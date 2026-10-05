@@ -19,7 +19,13 @@ $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path $Root).Path
 $script = Join-Path $Root 'realms\realms.ps1'
 $server = Join-Path $Root 'server'
-$manifest = Get-Content (Join-Path $Root 'realms\manifest.json') -Raw | ConvertFrom-Json
+# The package's own module: one server.properties parser for the installer and this test.
+Import-Module (Join-Path $Root 'realms\Realms.psm1') -Force
+$manifest = (New-RealmsContext -Root $Root).Manifest
+# Ranks are whatever LuckPerms groups the Defaults ship.
+$ranks = @(Get-ChildItem (Join-Path $Root 'realms\defaults\plugins\LuckPerms\yaml-storage\groups') -Filter *.yml |
+    ForEach-Object { $_.BaseName })
+if (-not $ranks.Count) { throw 'No LuckPerms ranks found in the package Defaults' }
 $failures = New-Object System.Collections.Generic.List[string]
 
 function Invoke-Realms([string[]]$Arguments) {
@@ -35,11 +41,12 @@ $again = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script insta
 if ($again -notmatch 'Everything is up to date') { $failures.Add("re-install was not a no-op:`n$again") }
 
 $props = Join-Path $server 'server.properties'
-$text = [IO.File]::ReadAllText($props)
-if ($text -match '\{\{') { $failures.Add('server.properties still has {{placeholders}}') }
-if ($text -notmatch "(?m)^level-seed=$([regex]::Escape([string]$manifest.world.seed))\s*$") { $failures.Add('seed not applied') }
-$text = $text -replace '(?m)^server-port=.*$', "server-port=$Port" -replace '(?m)^rcon\.port=.*$', "rcon.port=$RconPort"
-[IO.File]::WriteAllText($props, $text, (New-Object System.Text.UTF8Encoding $false))
+if ([IO.File]::ReadAllText($props) -match '\{\{') { $failures.Add('server.properties still has {{placeholders}}') }
+$values = Read-ServerProperties $props
+if ($values['level-seed'] -ne [string]$manifest.world.seed) { $failures.Add('seed not applied') }
+if ($values['level-name'] -ne $manifest.world.level_name) { $failures.Add('level name not applied') }
+Set-ServerProperty -Path $props -Name 'server-port' -Value $Port
+Set-ServerProperty -Path $props -Name 'rcon.port' -Value $RconPort
 
 Write-Host "--- start (port $Port)"
 $out = Join-Path $Root 'smoke-console.log'
@@ -83,7 +90,7 @@ foreach ($pattern in 'Error occurred while enabling', 'Could not load ''plugins'
 }
 # LuckPerms answers commands on the console, not over RCON, so check its storage instead.
 if ($logText -notmatch 'LuckPerms\] Loading storage provider\.\.\. \[YAML\]') { $failures.Add('LuckPerms is not using the YAML ranks') }
-foreach ($g in 'default', 'builder', 'moderator', 'admin') {
+foreach ($g in $ranks) {
     if (-not (Test-Path (Join-Path $server "plugins\LuckPerms\yaml-storage\groups\$g.yml"))) { $failures.Add("LuckPerms rank missing: $g") }
 }
 foreach ($p in $manifest.plugins) {

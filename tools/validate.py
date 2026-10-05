@@ -42,8 +42,10 @@ def validate_package(repo=REPO) -> list[str]:
     props = (repo.defaults / "server.properties").read_text(encoding="utf-8")
     errors = defaults.check_server_properties(props)
     errors += [f"package/{name} is missing" for name in PACKAGE_FILES if not (repo.package / name).is_file()]
-    if any(b > 127 for b in (repo.realms / "realms.ps1").read_bytes()):
-        errors.append("realms.ps1 must be plain ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI)")
+    for script in sorted(repo.package.rglob("*.ps*1")) + sorted(repo.package.glob("*.bat")):
+        if any(b > 127 for b in script.read_bytes()):
+            errors.append(f"{script.relative_to(repo.package).as_posix()} must be plain ASCII "
+                          "(Windows PowerShell 5.1 reads BOM-less files as ANSI; see ADR-0003)")
     return errors
 
 

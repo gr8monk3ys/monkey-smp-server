@@ -544,10 +544,7 @@ Describe 'Real manifest contract' {
     }
 
     It 'patched datapack <Entry.file> pins its patch to the upstream file' -ForEach $realPatched {
-        if ($Entry.patch -is [string]) {
-            Set-ItResult -Skipped -Because 'manifest.json still has the old string patch shape (tighten once the Python side lands the object shape)'
-            return
-        }
+        $Entry.patch | Should -Not -BeOfType [string]
         $Entry.patch.base_sha512 | Should -Be $Entry.hashes.sha512
         Join-Path $RepoRoot ('package\realms\' + $Entry.patch.path.Replace('/', '\')) | Should -Exist
     }

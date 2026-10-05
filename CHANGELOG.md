@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0] - 2026-10-05
+
+Synced with the updated mod list.
+
+- New datapacks: Dragonkind Evolved (End battle rework), Player Corpses, DnT Pillager Outpost Overhaul,
+  DnT Stronghold Overhaul. New structures only appear in newly generated chunks.
+- Client pack: added Cape Provider (replaces Capes), Reach Behind and MidnightLib; removed AFK Cinematics,
+  FWA, Inventory Particles, Presence Footsteps and Punchy to match the list.
+- Kept the Epic Structures packs and Spawn Animations on the server (their list replacements are
+  Fabric-only and can't run on Paper).
+- Update check no longer proposes re-listed files or downgrades from a newer pre-release pin.
+- Installer: file names with [ ] (like Player Corpses') no longer break the download.
+- RCON (Stop Server, Add Player, backups) reconnects if a server still warming up drops it.
+- Known issue: Silver's Custom Effects Library logs parse errors on 26.1.2 (some of its effects
+  don't work); this predates 1.1.0 and is an upstream compatibility problem.
+- Installer and tools split into testable modules (Pester + pytest), patches pinned to their upstream
+  file, glossary and ADRs.
+
 ## [1.0.0] - 2026-10-04
 
 First packaged release of The Realms.

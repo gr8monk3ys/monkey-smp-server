@@ -32,6 +32,25 @@ class Update:
     note: str = ""
 
 
+def newer_release(versions: list[dict], entry: dict) -> dict | None:
+    """The newest stable release that is really newer than the pinned artifact, or None.
+
+    Judged by file and date, not version id: Modrinth sometimes lists the same file again under a
+    new version id, and a pin can be a pre-release published after the latest stable release
+    (taking that release would be a downgrade).
+    """
+    pinned_sha512 = entries.hash_of(entry)[1]
+
+    def has_pinned_file(v):
+        return any(f["hashes"].get("sha512") == pinned_sha512 for f in v["files"])
+
+    pinned = [v for v in versions if v["id"] == entry["version_id"] or has_pinned_file(v)]
+    since = max((v["date_published"] for v in pinned), default="")
+    newer = [v for v in versions if v["version_type"] == "release" and v["date_published"] > since
+             and not has_pinned_file(v)]
+    return max(newer, key=lambda v: v["date_published"]) if newer else None
+
+
 def find_updates(manifest: dict, upstream: Upstream) -> list[Update]:
     mc = manifest["minecraft"]
     updates = []
@@ -41,8 +60,8 @@ def find_updates(manifest: dict, upstream: Upstream) -> list[Update]:
                               entries.paper(build)))
     for kind, group in entries.GROUPS.items():
         for e in manifest[group]:
-            v = upstream.newest_release(e["project_id"], mc, LOADERS[kind])
-            if not v or v["id"] == e["version_id"]:
+            v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e)
+            if not v:
                 continue
             if "patch" in e:
                 updates.append(Update(kind, e["slug"], e["version"], v["version_number"], None, NEEDS_PATCH))

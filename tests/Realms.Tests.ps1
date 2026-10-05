@@ -198,6 +198,32 @@ Describe 'Install-Server' {
         (Get-Item (Join-Path $F.Plugins 'Foo-1.0.jar')).LastWriteTimeUtc | Should -Be $stamp
     }
 
+    It 'installs upstream file names containing [ ] and is then a no-op' {
+        $F = New-Fixture
+        # Invoke-WebRequest -OutFile on 5.1 treats [ ] as wildcards; make the fake adapter just as strict.
+        $inner = $F.Fetch
+        $F.Fetch = {
+            param([string]$Url, [string]$OutFile)
+            if ($OutFile -match '[\[\]]') { throw "wildcard path $OutFile did not resolve to a file" }
+            & $inner $Url $OutFile
+        }.GetNewClosure()
+        $plugin = New-Entry $F 'Foo [1.0].jar' @{ 'plugin.yml' = 'name: Foo' }
+        $pack = New-Entry $F 'Player Corpses 3.7 [1.21.9+].zip' @{ 'pack.mcmeta' = '{}' }
+        $patched = Add-PatchTo (New-Entry $F 'Lib [v2].zip' @{ 'pack.mcmeta' = 'old' }) (New-Patch $F 'lib' @{ 'pack.mcmeta' = 'new' })
+        $m = New-Manifest $F @($plugin) @($pack, $patched)
+
+        Install-Fixture $F $m | Out-Null
+        Get-Sha512 (Join-Path $F.Plugins 'Foo [1.0].jar') | Should -Be $plugin.hashes.sha512
+        Get-Sha512 (Join-Path $F.Packs 'Player Corpses 3.7 [1.21.9+].zip') | Should -Be $pack.hashes.sha512
+        Read-ZipEntry (Join-Path $F.Packs 'Lib [v2].zip') 'pack.mcmeta' | Should -Be 'new'
+        @(Get-ChildItem -LiteralPath $F.Packs -Filter '*.part').Count | Should -Be 0
+
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'Everything is up to date'
+        $F.Fetched.Count | Should -Be 0
+    }
+
     It 'throws a hash error on a mismatched download and leaves no file behind' {
         $F = New-Fixture
         $plugin = New-Entry $F 'Bad.jar' @{ 'plugin.yml' = 'name: Bad' }
@@ -399,10 +425,12 @@ Describe 'Backup-Server' {
 Describe 'Invoke-Rcon' {
     BeforeAll {
         # A fake Minecraft RCON server: replies to each command in two packets (with a colour code),
-        # then answers the marker packet, like the real one does.
+        # then answers the marker packet, like the real one does. The first $Drops connections are
+        # cut after the first command, like a server still busy right after "Done".
         $script:FakeRcon = {
-            param($Listener, $Secret)
+            param($Listener, $Secret, [int]$Drops)
             $enc = New-Object System.Text.UTF8Encoding $false
+            for ($conn = 0; ; $conn++) {
             $deadline = (Get-Date).AddSeconds(15)
             while (-not $Listener.Pending()) {
                 if ((Get-Date) -gt $deadline) { return 'no client' }
@@ -441,6 +469,7 @@ Describe 'Invoke-Rcon' {
                 $auth = & $recv
                 if ($auth.Body -ne $Secret) { & $sendP -1 2 ''; return 'rejected' }
                 & $sendP $auth.Id 2 ''
+                if ($conn -lt $Drops) { [void](& $recv); continue }
                 while ($true) {
                     try { $cmd = & $recv } catch { break }
                     $marker = & $recv
@@ -450,9 +479,10 @@ Describe 'Invoke-Rcon' {
                 }
                 return 'ok'
             } finally { $client.Close() }
+            }
         }
 
-        function Invoke-WithFakeRcon([string]$Secret, [string]$ClientSecret, [string[]]$Commands) {
+        function Invoke-WithFakeRcon([string]$Secret, [string]$ClientSecret, [string[]]$Commands, [int]$Drops = 0) {
             $F = New-Fixture
             $listener = New-Object Net.Sockets.TcpListener ([Net.IPAddress]::Loopback, 0)
             $listener.Start()
@@ -460,7 +490,7 @@ Describe 'Invoke-Rcon' {
             try {
                 Write-Text (Join-Path $F.Server 'server.properties') (
                     "server-port=$($F.Port)`nenable-rcon=true`nrcon.port=$($listener.LocalEndpoint.Port)`nrcon.password=$ClientSecret`n")
-                [void]$ps.AddScript($script:FakeRcon).AddArgument($listener).AddArgument($Secret)
+                [void]$ps.AddScript($script:FakeRcon).AddArgument($listener).AddArgument($Secret).AddArgument($Drops)
                 $handle = $ps.BeginInvoke()
                 try {
                     return Invoke-Rcon -Context (New-Ctx $F (New-Manifest $F)) -Commands $Commands
@@ -479,6 +509,19 @@ Describe 'Invoke-Rcon' {
         $out.Count | Should -Be 2
         $out[0] | Should -Be 'reply to list part1; part2'
         $out[1] | Should -Be 'reply to seed part1; part2'
+    }
+
+    It 'reconnects when a busy server drops the connection' {
+        Mock Start-Sleep -ModuleName Realms {}
+        $out = @(Invoke-WithFakeRcon 'pw' 'pw' @('datapack list enabled') -Drops 2)
+        $out | Should -Be @('reply to datapack list enabled part1; part2')
+        Should -Invoke Start-Sleep -ModuleName Realms -Times 2 -Exactly
+    }
+
+    It 'gives up after five dropped connections' {
+        Mock Start-Sleep -ModuleName Realms {}
+        { Invoke-WithFakeRcon 'pw' 'pw' @('seed') -Drops 9 } | Should -Throw
+        Should -Invoke Start-Sleep -ModuleName Realms -Times 4 -Exactly
     }
 
     It 'throws when the password is rejected' {

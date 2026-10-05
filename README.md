@@ -12,8 +12,8 @@ double-clicking one file**. No Java install, no command line, no port forwarding
 | Minecraft | Java Edition **26.1.2** |
 | Server | [Paper](https://papermc.io) (build pinned in the manifest) |
 | Plugins | 20: Towns & Nations, LuckPerms, EssentialsX, WorldGuard, CoreProtect, BlueMap, Simple Voice Chat, ... |
-| Datapacks | 24 world-gen, structure and Strength SMP packs |
-| Client pack | 129 optional mods, resource packs and shaders (Fabric) |
+| Datapacks | 28 world-gen, structure, End-fight, corpse and Strength SMP packs |
+| Client pack | 126 optional mods, resource packs and shaders (Fabric) |
 
 ## I just want to run it
 
@@ -58,7 +58,7 @@ tests/                      <- unit tests + end-to-end smoke test
 
 | Workflow | When | What |
 |---|---|---|
-| [CI](.github/workflows/ci.yml) | every push and PR | ruff + pytest + manifest validation, PSScriptAnalyzer, then **builds the release zip on a Windows runner, unzips it, installs, boots the server, checks all 20 plugins enabled and all 24 datapacks are active, and stops it** |
+| [CI](.github/workflows/ci.yml) | every push and PR | ruff + pytest + manifest validation, PSScriptAnalyzer, then **builds the release zip on a Windows runner, unzips it, installs, boots the server, checks every plugin is enabled and every datapack is active, and stops it** |
 | [Release](.github/workflows/release.yml) | tag `v*.*.*` | runs CI, then publishes the server zip + client `.mrpack` as a GitHub release |
 | [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download (and that each datapack patch still fits) and opens/updates an issue listing newer Paper/plugin/datapack builds |
 

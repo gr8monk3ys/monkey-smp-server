@@ -6,7 +6,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/realms/manifest.json` | pinned Java, Paper, plugins, datapacks | `tools/snapshot.py`, `tools/check_updates.py --apply`, or by hand |
+| `package/realms/manifest.json` | pinned Java, Paper, plugins, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
@@ -28,8 +28,12 @@ lives in a few modules they share:
 ```bash
 python tools/check_updates.py            # what's newer (same Minecraft version, stable only)
 python tools/check_updates.py --apply    # pin them
+python tools/add.py datapack <slug>...    # add new Modrinth projects at their newest stable build
 python tools/validate.py --online        # download + hash-check everything
 ```
+
+An update has to be a stable release with a different file, published after the pinned version, so a
+re-listed file (same jar, new version id) or a newer pre-release pin is never "updated" backwards.
 
 Patched datapacks are the exception: `check_updates.py` lists a newer release of a patched pack as
 "patched - re-snapshot needed" and `--apply` leaves its pin alone, because the patch was made against
@@ -100,6 +104,6 @@ The release workflow re-runs CI, refuses to publish if the tag and manifest vers
 
 ## Changing Minecraft version
 
-All 20 plugins and 24 datapacks need builds for the new version. `check_updates.py` only looks within the
+Every plugin and datapack needs a build for the new version. `check_updates.py` only looks within the
 pinned version, so change `minecraft` in the manifest, run `snapshot.py` against a server you've upgraded
 by hand, and expect world-gen datapack changes to affect new chunks only.

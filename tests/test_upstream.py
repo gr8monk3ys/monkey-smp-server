@@ -4,7 +4,17 @@ import pytest
 from conftest import paper_build, paper_builds_url
 
 from check_updates import LOADERS
-from upstream import MODRINTH, RecordedHttp, RecordingHttp, UnrecordedRequest, Upstream, request_key
+from upstream import (
+    FABRIC_META,
+    MODRINTH,
+    RecordedHttp,
+    RecordingHttp,
+    UnrecordedRequest,
+    Upstream,
+    fabric_server_jar_url,
+    request_key,
+    version_key,
+)
 
 MC = "26.1.2"
 
@@ -68,3 +78,43 @@ def test_recording_trims_responses_and_replays_them(tmp_path):
     recorder = Upstream(RecordingHttp(live, tmp_path))
     assert recorder.modrinth_projects(["p"]) == {"p": {"id": "p", "slug": "s"}}
     assert Upstream(RecordedHttp.from_folder(tmp_path)).modrinth_projects(["p"]) == {"p": {"id": "p", "slug": "s"}}
+
+
+# --- Fabric meta -----------------------------------------------------------------------------------
+
+def test_newest_stable_fabric_loader_and_installer_from_recorded_meta(recorded):
+    up = Upstream(recorded)
+    assert {x["stable"] for x in up.fabric_loaders("26.3")} == {True, False}
+    assert up.newest_stable_fabric_loader("26.3") == "0.19.5"
+    assert up.newest_stable_fabric_installer() == "1.1.2"
+
+
+def test_newest_stable_fabric_versions_do_not_trust_list_order():
+    loaders = [{"loader": {"version": v, "stable": s}} for v, s in
+               [("0.9.9", True), ("0.19.10", True), ("0.19.11", False), ("0.19.2", True)]]
+    http = RecordedHttp().add("GET", f"{FABRIC_META}/versions/loader/26.3", loaders)
+    http.add("GET", f"{FABRIC_META}/versions/installer", [{"version": "1.0.9", "stable": False}])
+    up = Upstream(http)
+    assert up.newest_stable_fabric_loader("26.3") == "0.19.10"  # numerically, not as text
+    assert up.newest_stable_fabric_installer() is None
+
+
+def test_version_key_orders_dotted_versions():
+    assert version_key("0.19.10") > version_key("0.19.9") > version_key("0.19")
+    assert version_key("0.16.10+build.1") == (0, 16, 10)
+
+
+def test_fabric_server_jar_url():
+    assert fabric_server_jar_url("26.3", "0.19.5", "1.1.2") == \
+        "https://meta.fabricmc.net/v2/versions/loader/26.3/0.19.5/1.1.2/server/jar"
+
+
+def test_recording_trims_fabric_meta_responses(tmp_path):
+    url = f"{FABRIC_META}/versions/loader/26.3"
+    full = [{"loader": {"separator": ".", "build": n, "maven": "x", "version": f"0.19.{n}", "stable": n == 5},
+             "intermediary": {"version": "0.0.0"}, "launcherMeta": {"libraries": {"common": ["big"]}}}
+            for n in range(9)]
+    recorder = Upstream(RecordingHttp(RecordedHttp().add("GET", url, full), tmp_path))
+    assert [x["version"] for x in recorder.fabric_loaders("26.3")] == ["0.19.8", "0.19.7", "0.19.6", "0.19.5", "0.19.4"]
+    replayed = Upstream(RecordedHttp.from_folder(tmp_path))
+    assert replayed.fabric_loaders("26.3")[3] == {"version": "0.19.5", "stable": True}

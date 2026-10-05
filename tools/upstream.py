@@ -1,4 +1,4 @@
-"""The Upstream catalog: what Modrinth, PaperMC and Adoptium say about artifacts.
+"""The Upstream catalog: what Modrinth, PaperMC, Fabric meta and Adoptium say about artifacts.
 
   Upstream(http)                                   the catalog, over an HTTP adapter
     .modrinth_versions_by_sha1(sha1s)              {sha1: version} for files Modrinth knows
@@ -7,6 +7,10 @@
     .newest_release(project_id, mc, loaders)       newest stable ("release") version, or None
     .paper_builds(mc)                              every Paper build for a Minecraft version
     .newest_stable_paper_build(mc)                 the highest STABLE build id, or None
+    .fabric_loaders(mc)                            every Fabric loader for a Minecraft version
+    .newest_stable_fabric_loader(mc)               the highest stable loader version, or None
+    .fabric_installers()                           every Fabric installer (= server launcher) version
+    .newest_stable_fabric_installer()              the highest stable installer version, or None
     .adoptium_latest_jre(major)                    newest Temurin JRE (Windows x64) for a Java major
     .download(url)                                 the bytes at a URL
 
@@ -27,11 +31,26 @@ from pathlib import Path
 MODRINTH = "https://api.modrinth.com/v2"
 PAPER = "https://fill.papermc.io/v3/projects/paper"
 ADOPTIUM = "https://api.adoptium.net/v3"
+FABRIC_META = "https://meta.fabricmc.net/v2"
 USER_AGENT = "gr8monk3ys/the-realms-server (github.com/gr8monk3ys/the-realms-server)"
 
 
 def json_query(value) -> str:
     return urllib.parse.quote(json.dumps(value))
+
+
+def fabric_server_jar_url(mc: str, loader: str, installer: str) -> str:
+    """Fabric meta's server launcher jar for one Minecraft, loader and installer version.
+
+    The jar is generated, but deterministically: the same three versions always give the same bytes,
+    so a manifest can pin its size and hash like any other download.
+    """
+    return f"{FABRIC_META}/versions/loader/{mc}/{loader}/{installer}/server/jar"
+
+
+def version_key(version: str) -> tuple[int, ...]:
+    """Sort key for dotted versions such as Fabric's 0.19.5 (build metadata after '+' ignored)."""
+    return tuple(int(n) for n in re.findall(r"\d+", version.split("+")[0]))
 
 
 class Upstream:
@@ -67,6 +86,20 @@ class Upstream:
         stable = [b for b in self.paper_builds(mc) if b.get("channel") == "STABLE"]
         return max(stable, key=lambda b: b["id"]) if stable else None
 
+    def fabric_loaders(self, mc: str) -> list[dict]:
+        """[{"version": "0.19.5", "stable": True}, ...] for the loaders Fabric meta lists for `mc`."""
+        return [item["loader"] for item in self.http.get_json(f"{FABRIC_META}/versions/loader/{mc}")]
+
+    def newest_stable_fabric_loader(self, mc: str) -> str | None:
+        return _newest_stable(self.fabric_loaders(mc))
+
+    def fabric_installers(self) -> list[dict]:
+        """[{"version": "1.1.2", "stable": True}, ...]; the installer version is the launcher's version."""
+        return self.http.get_json(f"{FABRIC_META}/versions/installer")
+
+    def newest_stable_fabric_installer(self) -> str | None:
+        return _newest_stable(self.fabric_installers())
+
     def adoptium_latest_jre(self, major: int) -> dict:
         assets = self.http.get_json(
             f"{ADOPTIUM}/assets/latest/{major}/hotspot?os=windows&architecture=x64&image_type=jre")
@@ -76,6 +109,12 @@ class Upstream:
 
     def download(self, url: str) -> bytes:
         return self.http.get_bytes(url)
+
+
+def _newest_stable(versions: list[dict]) -> str | None:
+    # Fabric meta lists newest first today; don't depend on it.
+    stable = [v["version"] for v in versions if v.get("stable")]
+    return max(stable, key=version_key) if stable else None
 
 
 # --- adapters -----------------------------------------------------------------------------------
@@ -212,6 +251,12 @@ def trim(url: str, response):
         return [{**_pick(b, "id", "channel"), "downloads": {"server:default": {
             **_pick(b["downloads"]["server:default"], "name", "url", "size"),
             "checksums": _pick(b["downloads"]["server:default"]["checksums"], "sha256")}}} for b in newest]
+    if url.startswith(f"{FABRIC_META}/versions/loader/"):
+        newest = sorted(response, key=lambda x: version_key(x["loader"]["version"]), reverse=True)[:KEEP_LIST_ITEMS]
+        return [{"loader": _pick(x["loader"], "version", "stable")} for x in newest]
+    if url.startswith(f"{FABRIC_META}/versions/installer"):
+        newest = sorted(response, key=lambda x: version_key(x["version"]), reverse=True)[:KEEP_LIST_ITEMS]
+        return [_pick(x, "version", "stable") for x in newest]
     if url.startswith(ADOPTIUM):
         return [{"release_name": a["release_name"],
                  "binary": {"package": _pick(a["binary"]["package"], "name", "link", "size", "checksum")}}

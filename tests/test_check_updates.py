@@ -7,13 +7,14 @@ import copy
 import hashlib
 
 import pytest
-from conftest import paper_builds_url
+from conftest import paper_builds_url, serve_fabric_launcher
 
 import check_updates
 import entries
 import patches
 import validate
 from check_updates import LOADERS, NEEDS_PATCH
+from repo import Repo
 from upstream import MODRINTH, Upstream, json_query
 
 MC = "26.1.2"
@@ -151,3 +152,85 @@ def test_a_release_after_the_pre_release_pin_is_an_update(up, real_manifest):
     m = _only_plugin(up, real_manifest, beta, [newer, beta])
     (update,) = check_updates.find_updates(m, up)
     assert (update.pinned, update.newest, update.entry["file"]) == ("2.12.1+377", "2.12.2", "Plugin-2.12.2.jar")
+
+
+# --- Fabric: loader/installer from recorded Fabric meta, mods built in the test ----------------------
+
+FABRIC_MC = "26.3"  # recorded meta: newest stable loader 0.19.5, newest stable installer 1.1.2
+
+
+def _mods_url(project_id):
+    return (f"{MODRINTH}/project/{project_id}/version?game_versions={json_query([FABRIC_MC])}"
+            f"&loaders={json_query(LOADERS['mod'])}")
+
+
+def _mod_version(project_id, vid, number, date, name):
+    data = f"{project_id} {number}".encode()
+    return {"id": vid, "project_id": project_id, "version_number": number, "version_type": "release",
+            "date_published": date,
+            "files": [{"filename": name, "primary": True, "size": len(data),
+                       "url": f"https://cdn.modrinth.com/data/{project_id}/versions/{vid}/{name}",
+                       "hashes": {"sha1": hashlib.sha1(data).hexdigest(),
+                                  "sha512": hashlib.sha512(data).hexdigest()}}]}
+
+
+def fabric_manifest(up, real, loader="0.19.5", installer="1.1.2", mods=()):
+    """A Fabric manifest pinned to `loader`/`installer`; each mod is (slug, pinned, listed, patched)."""
+    m = copy.deepcopy(real)
+    m.update(minecraft=FABRIC_MC, server=entries.fabric(FABRIC_MC, loader, installer, b"pinned launcher"),
+             plugins=[], mods=[], datapacks=[])
+    for slug, pinned_v, listed, patched in mods:
+        e = entries.from_disk(pinned_v, pinned_v["files"][0]["hashes"]["sha1"], slug,
+                              disk_name=pinned_v["files"][0]["filename"])
+        if patched:
+            e["patch"] = patches.reference(slug, e["hashes"]["sha512"])
+        m["mods"].append(e)
+        up.http.add("GET", _mods_url(pinned_v["project_id"]), listed)
+    return m
+
+
+@pytest.mark.parametrize("loader, installer, newest", [
+    ("0.19.4", "1.1.2", "loader 0.19.5, installer 1.1.2"),  # newer loader
+    ("0.19.5", "1.1.1", "loader 0.19.5, installer 1.1.2"),  # newer installer
+    ("0.19.3", "1.0.3", "loader 0.19.5, installer 1.1.2"),  # both: still one server update
+])
+def test_fabric_server_update_pins_the_new_launcher(up, real_manifest, loader, installer, newest):
+    jar = serve_fabric_launcher(up.http, FABRIC_MC, "0.19.5", "1.1.2")
+    m = fabric_manifest(up, real_manifest, loader, installer)
+    (update,) = check_updates.find_updates(m, up)
+    assert (update.kind, update.slug) == ("server", "fabric")
+    assert (update.pinned, update.newest) == (f"loader {loader}, installer {installer}", newest)
+    assert update.entry == entries.fabric(FABRIC_MC, "0.19.5", "1.1.2", jar)
+    new = check_updates.apply(m, [update])
+    assert new["server"]["file"] == "fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar"
+    assert entries.check("server", new["server"]) == [] and entries.check_types(new) == []
+
+
+def test_fabric_server_is_not_downgraded_or_updated_when_newest(up, real_manifest):
+    assert check_updates.find_updates(fabric_manifest(up, real_manifest), up) == []
+    ahead = fabric_manifest(up, real_manifest, loader="0.19.10", installer="1.2.0")  # pre-release pins
+    assert check_updates.find_updates(ahead, up) == []
+
+
+def test_fabric_mod_update_takes_the_new_file_name_and_patched_mods_are_left(up, real_manifest, tmp_path):
+    old_mod = _mod_version("id-lith", "l1", "0.26.1", "2026-09-01T00:00:00Z", "lithium-fabric-0.26.1+mc26.3.jar")
+    new_mod = _mod_version("id-lith", "l2", "0.26.2", "2026-09-20T00:00:00Z", "lithium-fabric-0.26.2+mc26.3.jar")
+    old_fx = _mod_version("id-fx", "f1", "2.7", "2026-09-01T00:00:00Z", "silvers_effects-library-2.7.jar")
+    new_fx = _mod_version("id-fx", "f2", "2.8", "2026-09-20T00:00:00Z", "silvers_effects-library-2.8.jar")
+    m = fabric_manifest(up, real_manifest, mods=[("lithium", old_mod, [new_mod, old_mod], False),
+                                                 ("silvers_effects-library", old_fx, [new_fx, old_fx], True)])
+    updates = by_slug(check_updates.find_updates(m, up))
+    assert set(updates) == {"lithium", "silvers_effects-library"}
+    lith, fx = updates["lithium"], updates["silvers_effects-library"]
+    assert (lith.kind, lith.entry["version"]) == ("mod", "0.26.2")
+    assert lith.entry["file"] == "lithium-fabric-0.26.2+mc26.3.jar"  # upstream's new name, like a plugin
+    assert (fx.kind, fx.entry, fx.note, fx.newest) == ("mod", None, NEEDS_PATCH, "2.8")
+
+    new = check_updates.apply(m, list(updates.values()))
+    assert new["mods"][0]["version"] == "0.26.2" and new["mods"][1] == m["mods"][1]
+    assert "| mod | silvers_effects-library | 2.7 | 2.8 | patched - re-snapshot needed |" in check_updates.report(
+        m, list(updates.values()))
+    # The applied manifest is still consistent: the patch stays pinned to the file it was made against.
+    repo = Repo(tmp_path)
+    patches.write(repo.patches / "silvers_effects-library", {"pack.mcmeta": b"patched"})
+    assert validate.validate(new, repo) == []

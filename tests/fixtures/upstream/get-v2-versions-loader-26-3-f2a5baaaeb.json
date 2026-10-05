@@ -1,0 +1,38 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://meta.fabricmc.net/v2/versions/loader/26.3"
+ },
+ "response": [
+  {
+   "loader": {
+    "version": "0.19.5",
+    "stable": true
+   }
+  },
+  {
+   "loader": {
+    "version": "0.19.4",
+    "stable": false
+   }
+  },
+  {
+   "loader": {
+    "version": "0.19.3",
+    "stable": false
+   }
+  },
+  {
+   "loader": {
+    "version": "0.19.2",
+    "stable": false
+   }
+  },
+  {
+   "loader": {
+    "version": "0.19.1",
+    "stable": false
+   }
+  }
+ ]
+}

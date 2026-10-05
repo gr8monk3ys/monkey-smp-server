@@ -1,10 +1,19 @@
 """Capture a running setup into the repo, so it can be rebuilt anywhere.
 
   python tools/snapshot.py server C:/MCServer/factions
-      Rewrites package/realms/manifest.json from the server's paper.jar, plugins/*.jar and
-      <level-name>/datapacks/*.zip (level-name read from its server.properties). Every file must
-      be on Modrinth (matched by hash) or the snapshot fails. A datapack edited in place is matched
-      against datapack-originals/<same name>, and the files that differ are stored as a patch under
+      Rewrites package/realms/manifest.json from a Paper or Fabric server folder. Every plugin, mod
+      and datapack must be on Modrinth (matched by hash) or the snapshot fails.
+
+      Paper (paper.jar + version_history.json): the Paper build is matched by hash, plugins come
+      from plugins/*.jar.
+      Fabric (a Fabric server launcher jar such as fabric-server.jar, plus a mods/ folder): the
+      Minecraft and loader versions are read from the launcher jar's install.properties, the
+      launcher is pinned to Fabric meta's jar for the newest stable installer, and mods come from
+      mods/*.jar.
+
+      Datapacks come from <level-name>/datapacks/*.zip (level-name read from server.properties).
+      A mod or datapack edited in place is matched against mod-originals/ or datapack-originals/
+      <same name>, and the files that differ are stored as a patch under
       package/realms/patches/<slug>/, pinned to that original's hash.
 
   python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
@@ -19,6 +28,7 @@ import hashlib
 import json
 import re
 import shutil
+import zipfile
 from pathlib import Path
 from typing import NamedTuple
 
@@ -26,7 +36,7 @@ import defaults
 import entries
 import patches
 from repo import REPO, load_json, save_json
-from upstream import LiveHttp, Upstream
+from upstream import LiveHttp, Upstream, fabric_server_jar_url
 
 JAVA_MAJOR = 25
 CLIENT_CONTENT = ("mods", "resourcepacks", "shaderpacks")
@@ -36,6 +46,14 @@ class Found(NamedTuple):
     version: dict
     sha1: str
     slug: str
+
+
+class FabricLauncher(NamedTuple):
+    """A Fabric server launcher jar and the versions baked into it."""
+    path: Path
+    minecraft: str
+    loader: str
+    installer: str  # the installer that generated the jar ("" if its MANIFEST.MF doesn't say)
 
 
 def identify(upstream: Upstream, paths) -> dict[Path, Found | None]:
@@ -61,12 +79,85 @@ def minecraft_version(server_dir: Path) -> str:
     return m.group(1)
 
 
+def server_properties(server_dir: Path) -> dict[str, str]:
+    props = server_dir / "server.properties"
+    return defaults.parse_properties(props.read_text(encoding="utf-8")) if props.is_file() else {}
+
+
 def level_name(server_dir: Path) -> str:
     """The world folder the server uses (server.properties level-name, Minecraft's default 'world')."""
-    props = server_dir / "server.properties"
-    if not props.is_file():
-        return "world"
-    return defaults.parse_properties(props.read_text(encoding="utf-8")).get("level-name") or "world"
+    return server_properties(server_dir).get("level-name") or "world"
+
+
+def level_seed(server_dir: Path) -> str:
+    """server.properties level-seed as the number Minecraft uses ("" when empty, i.e. random).
+
+    Minecraft takes a seed that isn't a whole number as text and uses its Java String.hashCode().
+    """
+    seed = server_properties(server_dir).get("level-seed", "")
+    if re.fullmatch(r"-?\d+", seed) and -2**63 <= int(seed) < 2**63:
+        return seed
+    if not seed:
+        return ""
+    h = 0
+    utf16 = seed.encode("utf-16-be")
+    for i in range(0, len(utf16), 2):
+        h = (31 * h + int.from_bytes(utf16[i:i + 2], "big")) & 0xFFFFFFFF
+    return str(h - 2**32 if h >= 2**31 else h)
+
+
+# --- what kind of server it is ------------------------------------------------------------------
+
+def read_fabric_launcher(jar: Path) -> FabricLauncher | None:
+    """The versions in a Fabric server launcher jar, or None if `jar` isn't one.
+
+    Fabric meta generates the launcher with an install.properties naming the Minecraft and loader
+    versions; the launcher reads exactly that file to decide what to download and run, so it is the
+    authority on what the server runs (versions/ and .fabric/ are caches that can hold leftovers
+    from an earlier version). The installer version is MANIFEST.MF's Implementation-Version.
+    """
+    try:
+        with zipfile.ZipFile(jar) as z:
+            names = set(z.namelist())
+            if "install.properties" not in names:
+                return None
+            props = defaults.parse_properties(z.read("install.properties").decode("utf-8"))
+            mf = z.read("META-INF/MANIFEST.MF").decode("utf-8") if "META-INF/MANIFEST.MF" in names else ""
+    except (zipfile.BadZipFile, OSError):
+        return None
+    mc, loader = props.get("game-version"), props.get("fabric-loader-version")
+    if not mc or not loader:
+        return None
+    installer = next((line.split(":", 1)[1].strip() for line in mf.splitlines()
+                      if line.startswith("Implementation-Version:")), "")
+    return FabricLauncher(jar, mc, loader, installer)
+
+
+def detect_server(server_dir: Path) -> FabricLauncher | None:
+    """The Fabric launcher of a Fabric server folder, or None for a Paper server folder.
+
+    Paper: paper.jar + version_history.json. Fabric: a launcher jar in the folder (fabric-server.jar
+    preferred if there are several) + a mods/ folder.
+    """
+    launchers = [x for p in sorted(server_dir.glob("*.jar")) if (x := read_fabric_launcher(p))]
+    is_paper = (server_dir / "paper.jar").is_file() and (server_dir / "version_history.json").is_file()
+    if launchers and is_paper:
+        raise SystemExit(f"{server_dir} has both paper.jar and a Fabric launcher "
+                         f"({launchers[0].path.name}); remove the one the server doesn't use")
+    if len(launchers) > 1:
+        preferred = [x for x in launchers if x.path.name.lower() == "fabric-server.jar"]
+        if len(preferred) != 1:
+            names = ", ".join(x.path.name for x in launchers)
+            raise SystemExit(f"{server_dir} has several Fabric launchers ({names}); keep only the one start.bat runs")
+        launchers = preferred
+    if launchers:
+        if not (server_dir / "mods").is_dir():
+            raise SystemExit(f"{server_dir} has a Fabric launcher ({launchers[0].path.name}) but no mods/ folder")
+        return launchers[0]
+    if is_paper:
+        return None
+    raise SystemExit(f"{server_dir} is neither a Paper server (paper.jar + version_history.json) nor a "
+                     "Fabric server (a Fabric launcher jar such as fabric-server.jar + mods/)")
 
 
 def paper_entry(upstream: Upstream, server_dir: Path, mc: str) -> dict:
@@ -78,25 +169,35 @@ def paper_entry(upstream: Upstream, server_dir: Path, mc: str) -> dict:
     raise SystemExit("paper.jar doesn't match any Paper build for " + mc)
 
 
-def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, keep_java=True) -> dict:
-    upstream = upstream or Upstream(LiveHttp())
-    server_dir = Path(server_dir)
-    old = repo.load_manifest() if repo.manifest.exists() else {}
-    mc = minecraft_version(server_dir)
-    level = level_name(server_dir)
+def fabric_entry(upstream: Upstream, launcher: FabricLauncher) -> dict:
+    """Fabric meta's launcher for the server's Minecraft and loader versions and the newest stable installer.
 
-    plugin_paths = files_in(server_dir / "plugins", (".jar",))
-    pack_paths = files_in(server_dir / level / "datapacks", (".zip",))
-    originals = server_dir / "datapack-originals"
-    found = identify(upstream, plugin_paths + pack_paths + files_in(originals, (".zip",)))
+    The launcher's bytes depend on the installer version, so the local jar matches the pinned one only
+    if it came from the same installer; when it doesn't, meta's jar is pinned anyway (it runs the same
+    loader and Minecraft version) and a note says so.
+    """
+    installer = upstream.newest_stable_fabric_installer()
+    if not installer:
+        raise SystemExit("Fabric meta lists no stable installer")
+    jar = upstream.download(fabric_server_jar_url(launcher.minecraft, launcher.loader, installer))
+    entry = entries.fabric(launcher.minecraft, launcher.loader, installer, jar)
+    if hashlib.sha256(launcher.path.read_bytes()).hexdigest() != entry["hashes"]["sha256"]:
+        print(f"note: {launcher.path.name} (installer {launcher.installer or 'unknown'}) is not byte-identical to "
+              f"Fabric meta's launcher for installer {installer}; pinning meta's jar, which runs the same "
+              f"Minecraft {launcher.minecraft} and loader {launcher.loader}")
+    return entry
 
-    missing = [p for p in plugin_paths if not found[p]]
-    plugins = [entries.from_disk(*found[p], disk_name=p.name) for p in plugin_paths if found[p]]
-    datapacks, new_patches = [], {}
-    for p in pack_paths:
+
+# --- snapshot -----------------------------------------------------------------------------------
+
+def _match(paths: list[Path], originals: Path, found: dict, missing: list, new_patches: dict) -> list[dict]:
+    """Entries for files found on disk; a file not on Modrinth whose original (same name in
+    `originals`) is becomes that original plus a patch. Unknown files are appended to `missing`."""
+    out = []
+    for p in paths:
         orig = originals / p.name
         if found[p]:
-            datapacks.append(entries.from_disk(*found[p], disk_name=p.name))
+            out.append(entries.from_disk(*found[p], disk_name=p.name))
         elif found.get(orig):
             base = entries.from_disk(*found[orig], disk_name=p.name)
             try:
@@ -104,15 +205,47 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
             except patches.PatchError as err:
                 raise SystemExit(f"{p}: {err}") from err
             if files:
-                new_patches[base["slug"]] = files
+                slug = base["slug"]
+                if slug in new_patches:
+                    raise SystemExit(f"{p}: another patched file already uses patches/{slug}")
+                new_patches[slug] = files
                 base = entries.from_disk(*found[orig], disk_name=p.name,
-                                         patch=patches.reference(base["slug"], base["hashes"]["sha512"]))
-            datapacks.append(base)
+                                         patch=patches.reference(slug, base["hashes"]["sha512"]))
+            out.append(base)
         else:
             missing.append(p)
+    return out
+
+
+def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, keep_java=True) -> dict:
+    upstream = upstream or Upstream(LiveHttp())
+    server_dir = Path(server_dir)
+    old = repo.load_manifest() if repo.manifest.exists() else {}
+    launcher = detect_server(server_dir)
+    server_type = "fabric" if launcher else "paper"
+    mc = launcher.minecraft if launcher else minecraft_version(server_dir)
+    level = level_name(server_dir)
+
+    plugin_paths = [] if launcher else files_in(server_dir / "plugins", (".jar",))
+    mod_paths = files_in(server_dir / "mods", (".jar",)) if launcher else []
+    pack_paths = files_in(server_dir / level / "datapacks", (".zip",))
+    mod_originals, pack_originals = server_dir / "mod-originals", server_dir / "datapack-originals"
+    original_paths = (files_in(mod_originals, (".jar",)) if launcher else []) + files_in(pack_originals, (".zip",))
+    found = identify(upstream, plugin_paths + mod_paths + pack_paths + original_paths)
+
+    missing = [p for p in plugin_paths if not found[p]]
+    plugins = [entries.from_disk(*found[p], disk_name=p.name) for p in plugin_paths if found[p]]
+    new_patches = {}
+    mods = _match(mod_paths, mod_originals, found, missing, new_patches)
+    datapacks = _match(pack_paths, pack_originals, found, missing, new_patches)
     if missing:
         raise SystemExit("not on Modrinth (add them by hand or replace them):\n  "
                          + "\n  ".join(str(p) for p in missing))
+
+    server = fabric_entry(upstream, launcher) if launcher else paper_entry(upstream, server_dir, mc)
+    java = old["java"] if keep_java and "java" in old else entries.java(upstream.adoptium_latest_jre(JAVA_MAJOR))
+    same_world = "world" in old and old.get("minecraft") == mc and old.get("server", {}).get("type") == server_type
+    world = old["world"] if same_world else {"level_name": level, "seed": level_seed(server_dir)}
 
     if repo.patches.is_dir():
         for stale in repo.patches.iterdir():
@@ -125,16 +258,18 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
         "name": old.get("name", "The Realms"),
         "version": old.get("version", "1.0.0"),
         "minecraft": mc,
-        "java": old["java"] if keep_java and "java" in old else entries.java(upstream.adoptium_latest_jre(JAVA_MAJOR)),
-        "server": paper_entry(upstream, server_dir, mc),
-        "world": old.get("world", {"level_name": level, "seed": ""}),
+        "java": java,
+        "server": server,
+        "world": world,
         "plugins": sorted(plugins, key=lambda e: e["slug"]),
+        "mods": sorted(mods, key=lambda e: e["slug"]),
         "datapacks": sorted(datapacks, key=lambda e: e["slug"]),
     }
     repo.save_manifest(manifest)
-    print(f"manifest: Minecraft {mc}, Paper build {manifest['server']['build']}, "
-          f"{len(plugins)} plugins, {len(datapacks)} datapacks from {level}/datapacks "
-          f"({len(new_patches)} patched)")
+    what = (f"Fabric loader {server['loader']} (installer {server['installer']}), {len(mods)} mods" if launcher
+            else f"Paper build {server['build']}, {len(plugins)} plugins")
+    print(f"manifest: Minecraft {mc}, {what}, {len(datapacks)} datapacks from {level}/datapacks "
+          f"({len(new_patches)} patched); world {'kept' if same_world else 'read from server.properties'}")
     return manifest
 
 

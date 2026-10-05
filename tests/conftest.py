@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from repo import REPO, Repo
-from upstream import MODRINTH, PAPER, RecordedHttp, json_query
+from upstream import MODRINTH, PAPER, RecordedHttp, fabric_server_jar_url, json_query
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "upstream"
 
@@ -94,3 +94,21 @@ def paper_build(build_id: int, jar: bytes, channel="STABLE") -> dict:
 
 def paper_builds_url(mc: str) -> str:
     return f"{PAPER}/versions/{mc}/builds"
+
+
+def fabric_launcher(mc: str, loader: str, installer: str, salt: bytes = b"") -> bytes:
+    """A tiny jar shaped like Fabric meta's server launcher (install.properties + MANIFEST.MF)."""
+    manifest_mf = ("Manifest-Version: 1.0\r\nImplementation-Title: FabricInstaller\r\n"
+                   f"Implementation-Version: {installer}\r\nMain-Class: net.fabricmc.installer.ServerLauncher\r\n\r\n")
+    return make_zip({
+        "META-INF/MANIFEST.MF": manifest_mf,
+        "install.properties": f"fabric-loader-version={loader}\ngame-version={mc}\n",
+        "net/fabricmc/installer/ServerLauncher.class": b"\xca\xfe\xba\xbe" + salt,
+    })
+
+
+def serve_fabric_launcher(http: RecordedHttp, mc: str, loader: str, installer: str, jar: bytes | None = None) -> bytes:
+    """Serve a launcher jar at Fabric meta's URL for these versions; returns its bytes."""
+    jar = jar if jar is not None else fabric_launcher(mc, loader, installer)
+    http.add("GET", fabric_server_jar_url(mc, loader, installer), jar)
+    return jar

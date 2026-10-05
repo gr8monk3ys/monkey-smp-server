@@ -92,7 +92,7 @@ def test_matches_checks_size_and_strongest_hash():
     ("plugin", lambda e: e.update(hashes={"md5": "abc"}), "no sha512/sha256"),
     ("plugin", lambda e: e.update(size=0), "bad size"),
     ("plugin", lambda e: e.pop("version_id"), "missing 'version_id'"),
-    ("plugin", lambda e: e.update(patch={"path": "patches/x", "base_sha512": "a" * 128}), "only datapacks"),
+    ("plugin", lambda e: e.update(patch={"path": "patches/x", "base_sha512": "a" * 128}), "only mods and datapacks"),
     ("datapack", lambda e: e.update(file="bad:name.zip"), "characters Windows"),
 ])
 def test_check_catches_mistakes(real_manifest, kind, mutate, message):
@@ -100,3 +100,39 @@ def test_check_catches_mistakes(real_manifest, kind, mutate, message):
     mutate(e)
     errors = entries.check(kind, e)
     assert any(message in x for x in errors), errors
+
+
+def test_fabric_server_entry_pins_the_downloaded_launcher():
+    jar = b"launcher bytes"
+    e = entries.fabric("26.3", "0.19.5", "1.1.2", jar)
+    assert e == {"type": "fabric", "loader": "0.19.5", "installer": "1.1.2",
+                 "file": "fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar",
+                 "url": "https://meta.fabricmc.net/v2/versions/loader/26.3/0.19.5/1.1.2/server/jar",
+                 "size": len(jar), "hashes": {"sha256": hashlib.sha256(jar).hexdigest()}}
+    assert entries.check("server", e) == [] and entries.matches(e, jar)
+
+
+def test_mods_name_files_like_plugins(recorded):
+    v53, v71 = by_number(recorded, LUCKPERMS, "v5.5.53-bukkit"), by_number(recorded, LUCKPERMS, "v5.5.71-bukkit")
+    old = entries.from_disk(v53, v53["files"][0]["hashes"]["sha1"], "luckperms", disk_name="renamed.jar")
+    assert entries.updated("mod", old, v71)["file"] == "LuckPerms-Bukkit-5.5.71.jar"
+    patched = {**old, "patch": {"path": "patches/luckperms", "base_sha512": old["hashes"]["sha512"]}}
+    assert entries.check("mod", patched) == []
+    with pytest.raises(ValueError, match="re-snapshot"):
+        entries.updated("mod", patched, v71)
+
+
+def test_with_all_groups_adds_mods_after_plugins():
+    m = {"name": "x", "plugins": [], "datapacks": [], "world": {}}
+    assert list(entries.with_all_groups(m)) == ["name", "plugins", "mods", "datapacks", "world"]
+    assert entries.with_all_groups(m)["mods"] == [] and "mods" not in m
+    full = {"plugins": [], "mods": [1], "datapacks": []}
+    assert entries.with_all_groups(full) is full
+    assert entries.group({"plugins": []}, "mod") == []
+
+
+@pytest.mark.parametrize("server_type, allowed", [
+    ("paper", {"plugin", "datapack"}), ("fabric", {"mod", "datapack"}), ("forge", set()),
+])
+def test_kind_allowed(server_type, allowed):
+    assert {k for k in entries.GROUPS if entries.kind_allowed(server_type, k)} == allowed

@@ -55,7 +55,7 @@ The official source an artifact is downloaded from (Modrinth, PaperMC, Adoptium)
 _Avoid_: mirror, CDN, registry
 
 **Patch**:
-A small set of file replacements applied inside one downloaded datapack, tied to the exact upstream file it was made from.
+A small set of file replacements applied inside one downloaded mod or datapack, tied to the exact upstream file it was made from.
 _Avoid_: fix, override, mod
 
 **Defaults**:

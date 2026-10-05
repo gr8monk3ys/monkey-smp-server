@@ -60,6 +60,12 @@ def updated(kind: str, entry: dict, version: dict) -> dict:
     return _modrinth(version, f, slug=entry["slug"], project_id=entry["project_id"], file=name)
 
 
+def added(kind: str, slug: str, version: dict) -> dict:
+    """Entry for a plugin/datapack being added to the manifest: upstream names the file."""
+    f = pick_file(version, ".zip" if kind == "datapack" else ".jar")
+    return _modrinth(version, f, slug=slug, project_id=version["project_id"], file=f["filename"])
+
+
 def pick_file(version: dict, like: str) -> dict:
     """The file of a Modrinth version that replaces `like`: same extension, primary first."""
     files = version["files"]

@@ -198,6 +198,32 @@ Describe 'Install-Server' {
         (Get-Item (Join-Path $F.Plugins 'Foo-1.0.jar')).LastWriteTimeUtc | Should -Be $stamp
     }
 
+    It 'installs upstream file names containing [ ] and is then a no-op' {
+        $F = New-Fixture
+        # Invoke-WebRequest -OutFile on 5.1 treats [ ] as wildcards; make the fake adapter just as strict.
+        $inner = $F.Fetch
+        $F.Fetch = {
+            param([string]$Url, [string]$OutFile)
+            if ($OutFile -match '[\[\]]') { throw "wildcard path $OutFile did not resolve to a file" }
+            & $inner $Url $OutFile
+        }.GetNewClosure()
+        $plugin = New-Entry $F 'Foo [1.0].jar' @{ 'plugin.yml' = 'name: Foo' }
+        $pack = New-Entry $F 'Player Corpses 3.7 [1.21.9+].zip' @{ 'pack.mcmeta' = '{}' }
+        $patched = Add-PatchTo (New-Entry $F 'Lib [v2].zip' @{ 'pack.mcmeta' = 'old' }) (New-Patch $F 'lib' @{ 'pack.mcmeta' = 'new' })
+        $m = New-Manifest $F @($plugin) @($pack, $patched)
+
+        Install-Fixture $F $m | Out-Null
+        Get-Sha512 (Join-Path $F.Plugins 'Foo [1.0].jar') | Should -Be $plugin.hashes.sha512
+        Get-Sha512 (Join-Path $F.Packs 'Player Corpses 3.7 [1.21.9+].zip') | Should -Be $pack.hashes.sha512
+        Read-ZipEntry (Join-Path $F.Packs 'Lib [v2].zip') 'pack.mcmeta' | Should -Be 'new'
+        @(Get-ChildItem -LiteralPath $F.Packs -Filter '*.part').Count | Should -Be 0
+
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'Everything is up to date'
+        $F.Fetched.Count | Should -Be 0
+    }
+
     It 'throws a hash error on a mismatched download and leaves no file behind' {
         $F = New-Fixture
         $plugin = New-Entry $F 'Bad.jar' @{ 'plugin.yml' = 'name: Bad' }

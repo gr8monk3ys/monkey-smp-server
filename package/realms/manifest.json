@@ -1,6 +1,6 @@
 {
   "name": "The Realms",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minecraft": "26.1.2",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -270,6 +270,18 @@
   ],
   "datapacks": [
     {
+      "slug": "dragonkind-evolved",
+      "project_id": "yo1bGdBx",
+      "version": "1.13",
+      "version_id": "4CDWHEWC",
+      "file": "dragonkind-evolved-by-kanokarob-v1.13.zip",
+      "url": "https://cdn.modrinth.com/data/yo1bGdBx/versions/4CDWHEWC/dragonkind-evolved-by-kanokarob-v1.13.zip",
+      "size": 695796,
+      "hashes": {
+        "sha512": "dfd416d1e762aef1da252bb89f3e88558ba60508cac9ee61cf020641b1cf80dbb1548b319cc083a1ab6c581fdd76edd7434b6e4b5f3566d1fd544dd57f1f5917"
+      }
+    },
+    {
       "slug": "dungeons-and-taverns",
       "project_id": "tpehi7ww",
       "version": "5.2.0",
@@ -339,6 +351,30 @@
       "size": 973570,
       "hashes": {
         "sha512": "50c41708cb9474e636bce40867e3a3a77b82ee3776257d31ea7a5375d8494f7d5b85eb8f69d38a440d08a48e9c143b3a47def72f6ee8b177e1358b5a315553da"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-pillager-outpost-overhaul",
+      "project_id": "QIt10I7z",
+      "version": "v3.3",
+      "version_id": "uAHOlrKb",
+      "file": "DnT Pillager Outpost Overhaul v3.3.zip",
+      "url": "https://cdn.modrinth.com/data/QIt10I7z/versions/uAHOlrKb/DnT%20Pillager%20Outpost%20Overhaul%20v3.3.zip",
+      "size": 211560,
+      "hashes": {
+        "sha512": "bf3ae77f56642a82c217e417cdd6f6ead41ef13ac7da3cc3e70467833490f485cb6c7619c43db9714d00c70a200cdbde5e841b372d93d781e41c6021376fcae0"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-stronghold-overhaul",
+      "project_id": "rYocd2LE",
+      "version": "v2.4.0",
+      "version_id": "L1ylllq1",
+      "file": "DnT Stronghold Overhaul v2.4.0.zip",
+      "url": "https://cdn.modrinth.com/data/rYocd2LE/versions/L1ylllq1/DnT%20Stronghold%20Overhaul%20v2.4.0.zip",
+      "size": 1897461,
+      "hashes": {
+        "sha512": "98717889e12744c0625b4996c5471ad7938068b48749ef45aa80e82ed06512282386906b67a491ba144e6f692bdbf42a140dc85a90a4c7c201c0155a358724b4"
       }
     },
     {
@@ -435,6 +471,18 @@
       "size": 343680,
       "hashes": {
         "sha512": "a6b5b2e3d51b7af3312daa95e0762fc2fd91f421baa166871ee04ea084b9550c9706a4224c3fb8e781d959041b73de3fe722db61fd99b793661619295ed991c0"
+      }
+    },
+    {
+      "slug": "player-death-corpses",
+      "project_id": "jzoouHnf",
+      "version": "3.7",
+      "version_id": "M8oNDZN3",
+      "file": "Player Corpses 3.7 [1.21.9+].zip",
+      "url": "https://cdn.modrinth.com/data/jzoouHnf/versions/M8oNDZN3/Player%20Corpses%203.7%20%5B1.21.9%2B%5D.zip",
+      "size": 187323,
+      "hashes": {
+        "sha512": "430e733f3f5cfb038dc596c12b579e32c2be907504265fe0ba774c06dddf7bc4cf3dd93f87e450fd5108fdf6f76e2c816804c56c999bcc670aef3d31849e5137"
       }
     },
     {

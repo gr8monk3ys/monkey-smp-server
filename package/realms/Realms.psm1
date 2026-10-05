@@ -166,6 +166,13 @@ function Get-ExpectedHash {
     throw "No sha512/sha256 for $($Entry.file) in manifest.json"
 }
 
+# File names come from upstream and may contain [ ] (e.g. "Player Corpses 3.7 [1.21.9+].zip"), which
+# PowerShell cmdlets treat as wildcards. Moves and copies of artifacts go through .NET, which doesn't.
+function Copy-FileExact([string]$From, [string]$To, [switch]$Move) {
+    if ([IO.File]::Exists($To)) { [IO.File]::Delete($To) }
+    if ($Move) { [IO.File]::Move($From, $To) } else { [IO.File]::Copy($From, $To) }
+}
+
 function Test-Artifact([string]$Path, $Entry) {
     if (-not (Test-Path -LiteralPath $Path)) { return $false }
     if ((Get-Item -LiteralPath $Path).Length -ne [long]$Entry.size) { return $false }
@@ -178,7 +185,8 @@ function Test-Artifact([string]$Path, $Entry) {
 function Save-Artifact($Context, $Entry, [string]$Path) {
     if (Test-Artifact $Path $Entry) { return $false }
     New-Item -ItemType Directory -Force -Path (Split-Path $Path -Parent) | Out-Null
-    $part = "$Path.part"
+    # A bracket-free temporary name: the Fetch adapter may be a cmdlet that reads wildcards.
+    $part = Join-Path (Split-Path $Path -Parent) (".download-" + [guid]::NewGuid().ToString('N') + '.part')
     $want = Get-ExpectedHash $Entry
     for ($try = 1; $try -le 3; $try++) {
         try {
@@ -187,7 +195,7 @@ function Save-Artifact($Context, $Entry, [string]$Path) {
             if (-not (Test-Path -LiteralPath $part)) { throw 'the download produced no file' }
             $got = Get-Hash $part $want.Algorithm
             if ($got -ne $want.Value) { throw "hash mismatch for $($Entry.file) (expected $($want.Value), got $got)" }
-            Move-Item -LiteralPath $part -Destination $Path -Force
+            Copy-FileExact $part $Path -Move
             return $true
         } catch {
             Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
@@ -255,10 +263,10 @@ function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
         if ($got -ne $base) {
             throw "Patch $($patch.path) was made against a different upstream file than $($Entry.file) (base_sha512 $base, downloaded file $got)."
         }
-        Copy-Item -LiteralPath $raw -Destination $work -Force
+        Copy-FileExact $raw $work
         Invoke-ZipPatch $work $patchDir $Entry.file
         New-Item -ItemType Directory -Force -Path (Split-Path $Path -Parent) | Out-Null
-        Move-Item -LiteralPath $work -Destination $Path -Force
+        Copy-FileExact $work $Path -Move
     } finally {
         Remove-Item -LiteralPath $raw, $work -Force -ErrorAction SilentlyContinue
     }

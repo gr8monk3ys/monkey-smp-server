@@ -1,0 +1,13 @@
+# build output
+dist/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# a server installed from package/ for local testing (never commit worlds, jars or secrets)
+package/server/
+package/java/
+package/backups/
+package/downloads/
+package/smoke-console.log*

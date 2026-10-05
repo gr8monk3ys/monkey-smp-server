@@ -14,16 +14,18 @@
         server\    the Minecraft server (world, plugins or mods, configs)
         java\      the Java runtime the server uses
         backups\   world backups made by "backup"
+        exports\   zips made by "export-host" for running the server on an online host
 
 .EXAMPLE
     .\realms.ps1 start
     .\realms.ps1 install -AcceptEula -Owner Notch -NonInteractive
     .\realms.ps1 add-player Steve
+    .\realms.ps1 export-host -NonInteractive -NoOwner
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('start', 'install', 'stop', 'backup', 'add-player', 'status', 'rcon')]
+    [ValidateSet('start', 'install', 'stop', 'backup', 'add-player', 'status', 'rcon', 'export-host')]
     [string]$Command = 'start',
 
     [Parameter(Position = 1)]
@@ -58,6 +60,11 @@ switch ($Command) {
         Start-Server -Context $ctx -Java $java -MemoryGB (Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:REALMS_MEMORY_GB)
     }
     'install' { [void](Install-Server @install) }
+    'export-host' {
+        # Installs (or updates) here first, then packs the result for an online host. Never starts the server.
+        [void](Install-Server @install)
+        [void](Export-HostingBundle -Context $ctx)
+    }
     'stop' { Stop-Server -Context $ctx }
     'backup' { Backup-Server -Context $ctx }
     'add-player' { Add-Player -Context $ctx -Name $Name }

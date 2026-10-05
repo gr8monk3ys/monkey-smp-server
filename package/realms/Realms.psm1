@@ -861,6 +861,292 @@ function Show-Status {
     Write-Host "Running:   $(Test-ServerRunning $Context)    ${addOns}: $addOnCount    Datapacks: $(@($m.datapacks | Where-Object { $_ }).Count)"
 }
 
+# ================================================================ hosting export
+
+# What an online host doesn't need from server\: logs, caches and files the server re-downloads or
+# rebuilds, plus the install state (it describes this PC's folder). Folder names are top level.
+$script:ExportSkipDirs = @('logs', 'crash-reports', 'cache', '.fabric', 'libraries', 'versions', 'bluemap', 'plugins/.paper-remapped')
+$script:ExportSkipFiles = @('.realms-state.json')
+$script:ExportSkipPatterns = @('*.part', 'session.lock')
+# Ports a host has to open besides the game port: Simple Voice Chat (UDP) and the BlueMap web map.
+$script:VoicePort = 24454
+$script:MapPort = 8100
+
+# The Java feature release the manifest pins ('jdk-25.0.4.1+1' -> 25), for picking a JRE on a host.
+function Get-JavaMajor($Manifest) {
+    $v = [string]$Manifest.java.version
+    if ($v -notmatch '(\d+)') { throw "Can't tell the Java version from manifest.json java.version '$v'." }
+    return [int]$Matches[1]
+}
+
+# A word for a POSIX sh command line, quoted only when it has to be.
+function ConvertTo-ShWord([string]$Word) {
+    if ($Word -match '^[A-Za-z0-9_./:=+@%,-]+$') { return $Word }
+    return "'" + $Word.Replace("'", "'\''") + "'"
+}
+
+# The launch command with the memory left to the start script: Get-LaunchArguments stays the one
+# place that knows the flags, jar and arguments. -Memory replaces the "<n>G" in -Xms/-Xmx.
+function Get-HostingLaunchArguments($Manifest, [string]$Memory) {
+    $probe = 987654
+    $out = @()
+    $replaced = 0
+    foreach ($a in Get-LaunchArguments -Manifest $Manifest -MemoryGB $probe) {
+        if ($a -eq "-Xms${probe}G" -or $a -eq "-Xmx${probe}G") { $out += $a.Substring(0, 4) + $Memory + 'G'; $replaced++ }
+        else { $out += $a }
+    }
+    if ($replaced -ne 2) { throw 'Get-LaunchArguments no longer sets -Xms and -Xmx; update the hosting export.' }
+    return $out
+}
+
+function New-StartSh($Manifest) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $lines = @('#!/bin/sh',
+        "# Starts $($Manifest.name) $($Manifest.version) ($($layout.Description), Minecraft $($Manifest.minecraft)).",
+        '# Memory in GB comes from MEMORY_GB (default 4); the java to use from JAVA (default: java on the PATH).',
+        '# Made by "Prepare for Hosting". See HOSTING.txt.',
+        'cd "$(dirname "$0")" || exit 1',
+        'MEMORY_GB="${MEMORY_GB:-4}"',
+        'case "$MEMORY_GB" in',
+        "    ''|*[!0-9]*) echo `"MEMORY_GB must be a whole number of gigabytes, not '`$MEMORY_GB'`" >&2; exit 1 ;;",
+        'esac',
+        'exec "${JAVA:-java}" \')
+    $sentinel = '@MEMORY@'
+    $words = @(Get-HostingLaunchArguments $Manifest $sentinel | ForEach-Object {
+            if ($_.Contains($sentinel)) { $_.Replace($sentinel, '"${MEMORY_GB}"') } else { ConvertTo-ShWord $_ }
+        })
+    for ($i = 0; $i -lt $words.Count; $i++) {
+        $lines += '    ' + $words[$i] + $(if ($i -lt $words.Count - 1) { ' \' } else { '' })
+    }
+    return ($lines -join "`n") + "`n"
+}
+
+function New-StartBat($Manifest) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $cmd = (Get-HostingLaunchArguments $Manifest '%MEMORY_GB%') -join ' '
+    $lines = @('@echo off',
+        "rem Starts $($Manifest.name) $($Manifest.version) ($($layout.Description)) on a Windows server.",
+        'rem Memory in GB comes from MEMORY_GB (default 4). Needs Java on the PATH. See HOSTING.txt.',
+        'setlocal',
+        'cd /d "%~dp0"',
+        'if "%MEMORY_GB%"=="" set MEMORY_GB=4',
+        "java $cmd",
+        'if errorlevel 1 pause')
+    return ($lines -join "`r`n") + "`r`n"
+}
+
+function New-DockerCompose($Manifest, [int]$GamePort) {
+    $java = Get-JavaMajor $Manifest
+    $lines = @(
+        "# $($Manifest.name) $($Manifest.version) on Docker. Start: docker compose up -d   (see HOSTING.txt)",
+        'services:',
+        '  realms:',
+        "    image: eclipse-temurin:$java-jre",
+        '    working_dir: /data',
+        '    volumes:',
+        '      - .:/data',
+        '    command: ["sh", "./start.sh"]',
+        '    environment:',
+        '      MEMORY_GB: "4"',
+        '    ports:',
+        "      - `"${GamePort}:${GamePort}/tcp`"",
+        "      - `"$($script:VoicePort):$($script:VoicePort)/udp`"",
+        "      - `"$($script:MapPort):$($script:MapPort)/tcp`"",
+        '    restart: unless-stopped',
+        '    stdin_open: true',
+        '    tty: true')
+    return ($lines -join "`n") + "`n"
+}
+
+function New-HostingGuide($Manifest, [int]$GamePort, [string]$Folder) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $java = Get-JavaMajor $Manifest
+    $voiceConfig = if ($layout.Type -eq 'fabric') { 'config/voicechat/voicechat-server.properties' } else { 'plugins/voicechat/voicechat-server.properties' }
+    $text = @"
+$($Manifest.name.ToUpper()) $($Manifest.version) - RUNNING THE SERVER ON AN ONLINE HOST
+=====================================================================
+
+This zip is your own copy of The Realms server, made by "Prepare for Hosting" on your PC:
+$($layout.Name) ($($layout.Description)) for Minecraft $($Manifest.minecraft), with its $($layout.AddOns),
+datapacks and settings. Upload it to an online Minecraft host or to your own server
+and players can join without your PC being on.
+
+  Server jar:   $($layout.Jar)
+  Java:         $java
+  Game port:    $GamePort (TCP)
+  Voice chat:   $($script:VoicePort) (UDP, for Simple Voice Chat)
+  Web map:      $($script:MapPort) (TCP, BlueMap; optional)
+
+Unzipping gives a folder "$Folder". Upload what is INSIDE it, so that
+$($layout.Jar) ends up in the server's main (root) folder.
+
+The Minecraft EULA is already accepted in eula.txt (you agreed to it when you prepared
+this zip). The RCON password is in server.properties (rcon.password): change it to a new
+long random one before you go online.
+
+
+1. A MINECRAFT HOSTING COMPANY (Shockbyte, Apex, BisectHosting, any Pterodactyl panel)
+---------------------------------------------------------------------------------------
+  a) Create a server of type "$($layout.Name)" or "Custom JAR".
+     Pick Java $java if the panel asks for a Java version (or a "Java $java" Docker image).
+  b) Stop it, and delete the files the panel put there (keep nothing).
+  c) Upload the zip with the panel's file manager (or SFTP) and extract it. Move the
+     contents of "$Folder" up into the main folder if the panel kept the folder.
+  d) Set the server jar / startup file to:  $($layout.Jar)
+     (A panel that downloads its own jar for you would replace the pinned one - use "Custom JAR".)
+  e) Set the memory (RAM): 4 GB or more.
+  f) Start it. The first start downloads a few more files and takes a few minutes.
+     It is ready when the console says  Done (...)! For help, type "help"
+  g) Voice chat needs UDP port $($script:VoicePort). If the host gives you a second port instead,
+     put that number after  port=  in  $voiceConfig
+     and restart. Without it everything else still works.
+  The panel usually sets the game port itself; players join at the address the panel shows.
+
+
+2. YOUR OWN LINUX SERVER (VPS) WITH DOCKER
+------------------------------------------
+  a) Install Docker:  https://docs.docker.com/engine/install/
+  b) Upload the zip, then:   unzip $Folder.zip   and   cd $Folder
+  c) Start:            docker compose up -d
+     Watch the log:    docker compose logs -f        (Ctrl+C stops watching, not the server)
+     Type commands:    docker compose attach realms  (leave with Ctrl+P then Ctrl+Q)
+     Stop:             docker compose stop
+  d) Memory: change MEMORY_GB in docker-compose.yml (default 4 GB; the VPS needs more than that).
+  It restarts by itself after a reboot until you stop it.
+
+
+3. YOUR OWN LINUX SERVER (VPS) WITHOUT DOCKER
+---------------------------------------------
+  a) Install Java $java, for example:   sudo apt install openjdk-$java-jre-headless
+     (or Eclipse Temurin $java from https://adoptium.net)
+  b) Upload the zip, then:   unzip $Folder.zip   and   cd $Folder
+  c) Start it inside screen or tmux so it keeps running when you log out:
+        screen -S realms
+        MEMORY_GB=4 sh start.sh
+     Leave screen with Ctrl+A then D; come back with  screen -r realms
+  d) Stop: type  stop  in the server console.
+  On a Windows server, install Java $java and double-click start.bat instead.
+
+
+4. FIREWALL (VPS)
+-----------------
+  Allow $GamePort/tcp (the game), $($script:VoicePort)/udp (voice chat) and, if you want the web map,
+  $($script:MapPort)/tcp. For example with ufw:
+     sudo ufw allow $GamePort/tcp
+     sudo ufw allow $($script:VoicePort)/udp
+     sudo ufw allow $($script:MapPort)/tcp
+
+
+5. BACKUPS
+----------
+  Stop the server, then copy the world folders (world, world_nether, world_the_end if they
+  exist) and the $($layout.AddOns) and config folders somewhere safe. Most hosting panels also have
+  a Backups button.
+"@
+    return $text.Replace("`r`n", "`n").Replace("`n", "`r`n")
+}
+
+function Test-ExportSkip([string]$Rel) {
+    foreach ($d in $script:ExportSkipDirs) { if ($Rel.StartsWith("$d/", [StringComparison]::OrdinalIgnoreCase)) { return $true } }
+    if ($script:ExportSkipFiles -contains $Rel) { return $true }
+    $leaf = $Rel.Substring($Rel.LastIndexOf('/') + 1)
+    foreach ($p in $script:ExportSkipPatterns) { if ($leaf -like $p) { return $true } }
+    return $false
+}
+
+function Add-ZipText($Archive, [string]$Name, [string]$Text, [int]$UnixMode = 0) {
+    $entry = $Archive.CreateEntry($Name, [IO.Compression.CompressionLevel]::Optimal)
+    # Regular file + permission bits in the high 16 bits, the way Info-ZIP stores them.
+    if ($UnixMode) { $entry.ExternalAttributes = [BitConverter]::ToInt32([BitConverter]::GetBytes([uint32]((0x8000 -bor $UnixMode) * 65536)), 0) }
+    $s = $entry.Open()
+    try { $b = $script:Utf8.GetBytes($Text); $s.Write($b, 0, $b.Length) } finally { $s.Dispose() }
+}
+
+# .NET on Windows marks every zip entry as made on Windows, and unzip then ignores the Unix
+# permission bits. Marks the entries that carry Unix permissions as made on Unix instead.
+function Set-ZipUnixHost([string]$Path) {
+    $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite)
+    try {
+        $r = New-Object IO.BinaryReader $fs
+        # End of central directory: at least 22 bytes from the end, after a comment of up to 64 KB.
+        $tail = [int][Math]::Min($fs.Length, 22 + 65535)
+        $fs.Position = $fs.Length - $tail
+        $buf = $r.ReadBytes($tail)
+        $eocd = -1
+        for ($i = $buf.Length - 22; $i -ge 0; $i--) {
+            if ($buf[$i] -eq 0x50 -and $buf[$i + 1] -eq 0x4b -and $buf[$i + 2] -eq 5 -and $buf[$i + 3] -eq 6) { $eocd = $i; break }
+        }
+        if ($eocd -lt 0) { throw 'no end of central directory' }
+        $count = [BitConverter]::ToUInt16($buf, $eocd + 10)
+        $start = [BitConverter]::ToUInt32($buf, $eocd + 16)
+        # A zip64 archive (over 4 GB or 65535 files) keeps these elsewhere; leave it as it is.
+        if ($start -eq [uint32]::MaxValue -or $count -eq [uint16]::MaxValue) { return }
+        $pos = [long]$start
+        for ($n = 0; $n -lt $count; $n++) {
+            $fs.Position = $pos
+            $h = $r.ReadBytes(46)
+            if ([BitConverter]::ToUInt32($h, 0) -ne 0x02014b50) { throw 'bad central directory entry' }
+            if ([BitConverter]::ToUInt32($h, 38) -shr 16) {
+                $fs.Position = $pos + 5
+                $fs.WriteByte(3)   # 3 = Unix
+            }
+            $pos += 46 + [BitConverter]::ToUInt16($h, 28) + [BitConverter]::ToUInt16($h, 30) + [BitConverter]::ToUInt16($h, 32)
+        }
+    } finally { $fs.Dispose() }
+}
+
+<#
+.SYNOPSIS
+    Writes exports\TheRealms-<version>-hosting.zip: the installed server folder plus start.sh,
+    start.bat, docker-compose.yml and HOSTING.txt, ready to upload to an online host. Returns its path.
+.DESCRIPTION
+    Run Install-Server first: the export packs what this PC installed (nothing third-party is
+    redistributed by the release itself, see docs/adr/0002). Overwrites an earlier export.
+#>
+function Export-HostingBundle {
+    param([Parameter(Mandatory)] $Context)
+    if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
+    $m = $Context.Manifest
+    $layout = Get-ServerLayout -Manifest $m
+    $server = $Context.ServerDir
+    if (-not (Test-Path -LiteralPath (Join-Path $server $layout.Jar))) {
+        throw "The server isn't installed yet ($($layout.Jar) is missing). Run the install first."
+    }
+    $folder = "TheRealms-$($m.version)-hosting"
+    $exports = Join-Path $Context.Root 'exports'
+    New-Item -ItemType Directory -Force -Path $exports | Out-Null
+    $zipPath = Join-Path $exports "$folder.zip"
+    $part = Join-Path $exports (".export-" + [guid]::NewGuid().ToString('N') + '.part')
+    $p = (Read-ServerProperties (Join-Path $server 'server.properties'))['server-port']
+    $gamePort = if ($p -match '^\d+$') { [int]$p } else { 25565 }
+
+    Write-Step "Packing the server for an online host ($folder.zip)"
+    Use-Zip
+    $base = (Get-Item -LiteralPath $server).FullName.TrimEnd('\')
+    try {
+        $archive = [IO.Compression.ZipFile]::Open($part, [IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach ($f in Get-ChildItem -LiteralPath $base -Recurse -File -Force | Sort-Object FullName) {
+                $rel = $f.FullName.Substring($base.Length + 1).Replace('\', '/')
+                if (Test-ExportSkip $rel) { continue }
+                [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $f.FullName, "$folder/$rel",
+                    [IO.Compression.CompressionLevel]::Optimal)
+            }
+            Add-ZipText $archive "$folder/start.sh" (New-StartSh $m) 493   # 0755
+            Add-ZipText $archive "$folder/start.bat" (New-StartBat $m)
+            Add-ZipText $archive "$folder/docker-compose.yml" (New-DockerCompose $m $gamePort)
+            Add-ZipText $archive "$folder/HOSTING.txt" (New-HostingGuide $m $gamePort $folder)
+        } finally { $archive.Dispose() }
+        Set-ZipUnixHost $part
+        Copy-FileExact $part $zipPath -Move
+    } finally {
+        Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
+    }
+    Write-Ok ("Made {0} ({1:N0} MB)." -f $zipPath, ((Get-Item -LiteralPath $zipPath).Length / 1MB))
+    Write-Ok "Read HOSTING.txt inside the zip for how to upload and start it on a host."
+    return $zipPath
+}
+
 Export-ModuleMember -Function @(
     'New-RealmsContext'
     'Install-Server'
@@ -874,6 +1160,7 @@ Export-ModuleMember -Function @(
     'Get-MemoryGB'
     'Get-LaunchArguments'
     'Get-ServerLayout'
+    'Export-HostingBundle'
     'Get-ExpectedHash'
     'Read-ServerProperties'
     'Set-ServerProperty'

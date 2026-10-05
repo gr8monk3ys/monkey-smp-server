@@ -84,3 +84,15 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   "Failed to bind to port"  - another server is already using port 25565.
   Anything else: send the person who gave you this folder a screenshot of the window,
   plus the file  server\logs\latest.log
+
+8. HOSTING ONLINE (so the server runs without your PC)
+------------------------------------------------------
+  You can run the same server on a Minecraft hosting company (Shockbyte, Apex,
+  BisectHosting, any Pterodactyl panel) or on your own Linux server (VPS).
+  a) Stop the server if it is running.
+  b) Double-click  "Prepare for Hosting.bat". It downloads anything missing (it asks the
+     same questions as Start Server the first time) and makes a zip in the "exports" folder.
+  c) Open that zip and read  HOSTING.txt  - it explains how to upload and start it,
+     step by step, for hosting companies, Docker and plain Linux.
+  The world you play here is only included if it already exists; otherwise the host
+  creates the same world (same seed) the first time it starts.

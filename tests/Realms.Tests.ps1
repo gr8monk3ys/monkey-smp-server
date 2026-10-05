@@ -638,6 +638,158 @@ Describe 'Server layout and launch' {
     }
 }
 
+Describe 'Export-HostingBundle' {
+    BeforeAll {
+        # Entry name -> @{ Text; Mode (Unix permission bits); Host (zip "version made by" OS) }.
+        function Read-ExportZip([string]$Path) {
+            $out = @{}
+            $zip = [IO.Compression.ZipFile]::OpenRead($Path)
+            try {
+                foreach ($e in $zip.Entries) {
+                    $r = New-Object IO.StreamReader ($e.Open())
+                    try { $text = $r.ReadToEnd() } finally { $r.Dispose() }
+                    $mode = ([BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$e.ExternalAttributes), 0) -shr 16) -band 511
+                    $out[$e.FullName] = @{ Text = $text; Mode = $mode; Host = $null }
+                }
+            } finally { $zip.Dispose() }
+            # The made-by OS is not exposed by .NET Framework: read it from the central directory.
+            $b = [IO.File]::ReadAllBytes($Path)
+            for ($i = 0; $i -lt $b.Length - 46; $i++) {
+                if ($b[$i] -eq 0x50 -and $b[$i + 1] -eq 0x4b -and $b[$i + 2] -eq 1 -and $b[$i + 3] -eq 2) {
+                    $name = [Text.Encoding]::UTF8.GetString($b, $i + 46, [BitConverter]::ToUInt16($b, $i + 28))
+                    if ($out.ContainsKey($name)) { $out[$name].Host = $b[$i + 5] }
+                }
+            }
+            return $out
+        }
+
+        function Find-Sh {
+            $c = Get-Command sh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($c) { return $c.Source }
+            foreach ($p in "$env:ProgramFiles\Git\bin\sh.exe", "$env:ProgramFiles\Git\usr\bin\sh.exe") { if (Test-Path -LiteralPath $p) { return $p } }
+            return $null
+        }
+
+        # Installs a fixture of the given type with leftovers an export must skip, and exports it.
+        function New-ExportFixture([string]$Type) {
+            $F = New-Fixture
+            $F.Java.version = 'jdk-21.0.5+11'
+            $pack = New-Entry $F 'Pack [1].zip' @{ 'pack.mcmeta' = '{}' }
+            if ($Type -eq 'fabric') {
+                $F.AddOn = 'mods/M.jar'
+                $F.M = New-Manifest $F @() @($pack) @(New-Entry $F 'M.jar' @{ 'fabric.mod.json' = 'm' }) $F.Fabric
+                $F.Jar = 'fabric-server-launch.jar'
+            } else {
+                $F.AddOn = 'plugins/P.jar'
+                $F.M = New-Manifest $F @(New-Entry $F 'P.jar' @{ 'plugin.yml' = 'p' }) @($pack)
+                $F.Jar = 'paper.jar'
+            }
+            Install-Fixture $F $F.M | Out-Null
+            foreach ($junk in 'logs\latest.log', 'crash-reports\c.txt', 'cache\x.bin', '.fabric\remapped.jar', 'libraries\lib.jar',
+                'versions\mc.jar', 'bluemap\web\index.html', 'plugins\.paper-remapped\r.jar', 'world\session.lock', 'x.part') {
+                Write-Text (Join-Path $F.Server $junk) 'junk'
+            }
+            Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+            Write-Text (Join-Path $F.Server 'config\keep.json') '{}'
+            $F.Zip = Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null
+            $F.Top = 'TheRealms-1.0.0-hosting/'
+            return $F
+        }
+    }
+
+    It 'packs a <Type> install with its jar at the top, without logs, caches or install state' -ForEach @(
+        @{ Type = 'paper' }, @{ Type = 'fabric' }
+    ) {
+        $F = New-ExportFixture $Type
+        $F.Zip | Should -Be (Join-Path $F.Root 'exports\TheRealms-1.0.0-hosting.zip')
+        $z = Read-ExportZip $F.Zip
+        @($z.Keys | Where-Object { -not $_.StartsWith($F.Top) }) | Should -BeNullOrEmpty
+        foreach ($want in $F.Jar, $F.AddOn, 'world/datapacks/Pack [1].zip', 'world/level.dat', 'eula.txt', 'server.properties',
+            'config/keep.json', 'start.sh', 'start.bat', 'docker-compose.yml', 'HOSTING.txt') {
+            $z.Keys | Should -Contain ($F.Top + $want)
+        }
+        $skipped = @($z.Keys | Where-Object { $_ -match '/(logs|crash-reports|cache|\.fabric|libraries|versions|bluemap|plugins/\.paper-remapped)/|\.part$|session\.lock$|\.realms-state\.json$' })
+        $skipped | Should -BeNullOrEmpty
+        $z[$F.Top + 'eula.txt'].Text | Should -Match 'eula=true'
+    }
+
+    It 'writes a <Type> start.sh (LF, 0755, Unix) with the flags of Get-LaunchArguments' -ForEach @(
+        @{ Type = 'paper' }, @{ Type = 'fabric' }
+    ) {
+        $F = New-ExportFixture $Type
+        $z = Read-ExportZip $F.Zip
+        $sh = $z[$F.Top + 'start.sh']
+        $sh.Text | Should -Not -Match "`r"
+        $sh.Text | Should -BeLike "#!/bin/sh`n*"
+        $sh.Mode | Should -Be 493   # 0755
+        $sh.Host | Should -Be 3     # made on Unix, so unzip applies the mode
+        $sh.Text | Should -Match 'MEMORY_GB="\$\{MEMORY_GB:-4\}"'
+        $sh.Text | Should -Match '-Xms"\$\{MEMORY_GB\}"G'
+        $sh.Text | Should -Match '-Xmx"\$\{MEMORY_GB\}"G'
+        foreach ($a in Get-LaunchArguments -Manifest $F.M -MemoryGB 4) {
+            if ($a -notmatch '^-Xm[sx]') { $sh.Text | Should -Match ('(^|\s)' + [regex]::Escape($a) + '(\s|$)') }
+        }
+        $z[$F.Top + 'start.bat'].Text | Should -Match "-jar $([regex]::Escape($F.Jar))"
+        $z[$F.Top + 'start.bat'].Text | Should -Match "-Xmx%MEMORY_GB%G"
+        $z[$F.Top + 'start.bat'].Text.Replace("`r`n", '') | Should -Not -Match "`n"
+        $z[$F.Top + 'HOSTING.txt'].Text | Should -Match ([regex]::Escape($F.Jar))
+        $z[$F.Top + 'HOSTING.txt'].Text | Should -Match 'Java 21'
+    }
+
+    It 'runs start.sh with MEMORY_GB and exactly the arguments of Get-LaunchArguments' {
+        $sh = Find-Sh
+        if (-not $sh) { Set-ItResult -Skipped -Because 'no sh.exe (Git for Windows) on this machine'; return }
+        $F = New-ExportFixture 'fabric'
+        $dir = Join-Path $F.Dir 'unzipped'
+        [IO.Compression.ZipFile]::ExtractToDirectory($F.Zip, $dir)
+        $run = Join-Path $dir 'TheRealms-1.0.0-hosting'
+        [IO.File]::WriteAllText((Join-Path $run 'fakejava'), "#!/bin/sh`nprintf '%s\n' `"`$@`"`n", $script:Utf8)
+        Push-Location $run
+        try {
+            $seven = @(& $sh -c 'MEMORY_GB=7 JAVA=./fakejava sh ./start.sh')
+            $default = @(& $sh -c 'JAVA=./fakejava sh ./start.sh')
+            $null = & $sh -c 'MEMORY_GB=lots JAVA=./fakejava sh ./start.sh 2>/dev/null'
+            $badExit = $LASTEXITCODE
+        } finally { Pop-Location }
+        $seven | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 7)
+        $default | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 4)
+        $badExit | Should -Be 1
+    }
+
+    It 'pins the Docker image to the manifest Java and maps the game, voice and map ports' {
+        $F = New-ExportFixture 'paper'
+        $yml = (Read-ExportZip $F.Zip)[$F.Top + 'docker-compose.yml'].Text
+        $yml | Should -Not -Match "`r"
+        $yml | Should -Match '(?m)^    image: eclipse-temurin:21-jre$'
+        $yml | Should -Match '(?m)^    command: \["sh", "\./start\.sh"\]$'
+        $yml | Should -Match ([regex]::Escape("`"$($F.Port):$($F.Port)/tcp`""))
+        $yml | Should -Match '"24454:24454/udp"'
+        $yml | Should -Match '"8100:8100/tcp"'
+        $yml | Should -Match 'restart: unless-stopped'
+    }
+
+    It 'overwrites an earlier export and leaves no temporary file' {
+        $F = New-ExportFixture 'paper'
+        Write-Text (Join-Path $F.Server 'config\later.json') '{}'
+        Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null | Out-Null
+        @(Get-ChildItem -LiteralPath (Join-Path $F.Root 'exports') -Force | ForEach-Object { $_.Name }) | Should -Be @('TheRealms-1.0.0-hosting.zip')
+        (Read-ExportZip $F.Zip).Keys | Should -Contain ($F.Top + 'config/later.json')
+    }
+
+    It 'refuses while the server is running' {
+        $F = New-Fixture
+        Install-Fixture $F (New-Manifest $F) | Out-Null
+        Mock Test-ServerRunning -ModuleName Realms { $true }
+        { Export-HostingBundle -Context (New-Ctx $F (New-Manifest $F)) } | Should -Throw '*server is running*'
+        Join-Path $F.Root 'exports' | Should -Not -Exist
+    }
+
+    It 'refuses before anything is installed' {
+        $F = New-Fixture
+        { Export-HostingBundle -Context (New-Ctx $F (New-Manifest $F)) } | Should -Throw '*isn''t installed yet*'
+    }
+}
+
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },

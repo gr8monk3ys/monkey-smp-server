@@ -12,8 +12,11 @@ Everything below assumes the release zip is unzipped into a folder, called `TheR
 | Back up | `Backup World.bat` (safe while running; keeps the newest 14 in `backups\`) |
 | Update to a new release | stop the server, unzip the new release **over** the old folder, start again |
 
-Updating never touches the world or your config edits. It only swaps plugin/datapack/Paper files to the
+Updating never touches the world or your config edits. It only swaps mod/datapack/server files to the
 versions pinned in the new manifest.
+
+**Exception: 1.x (Paper) to 2.x (Fabric).** These are different servers with different worlds. Unzip 2.x
+into a **new** folder; the installer refuses to install over a 1.x world so nothing gets mixed up.
 
 The same actions from PowerShell:
 
@@ -30,9 +33,9 @@ Memory is picked from the computer's RAM (3 to 6 GB). To force a value, set the 
 
 | Rank | Can |
 |---|---|
-| `default` | homes, spawn, tpa, msg, pay, warps, nicknames |
-| `builder` | + WorldEdit, creative, fly |
-| `moderator` | + kick, mute, ban, vanish, tp, social spy, CoreProtect inspect/lookup/rollback/restore (not purge) |
+| `default` | normal play: parties and claims (Open Parties and Claims), voice chat |
+| `builder` | + switch game mode (`/gamemode`) |
+| `moderator` | + kick, ban, pardon, teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
 | `admin` | everything |
 
 ```
@@ -40,33 +43,40 @@ lp user NAME parent set moderator
 lp user NAME parent remove moderator
 ```
 
-Ranks live in `server\plugins\LuckPerms\yaml-storage\` as plain text files.
+Ranks live in `server\mods\luckperms\yaml-storage\` as plain text files (LuckPerms' settings are in
+`server\config\luckperms\luckperms.conf`).
 
 ## Griefing
 
-CoreProtect logs every block change. Common commands:
+Ledger logs every block change. Common commands:
 
 ```
-co inspect                      # toggle, then click a block to see who changed it
-co rollback u:NAME t:2h r:30    # undo NAME's changes in the last 2 hours within 30 blocks
-co restore u:NAME t:2h r:30     # redo them if you rolled back too much
+ledger inspect                                  # toggle, then click a block to see who changed it
+ledger search source:NAME range:30 after:2h     # what NAME did in the last 2 hours within 30 blocks
+ledger rollback source:NAME range:30 after:2h   # undo it
+ledger restore source:NAME range:30 after:2h    # redo it if you rolled back too much
 ```
 
-## Towns & Nations settings
+Claimed land (Open Parties and Claims) is already protected from outsiders, so most griefing happens
+in the wild.
 
-`server\plugins\TownsAndNations\config.yml`. This pack changes:
+## Claims and parties
 
-- `allowedTimeSlotsWar: ["10:00-23:30"]`: wars only during the day
-- `MinimumTimeBeforeAttack: 30`: 30 minutes' warning before an attack
-
-Everything else is the plugin default. Stop the server before editing configs.
+Open Parties and Claims settings are in `server\config\openpartiesandclaims-server.toml` (how many chunks
+each player may claim, whether claims are protected from explosions, and so on). Admins can claim land
+for the server itself (for example around spawn) with the server-claim mode in the claims menu. Stop the
+server before editing configs.
 
 ## Spawn protection
 
-WorldGuard region `spawn` (`server\plugins\WorldGuard\worlds\world\regions.yml`) covers
-x -864..-736, z -80..48 with PvP, TNT, creeper/other explosions, fire spread and ender pearls denied.
-It matches the pinned seed's spawn point. To redraw it in game: `//wand`, select two corners,
-`/rg redefine spawn`.
+Vanilla `spawn-protection=48` in `server\server.properties`: within 48 blocks of spawn only admins (ops)
+can build or break blocks. PvP is not blocked at spawn; make a server claim around it if you want that.
+
+## World generation
+
+The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,
+Incendium, Nullscape and the structure mods. The seed is pinned in the manifest, so every copy of the
+server gets the same terrain.
 
 ## The live map
 

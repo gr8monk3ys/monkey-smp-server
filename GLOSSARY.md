@@ -39,8 +39,12 @@ The pinned list of every artifact a release's server needs, plus the world setti
 _Avoid_: lockfile, config, dependency list
 
 **Artifact**:
-One downloadable file the server runs: the Java runtime, the server software, a plugin or a datapack.
-_Avoid_: dependency, asset, mod (for plugins and datapacks)
+One downloadable file the server runs: the Java runtime, the server software, a mod, a plugin or a datapack.
+_Avoid_: dependency, asset
+
+**Mod**:
+An add-on the Fabric server loads from its mods folder; many also have to be installed by players.
+_Avoid_: plugin (that is the Paper kind), addon
 
 **Manifest entry**:
 The manifest's record of one artifact: where it comes from, what it is called on disk, and the hash it must match.

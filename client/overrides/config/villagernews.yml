@@ -1,0 +1,36 @@
+# Villager News configuration. Restart the game or server after editing.
+
+# Settings for new worlds: a world copies them the first time it is started and keeps its own copy after
+# that, which operators (or the singleplayer owner) change in game: Esc -> Villager News.
+world-defaults:
+  # muted, shy, default or super-chatty
+  chattiness: default
+  # How often villagers say their rarer, longer lines: never, default or often
+  rare-lines: default
+  # Whether the special villagers (the Mayor, Testificate Man, #5, #9, ...) spawn in villages
+  spawn-special-villagers: true
+
+# Whether players who never changed it see subtitles when villagers speak
+subtitles-by-default: false
+
+# How each chattiness level behaves. These only limit what villagers say on their own; reactions to
+# what a player does (hitting, trading, gifts, ringing the bell, ...) still play. (Shy also pauses all
+# lines for a few seconds after each one, like the Bedrock add-on.) Limits count villagers within 48
+# blocks of each other, so players far apart on a server do not silence each other.
+#   cooldown-rate:   how fast the per-villager and per-line cooldowns run out. The Bedrock add-on uses
+#                    1.0 for Default; lower is quieter (0.5 = cooldowns last twice as long).
+#   min-gap-seconds: at least this long between two lines that villagers start on their own
+#   max-speakers:    at most this many villagers talking at the same time (0 = no limit)
+chattiness:
+  shy:
+    cooldown-rate: 0.5
+    min-gap-seconds: 2
+    max-speakers: 1
+  default:
+    cooldown-rate: 0.4
+    min-gap-seconds: 5
+    max-speakers: 2
+  super-chatty:
+    cooldown-rate: 5.0
+    min-gap-seconds: 0
+    max-speakers: 0

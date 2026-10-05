@@ -1,0 +1,25 @@
+#When looking down the current mount will begin to fade so what lies below can easily be seen. Does not apply to non-living vehicles.
+#Default Value: true
+translucent_mount = true
+
+[boat]
+	#Allow rendering held items while rowing.
+	#The items this applies to are defined by a corresponding tag.
+	#Default Value: true
+	hold_items_while_rowing = true
+
+[inventory]
+	#Show health and armor attributes for a mob in the corresponding inventory screen.
+	#Default Value: false
+	mob_attributes_in_inventory = false
+	#The inventory to open first when riding a vehicle.
+	#Default Value: VEHICLE
+	#Allowed Values: PLAYER, VEHICLE
+	default_vehicle_inventory = "VEHICLE"
+	#Add a button to the player and vehicle inventory for switching in-between.
+	#Default Value: true
+	vehicle_inventory_button = true
+	#Press control + the inventory key, or press the inventory key twice to open the player inventory instead of the vehicle inventory.
+	#Default Value: CONTROL
+	#Allowed Values: NONE, DOUBLE_TAB, CONTROL
+	switch_vehicle_inventory = "CONTROL"

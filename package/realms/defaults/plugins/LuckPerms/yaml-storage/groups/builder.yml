@@ -1,0 +1,7 @@
+name: builder
+permissions:
+- worldedit.*
+- essentials.fly
+- essentials.gamemode
+parents:
+- default

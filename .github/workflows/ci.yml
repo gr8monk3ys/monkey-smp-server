@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tools:
+    name: Lint, unit tests, manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pytest ruff
+      - run: ruff check tools tests
+      - run: pytest -q
+      - run: python tools/validate.py
+
+  smoke:
+    name: Boot the packaged server (Windows)
+    needs: tools
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Lint PowerShell (PSScriptAnalyzer)
+        shell: powershell
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          $issues = Invoke-ScriptAnalyzer -Path package/realms/realms.ps1, tests/smoke.ps1 -Settings ./PSScriptAnalyzerSettings.psd1
+          $issues | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+          if ($issues) { exit 1 }
+
+      - name: Build release files
+        run: python tools/build.py
+
+      - name: Unzip like a user would
+        shell: powershell
+        run: Expand-Archive -Path (Get-Item dist/TheRealms-Server-*.zip) -DestinationPath "$env:RUNNER_TEMP\realms"
+
+      - name: Install, boot, check plugins and datapacks, stop
+        shell: powershell
+        run: ./tests/smoke.ps1 -Root "$env:RUNNER_TEMP\realms\TheRealms-Server" -MemoryGB 4
+
+      - name: Upload server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: |
+            ${{ runner.temp }}/realms/TheRealms-Server/server/logs/
+            ${{ runner.temp }}/realms/TheRealms-Server/smoke-console.log*
+          if-no-files-found: ignore
+
+      - name: Upload release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

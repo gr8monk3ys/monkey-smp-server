@@ -27,7 +27,9 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: |
           version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '$0 ~ "^## \\[?"v"\\]?" {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          # Literal match on "## [x.y.z]": the section up to the next "## " heading.
+          awk -v h="## [$version]" 'index($0, h) == 1 {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then echo "CHANGELOG.md has no '## [$version]' section"; exit 1; fi
           cat >> notes.md <<'EOF'
 
           ### Downloads

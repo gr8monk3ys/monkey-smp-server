@@ -1,0 +1,3 @@
+# Patched datapacks are pinned to their upstream file and never updated automatically
+
+A patch is a set of file replacements made against one exact upstream datapack file, and the manifest records that file's hash next to the patch. When a newer upstream version appears, the update check reports it but does not move the pin, because the old patch may no longer fit, or may silently undo upstream fixes, in the new file. A maintainer takes the update by re-making the patch against the new file with a snapshot. Applying the old patch to the new file automatically was the original behaviour and was removed as a bug.

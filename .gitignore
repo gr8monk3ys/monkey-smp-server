@@ -11,3 +11,6 @@ package/java/
 package/backups/
 package/downloads/
 package/smoke-console.log*
+
+# agent worktrees
+.claude/worktrees/

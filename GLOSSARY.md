@@ -1,0 +1,77 @@
+# The Realms
+
+A Minecraft factions server packaged so that anyone can host it on Windows from a single download, and kept reproducible by pinning everything it runs.
+
+## People
+
+**Host**:
+The person who runs the server on their own computer.
+_Avoid_: admin, operator, server owner
+
+**Owner**:
+The Minecraft account given the admin rank and op status when a server is first installed; usually the host's own account.
+_Avoid_: admin, host
+
+**Player**:
+Anyone who joins the server with Minecraft.
+_Avoid_: user, client, member
+
+**Rank**:
+A named set of in-game permissions a player holds: default, builder, moderator or admin.
+_Avoid_: role, group
+
+## What ships
+
+**Release**:
+One numbered version of The Realms, made of a server package and a client pack built from the same manifest.
+_Avoid_: build, version (alone)
+
+**Server package**:
+The small download a host unzips and starts the server from; it holds instructions and configuration, never third-party files.
+_Avoid_: installer, bundle, modpack
+
+**Client pack**:
+The optional set of mods, resource packs and shaders a player installs to get the intended look and feel.
+_Avoid_: modpack (alone), client mods
+
+**Manifest**:
+The pinned list of every artifact a release's server needs, plus the world settings every copy shares.
+_Avoid_: lockfile, config, dependency list
+
+**Artifact**:
+One downloadable file the server runs: the Java runtime, the server software, a plugin or a datapack.
+_Avoid_: dependency, asset, mod (for plugins and datapacks)
+
+**Manifest entry**:
+The manifest's record of one artifact: where it comes from, what it is called on disk, and the hash it must match.
+_Avoid_: pin, lock, package
+
+**Upstream**:
+The official source an artifact is downloaded from (Modrinth, PaperMC, Adoptium).
+_Avoid_: mirror, CDN, registry
+
+**Patch**:
+A small set of file replacements applied inside one downloaded datapack, tied to the exact upstream file it was made from.
+_Avoid_: fix, override, mod
+
+**Defaults**:
+The configuration a server starts with on its first install; once a file exists, the host's version wins.
+_Avoid_: templates, config overrides
+
+## Lifecycle
+
+**Install**:
+Bringing a server folder in line with a release's manifest; running it again changes nothing unless the release changed.
+_Avoid_: setup, sync, deploy
+
+**Managed file**:
+A file an install placed in the server folder and may later replace or remove; every other file belongs to the host.
+_Avoid_: installed file, tracked file
+
+**Snapshot**:
+Capturing what a running server or player instance actually uses back into the manifest or client pack.
+_Avoid_: export, import, scan
+
+**Spawn safe zone**:
+The protected area around the world spawn where players can't fight or blow things up.
+_Avoid_: spawn protection (Minecraft uses that for something else)

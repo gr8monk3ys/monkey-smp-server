@@ -1,0 +1,73 @@
+{
+ "request": {
+  "method": "POST",
+  "url": "https://api.modrinth.com/v2/version_files",
+  "body": {
+   "hashes": [
+    "f46257f7e39e1340d0f6012eebed83e55513713d",
+    "fc8bb9919fa77c670b7ed5c284bcb66770ea71fc",
+    "fcc79ef323ee17567d6ded4a022c7e6e105cee01"
+   ],
+   "algorithm": "sha1"
+  }
+ },
+ "response": {
+  "f46257f7e39e1340d0f6012eebed83e55513713d": {
+   "id": "lGev5gzi",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.8",
+   "version_type": "release",
+   "date_published": "2026-10-01T13:52:17.599424Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.8 - 1.21-26.3+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/lGev5gzi/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.8%20-%201.21-26.3%2B.zip",
+     "size": 142475,
+     "primary": true,
+     "hashes": {
+      "sha1": "f46257f7e39e1340d0f6012eebed83e55513713d",
+      "sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
+     }
+    }
+   ]
+  },
+  "fc8bb9919fa77c670b7ed5c284bcb66770ea71fc": {
+   "id": "b0mk8uS6",
+   "project_id": "Vebnzrzj",
+   "version_number": "v5.5.71-bukkit",
+   "version_type": "release",
+   "date_published": "2026-08-06T19:40:10.637955Z",
+   "files": [
+    {
+     "filename": "LuckPerms-Bukkit-5.5.71.jar",
+     "url": "https://cdn.modrinth.com/data/Vebnzrzj/versions/b0mk8uS6/LuckPerms-Bukkit-5.5.71.jar",
+     "size": 1501521,
+     "primary": true,
+     "hashes": {
+      "sha1": "fc8bb9919fa77c670b7ed5c284bcb66770ea71fc",
+      "sha512": "188a91f0a543d23bfda32385fca6db63d61e49c8a422bd452a260bd9cbc6a7d7fe45071199e9fca8f3ce43c2b41ee84fd315bd15464577028ff3951a7d4fab27"
+     }
+    }
+   ]
+  },
+  "fcc79ef323ee17567d6ded4a022c7e6e105cee01": {
+   "id": "LMfNUgI4",
+   "project_id": "zJhgi9nK",
+   "version_number": "1.2",
+   "version_type": "release",
+   "date_published": "2026-09-27T14:29:46.998170Z",
+   "files": [
+    {
+     "filename": "Silver's Inventory Library - v.1.2.zip",
+     "url": "https://cdn.modrinth.com/data/zJhgi9nK/versions/LMfNUgI4/Silver%27s%20Inventory%20Library%20-%20v.1.2.zip",
+     "size": 17375,
+     "primary": true,
+     "hashes": {
+      "sha1": "fcc79ef323ee17567d6ded4a022c7e6e105cee01",
+      "sha512": "a6b4a92edc41e4540e05b6b7b39d6b623bf0115ceb9ac3cdc15d4574869c7a35340c35a7b242f560830fb1cc5b91569bbd0c4b2b0ef4d150e413ad1956f62fed"
+     }
+    }
+   ]
+  }
+ }
+}

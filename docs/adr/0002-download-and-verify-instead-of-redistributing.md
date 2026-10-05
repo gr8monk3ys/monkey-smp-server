@@ -1,0 +1,3 @@
+# Download and verify artifacts at install time instead of shipping them
+
+The server package contains no third-party files. On the host's computer, an install downloads every artifact from its upstream and checks it against the size and hash pinned in the manifest before using it. Many plugin and datapack licences forbid re-uploading, a self-contained zip would be hundreds of megabytes per release, and pinning hashes still gives byte-for-byte reproducible servers. The cost is that a first install needs internet access, and a release stops installing if an upstream removes a pinned file; the weekly update check re-verifies every pinned download so that is noticed early.

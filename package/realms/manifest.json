@@ -460,7 +460,10 @@
       "hashes": {
         "sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
       },
-      "patch": "patches/silvers_effects-library"
+      "patch": {
+        "path": "patches/silvers_effects-library",
+        "base_sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
+      }
     },
     {
       "slug": "silvers_inventory-library",

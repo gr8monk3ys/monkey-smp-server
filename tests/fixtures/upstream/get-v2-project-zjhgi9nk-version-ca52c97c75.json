@@ -1,0 +1,65 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.modrinth.com/v2/project/zJhgi9nK/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22datapack%22%5D"
+ },
+ "response": [
+  {
+   "id": "LMfNUgI4",
+   "project_id": "zJhgi9nK",
+   "version_number": "1.2",
+   "version_type": "release",
+   "date_published": "2026-09-27T14:29:46.998170Z",
+   "files": [
+    {
+     "filename": "Silver's Inventory Library - v.1.2.zip",
+     "url": "https://cdn.modrinth.com/data/zJhgi9nK/versions/LMfNUgI4/Silver%27s%20Inventory%20Library%20-%20v.1.2.zip",
+     "size": 17375,
+     "primary": true,
+     "hashes": {
+      "sha1": "fcc79ef323ee17567d6ded4a022c7e6e105cee01",
+      "sha512": "a6b4a92edc41e4540e05b6b7b39d6b623bf0115ceb9ac3cdc15d4574869c7a35340c35a7b242f560830fb1cc5b91569bbd0c4b2b0ef4d150e413ad1956f62fed"
+     }
+    }
+   ]
+  },
+  {
+   "id": "eSs4sEqw",
+   "project_id": "zJhgi9nK",
+   "version_number": "1.1",
+   "version_type": "release",
+   "date_published": "2026-09-08T02:58:54.108212Z",
+   "files": [
+    {
+     "filename": "Silver's Iventory Library - v.1.1.zip",
+     "url": "https://cdn.modrinth.com/data/zJhgi9nK/versions/eSs4sEqw/Silver%27s%20Iventory%20Library%20-%20v.1.1.zip",
+     "size": 3834,
+     "primary": true,
+     "hashes": {
+      "sha1": "8bdd53f985ac286baf2c3175500d72e7a34ed359",
+      "sha512": "89fad83801e4029e8144c1fe118476ecad47bb2ccf46dc28d9aab5764a28914079ccb61143d2b75e3cd1cd180d5fbbc9e3d2501613032814e1440ca641094b1b"
+     }
+    }
+   ]
+  },
+  {
+   "id": "NAVnU8OO",
+   "project_id": "zJhgi9nK",
+   "version_number": "1.0",
+   "version_type": "alpha",
+   "date_published": "2026-05-20T18:10:27.929205Z",
+   "files": [
+    {
+     "filename": "Silver's Iventory Library - v.1.0.zip",
+     "url": "https://cdn.modrinth.com/data/zJhgi9nK/versions/NAVnU8OO/Silver%27s%20Iventory%20Library%20-%20v.1.0.zip",
+     "size": 3821,
+     "primary": true,
+     "hashes": {
+      "sha1": "e3fb4ae2bae50ad56df44b25f309e61fd9c5b4dc",
+      "sha512": "b3ae79c74035c6b02017453ccaa321862f06194d50825d5da454b901f7330483fd2310b605f8a7b4c7a1ca06302ecc46ee0cfdb87ec35bc88d880e87cd67ce4f"
+     }
+    }
+   ]
+  }
+ ]
+}

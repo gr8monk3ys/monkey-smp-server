@@ -35,7 +35,8 @@ package/                    <- exactly what goes in the release zip
   Stop Server.bat, Backup World.bat, Add Player.bat
   READ ME FIRST.txt         <- plain-language guide for the host
   realms/
-    realms.ps1              <- installer + launcher (Windows PowerShell 5.1, built into Windows)
+    realms.ps1              <- entry script the launchers call (Windows PowerShell 5.1, built into Windows)
+    Realms.psm1             <- the installer module: install, start/stop, backup, RCON (Pester-tested)
     manifest.json           <- every download, pinned by URL + size + hash
     defaults/               <- first-run configs (server.properties, Towns & Nations, WorldGuard, LuckPerms ranks)
     patches/                <- small fixes applied inside downloaded datapacks
@@ -59,7 +60,7 @@ tests/                      <- unit tests + end-to-end smoke test
 |---|---|---|
 | [CI](.github/workflows/ci.yml) | every push and PR | ruff + pytest + manifest validation, PSScriptAnalyzer, then **builds the release zip on a Windows runner, unzips it, installs, boots the server, checks all 20 plugins enabled and all 24 datapacks are active, and stops it** |
 | [Release](.github/workflows/release.yml) | tag `v*.*.*` | runs CI, then publishes the server zip + client `.mrpack` as a GitHub release |
-| [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download and opens/updates an issue listing newer Paper/plugin/datapack builds |
+| [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download (and that each datapack patch still fits) and opens/updates an issue listing newer Paper/plugin/datapack builds |
 
 ## Maintaining
 

@@ -1,0 +1,65 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.modrinth.com/v2/project/Vebnzrzj/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22paper%22%2C%20%22spigot%22%2C%20%22bukkit%22%2C%20%22purpur%22%2C%20%22folia%22%5D"
+ },
+ "response": [
+  {
+   "id": "b0mk8uS6",
+   "project_id": "Vebnzrzj",
+   "version_number": "v5.5.71-bukkit",
+   "version_type": "release",
+   "date_published": "2026-08-06T19:40:10.637955Z",
+   "files": [
+    {
+     "filename": "LuckPerms-Bukkit-5.5.71.jar",
+     "url": "https://cdn.modrinth.com/data/Vebnzrzj/versions/b0mk8uS6/LuckPerms-Bukkit-5.5.71.jar",
+     "size": 1501521,
+     "primary": true,
+     "hashes": {
+      "sha1": "fc8bb9919fa77c670b7ed5c284bcb66770ea71fc",
+      "sha512": "188a91f0a543d23bfda32385fca6db63d61e49c8a422bd452a260bd9cbc6a7d7fe45071199e9fca8f3ce43c2b41ee84fd315bd15464577028ff3951a7d4fab27"
+     }
+    }
+   ]
+  },
+  {
+   "id": "MBSY8toc",
+   "project_id": "Vebnzrzj",
+   "version_number": "v5.5.53-bukkit",
+   "version_type": "release",
+   "date_published": "2026-05-27T07:14:37.365816Z",
+   "files": [
+    {
+     "filename": "LuckPerms-Bukkit-5.5.53.jar",
+     "url": "https://cdn.modrinth.com/data/Vebnzrzj/versions/MBSY8toc/LuckPerms-Bukkit-5.5.53.jar",
+     "size": 1490252,
+     "primary": true,
+     "hashes": {
+      "sha1": "dad091fbabe7cbb1db3dc1478eb1fe413520a014",
+      "sha512": "a0e087adfc1c7b9fab8fdb5a430a3331a2ca30bfc72818bb7e65ce9baff051a1490834be8cbb9cbeda292f2e92c44cf03fb829ebeb233ade9d666ed908e49ad5"
+     }
+    }
+   ]
+  },
+  {
+   "id": "OrIs0S6b",
+   "project_id": "Vebnzrzj",
+   "version_number": "v5.5.17-bukkit",
+   "version_type": "release",
+   "date_published": "2025-10-11T12:26:55.608887Z",
+   "files": [
+    {
+     "filename": "LuckPerms-Bukkit-5.5.17.jar",
+     "url": "https://cdn.modrinth.com/data/Vebnzrzj/versions/OrIs0S6b/LuckPerms-Bukkit-5.5.17.jar",
+     "size": 1480518,
+     "primary": true,
+     "hashes": {
+      "sha1": "af24a4fc61c4ae814ce9a280179b9c88ec614013",
+      "sha512": "773895644260b338818bfeff0c78f8d4f590f56b0f711c378a4eec91be6e8b37354099b5db1ea5b2dce4c02486213297a6da09675c9bf6f014f9a400b5772cf3"
+     }
+    }
+   ]
+  }
+ ]
+}

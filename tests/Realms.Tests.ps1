@@ -425,10 +425,12 @@ Describe 'Backup-Server' {
 Describe 'Invoke-Rcon' {
     BeforeAll {
         # A fake Minecraft RCON server: replies to each command in two packets (with a colour code),
-        # then answers the marker packet, like the real one does.
+        # then answers the marker packet, like the real one does. The first $Drops connections are
+        # cut after the first command, like a server still busy right after "Done".
         $script:FakeRcon = {
-            param($Listener, $Secret)
+            param($Listener, $Secret, [int]$Drops)
             $enc = New-Object System.Text.UTF8Encoding $false
+            for ($conn = 0; ; $conn++) {
             $deadline = (Get-Date).AddSeconds(15)
             while (-not $Listener.Pending()) {
                 if ((Get-Date) -gt $deadline) { return 'no client' }
@@ -467,6 +469,7 @@ Describe 'Invoke-Rcon' {
                 $auth = & $recv
                 if ($auth.Body -ne $Secret) { & $sendP -1 2 ''; return 'rejected' }
                 & $sendP $auth.Id 2 ''
+                if ($conn -lt $Drops) { [void](& $recv); continue }
                 while ($true) {
                     try { $cmd = & $recv } catch { break }
                     $marker = & $recv
@@ -476,9 +479,10 @@ Describe 'Invoke-Rcon' {
                 }
                 return 'ok'
             } finally { $client.Close() }
+            }
         }
 
-        function Invoke-WithFakeRcon([string]$Secret, [string]$ClientSecret, [string[]]$Commands) {
+        function Invoke-WithFakeRcon([string]$Secret, [string]$ClientSecret, [string[]]$Commands, [int]$Drops = 0) {
             $F = New-Fixture
             $listener = New-Object Net.Sockets.TcpListener ([Net.IPAddress]::Loopback, 0)
             $listener.Start()
@@ -486,7 +490,7 @@ Describe 'Invoke-Rcon' {
             try {
                 Write-Text (Join-Path $F.Server 'server.properties') (
                     "server-port=$($F.Port)`nenable-rcon=true`nrcon.port=$($listener.LocalEndpoint.Port)`nrcon.password=$ClientSecret`n")
-                [void]$ps.AddScript($script:FakeRcon).AddArgument($listener).AddArgument($Secret)
+                [void]$ps.AddScript($script:FakeRcon).AddArgument($listener).AddArgument($Secret).AddArgument($Drops)
                 $handle = $ps.BeginInvoke()
                 try {
                     return Invoke-Rcon -Context (New-Ctx $F (New-Manifest $F)) -Commands $Commands
@@ -505,6 +509,19 @@ Describe 'Invoke-Rcon' {
         $out.Count | Should -Be 2
         $out[0] | Should -Be 'reply to list part1; part2'
         $out[1] | Should -Be 'reply to seed part1; part2'
+    }
+
+    It 'reconnects when a busy server drops the connection' {
+        Mock Start-Sleep -ModuleName Realms {}
+        $out = @(Invoke-WithFakeRcon 'pw' 'pw' @('datapack list enabled') -Drops 2)
+        $out | Should -Be @('reply to datapack list enabled part1; part2')
+        Should -Invoke Start-Sleep -ModuleName Realms -Times 2 -Exactly
+    }
+
+    It 'gives up after five dropped connections' {
+        Mock Start-Sleep -ModuleName Realms {}
+        { Invoke-WithFakeRcon 'pw' 'pw' @('seed') -Drops 9 } | Should -Throw
+        Should -Invoke Start-Sleep -ModuleName Realms -Times 4 -Exactly
     }
 
     It 'throws when the password is rejected' {

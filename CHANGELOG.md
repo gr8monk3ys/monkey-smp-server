@@ -11,6 +11,10 @@ Synced with the updated mod list.
 - Kept the Epic Structures packs and Spawn Animations on the server (their list replacements are
   Fabric-only and can't run on Paper).
 - Update check no longer proposes re-listed files or downgrades from a newer pre-release pin.
+- Installer: file names with [ ] (like Player Corpses') no longer break the download.
+- RCON (Stop Server, Add Player, backups) reconnects if a server still warming up drops it.
+- Known issue: Silver's Custom Effects Library logs parse errors on 26.1.2 (some of its effects
+  don't work); this predates 1.1.0 and is an upstream compatibility problem.
 - Installer and tools split into testable modules (Pester + pytest), patches pinned to their upstream
   file, glossary and ADRs.
 

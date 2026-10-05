@@ -484,7 +484,24 @@ function Invoke-Rcon {
     param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string[]]$Commands)
     $props = Read-ServerProperties (Join-Path $Context.ServerDir 'server.properties')
     if ($props['enable-rcon'] -ne 'true' -or -not $props['rcon.password']) { throw 'RCON is turned off in server.properties.' }
-    return Invoke-RconSession '127.0.0.1' ([int]$props['rcon.port']) $props['rcon.password'] $Commands
+    # A server that is still warming up can drop or refuse a connection for a few seconds after
+    # "Done". Reconnect and resend; every command the scripts send (stop, whitelist add, save-*) is
+    # safe to repeat. A rejected password is never retried.
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            return Invoke-RconSession '127.0.0.1' ([int]$props['rcon.port']) $props['rcon.password'] $Commands
+        } catch {
+            # A drop shows up as a clean close, a reset (IOException) or a refused connect (SocketException).
+            $transient = $false
+            for ($e = $_.Exception; $e; $e = $e.InnerException) {
+                if ($e.Message -like '*RCON connection closed*' -or $e -is [IO.IOException] -or $e -is [Net.Sockets.SocketException]) {
+                    $transient = $true
+                }
+            }
+            if (-not $transient -or $attempt -ge 5) { throw }
+            Start-Sleep -Seconds 3
+        }
+    }
 }
 
 # ================================================================ players

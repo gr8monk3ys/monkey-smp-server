@@ -1,0 +1,78 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://fill.papermc.io/v3/projects/paper/versions/26.1.2/builds"
+ },
+ "response": [
+  {
+   "id": 74,
+   "channel": "STABLE",
+   "downloads": {
+    "server:default": {
+     "name": "paper-26.1.2-74.jar",
+     "url": "https://fill-data.papermc.io/v1/objects/1d70b1dab9cf4a6de615209a536f3a45a2186240253c428213ce2188ab95e5f7/paper-26.1.2-74.jar",
+     "size": 52893229,
+     "checksums": {
+      "sha256": "1d70b1dab9cf4a6de615209a536f3a45a2186240253c428213ce2188ab95e5f7"
+     }
+    }
+   }
+  },
+  {
+   "id": 73,
+   "channel": "STABLE",
+   "downloads": {
+    "server:default": {
+     "name": "paper-26.1.2-73.jar",
+     "url": "https://fill-data.papermc.io/v1/objects/e99e4e96c5e164743da0900b9cf6bfe3e5820c57c5ceaf06f78ecf4884ef0fee/paper-26.1.2-73.jar",
+     "size": 52893225,
+     "checksums": {
+      "sha256": "e99e4e96c5e164743da0900b9cf6bfe3e5820c57c5ceaf06f78ecf4884ef0fee"
+     }
+    }
+   }
+  },
+  {
+   "id": 72,
+   "channel": "STABLE",
+   "downloads": {
+    "server:default": {
+     "name": "paper-26.1.2-72.jar",
+     "url": "https://fill-data.papermc.io/v1/objects/0555a0b0468a5198d8fb1a16e1f9e95c81a917a2dc8f2e09867b4044742f6401/paper-26.1.2-72.jar",
+     "size": 52892581,
+     "checksums": {
+      "sha256": "0555a0b0468a5198d8fb1a16e1f9e95c81a917a2dc8f2e09867b4044742f6401"
+     }
+    }
+   }
+  },
+  {
+   "id": 71,
+   "channel": "STABLE",
+   "downloads": {
+    "server:default": {
+     "name": "paper-26.1.2-71.jar",
+     "url": "https://fill-data.papermc.io/v1/objects/542288423062864e56969a44c6927b860152cb827c65ff5f841178602bc99e9a/paper-26.1.2-71.jar",
+     "size": 52893683,
+     "checksums": {
+      "sha256": "542288423062864e56969a44c6927b860152cb827c65ff5f841178602bc99e9a"
+     }
+    }
+   }
+  },
+  {
+   "id": 70,
+   "channel": "STABLE",
+   "downloads": {
+    "server:default": {
+     "name": "paper-26.1.2-70.jar",
+     "url": "https://fill-data.papermc.io/v1/objects/6c59eefe2752f97ee79f83ad0a61fe14865a0976e4ac06597f53de6c44afd6c5/paper-26.1.2-70.jar",
+     "size": 52893162,
+     "checksums": {
+      "sha256": "6c59eefe2752f97ee79f83ad0a61fe14865a0976e4ac06597f53de6c44afd6c5"
+     }
+    }
+   }
+  }
+ ]
+}

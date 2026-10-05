@@ -1,0 +1,219 @@
+"""The Upstream catalog: what Modrinth, PaperMC and Adoptium say about artifacts.
+
+  Upstream(http)                                   the catalog, over an HTTP adapter
+    .modrinth_versions_by_sha1(sha1s)              {sha1: version} for files Modrinth knows
+    .modrinth_projects(ids)                        {project id: project}
+    .modrinth_versions(project_id, mc, loaders)    every version of a project for a Minecraft version
+    .newest_release(project_id, mc, loaders)       newest stable ("release") version, or None
+    .paper_builds(mc)                              every Paper build for a Minecraft version
+    .newest_stable_paper_build(mc)                 the highest STABLE build id, or None
+    .adoptium_latest_jre(major)                    newest Temurin JRE (Windows x64) for a Java major
+    .download(url)                                 the bytes at a URL
+
+The seam is the HTTP adapter (get_json, post_json, get_bytes):
+  LiveHttp       the real internet (urllib, our User-Agent, timeouts)
+  RecordedHttp   serves recorded responses keyed by method + URL + body, and raises
+                 UnrecordedRequest for anything else; built from a dict or from a fixtures folder
+  RecordingHttp  wraps another adapter and saves each JSON response (trimmed to the fields the
+                 catalog reads) into a fixtures folder; used by tests/fixtures/record.py
+"""
+import hashlib
+import json
+import re
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+MODRINTH = "https://api.modrinth.com/v2"
+PAPER = "https://fill.papermc.io/v3/projects/paper"
+ADOPTIUM = "https://api.adoptium.net/v3"
+USER_AGENT = "gr8monk3ys/the-realms-server (github.com/gr8monk3ys/the-realms-server)"
+
+
+def json_query(value) -> str:
+    return urllib.parse.quote(json.dumps(value))
+
+
+class Upstream:
+    def __init__(self, http):
+        self.http = http
+
+    def modrinth_versions_by_sha1(self, sha1s) -> dict[str, dict]:
+        hashes = sorted(set(sha1s))
+        if not hashes:
+            return {}
+        return self.http.post_json(f"{MODRINTH}/version_files", {"hashes": hashes, "algorithm": "sha1"})
+
+    def modrinth_projects(self, ids) -> dict[str, dict]:
+        ids = sorted(set(ids))
+        if not ids:
+            return {}
+        return {p["id"]: p for p in self.http.get_json(f"{MODRINTH}/projects?ids={json_query(ids)}")}
+
+    def modrinth_versions(self, project_id: str, mc: str, loaders) -> list[dict]:
+        """Every version of a project for one Minecraft version and loader set (any channel)."""
+        query = f"game_versions={json_query([mc])}&loaders={json_query(list(loaders))}"
+        return self.http.get_json(f"{MODRINTH}/project/{project_id}/version?{query}")
+
+    def newest_release(self, project_id: str, mc: str, loaders) -> dict | None:
+        releases = [v for v in self.modrinth_versions(project_id, mc, loaders) if v["version_type"] == "release"]
+        return max(releases, key=lambda v: v["date_published"]) if releases else None
+
+    def paper_builds(self, mc: str) -> list[dict]:
+        return self.http.get_json(f"{PAPER}/versions/{mc}/builds")
+
+    def newest_stable_paper_build(self, mc: str) -> dict | None:
+        # The API happens to list newest first today; don't depend on it.
+        stable = [b for b in self.paper_builds(mc) if b.get("channel") == "STABLE"]
+        return max(stable, key=lambda b: b["id"]) if stable else None
+
+    def adoptium_latest_jre(self, major: int) -> dict:
+        assets = self.http.get_json(
+            f"{ADOPTIUM}/assets/latest/{major}/hotspot?os=windows&architecture=x64&image_type=jre")
+        if not assets:
+            raise LookupError(f"Adoptium has no Windows x64 JRE for Java {major}")
+        return assets[0]
+
+    def download(self, url: str) -> bytes:
+        return self.http.get_bytes(url)
+
+
+# --- adapters -----------------------------------------------------------------------------------
+
+class LiveHttp:
+    def __init__(self, timeout_json: float = 60, timeout_download: float = 300):
+        self.timeout_json = timeout_json
+        self.timeout_download = timeout_download
+
+    def _open(self, url, data=None, headers=None, timeout=60):
+        req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
+        return urllib.request.urlopen(req, timeout=timeout)
+
+    def get_json(self, url):
+        with self._open(url, timeout=self.timeout_json) as r:
+            return json.load(r)
+
+    def post_json(self, url, body):
+        with self._open(url, json.dumps(body).encode(), {"Content-Type": "application/json"},
+                        self.timeout_json) as r:
+            return json.load(r)
+
+    def get_bytes(self, url):
+        with self._open(url, timeout=self.timeout_download) as r:
+            return r.read()
+
+
+def request_key(method: str, url: str, body=None) -> str:
+    """Deterministic identity of a request: method, URL and (canonical JSON) body."""
+    key = f"{method.upper()} {url}"
+    if body is not None:
+        key += " " + json.dumps(body, sort_keys=True, separators=(",", ":"))
+    return key
+
+
+class UnrecordedRequest(LookupError):
+    pass
+
+
+class RecordedHttp:
+    """Serves recorded responses. `responses` maps request_key(...) to a JSON value (or bytes)."""
+
+    def __init__(self, responses: dict | None = None):
+        self.responses = dict(responses or {})
+
+    @classmethod
+    def from_folder(cls, folder) -> "RecordedHttp":
+        responses = {}
+        for path in sorted(Path(folder).glob("*.json")):
+            rec = json.loads(path.read_text(encoding="utf-8"))
+            r = rec["request"]
+            responses[request_key(r["method"], r["url"], r.get("body"))] = rec["response"]
+        return cls(responses)
+
+    def add(self, method: str, url: str, response, body=None) -> "RecordedHttp":
+        self.responses[request_key(method, url, body)] = response
+        return self
+
+    def _serve(self, key):
+        if key not in self.responses:
+            raise UnrecordedRequest(f"no recorded response for {key}\n"
+                                    "(record it with `python tests/fixtures/record.py` or add it to the test)")
+        return self.responses[key]
+
+    def get_json(self, url):
+        return self._serve(request_key("GET", url))
+
+    def post_json(self, url, body):
+        return self._serve(request_key("POST", url, body))
+
+    def get_bytes(self, url):
+        data = self._serve(request_key("GET", url))
+        if not isinstance(data, bytes):
+            raise UnrecordedRequest(f"recorded response for GET {url} is JSON, not a download")
+        return data
+
+
+class RecordingHttp:
+    """Passes requests to `inner` and saves each JSON response, trimmed, into `folder`."""
+
+    def __init__(self, inner, folder):
+        self.inner = inner
+        self.folder = Path(folder)
+
+    def _save(self, method, url, body, response):
+        response = trim(url, response)
+        key = request_key(method, url, body)
+        tail = re.sub(r"[^a-z0-9]+", "-", urllib.parse.urlsplit(url).path.lower()).strip("-")[-50:]
+        name = f"{method.lower()}-{tail}-{hashlib.sha256(key.encode()).hexdigest()[:10]}.json"
+        request = {"method": method, "url": url, **({"body": body} if body is not None else {})}
+        self.folder.mkdir(parents=True, exist_ok=True)
+        with open(self.folder / name, "w", encoding="utf-8", newline="\n") as f:
+            json.dump({"request": request, "response": response}, f, indent=1, ensure_ascii=False)
+            f.write("\n")
+        return response
+
+    def get_json(self, url):
+        return self._save("GET", url, None, self.inner.get_json(url))
+
+    def post_json(self, url, body):
+        return self._save("POST", url, body, self.inner.post_json(url, body))
+
+    def get_bytes(self, url):
+        return self.inner.get_bytes(url)
+
+
+# --- fixture trimming: keep only what the catalog and entries.py read -----------------------------
+
+KEEP_LIST_ITEMS = 5
+
+
+def _pick(d: dict, *keys) -> dict:
+    return {k: d[k] for k in keys if k in d}
+
+
+def _version(v: dict) -> dict:
+    out = _pick(v, "id", "project_id", "version_number", "version_type", "date_published")
+    out["files"] = [{**_pick(f, "filename", "url", "size", "primary"),
+                     "hashes": _pick(f["hashes"], "sha1", "sha512")} for f in v["files"]]
+    return out
+
+
+def trim(url: str, response):
+    """A recorded response cut down to the fields the tools use (and lists to a few newest items)."""
+    if url.startswith(f"{MODRINTH}/version_files"):
+        return {h: _version(v) for h, v in response.items()}
+    if url.startswith(f"{MODRINTH}/projects"):
+        return [_pick(p, "id", "slug") for p in response]
+    if url.startswith(f"{MODRINTH}/project/"):
+        newest = sorted(response, key=lambda v: v["date_published"], reverse=True)[:KEEP_LIST_ITEMS]
+        return [_version(v) for v in newest]
+    if url.startswith(PAPER):
+        newest = sorted(response, key=lambda b: b["id"], reverse=True)[:KEEP_LIST_ITEMS]
+        return [{**_pick(b, "id", "channel"), "downloads": {"server:default": {
+            **_pick(b["downloads"]["server:default"], "name", "url", "size"),
+            "checksums": _pick(b["downloads"]["server:default"]["checksums"], "sha256")}}} for b in newest]
+    if url.startswith(ADOPTIUM):
+        return [{"release_name": a["release_name"],
+                 "binary": {"package": _pick(a["binary"]["package"], "name", "link", "size", "checksum")}}
+                for a in response]
+    return response

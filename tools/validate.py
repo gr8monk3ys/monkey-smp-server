@@ -1,97 +1,54 @@
 """Check the manifest and package for mistakes that would break an install.
 
-  python tools/validate.py              offline checks (structure, patches, defaults, client pack)
-  python tools/validate.py --online     also download every file and verify its size and hash
+  python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack)
+  python tools/validate.py --online     also download every file, verify its size and hash, and apply
+                                        each patch to its download to prove it still fits
 """
 import argparse
-import json
-import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import CLIENT, PACKAGE, REALMS, artifacts, digest, hash_of, http_bytes, load_manifest  # noqa: E402
+import defaults
+import entries
+import patches
+from repo import REPO, load_json
+from upstream import LiveHttp, Upstream
 
-HEX = {"sha1": 40, "sha256": 64, "sha512": 128}
-ALLOWED_HOSTS = ("https://cdn.modrinth.com/", "https://fill-data.papermc.io/",
-                 "https://github.com/adoptium/")
-TOKENS = ("{{RCON_PASSWORD}}", "{{SEED}}", "{{LEVEL_NAME}}")
-
-
-def check_entry(kind, e):
-    errors = []
-    for key in ("file", "url", "size", "hashes"):
-        if key not in e:
-            errors.append(f"{kind} {e.get('file', '?')}: missing '{key}'")
-    if errors:
-        return errors
-    if not e["url"].startswith(ALLOWED_HOSTS):
-        errors.append(f"{kind} {e['file']}: url is not from an allowed host: {e['url']}")
-    if re.search(r'[\\/:*?"<>|]', e["file"]):
-        errors.append(f"{kind} {e['file']}: file name has characters Windows can't use")
-    if not isinstance(e["size"], int) or e["size"] <= 0:
-        errors.append(f"{kind} {e['file']}: bad size")
-    try:
-        algo, value = hash_of(e)
-        if not re.fullmatch(rf"[0-9a-f]{{{HEX[algo]}}}", value):
-            errors.append(f"{kind} {e['file']}: {algo} is not {HEX[algo]} lowercase hex chars")
-    except KeyError as err:
-        errors.append(str(err))
-    return errors
+PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "READ ME FIRST.txt")
+MANIFEST_KEYS = ("name", "version", "minecraft", "java", "server", "world", "plugins", "datapacks")
 
 
-def validate(manifest):
-    errors = []
-    for key in ("name", "version", "minecraft", "java", "server", "world", "plugins", "datapacks"):
-        if key not in manifest:
-            errors.append(f"manifest: missing '{key}'")
+def validate(manifest: dict, repo=REPO) -> list[str]:
+    errors = [f"manifest: missing '{key}'" for key in MANIFEST_KEYS if key not in manifest]
     if errors:
         return errors
     if not re.fullmatch(r"\d+\.\d+\.\d+", manifest["version"]):
         errors.append("manifest: version must look like 1.2.3")
     if not re.fullmatch(r"-?\d*", str(manifest["world"].get("seed", ""))):
         errors.append("manifest: world.seed must be a number (or empty for random)")
-    for kind, e in artifacts(manifest):
-        errors += check_entry(kind, e)
-    for group in ("plugins", "datapacks"):
-        files = [e["file"].lower() for e in manifest[group]]
+    for kind, e in entries.artifacts(manifest):
+        errors += entries.check(kind, e)
+    for group in entries.GROUPS.values():
+        files = [e.get("file", "").lower() for e in manifest[group]]
         slugs = [e.get("slug") for e in manifest[group]]
-        for dup in {f for f in files if files.count(f) > 1}:
+        for dup in sorted({f for f in files if files.count(f) > 1}):
             errors.append(f"{group}: duplicate file {dup}")
-        for dup in {s for s in slugs if slugs.count(s) > 1}:
+        for dup in sorted({s for s in slugs if slugs.count(s) > 1}):
             errors.append(f"{group}: duplicate project {dup}")
-    for d in manifest["datapacks"]:
-        if "patch" in d:
-            path = os.path.join(REALMS, *d["patch"].split("/"))
-            if not d["patch"].startswith("patches/") or not os.path.isdir(path) or not os.listdir(path):
-                errors.append(f"datapack {d['file']}: patch folder {d['patch']} is missing or empty")
-    patch_dirs = {f"patches/{p}" for p in os.listdir(os.path.join(REALMS, "patches"))} if os.path.isdir(
-        os.path.join(REALMS, "patches")) else set()
-    for orphan in patch_dirs - {d.get("patch") for d in manifest["datapacks"]}:
-        errors.append(f"{orphan} is not used by any datapack")
-    return errors
+    return errors + patches.check(manifest, repo)
 
 
-def validate_package():
-    errors = []
-    props = open(os.path.join(REALMS, "defaults", "server.properties"), encoding="utf-8").read()
-    for token in TOKENS:
-        if token not in props:
-            errors.append(f"defaults/server.properties: missing {token}")
-    if re.search(r"(?m)^rcon\.password=(?!\{\{)", props):
-        errors.append("defaults/server.properties: a real RCON password is committed")
-    for name in ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "READ ME FIRST.txt"):
-        if not os.path.isfile(os.path.join(PACKAGE, name)):
-            errors.append(f"package/{name} is missing")
-    script = open(os.path.join(REALMS, "realms.ps1"), "rb").read()
-    if any(b > 127 for b in script):
+def validate_package(repo=REPO) -> list[str]:
+    props = (repo.defaults / "server.properties").read_text(encoding="utf-8")
+    errors = defaults.check_server_properties(props)
+    errors += [f"package/{name} is missing" for name in PACKAGE_FILES if not (repo.package / name).is_file()]
+    if any(b > 127 for b in (repo.realms / "realms.ps1").read_bytes()):
         errors.append("realms.ps1 must be plain ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI)")
     return errors
 
 
-def validate_client(manifest):
-    path = os.path.join(CLIENT, "modrinth.index.json")
-    index = json.load(open(path, encoding="utf-8"))
+def validate_client(manifest: dict, repo=REPO) -> list[str]:
+    index = load_json(repo.client / "modrinth.index.json")
     errors = []
     if index["dependencies"].get("minecraft") != manifest["minecraft"]:
         errors.append("client: minecraft version differs from the server manifest")
@@ -103,31 +60,36 @@ def validate_client(manifest):
     return errors
 
 
-def verify_online(manifest):
+def verify_online(manifest: dict, upstream: Upstream, repo=REPO) -> list[str]:
     errors = []
-    for kind, e in artifacts(manifest):
-        data = http_bytes(e["url"])
-        algo, value = hash_of(e)
-        if len(data) != e["size"] or digest(data, algo) != value:
+    for kind, e in entries.artifacts(manifest):
+        data = upstream.download(e["url"])
+        if not entries.matches(e, data):
             errors.append(f"{kind} {e['file']}: download doesn't match the pinned size/hash")
-        else:
-            print(f"ok  {kind:8} {e['file']}")
+            continue
+        if "patch" in e:
+            try:
+                patches.apply(data, patches.read(patches.folder(repo, e)))
+            except patches.PatchError as err:
+                errors.append(f"{kind} {e['file']}: patch {e['patch']['path']} doesn't fit the download: {err}")
+                continue
+        print(f"ok  {kind:8} {e['file']}{'  (patch fits)' if 'patch' in e else ''}")
     return errors
 
 
-def main():
+def main(argv=None, repo=REPO, upstream=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--online", action="store_true")
-    a = ap.parse_args()
-    manifest = load_manifest()
-    errors = validate(manifest) + validate_package() + validate_client(manifest)
+    a = ap.parse_args(argv)
+    manifest = repo.load_manifest()
+    errors = validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
     if a.online and not errors:
-        errors += verify_online(manifest)
+        errors += verify_online(manifest, upstream or Upstream(LiveHttp()), repo)
     for e in errors:
         print("ERROR", e)
     print(f"{len(errors)} problem(s); {len(manifest['plugins'])} plugins, {len(manifest['datapacks'])} datapacks")
-    sys.exit(1 if errors else 0)
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -1,0 +1,2 @@
+#Sun Oct 04 21:08:29 PDT 2026
+RP_MODE=3

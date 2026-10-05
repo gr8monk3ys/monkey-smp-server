@@ -1,0 +1,22 @@
+[light_sources]
+	water_sensitive_check = true
+	self = true
+	block_entities = true
+	entities = true
+
+			[light_sources.settings.entities.minecraft]
+				item = true
+				zombie_villager = true
+				bogged = true
+				tropical_fish = true
+				chest_minecart = true
+				skeleton = true
+				frog = true
+				bat = true
+				rabbit = true
+				zombie = true
+				glow_squid = true
+				spider = true
+				creeper = true
+				player = true
+				enderman = true

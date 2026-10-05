@@ -1,0 +1,86 @@
+THE REALMS - how to run the server
+==================================
+
+A Minecraft factions server: towns, nations, wars, land claims, PvP and roleplay.
+You need: Windows 10 or 11, 8 GB of RAM or more, and about 3 GB of free disk space.
+You do NOT need to install Java or anything else - this folder takes care of it.
+
+
+1. FIRST TIME
+-------------
+  a) Put this whole folder somewhere permanent, like Documents (not Downloads).
+  b) Double-click  "Start Server.bat".
+     - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
+     - It downloads about 300 MB the first time (Java, the server and its add-ons),
+       so give it a few minutes.
+  c) It asks you two things:
+     - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.
+     - Your Minecraft username.  Type it and press Enter. You become the admin.
+  d) If Windows Firewall asks about "Java", click "Allow".
+  e) When the window says  Done (...)! For help, type "help"  the server is running.
+     Keep that window open while people play.
+
+
+2. EVERY TIME AFTER THAT
+------------------------
+  Start:  double-click "Start Server.bat".
+  Stop:   click in the server window, type  stop  and press Enter.
+          (or double-click "Stop Server.bat")
+  Please don't just close the window - that can lose the last few minutes of the world.
+
+
+3. LETTING FRIENDS JOIN
+-----------------------
+  Only people on the guest list (the "whitelist") can join.
+  Add someone: double-click "Add Player.bat" and type their Minecraft username.
+     (or type  whitelist add THEIRNAME  in the server window)
+
+  Friends in the same house: they join with your computer's local address
+  (shown as "IPv4 Address" when you run  ipconfig  in a Command Prompt).
+
+  Friends somewhere else: use playit.gg (free, no router setup needed):
+    1. Go to https://playit.gg, make a free account, and download the Windows app.
+    2. Run it and follow its "claim" link to connect it to your account.
+    3. In the playit.gg website, add a tunnel:  type "Minecraft Java",
+       local address 127.0.0.1, local port 25565.
+    4. It gives you an address like  something.joinmc.link  - send that to friends.
+    5. playit must be running (along with the server) whenever people play.
+
+
+4. WHAT FRIENDS INSTALL
+-----------------------
+  The server works with normal Minecraft Java Edition 26.1.2.
+  For the full experience (shaders, nicer graphics, voice chat, maps), friends can install
+  the "TheRealms-Client" modpack (.mrpack file) with Prism Launcher or the Modrinth App:
+    Prism Launcher: Add Instance > Import > choose the .mrpack file.
+
+
+5. BACKUPS
+----------
+  Double-click "Backup World.bat" (works while the server runs).
+  Backups go into the "backups" folder; the newest 14 are kept.
+  To restore one: stop the server, then copy the files from a backup folder into "server".
+
+
+6. ADMIN CHEAT SHEET (type in the server window, or in game with / in front)
+-----------------------------------------------------------------------------
+  whitelist add NAME            let someone join
+  whitelist remove NAME         stop someone joining
+  op NAME                       make someone a full admin
+  lp user NAME parent set moderator    give someone the moderator rank
+      ranks: default, builder, moderator, admin
+  kick NAME / ban NAME          remove a troublemaker
+  co rollback u:NAME t:1h r:20  undo griefing (CoreProtect)
+  stop                          save and shut down
+
+  In game, players use  /tan  for towns, nations, claims and wars.
+  Wars can only be fought between 10:00 and 23:30 (server time).
+  Spawn is a safe zone: no PvP, no explosions.
+
+
+7. IF SOMETHING GOES WRONG
+--------------------------
+  "The server is running. Stop it first"  - it's already open in another window.
+  "Failed to bind to port"  - another server is already using port 25565.
+  Anything else: send the person who gave you this folder a screenshot of the window,
+  plus the file  server\logs\latest.log

@@ -1,0 +1,813 @@
+#  _____                            ___       _   _       _   _
+# |_   ______      ___ __  ___     ( _ )     | \ | | __ _| |_(_) ___  _ __  ___
+#   | |/ _ \ \ /\ / | '_ \/ __|    / _ \/\   |  \| |/ _` | __| |/ _ \| '_ \/ __|
+#   | | (_) \ V  V /| | | \__ \   | (_>  <   | |\  | (_| | |_| | (_) | | | \__ \
+#   |_|\___/ \_/\_/ |_| |_|___/    \___/\/   |_| \_|\__,_|\__|_|\___/|_| |_|___/
+
+
+########################
+##      General       ##
+########################
+
+# Online mode
+# If true, only premium (online-mode) players are allowed; their custom heads can be used as town icons.
+# If false (cracked mode), the plugin will attempt to fetch the skin for the given player name;
+# only players with a valid skin will have their head displayed as a town icon.
+onlineMode: true
+
+#Time of the day when taxes are collected (default is midnight at 0:00)
+taxHourTime: 0 #0-23
+taxMinuteTime: 0 #0-59
+
+########################
+##      Players       ##
+########################
+
+#IMPORTANT !! Enable the player color code.
+#Enabling the color code will create a separate scoreboard for each player, thus BREAKING THE VANILLA SCOREBOARD
+#Only enable this if you are not using any other scoreboard plugin
+EnablePlayerColorCode: false
+
+
+# Enable town tag
+# Players in a town will be shown with a prefix of their town name or tag
+enableTownTag: true
+#If tag enabled:
+tagMinSize: 3
+tagMaxSize: 4
+# tag format
+# Minecraft color code : https://manacube.com/attachments/1575063877749-png.20438/
+townTagFormat: "&f[{townColor}&l{townTag}&r&f]"
+
+#Enable the version check
+CheckForUpdate: true
+
+EnableNameFilter: true
+NameFilterFile: "banned_words.yml"
+
+NameFilterNormalizeDiacritics: true
+NameFilterNormalizeLeetspeak: false
+
+NameFilterApplyToTown: true
+NameFilterApplyToRegion: true
+NameFilterApplyToNation: true
+NameFilterApplyToRank: true
+
+########################
+##      Economy       ##
+########################
+
+#Use TownsAndNations economy for vault
+#If set to false, plugin will use the economy plugin linked to vault
+#If no other economy plugin are provided by vault, the plugin will use its own economy system without linking to vault
+UseTanEconomy: false
+
+#If TownsAndNations economy is used, set the currency symbol
+moneyIcon: "✦"
+
+#Show currency symbol in menus and messages
+showCurrency: true
+
+#If TownsAndNations economy is used, set the number of digits (0,1,2,3...)
+DecimalDigits: 2
+
+#Max distance between 2 players to be able to trade (/tan pay)
+maxPayDistance: 15
+
+#The amount of money a player starts with (only works if no external economy plugin is used)
+StartingMoney: 100.0
+
+########################
+##     Territories    ##
+########################
+
+#Buffer zone between territories when creating a new territory (Capital chunk or Fort as outpost)
+#Buffer is only checked if <Town/Region/Nation>AllowNonAdjacentChunks is set to false
+TerritoryClaimBufferZone: 2
+
+# Particles shown to display territory boundaries
+boundaryParticles :
+  ALLY: COMPOSTER
+  NEUTRAL: SMOKE
+  ENEMY : FLAME
+
+########################
+##      Nations      ##
+########################
+
+#Enable Nations
+EnableNation: true
+
+nationCost: 25000
+
+NationNameSize: 45
+NationDescSize: 55
+
+ChangeNationNameCost: 100
+
+#Allow non-adjacent chunks to be claimed for nations
+NationAllowNonAdjacentChunks: false
+
+########################
+##       Regions      ##
+########################
+
+#Enable Region (will automatically disable Nations if set to false)
+EnableRegion: true
+
+#The cost of creating a Region
+regionCost: 7500
+
+#The max size of names
+TownNameSize: 45
+TownDescSize: 55
+
+#Cost of renaming a region:
+ChangeRegionNameCost: 100
+
+#Allow non-adjacent chunks to be claimed
+RegionAllowNonAdjacentChunks: false
+
+#Notify if a player from an enemy territory enters
+notifyEnemyEnterRegion: true
+
+########################
+##       Towns        ##
+########################
+
+#The cost of creating a town
+townCost: 1000
+
+#The max size of names
+RegionNameSize: 45
+RegionDescSize: 55
+
+#Cost of renaming a town:
+ChangeTownNameCost: 100
+
+#Allow non-adjacent chunks to be claimed
+TownAllowNonAdjacentChunks: false
+
+#Notify if a player from an enemy town enters
+notifyEnemyEnterTown: true
+
+# Defines if the first claim chunk needs to be selected before creating a new town
+# If set to false, a town can exist without any claims
+setCapitalAtCreation: true
+
+########################
+##      Relations     ##
+########################
+
+# enablePvP :           If true, two players with the relation can hurt each-other (check only apply to hit and arrow)
+# truce_period          The number of hours a territory cannot set a hostile relation after the current relation has been removed.
+#                       Only for Alliance and Non-Aggression pact.
+#                       Set to 0 to disable option
+# canInteractWithProperty        If true, a player can buy or rent property in another town. This is not retroactive.
+# canAccessTerritory :  If false, a player will not be able to navigate inside the territory claims.
+#                       This does not apply during attacks.
+# blockedCommands       A list of command that cannot be cast by a player if another player is selected.
+#                       Eg : /tpa %PLAYER% will disable /tpa "playerName" only if aimed at a player under embargo
+#                       Every command that match the blacklisted part will be blocked (/tp %PLAYER% will block /tp notch 0 70 0)
+#                       Keywords :
+#                       - %PLAYER%  placeholder to get the player username. Mandatory or command will not be registered.
+
+relationConstants:
+  self: #Player is in the same town
+    enablePvP: true
+    canInteractWithProperty: true
+    canAccessTerritory: true
+    blockedCommands: [ ]
+  alliance:
+    enablePvP: true
+    truce_period: 72
+    canInteractWithProperty: true
+    canAccessTerritory: true
+    blockedCommands: [ ]
+  non_aggression:
+    enablePvP: true
+    truce_period: 48
+    canInteractWithProperty: true
+    canAccessTerritory: true
+    blockedCommands: [ ]
+  neutral: #Default relation between two territories. Also used for Vassals and Overlord relation.
+    enablePvP: true
+    canInteractWithProperty: true
+    canAccessTerritory: true
+    blockedCommands: [ ]
+  embargo:
+    enablePvP: true
+    canInteractWithProperty: false
+    canAccessTerritory: true
+    blockedCommands: [ "/tpa %PLAYER%", "/tan pay %PLAYER%", "/pay %PLAYER% " ]
+  war:
+    enablePvP: true
+    canInteractWithProperty: false
+    canAccessTerritory: true
+    blockedCommands: [ "/tpa %PLAYER%", "/tan pay %PLAYER%", "/pay %PLAYER%" ]
+
+
+########################
+##       Events       ##
+########################
+
+#List of every event that can happen and who should be notified
+# BROADCAST: ALL | CONCERNED | NONE
+# NEWSLETTER: ALL | CONCERNED | NONE
+# ALL: All players (connected for broadcast)
+# CONCERNED: Only the players involved by the event (members of the territory, players in the same alliance, etc.)
+# NONE: No one will be notified
+events:
+  TOWN_CREATED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  TOWN_DELETED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  PLAYER_APPLICATION:
+    BROADCAST: "CONCERNED"
+    NEWSLETTER: "CONCERNED"
+  PLAYER_JOIN_TOWN:
+    BROADCAST: "CONCERNED"
+    NEWSLETTER: "CONCERNED"
+  REGION_CREATED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  REGION_DELETED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  NATION_CREATED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  NATION_DELETED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  TERRITORY_VASSAL_PROPOSAL:
+    BROADCAST: "CONCERNED"
+    NEWSLETTER: "CONCERNED"
+  TERRITORY_VASSAL_ACCEPTED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  TERRITORY_VASSAL_FORCED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  TERRITORY_VASSAL_INDEPENDENT:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  DIPLOMACY_PROPOSAL:
+    BROADCAST: "CONCERNED"
+    NEWSLETTER: "CONCERNED"
+  DIPLOMACY_ACCEPTED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  LANDMARK_CLAIMED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  LANDMARK_UNCLAIMED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  WAR_DECLARED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  ATTACK_DECLARED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  ATTACK_CANCELLED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  ATTACK_ENDED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+  WAR_ENDED:
+    BROADCAST: "ALL"
+    NEWSLETTER: "ALL"
+
+
+########################
+##     Properties     ##
+########################
+
+#Define the maximum range at which the property sign can be from the closest block of the property
+maxPropertyMargin: 3
+#When a player rent a property, make the player pay the rent one extra time at start
+payRentAtStart: true
+
+#The max size of names
+maxPropertyNameSize: 16
+maxPropertyDescriptionSize: 40
+
+#Max size of a property (length x width x height)
+MaxPropertySize: 50000
+
+# Particle used to show property boundaries
+propertyBoundaryParticles : "HAPPY_VILLAGER"
+
+# Enable protection of property sign and holding block against breaking. It can still be griefed by explosions, fire, etc.
+enablePropertySignProtection: true
+
+########################
+##       Ranks        ##
+########################
+
+#The max number of rank a town can create
+maxRanks: 9
+
+RankNameSize: 25
+
+########################
+##        Wars        ##
+########################
+
+#Enable war
+EnableWar: true
+
+#WarDeclareCost
+warDeclareCost: 1000
+
+# Simple war mode
+# If enabled, a war will not require attacks to capture chunks.
+# As soon as the war is declared, an attack will start and last until one side surrenders.
+simpleWarMode : false
+
+# Enable leaving wars
+# If enabled, territories joining existing wars can pull out of them.
+enableLeavingWars : true
+
+# Capture percentage of a territory before forced surrender (default 70%)
+capturePercentageToSurrender: 70
+# If town capital chunk is captured, bonus capture percentage (default 20%)
+captureCapitalBonusPercentage : 20
+
+#Authorized ranges
+allowedTimeSlotsWar: [ "10:00-23:30" ]
+#Allowed days of the weeks
+# 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday : 6: Saturday, 7: Sunday
+allowedDays : [1, 2, 3, 4, 5, 6, 7]
+
+#Admin needs to approve every war. Admins need to use /tan admin gui to approve or deny a war
+AdminApproval: false
+
+#The duration of an attack in minutes
+WarDuration: 30
+
+#The minimum time before starting a war in minutes
+MinimumTimeBeforeAttack: 30 #30 minutes
+#The maximum time before starting a war in minutes
+MaximumTimeBeforeAttack: 4320 #72 hours
+
+#Chunk capture time (in seconds)
+ChunkCaptureTime : 10
+
+# Command to execute when an attack starts/end ONCE
+commandToExecuteOnceWhenAttackStart: [ ] #eg : ["time set day", "..."]
+commandToExecuteOnceWhenAttackEnd: [ ] #eg : ["time set night", "..."]
+
+# Command to execute when an attack starts/end for EACH PLAYER
+# Placeholder : %PLAYER% -> Name one player
+commandToExecutePerPlayerWhenAttackStart: [ ] #eg : ["pvp %PLAYER% on", "..."]
+commandToExecutePerPlayerWhenAttackEnd: [ ] #eg : ["pvp %PLAYER% off", "..."]
+
+#Commands blocked during attacks
+#Example : ["command 1", "command 1"]
+#You can use separated command if needed :
+#"/tan pay" WILL NOT block "/tan gui", "/tan claim"
+#"/tp"      WILL     block "/tp @r", "/tp <playerName>"...
+BlacklistedCommandsDuringAttacks: [ "/tan pay", "/tp" ]
+
+## Forts
+Forts:
+  # Max size of a fort name
+  fortMaxNameSize: 25
+  # If TownAllowNonAdjacentChunks : true, forts can be used as outposts to claims non-adjacent chunks
+  useAsOutpost: true
+  # The cost of creating a fort for towns
+  fortCost: 1000.0
+  # The protection radius of forts
+  fortProtectionRadius: 50.0
+  # the radius to capture a fort during an attack, in block
+  fortCaptureRadius: 10.0
+  # The time to capture a fort (in seconds)
+  fortCaptureTime: 60
+  # If true, all chunk protected by this fort and no longer protected by another one will also be captured by the
+  # owning side. Else, all chunks will need to be claimed by hand
+  claimAllIfCaptured : true
+
+# During a war, boundaries of territories at war are shown to players as a cylinder.
+# Radius of the cylinder.
+warBoundaryRadius: 16.0
+# height of the cylinder is set to 1 as of 0.15.5+
+
+# forbid/prevent splitting territory chunks in half if it means that one part will no longer be linked.
+# Will be applied to normal unclaim and war goals unclaim
+preventUnclaimOrphanChunks: false
+
+# When a side surrenders and end the war, set the new relation between the two nations
+# Values : HOSTILE, EMBARGO, NEUTRAL, NON_AGGRESSION, ALLIANCE.
+# Default : NEUTRAL
+relationAfterSurrender : "NON_AGGRESSION"
+
+# Defines what permissions players get in a territory chunk during a war
+# heldByAlly : when the chunk is held by an ally of the player
+# heldByEnemy : when the chunk is held by an enemy of the player
+attackersPermissions:
+  heldByAlly:
+    INTERACT_CHEST: true
+    INTERACT_DOOR: true
+    BREAK_BLOCK: true
+    PLACE_BLOCK: true
+    ATTACK_PASSIVE_MOB: true
+    INTERACT_BUTTON: true
+    INTERACT_REDSTONE: true
+    INTERACT_FURNACE: true
+    INTERACT_ITEM_FRAME: true
+    INTERACT_ARMOR_STAND: true
+    INTERACT_DECORATIVE_BLOCK: true
+    INTERACT_MUSIC_BLOCK: true
+    USE_LEAD: true
+    USE_SHEARS: true
+    INTERACT_BOAT: true
+    INTERACT_MINECART: true
+    USE_BONE_MEAL: true
+    INTERACT_BERRIES: true
+  heldByEnemy:
+    INTERACT_CHEST: false
+    INTERACT_DOOR: false
+    BREAK_BLOCK: true
+    PLACE_BLOCK: true
+    ATTACK_PASSIVE_MOB: true
+    INTERACT_BUTTON: true
+    INTERACT_REDSTONE: true
+    INTERACT_FURNACE: false
+    INTERACT_ITEM_FRAME: false
+    INTERACT_ARMOR_STAND: false
+    INTERACT_DECORATIVE_BLOCK: true
+    INTERACT_MUSIC_BLOCK: true
+    USE_LEAD: true
+    USE_SHEARS: true
+    INTERACT_BOAT: true
+    INTERACT_MINECART: true
+    USE_BONE_MEAL: true
+    INTERACT_BERRIES: true
+
+########################
+##      War goals     ##
+########################
+
+# Set the maximum number of chunks a territory can conquer during a war.
+# Set the value to 0 for unlimited chunks (capped by the maximum number of chunks the territory currently own).
+MaximumChunkConquer: 0
+
+# Set the number of day a tribute should be paid
+tributeDuration : 7
+
+# Set the maximum of money of a daily tribute
+maxTributeAmount : 1000.0
+
+########################
+##  General settings  ##
+########################
+
+# This section defines double permission for certain actions. They can be disabled.
+doublePermissionCheck:
+  BREAK_CHEST_NEED_INTERACT_CHEST_PERMISSION : true # Breaking a chest in a claimed chunk will require INTERACT_CHEST permission in addition to BREAK_BLOCK
+  BREAK_FURNACE_NEED_BREAK_FURNACE_PERMISSION : true # Breaking a furnace in a claimed chunk will require INTERACT_FURNACE permission in addition to BREAK_BLOCK
+
+
+#Entering claim message
+#Should a territory name be shown with its own color (true) or the default hierarchy color (false) when a
+#player enter claimed chunks.
+displayTerritoryNameWithOwnColor: false
+
+# If enabled, bukkit events (break block, hit creature...)
+# already cancelled by other plugins will not be analysed by chunk protection.
+noCheckIfEventCancelled: true
+
+# Chunk permission defines what players can do in an area.
+# The same system is used for territory chunks and properties.
+# You can set the default permission for every claimed chunk of territory
+# You can also block specific actions so players cannot change them in-game. In that case, default settings will be used.
+# Available permissions: INTERACT_CHEST, INTERACT_DOOR, BREAK_BLOCK, PLACE_BLOCK, ATTACK_PASSIVE_MOB, INTERACT_BUTTON,
+# INTERACT_REDSTONE, INTERACT_FURNACE, INTERACT_ITEM_FRAME, INTERACT_ARMOR_STAND, INTERACT_DECORATIVE_BLOCK,
+# INTERACT_MUSIC_BLOCK, USE_LEAD, USE_SHEARS, INTERACT_BOAT, INTERACT_MINECART, USE_BONE_MEAL, INTERACT_BERRIES
+# Default permission: TOWN, ALLIANCE, FOREIGN, SELECTED_ONLY (default : TOWN)
+# Locked permission: locked (leave blank to allow changes). Locked permission will not allow additional players or ranks.
+# Example :
+# chunkPermissionConfig:
+#  townPermissions:
+#    INTERACT_CHEST:   <- Interact chest permission for towns
+#      - "ALLIANCE"    <- Set to "Alliance" by default
+#      - "locked"      <- If written, players will not be able to change this permission. Optional.
+chunkPermissionConfig:
+  townPermissions:
+  regionPermissions:
+  nationPermissions:
+  propertyPermissions:
+#General settings in claimed chunks of territories
+# Always                 | Always allow
+# Player choice          | Allow territories to choose
+# Player choice and War  | Allow territories to choose but is automatically enabled during wars
+# WarOnly                | Allow only during wars
+# Never                  | Never allow
+# [ALWAYS, WAR_ONLY, PLAYER_CHOICE_AND_WAR, PLAYER_CHOICE, NEVER]
+chunkGeneralSettings:
+  fire: "PLAYER_CHOICE_AND_WAR" #burning and spreading
+  explosion: "PLAYER_CHOICE_AND_WAR" #Explosion (creeper included)
+  pvp: "ALWAYS"
+  piston_interaction: "PLAYER_CHOICE_AND_WAR" #Moving blocks inside claimed chunks with piston from wilderness or other territory.
+  hostile_mob: "PLAYER_CHOICE" #Enderman picking up blocks, Wither breaking blocks...
+  passive_mob: "PLAYER_CHOICE" #sheep eating grass
+  villager: "PLAYER_CHOICE" #Villager farming
+  allow_unauthorized_players_mounts: "PLAYER_CHOICE_AND_WAR" # If set to true, any player entering a territory riding an unauthorized vehicle will be dismounted.
+
+########################
+##    TELEPORTATION   ##
+########################
+
+##Teleportation
+#Time before a teleportation (in seconds). 0 or negative value will result in an instant teleportation
+timeBeforeTeleport: 5
+
+#Cancel teleportation if player move head
+cancelTeleportOnMoveHead: false
+
+#Cancel teleportation if player move position
+cancelTeleportOnMovePosition: true
+
+#Cancel teleportation if player take damage
+cancelTeleportOnDamage: true
+
+# Authorize territory to grant teleportation permission to other territories.
+# If enabled, territories will be able to grant teleportation permission to other territories.
+# Players from these territories will then be able to teleport to the territory spawn.
+allowShareOfTeleportation: true
+
+# Defines if a player can teleport to a fort owned by one of its territory.
+allowFortTeleport: true
+allowFortTeleportDuringWar: false
+
+########################
+##      Landmarks     ##
+########################
+#Creating a landmark and modifying the reward is done in-game with /tanadmin gui
+
+#Max size of a landmark name
+landmarkNameMaxSize: 25
+
+#Cost to claim a landmark
+claimLandmarkCost: 500.0
+
+#Defines if a territory needs to encircle the landmark to claim it
+#If set to true, a claimed landmark will be unclaimed if the territory does not encircle it anymore
+landmarkEncircleToCapture: true
+
+# The default value is the maximum amount of resources to store. (amount * storageLimit)
+landmarkStorageCapacity: 7
+
+########################
+##       Claims       ##
+########################
+
+#List of every claim that cannot be claimed
+#The list represent a square area defined by 2 points
+# name : <world name>                | name of the world
+# coordinate : [x1, z1, x2, z2]      | coordinate of the 2 points defining the area. Leave empty to disable the whole world
+
+#Example:
+#claimBlacklist:
+#  - name : "world"
+#    coordinate : [0,0,10,10]
+
+claimBlacklist:
+# - name: "world"
+#   coordinate: [ 0,0,1,1 ]
+
+# Defines how chunks are handled when more chunks
+# - DELETE_INSTANT : Remove all border chunks until the town have enough claims (As of 1.0.3, only triggers at midnight).
+# - DELETE_EACH_DAY : Same logic will apply as when upkeep is not fully paid (percentageOfChunksUnclaimed and minimumNumberOfChunksUnclaimed) DEFAULT
+# - INCREASE_UPKEEP : Increase the upkeep of all chunks by a percent based on how many chunk exceed (60/50 chunks -> +20%)
+# - NOTHING : Chunk cap can be exceeded.
+chunkCapExceededStrategy : DELETE_EACH_DAY
+
+#If a town cannot pay the territory upkeep, % of chunks that will be unclaimed
+percentageOfChunksUnclaimed: 15.0
+
+#Minimum number of chunks that will be unclaimed if a town cannot pay the territory upkeep
+minimumNumberOfChunksUnclaimed: 5
+
+########################
+##  Private channels  ##
+########################
+
+#Enable logger in the console of private messages between players (alliance, region and towns)
+sendPrivateMessagesToConsole: false
+
+########################
+##     Wilderness     ##
+########################
+
+#Set rules for player on wilderness chunks (unclaimed)
+# basic: only break and place blocks
+# if an interaction is not listed, it will be set to true
+
+wildernessRules:
+  default:
+    INTERACT_CHEST: true
+    INTERACT_DOOR: true
+    BREAK_BLOCK: true
+    PLACE_BLOCK: true
+    ATTACK_PASSIVE_MOB: true
+    INTERACT_BUTTON: true
+    INTERACT_REDSTONE: true
+    INTERACT_FURNACE: true
+    INTERACT_ITEM_FRAME: true
+    INTERACT_ARMOR_STAND: true
+    INTERACT_DECORATIVE_BLOCK: true
+    INTERACT_MUSIC_BLOCK: true
+    USE_LEAD: true
+    USE_SHEARS: true
+    INTERACT_BOAT: true
+    INTERACT_MINECART: true
+    USE_BONE_MEAL: true
+    INTERACT_BERRIES: true
+  world_nether:
+    INTERACT_CHEST: true
+    #add other rules here
+
+
+########################
+##     Newsletter     ##
+########################
+#Time before old newsletter are deleted in days (will be deleted at midnight)
+TimeBeforeClearingNewsletter: 7
+
+
+########################
+##       Storage      ##
+########################
+
+
+# There are 2 types of storage in towns and nations. Each one need one type :
+# - In-game storage : data that will be actively used by the plugin when the server is on.
+#  - RAM storage (default)
+#  - Redis (Allow to share data between multiple servers "bungee mode") REQUIRES A REDIS SERVER
+# - Long term storage : Used to store and load data between server restarts.
+#  - JSON storage (default)
+#  - Database (experimental, not yet supported)
+
+## In game storage
+# WARNING : Reds is in early development and is not yet fully supported. Use at your own risk.
+# It is recommended to use Redis only for testing for now.
+inGameStorageType: "RAM" #RAM or REDIS
+
+# Redis configuration (used only if inGameStorageType is set to REDIS)
+redis_config:
+  host: "localhost"
+  port: 6379
+  user: "default"
+  password: "password"
+
+
+# Long term storage
+# As for now, both are used at the same time : Some data are stored in JSON files, and some data are stored in the database.
+# A full support for databases is not yet available.
+
+database:
+  #Database type (sqlite or mysql)
+  type: "sqlite"
+  #Database host (if using sqlite, unused)
+  host: "localhost"
+  #Database port (if using sqlite, unused)
+  port: 3306
+  #Database name (if using sqlite, unused)
+  name: "towns_and_nations"
+  #Database user (if using sqlite, unused)
+  user: "user"
+  #Database password (if using sqlite, unused)
+  password: "password"
+
+#Archive major event into a txt file
+archiveHistory: true
+
+#Time before old transactions are deleted (in days). Can be set to -1 to disable
+#Too much history can slow down the certains operations over time
+nbDaysBeforeTransactionDeletion: 90
+
+
+########################
+##     Extensions     ##
+########################
+
+##WorldGuard
+#Defines which chunk's properties will be overridden by a worldguard region
+worldguard_override_wilderness: true
+worldguard_override_town: false
+worldguard_override_region: false
+worldguard_override_nation: false
+worldguard_override_landmark: false
+
+## PlaceholderAPI
+# Defines what FALSE and TRUE will return
+placeholderString:
+  trueValue: "true"
+  falseValue: "false"
+
+########################
+##     Server Limit   ##
+########################
+
+# Some functionalities may consume a lot of processing time and/or memory.
+
+# The maximum number of wilderness chunk that can be claimed at once with /tan claimarea <town/region/nation>
+claimAreaChunkLimit : 10000
+
+
+#Write the type of mobs you want a town to be able to cancel the spawn of.
+#If you want the removal option to be free, write 0, else write the cost of the removal
+#If you do not want some mobs to be removed, write -1 or any other negative number
+CancelMobSpawnInTown:
+  AXOLOTL: 0
+  BAT: 50
+  BEE: 0
+  BLAZE: 0
+  CAMEL: 0
+  CAT: 0
+  CAVE_SPIDER: 500
+  CHICKEN: 0
+  COD: 0
+  COW: 0
+  CREEPER: 1000
+  DOLPHIN: 0
+  DONKEY: 0
+  DROWNED: 500
+  ENDERMAN: 1000
+  ENDERMITE: 0
+  EVOKER: 0
+  FOX: 0
+  FROG: 0
+  GHAST: 1000
+  GLOW_SQUID: 0
+  GOAT: 0
+  GUARDIAN: 0
+  HOGLIN: 0
+  HORSE: 0
+  HUSK: 500
+  IRON_GOLEM: 0
+  LLAMA: 0
+  MAGMA_CUBE: 0
+  MOOSHROOM: 0
+  MULE: 0
+  OCELOT: 0
+  PANDA: 0
+  PARROT: 0
+  PHANTOM: 0
+  PIG: 0
+  PIGLIN: 0
+  PIGLIN_BRUTE: 0
+  PILLAGER: 0
+  POLAR_BEAR: 0
+  PUFFERFISH: 0
+  RABBIT: 0
+  RAVAGER: 0
+  SALMON: 0
+  SHEEP: 0
+  SHULKER: 0
+  SILVERFISH: 0
+  SKELETON: 1000
+  SKELETON_HORSE: 0
+  SLIME: 0
+  SNOWMAN: 0
+  SPIDER: 500
+  SQUID: 0
+  STRAY: 500
+  STRIDER: 0
+  TRADER_LLAMA: 0
+  TROPICAL_FISH: 0
+  TURTLE: 0
+  VEX: 0
+  VILLAGER: 0
+  VINDICATOR: 0
+  WANDERING_TRADER: 0
+  WITCH: 0
+  WITHER: 0
+  WITHER_SKELETON: 0
+  WOLF: 0
+  ZOGLIN: 0
+  ZOMBIE: 1000
+  ZOMBIE_HORSE: 0
+  ZOMBIE_VILLAGER: 0
+
+
+# Upgrades
+# Everything related to upgrades can be edited from the file "upgrades.yml".
+# - Player cap
+# - Chunk cap
+# - Chunk claim cost
+# - Chunk Upkeep cost
+# - Property cap
+# - Territory spawn
+# - Upgrades cost, position, description, etc.
+# - And more...
+
+
+
+

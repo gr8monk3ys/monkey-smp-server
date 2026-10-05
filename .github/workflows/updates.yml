@@ -1,0 +1,51 @@
+name: Check for updates
+
+# Weekly: are there newer Paper builds or plugin/datapack releases for our Minecraft version,
+# and do all pinned downloads still exist with the same hashes? Results go into one issue.
+on:
+  schedule:
+    - cron: "17 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify every pinned download
+        id: verify
+        continue-on-error: true
+        run: python tools/validate.py --online | tee verify.txt
+
+      - name: Look for newer builds
+        id: updates
+        run: python tools/check_updates.py --out report.md
+
+      - name: Open or update the tracking issue
+        if: steps.updates.outputs.count != '0' || steps.verify.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            cat report.md
+            if [ "${{ steps.verify.outcome }}" = "failure" ]; then
+              echo; echo "### Broken downloads"; echo '```'; grep ERROR verify.txt; echo '```'
+            fi
+            echo; echo "_Updated by [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})._"
+          } > body.md
+          title="Server updates available"
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi

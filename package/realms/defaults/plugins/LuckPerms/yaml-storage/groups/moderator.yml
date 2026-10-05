@@ -1,0 +1,18 @@
+name: moderator
+permissions:
+- coreprotect.help
+- coreprotect.inspect
+- coreprotect.lookup
+- coreprotect.restore
+- coreprotect.rollback
+- coreprotect.teleport
+- essentials.ban
+- essentials.kick
+- essentials.mute
+- essentials.socialspy
+- essentials.tempban
+- essentials.tp
+- essentials.unban
+- essentials.vanish
+parents:
+- default

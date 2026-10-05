@@ -1,0 +1,6 @@
+name: admin
+permissions:
+- '*'
+parents:
+- builder
+- moderator

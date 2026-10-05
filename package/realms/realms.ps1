@@ -4,26 +4,28 @@
     Installs, updates, starts, stops and backs up The Realms Minecraft server.
 
 .DESCRIPTION
-    Everything is downloaded from its official source (Adoptium, PaperMC, Modrinth) and checked
+    Everything is downloaded from its official source (Adoptium, PaperMC or Fabric, Modrinth) and checked
     against the hashes pinned in manifest.json before it is used. Running "install" again is safe:
     files that are already correct are skipped, and files from an older manifest are replaced.
 
     This script only parses the command line; the work is done by Realms.psm1 next to it.
 
     Layout next to this folder:
-        server\    the Minecraft server (world, plugins, configs)
+        server\    the Minecraft server (world, plugins or mods, configs)
         java\      the Java runtime the server uses
         backups\   world backups made by "backup"
+        exports\   zips made by "export-host" for running the server on an online host
 
 .EXAMPLE
     .\realms.ps1 start
     .\realms.ps1 install -AcceptEula -Owner Notch -NonInteractive
     .\realms.ps1 add-player Steve
+    .\realms.ps1 export-host -NonInteractive -NoOwner
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('start', 'install', 'stop', 'backup', 'add-player', 'status', 'rcon')]
+    [ValidateSet('start', 'install', 'stop', 'backup', 'add-player', 'status', 'rcon', 'export-host')]
     [string]$Command = 'start',
 
     [Parameter(Position = 1)]
@@ -58,6 +60,11 @@ switch ($Command) {
         Start-Server -Context $ctx -Java $java -MemoryGB (Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:REALMS_MEMORY_GB)
     }
     'install' { [void](Install-Server @install) }
+    'export-host' {
+        # Installs (or updates) here first, then packs the result for an online host. Never starts the server.
+        [void](Install-Server @install)
+        [void](Export-HostingBundle -Context $ctx)
+    }
     'stop' { Stop-Server -Context $ctx }
     'backup' { Backup-Server -Context $ctx }
     'add-player' { Add-Player -Context $ctx -Name $Name }

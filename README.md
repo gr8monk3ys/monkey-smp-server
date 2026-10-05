@@ -59,7 +59,7 @@ tests/                      <- unit tests + end-to-end smoke test
 |---|---|---|
 | [CI](.github/workflows/ci.yml) | every push and PR | ruff + pytest + manifest validation, PSScriptAnalyzer, then **builds the release zip on a Windows runner, unzips it, installs, boots the server, checks all 20 plugins enabled and all 24 datapacks are active, and stops it** |
 | [Release](.github/workflows/release.yml) | tag `v*.*.*` | runs CI, then publishes the server zip + client `.mrpack` as a GitHub release |
-| [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download and opens/updates an issue listing newer Paper/plugin/datapack builds |
+| [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download (and that each datapack patch still fits) and opens/updates an issue listing newer Paper/plugin/datapack builds |
 
 ## Maintaining
 

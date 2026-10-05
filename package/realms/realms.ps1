@@ -221,7 +221,7 @@ function Get-Profile([string]$PlayerName) {
                 $uuid = '{0}-{1}-{2}-{3}-{4}' -f $u.Substring(0, 8), $u.Substring(8, 4), $u.Substring(12, 4), $u.Substring(16, 4), $u.Substring(20)
                 return @{ Name = $p.name; Uuid = $uuid }
             }
-        } catch { }
+        } catch { Write-Verbose "Profile lookup via $url failed: $_" }   # try the next API
     }
     throw "Couldn't find a Minecraft Java account named '$PlayerName'. Check the spelling (it's the in-game name)."
 }

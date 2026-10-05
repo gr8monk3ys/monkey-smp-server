@@ -32,7 +32,7 @@ Memory is picked from the computer's RAM (3 to 6 GB). To force a value, set the 
 |---|---|
 | `default` | homes, spawn, tpa, msg, pay, warps, nicknames |
 | `builder` | + WorldEdit, creative, fly |
-| `moderator` | + kick, mute, ban, vanish, tp, social spy, CoreProtect lookups/rollbacks |
+| `moderator` | + kick, mute, ban, vanish, tp, social spy, CoreProtect inspect/lookup/rollback/restore (not purge) |
 | `admin` | everything |
 
 ```

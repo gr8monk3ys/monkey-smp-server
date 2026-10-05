@@ -44,7 +44,8 @@ jobs:
         shell: powershell
         run: |
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
-          $issues = Invoke-ScriptAnalyzer -Path package/realms/realms.ps1, tests/smoke.ps1 -Settings ./PSScriptAnalyzerSettings.psd1
+          $issues = 'package/realms/realms.ps1', 'tests/smoke.ps1' |
+            ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Settings ./PSScriptAnalyzerSettings.psd1 }
           $issues | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
           if ($issues) { exit 1 }
 

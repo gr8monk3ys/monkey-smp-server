@@ -28,6 +28,18 @@ $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 $script:TemplateFiles = @('server.properties')
 $script:KeepBackups = 14
 
+# What each kind of server runs and where its add-ons live (relative to server\).
+#   Jar        the file name the server entry is saved as, and what java -jar runs
+#   Arguments  what follows the jar on the command line
+#   AddOns     the manifest group it loads add-ons from ('plugins' or 'mods'); datapacks work on both
+#   LuckPerms  the LuckPerms YAML storage folder (ranks in groups\, players in users\)
+$script:ServerTypes = @{
+    paper  = @{ Name = 'Paper'; Jar = 'paper.jar'; Arguments = @('--nogui'); AddOns = 'plugins'; LuckPerms = 'plugins\LuckPerms\yaml-storage' }
+    fabric = @{ Name = 'Fabric'; Jar = 'fabric-server-launch.jar'; Arguments = @('nogui'); AddOns = 'mods'; LuckPerms = 'mods\luckperms\yaml-storage' }
+}
+# The groups of managed files in the manifest, and the word used for one of them in messages.
+$script:Groups = [ordered]@{ plugins = 'plugin'; mods = 'mod'; datapacks = 'datapack' }
+
 # ================================================================ output
 
 function Write-Step([string]$Text) { Write-Host "==> $Text" -ForegroundColor Cyan }
@@ -151,6 +163,44 @@ function Get-LevelName($Context) {
     return $name
 }
 
+<#
+.SYNOPSIS
+    What the manifest's server type runs and where its files go. Throws on an unknown type.
+.OUTPUTS
+    Type ('paper' | 'fabric'), Name, Jar, Arguments, AddOns ('plugins' | 'mods'),
+    LuckPerms (YAML storage folder relative to server\) and Description ('Paper build 74', 'Fabric loader 0.19.5').
+#>
+function Get-ServerLayout {
+    param([Parameter(Mandatory)] $Manifest)
+    $server = $Manifest.server
+    $type = ([string]$server.type).ToLower()
+    if (-not $type -or -not $script:ServerTypes.ContainsKey($type)) {
+        throw "manifest.json has server type '$($server.type)', but this installer only knows 'paper' and 'fabric'. Download the latest release of The Realms."
+    }
+    $t = $script:ServerTypes[$type]
+    $description = if ($type -eq 'paper') { "Paper build $($server.build)" } else { "Fabric loader $($server.loader)" }
+    return [pscustomobject]@{
+        Type        = $type
+        Name        = $t.Name
+        Jar         = $t.Jar
+        Arguments   = @($t.Arguments)
+        AddOns      = $t.AddOns
+        LuckPerms   = $t.LuckPerms
+        Description = $description
+    }
+}
+
+# The folder a group of managed files goes in. Folders are fixed per group; the server type only
+# decides which groups may have entries.
+function Get-GroupFolder($Context, [string]$Group) {
+    switch ($Group) {
+        'plugins' { return Join-Path $Context.ServerDir 'plugins' }
+        'mods' { return Join-Path $Context.ServerDir 'mods' }
+        'datapacks' { return Join-Path $Context.ServerDir "$(Get-LevelName $Context)\datapacks" }
+    }
+    throw "Unknown group of files: $Group"
+}
+
 # ================================================================ artifacts
 
 <#
@@ -225,7 +275,7 @@ function Invoke-ZipPatch([string]$Zip, [string]$Dir, [string]$Name) {
     try {
         $missing = @($files | Where-Object { -not $archive.GetEntry($_.Rel) } | ForEach-Object { $_.Rel })
         if ($missing.Count) {
-            throw "Patch file(s) with no matching file in ${Name}: $($missing -join ', '). A patch may only replace files that already exist in the datapack."
+            throw "Patch file(s) with no matching file in ${Name}: $($missing -join ', '). A patch may only replace files that already exist in the file it patches."
         }
         foreach ($f in $files) {
             $archive.GetEntry($f.Rel).Delete()
@@ -241,7 +291,7 @@ function Invoke-ZipPatch([string]$Zip, [string]$Dir, [string]$Name) {
 function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
     $patch = $Entry.patch
     if ($patch -is [string] -or -not $patch.path -or -not $patch.base_sha512) {
-        throw "Datapack $($Entry.file): 'patch' in manifest.json must be an object with 'path' and 'base_sha512'."
+        throw "$($Entry.file): 'patch' in manifest.json must be an object with 'path' and 'base_sha512'."
     }
     $base = ([string]$patch.base_sha512).ToLower()
     if ($Entry.hashes.sha512 -and ([string]$Entry.hashes.sha512).ToLower() -ne $base) {
@@ -277,18 +327,19 @@ function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
 
 # Reconciles one folder of managed files with the manifest: downloads (and patches) every wanted
 # entry that isn't already correct, and removes files a previous install placed there that are no
-# longer wanted. Files the host added (never in $Previous) are left alone.
+# longer wanted. Only those exact file names are ever touched: files the host (or a mod) added and
+# subfolders (e.g. mods\luckperms) are left alone.
 # Returns @{ Changed = <count>; Managed = <file names now managed>; Patched = @{ file = record } }.
 function Sync-ManagedFiles {
     param(
         $Context,
-        [ValidateSet('plugin', 'datapack')] [string]$Kind,
+        [ValidateSet('plugin', 'mod', 'datapack')] [string]$Kind,
         [object[]]$Entries,
         [string]$Folder,
         [object[]]$Previous,
         $PreviousPatched
     )
-    $label = if ($Kind -eq 'plugin') { 'plugin ' } else { $Kind }
+    $label = $Kind.PadRight(8)
     $changed = 0
     $patched = @{}
     $wanted = @($Entries | Where-Object { $_ })
@@ -323,6 +374,42 @@ function Read-InstallState($Context) {
 
 function Write-InstallState($Context, [hashtable]$State) {
     Write-JsonFile $Context.StateFile $State
+}
+
+# The server type already installed in this folder, or $null for a fresh folder. State files from
+# 1.x have no server_type: every 1.x release was Paper. Without a state file the server jar tells.
+function Get-InstalledServerType($Context, $State) {
+    if ($State.server_type) { return ([string]$State.server_type).ToLower() }
+    if ($State.version) { return 'paper' }
+    foreach ($type in @($script:ServerTypes.Keys | Sort-Object)) {
+        if (Test-Path -LiteralPath (Join-Path $Context.ServerDir $script:ServerTypes[$type].Jar)) { return $type }
+    }
+    return $null
+}
+
+# True once the server has made a world: its folder holds more than the datapacks an install puts there.
+function Test-WorldExists($Context) {
+    $name = (Read-ServerProperties (Join-Path $Context.ServerDir 'server.properties'))['level-name']
+    if (-not $name) { $name = Get-LevelName $Context }
+    $dir = Join-Path $Context.ServerDir $name
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { return $false }
+    return [bool](Get-ChildItem -LiteralPath $dir -Force | Where-Object { $_.Name -ne 'datapacks' } | Select-Object -First 1)
+}
+
+# A world can't move between a Paper and a Fabric server, so a release of the other type never
+# installs over a folder with a world in it: it stops before changing anything.
+# Returns the type that was installed before ($null for a fresh folder).
+function Assert-SameServerType($Context, $Layout, $State) {
+    $was = Get-InstalledServerType $Context $State
+    if (-not $was -or $was -eq $Layout.Type) { return $was }
+    if (Test-WorldExists $Context) {
+        $old = if ($script:ServerTypes.ContainsKey($was)) { $script:ServerTypes[$was].Name } else { $was }
+        throw ("This folder already has a $old server with a world in it, but this release of The Realms is a " +
+            "$($Layout.Name) server. A world can't be moved from one to the other, so nothing was changed. " +
+            "Unzip this release into a NEW, empty folder and start it from there. To keep playing the old " +
+            "world, unzip the release you had before into this folder again.")
+    }
+    return $was
 }
 
 # ================================================================ server.properties and templates
@@ -528,7 +615,8 @@ function Add-Owner {
     Add-ToList $Context 'whitelist.json' @{ uuid = $p.Uuid; name = $p.Name }
     Add-ToList $Context 'ops.json' @{ uuid = $p.Uuid; name = $p.Name; level = 4; bypassesPlayerLimit = $true }
     # LuckPerms (YAML storage): put the owner in the admin group.
-    $lp = Join-Path $Context.ServerDir "plugins\LuckPerms\yaml-storage\users\$($p.Uuid).yml"
+    $storage = (Get-ServerLayout -Manifest $Context.Manifest).LuckPerms
+    $lp = Join-Path $Context.ServerDir "$storage\users\$($p.Uuid).yml"
     if (-not (Test-Path -LiteralPath $lp)) {
         Write-TextFile $lp "uuid: $($p.Uuid)`nname: $($p.Name.ToLower())`nprimary-group: admin`nparents:`n- admin`n"
     }
@@ -599,21 +687,35 @@ function Install-Server {
     if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
     $m = $Context.Manifest
     $server = $Context.ServerDir
-    New-Item -ItemType Directory -Force -Path $server | Out-Null
+    $layout = Get-ServerLayout -Manifest $m
+    foreach ($group in $script:Groups.Keys) {
+        if ($group -ne 'datapacks' -and $group -ne $layout.AddOns -and @($m.$group | Where-Object { $_ }).Count) {
+            throw "manifest.json lists $group, but a $($layout.Name) server can't load $group (only $($layout.AddOns))."
+        }
+    }
     $state = Read-InstallState $Context
+    $was = Assert-SameServerType $Context $layout $state
+    New-Item -ItemType Directory -Force -Path $server | Out-Null
     $firstInstall = -not $state.version
 
     Confirm-Eula $Context ([bool]$AcceptEula)
     $java = Install-Java $Context
 
-    Write-Step "Checking server files for $($m.name) $($m.version) (Minecraft $($m.minecraft))"
+    Write-Step "Checking server files for $($m.name) $($m.version) (Minecraft $($m.minecraft), $($layout.Name))"
     $n = 0
-    if (Save-Artifact $Context $m.server (Join-Path $server 'paper.jar')) { Write-Ok "Paper build $($m.server.build)"; $n++ }
-    $plugins = Sync-ManagedFiles -Context $Context -Kind plugin -Entries $m.plugins -Folder (Join-Path $server 'plugins') `
-        -Previous $state.plugins -PreviousPatched $state.patched
-    $packs = Sync-ManagedFiles -Context $Context -Kind datapack -Entries $m.datapacks `
-        -Folder (Join-Path $server "$(Get-LevelName $Context)\datapacks") -Previous $state.datapacks -PreviousPatched $state.patched
-    $n += $plugins.Changed + $packs.Changed
+    if ($was -and $was -ne $layout.Type -and $script:ServerTypes.ContainsKey($was)) {
+        # No world yet, so the switch is safe; the old server jar is ours to remove.
+        $oldJar = $script:ServerTypes[$was].Jar
+        if ($oldJar -ne $layout.Jar) { Remove-Item -LiteralPath (Join-Path $server $oldJar) -Force -ErrorAction SilentlyContinue }
+        Write-Note "switched this folder from $($script:ServerTypes[$was].Name) to $($layout.Name)"
+    }
+    if (Save-Artifact $Context $m.server (Join-Path $server $layout.Jar)) { Write-Ok $layout.Description; $n++ }
+    $synced = [ordered]@{}
+    foreach ($group in $script:Groups.Keys) {
+        $synced[$group] = Sync-ManagedFiles -Context $Context -Kind $script:Groups[$group] -Entries $m.$group `
+            -Folder (Get-GroupFolder $Context $group) -Previous $state.$group -PreviousPatched $state.patched
+        $n += $synced[$group].Changed
+    }
     if ($n -eq 0) { Write-Ok 'Everything is up to date.' }
 
     Install-Defaults $Context
@@ -628,15 +730,18 @@ function Install-Server {
         if ($who) { $ownerName = Add-Owner $Context $who }
     }
 
+    # 1.x state files have this shape minus server_type and mods, and read back as a Paper install.
     $patched = @{}
-    foreach ($r in $plugins, $packs) { foreach ($k in $r.Patched.Keys) { $patched[$k] = $r.Patched[$k] } }
+    foreach ($r in $synced.Values) { foreach ($k in $r.Patched.Keys) { $patched[$k] = $r.Patched[$k] } }
     Write-InstallState $Context @{
-        version   = $m.version
-        java      = $java
-        owner     = $ownerName
-        plugins   = @($plugins.Managed)
-        datapacks = @($packs.Managed)
-        patched   = $patched
+        version     = $m.version
+        server_type = $layout.Type
+        java        = $java
+        owner       = $ownerName
+        plugins     = @($synced.plugins.Managed)
+        mods        = @($synced.mods.Managed)
+        datapacks   = @($synced.datapacks.Managed)
+        patched     = $patched
     }
     Remove-Item -LiteralPath $Context.DownloadDir -Recurse -Force -ErrorAction SilentlyContinue
     if ($firstInstall) { Write-Ok 'Install finished.' }
@@ -662,19 +767,30 @@ function Get-MemoryGB {
 
 <#
 .SYNOPSIS
-    Runs the server in this window until it stops. Throws if it exits with an error.
+    The java command line (everything after java.exe) that runs the manifest's server with -MemoryGB of memory.
 #>
-function Start-Server {
-    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB)
+function Get-LaunchArguments {
+    param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [int]$MemoryGB)
+    $layout = Get-ServerLayout -Manifest $Manifest
     $gb = $MemoryGB
-    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags).
-    $jvm = @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
+    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags); they suit a Fabric server too.
+    return @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
         '-XX:+UnlockExperimentalVMOptions', '-XX:+DisableExplicitGC', '-XX:+AlwaysPreTouch', '-XX:G1NewSizePercent=30',
         '-XX:G1MaxNewSizePercent=40', '-XX:G1HeapRegionSize=8M', '-XX:G1ReservePercent=20', '-XX:G1HeapWastePercent=5',
         '-XX:G1MixedGCCountTarget=4', '-XX:InitiatingHeapOccupancyPercent=15', '-XX:G1MixedGCLiveThresholdPercent=90',
         '-XX:G1RSetUpdatingPauseTimePercent=5', '-XX:SurvivorRatio=32', '-XX:+PerfDisableSharedMem',
         '-XX:MaxTenuringThreshold=1', '-Dusing.aikars.flags=https://mcflags.emc.gs', '-Daikars.new.flags=true',
-        '-jar', 'paper.jar', '--nogui')
+        '-jar', $layout.Jar) + $layout.Arguments
+}
+
+<#
+.SYNOPSIS
+    Runs the server in this window until it stops. Throws if it exits with an error.
+#>
+function Start-Server {
+    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB)
+    $gb = $MemoryGB
+    $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb
     Write-Host ''
     Write-Step "Starting The Realms with $gb GB of memory"
     Write-Host '    Friends join at the address shown by playit.gg (see READ ME FIRST.txt).' -ForegroundColor White
@@ -701,7 +817,7 @@ function Stop-Server {
 
 <#
 .SYNOPSIS
-    Copies the world, configs and plugin data to backups\<timestamp> and keeps the newest 14.
+    Copies the world, configs and plugin or mod data to backups\<timestamp> and keeps the newest 14.
 #>
 function Backup-Server {
     param([Parameter(Mandatory)] $Context)
@@ -713,10 +829,11 @@ function Backup-Server {
     Write-Step "Backing up to backups\$stamp"
     if ($running) { [void](Invoke-Rcon $Context @('save-off', 'save-all flush')); Start-Sleep -Seconds 3 }
     try {
-        # Worlds, configs and plugin data. Skips things the installer can re-download or the server rebuilds.
+        # Worlds, configs and plugin or mod data. Skips things the installer can re-download or the server rebuilds.
         & robocopy $server $dest /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP `
             /XD (Join-Path $server 'libraries') (Join-Path $server 'versions') (Join-Path $server 'cache') `
                 (Join-Path $server 'logs') (Join-Path $server 'bluemap') (Join-Path $server 'plugins\.paper-remapped') `
+                (Join-Path $server '.fabric') `
             /XF '*.jar' 'session.lock' | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
     } finally {
@@ -735,10 +852,13 @@ function Backup-Server {
 function Show-Status {
     param([Parameter(Mandatory)] $Context)
     $m = $Context.Manifest
+    $layout = Get-ServerLayout -Manifest $m
     $state = Read-InstallState $Context
-    Write-Host "$($m.name) $($m.version) - Minecraft $($m.minecraft), Paper build $($m.server.build)"
+    $addOns = if ($layout.AddOns -eq 'mods') { 'Mods' } else { 'Plugins' }
+    $addOnCount = @($m.($layout.AddOns) | Where-Object { $_ }).Count
+    Write-Host "$($m.name) $($m.version) - Minecraft $($m.minecraft), $($layout.Description)"
     Write-Host "Installed: $(if ($state.version) { $state.version } else { 'no' })    Admin: $($state.owner)"
-    Write-Host "Running:   $(Test-ServerRunning $Context)    Plugins: $(@($m.plugins).Count)    Datapacks: $(@($m.datapacks).Count)"
+    Write-Host "Running:   $(Test-ServerRunning $Context)    ${addOns}: $addOnCount    Datapacks: $(@($m.datapacks | Where-Object { $_ }).Count)"
 }
 
 Export-ModuleMember -Function @(
@@ -752,6 +872,8 @@ Export-ModuleMember -Function @(
     'Add-Owner'
     'Invoke-Rcon'
     'Get-MemoryGB'
+    'Get-LaunchArguments'
+    'Get-ServerLayout'
     'Get-ExpectedHash'
     'Read-ServerProperties'
     'Set-ServerProperty'

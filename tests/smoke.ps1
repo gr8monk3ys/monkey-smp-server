@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    End-to-end test: install the packaged server, boot it, check every plugin and datapack loaded, stop it.
+    End-to-end test: install the packaged server, boot it, check every plugin (Paper) or mod (Fabric)
+    and datapack loaded, stop it.
 
 .EXAMPLE
     # From an unzipped release (or a copy of package/):
@@ -22,10 +23,16 @@ $server = Join-Path $Root 'server'
 # The package's own module: one server.properties parser for the installer and this test.
 Import-Module (Join-Path $Root 'realms\Realms.psm1') -Force
 $manifest = (New-RealmsContext -Root $Root).Manifest
-# Ranks are whatever LuckPerms groups the Defaults ship.
-$ranks = @(Get-ChildItem (Join-Path $Root 'realms\defaults\plugins\LuckPerms\yaml-storage\groups') -Filter *.yml |
+$layout = Get-ServerLayout -Manifest $manifest
+$isPaper = $layout.Type -eq 'paper'
+# The plugins (Paper) or mods (Fabric) the manifest pins, and the folder they go in.
+$addOns = @($manifest.($layout.AddOns) | Where-Object { $_ })
+$datapacks = @($manifest.datapacks | Where-Object { $_ })
+# Ranks are whatever LuckPerms groups the Defaults ship, in the server type's LuckPerms storage folder.
+$ranks = @(Get-ChildItem -LiteralPath (Join-Path $Root "realms\defaults\$($layout.LuckPerms)\groups") -Filter *.yml |
     ForEach-Object { $_.BaseName })
 if (-not $ranks.Count) { throw 'No LuckPerms ranks found in the package Defaults' }
+Write-Host "--- $($manifest.name) $($manifest.version): $($layout.Description), $($addOns.Count) $($layout.AddOns), $($datapacks.Count) datapacks"
 $failures = New-Object System.Collections.Generic.List[string]
 
 function Invoke-Realms([string[]]$Arguments) {
@@ -70,12 +77,15 @@ try {
     # Paper shortens long replies with "...", so check the count and that nothing was left disabled.
     $enabled = (Invoke-Realms @('rcon', 'datapack list enabled')) -join "`n"
     $count = if ($enabled -match 'There are (\d+) data pack') { [int]$Matches[1] } else { 0 }
-    if ($count -lt @($manifest.datapacks).Count + 1) { $failures.Add("only $count datapacks enabled: $enabled") }
+    if ($count -lt $datapacks.Count + 1) { $failures.Add("only $count datapacks enabled: $enabled") }
     $available = (Invoke-Realms @('rcon', 'datapack list available')) -join "`n"
     if ($available -match 'file/') { $failures.Add("datapacks present but not enabled: $available") }
-    $plugins = (Invoke-Realms @('rcon', 'plugins')) -join "`n"
-    Write-Host $plugins
-    if ($plugins -notmatch "Server Plugins \($(@($manifest.plugins).Count)\)") { $failures.Add('not every plugin loaded') }
+    if ($isPaper) {
+        # Fabric has no plugins command; its mods are checked in the log below.
+        $plugins = (Invoke-Realms @('rcon', 'plugins')) -join "`n"
+        Write-Host $plugins
+        if ($plugins -notmatch "Server Plugins \($($addOns.Count)\)") { $failures.Add('not every plugin loaded') }
+    }
     $seed = (Invoke-Realms @('rcon', 'seed')) -join ''
     if ($seed -notmatch [regex]::Escape("[$($manifest.world.seed)]")) { $failures.Add("world seed is not the pinned one: $seed") }
 } finally {
@@ -85,17 +95,38 @@ try {
 }
 
 $logText = Get-Content $log -Raw
-foreach ($pattern in 'Error occurred while enabling', 'Could not load ''plugins', 'Unknown dependency', 'Ambiguous plugin name') {
+if ($isPaper) {
+    $bad = 'Error occurred while enabling', 'Could not load ''plugins', 'Unknown dependency', 'Ambiguous plugin name'
+} else {
+    $bad = 'Incompatible mods', 'Mixin apply', 'Exception in server tick loop', 'Minecraft Crash Report', 'This crash report has been saved'
+    # Fabric Loader lists the mods it found ("Loading 42 mods:", counting Minecraft, Java and bundled
+    # libraries too), possibly before the log file starts, so look at the console output as well.
+    $boot = $logText
+    if (Test-Path -LiteralPath $out) { $boot += "`n" + (Get-Content -LiteralPath $out -Raw) }
+    if ($boot -match 'Loading (\d+) mods') {
+        if ([int]$Matches[1] -lt $addOns.Count) { $failures.Add("Fabric loaded $($Matches[1]) mods, fewer than the $($addOns.Count) pinned") }
+    } else { $failures.Add('no "Loading <N> mods" line from Fabric Loader') }
+    $crashes = Join-Path $server 'crash-reports'
+    if ((Test-Path -LiteralPath $crashes) -and @(Get-ChildItem -LiteralPath $crashes -File).Count) { $failures.Add('crash-reports\ is not empty') }
+}
+foreach ($pattern in $bad) {
     foreach ($m in [regex]::Matches($logText, "(?m)^.*$([regex]::Escape($pattern)).*$")) { $failures.Add("log: $($m.Value)") }
 }
-# LuckPerms answers commands on the console, not over RCON, so check its storage instead.
-if ($logText -notmatch 'LuckPerms\] Loading storage provider\.\.\. \[YAML\]') { $failures.Add('LuckPerms is not using the YAML ranks') }
+# LuckPerms answers commands on the console, not over RCON, so check its storage instead. On Fabric
+# the line has no [LuckPerms] prefix.
+$storageLine = if ($isPaper) { 'LuckPerms\] Loading storage provider\.\.\. \[YAML\]' } else { '(?i)Loading storage provider\.\.\. \[YAML\]' }
+if ($logText -notmatch $storageLine) { $failures.Add('LuckPerms is not using the YAML ranks') }
 foreach ($g in $ranks) {
-    if (-not (Test-Path (Join-Path $server "plugins\LuckPerms\yaml-storage\groups\$g.yml"))) { $failures.Add("LuckPerms rank missing: $g") }
+    if (-not (Test-Path -LiteralPath (Join-Path $server "$($layout.LuckPerms)\groups\$g.yml"))) { $failures.Add("LuckPerms rank missing: $g") }
 }
-foreach ($p in $manifest.plugins) {
-    $jar = Join-Path $server "plugins\$($p.file)"
-    if (-not (Test-Path -LiteralPath $jar)) { $failures.Add("plugin jar missing: $($p.file)") }
+$kind = $layout.AddOns.TrimEnd('s')
+foreach ($p in $addOns) {
+    $jar = Join-Path $server "$($layout.AddOns)\$($p.file)"
+    if (-not (Test-Path -LiteralPath $jar)) { $failures.Add("$kind jar missing: $($p.file)") }
+}
+foreach ($p in $datapacks) {
+    $pack = Join-Path $server "$($manifest.world.level_name)\datapacks\$($p.file)"
+    if (-not (Test-Path -LiteralPath $pack)) { $failures.Add("datapack missing: $($p.file)") }
 }
 if ($logText -notmatch 'All dimensions are saved|Closing Server') { $failures.Add('server did not shut down cleanly') }
 
@@ -104,4 +135,4 @@ if ($failures.Count) {
     $failures | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     exit 1
 }
-Write-Host "`nSMOKE TEST PASSED: $(@($manifest.plugins).Count) plugins, $(@($manifest.datapacks).Count) datapacks" -ForegroundColor Green
+Write-Host "`nSMOKE TEST PASSED: $($layout.Description), $($addOns.Count) $($layout.AddOns), $($datapacks.Count) datapacks" -ForegroundColor Green

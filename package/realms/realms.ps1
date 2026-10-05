@@ -4,14 +4,14 @@
     Installs, updates, starts, stops and backs up The Realms Minecraft server.
 
 .DESCRIPTION
-    Everything is downloaded from its official source (Adoptium, PaperMC, Modrinth) and checked
+    Everything is downloaded from its official source (Adoptium, PaperMC or Fabric, Modrinth) and checked
     against the hashes pinned in manifest.json before it is used. Running "install" again is safe:
     files that are already correct are skipped, and files from an older manifest are replaced.
 
     This script only parses the command line; the work is done by Realms.psm1 next to it.
 
     Layout next to this folder:
-        server\    the Minecraft server (world, plugins, configs)
+        server\    the Minecraft server (world, plugins or mods, configs)
         java\      the Java runtime the server uses
         backups\   world backups made by "backup"
 

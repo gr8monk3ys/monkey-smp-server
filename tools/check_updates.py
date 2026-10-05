@@ -1,13 +1,15 @@
-"""Find newer builds of Paper and of every plugin/datapack for the pinned Minecraft version.
+"""Find newer builds of the server and of every plugin/mod/datapack for the pinned Minecraft version.
 
   python tools/check_updates.py                 print a Markdown report
   python tools/check_updates.py --apply         also pin the newer builds in manifest.json
   python tools/check_updates.py --out report.md write the report to a file (used by CI)
 
-Only stable releases for the same Minecraft version are considered. A patched datapack with a
-newer release is reported but never pinned by --apply: its patch was made against the old file
-(ADR-0004), so take it by re-making the patch with tools/snapshot.py. After --apply, run the smoke
-test (tests/smoke.ps1) before releasing: plugin updates can change configs.
+Only stable releases for the same Minecraft version are considered. The server is Paper's newest
+stable build, or for Fabric the newest stable loader for the Minecraft version and/or the newest
+stable installer (one server update; the launcher jar is downloaded to pin its size and hash).
+A patched mod or datapack with a newer release is reported but never pinned by --apply: its patch
+was made against the old file (ADR-0004), so take it by re-making the patch with tools/snapshot.py.
+After --apply, run the smoke test (tests/smoke.ps1) before releasing: updates can change configs.
 """
 import argparse
 import copy
@@ -16,15 +18,15 @@ from dataclasses import dataclass
 
 import entries
 from repo import REPO
-from upstream import LiveHttp, Upstream
+from upstream import LiveHttp, Upstream, fabric_server_jar_url, version_key
 
-LOADERS = {"plugin": ["paper", "spigot", "bukkit", "purpur", "folia"], "datapack": ["datapack"]}
+LOADERS = {"plugin": ["paper", "spigot", "bukkit", "purpur", "folia"], "mod": ["fabric"], "datapack": ["datapack"]}
 NEEDS_PATCH = "patched - re-snapshot needed"
 
 
 @dataclass(frozen=True)
 class Update:
-    kind: str           # "server", "plugin" or "datapack"
+    kind: str           # "server", "plugin", "mod" or "datapack"
     slug: str
     pinned: str
     newest: str
@@ -51,15 +53,39 @@ def newer_release(versions: list[dict], entry: dict) -> dict | None:
     return max(newer, key=lambda v: v["date_published"]) if newer else None
 
 
+def server_update(manifest: dict, upstream: Upstream) -> Update | None:
+    mc, server = manifest["minecraft"], manifest["server"]
+    if server["type"] == "paper":
+        build = upstream.newest_stable_paper_build(mc)
+        if build and build["id"] > server["build"]:
+            return Update("server", "paper", str(server["build"]), str(build["id"]), entries.paper(build))
+        return None
+    loader, installer = server["loader"], server["installer"]
+    newest_loader = upstream.newest_stable_fabric_loader(mc)
+    newest_installer = upstream.newest_stable_fabric_installer()
+    if newest_loader and version_key(newest_loader) > version_key(loader):
+        loader = newest_loader
+    if newest_installer and version_key(newest_installer) > version_key(installer):
+        installer = newest_installer
+    if (loader, installer) == (server["loader"], server["installer"]):
+        return None
+    jar = upstream.download(fabric_server_jar_url(mc, loader, installer))
+    return Update("server", "fabric", fabric_label(server["loader"], server["installer"]),
+                  fabric_label(loader, installer), entries.fabric(mc, loader, installer, jar))
+
+
+def fabric_label(loader: str, installer: str) -> str:
+    return f"loader {loader}, installer {installer}"
+
+
 def find_updates(manifest: dict, upstream: Upstream) -> list[Update]:
     mc = manifest["minecraft"]
     updates = []
-    build = upstream.newest_stable_paper_build(mc)
-    if build and build["id"] > manifest["server"]["build"]:
-        updates.append(Update("server", "paper", str(manifest["server"]["build"]), str(build["id"]),
-                              entries.paper(build)))
-    for kind, group in entries.GROUPS.items():
-        for e in manifest[group]:
+    server = server_update(manifest, upstream)
+    if server:
+        updates.append(server)
+    for kind in entries.GROUPS:
+        for e in entries.group(manifest, kind):
             v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e)
             if not v:
                 continue
@@ -79,13 +105,14 @@ def report(manifest: dict, updates: list[Update]) -> str:
     lines += [f"| {u.kind} | {u.slug} | {u.pinned} | {u.newest} | {u.note} |" for u in updates]
     lines += ["", "To take them: `python tools/check_updates.py --apply`, run the smoke test, bump the version, tag."]
     if any(u.entry is None for u in updates):
-        lines += ["Patched datapacks are not pinned by `--apply`: update the pack on a server, re-apply the "
-                  "edit, and run `python tools/snapshot.py server <folder>` to re-make the patch (ADR-0004)."]
+        lines += ["Patched mods and datapacks are not pinned by `--apply`: update the file on a server (the new "
+                  "upstream file in mod-originals/ or datapack-originals/, the edited one in mods/ or the world's "
+                  "datapacks/), and run `python tools/snapshot.py server <folder>` to re-make the patch (ADR-0004)."]
     return "\n".join(lines)
 
 
 def apply(manifest: dict, updates: list[Update]) -> dict:
-    """A copy of the manifest with every pinnable update applied (patched datapacks are left alone)."""
+    """A copy of the manifest with every pinnable update applied (patched mods/datapacks are left alone)."""
     out = copy.deepcopy(manifest)
     for u in updates:
         if u.entry is None:
@@ -116,7 +143,7 @@ def main(argv=None, repo=REPO, upstream=None):
         repo.save_manifest(apply(manifest, updates))
         print(f"\npinned {len(pinnable)} update(s) in manifest.json")
     if a.apply and len(pinnable) < len(updates):
-        print(f"{len(updates) - len(pinnable)} patched datapack(s) left pinned; they need a fresh patch")
+        print(f"{len(updates) - len(pinnable)} patched mod(s)/datapack(s) left pinned; they need a fresh patch")
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             f.write(f"count={len(updates)}\n")

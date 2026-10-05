@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 import pytest
 
@@ -75,3 +76,42 @@ def test_unknown_project_fails():
     http.add("GET", f"{MODRINTH}/projects?ids={json_query(['nope'])}", [])
     with pytest.raises(SystemExit, match="not on Modrinth: nope"):
         add.add(_manifest(), "datapack", ["nope"], Upstream(http))
+
+
+def _fabric_manifest(mods=()):
+    return {"minecraft": MC, "server": {"type": "fabric"}, "plugins": [], "mods": list(mods), "datapacks": []}
+
+
+def test_adds_a_mod_to_a_fabric_server():
+    http = RecordedHttp()
+    lithium = _project(http, "lithium", [
+        _version("lithium", "0.26.2", "release", "2026-09-20T00:00:00Z", "lithium-fabric-0.26.2.jar"),
+    ], kind="mod")
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(['lithium'])}", [lithium])
+    out, added = add.add(_fabric_manifest(), "mod", ["lithium"], Upstream(http))
+    assert added == ["lithium"]
+    assert [(e["slug"], e["file"]) for e in out["mods"]] == [("lithium", "lithium-fabric-0.26.2.jar")]
+    assert entries.check("mod", out["mods"][0]) == []
+
+
+@pytest.mark.parametrize("manifest, kind, message", [
+    (_manifest(), "mod", "a paper server can't run mods"),
+    (_fabric_manifest(), "plugin", "a fabric server can't run plugins"),
+])
+def test_kinds_the_server_type_does_not_run_are_refused(manifest, kind, message):
+    with pytest.raises(SystemExit, match=message):
+        add.add(manifest, kind, ["anything"], Upstream(RecordedHttp()))
+
+
+def test_main_adds_a_mod_and_the_saved_manifest_has_every_group(repo_copy):
+    http = RecordedHttp()
+    corpses = _project(http, "player-corpses", [
+        _version("player-corpses", "2.0", "release", "2026-09-01T00:00:00Z", "corpses-2.0.zip")])
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(['player-corpses'])}", [corpses])
+    raw = json.loads(repo_copy.manifest.read_text(encoding="utf-8"))
+    raw.pop("mods", None)  # a 1.x manifest
+    repo_copy.manifest.write_text(json.dumps(raw), encoding="utf-8")
+    add.main(["datapack", "player-corpses"], repo=repo_copy, upstream=Upstream(http))
+    saved = json.loads(repo_copy.manifest.read_text(encoding="utf-8"))
+    assert saved["mods"] == [] and list(saved).index("mods") == list(saved).index("plugins") + 1
+    assert "player-corpses" in [d["slug"] for d in saved["datapacks"]]

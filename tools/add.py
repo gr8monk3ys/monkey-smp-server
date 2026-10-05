@@ -1,11 +1,13 @@
 """Add Modrinth projects to the manifest, pinned to their newest stable build for our Minecraft version.
 
   python tools/add.py datapack player-corpses dragonkind-evolved
-  python tools/add.py plugin chunky
+  python tools/add.py plugin chunky          (Paper servers)
+  python tools/add.py mod lithium            (Fabric servers)
 
 Projects already in the manifest are skipped (use check_updates.py to move them). A project with no
 stable release for the pinned Minecraft version and loader fails the whole command, so nothing is
-half-added. Run validate.py --online and the smoke test afterwards.
+half-added, and so does a kind the server type doesn't run (plugins on Fabric, mods on Paper).
+Run validate.py --online and the smoke test afterwards.
 """
 import argparse
 
@@ -18,7 +20,11 @@ from upstream import LiveHttp, Upstream
 def add(manifest: dict, kind: str, slugs: list[str], upstream: Upstream) -> tuple[dict, list[str]]:
     """A copy of the manifest with the projects added (sorted by slug), and the slugs actually added."""
     group = entries.GROUPS[kind]
-    have = {e["slug"] for e in manifest[group]} | {e["project_id"] for e in manifest[group]}
+    server_type = manifest.get("server", {}).get("type", "paper")
+    if not entries.kind_allowed(server_type, kind):
+        raise SystemExit(f"a {server_type} server can't run {group}")
+    current = entries.group(manifest, kind)
+    have = {e["slug"] for e in current} | {e["project_id"] for e in current}
     projects = {p["slug"]: p for p in upstream.modrinth_projects(slugs).values()}
     missing = [s for s in slugs if s not in projects]
     if missing:
@@ -36,8 +42,8 @@ def add(manifest: dict, kind: str, slugs: list[str], upstream: Upstream) -> tupl
         added_slugs.append(slug)
     if problems:
         raise SystemExit("\n".join(problems))
-    out = dict(manifest)
-    out[group] = sorted(manifest[group] + new, key=lambda e: e["slug"])
+    out = entries.with_all_groups(dict(manifest))
+    out[group] = sorted(current + new, key=lambda e: e["slug"])
     return out, added_slugs
 
 

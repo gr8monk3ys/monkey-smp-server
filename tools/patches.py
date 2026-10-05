@@ -1,4 +1,5 @@
-"""Patches: small sets of file replacements applied inside one downloaded datapack (see ADR-0004).
+"""Patches: small sets of file replacements applied inside one downloaded mod jar or datapack zip
+(see ADR-0004). Jars are zips, so both are handled the same way.
 
 This module is the one owner of what a patch is. Its interface:
 
@@ -13,16 +14,18 @@ This module is the one owner of what a patch is. Its interface:
 The rules, shared with the installer:
   - A patch only REPLACES files that already exist in the upstream zip. Making a patch that adds or
     removes files, or applying one that names a file the zip doesn't have, raises PatchError.
-  - A datapack entry's `patch` is {"path": "patches/<folder>", "base_sha512": <hex>}, where
+  - A mod or datapack entry's `patch` is {"path": "patches/<folder>", "base_sha512": <hex>}, where
     base_sha512 is the hash of the exact upstream file the patch was made against. In a consistent
     manifest that equals the entry's own hashes.sha512; when they differ, the pin moved without the
     patch being re-made, and the manifest is invalid.
-  - Every folder under patches/ belongs to exactly one datapack entry.
+  - Every folder under patches/ belongs to exactly one mod or datapack entry.
 """
 import io
 import shutil
 import zipfile
 from pathlib import Path
+
+import entries
 
 PATCHES_DIR = "patches"
 
@@ -78,21 +81,25 @@ def folder(repo, entry: dict) -> Path:
 
 
 def check(manifest: dict, repo) -> list[str]:
-    errors, used = [], set()
-    for entry in manifest.get("datapacks", []):
-        if "patch" in entry:
-            errors += _check_entry(entry, repo)
-            if isinstance(entry["patch"], dict):
-                used.add(str(entry["patch"].get("path")))
+    errors, used = [], {}
+    for kind in entries.PATCHABLE:
+        for entry in entries.group(manifest, kind):
+            if "patch" in entry:
+                errors += _check_entry(kind, entry, repo)
+                if isinstance(entry["patch"], dict):
+                    path = str(entry["patch"].get("path"))
+                    if path in used:
+                        errors.append(f"{kind} {entry.get('file', '?')}: patch {path} is also used by {used[path]}")
+                    used.setdefault(path, f"{kind} {entry.get('file', '?')}")
     if repo.patches.is_dir():
         for p in sorted(repo.patches.iterdir()):
             if f"{PATCHES_DIR}/{p.name}" not in used:
-                errors.append(f"{PATCHES_DIR}/{p.name} is not used by any datapack")
+                errors.append(f"{PATCHES_DIR}/{p.name} is not used by any mod or datapack")
     return errors
 
 
-def _check_entry(entry: dict, repo) -> list[str]:
-    name = f"datapack {entry.get('file', '?')}"
+def _check_entry(kind: str, entry: dict, repo) -> list[str]:
+    name = f"{kind} {entry.get('file', '?')}"
     patch = entry["patch"]
     if not isinstance(patch, dict) or set(patch) != {"path", "base_sha512"}:
         return [f'{name}: patch must be {{"path": "{PATCHES_DIR}/<folder>", "base_sha512": "<hex>"}}']

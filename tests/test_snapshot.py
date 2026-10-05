@@ -1,10 +1,11 @@
-"""Snapshots of a fake server folder and client instance, with Modrinth/Paper answers keyed to the
-hashes of the tiny files each test makes."""
+"""Snapshots of fake Paper and Fabric server folders and a client instance, with Modrinth/Paper/Fabric
+answers keyed to the hashes of the tiny files each test makes."""
 import json
 
 import pytest
-from conftest import make_zip, paper_build, paper_builds_url, zip_contents
+from conftest import fabric_launcher, make_zip, paper_build, paper_builds_url, serve_fabric_launcher, zip_contents
 
+import entries
 import patches
 import snapshot
 import validate
@@ -60,7 +61,9 @@ def test_snapshot_server_writes_a_valid_manifest(server, repo_copy):
     assert m["minecraft"] == MC and m["server"]["build"] == 74
     assert m["java"] == repo_copy.load_manifest()["java"]  # kept by default
     assert [p["file"] for p in m["plugins"]] == ["Plugin-1.0.jar"]
+    assert m["mods"] == []
     assert [d["slug"] for d in m["datapacks"]] == ["edited-pack", "pack"]
+    assert m["world"] == repo_copy.load_manifest()["world"]  # same type and Minecraft version: kept
     assert validate.validate(m, repo_copy) == []
 
 
@@ -110,6 +113,145 @@ def test_snapshot_server_can_pin_the_newest_java(server, repo_copy, recorded):
     http.responses.update({k: v for k, v in recorded.responses.items() if "adoptium" in k})
     m = snapshot.snapshot_server(server.root, repo=repo_copy, upstream=Upstream(http), keep_java=False)
     assert m["java"]["file"].startswith("OpenJDK25U-jre_x64_windows")
+
+
+# --- Fabric --------------------------------------------------------------------------------------
+
+FABRIC_MC, LOADER = "26.3", "0.19.5"
+INSTALLER = "1.1.2"  # the newest stable installer in the recorded Fabric meta response
+JAR = {"fabric.mod.json": b'{"id": "edited"}', "data/edited/effects.json": b'{"strength": 1}'}
+EDITED_JAR = {**JAR, "data/edited/effects.json": b'{"strength": 3}'}
+
+
+class FakeFabricServer:
+    """A Fabric server folder: launcher jar, version caches, three mods (one patched, one identical
+    to its original), a datapack in a non-default world folder, and a folder inside mods/."""
+
+    def __init__(self, root, modrinth, recorded, level="smp_world", seed="12345"):
+        self.root, self.modrinth, self.level = root, modrinth, level
+        http = modrinth.http
+        http.responses.update({k: v for k, v in recorded.responses.items() if "meta.fabricmc.net" in k})
+        write(root / "server.properties", f"level-name={level}\nlevel-seed={seed}\nrcon.password=hunter2\n")
+        self.launcher = write(root / "fabric-server.jar", fabric_launcher(FABRIC_MC, LOADER, INSTALLER))
+        self.meta_jar = serve_fabric_launcher(http, FABRIC_MC, LOADER, INSTALLER, self.launcher)
+        write(root / "versions" / FABRIC_MC / f"server-{FABRIC_MC}.jar", b"vanilla server")
+        write(root / ".fabric" / "server" / f"fabric-loader-server-{LOADER}-minecraft-{FABRIC_MC}.jar", b"loader")
+        write(root / "mods" / "luckperms" / "config.yml", b"a mod's folder, not a mod")
+        self.mod = write(root / "mods" / "Mod-1.0+26.3.jar", make_zip({"fabric.mod.json": b'{"id": "mod"}'}))
+        self.same = write(root / "mods" / "same-1.0.jar", make_zip({"fabric.mod.json": b'{"id": "same"}'}))
+        write(root / "mod-originals" / "same-1.0.jar", self.same)
+        self.original = write(root / "mod-originals" / "edited-2.8.jar", make_zip(JAR))
+        self.edited = write(root / "mods" / "edited-2.8.jar", make_zip(EDITED_JAR))
+        self.pack = write(root / level / "datapacks" / "Pack.zip", make_zip(PACK))
+        modrinth.publish(self.mod, "mod", "Mod-1.0+26.3.jar")
+        modrinth.publish(self.same, "same", "same-1.0.jar")
+        self.original_version = modrinth.publish(self.original, "edited", "edited-2.8.jar")
+        modrinth.publish(self.pack, "pack", "Pack.zip")
+
+    def expect_lookup(self, *extra):
+        self.modrinth.expect_lookup(self.mod, self.same, self.original, self.edited, self.pack, *extra)
+
+    def snapshot(self, repo, **kw):
+        return snapshot.snapshot_server(self.root, repo=repo, upstream=Upstream(self.modrinth.http), **kw)
+
+
+@pytest.fixture
+def fabric(tmp_path, fake_modrinth, recorded):
+    return FakeFabricServer(tmp_path / "smp", fake_modrinth, recorded)
+
+
+def test_snapshot_fabric_server_writes_a_valid_manifest(fabric, repo_copy, capsys):
+    fabric.expect_lookup()
+    m = fabric.snapshot(repo_copy)
+
+    assert repo_copy.load_manifest() == m
+    assert list(m) == ["name", "version", "minecraft", "java", "server", "world", "plugins", "mods", "datapacks"]
+    assert m["minecraft"] == FABRIC_MC
+    assert m["server"] == entries.fabric(FABRIC_MC, LOADER, INSTALLER, fabric.meta_jar)
+    assert m["server"]["file"] == "fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar"
+    assert m["server"]["url"] == "https://meta.fabricmc.net/v2/versions/loader/26.3/0.19.5/1.1.2/server/jar"
+    assert m["plugins"] == []
+    assert [(e["slug"], e["file"]) for e in m["mods"]] == [
+        ("edited", "edited-2.8.jar"), ("mod", "Mod-1.0+26.3.jar"), ("same", "same-1.0.jar")]
+    assert [d["file"] for d in m["datapacks"]] == ["Pack.zip"]
+    assert m["java"] == repo_copy.load_manifest()["java"]
+    # The old manifest was Paper on another Minecraft version, so the world comes from server.properties.
+    assert m["world"] == {"level_name": "smp_world", "seed": "12345"}
+    assert validate.validate(m, repo_copy) == []
+    assert "note:" not in capsys.readouterr().out  # the local launcher is meta's jar
+
+
+def test_snapshot_fabric_server_turns_an_edited_mod_into_a_patch(fabric, repo_copy):
+    fabric.expect_lookup()
+    m = fabric.snapshot(repo_copy)
+
+    edited = next(e for e in m["mods"] if e["slug"] == "edited")
+    upstream_sha512 = fabric.original_version["files"][0]["hashes"]["sha512"]
+    assert edited["hashes"]["sha512"] == upstream_sha512
+    assert edited["patch"] == {"path": "patches/edited", "base_sha512": upstream_sha512}
+    files = patches.read(patches.folder(repo_copy, edited))
+    assert files == {"data/edited/effects.json": EDITED_JAR["data/edited/effects.json"]}
+    assert zip_contents(patches.apply(fabric.original, files)) == EDITED_JAR
+    assert "patch" not in next(e for e in m["mods"] if e["slug"] == "same"), "identical to its original"
+    assert sorted(p.name for p in repo_copy.patches.iterdir()) == ["edited"], "the Paper pack's patch is gone"
+
+
+def test_snapshot_fabric_server_pins_meta_launcher_even_if_the_local_one_differs(fabric, repo_copy, capsys):
+    write(fabric.root / "fabric-server.jar", fabric_launcher(FABRIC_MC, LOADER, "1.0.3"))  # an older installer
+    fabric.expect_lookup()
+    m = fabric.snapshot(repo_copy)
+    assert m["server"] == entries.fabric(FABRIC_MC, LOADER, INSTALLER, fabric.meta_jar)
+    out = capsys.readouterr().out
+    assert "note: fabric-server.jar (installer 1.0.3) is not byte-identical" in out and "installer 1.1.2" in out
+
+
+def test_snapshot_fabric_server_keeps_the_world_when_type_and_version_are_unchanged(fabric, repo_copy):
+    fabric.expect_lookup()
+    fabric.snapshot(repo_copy)
+    write(fabric.root / "server.properties", "level-name=smp_world\nlevel-seed=999\n")
+    m = fabric.snapshot(repo_copy)
+    assert m["world"] == {"level_name": "smp_world", "seed": "12345"}
+
+
+def test_snapshot_fabric_server_fails_on_mods_not_on_modrinth(fabric, repo_copy):
+    unknown = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
+    fabric.expect_lookup(unknown)
+    before = repo_copy.manifest.read_bytes()
+    with pytest.raises(SystemExit, match="homemade-1.0.jar"):
+        fabric.snapshot(repo_copy)
+    assert repo_copy.manifest.read_bytes() == before
+
+
+@pytest.mark.parametrize("seed, expected", [
+    ("", ""), ("-5", "-5"), ("abc", "96354"), ("polygenelubricants", "-2147483648"),
+    ("99999999999999999999", "1260560192"),  # too big for a long: Minecraft hashes it like text
+])
+def test_level_seed_is_the_number_minecraft_uses(tmp_path, seed, expected):
+    write(tmp_path / "server.properties", f"level-seed={seed}\n")
+    assert snapshot.level_seed(tmp_path) == expected
+
+
+def test_read_fabric_launcher(tmp_path):
+    write(tmp_path / "fabric-server.jar", fabric_launcher("26.3", "0.19.5", "1.1.2"))
+    found = snapshot.read_fabric_launcher(tmp_path / "fabric-server.jar")
+    assert found == snapshot.FabricLauncher(tmp_path / "fabric-server.jar", "26.3", "0.19.5", "1.1.2")
+    write(tmp_path / "paper.jar", make_zip({"META-INF/MANIFEST.MF": b"Main-Class: io.papermc.paperclip.Main\n"}))
+    write(tmp_path / "broken.jar", b"not a zip")
+    assert snapshot.read_fabric_launcher(tmp_path / "paper.jar") is None
+    assert snapshot.read_fabric_launcher(tmp_path / "broken.jar") is None
+
+
+def test_detect_server_refuses_unclear_folders(tmp_path, fabric, server):
+    with pytest.raises(SystemExit, match="neither a Paper server"):
+        snapshot.detect_server(tmp_path / "empty")
+    assert snapshot.detect_server(server.root) is None
+    assert snapshot.detect_server(fabric.root).loader == LOADER
+    write(server.root / "fabric-server.jar", fabric_launcher(FABRIC_MC, LOADER, INSTALLER))
+    with pytest.raises(SystemExit, match="both paper.jar and a Fabric launcher"):
+        snapshot.detect_server(server.root)
+    (server.root / "paper.jar").unlink()
+    with pytest.raises(SystemExit, match="no mods/ folder"):
+        snapshot.detect_server(server.root)
 
 
 def test_snapshot_client(tmp_path, fake_modrinth, repo_copy):

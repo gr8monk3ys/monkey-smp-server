@@ -19,6 +19,7 @@ from upstream import LiveHttp, RecordingHttp, Upstream  # noqa: E402
 
 FOLDER = Path(__file__).resolve().parent / "upstream"
 MC = "26.1.2"
+MC_FABRIC = "26.3"  # Fabric meta: loader and installer lists (the launcher jar itself is built in tests)
 # Projects with several stable releases for MC, so tests can pin an older one and see an update.
 PROJECTS = {
     "Vebnzrzj": "plugin",    # LuckPerms: the jar name changes with every version
@@ -32,6 +33,8 @@ def main():
     up = Upstream(RecordingHttp(LiveHttp(), FOLDER))
     up.paper_builds(MC)
     up.adoptium_latest_jre(JAVA_MAJOR)
+    up.fabric_loaders(MC_FABRIC)
+    up.fabric_installers()
     sha1s = []
     for project_id, kind in PROJECTS.items():
         newest = up.newest_release(project_id, MC, LOADERS[kind])

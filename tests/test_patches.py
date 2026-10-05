@@ -70,7 +70,7 @@ def test_check_catches_a_patch_made_against_another_upstream_file(repo_copy):
 def test_check_catches_an_orphan_folder(repo_copy):
     (repo_copy.patches / "nobody").mkdir()
     (repo_copy.patches / "nobody" / "pack.mcmeta").write_text("{}")
-    assert patches.check(repo_copy.load_manifest(), repo_copy) == ["patches/nobody is not used by any datapack"]
+    assert patches.check(repo_copy.load_manifest(), repo_copy) == ["patches/nobody is not used by any mod or datapack"]
 
 
 @pytest.mark.parametrize("break_it, message", [

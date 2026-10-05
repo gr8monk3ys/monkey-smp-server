@@ -2,9 +2,10 @@
 
   python tools/snapshot.py server C:/MCServer/factions
       Rewrites package/realms/manifest.json from the server's paper.jar, plugins/*.jar and
-      world/datapacks/*.zip. Every file must be on Modrinth (matched by hash) or the snapshot
-      fails. A datapack edited in place is matched against datapack-originals/<same name>,
-      and the files that differ are stored under package/realms/patches/<slug>/.
+      <level-name>/datapacks/*.zip (level-name read from its server.properties). Every file must
+      be on Modrinth (matched by hash) or the snapshot fails. A datapack edited in place is matched
+      against datapack-originals/<same name>, and the files that differ are stored as a patch under
+      package/realms/patches/<slug>/, pinned to that original's hash.
 
   python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
       Rewrites client/ (a Modrinth modpack source) from a Prism instance: mods, resource packs
@@ -14,194 +15,194 @@
 Hand-curated config defaults (package/realms/defaults/) are not touched.
 """
 import argparse
+import hashlib
 import json
-import os
 import re
 import shutil
-import sys
-import zipfile
+from pathlib import Path
+from typing import NamedTuple
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import CLIENT, MODRINTH, REALMS, digest, http_json, load_manifest, q, save_manifest  # noqa: E402
+import defaults
+import entries
+import patches
+from repo import REPO, load_json, save_json
+from upstream import LiveHttp, Upstream
 
 JAVA_MAJOR = 25
+CLIENT_CONTENT = ("mods", "resourcepacks", "shaderpacks")
 
 
-def modrinth_lookup(paths):
-    """Map each local file to its Modrinth version/file by sha1. Unmatched files map to None."""
-    blobs = {p: open(p, "rb").read() for p in paths}
-    sha1 = {p: digest(b, "sha1") for p, b in blobs.items()}
-    found = http_json(f"{MODRINTH}/version_files", {"hashes": list(sha1.values()), "algorithm": "sha1"}) if sha1 else {}
-    ids = sorted({v["project_id"] for v in found.values()})
-    slugs = {p["id"]: p["slug"] for p in http_json(f"{MODRINTH}/projects?ids={q(ids)}")} if ids else {}
-    out = {}
-    for p, h in sha1.items():
-        v = found.get(h)
-        if not v:
-            out[p] = None
-            continue
-        f = next(x for x in v["files"] if x["hashes"]["sha1"] == h)
-        out[p] = {
-            "slug": slugs[v["project_id"]],
-            "project_id": v["project_id"],
-            "version": v["version_number"],
-            "version_id": v["id"],
-            "file": os.path.basename(p),
-            "url": f["url"],
-            "size": f["size"],
-            "hashes": {"sha512": f["hashes"]["sha512"]},
-        }
-    return out
+class Found(NamedTuple):
+    version: dict
+    sha1: str
+    slug: str
 
 
-def files_in(folder, exts):
-    if not os.path.isdir(folder):
+def identify(upstream: Upstream, paths) -> dict[Path, Found | None]:
+    """Match each local file to its Modrinth version by SHA-1. Unmatched files map to None."""
+    sha1 = {p: hashlib.sha1(p.read_bytes()).hexdigest() for p in paths}
+    versions = upstream.modrinth_versions_by_sha1(sha1.values())
+    projects = upstream.modrinth_projects(v["project_id"] for v in versions.values())
+    return {p: Found(versions[h], h, projects[versions[h]["project_id"]]["slug"]) if h in versions else None
+            for p, h in sha1.items()}
+
+
+def files_in(folder: Path, exts) -> list[Path]:
+    if not folder.is_dir():
         return []
-    return sorted(os.path.join(folder, f) for f in os.listdir(folder)
-                  if f.lower().endswith(exts) and os.path.isfile(os.path.join(folder, f)))
+    return sorted(p for p in folder.iterdir() if p.is_file() and p.name.lower().endswith(exts))
 
 
-def zip_diff(original, patched):
-    a, b = zipfile.ZipFile(original), zipfile.ZipFile(patched)
-    if set(a.namelist()) != set(b.namelist()):
-        raise SystemExit(f"{patched}: patch adds/removes files; only in-place edits are supported")
-    return {n: b.read(n) for n in b.namelist() if a.read(n) != b.read(n)}
-
-
-def paper_build(server_dir, mc):
-    sha256 = digest(open(os.path.join(server_dir, "paper.jar"), "rb").read(), "sha256")
-    for b in http_json(f"https://fill.papermc.io/v3/projects/paper/versions/{mc}/builds"):
-        d = b["downloads"]["server:default"]
-        if d["checksums"]["sha256"] == sha256:
-            return {"type": "paper", "build": b["id"], "file": d["name"], "url": d["url"],
-                    "size": d["size"], "hashes": {"sha256": sha256}}
-    raise SystemExit("paper.jar doesn't match any Paper build for " + mc)
-
-
-def java_runtime():
-    a = http_json(f"https://api.adoptium.net/v3/assets/latest/{JAVA_MAJOR}/hotspot"
-                  "?os=windows&architecture=x64&image_type=jre")[0]
-    p = a["binary"]["package"]
-    return {"vendor": "Eclipse Temurin JRE", "version": a["release_name"], "file": p["name"],
-            "url": p["link"], "size": p["size"], "hashes": {"sha256": p["checksum"]}}
-
-
-def snapshot_server(server_dir, keep_java):
-    old = load_manifest() if os.path.exists(os.path.join(REALMS, "manifest.json")) else {}
-    hist = json.load(open(os.path.join(server_dir, "version_history.json")))["currentVersion"]
+def minecraft_version(server_dir: Path) -> str:
+    hist = load_json(server_dir / "version_history.json")["currentVersion"]
     m = re.search(r"MC: ([\w.\-]+)\)", hist)
     if not m:
         raise SystemExit(f"can't read the Minecraft version from version_history.json: {hist}")
-    mc = m.group(1)
+    return m.group(1)
 
-    plugin_paths = files_in(os.path.join(server_dir, "plugins"), (".jar",))
-    pack_paths = files_in(os.path.join(server_dir, "world", "datapacks"), (".zip",))
-    originals = os.path.join(server_dir, "datapack-originals")
-    lookup_paths = plugin_paths + pack_paths + files_in(originals, (".zip",))
-    found = modrinth_lookup(lookup_paths)
+
+def level_name(server_dir: Path) -> str:
+    """The world folder the server uses (server.properties level-name, Minecraft's default 'world')."""
+    props = server_dir / "server.properties"
+    if not props.is_file():
+        return "world"
+    return defaults.parse_properties(props.read_text(encoding="utf-8")).get("level-name") or "world"
+
+
+def paper_entry(upstream: Upstream, server_dir: Path, mc: str) -> dict:
+    sha256 = hashlib.sha256((server_dir / "paper.jar").read_bytes()).hexdigest()
+    for build in upstream.paper_builds(mc):
+        entry = entries.paper(build)
+        if entry["hashes"]["sha256"] == sha256:
+            return entry
+    raise SystemExit("paper.jar doesn't match any Paper build for " + mc)
+
+
+def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, keep_java=True) -> dict:
+    upstream = upstream or Upstream(LiveHttp())
+    server_dir = Path(server_dir)
+    old = repo.load_manifest() if repo.manifest.exists() else {}
+    mc = minecraft_version(server_dir)
+    level = level_name(server_dir)
+
+    plugin_paths = files_in(server_dir / "plugins", (".jar",))
+    pack_paths = files_in(server_dir / level / "datapacks", (".zip",))
+    originals = server_dir / "datapack-originals"
+    found = identify(upstream, plugin_paths + pack_paths + files_in(originals, (".zip",)))
 
     missing = [p for p in plugin_paths if not found[p]]
-    plugins = [found[p] for p in plugin_paths if found[p]]
-    datapacks = []
+    plugins = [entries.from_disk(*found[p], disk_name=p.name) for p in plugin_paths if found[p]]
+    datapacks, new_patches = [], {}
     for p in pack_paths:
-        entry = found[p]
-        orig = os.path.join(originals, os.path.basename(p))
-        if not entry and os.path.exists(orig) and found.get(orig):
-            entry = dict(found[orig])
-            patch_dir = os.path.join(REALMS, "patches", entry["slug"])
-            shutil.rmtree(patch_dir, ignore_errors=True)
-            for name, data in zip_diff(orig, p).items():
-                out = os.path.join(patch_dir, *name.split("/"))
-                os.makedirs(os.path.dirname(out), exist_ok=True)
-                open(out, "wb").write(data)
-            entry["patch"] = "patches/" + entry["slug"]
-        if entry:
-            datapacks.append(entry)
+        orig = originals / p.name
+        if found[p]:
+            datapacks.append(entries.from_disk(*found[p], disk_name=p.name))
+        elif found.get(orig):
+            base = entries.from_disk(*found[orig], disk_name=p.name)
+            try:
+                files = patches.make(orig.read_bytes(), p.read_bytes())
+            except patches.PatchError as err:
+                raise SystemExit(f"{p}: {err}") from err
+            if files:
+                new_patches[base["slug"]] = files
+                base = entries.from_disk(*found[orig], disk_name=p.name,
+                                         patch=patches.reference(base["slug"], base["hashes"]["sha512"]))
+            datapacks.append(base)
         else:
             missing.append(p)
     if missing:
-        raise SystemExit("not on Modrinth (add them by hand or replace them):\n  " + "\n  ".join(missing))
+        raise SystemExit("not on Modrinth (add them by hand or replace them):\n  "
+                         + "\n  ".join(str(p) for p in missing))
+
+    if repo.patches.is_dir():
+        for stale in repo.patches.iterdir():
+            if stale.name not in new_patches:
+                shutil.rmtree(stale)
+    for slug, files in new_patches.items():
+        patches.write(repo.patches / slug, files)
 
     manifest = {
         "name": old.get("name", "The Realms"),
         "version": old.get("version", "1.0.0"),
         "minecraft": mc,
-        "java": old["java"] if keep_java and "java" in old else java_runtime(),
-        "server": paper_build(server_dir, mc),
-        "world": old.get("world", {"level_name": "world", "seed": ""}),
+        "java": old["java"] if keep_java and "java" in old else entries.java(upstream.adoptium_latest_jre(JAVA_MAJOR)),
+        "server": paper_entry(upstream, server_dir, mc),
+        "world": old.get("world", {"level_name": level, "seed": ""}),
         "plugins": sorted(plugins, key=lambda e: e["slug"]),
         "datapacks": sorted(datapacks, key=lambda e: e["slug"]),
     }
-    save_manifest(manifest)
+    repo.save_manifest(manifest)
     print(f"manifest: Minecraft {mc}, Paper build {manifest['server']['build']}, "
-          f"{len(plugins)} plugins, {len(datapacks)} datapacks "
-          f"({sum('patch' in d for d in datapacks)} patched)")
+          f"{len(plugins)} plugins, {len(datapacks)} datapacks from {level}/datapacks "
+          f"({len(new_patches)} patched)")
+    return manifest
 
 
-CLIENT_CONTENT = ("mods", "resourcepacks", "shaderpacks")
-
-
-def snapshot_client(instance):
-    old = json.load(open(os.path.join(CLIENT, "modrinth.index.json"))) if os.path.exists(
-        os.path.join(CLIENT, "modrinth.index.json")) else {}
-    paths = [p for d in CLIENT_CONTENT for p in files_in(os.path.join(instance, d), (".jar", ".zip"))]
-    found = modrinth_lookup(paths)
+def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) -> dict:
+    upstream = upstream or Upstream(LiveHttp())
+    instance = Path(instance)
+    index_path = repo.client / "modrinth.index.json"
+    old = load_json(index_path) if index_path.exists() else {}
+    paths = [p for d in CLIENT_CONTENT for p in files_in(instance / d, (".jar", ".zip"))]
+    found = identify(upstream, paths)
     files, skipped = [], []
     for p in paths:
-        e = found[p]
-        if not e:
-            skipped.append(os.path.relpath(p, instance))
+        rel = p.relative_to(instance).as_posix()
+        if not found[p]:
+            skipped.append(rel)
             continue
-        rel = os.path.relpath(p, instance).replace("\\", "/")
-        files.append({"path": rel, "hashes": {"sha1": digest(open(p, "rb").read(), "sha1"),
-                                              "sha512": e["hashes"]["sha512"]},
+        version, sha1, _ = found[p]
+        f = next(x for x in version["files"] if x["hashes"]["sha1"] == sha1)
+        files.append({"path": rel, "hashes": {"sha1": sha1, "sha512": f["hashes"]["sha512"]},
                       "env": {"client": "required", "server": "unsupported"},
-                      "downloads": [e["url"]], "fileSize": e["size"]})
-    manifest = load_manifest()
+                      "downloads": [f["url"]], "fileSize": f["size"]})
+    manifest = repo.load_manifest()
+    loader = fabric_loader(instance) or old.get("dependencies", {}).get("fabric-loader")
+    if not loader:
+        raise SystemExit("can't tell the Fabric loader version (no mmc-pack.json next to the instance)")
     index = {"formatVersion": 1, "game": "minecraft",
              "versionId": manifest["version"], "name": old.get("name", "The Realms - Client"),
              "summary": old.get("summary", "Client pack for The Realms factions server."),
              "files": files,
-             "dependencies": {"minecraft": manifest["minecraft"],
-                              "fabric-loader": fabric_loader(instance) or old["dependencies"]["fabric-loader"]}}
+             "dependencies": {"minecraft": manifest["minecraft"], "fabric-loader": loader}}
 
-    overrides = os.path.join(CLIENT, "overrides")
+    overrides = repo.client / "overrides"
     shutil.rmtree(overrides, ignore_errors=True)
-    shutil.copytree(os.path.join(instance, "config"), os.path.join(overrides, "config"),
-                    ignore=shutil.ignore_patterns("*.bak*", "*.old"))
-    os.makedirs(os.path.join(overrides, "shaderpacks"), exist_ok=True)
-    for f in os.listdir(os.path.join(instance, "shaderpacks")):
-        if f.endswith(".txt"):
-            shutil.copy2(os.path.join(instance, "shaderpacks", f), os.path.join(overrides, "shaderpacks", f))
-    shutil.copy2(os.path.join(instance, "options.txt"), os.path.join(overrides, "options.txt"))
-    with open(os.path.join(CLIENT, "modrinth.index.json"), "w", encoding="utf-8", newline="\n") as f:
-        json.dump(index, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    overrides.mkdir(parents=True)
+    if (instance / "config").is_dir():
+        shutil.copytree(instance / "config", overrides / "config", ignore=shutil.ignore_patterns("*.bak*", "*.old"))
+    (overrides / "shaderpacks").mkdir()
+    for f in files_in(instance / "shaderpacks", (".txt",)):
+        shutil.copy2(f, overrides / "shaderpacks" / f.name)
+    if (instance / "options.txt").is_file():
+        shutil.copy2(instance / "options.txt", overrides / "options.txt")
+    save_json(index_path, index)
     print(f"client: {len(files)} files linked from Modrinth")
     if skipped:
         print("left out (not on Modrinth):\n  " + "\n  ".join(skipped))
+    return index
 
 
-def fabric_loader(instance):
-    pack = os.path.join(os.path.dirname(instance), "mmc-pack.json")
-    if os.path.exists(pack):
-        for c in json.load(open(pack))["components"]:
+def fabric_loader(instance: Path) -> str | None:
+    pack = instance.parent / "mmc-pack.json"
+    if pack.exists():
+        for c in json.loads(pack.read_text(encoding="utf-8"))["components"]:
             if c["uid"] == "net.fabricmc.fabric-loader":
                 return c["version"]
     return None
 
 
-def main():
+def main(argv=None, repo=REPO, upstream=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("what", choices=["server", "client"])
     ap.add_argument("path")
     ap.add_argument("--update-java", action="store_true",
                     help="pin the newest Temurin JRE instead of keeping the current one")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     if a.what == "server":
-        snapshot_server(a.path, keep_java=not a.update_java)
+        snapshot_server(a.path, repo=repo, upstream=upstream, keep_java=not a.update_java)
     else:
-        snapshot_client(a.path)
+        snapshot_client(a.path, repo=repo, upstream=upstream)
 
 
 if __name__ == "__main__":

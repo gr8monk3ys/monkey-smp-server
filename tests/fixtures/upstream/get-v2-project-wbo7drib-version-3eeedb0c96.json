@@ -1,0 +1,103 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.modrinth.com/v2/project/wBo7DRiB/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22datapack%22%5D"
+ },
+ "response": [
+  {
+   "id": "lGev5gzi",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.8",
+   "version_type": "release",
+   "date_published": "2026-10-01T13:52:17.599424Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.8 - 1.21-26.3+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/lGev5gzi/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.8%20-%201.21-26.3%2B.zip",
+     "size": 142475,
+     "primary": true,
+     "hashes": {
+      "sha1": "f46257f7e39e1340d0f6012eebed83e55513713d",
+      "sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
+     }
+    }
+   ]
+  },
+  {
+   "id": "rxE6PxVn",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.7",
+   "version_type": "release",
+   "date_published": "2026-10-01T13:17:58.586570Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.7 - 1.21-26.3+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/rxE6PxVn/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.7%20-%201.21-26.3%2B.zip",
+     "size": 142362,
+     "primary": true,
+     "hashes": {
+      "sha1": "42befbcc7ee2fd76a327c68763de2a0bf137ec77",
+      "sha512": "1bae72816062eea6ab8648f70416d9cc76132ee4cfa798ef40ea98872cae88e0b5c7ae725f7ee88e475299e22c94da915546ffd3b519f745b1cd920f092e583c"
+     }
+    }
+   ]
+  },
+  {
+   "id": "pHR6ZrmC",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.6",
+   "version_type": "release",
+   "date_published": "2026-09-20T10:59:34.959940Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.6 - 1.21-26.3+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/pHR6ZrmC/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.6%20-%201.21-26.3%2B.zip",
+     "size": 142340,
+     "primary": true,
+     "hashes": {
+      "sha1": "6cf721a4ae816b778d1bcb2b22752a44437d6526",
+      "sha512": "b1f99e18d5527eb87d15cf40faf91d2cbce41d79c595b5e7b44cbed13c215cdf936dffb5093f3710abc62033ea3832ce0836d89a598862101332afef682bf0d0"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ZPvyrjhF",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.4",
+   "version_type": "release",
+   "date_published": "2026-07-14T13:04:07.904860Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.4 - 26.1.x+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/ZPvyrjhF/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.4%20-%2026.1.x%2B.zip",
+     "size": 61986,
+     "primary": true,
+     "hashes": {
+      "sha1": "a2a3d50fb62058098e45d6d13aa02625cb0f775c",
+      "sha512": "57255a3797f5e07af477a955aa3a1e25d502cf061f6caad768142ee478c4865168683e63f1f10fa933eaa91f0dca7762732376b70b8158ce99e786d8c6169063"
+     }
+    }
+   ]
+  },
+  {
+   "id": "C57AmiWs",
+   "project_id": "wBo7DRiB",
+   "version_number": "2.3",
+   "version_type": "release",
+   "date_published": "2026-07-09T03:06:14.716819Z",
+   "files": [
+    {
+     "filename": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.3 - 26.1.x+.zip",
+     "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/C57AmiWs/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.3%20-%2026.1.x%2B.zip",
+     "size": 60825,
+     "primary": true,
+     "hashes": {
+      "sha1": "76f5d748d495215005fa850397bd258c0836b8db",
+      "sha512": "4aa3032b8b9e240b43d6873fdba6cfd2e30c5427b58d2d36a8e8955ad4f544647efc7942a6957847843511586512bac91b2b8a24e244efe1eb89020ec66787c2"
+     }
+    }
+   ]
+  }
+ ]
+}

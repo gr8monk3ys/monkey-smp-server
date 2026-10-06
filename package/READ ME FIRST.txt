@@ -46,14 +46,23 @@ You do NOT need to install Java or anything else - this folder takes care of it.
        local address 127.0.0.1, local port 25565.
     4. It gives you an address like  something.joinmc.link  - send that to friends.
     5. playit must be running (along with the server) whenever people play.
+    Voice chat (optional, needs one more tunnel):
+    6. In playit.gg add a second tunnel: type "UDP" (or "Custom UDP"),
+       local address 127.0.0.1, local port 24454. Note the address and port it gives you.
+    7. Stop the server, open  server\configoicechatoicechat-server.properties  in
+       Notepad, set  voice_host=THAT-ADDRESS:THAT-PORT  (e.g. 147.185.221.10:51234), save,
+       and start the server again. Without this, everything works except voice chat.
 
 
 4. WHAT FRIENDS INSTALL (everyone, including you)
 -------------------------------------------------
   Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
   needs the "TheRealms-Client" modpack (.mrpack file) that came with this server.
-    1. Install Prism Launcher (https://prismlauncher.org) and sign in with Microsoft.
-    2. Add Instance > Import > choose the .mrpack file. It downloads everything.
+    1. Install the Modrinth App (https://modrinth.com/app) or Prism Launcher
+       (https://prismlauncher.org) and sign in with Microsoft. (The normal Minecraft
+       Launcher can't open .mrpack files.)
+    2. Import the .mrpack file (Modrinth App: + > Import; Prism: Add Instance > Import).
+       It downloads everything.
     3. Launch it, then Multiplayer > Add Server with your address.
   Use the client pack with the same version number as this server.
 

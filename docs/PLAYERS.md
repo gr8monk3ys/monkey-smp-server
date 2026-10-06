@@ -15,7 +15,11 @@
 3. In Prism: **Add Instance > Import**, choose the `.mrpack`, **OK**. It downloads everything (a few minutes).
 4. Launch it, then **Multiplayer > Add Server** with the address from the host.
 
-The Modrinth App can also import `.mrpack` files. Use the pack that matches the server's release
+The [Modrinth App](https://modrinth.com/app) works just as well: **+ > Import**, choose the `.mrpack`.
+
+**The normal Minecraft Launcher can't open `.mrpack` files.** You'd have to install Fabric and ~130 mods by
+hand, so use the Modrinth App or Prism Launcher. Both are free and use the same Microsoft account; you
+don't buy Minecraft again. Use the pack that matches the server's release
 (2.x packs are Minecraft 26.3; 1.x packs were 26.1.2 and won't work on a 2.x server).
 
 **Performance:** shaders are heavy. If it stutters, press **O** in game (Iris shader menu) to pick a lighter

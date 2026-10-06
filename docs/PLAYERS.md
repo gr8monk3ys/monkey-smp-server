@@ -2,25 +2,41 @@
 
 ## What you need
 
-- **Minecraft Java Edition** (not Bedrock / Windows 10 Edition).
-- The **client pack** for this release (`TheRealms-Client-<version>.mrpack`). From 2.0 it is required:
-  the server runs mods that add blocks, mobs and items, so plain Minecraft can't join.
-- Your Minecraft username on the server's **whitelist**. Ask the host to add you.
+- **Minecraft Java Edition** (the one from minecraft.net; not Bedrock / Windows 10 Edition), on Windows.
+- **`TheRealms-Player-<version>.zip`** from the host. It sets up the mods the server needs: the server
+  adds blocks, mobs and items, so plain Minecraft can't join.
+- Your Minecraft username on the server's **guest list** (whitelist). Tell the host your exact name.
 - The server address from the host (for example `something.joinmc.link`).
 
-## Install the client pack
+## Install (pick one)
 
-1. Install [Prism Launcher](https://prismlauncher.org/download/) (free) and sign in with your Microsoft account.
-2. Get **`TheRealms-Client-<version>.mrpack`** from the host (or the [latest release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)).
-3. In Prism: **Add Instance > Import**, choose the `.mrpack`, **OK**. It downloads everything (a few minutes).
-4. Launch it, then **Multiplayer > Add Server** with the address from the host.
+### A. The normal Minecraft Launcher (most people)
 
-The [Modrinth App](https://modrinth.com/app) works just as well: **+ > Import**, choose the `.mrpack`.
+1. Start the Minecraft Launcher once, sign in, then **close it**.
+2. Unzip `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
+   If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
+   It downloads about 1 GB (mods, resource packs, shaders) from their official websites and checks
+   every file. When it's done, press a key to close the window.
+3. Open the launcher, click the version box next to the green **Play** button, choose **The Realms**,
+   press **Play**. The first start takes a few minutes.
+4. **Multiplayer > Add Server**, type the address from the host, **Done**, **Join Server**.
 
-**The normal Minecraft Launcher can't open `.mrpack` files.** You'd have to install Fabric and ~130 mods by
-hand, so use the Modrinth App or Prism Launcher. Both are free and use the same Microsoft account; you
-don't buy Minecraft again. Use the pack that matches the server's release
-(2.x packs are Minecraft 26.3; 1.x packs were 26.1.2 and won't work on a 2.x server).
+Your normal Minecraft isn't touched: The Realms keeps its own mods, settings and worlds in a separate
+folder (`%APPDATA%\.the-realms`). To remove it, double-click **`Uninstall The Realms.bat`**.
+
+### B. Modrinth App or Prism Launcher (if you already use one)
+
+Import the `TheRealms-Client-<version>.mrpack` file that's inside the player zip:
+
+- [Modrinth App](https://modrinth.com/app): **+ > Import**, choose the `.mrpack`.
+- [Prism Launcher](https://prismlauncher.org): **Add Instance > Import**, choose the `.mrpack`.
+
+Both are free and use the same Microsoft account; you don't buy Minecraft again.
+
+### Updating
+
+When the host sends a newer version, run the new installer (or import the new `.mrpack`). Always use the
+version that matches the server: 2.x is Minecraft 26.3; 1.x packs were 26.1.2 and won't join a 2.x server.
 
 **Performance:** shaders are heavy. If it stutters, press **O** in game (Iris shader menu) to pick a lighter
 profile or turn shaders off, and lower **Video Settings > Render Distance**.

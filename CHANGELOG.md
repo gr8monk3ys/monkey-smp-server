@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] - 2026-10-06
+
+Easier for players: no Modrinth App or Prism needed.
+
+- New download for players: **TheRealms-Player-2.1.0.zip**. Double-click "Install for Minecraft Launcher.bat"
+  and it sets up Fabric and every mod, resource pack and shader (downloaded from Modrinth, each file
+  hash-checked) in a separate folder, then adds a "The Realms" installation to the normal Minecraft
+  Launcher. Running it again updates; "Uninstall The Realms.bat" removes it.
+- The player zip also contains the .mrpack for Modrinth App / Prism users, and a plain-language READ ME.
+- New docs/SHARING.md: which file to send to whom, with copy-paste messages for the host and players.
+- playit.gg instructions now cover the second tunnel voice chat needs.
+
 ## [2.0.0] - 2026-10-05
 
 The server moves from Paper 26.1.2 to **Fabric 26.3** so the whole mod list runs (ADR-0005). This is a

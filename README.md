@@ -16,6 +16,17 @@ with one upload. No Java install, no command line, no port forwarding needed.
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).
 
+## Downloads: who gets what
+
+Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest) has three small files.
+[docs/SHARING.md](docs/SHARING.md) has copy-paste messages to send with them.
+
+| File | For | |
+|---|---|---|
+| `TheRealms-Server-<version>.zip` | the **host** | run the server on a PC, or prepare it for an online host |
+| `TheRealms-Player-<version>.zip` | every **player** | double-click `Install for Minecraft Launcher.bat`, then pick "The Realms" in the normal Minecraft Launcher |
+| `TheRealms-Client-<version>.mrpack` | players using the Modrinth App or Prism | import it (it's also inside the player zip) |
+
 ## Run it on your own PC (Windows)
 
 1. Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/the-realms-server/releases/latest).
@@ -40,7 +51,15 @@ the Minecraft EULA and for your Minecraft name, which becomes the admin. Friends
 `HOSTING.txt` inside the zip has the step-by-step for each. The bundle is built from the official
 downloads on your own PC, so nothing is redistributed ([ADR-0006](docs/adr/0006-online-hosting-via-a-bundle-built-on-the-hosts-pc.md)).
 
-Players: [docs/PLAYERS.md](docs/PLAYERS.md). Admins: [docs/ADMIN.md](docs/ADMIN.md).
+## Play on it
+
+Players need the mods (the server adds blocks, mobs and items). Unzip `TheRealms-Player-<version>.zip` and
+double-click **`Install for Minecraft Launcher.bat`**: it installs Fabric and every mod, resource pack and
+shader into a separate folder (downloaded from Modrinth, each file hash-checked) and adds a
+**The Realms** installation to the normal Minecraft Launcher. Modrinth App and Prism users import the
+`.mrpack` instead. Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
+
+Admins: [docs/ADMIN.md](docs/ADMIN.md).
 
 ## How it works
 
@@ -55,7 +74,8 @@ package/                    <- exactly what goes in the release zip
     manifest.json           <- every download, pinned by URL + size + hash
     defaults/               <- first-run configs (server.properties, LuckPerms ranks, Tectonic, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
-client/                     <- source of the player modpack (.mrpack)
+player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
+client/                     <- source of the player modpack (.mrpack) + the pinned Fabric launcher profile
 tools/                      <- maintainer scripts (Python, stdlib only)
 tests/                      <- pytest + Pester unit tests, Windows smoke test, Docker hosting test
 ```

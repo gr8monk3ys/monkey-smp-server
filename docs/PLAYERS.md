@@ -2,15 +2,17 @@
 
 ## What you need
 
-- **Minecraft Java Edition** (the one from minecraft.net; not Bedrock / Windows 10 Edition), on Windows.
+- **Minecraft Java Edition** (the one from minecraft.net; not Bedrock / Windows 10 Edition), on Windows,
+  macOS or Linux.
 - **`TheRealms-Player-<version>.zip`** from the host. It sets up the mods the server needs: the server
-  adds blocks, mobs and items, so plain Minecraft can't join.
+  adds blocks, mobs and items, so plain Minecraft can't join. On a Mac or Linux you only need the
+  `.mrpack` file inside it (or the separate `TheRealms-Client-<version>.mrpack`).
 - Your Minecraft username on the server's **guest list** (whitelist). Tell the host your exact name.
 - The server address from the host (for example `something.joinmc.link`).
 
 ## Install (pick one)
 
-### A. The normal Minecraft Launcher (most people)
+### A. Windows: the normal Minecraft Launcher (most people)
 
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
@@ -24,14 +26,17 @@
 Your normal Minecraft isn't touched: The Realms keeps its own mods, settings and worlds in a separate
 folder (`%APPDATA%\.the-realms`). To remove it, double-click **`Uninstall The Realms.bat`**.
 
-### B. Modrinth App or Prism Launcher (if you already use one)
+### B. Mac, Linux, or anyone using the Modrinth App or Prism Launcher
 
-Import the `TheRealms-Client-<version>.mrpack` file that's inside the player zip:
+The installer in A is Windows-only. On a Mac or Linux (or on Windows if you already use one of these
+launchers), install one of them and import the `TheRealms-Client-<version>.mrpack` file that's inside
+the player zip:
 
 - [Modrinth App](https://modrinth.com/app): **+ > Import**, choose the `.mrpack`.
 - [Prism Launcher](https://prismlauncher.org): **Add Instance > Import**, choose the `.mrpack`.
 
-Both are free and use the same Microsoft account; you don't buy Minecraft again.
+Both are free, run on Windows, macOS and Linux, and use the same Microsoft account; you don't buy
+Minecraft again. Launch the new instance and add the server as in step 4 of A.
 
 ### Updating
 

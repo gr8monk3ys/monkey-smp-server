@@ -1,11 +1,11 @@
 # The Realms
 
-A Minecraft factions server packaged so that anyone can host it on Windows from a single download, and kept reproducible by pinning everything it runs.
+A Minecraft factions server packaged so that anyone can host it on Windows, macOS or Linux from a single download, and kept reproducible by pinning everything it runs.
 
 ## People
 
 **Host**:
-The person who runs the server on their own computer.
+The person who runs the server, on their own computer or on a server they rent.
 _Avoid_: admin, operator, server owner
 
 **Owner**:
@@ -65,6 +65,24 @@ _Avoid_: fix, override, mod
 **Defaults**:
 The configuration a server starts with on its first install; once a file exists, the host's version wins.
 _Avoid_: templates, config overrides
+
+## Where it runs
+
+**Platform**:
+An operating system and processor pair the server package runs on natively: Windows x64, Linux x64 or arm64, macOS Intel or Apple Silicon. The manifest pins a Java runtime for each.
+_Avoid_: OS (alone), target, arch
+
+**PowerShell bootstrap**:
+The first step on macOS and Linux: find PowerShell 7, or download the pinned portable copy into the server folder, so the same install as on Windows can run.
+_Avoid_: installer, wrapper, launcher
+
+**Docker setup**:
+The `docker` folder in the server package that runs a host's own server folder in a container; its image holds no third-party files.
+_Avoid_: Docker image (alone), container
+
+**Hosting bundle**:
+The zip "Prepare for Hosting" makes from an installed server folder, for online Minecraft hosts that only accept a finished server.
+_Avoid_: export, server pack, server package
 
 ## Lifecycle
 

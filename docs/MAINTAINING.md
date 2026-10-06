@@ -6,7 +6,10 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/realms/manifest.json` | pinned Java, server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
+| `package/realms/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
+| `package/realms/pwsh.lock` | the portable PowerShell 7 build per platform that `realms.sh` downloads when `pwsh` is missing | by hand (see below) |
+| `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
+| `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
@@ -42,6 +45,27 @@ generates that jar, but the same three versions always give the same bytes, so i
 are pinned like any other download. On first start the launcher fetches the loader and the vanilla
 server itself.
 
+## Platforms: Java and PowerShell pins
+
+One installer (`realms.ps1` + `Realms.psm1`) runs everywhere: on Windows PowerShell 5.1, and on
+PowerShell 7 on macOS and Linux, where `realms/realms.sh` starts it (ADR-0007). Two kinds of pins
+depend on the platform:
+
+| Pin | Where | Platforms |
+|---|---|---|
+| Java (Eclipse Temurin JRE from Adoptium) | `manifest.json` `java`, one build per platform, each with URL + size + hash | Windows x64 (`.zip`), Linux x64 and aarch64, macOS x64 and aarch64 (`.tar.gz`) |
+| PowerShell 7 (portable, from `PowerShell/PowerShell` GitHub releases) | `realms/pwsh.lock`, one line per platform: URL + SHA-256 | Linux x64 and arm64, macOS x64 and arm64 (`.tar.gz`); Windows uses its built-in 5.1 |
+
+`pwsh.lock` is a plain-text file, not JSON, because `realms.sh` reads it with POSIX `sh` before any
+PowerShell exists. Bump Java for every platform at once (same release on each), and PowerShell only
+when needed (a security fix, or a feature the installer starts using). After changing either, run
+`python tools/validate.py --online`, which downloads and hash-checks every pin, then let CI boot it on
+each platform. On macOS that means starting CI by hand (see Tests).
+
+The installer code must keep working on both PowerShell 5.1 and 7, and stay plain ASCII (ADR-0003):
+put Windows-only calls (CIM, robocopy, `\` paths, `java.exe`) behind a platform check. The `.sh`
+launchers are POSIX `sh` (Debian's `dash` and macOS's `sh` must both run them) with LF line endings.
+
 ## Updating the server, plugins and mods
 
 ```bash
@@ -71,7 +95,7 @@ folder, then snapshot the server as below; that re-makes the patch against the n
 
 | File | For | Contents |
 |---|---|---|
-| `TheRealms-Server-X.Y.Z.zip` | the host | `package/` under `TheRealms-Server/` |
+| `TheRealms-Server-X.Y.Z.zip` | the host | `package/` under `TheRealms-Server/` (the `.sh` and `.command` launchers marked executable) |
 | `TheRealms-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
 | `TheRealms-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `TheRealms-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
 
@@ -85,7 +109,36 @@ Expand-Archive dist\TheRealms-Server-*.zip $env:TEMP\realms-test -Force
 .\tests\smoke.ps1 -Root $env:TEMP\realms-test\TheRealms-Server -Port 25566 -RconPort 25576
 ```
 
-Open a PR. CI runs the same smoke test on a clean Windows runner.
+On macOS or Linux, unzip the same way and run `sh start.sh` in the folder: the first run exercises the
+PowerShell bootstrap too (uninstall or hide `pwsh` from the `PATH` to test the download).
+
+To test the Docker setup locally (Linux, or Docker Desktop on Windows/macOS), with no other server on
+25565:
+
+```sh
+python tools/build.py
+rm -rf /tmp/realms-docker && mkdir -p /tmp/realms-docker
+unzip -q dist/TheRealms-Server-*.zip -d /tmp/realms-docker
+cd /tmp/realms-docker/TheRealms-Server/docker
+printf 'EULA=TRUE\nOWNER=YourName\nMEMORY_GB=4\n' > .env
+docker compose up -d --build      # --build picks up Dockerfile changes
+docker compose logs -f            # wait for "Done (", then Ctrl+C
+docker compose down               # must log "All dimensions are saved"
+```
+
+The world, `java/` (the Linux build) and the downloaded PowerShell end up in
+`/tmp/realms-docker/TheRealms-Server`, exactly where a native run puts them.
+
+Open a PR. CI boots the release on clean runners:
+
+| Job | Runs on | What |
+|---|---|---|
+| Lint, unit tests, manifest | every push and PR | ruff, pytest, `validate.py` |
+| Windows | every push and PR | PSScriptAnalyzer, Pester, build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
+| Linux (native) | every push and PR | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), same checks |
+| Linux (Docker) | every push and PR | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
+| Hosting bundle (Docker) | every push and PR | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
+| macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `realms.sh`, `pwsh.lock` or Java |
 
 ## Capturing changes from a live server
 
@@ -176,7 +229,7 @@ python tests/fixtures/record.py
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
 3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
-The release workflow re-runs CI, refuses to publish if the tag and manifest version differ, and attaches
+The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
 `TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.
 
 ## Changing Minecraft version

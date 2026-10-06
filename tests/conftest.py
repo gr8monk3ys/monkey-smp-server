@@ -5,7 +5,10 @@ its patches/ and a trimmed client modrinth.index.json), never whatever the repo 
   paper-1.1.0   the last Paper release (a 1.x manifest: no "mods" group), one patched datapack
   fabric-2.0.0  the first Fabric release: 112 mods, two of them patched
 Only test_validate.py::test_real_repo_is_valid looks at the real manifest, package and client.
+Neither frozen release had a client/fabric-profile.json or a player/ folder; frozen_repo adds a profile
+(derived from the recorded one) and tests that build the player zip add a fake player/ (fake_player).
 """
+import copy
 import hashlib
 import io
 import shutil
@@ -16,11 +19,19 @@ import pytest
 
 import entries
 from repo import REPO, Repo, load_json, save_json
-from upstream import MODRINTH, PAPER, RecordedHttp, fabric_server_jar_url, json_query
+from upstream import MODRINTH, PAPER, RecordedHttp, fabric_profile_url, fabric_server_jar_url, json_query
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "upstream"
 MANIFESTS = Path(__file__).resolve().parent / "fixtures" / "manifests"
 PAPER_RELEASE, FABRIC_RELEASE = "paper-1.1.0", "fabric-2.0.0"
+# The launcher profile recorded from Fabric meta (tests/fixtures/record.py).
+RECORDED_PROFILE_MC, RECORDED_PROFILE_LOADER = "26.3", "0.19.5"
+PLAYER_FILES = {
+    "Install for Minecraft Launcher.bat": "@echo off\r\npowershell -File installer\\install-client.ps1\r\n",
+    "READ ME.txt": "Double-click Install for Minecraft Launcher.bat\r\n",
+    "installer/install-client.ps1": "Import-Module (Join-Path $PSScriptRoot PlayerInstall.psm1)\r\n",
+    "installer/PlayerInstall.psm1": "function Install-Client { }\r\n",
+}
 
 
 @pytest.fixture
@@ -47,8 +58,34 @@ def frozen_repo(root: Path, name: str) -> Repo:
     shutil.copy2(frozen / "manifest.json", repo.manifest)
     shutil.copytree(frozen / "patches", repo.patches)
     (repo.client / "overrides").mkdir(parents=True)
-    save_json(repo.client / "modrinth.index.json", load_json(frozen / "modrinth.index.json"))
+    index = load_json(frozen / "modrinth.index.json")
+    save_json(repo.client / "modrinth.index.json", index)
+    save_json(repo.fabric_profile, fabric_profile(index["dependencies"]["minecraft"],
+                                                  index["dependencies"]["fabric-loader"]))
     return repo
+
+
+def fabric_profile(mc: str, loader: str) -> dict:
+    """Fabric meta's launcher profile for `mc` + `loader`: the recorded one, re-labelled for other versions."""
+    recorded = RecordedHttp.from_folder(FIXTURES).get_json(
+        fabric_profile_url(RECORDED_PROFILE_MC, RECORDED_PROFILE_LOADER))
+    profile = copy.deepcopy(recorded)
+    profile.update(id=f"fabric-loader-{loader}-{mc}", inheritsFrom=mc)
+    for lib in profile["libraries"]:
+        if lib["name"] == f"net.fabricmc:fabric-loader:{RECORDED_PROFILE_LOADER}":
+            lib["name"] = f"net.fabricmc:fabric-loader:{loader}"
+    return profile
+
+
+def fake_player(repo: Repo, files: dict[str, str] | None = None) -> dict[str, bytes]:
+    """A stand-in for the player installer in `repo`/player/; returns {relative path: bytes}."""
+    written = {}
+    for name, text in (PLAYER_FILES if files is None else files).items():
+        path = repo.player / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(text.encode())
+        written[name] = text.encode()
+    return written
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@ import hashlib
 import zipfile
 
 import pytest
-from conftest import make_zip, patched_entry
+from conftest import PLAYER_FILES, fake_player, make_zip, patched_entry
 
 import build
 import defaults
@@ -120,6 +120,92 @@ def test_validate_package_checks_the_server_properties_template(paper_repo, edit
 def test_validate_package_requires_the_launchers(paper_repo):
     (paper_repo.package / "Start Server.bat").unlink()
     assert "package/Start Server.bat is missing" in validate.validate_package(paper_repo)
+
+
+# --- the player installer (checked once player/ exists) ---------------------------------------------
+
+def test_validate_package_checks_the_player_installer_only_once_it_exists(fabric_repo):
+    assert not fabric_repo.player.exists()
+    assert validate.validate_package(fabric_repo) == []
+    fake_player(fabric_repo)
+    assert validate.validate_package(fabric_repo) == []
+    assert validate.main([], repo=fabric_repo) == 0
+
+
+@pytest.mark.parametrize("missing", list(PLAYER_FILES))
+def test_validate_package_requires_the_player_files(fabric_repo, missing):
+    fake_player(fabric_repo, {k: v for k, v in PLAYER_FILES.items() if k != missing})
+    assert validate.validate_package(fabric_repo) == [f"player/{missing} is missing"]
+
+
+@pytest.mark.parametrize("name", ["installer/PlayerInstall.psm1", "installer/install-client.ps1",
+                                  "Install for Minecraft Launcher.bat", "installer/tools/Helper.bat"])
+def test_validate_package_requires_ascii_player_scripts(fabric_repo, name):
+    fake_player(fabric_repo, {**PLAYER_FILES, name: "Write-Host 'café'\r\n"})
+    errors = validate.validate_package(fabric_repo)
+    assert errors == [f"player/{name} {validate.ASCII_NOTE}"]
+
+
+# --- the client's Fabric launcher profile ----------------------------------------------------------
+
+def edit_profile(repo, change):
+    profile = load_json(repo.fabric_profile)
+    change(profile)
+    save_json(repo.fabric_profile, profile)
+
+
+def libs(p):
+    return p["libraries"]
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda p: p.update(id="fabric-loader-0.19.4-26.3"), "id must be fabric-loader-0.19.5-26.3"),
+    (lambda p: p.update(inheritsFrom="26.2"), "inheritsFrom must be 26.3"),
+    (lambda p: p.pop("mainClass"), "missing mainClass"),
+    (lambda p: libs(p)[0].update(url="https://evil.example/maven/"), "not an allowed maven repository"),
+    (lambda p: libs(p)[0].update(url="http://maven.fabricmc.net/"), "not an allowed maven repository"),
+    (lambda p: [libs(p)[0].pop(k) for k in ("sha1", "sha256")], "org.ow2.asm:asm:9.10.1: needs a sha1 or sha256"),
+    (lambda p: libs(p)[0].update(sha1="ABC"), "sha1 must be 40 lowercase hex"),
+    (lambda p: libs(p).pop(), "must include net.fabricmc:fabric-loader:0.19.5"),
+    (lambda p: p.update(libraries=[]), "libraries must be a non-empty list"),
+])
+def test_validate_client_checks_the_launcher_profile(fabric_repo, change, message):
+    manifest = fabric_repo.load_manifest()
+    assert validate.validate_client(manifest, fabric_repo) == []
+    edit_profile(fabric_repo, change)
+    errors = validate.validate_client(manifest, fabric_repo)
+    assert any(message in e for e in errors), errors
+
+
+def test_validate_client_matches_the_profile_to_the_client_index(fabric_repo):
+    index = load_json(fabric_repo.client / "modrinth.index.json")
+    index["dependencies"]["fabric-loader"] = "0.19.6"  # a loader bump without re-pinning the profile
+    save_json(fabric_repo.client / "modrinth.index.json", index)
+    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
+    assert any("id must be fabric-loader-0.19.6-26.3" in e for e in errors), errors
+
+
+def test_validate_client_requires_a_readable_profile(fabric_repo):
+    manifest = fabric_repo.load_manifest()
+    fabric_repo.fabric_profile.write_text("{not json", encoding="utf-8")
+    assert "not valid JSON" in validate.validate_client(manifest, fabric_repo)[0]
+    fabric_repo.fabric_profile.unlink()
+    assert validate.validate_client(manifest, fabric_repo) == [
+        "client/fabric-profile.json is missing (pin it with `python tools/snapshot.py profile`)"]
+
+
+def test_verify_profile_online(fabric_repo, recorded, capsys):
+    up = Upstream(recorded)
+    assert validate.verify_profile_online(up, fabric_repo) == []
+    assert "ok  profile  fabric-loader-0.19.5-26.3" in capsys.readouterr().out
+    # Meta stamps each generated profile with the time; that alone is not a difference.
+    later = "2027-01-01T00:00:00+0000"
+    edit_profile(fabric_repo, lambda p: p.update(time=later, releaseTime=later))
+    assert validate.verify_profile_online(up, fabric_repo) == []
+    edit_profile(fabric_repo, lambda p: libs(p)[0].update(sha1="0" * 40))
+    assert validate.verify_profile_online(up, fabric_repo) == [
+        "client/fabric-profile.json differs from what Fabric meta serves now "
+        "(re-pin it with `python tools/snapshot.py profile`)"]
 
 
 # --- online: downloads and patch fit, served by RecordedHttp ---------------------------------------

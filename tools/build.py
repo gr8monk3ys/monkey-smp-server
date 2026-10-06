@@ -2,8 +2,14 @@
 
   dist/TheRealms-Server-<version>.zip     unzip anywhere on Windows, double-click Start Server.bat
   dist/TheRealms-Client-<version>.mrpack  import into Prism Launcher / Modrinth App to play
+  dist/TheRealms-Player-<version>.zip     for the official Minecraft Launcher: unzip, double-click
+                                          Install for Minecraft Launcher.bat
 
-Neither file contains third-party jars or datapacks: the server downloads them on first start
+The player zip is everything in player/ (the installer) under TheRealms-Player-<version>/, plus the
+.mrpack (the same bytes as the standalone file) and installer/fabric-profile.json (a copy of
+client/fabric-profile.json, the Fabric launcher profile the installer adds to the launcher).
+
+None of the files contains third-party jars or datapacks: the server downloads them on first start
 and the launcher downloads the client mods, both from their official sources.
 """
 import json
@@ -51,14 +57,39 @@ def build_client(version: str, repo=REPO, dist: Path | None = None) -> Path:
     return out
 
 
+def _require_player(repo) -> None:
+    if not repo.player.is_dir():
+        raise SystemExit(f"{repo.player} is missing: the player zip is built from the installer in player/")
+
+
+def build_player(version: str, mrpack: Path, repo=REPO, dist: Path | None = None) -> Path:
+    """The player zip; `mrpack` is the client pack build_client made for the same version."""
+    _require_player(repo)
+    if not repo.fabric_profile.is_file():
+        raise SystemExit(f"{repo.fabric_profile} is missing: pin it with `python tools/snapshot.py profile`")
+    top = f"TheRealms-Player-{version}"
+    files = {f"{top}/{path.relative_to(repo.player).as_posix()}": path.read_bytes() for path in _walk(repo.player)}
+    extra = {f"{top}/{mrpack.name}": mrpack.read_bytes(),
+             f"{top}/installer/fabric-profile.json": repo.fabric_profile.read_bytes()}
+    if clash := sorted(set(files) & set(extra)):
+        raise SystemExit(f"player/ must not contain {', '.join(n.split('/', 1)[1] for n in clash)}: the build adds it")
+    out = Path(dist or repo.dist) / f"{top}.zip"
+    with zipfile.ZipFile(out, "w") as z:
+        for name, data in sorted({**files, **extra}.items()):
+            _add(z, name, data)
+    return out
+
+
 def main(repo=REPO, dist: Path | None = None):
     version = repo.load_manifest()["version"]
     tag = os.environ.get("GITHUB_REF_NAME", "")
     if tag.startswith("v") and tag[1:] != version:
         raise SystemExit(f"tag {tag} doesn't match manifest version {version}")
+    _require_player(repo)
     dist = Path(dist or repo.dist)
     dist.mkdir(parents=True, exist_ok=True)
-    for path in (build_server(version, repo, dist), build_client(version, repo, dist)):
+    mrpack = build_client(version, repo, dist)
+    for path in (build_server(version, repo, dist), mrpack, build_player(version, mrpack, repo, dist)):
         print(f"{path}  {path.stat().st_size / 1e6:.1f} MB")
 
 

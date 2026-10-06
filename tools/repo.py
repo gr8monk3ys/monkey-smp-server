@@ -42,6 +42,16 @@ class Repo:
         return self.root / "client"
 
     @property
+    def fabric_profile(self) -> Path:
+        """Fabric meta's launcher profile for the client pack's Minecraft + loader (see launcher_profile.py)."""
+        return self.client / "fabric-profile.json"
+
+    @property
+    def player(self) -> Path:
+        """The player installer (for the official Minecraft Launcher); the player zip ships all of it."""
+        return self.root / "player"
+
+    @property
     def dist(self) -> Path:
         return self.root / "dist"
 

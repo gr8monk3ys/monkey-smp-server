@@ -11,6 +11,7 @@
     .newest_stable_fabric_loader(mc)               the highest stable loader version, or None
     .fabric_installers()                           every Fabric installer (= server launcher) version
     .newest_stable_fabric_installer()              the highest stable installer version, or None
+    .fabric_profile(mc, loader)                    Fabric meta's launcher profile JSON for a client
     .adoptium_latest_jre(major)                    newest Temurin JRE (Windows x64) for a Java major
     .download(url)                                 the bytes at a URL
 
@@ -46,6 +47,11 @@ def fabric_server_jar_url(mc: str, loader: str, installer: str) -> str:
     so a manifest can pin its size and hash like any other download.
     """
     return f"{FABRIC_META}/versions/loader/{mc}/{loader}/{installer}/server/jar"
+
+
+def fabric_profile_url(mc: str, loader: str) -> str:
+    """Fabric meta's launcher profile (a versions/<id>/<id>.json for the official Minecraft Launcher)."""
+    return f"{FABRIC_META}/versions/loader/{mc}/{loader}/profile/json"
 
 
 def version_key(version: str) -> tuple[int, ...]:
@@ -99,6 +105,10 @@ class Upstream:
 
     def newest_stable_fabric_installer(self) -> str | None:
         return _newest_stable(self.fabric_installers())
+
+    def fabric_profile(self, mc: str, loader: str) -> dict:
+        """The launcher profile for Fabric `loader` on Minecraft `mc` (see tools/launcher_profile.py)."""
+        return self.http.get_json(fabric_profile_url(mc, loader))
 
     def adoptium_latest_jre(self, major: int) -> dict:
         assets = self.http.get_json(
@@ -251,6 +261,8 @@ def trim(url: str, response):
         return [{**_pick(b, "id", "channel"), "downloads": {"server:default": {
             **_pick(b["downloads"]["server:default"], "name", "url", "size"),
             "checksums": _pick(b["downloads"]["server:default"]["checksums"], "sha256")}}} for b in newest]
+    if url.startswith(f"{FABRIC_META}/versions/loader/") and url.endswith("/profile/json"):
+        return response  # small, and stored whole: the launcher reads all of it
     if url.startswith(f"{FABRIC_META}/versions/loader/"):
         newest = sorted(response, key=lambda x: version_key(x["loader"]["version"]), reverse=True)[:KEEP_LIST_ITEMS]
         return [{"loader": _pick(x["loader"], "version", "stable")} for x in newest]

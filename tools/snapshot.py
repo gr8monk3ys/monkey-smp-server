@@ -20,6 +20,11 @@
       Rewrites client/ (a Modrinth modpack source) from a Prism instance: mods, resource packs
       and shader packs are linked by hash, and config/, shader settings and options.txt are
       copied as overrides. Files that aren't on Modrinth are left out (not redistributed).
+      Also pins client/fabric-profile.json, Fabric meta's launcher profile for the pack's Minecraft
+      and loader versions (the player installer gives it to the official Minecraft Launcher).
+
+  python tools/snapshot.py profile
+      Re-pins only client/fabric-profile.json, for the versions client/modrinth.index.json names.
 
 Hand-curated config defaults (package/realms/defaults/) are not touched.
 """
@@ -34,6 +39,7 @@ from typing import NamedTuple
 
 import defaults
 import entries
+import launcher_profile
 import patches
 from repo import REPO, load_json, save_json
 from upstream import LiveHttp, Upstream, fabric_server_jar_url
@@ -300,6 +306,7 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
              "summary": old.get("summary", "Client pack for The Realms factions server."),
              "files": files,
              "dependencies": {"minecraft": manifest["minecraft"], "fabric-loader": loader}}
+    profile = fetch_profile(upstream, manifest["minecraft"], loader)  # before writing anything
 
     overrides = repo.client / "overrides"
     shutil.rmtree(overrides, ignore_errors=True)
@@ -312,10 +319,36 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
     if (instance / "options.txt").is_file():
         shutil.copy2(instance / "options.txt", overrides / "options.txt")
     save_json(index_path, index)
+    save_profile(repo, profile)
     print(f"client: {len(files)} files linked from Modrinth")
     if skipped:
         print("left out (not on Modrinth):\n  " + "\n  ".join(skipped))
     return index
+
+
+def fetch_profile(upstream: Upstream, mc: str, loader: str) -> dict:
+    profile = upstream.fabric_profile(mc, loader)
+    errors = launcher_profile.check(profile, mc, loader)
+    if errors:
+        raise SystemExit("Fabric meta's launcher profile doesn't look right:\n  " + "\n  ".join(errors))
+    return profile
+
+
+def save_profile(repo, profile: dict) -> None:
+    changed = launcher_profile.save(repo.fabric_profile, profile)
+    print(f"{repo.fabric_profile.relative_to(repo.root).as_posix()}: {profile['id']}"
+          f"{'' if changed else ' (unchanged)'}")
+
+
+def snapshot_profile(*, repo=REPO, upstream: Upstream | None = None) -> dict:
+    """Re-pin client/fabric-profile.json for the Minecraft and loader versions the client index names."""
+    upstream = upstream or Upstream(LiveHttp())
+    deps = load_json(repo.client / "modrinth.index.json")["dependencies"]
+    if not deps.get("fabric-loader"):
+        raise SystemExit("client/modrinth.index.json has no fabric-loader dependency")
+    profile = fetch_profile(upstream, deps["minecraft"], deps["fabric-loader"])
+    save_profile(repo, profile)
+    return profile
 
 
 def fabric_loader(instance: Path) -> str | None:
@@ -329,12 +362,16 @@ def fabric_loader(instance: Path) -> str | None:
 
 def main(argv=None, repo=REPO, upstream=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=["server", "client"])
-    ap.add_argument("path")
+    ap.add_argument("what", choices=["server", "client", "profile"])
+    ap.add_argument("path", nargs="?", help="the server folder or Prism instance (not used by 'profile')")
     ap.add_argument("--update-java", action="store_true",
                     help="pin the newest Temurin JRE instead of keeping the current one")
     a = ap.parse_args(argv)
-    if a.what == "server":
+    if a.what == "profile":
+        snapshot_profile(repo=repo, upstream=upstream)
+    elif not a.path:
+        ap.error(f"'{a.what}' needs a path")
+    elif a.what == "server":
         snapshot_server(a.path, repo=repo, upstream=upstream, keep_java=not a.update_java)
     else:
         snapshot_client(a.path, repo=repo, upstream=upstream)

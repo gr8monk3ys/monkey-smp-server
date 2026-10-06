@@ -11,6 +11,7 @@ from upstream import (
     RecordingHttp,
     UnrecordedRequest,
     Upstream,
+    fabric_profile_url,
     fabric_server_jar_url,
     request_key,
     version_key,
@@ -118,3 +119,20 @@ def test_recording_trims_fabric_meta_responses(tmp_path):
     assert [x["version"] for x in recorder.fabric_loaders("26.3")] == ["0.19.8", "0.19.7", "0.19.6", "0.19.5", "0.19.4"]
     replayed = Upstream(RecordedHttp.from_folder(tmp_path))
     assert replayed.fabric_loaders("26.3")[3] == {"version": "0.19.5", "stable": True}
+
+
+def test_fabric_profile_from_recorded_meta(recorded):
+    profile = Upstream(recorded).fabric_profile("26.3", "0.19.5")
+    assert fabric_profile_url("26.3", "0.19.5") == \
+        "https://meta.fabricmc.net/v2/versions/loader/26.3/0.19.5/profile/json"
+    assert (profile["id"], profile["inheritsFrom"]) == ("fabric-loader-0.19.5-26.3", "26.3")
+    assert profile["mainClass"] == "net.fabricmc.loader.impl.launch.knot.KnotClient"
+    assert profile["libraries"][-1]["name"] == "net.fabricmc:fabric-loader:0.19.5"
+
+
+def test_recording_keeps_the_whole_fabric_profile(tmp_path, recorded):
+    url = fabric_profile_url("26.3", "0.19.5")
+    full = recorded.get_json(url)
+    recorder = Upstream(RecordingHttp(RecordedHttp().add("GET", url, full), tmp_path))
+    assert recorder.fabric_profile("26.3", "0.19.5") == full
+    assert Upstream(RecordedHttp.from_folder(tmp_path)).fabric_profile("26.3", "0.19.5") == full

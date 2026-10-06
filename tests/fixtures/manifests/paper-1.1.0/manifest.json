@@ -1,0 +1,613 @@
+{
+  "name": "The Realms",
+  "version": "1.1.0",
+  "minecraft": "26.1.2",
+  "java": {
+    "vendor": "Eclipse Temurin JRE",
+    "version": "jdk-25.0.4.1+1",
+    "file": "OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip",
+    "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip",
+    "size": 58475080,
+    "hashes": {
+      "sha256": "4c95451cea98556def2c54f7782933f52a26d4a36bd85e1d59f0364464828b07"
+    }
+  },
+  "server": {
+    "type": "paper",
+    "build": 74,
+    "file": "paper-26.1.2-74.jar",
+    "url": "https://fill-data.papermc.io/v1/objects/1d70b1dab9cf4a6de615209a536f3a45a2186240253c428213ce2188ab95e5f7/paper-26.1.2-74.jar",
+    "size": 52893229,
+    "hashes": {
+      "sha256": "1d70b1dab9cf4a6de615209a536f3a45a2186240253c428213ce2188ab95e5f7"
+    }
+  },
+  "world": {
+    "level_name": "world",
+    "seed": "-1530574320264536775"
+  },
+  "plugins": [
+    {
+      "slug": "bluemap",
+      "project_id": "swbUV1cr",
+      "version": "5.28-spigot",
+      "version_id": "pJm76X7R",
+      "file": "bluemap-5.28-spigot.jar",
+      "url": "https://cdn.modrinth.com/data/swbUV1cr/versions/pJm76X7R/bluemap-5.28-spigot.jar",
+      "size": 7090043,
+      "hashes": {
+        "sha512": "1e5fc0749c81299fba2e23743d9ca284b8addf2bf56f04c7d6a2bf72acd226426a7c0377105aeef9d86fab919bd052029e1f20f55fd8bcccadc7e552212d94fe"
+      }
+    },
+    {
+      "slug": "character-cards",
+      "project_id": "bmeFJq7B",
+      "version": "1.4.5",
+      "version_id": "yWcWiE5u",
+      "file": "CharacterCard-1.4.5.jar",
+      "url": "https://cdn.modrinth.com/data/bmeFJq7B/versions/yWcWiE5u/CharacterCard-1.4.5.jar",
+      "size": 14248091,
+      "hashes": {
+        "sha512": "f30dabf1532eb121a285b099983d9a41b819e8d921a6ef237b64ff8a247454a53c204fe93f2b015420eefd9915b09974f40441e0690d15a28e22aff724a14aff"
+      }
+    },
+    {
+      "slug": "chestshop",
+      "project_id": "QI2CAnAl",
+      "version": "3.13-pre-1",
+      "version_id": "YNfN5x9T",
+      "file": "ChestShop.jar",
+      "url": "https://cdn.modrinth.com/data/QI2CAnAl/versions/YNfN5x9T/ChestShop.jar",
+      "size": 2124153,
+      "hashes": {
+        "sha512": "1d203756276b533d7f0f209598ab41237ea19eec0b9b477049ae148ff6586ff4db26d14c9715f51a3b0aac34bd9de141a87c6896fa4112644069020a8e062a6f"
+      }
+    },
+    {
+      "slug": "chunky",
+      "project_id": "fALzjamp",
+      "version": "1.5.3",
+      "version_id": "MdY6JATr",
+      "file": "Chunky-Bukkit-1.5.3.jar",
+      "url": "https://cdn.modrinth.com/data/fALzjamp/versions/MdY6JATr/Chunky-Bukkit-1.5.3.jar",
+      "size": 304616,
+      "hashes": {
+        "sha512": "43ffecc6e6a734b752da41575bbb316526c124c3f878942437d5133c377bfbd9b78bda975520dc074d7158c15dade58a444ccd0fd8d8a25d165b6fc450140422"
+      }
+    },
+    {
+      "slug": "coreprotect",
+      "project_id": "Lu3KuzdV",
+      "version": "24.1",
+      "version_id": "3sehX6Sg",
+      "file": "CoreProtect-CE-24.1.jar",
+      "url": "https://cdn.modrinth.com/data/Lu3KuzdV/versions/3sehX6Sg/CoreProtect-CE-24.1.jar",
+      "size": 1113283,
+      "hashes": {
+        "sha512": "76aad727528ddb990bbee5069f8ef3fcd018ae0bcdea89b965be2485e828633eb068672e841be64e550c8474f901a24d8c15c7bd44c2bd6c96244e1e58de0c95"
+      }
+    },
+    {
+      "slug": "distant-horizons-support",
+      "project_id": "IjY7seTG",
+      "version": "0.14.0",
+      "version_id": "R1UjEyjz",
+      "file": "DistantHorizonsSupport-0.14.0.jar",
+      "url": "https://cdn.modrinth.com/data/IjY7seTG/versions/R1UjEyjz/DistantHorizonsSupport-0.14.0.jar",
+      "size": 454213,
+      "hashes": {
+        "sha512": "b210b81df67ee36fa048406096fbc90805af81d978d6aa53f0bda91f4120d76b1b4fe6367b980b3c2036eac233c30cf86f881cf5c574b809c8635607c9ff991a"
+      }
+    },
+    {
+      "slug": "essentialsx",
+      "project_id": "hXiIvTyT",
+      "version": "2.22.0",
+      "version_id": "nY6VN1XH",
+      "file": "EssentialsX-2.22.0.jar",
+      "url": "https://cdn.modrinth.com/data/hXiIvTyT/versions/nY6VN1XH/EssentialsX-2.22.0.jar",
+      "size": 4861125,
+      "hashes": {
+        "sha512": "472ecf71924801723643ca6e1f9931297de5aa0874a544f8a719e2e2f7c81af81ef7bcbd38b6e43f0260a9dae6abe42c97907e70e2430e326ff8cff12ebd61cf"
+      }
+    },
+    {
+      "slug": "essentialsx-spawn",
+      "project_id": "sYpvDxGJ",
+      "version": "2.22.0",
+      "version_id": "lc5JHiNJ",
+      "file": "EssentialsXSpawn-2.22.0.jar",
+      "url": "https://cdn.modrinth.com/data/sYpvDxGJ/versions/lc5JHiNJ/EssentialsXSpawn-2.22.0.jar",
+      "size": 18661,
+      "hashes": {
+        "sha512": "7097478ec02bc46e1dce326520e7dd0cf38bcce0f7810c1c89cfcc2fef8a88a7dc27c5a946d1256abad589185c5015c615e2cb4eab181ea7362428fac581b964"
+      }
+    },
+    {
+      "slug": "fancynpcs",
+      "project_id": "EeyAn23L",
+      "version": "2.12.1+377",
+      "version_id": "QvRmkdQV",
+      "file": "FancyNpcs-2.12.1+377.jar",
+      "url": "https://cdn.modrinth.com/data/EeyAn23L/versions/QvRmkdQV/FancyNpcs-2.12.1%2B377.jar",
+      "size": 7466513,
+      "hashes": {
+        "sha512": "e98f1b8ad4f6f284d0adf4fedd1a55d48dcc0b463c1f936e566b8c258b448f52afbfe5ab6074bcc2662022062ec177bd6af77a2ea4b8a3df0459bfa968f5d8b1"
+      }
+    },
+    {
+      "slug": "fastasyncworldedit",
+      "project_id": "z4HZZnLr",
+      "version": "2.16.0",
+      "version_id": "U2dcKa9T",
+      "file": "FastAsyncWorldEdit-Paper-2.16.0.jar",
+      "url": "https://cdn.modrinth.com/data/z4HZZnLr/versions/U2dcKa9T/FastAsyncWorldEdit-Paper-2.16.0.jar",
+      "size": 15276112,
+      "hashes": {
+        "sha512": "add46c57209e95c700cbda1c4b25d58d4e39826cd5cbc23bfbc678e145d3424283020317544ec05587972d2a133e43715dc24dd26d51593bb3b0c4e28b7c9c4b"
+      }
+    },
+    {
+      "slug": "luckperms",
+      "project_id": "Vebnzrzj",
+      "version": "v5.5.71-bukkit",
+      "version_id": "b0mk8uS6",
+      "file": "LuckPerms-Bukkit-5.5.71.jar",
+      "url": "https://cdn.modrinth.com/data/Vebnzrzj/versions/b0mk8uS6/LuckPerms-Bukkit-5.5.71.jar",
+      "size": 1501521,
+      "hashes": {
+        "sha512": "188a91f0a543d23bfda32385fca6db63d61e49c8a422bd452a260bd9cbc6a7d7fe45071199e9fca8f3ce43c2b41ee84fd315bd15464577028ff3951a7d4fab27"
+      }
+    },
+    {
+      "slug": "placeholderapi",
+      "project_id": "lKEzGugV",
+      "version": "2.12.3",
+      "version_id": "pIvQcXW8",
+      "file": "PlaceholderAPI-2.12.3.jar",
+      "url": "https://cdn.modrinth.com/data/lKEzGugV/versions/pIvQcXW8/PlaceholderAPI-2.12.3.jar",
+      "size": 1160690,
+      "hashes": {
+        "sha512": "f048d55b633fd816c08e2e4472bd54a75fc4d13534682e6e7745408253d2f393706efdc389d12ca2cf28d4dc035a9afdda3eed9ecde51c7e332831391d9b6479"
+      }
+    },
+    {
+      "slug": "pvpmanager",
+      "project_id": "1Ffl2uIq",
+      "version": "4.0.22",
+      "version_id": "rE8pwOLY",
+      "file": "PvPManager.jar",
+      "url": "https://cdn.modrinth.com/data/1Ffl2uIq/versions/rE8pwOLY/PvPManager.jar",
+      "size": 1207911,
+      "hashes": {
+        "sha512": "fe21ce4c6806395601293431364bdf187722cc8785581533b1ce90b842f82d0939ac741ac70268a2856924b222f59eaf1ed602667d9ce7c8870b8b319087b69d"
+      }
+    },
+    {
+      "slug": "simple-voice-chat",
+      "project_id": "9eGKb6K1",
+      "version": "bukkit-2.6.24",
+      "version_id": "EJth3OAr",
+      "file": "voicechat-bukkit-2.6.24.jar",
+      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/EJth3OAr/voicechat-bukkit-2.6.24.jar",
+      "size": 939426,
+      "hashes": {
+        "sha512": "7f1d5765e79cd42616f14f40322d1171a8505e1116dfff71c7bd0e59af9d255c06f70a68a5b622015c0407d40c80e70298c172992007ff339cedcef0116fec42"
+      }
+    },
+    {
+      "slug": "spherelib",
+      "project_id": "EkYO3Q4N",
+      "version": "0.6.3",
+      "version_id": "trKCXB6B",
+      "file": "SphereLib-0.6.3.jar",
+      "url": "https://cdn.modrinth.com/data/EkYO3Q4N/versions/trKCXB6B/SphereLib-0.6.3.jar",
+      "size": 44998,
+      "hashes": {
+        "sha512": "89e5751f553ad0516021841d8b1b799a4f22b155efcc1eb153461e41e3f928dba27ca3798feb4c5fa3523bf903c0ba2e06da60c1318d575ab9cfd0ba9fd2821e"
+      }
+    },
+    {
+      "slug": "tab-was-taken",
+      "project_id": "gG7VFbG0",
+      "version": "6.2.0",
+      "version_id": "OzomWbbH",
+      "file": "TAB v6.2.0.jar",
+      "url": "https://cdn.modrinth.com/data/gG7VFbG0/versions/OzomWbbH/TAB%20v6.2.0.jar",
+      "size": 8482800,
+      "hashes": {
+        "sha512": "b09aa679e40b526273b6c59109ad69c135ee41cf2b26c636a1edc5662b83928278000bbb028088d5be55dd71f0eb239dba5289df265b6141307b251b2c8133e3"
+      }
+    },
+    {
+      "slug": "towns-and-nations-bluemap",
+      "project_id": "TIX1OYki",
+      "version": "0.16.1",
+      "version_id": "1RSkqFQn",
+      "file": "TownsAndNations-bluemap-0.16.1.jar",
+      "url": "https://cdn.modrinth.com/data/TIX1OYki/versions/1RSkqFQn/TownsAndNations-bluemap-0.16.1.jar",
+      "size": 77659,
+      "hashes": {
+        "sha512": "624596468ad89be7f7edffcb8c76a54f356dc427e61d423d377bb4c27435bfc21f7f6d827341db2a87a7860ae0d821d7c2c7f48b63b7aa8651d1545bf9930093"
+      }
+    },
+    {
+      "slug": "towns-nations",
+      "project_id": "Ag2I6USg",
+      "version": "1.0.5",
+      "version_id": "o6gXuIRu",
+      "file": "TownsAndNations-1.0.5.jar",
+      "url": "https://cdn.modrinth.com/data/Ag2I6USg/versions/o6gXuIRu/TownsAndNations-1.0.5.jar",
+      "size": 22116678,
+      "hashes": {
+        "sha512": "72e58680eeed3bb3ef6504bfc04e795d9de1c1e746a1483d4a2198e2c5f20d82c27b2ca086b18f253e41c32a119e5fa043a791b38000e27cf93e5f924ce5bb8b"
+      }
+    },
+    {
+      "slug": "vaultunlocked",
+      "project_id": "ayRaM8J7",
+      "version": "2.20.3",
+      "version_id": "qZgRzoYs",
+      "file": "VaultUnlocked-2.20.3.jar",
+      "url": "https://cdn.modrinth.com/data/ayRaM8J7/versions/qZgRzoYs/VaultUnlocked-2.20.3.jar",
+      "size": 134932,
+      "hashes": {
+        "sha512": "0eedea1591459e7e327315b43afa834a173c8c2ae31b3b235586d31963df29a4a6c0ef4b8f3fdc746e15afd47ee50c1ff93584543b5c2ef7c2a80135dba1136a"
+      }
+    },
+    {
+      "slug": "worldguard",
+      "project_id": "DKY9btbd",
+      "version": "7.0.18",
+      "version_id": "btHBavWa",
+      "file": "worldguard-bukkit-7.0.18.jar",
+      "url": "https://cdn.modrinth.com/data/DKY9btbd/versions/btHBavWa/worldguard-bukkit-7.0.18.jar",
+      "size": 1198472,
+      "hashes": {
+        "sha512": "9404a0eacebc5c85bdcf4a7d343330b4894dcd87246548adca75c43dbf2a3c0539f75bb15665cdd04d7f980e8d0d2a95d79e96861ba74fcd5636d685496f47f2"
+      }
+    }
+  ],
+  "datapacks": [
+    {
+      "slug": "dragonkind-evolved",
+      "project_id": "yo1bGdBx",
+      "version": "1.13",
+      "version_id": "4CDWHEWC",
+      "file": "dragonkind-evolved-by-kanokarob-v1.13.zip",
+      "url": "https://cdn.modrinth.com/data/yo1bGdBx/versions/4CDWHEWC/dragonkind-evolved-by-kanokarob-v1.13.zip",
+      "size": 695796,
+      "hashes": {
+        "sha512": "dfd416d1e762aef1da252bb89f3e88558ba60508cac9ee61cf020641b1cf80dbb1548b319cc083a1ab6c581fdd76edd7434b6e4b5f3566d1fd544dd57f1f5917"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns",
+      "project_id": "tpehi7ww",
+      "version": "5.2.0",
+      "version_id": "ohqJT0pv",
+      "file": "Dungeons and Taverns v5.2.0.zip",
+      "url": "https://cdn.modrinth.com/data/tpehi7ww/versions/ohqJT0pv/Dungeons%20and%20Taverns%20v5.2.0.zip",
+      "size": 19936859,
+      "hashes": {
+        "sha512": "092879dd3c659fc85b5357a33c973e0e5aca917174be28417ba67e79f3a50f55b4c61850b5613210cd5a2cb77a7ce42bfbed2fd2481b89982e2537c8abd171d5"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-ancient-city-overhaul",
+      "project_id": "DNuNq5bb",
+      "version": "3.3",
+      "version_id": "1AQICtEv",
+      "file": "DnT Ancient City Overhaul v3.3.zip",
+      "url": "https://cdn.modrinth.com/data/DNuNq5bb/versions/1AQICtEv/DnT%20Ancient%20City%20Overhaul%20v3.3.zip",
+      "size": 626096,
+      "hashes": {
+        "sha512": "b20bb80cb57e63f239e1cc2c1dbc3000c087fa37adda54f709266760a4bd9faa739862a80df24ddd33e6e83b4659779411251d1d75a6a75a4647becd82697dbb"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-desert-temple-overhaul",
+      "project_id": "7JTDDmRT",
+      "version": "v2.1",
+      "version_id": "tOWwOzy4",
+      "file": "DnT Desert Temple Overhaul v2.1.zip",
+      "url": "https://cdn.modrinth.com/data/7JTDDmRT/versions/tOWwOzy4/DnT%20Desert%20Temple%20Overhaul%20v2.1.zip",
+      "size": 216107,
+      "hashes": {
+        "sha512": "4f9af3b9d28873cfc1be0956601300761960da2a7b0eb99cf986ab4472e771ec66812186fb60fadd6b9b6ed4a800d3de0075df3372b4542efeba0e6e59109d82"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-mineshaft-overhaul",
+      "project_id": "ozLFhOy3",
+      "version": "1",
+      "version_id": "ptokDzoL",
+      "file": "DnT Mineshaft Overhaul v1.zip",
+      "url": "https://cdn.modrinth.com/data/ozLFhOy3/versions/ptokDzoL/DnT%20Mineshaft%20Overhaul%20v1.zip",
+      "size": 705704,
+      "hashes": {
+        "sha512": "ef05a5a6866fde305990aadae6b3d4cea0316e4d55a0d8a7ba32468d6f55c3c4ee6ddd85d6358c1a86a442633bd92840343ae6a567a469ea33290fb39832217f"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-nether-fortress-overhaul",
+      "project_id": "8Dbnvm77",
+      "version": "v3.1",
+      "version_id": "3u94EXVg",
+      "file": "DnT Nether Fortress Overhaul v3.1.zip",
+      "url": "https://cdn.modrinth.com/data/8Dbnvm77/versions/3u94EXVg/DnT%20Nether%20Fortress%20Overhaul%20v3.1.zip",
+      "size": 346655,
+      "hashes": {
+        "sha512": "4553734b3eac9d4da2d14e1b99c291543c487909bfe018cdb2ac0a4c8db5dceae2b08158a2a2823ff5398fec244baeb2b66e8b0968ec8e7496a26a05ff2b9b45"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-ocean-monument-overhaul",
+      "project_id": "z6GJ3ycD",
+      "version": "v2.2",
+      "version_id": "XaMRlEub",
+      "file": "DnT Ocean Monument Overhaul v2.2.zip",
+      "url": "https://cdn.modrinth.com/data/z6GJ3ycD/versions/XaMRlEub/DnT%20Ocean%20Monument%20Overhaul%20v2.2.zip",
+      "size": 973570,
+      "hashes": {
+        "sha512": "50c41708cb9474e636bce40867e3a3a77b82ee3776257d31ea7a5375d8494f7d5b85eb8f69d38a440d08a48e9c143b3a47def72f6ee8b177e1358b5a315553da"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-pillager-outpost-overhaul",
+      "project_id": "QIt10I7z",
+      "version": "v3.3",
+      "version_id": "uAHOlrKb",
+      "file": "DnT Pillager Outpost Overhaul v3.3.zip",
+      "url": "https://cdn.modrinth.com/data/QIt10I7z/versions/uAHOlrKb/DnT%20Pillager%20Outpost%20Overhaul%20v3.3.zip",
+      "size": 211560,
+      "hashes": {
+        "sha512": "bf3ae77f56642a82c217e417cdd6f6ead41ef13ac7da3cc3e70467833490f485cb6c7619c43db9714d00c70a200cdbde5e841b372d93d781e41c6021376fcae0"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-stronghold-overhaul",
+      "project_id": "rYocd2LE",
+      "version": "v2.4.0",
+      "version_id": "L1ylllq1",
+      "file": "DnT Stronghold Overhaul v2.4.0.zip",
+      "url": "https://cdn.modrinth.com/data/rYocd2LE/versions/L1ylllq1/DnT%20Stronghold%20Overhaul%20v2.4.0.zip",
+      "size": 1897461,
+      "hashes": {
+        "sha512": "98717889e12744c0625b4996c5471ad7938068b48749ef45aa80e82ed06512282386906b67a491ba144e6f692bdbf42a140dc85a90a4c7c201c0155a358724b4"
+      }
+    },
+    {
+      "slug": "epic-structures-dungeons",
+      "project_id": "t0YT91nL",
+      "version": "1.2.5",
+      "version_id": "HCt01kO4",
+      "file": "Epic Dungeons 1.2.5.zip",
+      "url": "https://cdn.modrinth.com/data/t0YT91nL/versions/HCt01kO4/Epic%20Dungeons%201.2.5.zip",
+      "size": 9156936,
+      "hashes": {
+        "sha512": "0ae4e7e434565fa9d46cc85e3ada6de9786ed197651ef5c9c2a478e9125a8e0e60d0bdc6e384f0c14f64c916cfa1b111ac20bb0812e559ae0b951d9404b74a66"
+      }
+    },
+    {
+      "slug": "epic-structures-igloo",
+      "project_id": "r5cwIwhb",
+      "version": "1.0.5",
+      "version_id": "RLxs14gl",
+      "file": "epic igloo (1.21+ 26+).zip",
+      "url": "https://cdn.modrinth.com/data/r5cwIwhb/versions/RLxs14gl/epic%20igloo%20%281.21%2B%2026%2B%29.zip",
+      "size": 1790189,
+      "hashes": {
+        "sha512": "c3e53e67144d142790b52c33b78b2ee431e1eeca764a57839283303a320bae1eb3e16e5412a1d265b0c4f1f3ac12075b57743b376b32b04329178065a17de632"
+      }
+    },
+    {
+      "slug": "epic-structures-jungle-temples",
+      "project_id": "Zs1qzXyd",
+      "version": "1.0.2",
+      "version_id": "XjuAKE3K",
+      "file": "Epic Jungle Temples v1.0.2.zip",
+      "url": "https://cdn.modrinth.com/data/Zs1qzXyd/versions/XjuAKE3K/Epic%20Jungle%20Temples%20v1.0.2.zip",
+      "size": 2595028,
+      "hashes": {
+        "sha512": "8a4f67e8a2d8d1a88053a445e12ecd0a64d79ae5e6001ff2a15c02aa8e0c600a14cb5c2e803055bf7b71747045577977a4029a7130299e8680d895e476706f40"
+      }
+    },
+    {
+      "slug": "epic-structures-villages",
+      "project_id": "4OeMBkiG",
+      "version": "2.0.0",
+      "version_id": "NJ8yat4P",
+      "file": "Epic Villages 2.0.0.zip",
+      "url": "https://cdn.modrinth.com/data/4OeMBkiG/versions/NJ8yat4P/Epic%20Villages%202.0.0.zip",
+      "size": 9137344,
+      "hashes": {
+        "sha512": "17325b558297152338d92b957d42408ae7f5531f64ed3a322ccbddcc889b3a94a60faacf746c23ddafb2c5716d88f96c4f044d2a843bb9e38bfc88b78a44ef8b"
+      }
+    },
+    {
+      "slug": "epic-structures-witch-huts",
+      "project_id": "7KOwcKlK",
+      "version": "1.3.1",
+      "version_id": "CUnq3JFk",
+      "file": "Epic Witch Huts v1.3.1.zip",
+      "url": "https://cdn.modrinth.com/data/7KOwcKlK/versions/CUnq3JFk/Epic%20Witch%20Huts%20v1.3.1.zip",
+      "size": 1269854,
+      "hashes": {
+        "sha512": "c49b15ab378222146040f080b9d0670e4899f8186cb7aa25f547d505ff358579cbc86eadbe6ca2a217661bc0083a32f5f880f9f47a5cb1128bd80c6862de27ef"
+      }
+    },
+    {
+      "slug": "explorify",
+      "project_id": "HSfsxuTo",
+      "version": "v1.6.5",
+      "version_id": "BKKKBD2V",
+      "file": "Explorify v1.6.5.dp.zip",
+      "url": "https://cdn.modrinth.com/data/HSfsxuTo/versions/BKKKBD2V/Explorify%20v1.6.5.dp.zip",
+      "size": 766527,
+      "hashes": {
+        "sha512": "9ca01672759e9a84a14e3424f1a779bde3fdaad3bf77b853961e0a5902c4bbee0ab970adf5638e1e6934e0a70d926221caa8d89f29e6f88d56b73aad9ae4fb6b"
+      }
+    },
+    {
+      "slug": "incendium",
+      "project_id": "ZVzW5oNS",
+      "version": "5.4.12",
+      "version_id": "l721IuKU",
+      "file": "Incendium_26.1_v5.4.12_UNSUPPORTED.zip",
+      "url": "https://cdn.modrinth.com/data/ZVzW5oNS/versions/l721IuKU/Incendium_26.1_v5.4.12_UNSUPPORTED.zip",
+      "size": 4245919,
+      "hashes": {
+        "sha512": "61e0a857cc99e27b04b92a4408bb4d7b0358f69d16c2038e7912f2453edb983aa8b366df1e89745e586e312019e48208540fdb013a2751e36697787ecc14dc37"
+      }
+    },
+    {
+      "slug": "nullscape",
+      "project_id": "LPjGiSO4",
+      "version": "1.2.20",
+      "version_id": "3UlARIGL",
+      "file": "Nullscape_26.1_v1.2.20.zip",
+      "url": "https://cdn.modrinth.com/data/LPjGiSO4/versions/3UlARIGL/Nullscape_26.1_v1.2.20.zip",
+      "size": 343680,
+      "hashes": {
+        "sha512": "a6b5b2e3d51b7af3312daa95e0762fc2fd91f421baa166871ee04ea084b9550c9706a4224c3fb8e781d959041b73de3fe722db61fd99b793661619295ed991c0"
+      }
+    },
+    {
+      "slug": "player-death-corpses",
+      "project_id": "jzoouHnf",
+      "version": "3.7",
+      "version_id": "M8oNDZN3",
+      "file": "Player Corpses 3.7 [1.21.9+].zip",
+      "url": "https://cdn.modrinth.com/data/jzoouHnf/versions/M8oNDZN3/Player%20Corpses%203.7%20%5B1.21.9%2B%5D.zip",
+      "size": 187323,
+      "hashes": {
+        "sha512": "430e733f3f5cfb038dc596c12b579e32c2be907504265fe0ba774c06dddf7bc4cf3dd93f87e450fd5108fdf6f76e2c816804c56c999bcc670aef3d31849e5137"
+      }
+    },
+    {
+      "slug": "silvers-datapack-tags-library",
+      "project_id": "n2UxUWXF",
+      "version": "1.12",
+      "version_id": "hwxNxBUl",
+      "file": "Silver's Tags Library - v.1.12 - JE v.1.21-26.3+.zip",
+      "url": "https://cdn.modrinth.com/data/n2UxUWXF/versions/hwxNxBUl/Silver%27s%20Tags%20Library%20-%20v.1.12%20-%20JE%20v.1.21-26.3%2B.zip",
+      "size": 78067,
+      "hashes": {
+        "sha512": "04c9959f740a56d54cc16c1f8af8e7395c7115ce3033ac94c5291caa233fbbf502da22dfb25efbfe378365ab78ec92618a7ef7639d06a22014099594bded748f"
+      }
+    },
+    {
+      "slug": "silvers_effects-library",
+      "project_id": "wBo7DRiB",
+      "version": "2.8",
+      "version_id": "lGev5gzi",
+      "file": "Silver's Custom Effects Library - Datapack & Texture Pack - v.2.8 - 1.21-26.3+.zip",
+      "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/lGev5gzi/Silver%27s%20Custom%20Effects%20Library%20-%20Datapack%20%26%20Texture%20Pack%20-%20v.2.8%20-%201.21-26.3%2B.zip",
+      "size": 142475,
+      "hashes": {
+        "sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
+      },
+      "patch": {
+        "path": "patches/silvers_effects-library",
+        "base_sha512": "934025c83fa838beb5aa37778df262c511b33be671e4e603ee47e123e1619225236cc3ed432f8428a3ff3100ccf14fb32ccd8cfd3d64604b77033b45f2e6eac5"
+      }
+    },
+    {
+      "slug": "silvers_inventory-library",
+      "project_id": "zJhgi9nK",
+      "version": "1.2",
+      "version_id": "LMfNUgI4",
+      "file": "Silver's Inventory Library - v.1.2.zip",
+      "url": "https://cdn.modrinth.com/data/zJhgi9nK/versions/LMfNUgI4/Silver%27s%20Inventory%20Library%20-%20v.1.2.zip",
+      "size": 17375,
+      "hashes": {
+        "sha512": "a6b4a92edc41e4540e05b6b7b39d6b623bf0115ceb9ac3cdc15d4574869c7a35340c35a7b242f560830fb1cc5b91569bbd0c4b2b0ef4d150e413ad1956f62fed"
+      }
+    },
+    {
+      "slug": "silvers_strength-restrictions",
+      "project_id": "M15Gwx1o",
+      "version": "1.4",
+      "version_id": "B8AmNpPV",
+      "file": "Strength Restrictions - v.1.4 - 26.1-26.1.2.zip",
+      "url": "https://cdn.modrinth.com/data/M15Gwx1o/versions/B8AmNpPV/Strength%20Restrictions%20-%20v.1.4%20-%2026.1-26.1.2.zip",
+      "size": 37212,
+      "hashes": {
+        "sha512": "d9830940f34d3c2ce2513ea6921805f14de97b1567527a59fec6467bdea6da7b7b1b8a66926a17b8ebbef0997714a3c111209f8503544dc2dbc29572c75d25c2"
+      }
+    },
+    {
+      "slug": "silvers_strength-smp-season-4",
+      "project_id": "DEvdqUh9",
+      "version": "1.7",
+      "version_id": "sT3Suksr",
+      "file": "Strength SMP Datapack - v.1.7 - 26.1-26.1.2.zip",
+      "url": "https://cdn.modrinth.com/data/DEvdqUh9/versions/sT3Suksr/Strength%20SMP%20Datapack%20-%20v.1.7%20-%2026.1-26.1.2.zip",
+      "size": 90933,
+      "hashes": {
+        "sha512": "d803a3d72f60987a1f112c26c48a61ba360d79027323bfcadeb52098a2f9c8e2f769306617c911ea0f98b979a6fd03518647cf61322ef42cd895e38396b26622"
+      }
+    },
+    {
+      "slug": "spawn-animations",
+      "project_id": "zrzYrlm0",
+      "version": "1.11.6",
+      "version_id": "2Y1IwF8Y",
+      "file": "spawnanimations-v1.11.6-mc1.17-26.3.9-datapack.zip",
+      "url": "https://cdn.modrinth.com/data/zrzYrlm0/versions/2Y1IwF8Y/spawnanimations-v1.11.6-mc1.17-26.3.9-datapack.zip",
+      "size": 206518,
+      "hashes": {
+        "sha512": "1934263cbd19a6b5f536e38ac8687e00fa8c2ae545cc61e938d651de1aaa79be28f42ba706293c93b9d560dd72199f33d042c2ca67a12659e07e613e44c445ef"
+      }
+    },
+    {
+      "slug": "structory",
+      "project_id": "aKCwCJlY",
+      "version": "1.3.17",
+      "version_id": "OIcllpSf",
+      "file": "Structory_v1.3.7.zip",
+      "url": "https://cdn.modrinth.com/data/aKCwCJlY/versions/OIcllpSf/Structory_v1.3.7.zip",
+      "size": 1258400,
+      "hashes": {
+        "sha512": "ac7d415d2000b531b82f3dc15eec598e13756f8c7d4de02bda02d40c85ef86e45da0f39a64500ad76952b20333e0d34765c99e3e23c172f089385bd206843fa6"
+      }
+    },
+    {
+      "slug": "terralith",
+      "project_id": "8oi3bsk5",
+      "version": "2.6.2",
+      "version_id": "f1lDwn23",
+      "file": "Terralith_26.1_v2.6.2.zip",
+      "url": "https://cdn.modrinth.com/data/8oi3bsk5/versions/f1lDwn23/Terralith_26.1_v2.6.2.zip",
+      "size": 2985747,
+      "hashes": {
+        "sha512": "14a7282b35cad17e0e3579b1ea33c311be576b8cb53d0e8bfecfcdaac41da25100910c0356c6c9e8a03f8928e22be7b22b5c1c6d36985cc132b1caff3d800496"
+      }
+    },
+    {
+      "slug": "terratonic",
+      "project_id": "3L2L6sWL",
+      "version": "v3.0.22",
+      "version_id": "96aJ7B6m",
+      "file": "tectonic_3.0.22.zip",
+      "url": "https://cdn.modrinth.com/data/3L2L6sWL/versions/96aJ7B6m/tectonic_3.0.22.zip",
+      "size": 187020,
+      "hashes": {
+        "sha512": "00cd9dbd874de8f578933884cb81b85c483f550213fefdec498335cd86bed8af04d84a3328fcabc8dbfff867c52e653868ec72a3b08eebd56f34813fc36bf14d"
+      }
+    },
+    {
+      "slug": "towns-and-towers",
+      "project_id": "DjLobEOy",
+      "version": "26.1-datapack",
+      "version_id": "E39wx2BN",
+      "file": "t_and_t-datapack-26.x.zip",
+      "url": "https://cdn.modrinth.com/data/DjLobEOy/versions/E39wx2BN/t_and_t-datapack-26.x.zip",
+      "size": 3284762,
+      "hashes": {
+        "sha512": "bd139bb99284f30a6e924d5a8f72a08ebf8b86c928ab2cd57fdf715c335c13dc87cf5e62b668674010dede5aeb6a4b9d3615247d920da21bd5449f1dbd7a25e5"
+      }
+    }
+  ]
+}

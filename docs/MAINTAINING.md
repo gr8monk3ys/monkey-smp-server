@@ -6,9 +6,9 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/realms/manifest.json` | pinned Java, Paper, plugins, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
+| `package/realms/manifest.json` | pinned Java, server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/realms/patches/<slug>/` | files replaced inside a downloaded datapack | `tools/snapshot.py` |
+| `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
 
@@ -17,29 +17,52 @@ lives in a few modules they share:
 
 | Module | Owns |
 |---|---|
-| `tools/entries.py` | the manifest entry shape, the `file` naming rule, entry validation, hash choice |
+| `tools/entries.py` | the manifest entry shape, server types and which groups they use, the `file` naming rule, entry validation, hash choice |
 | `tools/patches.py` | making, storing, applying and checking patches |
-| `tools/upstream.py` | the Upstream catalog (Modrinth, PaperMC, Adoptium) behind a swappable HTTP adapter |
+| `tools/upstream.py` | the Upstream catalog (Modrinth, PaperMC, Fabric meta, Adoptium) behind a swappable HTTP adapter |
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
 
-## Updating plugins and Paper
+## Server types: Paper or Fabric
+
+The manifest's `server.type` says which server software runs, and that decides which groups it may use:
+
+| `server.type` | Pinned server download | Runs | Must be empty |
+|---|---|---|---|
+| `paper` | the Paper build's jar (`build`) | `plugins` + `datapacks` | `mods` |
+| `fabric` | Fabric meta's server launcher for `minecraft` + `loader` + `installer` | `mods` + `datapacks` | `plugins` |
+
+All three groups are written to every manifest; a 1.x manifest without `mods` still reads, validates
+and builds (the group counts as empty). The Fabric launcher URL is
+`https://meta.fabricmc.net/v2/versions/loader/<minecraft>/<loader>/<installer>/server/jar`. Meta
+generates that jar, but the same three versions always give the same bytes, so its size and sha256
+are pinned like any other download. On first start the launcher fetches the loader and the vanilla
+server itself.
+
+## Updating the server, plugins and mods
 
 ```bash
 python tools/check_updates.py            # what's newer (same Minecraft version, stable only)
 python tools/check_updates.py --apply    # pin them
 python tools/add.py datapack <slug>...    # add new Modrinth projects at their newest stable build
+python tools/add.py mod <slug>...         # (Fabric) ...or mods; `plugin` on Paper
 python tools/validate.py --online        # download + hash-check everything
 ```
 
 An update has to be a stable release with a different file, published after the pinned version, so a
 re-listed file (same jar, new version id) or a newer pre-release pin is never "updated" backwards.
+Plugins are looked up with the Paper-family loaders and mods with the `fabric` loader, both for the
+manifest's Minecraft version. For a Fabric server, a newer stable loader for that Minecraft version
+and/or a newer stable installer is one server update; `--apply` downloads the new launcher from meta
+to pin its size and hash. `add.py` refuses a kind the server type doesn't run (mods on Paper,
+plugins on Fabric).
 
-Patched datapacks are the exception: `check_updates.py` lists a newer release of a patched pack as
+Patched mods and datapacks are the exception: `check_updates.py` lists a newer release as
 "patched - re-snapshot needed" and `--apply` leaves its pin alone, because the patch was made against
-the old file and may not fit the new one (see `docs/adr/0004-patched-datapacks-are-not-auto-updated.md`).
-To take it, put the new upstream zip in the server's `datapack-originals/` and (edited) in its
-datapacks folder, then snapshot the server as below; that re-makes the patch against the new file.
+the old file and may not fit the new one (see `docs/adr/0004-patched-datapacks-are-not-auto-updated.md`;
+it applies to mods the same way). To take it, put the new upstream file in the server's
+`mod-originals/` or `datapack-originals/` and the edited copy in `mods/` or the world's datapacks
+folder, then snapshot the server as below; that re-makes the patch against the new file.
 
 Then boot it locally on spare ports (doesn't disturb a server already on 25565):
 
@@ -53,25 +76,49 @@ Open a PR. CI runs the same smoke test on a clean Windows runner.
 
 ## Capturing changes from a live server
 
-If you add or update plugins/datapacks on a running server by hand, snapshot it back into the manifest:
+If you add or update plugins/mods/datapacks on a running server by hand, snapshot it back into the
+manifest (stop the server first so nothing is mid-write):
 
 ```bash
-python tools/snapshot.py server C:/MCServer/factions
+python tools/snapshot.py server C:/MCServer/factions     # Paper
+python tools/snapshot.py server C:/MCServer/smp          # Fabric
 python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
 ```
 
-Every file must be on Modrinth (matched by SHA-1). Datapacks are read from the world folder named by
-`level-name` in the server's `server.properties`. A datapack you edited in place is matched against
+The snapshot tells the server type from the folder:
+
+- **Paper**: `paper.jar` + `version_history.json`. The Minecraft version comes from
+  `version_history.json`, the Paper build is matched by hash, plugins come from `plugins/*.jar`.
+- **Fabric**: a Fabric server launcher jar in the folder (`fabric-server.jar`, preferred if there are
+  several) + a `mods/` folder. The Minecraft and loader versions are read from the launcher jar's
+  `install.properties`: the launcher reads exactly that file to decide what to download and run, it
+  is there before the first start, and unlike `versions/`, `.fabric/` and `libraries/` it can't hold
+  leftovers from an older version. The launcher is pinned to meta's jar for those versions and the
+  newest stable installer. If the local jar isn't byte-identical to it (it came from another
+  installer), the snapshot still pins meta's jar, which runs the same loader and Minecraft version,
+  and prints a note. Mods come from `mods/*.jar` only; folders inside `mods/` (LuckPerms keeps its
+  data in `mods/luckperms/`) and other files are ignored.
+
+Every plugin, mod and datapack must be on Modrinth (matched by SHA-1), or the snapshot fails and lists
+the files that aren't. Datapacks are read from the world folder named by `level-name` in the server's
+`server.properties` (on Fabric this may be empty; datapack mods live in `mods/`).
+
+The `world` settings are kept from the old manifest when the server type and Minecraft version are
+unchanged; otherwise they are read from `server.properties` (`level-name`, and `level-seed`: empty
+stays empty, meaning a random seed; a text seed is turned into the number Minecraft would use).
+
+A mod or datapack you edited in place is matched against `mod-originals/<same file name>` or
 `datapack-originals/<same file name>` in the server folder, and the changed files become a patch:
 `package/realms/patches/<slug>/` plus `"patch": {"path": "patches/<slug>", "base_sha512": ...}` on
-the entry, pinned to the original's hash. A patch may only replace files that exist in the upstream
-zip (adding or removing files fails the snapshot), and patch folders no datapack uses are deleted.
-`validate.py` checks that every patch matches its entry's pinned hash, and `--online` applies each
-patch to the real download to prove it still fits.
+the entry, pinned to the original's hash. (Jars are zips, so mods and datapacks are patched the same
+way.) A file identical to its original simply pins the original, with no patch. A patch may only
+replace files that exist in the upstream file (adding or removing files fails the snapshot), and
+patch folders no mod or datapack uses are deleted. `validate.py` checks that every patch matches its
+entry's pinned hash, and `--online` applies each patch to the real download to prove it still fits.
 
-Datapacks and plugins keep the file name they have on the server. On `check_updates.py --apply`,
-plugins take the new upstream file name, but datapacks keep theirs, because the world refers to
-datapacks by file name (the rule is written down once, in `tools/entries.py`).
+Plugins, mods and datapacks keep the file name they have on the server. On `check_updates.py --apply`,
+plugins and mods take the new upstream file name, but datapacks keep theirs, because the world refers
+to datapacks by file name (the rule is written down once, in `tools/entries.py`).
 Config defaults are curated by hand: copy changed configs into `package/realms/defaults/` yourself, and
 never copy files containing secrets (`server.properties` from a live server has the RCON password).
 
@@ -85,7 +132,10 @@ python -m pytest -q && python -m ruff check tools tests && python tools/validate
 The unit tests never touch the network or the real checkout: tools take an `Upstream` catalog and
 a `Repo`, and tests pass a `RecordedHttp` adapter (replaying `tests/fixtures/upstream/*.json`, or
 responses built in the test) and a temporary copy of the repo. A request with no recorded response
-fails loudly. If an upstream API changes shape, or a test needs a new request, re-record the
+fails loudly. Sample manifests are frozen releases in `tests/fixtures/manifests/` (`paper-1.1.0`, the
+last Paper release, and `fabric-2.0.0`, each with its patches and a trimmed client index), so a new
+release never breaks the tests; only `test_real_repo_is_valid` checks what the repo pins today.
+If an upstream API changes shape, or a test needs a new request, re-record the
 fixtures from the live APIs (responses are trimmed to the fields the tools read):
 
 ```bash
@@ -104,6 +154,8 @@ The release workflow re-runs CI, refuses to publish if the tag and manifest vers
 
 ## Changing Minecraft version
 
-Every plugin and datapack needs a build for the new version. `check_updates.py` only looks within the
-pinned version, so change `minecraft` in the manifest, run `snapshot.py` against a server you've upgraded
-by hand, and expect world-gen datapack changes to affect new chunks only.
+Every plugin, mod and datapack needs a build for the new version. `check_updates.py` only looks within
+the pinned version, so upgrade a server by hand and run `snapshot.py` against it (it takes the Minecraft
+version from the server, and re-reads the world settings from `server.properties` because the version
+changed). Expect world-gen changes to affect new chunks only. Switching between Paper and Fabric works
+the same way: snapshot a server of the new type.

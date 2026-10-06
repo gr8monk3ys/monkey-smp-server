@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.0] - 2026-10-05
+
+The server moves from Paper 26.1.2 to **Fabric 26.3** so the whole mod list runs (ADR-0005). This is a
+new world: unzip 2.0 into a new folder, and every player needs the 2.0 client pack.
+
+- Fabric 26.3 (loader 0.19.5) with 112 server mods, including Moog's structures, Naturalist, Variants &
+  Ventures, Easy Magic, More Babies, Nature's Compass, Dragonkind Evolved, Terralith, Tectonic (Overkill),
+  Incendium, Nullscape, Dungeons and Taverns, Strength SMP S4 and C2ME.
+- Factions are parties, allies and land claims (Open Parties and Claims); Towns & Nations wars are gone.
+  Ranks via LuckPerms, rollbacks via Ledger (moderators can't purge its logs), live map via BlueMap.
+- New pinned world seed; spawn is protected by vanilla spawn-protection (48 blocks).
+- Client pack for 26.3: 167 mods, resource packs and shaders. Required to join.
+- New: "Prepare for Hosting.bat" builds an upload-ready zip for online Minecraft hosts and Linux VPSes
+  (start.sh, docker-compose.yml, HOSTING.txt) (ADR-0006).
+- The installer refuses to install 2.x over a 1.x world, so the two can't get mixed up.
+- Left out (not on Modrinth, so they can't be pinned): Villager News, Improved Inventory Tabs,
+  JustEnoughProfessions, Bliss shader.
+
 ## [1.1.0] - 2026-10-05
 
 Synced with the updated mod list.

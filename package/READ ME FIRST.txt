@@ -1,8 +1,9 @@
 THE REALMS - how to run the server
 ==================================
 
-A Minecraft factions server: towns, nations, wars, land claims, PvP and roleplay.
-You need: Windows 10 or 11, 8 GB of RAM or more, and about 3 GB of free disk space.
+A modded Minecraft (Java 26.3) factions server: parties, allies, land claims, PvP, new
+structures, mobs and magic. You need: Windows 10 or 11, 12 GB of RAM or more (16 GB is
+better), and about 5 GB of free disk space.
 You do NOT need to install Java or anything else - this folder takes care of it.
 
 
@@ -11,8 +12,8 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   a) Put this whole folder somewhere permanent, like Documents (not Downloads).
   b) Double-click  "Start Server.bat".
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads about 300 MB the first time (Java, the server and its add-ons),
-       so give it a few minutes.
+     - It downloads about 500 MB the first time (Java, the server and its 112 mods),
+       and the first start builds the world, so give it 5-10 minutes.
   c) It asks you two things:
      - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.
      - Your Minecraft username.  Type it and press Enter. You become the admin.
@@ -45,14 +46,25 @@ You do NOT need to install Java or anything else - this folder takes care of it.
        local address 127.0.0.1, local port 25565.
     4. It gives you an address like  something.joinmc.link  - send that to friends.
     5. playit must be running (along with the server) whenever people play.
+    Voice chat (optional, needs one more tunnel):
+    6. In playit.gg add a second tunnel: type "UDP" (or "Custom UDP"),
+       local address 127.0.0.1, local port 24454. Note the address and port it gives you.
+    7. Stop the server, open  server\configoicechatoicechat-server.properties  in
+       Notepad, set  voice_host=THAT-ADDRESS:THAT-PORT  (e.g. 147.185.221.10:51234), save,
+       and start the server again. Without this, everything works except voice chat.
 
 
-4. WHAT FRIENDS INSTALL
------------------------
-  The server works with normal Minecraft Java Edition 26.1.2.
-  For the full experience (shaders, nicer graphics, voice chat, maps), friends can install
-  the "TheRealms-Client" modpack (.mrpack file) with Prism Launcher or the Modrinth App:
-    Prism Launcher: Add Instance > Import > choose the .mrpack file.
+4. WHAT FRIENDS INSTALL (everyone, including you)
+-------------------------------------------------
+  Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
+  needs the "TheRealms-Client" modpack (.mrpack file) that came with this server.
+    1. Install the Modrinth App (https://modrinth.com/app) or Prism Launcher
+       (https://prismlauncher.org) and sign in with Microsoft. (The normal Minecraft
+       Launcher can't open .mrpack files.)
+    2. Import the .mrpack file (Modrinth App: + > Import; Prism: Add Instance > Import).
+       It downloads everything.
+    3. Launch it, then Multiplayer > Add Server with your address.
+  Use the client pack with the same version number as this server.
 
 
 5. BACKUPS
@@ -70,17 +82,32 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   lp user NAME parent set moderator    give someone the moderator rank
       ranks: default, builder, moderator, admin
   kick NAME / ban NAME          remove a troublemaker
-  co rollback u:NAME t:1h r:20  undo griefing (CoreProtect)
+  ledger rollback source:NAME range:20 after:1h   undo griefing (Ledger)
   stop                          save and shut down
 
-  In game, players use  /tan  for towns, nations, claims and wars.
-  Wars can only be fought between 10:00 and 23:30 (server time).
-  Spawn is a safe zone: no PvP, no explosions.
+  In game, players claim land on the map (press M, right-click chunks) and use
+  /openpac-parties  to make parties and allies. Claimed land is protected.
+  Near spawn only admins can build. PvP is on everywhere else.
 
 
 7. IF SOMETHING GOES WRONG
 --------------------------
   "The server is running. Stop it first"  - it's already open in another window.
   "Failed to bind to port"  - another server is already using port 25565.
+  "This folder already has a ... server with a world in it"  - you unzipped 2.x over an
+      old 1.x server.
+      Unzip it into a new, empty folder instead (the old world stays where it was).
   Anything else: send the person who gave you this folder a screenshot of the window,
   plus the file  server\logs\latest.log
+
+8. HOSTING ONLINE (so the server runs without your PC)
+------------------------------------------------------
+  You can run the same server on a Minecraft hosting company (Shockbyte, Apex,
+  BisectHosting, any Pterodactyl panel) or on your own Linux server (VPS).
+  a) Stop the server if it is running.
+  b) Double-click  "Prepare for Hosting.bat". It downloads anything missing (it asks the
+     same questions as Start Server the first time) and makes a zip in the "exports" folder.
+  c) Open that zip and read  HOSTING.txt  - it explains how to upload and start it,
+     step by step, for hosting companies, Docker and plain Linux.
+  The world you play here is only included if it already exists; otherwise the host
+  creates the same world (same seed) the first time it starts.

@@ -8,6 +8,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import entries
+
 
 @dataclass(frozen=True)
 class Repo:
@@ -44,7 +46,8 @@ class Repo:
         return self.root / "dist"
 
     def load_manifest(self) -> dict:
-        return load_json(self.manifest)
+        """The manifest, with every group present (a 1.x manifest has no "mods"; it reads as [])."""
+        return entries.with_all_groups(load_json(self.manifest))
 
     def save_manifest(self, manifest: dict) -> None:
         save_json(self.manifest, manifest)

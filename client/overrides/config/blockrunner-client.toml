@@ -1,0 +1,6 @@
+#Add a tooltip to blocks that have an altered block speed with the multiplier.
+#Default Value: true
+block_speed_item_tooltip = true
+#Prevent running on blocks with higher speeds from changing the field of view.
+#Default Value: true
+disable_field_of_view_changes = true

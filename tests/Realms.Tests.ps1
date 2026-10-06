@@ -19,9 +19,10 @@ BeforeDiscovery {
     $script:realArtifacts = @(
         @{ Kind = 'java'; Entry = $real.java }
         @{ Kind = 'server'; Entry = $real.server }
-    ) + @($real.plugins | ForEach-Object { @{ Kind = 'plugin'; Entry = $_ } }) +
-        @($real.datapacks | ForEach-Object { @{ Kind = 'datapack'; Entry = $_ } })
-    $script:realPatched = @($real.datapacks | Where-Object { $_.patch } | ForEach-Object { @{ Entry = $_ } })
+    ) + @($real.plugins | Where-Object { $_ } | ForEach-Object { @{ Kind = 'plugin'; Entry = $_ } }) +
+        @($real.mods | Where-Object { $_ } | ForEach-Object { @{ Kind = 'mod'; Entry = $_ } }) +
+        @($real.datapacks | Where-Object { $_ } | ForEach-Object { @{ Kind = 'datapack'; Entry = $_ } })
+    $script:realPatched = @(@($real.mods) + @($real.datapacks) | Where-Object { $_ -and $_.patch } | ForEach-Object { @{ Entry = $_ } })
 }
 
 BeforeAll {
@@ -81,6 +82,7 @@ BeforeAll {
         $F.Server = Join-Path $F.Root 'server'
         $F.Packs = Join-Path $F.Server 'world\datapacks'
         $F.Plugins = Join-Path $F.Server 'plugins'
+        $F.Mods = Join-Path $F.Server 'mods'
         New-Item -ItemType Directory -Force -Path $F.Upstream, $F.Realms | Out-Null
         Write-Text (Join-Path $F.Realms 'defaults\server.properties') (
             "#fixture`nlevel-name={{LEVEL_NAME}}`nlevel-seed={{SEED}}`nserver-port=$($F.Port)`n" +
@@ -103,7 +105,12 @@ BeforeAll {
         $F.Java.version = 'jdk-fixture'
         $F.Java | Add-Member -NotePropertyName vendor -NotePropertyValue 'Fixture JRE'
         $F.Paper = New-Entry $F 'paper-1.jar' @{ 'paper.txt' = 'paper build 1' }
+        $F.Paper | Add-Member -NotePropertyName type -NotePropertyValue 'paper'
         $F.Paper | Add-Member -NotePropertyName build -NotePropertyValue 1
+        $F.Fabric = New-Entry $F 'fabric-server-mc.1.0-loader.0.1.0-launcher.1.0.0.jar' @{ 'fabric.txt' = 'fabric launcher' }
+        $F.Fabric | Add-Member -NotePropertyName type -NotePropertyValue 'fabric'
+        $F.Fabric | Add-Member -NotePropertyName loader -NotePropertyValue '0.1.0'
+        $F.Fabric | Add-Member -NotePropertyName installer -NotePropertyValue '1.0.0'
         return $F
     }
 
@@ -135,15 +142,18 @@ BeforeAll {
         return $Entry
     }
 
-    function New-Manifest($F, [object[]]$Plugins = @(), [object[]]$Datapacks = @()) {
+    # A Paper manifest unless -Server is given (e.g. $F.Fabric).
+    function New-Manifest($F, [object[]]$Plugins = @(), [object[]]$Datapacks = @(), [object[]]$Mods = @(), $Server, [string]$Version = '1.0.0') {
+        if (-not $Server) { $Server = $F.Paper }
         $m = [pscustomobject]@{
             name      = 'Fixture Realms'
-            version   = '1.0.0'
+            version   = $Version
             minecraft = '1.0'
             java      = $F.Java
-            server    = $F.Paper
+            server    = $Server
             world     = [pscustomobject]@{ level_name = 'world'; seed = '-12345' }
             plugins   = @($Plugins)
+            mods      = @($Mods)
             datapacks = @($Datapacks)
         }
         # Round-trip through JSON so the types match a manifest read from disk.
@@ -157,6 +167,12 @@ BeforeAll {
     function Install-Fixture($F, $Manifest, [hashtable]$Options = @{ NoOwner = $true }) {
         $ctx = New-Ctx $F $Manifest
         Install-Server -Context $ctx -AcceptEula @Options 6>$null
+    }
+
+    # Fabric Defaults in place of the Paper ones New-Fixture writes (LuckPerms config moves to config\).
+    function Use-FabricDefaults($F) {
+        Remove-Item -LiteralPath (Join-Path $F.Realms 'defaults\plugins') -Recurse -Force
+        Write-Text (Join-Path $F.Realms 'defaults\config\luckperms\luckperms.conf') "storage-method = `"yaml`"`n"
     }
 
     function Get-State($F) { Get-Content -LiteralPath (Join-Path $F.Server '.realms-state.json') -Raw | ConvertFrom-Json }
@@ -388,6 +404,392 @@ Describe 'Install-Server' {
     }
 }
 
+Describe 'Fabric servers' {
+    BeforeEach {
+        Mock Start-Sleep -ModuleName Realms {}
+    }
+
+    It 'installs the launcher as fabric-server-launch.jar and mods in mods\, then is a no-op' {
+        $F = New-Fixture
+        Use-FabricDefaults $F
+        $mod = New-Entry $F 'Foo-mod [1.0].jar' @{ 'fabric.mod.json' = '{"id":"foo"}' }
+        $pack = New-Entry $F 'Pack.zip' @{ 'pack.mcmeta' = '{}' }
+        $m = New-Manifest $F @() @($pack) @($mod) $F.Fabric
+
+        Install-Fixture $F $m | Out-Null
+        Get-Sha512 (Join-Path $F.Server 'fabric-server-launch.jar') | Should -Be $F.Fabric.hashes.sha512
+        Join-Path $F.Server 'paper.jar' | Should -Not -Exist
+        Get-Sha512 (Join-Path $F.Mods 'Foo-mod [1.0].jar') | Should -Be $mod.hashes.sha512
+        Join-Path $F.Packs 'Pack.zip' | Should -Exist
+        $F.Plugins | Should -Not -Exist
+        Join-Path $F.Server 'config\luckperms\luckperms.conf' | Should -Exist
+        $state = Get-State $F
+        $state.server_type | Should -Be 'fabric'
+        ($state.mods -join ',') | Should -Be 'Foo-mod [1.0].jar'
+        @($state.plugins).Count | Should -Be 0
+        Get-Content -LiteralPath (Join-Path $F.Server '.realms-state.json') -Raw | Should -Match '"mods":\s*\['
+
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'Everything is up to date'
+        $F.Fetched.Count | Should -Be 0
+    }
+
+    It 'removes a dropped mod but never touches subfolders or files it does not manage' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' }
+        $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' }
+        Install-Fixture $F (New-Manifest $F @() @() @($a, $b) $F.Fabric)
+        Write-Text (Join-Path $F.Mods 'luckperms\yaml-storage\groups\admin.yml') 'name: admin'
+        Write-Text (Join-Path $F.Mods 'HostMod.jar') 'host'
+
+        Install-Fixture $F (New-Manifest $F @() @() @($a) $F.Fabric)
+        Join-Path $F.Mods 'A.jar' | Should -Exist
+        Join-Path $F.Mods 'B.jar' | Should -Not -Exist
+        Join-Path $F.Mods 'HostMod.jar' | Should -Exist
+        Join-Path $F.Mods 'luckperms\yaml-storage\groups\admin.yml' | Should -Exist
+        ((Get-State $F).mods -join ',') | Should -Be 'A.jar'
+    }
+
+    It 'refuses plugins in a Fabric manifest and mods in a Paper one' {
+        $F = New-Fixture
+        $jar = New-Entry $F 'X.jar' @{ 'x' = 'x' }
+        { Install-Fixture $F (New-Manifest $F @($jar) @() @() $F.Fabric) } | Should -Throw "*lists plugins, but a Fabric server can't load plugins*"
+        { Install-Fixture $F (New-Manifest $F @() @() @($jar)) } | Should -Throw "*lists mods, but a Paper server can't load mods*"
+        $F.Server | Should -Not -Exist
+    }
+
+    Context 'patched mods' {
+        BeforeEach {
+            $F = New-Fixture
+            $F.Mod = New-Entry $F 'silvers-lib.jar' @{ 'fabric.mod.json' = 'original'; 'data/x/fn.mcfunction' = 'say hi' }
+            $F.Patch = New-Patch $F 'silvers-lib' @{ 'fabric.mod.json' = 'patched' }
+            $F.Dest = Join-Path $F.Mods 'silvers-lib.jar'
+        }
+
+        It 'replaces the patched files, keeps the rest, and is then a no-op' {
+            $m = New-Manifest $F @() @() @(Add-PatchTo $F.Mod $F.Patch) $F.Fabric
+            Install-Fixture $F $m | Out-Null
+            Read-ZipEntry $F.Dest 'fabric.mod.json' | Should -Be 'patched'
+            Read-ZipEntry $F.Dest 'data/x/fn.mcfunction' | Should -Be 'say hi'
+            (Get-State $F).patched.'silvers-lib.jar'.sha256 | Should -Not -BeNullOrEmpty
+
+            $F.Fetched.Clear()
+            $stamp = (Get-Item $F.Dest).LastWriteTimeUtc
+            Install-Fixture $F $m | Out-Null
+            $F.Fetched.Count | Should -Be 0
+            (Get-Item $F.Dest).LastWriteTimeUtc | Should -Be $stamp
+        }
+
+        It 'throws when base_sha512 is not the upstream file the entry pins' {
+            $m = New-Manifest $F @() @() @(Add-PatchTo $F.Mod $F.Patch ('cd' * 64)) $F.Fabric
+            { Install-Fixture $F $m } | Should -Throw '*different upstream file*'
+            $F.Dest | Should -Not -Exist
+        }
+
+        It 'throws when a patch adds a file the mod does not have' {
+            Write-Text (Join-Path $F.Realms 'patches\silvers-lib\data\x\new.json') '{}'
+            { Install-Fixture $F (New-Manifest $F @() @() @(Add-PatchTo $F.Mod $F.Patch) $F.Fabric) } |
+                Should -Throw '*no matching file in silvers-lib.jar: data/x/new.json*'
+            $F.Dest | Should -Not -Exist
+        }
+    }
+
+    It 'puts the Owner in the LuckPerms admin rank under mods\luckperms' {
+        $F = New-Fixture
+        Use-FabricDefaults $F
+        $m = New-Manifest $F @() @() @() $F.Fabric
+        Install-Fixture $F $m @{ Owner = 'notch' } | Out-Null
+        Join-Path $F.Mods 'luckperms\yaml-storage\users\069a79f4-44e9-4726-a5be-fca90e38aaf5.yml' |
+            Should -FileContentMatch '^primary-group: admin$'
+        Join-Path $F.Server 'plugins\LuckPerms' | Should -Not -Exist
+        (Get-State $F).owner | Should -Be 'Notch'
+    }
+}
+
+Describe 'Upgrades and server type switches' {
+    BeforeEach {
+        Mock Start-Sleep -ModuleName Realms {}
+    }
+
+    It 'upgrades a 1.x Paper install (state without mods or server_type) with no re-downloads' {
+        $F = New-Fixture
+        $keep = New-Entry $F 'Keep.jar' @{ 'plugin.yml' = 'keep' }
+        $old = New-Entry $F 'Old-1.jar' @{ 'plugin.yml' = 'v1' } 'old'
+        $pack = Add-PatchTo (New-Entry $F 'Effects.zip' @{ 'pack.mcmeta' = 'original' }) (New-Patch $F 'effects' @{ 'pack.mcmeta' = 'patched' })
+        Install-Fixture $F (New-Manifest $F @($keep, $old) @($pack)) | Out-Null
+        # Rewrite the state the way 1.x wrote it, and drop 'mods' from the manifest like 1.x had.
+        $s = Get-State $F
+        $legacy = [ordered]@{ version = $s.version; java = $s.java; owner = $null; plugins = @($s.plugins)
+            datapacks = @($s.datapacks); patched = $s.patched }
+        Write-Text (Join-Path $F.Server '.realms-state.json') (ConvertTo-Json -InputObject $legacy -Depth 10)
+        Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+        $F.Fetched.Clear()
+
+        $new = New-Entry $F 'Old-2.jar' @{ 'plugin.yml' = 'v2' } 'old'
+        $m = New-Manifest $F @($keep, $new) @($pack) -Version '1.2.0'
+        $m.PSObject.Properties.Remove('mods')
+        Install-Fixture $F $m | Out-Null
+
+        $F.Fetched.Keys | Should -Be @($new.url)
+        Join-Path $F.Plugins 'Old-1.jar' | Should -Not -Exist
+        Join-Path $F.Plugins 'Old-2.jar' | Should -Exist
+        Read-ZipEntry (Join-Path $F.Packs 'Effects.zip') 'pack.mcmeta' | Should -Be 'patched'
+        $state = Get-State $F
+        $state.version | Should -Be '1.2.0'
+        $state.server_type | Should -Be 'paper'
+        @($state.mods).Count | Should -Be 0
+    }
+
+    It 'stops and changes nothing when a <Was> folder with a world gets a <Now> release' -ForEach @(
+        @{ Was = 'paper'; Now = 'fabric'; Legacy = $false }
+        @{ Was = 'paper'; Now = 'fabric'; Legacy = $true }
+        @{ Was = 'fabric'; Now = 'paper'; Legacy = $false }
+    ) {
+        $F = New-Fixture
+        $jars = @{ paper = 'paper.jar'; fabric = 'fabric-server-launch.jar' }
+        $plugin = New-Entry $F 'P.jar' @{ 'plugin.yml' = 'p' }
+        $mod = New-Entry $F 'M.jar' @{ 'fabric.mod.json' = 'm' }
+        $first = if ($Was -eq 'paper') { New-Manifest $F @($plugin) } else { New-Manifest $F @() @() @($mod) $F.Fabric }
+        Install-Fixture $F $first | Out-Null
+        $stateFile = Join-Path $F.Server '.realms-state.json'
+        if ($Legacy) {
+            $s = Get-State $F
+            Write-Text $stateFile (ConvertTo-Json -InputObject ([ordered]@{ version = $s.version; java = $s.java; plugins = @($s.plugins); datapacks = @(); patched = @{} }))
+        }
+        Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+        $before = @(Get-ChildItem -LiteralPath $F.Root -Recurse -File | ForEach-Object { "$($_.FullName)=$($_.Length)" })
+        $stateText = [IO.File]::ReadAllText($stateFile)
+        $F.Fetched.Clear()
+
+        $second = if ($Now -eq 'paper') { New-Manifest $F @($plugin) } else { New-Manifest $F @() @() @($mod) $F.Fabric }
+        { Install-Fixture $F $second } | Should -Throw '*Unzip this release into a NEW, empty folder*'
+
+        $F.Fetched.Count | Should -Be 0
+        [IO.File]::ReadAllText($stateFile) | Should -Be $stateText
+        @(Get-ChildItem -LiteralPath $F.Root -Recurse -File | ForEach-Object { "$($_.FullName)=$($_.Length)" }) | Should -Be $before
+        Join-Path $F.Server $jars[$Was] | Should -Exist
+        Join-Path $F.Server $jars[$Now] | Should -Not -Exist
+    }
+
+    It 'switches a folder that has no world yet, removing the old server jar and plugins' {
+        $F = New-Fixture
+        $plugin = New-Entry $F 'P.jar' @{ 'plugin.yml' = 'p' }
+        $mod = New-Entry $F 'M.jar' @{ 'fabric.mod.json' = 'm' }
+        $pack = New-Entry $F 'Pack.zip' @{ 'pack.mcmeta' = '{}' }
+        Install-Fixture $F (New-Manifest $F @($plugin) @($pack)) | Out-Null
+        Install-Fixture $F (New-Manifest $F @() @($pack) @($mod) $F.Fabric) | Out-Null
+
+        Join-Path $F.Server 'paper.jar' | Should -Not -Exist
+        Join-Path $F.Plugins 'P.jar' | Should -Not -Exist
+        Join-Path $F.Server 'fabric-server-launch.jar' | Should -Exist
+        Join-Path $F.Mods 'M.jar' | Should -Exist
+        Join-Path $F.Packs 'Pack.zip' | Should -Exist
+        (Get-State $F).server_type | Should -Be 'fabric'
+    }
+
+    It 'installs a Fabric release normally into an empty folder' {
+        $F = New-Fixture
+        Install-Fixture $F (New-Manifest $F @() @() @() $F.Fabric) | Out-Null
+        Join-Path $F.Server 'fabric-server-launch.jar' | Should -Exist
+        (Get-State $F).server_type | Should -Be 'fabric'
+    }
+}
+
+Describe 'Server layout and launch' {
+    It 'launches <Type> with -jar <Jar> <Arg>' -ForEach @(
+        @{ Type = 'paper'; Jar = 'paper.jar'; Arg = '--nogui' }
+        @{ Type = 'fabric'; Jar = 'fabric-server-launch.jar'; Arg = 'nogui' }
+    ) {
+        $m = [pscustomobject]@{ server = [pscustomobject]@{ type = $Type } }
+        $a = @(Get-LaunchArguments -Manifest $m -MemoryGB 4)
+        $a[0..1] | Should -Be @('-Xms4G', '-Xmx4G')
+        $a[-3..-1] | Should -Be @('-jar', $Jar, $Arg)
+        $a | Should -Contain '-XX:+UseG1GC'
+    }
+
+    It 'describes the server as <Want>' -ForEach @(
+        @{ Server = @{ type = 'paper'; build = 74 }; Want = 'Paper build 74'; AddOns = 'plugins'; LuckPerms = 'plugins\LuckPerms\yaml-storage' }
+        @{ Server = @{ type = 'Fabric'; loader = '0.19.5' }; Want = 'Fabric loader 0.19.5'; AddOns = 'mods'; LuckPerms = 'mods\luckperms\yaml-storage' }
+    ) {
+        $l = Get-ServerLayout -Manifest ([pscustomobject]@{ server = [pscustomobject]$Server })
+        $l.Description | Should -Be $Want
+        $l.AddOns | Should -Be $AddOns
+        $l.LuckPerms | Should -Be $LuckPerms
+    }
+
+    It 'shows the Fabric loader and mod count in status' {
+        $F = New-Fixture
+        $mod = New-Entry $F 'M.jar' @{ 'fabric.mod.json' = 'm' }
+        $out = Show-Status -Context (New-Ctx $F (New-Manifest $F @() @() @($mod) $F.Fabric)) 6>&1 | Out-String
+        $out | Should -Match 'Fabric loader 0\.1\.0'
+        $out | Should -Match 'Mods: 1'
+    }
+
+    It 'rejects an unknown server type <Type> clearly, before changing anything' -ForEach @(
+        @{ Type = 'forge' }, @{ Type = '' }
+    ) {
+        $F = New-Fixture
+        $F.Paper.type = $Type
+        $m = New-Manifest $F
+        { Get-LaunchArguments -Manifest $m -MemoryGB 2 } | Should -Throw "*server type '$Type'*only knows 'paper' and 'fabric'*"
+        { Install-Fixture $F $m } | Should -Throw "*server type '$Type'*"
+        $F.Server | Should -Not -Exist
+    }
+}
+
+Describe 'Export-HostingBundle' {
+    BeforeAll {
+        # Entry name -> @{ Text; Mode (Unix permission bits); Host (zip "version made by" OS) }.
+        function Read-ExportZip([string]$Path) {
+            $out = @{}
+            $zip = [IO.Compression.ZipFile]::OpenRead($Path)
+            try {
+                foreach ($e in $zip.Entries) {
+                    $r = New-Object IO.StreamReader ($e.Open())
+                    try { $text = $r.ReadToEnd() } finally { $r.Dispose() }
+                    $mode = ([BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$e.ExternalAttributes), 0) -shr 16) -band 511
+                    $out[$e.FullName] = @{ Text = $text; Mode = $mode; Host = $null }
+                }
+            } finally { $zip.Dispose() }
+            # The made-by OS is not exposed by .NET Framework: read it from the central directory.
+            $b = [IO.File]::ReadAllBytes($Path)
+            for ($i = 0; $i -lt $b.Length - 46; $i++) {
+                if ($b[$i] -eq 0x50 -and $b[$i + 1] -eq 0x4b -and $b[$i + 2] -eq 1 -and $b[$i + 3] -eq 2) {
+                    $name = [Text.Encoding]::UTF8.GetString($b, $i + 46, [BitConverter]::ToUInt16($b, $i + 28))
+                    if ($out.ContainsKey($name)) { $out[$name].Host = $b[$i + 5] }
+                }
+            }
+            return $out
+        }
+
+        function Find-Sh {
+            $c = Get-Command sh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($c) { return $c.Source }
+            foreach ($p in "$env:ProgramFiles\Git\bin\sh.exe", "$env:ProgramFiles\Git\usr\bin\sh.exe") { if (Test-Path -LiteralPath $p) { return $p } }
+            return $null
+        }
+
+        # Installs a fixture of the given type with leftovers an export must skip, and exports it.
+        function New-ExportFixture([string]$Type) {
+            $F = New-Fixture
+            $F.Java.version = 'jdk-21.0.5+11'
+            $pack = New-Entry $F 'Pack [1].zip' @{ 'pack.mcmeta' = '{}' }
+            if ($Type -eq 'fabric') {
+                $F.AddOn = 'mods/M.jar'
+                $F.M = New-Manifest $F @() @($pack) @(New-Entry $F 'M.jar' @{ 'fabric.mod.json' = 'm' }) $F.Fabric
+                $F.Jar = 'fabric-server-launch.jar'
+            } else {
+                $F.AddOn = 'plugins/P.jar'
+                $F.M = New-Manifest $F @(New-Entry $F 'P.jar' @{ 'plugin.yml' = 'p' }) @($pack)
+                $F.Jar = 'paper.jar'
+            }
+            Install-Fixture $F $F.M | Out-Null
+            foreach ($junk in 'logs\latest.log', 'crash-reports\c.txt', 'cache\x.bin', '.fabric\remapped.jar', 'libraries\lib.jar',
+                'versions\mc.jar', 'bluemap\web\index.html', 'plugins\.paper-remapped\r.jar', 'world\session.lock', 'x.part') {
+                Write-Text (Join-Path $F.Server $junk) 'junk'
+            }
+            Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+            Write-Text (Join-Path $F.Server 'config\keep.json') '{}'
+            $F.Zip = Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null
+            $F.Top = 'TheRealms-1.0.0-hosting/'
+            return $F
+        }
+    }
+
+    It 'packs a <Type> install with its jar at the top, without logs, caches or install state' -ForEach @(
+        @{ Type = 'paper' }, @{ Type = 'fabric' }
+    ) {
+        $F = New-ExportFixture $Type
+        $F.Zip | Should -Be (Join-Path $F.Root 'exports\TheRealms-1.0.0-hosting.zip')
+        $z = Read-ExportZip $F.Zip
+        @($z.Keys | Where-Object { -not $_.StartsWith($F.Top) }) | Should -BeNullOrEmpty
+        foreach ($want in $F.Jar, $F.AddOn, 'world/datapacks/Pack [1].zip', 'world/level.dat', 'eula.txt', 'server.properties',
+            'config/keep.json', 'start.sh', 'start.bat', 'docker-compose.yml', 'HOSTING.txt') {
+            $z.Keys | Should -Contain ($F.Top + $want)
+        }
+        $skipped = @($z.Keys | Where-Object { $_ -match '/(logs|crash-reports|cache|\.fabric|libraries|versions|bluemap|plugins/\.paper-remapped)/|\.part$|session\.lock$|\.realms-state\.json$' })
+        $skipped | Should -BeNullOrEmpty
+        $z[$F.Top + 'eula.txt'].Text | Should -Match 'eula=true'
+    }
+
+    It 'writes a <Type> start.sh (LF, 0755, Unix) with the flags of Get-LaunchArguments' -ForEach @(
+        @{ Type = 'paper' }, @{ Type = 'fabric' }
+    ) {
+        $F = New-ExportFixture $Type
+        $z = Read-ExportZip $F.Zip
+        $sh = $z[$F.Top + 'start.sh']
+        $sh.Text | Should -Not -Match "`r"
+        $sh.Text | Should -BeLike "#!/bin/sh`n*"
+        $sh.Mode | Should -Be 493   # 0755
+        $sh.Host | Should -Be 3     # made on Unix, so unzip applies the mode
+        $sh.Text | Should -Match 'MEMORY_GB="\$\{MEMORY_GB:-4\}"'
+        $sh.Text | Should -Match '-Xms"\$\{MEMORY_GB\}"G'
+        $sh.Text | Should -Match '-Xmx"\$\{MEMORY_GB\}"G'
+        foreach ($a in Get-LaunchArguments -Manifest $F.M -MemoryGB 4) {
+            if ($a -notmatch '^-Xm[sx]') { $sh.Text | Should -Match ('(^|\s)' + [regex]::Escape($a) + '(\s|$)') }
+        }
+        $z[$F.Top + 'start.bat'].Text | Should -Match "-jar $([regex]::Escape($F.Jar))"
+        $z[$F.Top + 'start.bat'].Text | Should -Match "-Xmx%MEMORY_GB%G"
+        $z[$F.Top + 'start.bat'].Text.Replace("`r`n", '') | Should -Not -Match "`n"
+        $z[$F.Top + 'HOSTING.txt'].Text | Should -Match ([regex]::Escape($F.Jar))
+        $z[$F.Top + 'HOSTING.txt'].Text | Should -Match 'Java 21'
+    }
+
+    It 'runs start.sh with MEMORY_GB and exactly the arguments of Get-LaunchArguments' {
+        $sh = Find-Sh
+        if (-not $sh) { Set-ItResult -Skipped -Because 'no sh.exe (Git for Windows) on this machine'; return }
+        $F = New-ExportFixture 'fabric'
+        $dir = Join-Path $F.Dir 'unzipped'
+        [IO.Compression.ZipFile]::ExtractToDirectory($F.Zip, $dir)
+        $run = Join-Path $dir 'TheRealms-1.0.0-hosting'
+        [IO.File]::WriteAllText((Join-Path $run 'fakejava'), "#!/bin/sh`nprintf '%s\n' `"`$@`"`n", $script:Utf8)
+        Push-Location $run
+        try {
+            $seven = @(& $sh -c 'MEMORY_GB=7 JAVA=./fakejava sh ./start.sh')
+            $default = @(& $sh -c 'JAVA=./fakejava sh ./start.sh')
+            $null = & $sh -c 'MEMORY_GB=lots JAVA=./fakejava sh ./start.sh 2>/dev/null'
+            $badExit = $LASTEXITCODE
+        } finally { Pop-Location }
+        $seven | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 7)
+        $default | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 4)
+        $badExit | Should -Be 1
+    }
+
+    It 'pins the Docker image to the manifest Java and maps the game, voice and map ports' {
+        $F = New-ExportFixture 'paper'
+        $yml = (Read-ExportZip $F.Zip)[$F.Top + 'docker-compose.yml'].Text
+        $yml | Should -Not -Match "`r"
+        $yml | Should -Match '(?m)^    image: eclipse-temurin:21-jre$'
+        $yml | Should -Match '(?m)^    command: \["sh", "\./start\.sh"\]$'
+        $yml | Should -Match ([regex]::Escape("`"$($F.Port):$($F.Port)/tcp`""))
+        $yml | Should -Match '"24454:24454/udp"'
+        $yml | Should -Match '"8100:8100/tcp"'
+        $yml | Should -Match 'restart: unless-stopped'
+    }
+
+    It 'overwrites an earlier export and leaves no temporary file' {
+        $F = New-ExportFixture 'paper'
+        Write-Text (Join-Path $F.Server 'config\later.json') '{}'
+        Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null | Out-Null
+        @(Get-ChildItem -LiteralPath (Join-Path $F.Root 'exports') -Force | ForEach-Object { $_.Name }) | Should -Be @('TheRealms-1.0.0-hosting.zip')
+        (Read-ExportZip $F.Zip).Keys | Should -Contain ($F.Top + 'config/later.json')
+    }
+
+    It 'refuses while the server is running' {
+        $F = New-Fixture
+        Install-Fixture $F (New-Manifest $F) | Out-Null
+        Mock Test-ServerRunning -ModuleName Realms { $true }
+        { Export-HostingBundle -Context (New-Ctx $F (New-Manifest $F)) } | Should -Throw '*server is running*'
+        Join-Path $F.Root 'exports' | Should -Not -Exist
+    }
+
+    It 'refuses before anything is installed' {
+        $F = New-Fixture
+        { Export-HostingBundle -Context (New-Ctx $F (New-Manifest $F)) } | Should -Throw '*isn''t installed yet*'
+    }
+}
+
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },
@@ -586,7 +988,12 @@ Describe 'Real manifest contract' {
         $h.Value | Should -Match ('^[0-9a-f]{' + $(if ($h.Algorithm -eq 'SHA512') { 128 } else { 64 }) + '}$')
     }
 
-    It 'patched datapack <Entry.file> pins its patch to the upstream file' -ForEach $realPatched {
+    It 'has a server type this installer knows' {
+        $l = Get-ServerLayout -Manifest (Get-Content -LiteralPath (Join-Path $RepoRoot 'package\realms\manifest.json') -Raw | ConvertFrom-Json)
+        $l.Type | Should -BeIn @('paper', 'fabric')
+    }
+
+    It 'patched <Entry.file> pins its patch to the upstream file' -ForEach $realPatched {
         $Entry.patch | Should -Not -BeOfType [string]
         $Entry.patch.base_sha512 | Should -Be $Entry.hashes.sha512
         Join-Path $RepoRoot ('package\realms\' + $Entry.patch.path.Replace('/', '\')) | Should -Exist

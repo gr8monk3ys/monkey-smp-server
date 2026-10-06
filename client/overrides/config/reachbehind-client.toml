@@ -1,0 +1,8 @@
+#The hanging blocks that are permitted to pass clicks to the block they attach to.
+#This option only takes effect when playing on a multiplayer server without this mod installed. In all other scenarios, configure the respective tag instead.
+#Default Value: [#minecraft:banners, #fastitemframes:item_frames, #minecraft:wall_signs]
+passes_block_clicks_through = ["#minecraft:banners", "#fastitemframes:item_frames", "#minecraft:wall_signs"]
+#The hanging entities that are permitted to pass clicks to the block they attach to.
+#This option only takes effect when playing on a multiplayer server without this mod installed. In all other scenarios, configure the respective tag instead.
+#Default Value: [minecraft:glow_item_frame, minecraft:item_frame, #fastitemframes:item_frames]
+passes_entity_clicks_through = ["minecraft:glow_item_frame", "minecraft:item_frame", "#fastitemframes:item_frames"]

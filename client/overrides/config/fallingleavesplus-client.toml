@@ -1,0 +1,77 @@
+[vanilla]
+	#Determines if leaf particles swirl around in circle patterns as they fall.
+	#Default Value: true
+	swirl_around = true
+	#Strength factor for the wind blowing the leaf particles in a certain direction.
+	#Default Value: 10.0
+	# Default: 10.0
+	# Range: 0.0 ~ 1.7976931348623157E308
+	wind_strength = 10.0
+	#Determines if leaf particles are blown away by wind.
+	#Default Value: false
+	flow_away = false
+	#The physical and visual size of the leaf particles.
+	#Default Value: 2.0
+	# Default: 2.0
+	# Range: 0.0 ~ 1.7976931348623157E308
+	leaf_size = 2.0
+	#The speed at which leaf particles begin to fall upon spawning below a leaves block.
+	#Default Value: 0.021
+	# Default: 0.021
+	# Range: 0.0 ~ 1.7976931348623157E308
+	initial_falling_speed = 0.021
+	#Multiplier for the effect of gravity on leaf particles.
+	#Default Value: 0.07
+	# Default: 0.07
+	# Range: 0.0 ~ 1.7976931348623157E308
+	gravity_multiplier = 0.07
+
+[additional]
+	#Maximum time in seconds leaf particles may exist in the world.
+	#Default Value: 15
+	# Default: 15
+	# Range: > 0
+	lifetime_in_seconds = 15
+	#Wind direction in degrees for where leaves are blowing away to.
+	#Default Value: 0.0
+	# Default: 0.0
+	# Range: 0.0 ~ 360.0
+	wind_direction = 0.0
+	#Thunder will allow more leaf particles to spawn, and increase wind strength.
+	#Default Value: 2.0
+	# Default: 2.0
+	# Range: 0.0 ~ 1.7976931348623157E308
+	thunderstorm_amplifier = 2.0
+	#Determines if leaf particles collide with visual shapes of blocks rather than just their collision boxes.
+	#Default Value: true
+	collide_with_visual_shapes = true
+	#Rain and snow will allow more leaf particles to spawn, and increase wind strength.
+	#Default Value: 1.0
+	# Default: 1.0
+	# Range: 0.0 ~ 1.7976931348623157E308
+	rain_amplifier = 1.0
+	#Decay speed for when leaf particles land on the ground.
+	#Default Value: FAST
+	#Allowed Values: IMMEDIATE, FAST, SLOW
+	decay_on_ground_mode = "FAST"
+
+[general]
+	#The chance for a leaf particle to spawn below a leaves block on every animation tick.
+	#Default Value: 0.01
+	# Default: 0.01
+	# Range: 0.0 ~ 1.0
+	leaf_particle_chance = 0.01
+	#Spawn snowflakes below snow covered leaves instead of falling leaves.
+	#Default Value: true
+	spawn_snowflakes = true
+	#Blocks to consider as snow when deciding to spawn snowflakes instead of leaf particles.
+	#Format for every entry is "<namespace>:<path>". Tags are supported, must be in the format of "#<namespace>:<path>". Namespace may be omitted to use "minecraft" by default. May use asterisk as wildcard parameter via pattern matching, e.g. "minecraft:*_shulker_box" to match all shulker boxes no matter of color. Begin an entry with "!" to make sure it is excluded, useful e.g. when it has already been matched by another pattern.
+	#Default Value: [minecraft:snow]
+	snow_flakes_spawning_blocks = ["minecraft:snow"]
+	#Use block particles as leaves instead of leaf sprites.
+	#Default Value: false
+	block_particles = false
+	#Leaves blocks that will spawn custom leaf particles underneath, vanilla particles are replaced.
+	#Format for every entry is "<namespace>:<path>". Tags are supported, must be in the format of "#<namespace>:<path>". Namespace may be omitted to use "minecraft" by default. May use asterisk as wildcard parameter via pattern matching, e.g. "minecraft:*_shulker_box" to match all shulker boxes no matter of color. Begin an entry with "!" to make sure it is excluded, useful e.g. when it has already been matched by another pattern.
+	#Default Value: [#minecraft:leaves]
+	default_leaves_blocks = ["#minecraft:leaves"]

@@ -1,8 +1,9 @@
 """Check the manifest and package for mistakes that would break an install.
 
   python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack)
-  python tools/validate.py --online     also download every file, verify its size and hash, and apply
-                                        each patch to its download to prove it still fits
+  python tools/validate.py --online     also download every file (Java, the Paper jar or Fabric launcher,
+                                        plugins, mods, datapacks), verify its size and hash, and apply
+                                        each mod/datapack patch to its download to prove it still fits
 """
 import argparse
 import re
@@ -14,12 +15,16 @@ import patches
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
 
-PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "READ ME FIRST.txt")
+PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "Prepare for Hosting.bat",
+                 "READ ME FIRST.txt")
+# "mods" is not required: 1.x (Paper-only) manifests predate it, and a missing group reads as [].
 MANIFEST_KEYS = ("name", "version", "minecraft", "java", "server", "world", "plugins", "datapacks")
 
 
 def validate(manifest: dict, repo=REPO) -> list[str]:
     errors = [f"manifest: missing '{key}'" for key in MANIFEST_KEYS if key not in manifest]
+    errors += [f"manifest: '{group}' must be a list" for group in entries.GROUPS.values()
+               if not isinstance(manifest.get(group, []), list)]
     if errors:
         return errors
     if not re.fullmatch(r"\d+\.\d+\.\d+", manifest["version"]):
@@ -28,9 +33,10 @@ def validate(manifest: dict, repo=REPO) -> list[str]:
         errors.append("manifest: world.seed must be a number (or empty for random)")
     for kind, e in entries.artifacts(manifest):
         errors += entries.check(kind, e)
-    for group in entries.GROUPS.values():
-        files = [e.get("file", "").lower() for e in manifest[group]]
-        slugs = [e.get("slug") for e in manifest[group]]
+    errors += entries.check_types(manifest)
+    for kind, group in entries.GROUPS.items():
+        files = [e.get("file", "").lower() for e in entries.group(manifest, kind)]
+        slugs = [e.get("slug") for e in entries.group(manifest, kind)]
         for dup in sorted({f for f in files if files.count(f) > 1}):
             errors.append(f"{group}: duplicate file {dup}")
         for dup in sorted({s for s in slugs if slugs.count(s) > 1}):
@@ -89,7 +95,8 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
         errors += verify_online(manifest, upstream or Upstream(LiveHttp()), repo)
     for e in errors:
         print("ERROR", e)
-    print(f"{len(errors)} problem(s); {len(manifest['plugins'])} plugins, {len(manifest['datapacks'])} datapacks")
+    counts = ", ".join(f"{len(entries.group(manifest, kind))} {group}" for kind, group in entries.GROUPS.items())
+    print(f"{len(errors)} problem(s); {manifest['server'].get('type', '?')} server, {counts}")
     return 1 if errors else 0
 
 

@@ -1,0 +1,18 @@
+name: moderator
+permissions:
+- ledger.commands.inspect
+- ledger.commands.player
+- ledger.commands.preview
+- ledger.commands.rollback
+- ledger.commands.root
+- ledger.commands.search
+- ledger.commands.status
+- ledger.commands.tp
+- minecraft.command.ban
+- minecraft.command.kick
+- minecraft.command.pardon
+- minecraft.command.teleport
+- minecraft.command.tp
+- minecraft.command.whitelist
+parents:
+- default

@@ -1,6 +1,7 @@
 # The Realms server
 
-One-click Windows package for a Paper 26.1.2 factions server. `package/` is exactly what ships in the
+One-click Windows package for a Fabric 26.3 factions server (1.x releases were Paper 26.1.2), plus a
+"Prepare for Hosting" bundle for online hosts and VPSes (ADR-0006). `package/` is exactly what ships in the
 release zip; `package/realms/manifest.json` pins every download; `tools/` are maintainer scripts
 (Python stdlib); `tests/smoke.ps1` boots the real server. See `README.md` and `docs/MAINTAINING.md`.
 

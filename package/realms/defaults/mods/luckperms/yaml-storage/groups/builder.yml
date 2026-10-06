@@ -1,0 +1,5 @@
+name: builder
+permissions:
+- minecraft.command.gamemode
+parents:
+- default

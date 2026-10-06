@@ -28,6 +28,18 @@ $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 $script:TemplateFiles = @('server.properties')
 $script:KeepBackups = 14
 
+# What each kind of server runs and where its add-ons live (relative to server\).
+#   Jar        the file name the server entry is saved as, and what java -jar runs
+#   Arguments  what follows the jar on the command line
+#   AddOns     the manifest group it loads add-ons from ('plugins' or 'mods'); datapacks work on both
+#   LuckPerms  the LuckPerms YAML storage folder (ranks in groups\, players in users\)
+$script:ServerTypes = @{
+    paper  = @{ Name = 'Paper'; Jar = 'paper.jar'; Arguments = @('--nogui'); AddOns = 'plugins'; LuckPerms = 'plugins\LuckPerms\yaml-storage' }
+    fabric = @{ Name = 'Fabric'; Jar = 'fabric-server-launch.jar'; Arguments = @('nogui'); AddOns = 'mods'; LuckPerms = 'mods\luckperms\yaml-storage' }
+}
+# The groups of managed files in the manifest, and the word used for one of them in messages.
+$script:Groups = [ordered]@{ plugins = 'plugin'; mods = 'mod'; datapacks = 'datapack' }
+
 # ================================================================ output
 
 function Write-Step([string]$Text) { Write-Host "==> $Text" -ForegroundColor Cyan }
@@ -151,6 +163,44 @@ function Get-LevelName($Context) {
     return $name
 }
 
+<#
+.SYNOPSIS
+    What the manifest's server type runs and where its files go. Throws on an unknown type.
+.OUTPUTS
+    Type ('paper' | 'fabric'), Name, Jar, Arguments, AddOns ('plugins' | 'mods'),
+    LuckPerms (YAML storage folder relative to server\) and Description ('Paper build 74', 'Fabric loader 0.19.5').
+#>
+function Get-ServerLayout {
+    param([Parameter(Mandatory)] $Manifest)
+    $server = $Manifest.server
+    $type = ([string]$server.type).ToLower()
+    if (-not $type -or -not $script:ServerTypes.ContainsKey($type)) {
+        throw "manifest.json has server type '$($server.type)', but this installer only knows 'paper' and 'fabric'. Download the latest release of The Realms."
+    }
+    $t = $script:ServerTypes[$type]
+    $description = if ($type -eq 'paper') { "Paper build $($server.build)" } else { "Fabric loader $($server.loader)" }
+    return [pscustomobject]@{
+        Type        = $type
+        Name        = $t.Name
+        Jar         = $t.Jar
+        Arguments   = @($t.Arguments)
+        AddOns      = $t.AddOns
+        LuckPerms   = $t.LuckPerms
+        Description = $description
+    }
+}
+
+# The folder a group of managed files goes in. Folders are fixed per group; the server type only
+# decides which groups may have entries.
+function Get-GroupFolder($Context, [string]$Group) {
+    switch ($Group) {
+        'plugins' { return Join-Path $Context.ServerDir 'plugins' }
+        'mods' { return Join-Path $Context.ServerDir 'mods' }
+        'datapacks' { return Join-Path $Context.ServerDir "$(Get-LevelName $Context)\datapacks" }
+    }
+    throw "Unknown group of files: $Group"
+}
+
 # ================================================================ artifacts
 
 <#
@@ -225,7 +275,7 @@ function Invoke-ZipPatch([string]$Zip, [string]$Dir, [string]$Name) {
     try {
         $missing = @($files | Where-Object { -not $archive.GetEntry($_.Rel) } | ForEach-Object { $_.Rel })
         if ($missing.Count) {
-            throw "Patch file(s) with no matching file in ${Name}: $($missing -join ', '). A patch may only replace files that already exist in the datapack."
+            throw "Patch file(s) with no matching file in ${Name}: $($missing -join ', '). A patch may only replace files that already exist in the file it patches."
         }
         foreach ($f in $files) {
             $archive.GetEntry($f.Rel).Delete()
@@ -241,7 +291,7 @@ function Invoke-ZipPatch([string]$Zip, [string]$Dir, [string]$Name) {
 function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
     $patch = $Entry.patch
     if ($patch -is [string] -or -not $patch.path -or -not $patch.base_sha512) {
-        throw "Datapack $($Entry.file): 'patch' in manifest.json must be an object with 'path' and 'base_sha512'."
+        throw "$($Entry.file): 'patch' in manifest.json must be an object with 'path' and 'base_sha512'."
     }
     $base = ([string]$patch.base_sha512).ToLower()
     if ($Entry.hashes.sha512 -and ([string]$Entry.hashes.sha512).ToLower() -ne $base) {
@@ -277,18 +327,19 @@ function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
 
 # Reconciles one folder of managed files with the manifest: downloads (and patches) every wanted
 # entry that isn't already correct, and removes files a previous install placed there that are no
-# longer wanted. Files the host added (never in $Previous) are left alone.
+# longer wanted. Only those exact file names are ever touched: files the host (or a mod) added and
+# subfolders (e.g. mods\luckperms) are left alone.
 # Returns @{ Changed = <count>; Managed = <file names now managed>; Patched = @{ file = record } }.
 function Sync-ManagedFiles {
     param(
         $Context,
-        [ValidateSet('plugin', 'datapack')] [string]$Kind,
+        [ValidateSet('plugin', 'mod', 'datapack')] [string]$Kind,
         [object[]]$Entries,
         [string]$Folder,
         [object[]]$Previous,
         $PreviousPatched
     )
-    $label = if ($Kind -eq 'plugin') { 'plugin ' } else { $Kind }
+    $label = $Kind.PadRight(8)
     $changed = 0
     $patched = @{}
     $wanted = @($Entries | Where-Object { $_ })
@@ -323,6 +374,42 @@ function Read-InstallState($Context) {
 
 function Write-InstallState($Context, [hashtable]$State) {
     Write-JsonFile $Context.StateFile $State
+}
+
+# The server type already installed in this folder, or $null for a fresh folder. State files from
+# 1.x have no server_type: every 1.x release was Paper. Without a state file the server jar tells.
+function Get-InstalledServerType($Context, $State) {
+    if ($State.server_type) { return ([string]$State.server_type).ToLower() }
+    if ($State.version) { return 'paper' }
+    foreach ($type in @($script:ServerTypes.Keys | Sort-Object)) {
+        if (Test-Path -LiteralPath (Join-Path $Context.ServerDir $script:ServerTypes[$type].Jar)) { return $type }
+    }
+    return $null
+}
+
+# True once the server has made a world: its folder holds more than the datapacks an install puts there.
+function Test-WorldExists($Context) {
+    $name = (Read-ServerProperties (Join-Path $Context.ServerDir 'server.properties'))['level-name']
+    if (-not $name) { $name = Get-LevelName $Context }
+    $dir = Join-Path $Context.ServerDir $name
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { return $false }
+    return [bool](Get-ChildItem -LiteralPath $dir -Force | Where-Object { $_.Name -ne 'datapacks' } | Select-Object -First 1)
+}
+
+# A world can't move between a Paper and a Fabric server, so a release of the other type never
+# installs over a folder with a world in it: it stops before changing anything.
+# Returns the type that was installed before ($null for a fresh folder).
+function Assert-SameServerType($Context, $Layout, $State) {
+    $was = Get-InstalledServerType $Context $State
+    if (-not $was -or $was -eq $Layout.Type) { return $was }
+    if (Test-WorldExists $Context) {
+        $old = if ($script:ServerTypes.ContainsKey($was)) { $script:ServerTypes[$was].Name } else { $was }
+        throw ("This folder already has a $old server with a world in it, but this release of The Realms is a " +
+            "$($Layout.Name) server. A world can't be moved from one to the other, so nothing was changed. " +
+            "Unzip this release into a NEW, empty folder and start it from there. To keep playing the old " +
+            "world, unzip the release you had before into this folder again.")
+    }
+    return $was
 }
 
 # ================================================================ server.properties and templates
@@ -528,7 +615,8 @@ function Add-Owner {
     Add-ToList $Context 'whitelist.json' @{ uuid = $p.Uuid; name = $p.Name }
     Add-ToList $Context 'ops.json' @{ uuid = $p.Uuid; name = $p.Name; level = 4; bypassesPlayerLimit = $true }
     # LuckPerms (YAML storage): put the owner in the admin group.
-    $lp = Join-Path $Context.ServerDir "plugins\LuckPerms\yaml-storage\users\$($p.Uuid).yml"
+    $storage = (Get-ServerLayout -Manifest $Context.Manifest).LuckPerms
+    $lp = Join-Path $Context.ServerDir "$storage\users\$($p.Uuid).yml"
     if (-not (Test-Path -LiteralPath $lp)) {
         Write-TextFile $lp "uuid: $($p.Uuid)`nname: $($p.Name.ToLower())`nprimary-group: admin`nparents:`n- admin`n"
     }
@@ -599,21 +687,35 @@ function Install-Server {
     if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
     $m = $Context.Manifest
     $server = $Context.ServerDir
-    New-Item -ItemType Directory -Force -Path $server | Out-Null
+    $layout = Get-ServerLayout -Manifest $m
+    foreach ($group in $script:Groups.Keys) {
+        if ($group -ne 'datapacks' -and $group -ne $layout.AddOns -and @($m.$group | Where-Object { $_ }).Count) {
+            throw "manifest.json lists $group, but a $($layout.Name) server can't load $group (only $($layout.AddOns))."
+        }
+    }
     $state = Read-InstallState $Context
+    $was = Assert-SameServerType $Context $layout $state
+    New-Item -ItemType Directory -Force -Path $server | Out-Null
     $firstInstall = -not $state.version
 
     Confirm-Eula $Context ([bool]$AcceptEula)
     $java = Install-Java $Context
 
-    Write-Step "Checking server files for $($m.name) $($m.version) (Minecraft $($m.minecraft))"
+    Write-Step "Checking server files for $($m.name) $($m.version) (Minecraft $($m.minecraft), $($layout.Name))"
     $n = 0
-    if (Save-Artifact $Context $m.server (Join-Path $server 'paper.jar')) { Write-Ok "Paper build $($m.server.build)"; $n++ }
-    $plugins = Sync-ManagedFiles -Context $Context -Kind plugin -Entries $m.plugins -Folder (Join-Path $server 'plugins') `
-        -Previous $state.plugins -PreviousPatched $state.patched
-    $packs = Sync-ManagedFiles -Context $Context -Kind datapack -Entries $m.datapacks `
-        -Folder (Join-Path $server "$(Get-LevelName $Context)\datapacks") -Previous $state.datapacks -PreviousPatched $state.patched
-    $n += $plugins.Changed + $packs.Changed
+    if ($was -and $was -ne $layout.Type -and $script:ServerTypes.ContainsKey($was)) {
+        # No world yet, so the switch is safe; the old server jar is ours to remove.
+        $oldJar = $script:ServerTypes[$was].Jar
+        if ($oldJar -ne $layout.Jar) { Remove-Item -LiteralPath (Join-Path $server $oldJar) -Force -ErrorAction SilentlyContinue }
+        Write-Note "switched this folder from $($script:ServerTypes[$was].Name) to $($layout.Name)"
+    }
+    if (Save-Artifact $Context $m.server (Join-Path $server $layout.Jar)) { Write-Ok $layout.Description; $n++ }
+    $synced = [ordered]@{}
+    foreach ($group in $script:Groups.Keys) {
+        $synced[$group] = Sync-ManagedFiles -Context $Context -Kind $script:Groups[$group] -Entries $m.$group `
+            -Folder (Get-GroupFolder $Context $group) -Previous $state.$group -PreviousPatched $state.patched
+        $n += $synced[$group].Changed
+    }
     if ($n -eq 0) { Write-Ok 'Everything is up to date.' }
 
     Install-Defaults $Context
@@ -628,15 +730,18 @@ function Install-Server {
         if ($who) { $ownerName = Add-Owner $Context $who }
     }
 
+    # 1.x state files have this shape minus server_type and mods, and read back as a Paper install.
     $patched = @{}
-    foreach ($r in $plugins, $packs) { foreach ($k in $r.Patched.Keys) { $patched[$k] = $r.Patched[$k] } }
+    foreach ($r in $synced.Values) { foreach ($k in $r.Patched.Keys) { $patched[$k] = $r.Patched[$k] } }
     Write-InstallState $Context @{
-        version   = $m.version
-        java      = $java
-        owner     = $ownerName
-        plugins   = @($plugins.Managed)
-        datapacks = @($packs.Managed)
-        patched   = $patched
+        version     = $m.version
+        server_type = $layout.Type
+        java        = $java
+        owner       = $ownerName
+        plugins     = @($synced.plugins.Managed)
+        mods        = @($synced.mods.Managed)
+        datapacks   = @($synced.datapacks.Managed)
+        patched     = $patched
     }
     Remove-Item -LiteralPath $Context.DownloadDir -Recurse -Force -ErrorAction SilentlyContinue
     if ($firstInstall) { Write-Ok 'Install finished.' }
@@ -662,19 +767,30 @@ function Get-MemoryGB {
 
 <#
 .SYNOPSIS
-    Runs the server in this window until it stops. Throws if it exits with an error.
+    The java command line (everything after java.exe) that runs the manifest's server with -MemoryGB of memory.
 #>
-function Start-Server {
-    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB)
+function Get-LaunchArguments {
+    param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [int]$MemoryGB)
+    $layout = Get-ServerLayout -Manifest $Manifest
     $gb = $MemoryGB
-    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags).
-    $jvm = @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
+    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags); they suit a Fabric server too.
+    return @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
         '-XX:+UnlockExperimentalVMOptions', '-XX:+DisableExplicitGC', '-XX:+AlwaysPreTouch', '-XX:G1NewSizePercent=30',
         '-XX:G1MaxNewSizePercent=40', '-XX:G1HeapRegionSize=8M', '-XX:G1ReservePercent=20', '-XX:G1HeapWastePercent=5',
         '-XX:G1MixedGCCountTarget=4', '-XX:InitiatingHeapOccupancyPercent=15', '-XX:G1MixedGCLiveThresholdPercent=90',
         '-XX:G1RSetUpdatingPauseTimePercent=5', '-XX:SurvivorRatio=32', '-XX:+PerfDisableSharedMem',
         '-XX:MaxTenuringThreshold=1', '-Dusing.aikars.flags=https://mcflags.emc.gs', '-Daikars.new.flags=true',
-        '-jar', 'paper.jar', '--nogui')
+        '-jar', $layout.Jar) + $layout.Arguments
+}
+
+<#
+.SYNOPSIS
+    Runs the server in this window until it stops. Throws if it exits with an error.
+#>
+function Start-Server {
+    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB)
+    $gb = $MemoryGB
+    $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb
     Write-Host ''
     Write-Step "Starting The Realms with $gb GB of memory"
     Write-Host '    Friends join at the address shown by playit.gg (see READ ME FIRST.txt).' -ForegroundColor White
@@ -701,7 +817,7 @@ function Stop-Server {
 
 <#
 .SYNOPSIS
-    Copies the world, configs and plugin data to backups\<timestamp> and keeps the newest 14.
+    Copies the world, configs and plugin or mod data to backups\<timestamp> and keeps the newest 14.
 #>
 function Backup-Server {
     param([Parameter(Mandatory)] $Context)
@@ -713,10 +829,11 @@ function Backup-Server {
     Write-Step "Backing up to backups\$stamp"
     if ($running) { [void](Invoke-Rcon $Context @('save-off', 'save-all flush')); Start-Sleep -Seconds 3 }
     try {
-        # Worlds, configs and plugin data. Skips things the installer can re-download or the server rebuilds.
+        # Worlds, configs and plugin or mod data. Skips things the installer can re-download or the server rebuilds.
         & robocopy $server $dest /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP `
             /XD (Join-Path $server 'libraries') (Join-Path $server 'versions') (Join-Path $server 'cache') `
                 (Join-Path $server 'logs') (Join-Path $server 'bluemap') (Join-Path $server 'plugins\.paper-remapped') `
+                (Join-Path $server '.fabric') `
             /XF '*.jar' 'session.lock' | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
     } finally {
@@ -735,10 +852,299 @@ function Backup-Server {
 function Show-Status {
     param([Parameter(Mandatory)] $Context)
     $m = $Context.Manifest
+    $layout = Get-ServerLayout -Manifest $m
     $state = Read-InstallState $Context
-    Write-Host "$($m.name) $($m.version) - Minecraft $($m.minecraft), Paper build $($m.server.build)"
+    $addOns = if ($layout.AddOns -eq 'mods') { 'Mods' } else { 'Plugins' }
+    $addOnCount = @($m.($layout.AddOns) | Where-Object { $_ }).Count
+    Write-Host "$($m.name) $($m.version) - Minecraft $($m.minecraft), $($layout.Description)"
     Write-Host "Installed: $(if ($state.version) { $state.version } else { 'no' })    Admin: $($state.owner)"
-    Write-Host "Running:   $(Test-ServerRunning $Context)    Plugins: $(@($m.plugins).Count)    Datapacks: $(@($m.datapacks).Count)"
+    Write-Host "Running:   $(Test-ServerRunning $Context)    ${addOns}: $addOnCount    Datapacks: $(@($m.datapacks | Where-Object { $_ }).Count)"
+}
+
+# ================================================================ hosting export
+
+# What an online host doesn't need from server\: logs, caches and files the server re-downloads or
+# rebuilds, plus the install state (it describes this PC's folder). Folder names are top level.
+$script:ExportSkipDirs = @('logs', 'crash-reports', 'cache', '.fabric', 'libraries', 'versions', 'bluemap', 'plugins/.paper-remapped')
+$script:ExportSkipFiles = @('.realms-state.json')
+$script:ExportSkipPatterns = @('*.part', 'session.lock')
+# Ports a host has to open besides the game port: Simple Voice Chat (UDP) and the BlueMap web map.
+$script:VoicePort = 24454
+$script:MapPort = 8100
+
+# The Java feature release the manifest pins ('jdk-25.0.4.1+1' -> 25), for picking a JRE on a host.
+function Get-JavaMajor($Manifest) {
+    $v = [string]$Manifest.java.version
+    if ($v -notmatch '(\d+)') { throw "Can't tell the Java version from manifest.json java.version '$v'." }
+    return [int]$Matches[1]
+}
+
+# A word for a POSIX sh command line, quoted only when it has to be.
+function ConvertTo-ShWord([string]$Word) {
+    if ($Word -match '^[A-Za-z0-9_./:=+@%,-]+$') { return $Word }
+    return "'" + $Word.Replace("'", "'\''") + "'"
+}
+
+# The launch command with the memory left to the start script: Get-LaunchArguments stays the one
+# place that knows the flags, jar and arguments. -Memory replaces the "<n>G" in -Xms/-Xmx.
+function Get-HostingLaunchArguments($Manifest, [string]$Memory) {
+    $probe = 987654
+    $out = @()
+    $replaced = 0
+    foreach ($a in Get-LaunchArguments -Manifest $Manifest -MemoryGB $probe) {
+        if ($a -eq "-Xms${probe}G" -or $a -eq "-Xmx${probe}G") { $out += $a.Substring(0, 4) + $Memory + 'G'; $replaced++ }
+        else { $out += $a }
+    }
+    if ($replaced -ne 2) { throw 'Get-LaunchArguments no longer sets -Xms and -Xmx; update the hosting export.' }
+    return $out
+}
+
+function New-StartSh($Manifest) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $lines = @('#!/bin/sh',
+        "# Starts $($Manifest.name) $($Manifest.version) ($($layout.Description), Minecraft $($Manifest.minecraft)).",
+        '# Memory in GB comes from MEMORY_GB (default 4); the java to use from JAVA (default: java on the PATH).',
+        '# Made by "Prepare for Hosting". See HOSTING.txt.',
+        'cd "$(dirname "$0")" || exit 1',
+        'MEMORY_GB="${MEMORY_GB:-4}"',
+        'case "$MEMORY_GB" in',
+        "    ''|*[!0-9]*) echo `"MEMORY_GB must be a whole number of gigabytes, not '`$MEMORY_GB'`" >&2; exit 1 ;;",
+        'esac',
+        'exec "${JAVA:-java}" \')
+    $sentinel = '@MEMORY@'
+    $words = @(Get-HostingLaunchArguments $Manifest $sentinel | ForEach-Object {
+            if ($_.Contains($sentinel)) { $_.Replace($sentinel, '"${MEMORY_GB}"') } else { ConvertTo-ShWord $_ }
+        })
+    for ($i = 0; $i -lt $words.Count; $i++) {
+        $lines += '    ' + $words[$i] + $(if ($i -lt $words.Count - 1) { ' \' } else { '' })
+    }
+    return ($lines -join "`n") + "`n"
+}
+
+function New-StartBat($Manifest) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $cmd = (Get-HostingLaunchArguments $Manifest '%MEMORY_GB%') -join ' '
+    $lines = @('@echo off',
+        "rem Starts $($Manifest.name) $($Manifest.version) ($($layout.Description)) on a Windows server.",
+        'rem Memory in GB comes from MEMORY_GB (default 4). Needs Java on the PATH. See HOSTING.txt.',
+        'setlocal',
+        'cd /d "%~dp0"',
+        'if "%MEMORY_GB%"=="" set MEMORY_GB=4',
+        "java $cmd",
+        'if errorlevel 1 pause')
+    return ($lines -join "`r`n") + "`r`n"
+}
+
+function New-DockerCompose($Manifest, [int]$GamePort) {
+    $java = Get-JavaMajor $Manifest
+    $lines = @(
+        "# $($Manifest.name) $($Manifest.version) on Docker. Start: docker compose up -d   (see HOSTING.txt)",
+        'services:',
+        '  realms:',
+        "    image: eclipse-temurin:$java-jre",
+        '    working_dir: /data',
+        '    volumes:',
+        '      - .:/data',
+        '    command: ["sh", "./start.sh"]',
+        '    environment:',
+        '      MEMORY_GB: "4"',
+        '    ports:',
+        "      - `"${GamePort}:${GamePort}/tcp`"",
+        "      - `"$($script:VoicePort):$($script:VoicePort)/udp`"",
+        "      - `"$($script:MapPort):$($script:MapPort)/tcp`"",
+        '    restart: unless-stopped',
+        '    stdin_open: true',
+        '    tty: true')
+    return ($lines -join "`n") + "`n"
+}
+
+function New-HostingGuide($Manifest, [int]$GamePort, [string]$Folder) {
+    $layout = Get-ServerLayout -Manifest $Manifest
+    $java = Get-JavaMajor $Manifest
+    $voiceConfig = if ($layout.Type -eq 'fabric') { 'config/voicechat/voicechat-server.properties' } else { 'plugins/voicechat/voicechat-server.properties' }
+    $text = @"
+$($Manifest.name.ToUpper()) $($Manifest.version) - RUNNING THE SERVER ON AN ONLINE HOST
+=====================================================================
+
+This zip is your own copy of The Realms server, made by "Prepare for Hosting" on your PC:
+$($layout.Name) ($($layout.Description)) for Minecraft $($Manifest.minecraft), with its $($layout.AddOns),
+datapacks and settings. Upload it to an online Minecraft host or to your own server
+and players can join without your PC being on.
+
+  Server jar:   $($layout.Jar)
+  Java:         $java
+  Game port:    $GamePort (TCP)
+  Voice chat:   $($script:VoicePort) (UDP, for Simple Voice Chat)
+  Web map:      $($script:MapPort) (TCP, BlueMap; optional)
+
+Unzipping gives a folder "$Folder". Upload what is INSIDE it, so that
+$($layout.Jar) ends up in the server's main (root) folder.
+
+The Minecraft EULA is already accepted in eula.txt (you agreed to it when you prepared
+this zip). The RCON password is in server.properties (rcon.password): change it to a new
+long random one before you go online.
+
+
+1. A MINECRAFT HOSTING COMPANY (Shockbyte, Apex, BisectHosting, any Pterodactyl panel)
+---------------------------------------------------------------------------------------
+  a) Create a server of type "$($layout.Name)" or "Custom JAR".
+     Pick Java $java if the panel asks for a Java version (or a "Java $java" Docker image).
+  b) Stop it, and delete the files the panel put there (keep nothing).
+  c) Upload the zip with the panel's file manager (or SFTP) and extract it. Move the
+     contents of "$Folder" up into the main folder if the panel kept the folder.
+  d) Set the server jar / startup file to:  $($layout.Jar)
+     (A panel that downloads its own jar for you would replace the pinned one - use "Custom JAR".)
+  e) Set the memory (RAM): 4 GB or more.
+  f) Start it. The first start downloads a few more files and takes a few minutes.
+     It is ready when the console says  Done (...)! For help, type "help"
+  g) Voice chat needs UDP port $($script:VoicePort). If the host gives you a second port instead,
+     put that number after  port=  in  $voiceConfig
+     and restart. Without it everything else still works.
+  The panel usually sets the game port itself; players join at the address the panel shows.
+
+
+2. YOUR OWN LINUX SERVER (VPS) WITH DOCKER
+------------------------------------------
+  a) Install Docker:  https://docs.docker.com/engine/install/
+  b) Upload the zip, then:   unzip $Folder.zip   and   cd $Folder
+  c) Start:            docker compose up -d
+     Watch the log:    docker compose logs -f        (Ctrl+C stops watching, not the server)
+     Type commands:    docker compose attach realms  (leave with Ctrl+P then Ctrl+Q)
+     Stop:             docker compose stop
+  d) Memory: change MEMORY_GB in docker-compose.yml (default 4 GB; the VPS needs more than that).
+  It restarts by itself after a reboot until you stop it.
+
+
+3. YOUR OWN LINUX SERVER (VPS) WITHOUT DOCKER
+---------------------------------------------
+  a) Install Java $java, for example:   sudo apt install openjdk-$java-jre-headless
+     (or Eclipse Temurin $java from https://adoptium.net)
+  b) Upload the zip, then:   unzip $Folder.zip   and   cd $Folder
+  c) Start it inside screen or tmux so it keeps running when you log out:
+        screen -S realms
+        MEMORY_GB=4 sh start.sh
+     Leave screen with Ctrl+A then D; come back with  screen -r realms
+  d) Stop: type  stop  in the server console.
+  On a Windows server, install Java $java and double-click start.bat instead.
+
+
+4. FIREWALL (VPS)
+-----------------
+  Allow $GamePort/tcp (the game), $($script:VoicePort)/udp (voice chat) and, if you want the web map,
+  $($script:MapPort)/tcp. For example with ufw:
+     sudo ufw allow $GamePort/tcp
+     sudo ufw allow $($script:VoicePort)/udp
+     sudo ufw allow $($script:MapPort)/tcp
+
+
+5. BACKUPS
+----------
+  Stop the server, then copy the world folders (world, world_nether, world_the_end if they
+  exist) and the $($layout.AddOns) and config folders somewhere safe. Most hosting panels also have
+  a Backups button.
+"@
+    return $text.Replace("`r`n", "`n").Replace("`n", "`r`n")
+}
+
+function Test-ExportSkip([string]$Rel) {
+    foreach ($d in $script:ExportSkipDirs) { if ($Rel.StartsWith("$d/", [StringComparison]::OrdinalIgnoreCase)) { return $true } }
+    if ($script:ExportSkipFiles -contains $Rel) { return $true }
+    $leaf = $Rel.Substring($Rel.LastIndexOf('/') + 1)
+    foreach ($p in $script:ExportSkipPatterns) { if ($leaf -like $p) { return $true } }
+    return $false
+}
+
+function Add-ZipText($Archive, [string]$Name, [string]$Text, [int]$UnixMode = 0) {
+    $entry = $Archive.CreateEntry($Name, [IO.Compression.CompressionLevel]::Optimal)
+    # Regular file + permission bits in the high 16 bits, the way Info-ZIP stores them.
+    if ($UnixMode) { $entry.ExternalAttributes = [BitConverter]::ToInt32([BitConverter]::GetBytes([uint32]((0x8000 -bor $UnixMode) * 65536)), 0) }
+    $s = $entry.Open()
+    try { $b = $script:Utf8.GetBytes($Text); $s.Write($b, 0, $b.Length) } finally { $s.Dispose() }
+}
+
+# .NET on Windows marks every zip entry as made on Windows, and unzip then ignores the Unix
+# permission bits. Marks the entries that carry Unix permissions as made on Unix instead.
+function Set-ZipUnixHost([string]$Path) {
+    $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite)
+    try {
+        $r = New-Object IO.BinaryReader $fs
+        # End of central directory: at least 22 bytes from the end, after a comment of up to 64 KB.
+        $tail = [int][Math]::Min($fs.Length, 22 + 65535)
+        $fs.Position = $fs.Length - $tail
+        $buf = $r.ReadBytes($tail)
+        $eocd = -1
+        for ($i = $buf.Length - 22; $i -ge 0; $i--) {
+            if ($buf[$i] -eq 0x50 -and $buf[$i + 1] -eq 0x4b -and $buf[$i + 2] -eq 5 -and $buf[$i + 3] -eq 6) { $eocd = $i; break }
+        }
+        if ($eocd -lt 0) { throw 'no end of central directory' }
+        $count = [BitConverter]::ToUInt16($buf, $eocd + 10)
+        $start = [BitConverter]::ToUInt32($buf, $eocd + 16)
+        # A zip64 archive (over 4 GB or 65535 files) keeps these elsewhere; leave it as it is.
+        if ($start -eq [uint32]::MaxValue -or $count -eq [uint16]::MaxValue) { return }
+        $pos = [long]$start
+        for ($n = 0; $n -lt $count; $n++) {
+            $fs.Position = $pos
+            $h = $r.ReadBytes(46)
+            if ([BitConverter]::ToUInt32($h, 0) -ne 0x02014b50) { throw 'bad central directory entry' }
+            if ([BitConverter]::ToUInt32($h, 38) -shr 16) {
+                $fs.Position = $pos + 5
+                $fs.WriteByte(3)   # 3 = Unix
+            }
+            $pos += 46 + [BitConverter]::ToUInt16($h, 28) + [BitConverter]::ToUInt16($h, 30) + [BitConverter]::ToUInt16($h, 32)
+        }
+    } finally { $fs.Dispose() }
+}
+
+<#
+.SYNOPSIS
+    Writes exports\TheRealms-<version>-hosting.zip: the installed server folder plus start.sh,
+    start.bat, docker-compose.yml and HOSTING.txt, ready to upload to an online host. Returns its path.
+.DESCRIPTION
+    Run Install-Server first: the export packs what this PC installed (nothing third-party is
+    redistributed by the release itself, see docs/adr/0002). Overwrites an earlier export.
+#>
+function Export-HostingBundle {
+    param([Parameter(Mandatory)] $Context)
+    if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
+    $m = $Context.Manifest
+    $layout = Get-ServerLayout -Manifest $m
+    $server = $Context.ServerDir
+    if (-not (Test-Path -LiteralPath (Join-Path $server $layout.Jar))) {
+        throw "The server isn't installed yet ($($layout.Jar) is missing). Run the install first."
+    }
+    $folder = "TheRealms-$($m.version)-hosting"
+    $exports = Join-Path $Context.Root 'exports'
+    New-Item -ItemType Directory -Force -Path $exports | Out-Null
+    $zipPath = Join-Path $exports "$folder.zip"
+    $part = Join-Path $exports (".export-" + [guid]::NewGuid().ToString('N') + '.part')
+    $p = (Read-ServerProperties (Join-Path $server 'server.properties'))['server-port']
+    $gamePort = if ($p -match '^\d+$') { [int]$p } else { 25565 }
+
+    Write-Step "Packing the server for an online host ($folder.zip)"
+    Use-Zip
+    $base = (Get-Item -LiteralPath $server).FullName.TrimEnd('\')
+    try {
+        $archive = [IO.Compression.ZipFile]::Open($part, [IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach ($f in Get-ChildItem -LiteralPath $base -Recurse -File -Force | Sort-Object FullName) {
+                $rel = $f.FullName.Substring($base.Length + 1).Replace('\', '/')
+                if (Test-ExportSkip $rel) { continue }
+                [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $f.FullName, "$folder/$rel",
+                    [IO.Compression.CompressionLevel]::Optimal)
+            }
+            Add-ZipText $archive "$folder/start.sh" (New-StartSh $m) 493   # 0755
+            Add-ZipText $archive "$folder/start.bat" (New-StartBat $m)
+            Add-ZipText $archive "$folder/docker-compose.yml" (New-DockerCompose $m $gamePort)
+            Add-ZipText $archive "$folder/HOSTING.txt" (New-HostingGuide $m $gamePort $folder)
+        } finally { $archive.Dispose() }
+        Set-ZipUnixHost $part
+        Copy-FileExact $part $zipPath -Move
+    } finally {
+        Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
+    }
+    Write-Ok ("Made {0} ({1:N0} MB)." -f $zipPath, ((Get-Item -LiteralPath $zipPath).Length / 1MB))
+    Write-Ok "Read HOSTING.txt inside the zip for how to upload and start it on a host."
+    return $zipPath
 }
 
 Export-ModuleMember -Function @(
@@ -752,6 +1158,9 @@ Export-ModuleMember -Function @(
     'Add-Owner'
     'Invoke-Rcon'
     'Get-MemoryGB'
+    'Get-LaunchArguments'
+    'Get-ServerLayout'
+    'Export-HostingBundle'
     'Get-ExpectedHash'
     'Read-ServerProperties'
     'Set-ServerProperty'

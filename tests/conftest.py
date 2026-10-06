@@ -1,4 +1,11 @@
-"""Shared test fixtures. Tests never touch the network or write into the real checkout."""
+"""Shared test fixtures. Tests never touch the network or write into the real checkout.
+
+Sample manifests are FROZEN copies of real releases (tests/fixtures/manifests/<name>/: manifest.json,
+its patches/ and a trimmed client modrinth.index.json), never whatever the repo pins today:
+  paper-1.1.0   the last Paper release (a 1.x manifest: no "mods" group), one patched datapack
+  fabric-2.0.0  the first Fabric release: 112 mods, two of them patched
+Only test_validate.py::test_real_repo_is_valid looks at the real manifest, package and client.
+"""
 import hashlib
 import io
 import shutil
@@ -7,10 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from repo import REPO, Repo
-from upstream import MODRINTH, PAPER, RecordedHttp, json_query
+import entries
+from repo import REPO, Repo, load_json, save_json
+from upstream import MODRINTH, PAPER, RecordedHttp, fabric_server_jar_url, json_query
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "upstream"
+MANIFESTS = Path(__file__).resolve().parent / "fixtures" / "manifests"
+PAPER_RELEASE, FABRIC_RELEASE = "paper-1.1.0", "fabric-2.0.0"
 
 
 @pytest.fixture
@@ -19,18 +29,51 @@ def recorded() -> RecordedHttp:
     return RecordedHttp.from_folder(FIXTURES)
 
 
-@pytest.fixture
-def real_manifest() -> dict:
-    return REPO.load_manifest()
+def frozen_manifest(name: str) -> dict:
+    """A frozen release manifest as the tools read it (every group present)."""
+    return entries.with_all_groups(load_json(MANIFESTS / name / "manifest.json"))
+
+
+def frozen_repo(root: Path, name: str) -> Repo:
+    """A throwaway repo holding a frozen release: its manifest.json, patches/ and client index, plus
+    today's package files (launchers, scripts, defaults), which the release's manifest doesn't pin."""
+    frozen = MANIFESTS / name
+
+    def skip_pins(folder, names):
+        return {"manifest.json", "patches"} if Path(folder) == REPO.realms else set()
+
+    shutil.copytree(REPO.package, root / "package", ignore=skip_pins)
+    repo = Repo(root)
+    shutil.copy2(frozen / "manifest.json", repo.manifest)
+    shutil.copytree(frozen / "patches", repo.patches)
+    (repo.client / "overrides").mkdir(parents=True)
+    save_json(repo.client / "modrinth.index.json", load_json(frozen / "modrinth.index.json"))
+    return repo
 
 
 @pytest.fixture
-def repo_copy(tmp_path) -> Repo:
-    """A throwaway copy of the repo's package/ and client/ to run tools against."""
-    root = tmp_path / "repo"
-    shutil.copytree(REPO.package, root / "package")
-    shutil.copytree(REPO.client, root / "client")
-    return Repo(root)
+def paper_manifest() -> dict:
+    return frozen_manifest(PAPER_RELEASE)
+
+
+@pytest.fixture
+def fabric_manifest() -> dict:
+    return frozen_manifest(FABRIC_RELEASE)
+
+
+@pytest.fixture
+def paper_repo(tmp_path) -> Repo:
+    return frozen_repo(tmp_path / PAPER_RELEASE, PAPER_RELEASE)
+
+
+@pytest.fixture
+def fabric_repo(tmp_path) -> Repo:
+    return frozen_repo(tmp_path / FABRIC_RELEASE, FABRIC_RELEASE)
+
+
+def patched_entry(manifest: dict) -> tuple[str, dict]:
+    """(kind, entry) of the first patched mod or datapack."""
+    return next((k, e) for k in entries.PATCHABLE for e in entries.group(manifest, k) if "patch" in e)
 
 
 def make_zip(files: dict[str, bytes | str]) -> bytes:
@@ -94,3 +137,21 @@ def paper_build(build_id: int, jar: bytes, channel="STABLE") -> dict:
 
 def paper_builds_url(mc: str) -> str:
     return f"{PAPER}/versions/{mc}/builds"
+
+
+def fabric_launcher(mc: str, loader: str, installer: str, salt: bytes = b"") -> bytes:
+    """A tiny jar shaped like Fabric meta's server launcher (install.properties + MANIFEST.MF)."""
+    manifest_mf = ("Manifest-Version: 1.0\r\nImplementation-Title: FabricInstaller\r\n"
+                   f"Implementation-Version: {installer}\r\nMain-Class: net.fabricmc.installer.ServerLauncher\r\n\r\n")
+    return make_zip({
+        "META-INF/MANIFEST.MF": manifest_mf,
+        "install.properties": f"fabric-loader-version={loader}\ngame-version={mc}\n",
+        "net/fabricmc/installer/ServerLauncher.class": b"\xca\xfe\xba\xbe" + salt,
+    })
+
+
+def serve_fabric_launcher(http: RecordedHttp, mc: str, loader: str, installer: str, jar: bytes | None = None) -> bytes:
+    """Serve a launcher jar at Fabric meta's URL for these versions; returns its bytes."""
+    jar = jar if jar is not None else fabric_launcher(mc, loader, installer)
+    http.add("GET", fabric_server_jar_url(mc, loader, installer), jar)
+    return jar

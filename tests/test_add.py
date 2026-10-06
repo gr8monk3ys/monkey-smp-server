@@ -1,18 +1,20 @@
 import hashlib
+import json
 
 import pytest
 
 import add
 import entries
+import validate
 from check_updates import LOADERS
 from upstream import MODRINTH, RecordedHttp, Upstream, json_query
 
 MC = "26.1.2"
 
 
-def _project(http, slug, versions, kind="datapack"):
+def _project(http, slug, versions, kind="datapack", mc=MC):
     pid = f"id-{slug}"
-    url = f"{MODRINTH}/project/{pid}/version?game_versions={json_query([MC])}&loaders={json_query(LOADERS[kind])}"
+    url = f"{MODRINTH}/project/{pid}/version?game_versions={json_query([mc])}&loaders={json_query(LOADERS[kind])}"
     http.add("GET", url, versions)
     return {"id": pid, "slug": slug}
 
@@ -75,3 +77,59 @@ def test_unknown_project_fails():
     http.add("GET", f"{MODRINTH}/projects?ids={json_query(['nope'])}", [])
     with pytest.raises(SystemExit, match="not on Modrinth: nope"):
         add.add(_manifest(), "datapack", ["nope"], Upstream(http))
+
+
+def _fabric_manifest(mods=()):
+    return {"minecraft": MC, "server": {"type": "fabric"}, "plugins": [], "mods": list(mods), "datapacks": []}
+
+
+def test_adds_a_mod_to_a_fabric_server():
+    http = RecordedHttp()
+    lithium = _project(http, "lithium", [
+        _version("lithium", "0.26.2", "release", "2026-09-20T00:00:00Z", "lithium-fabric-0.26.2.jar"),
+    ], kind="mod")
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(['lithium'])}", [lithium])
+    out, added = add.add(_fabric_manifest(), "mod", ["lithium"], Upstream(http))
+    assert added == ["lithium"]
+    assert [(e["slug"], e["file"]) for e in out["mods"]] == [("lithium", "lithium-fabric-0.26.2.jar")]
+    assert entries.check("mod", out["mods"][0]) == []
+
+
+@pytest.mark.parametrize("manifest, kind, message", [
+    (_manifest(), "mod", "a paper server can't run mods"),
+    (_fabric_manifest(), "plugin", "a fabric server can't run plugins"),
+])
+def test_kinds_the_server_type_does_not_run_are_refused(manifest, kind, message):
+    with pytest.raises(SystemExit, match=message):
+        add.add(manifest, kind, ["anything"], Upstream(RecordedHttp()))
+
+
+def test_main_adds_to_a_1x_paper_manifest_and_saves_every_group(paper_repo):
+    http = RecordedHttp()
+    corpses = _project(http, "player-corpses", [
+        _version("player-corpses", "2.0", "release", "2026-09-01T00:00:00Z", "corpses-2.0.zip")])
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(['player-corpses'])}", [corpses])
+    raw = json.loads(paper_repo.manifest.read_text(encoding="utf-8"))
+    assert "mods" not in raw  # the frozen 1.1.0 release predates mods
+    add.main(["datapack", "player-corpses"], repo=paper_repo, upstream=Upstream(http))
+    saved = json.loads(paper_repo.manifest.read_text(encoding="utf-8"))
+    assert saved["mods"] == [] and list(saved).index("mods") == list(saved).index("plugins") + 1
+    assert "player-corpses" in [d["slug"] for d in saved["datapacks"]]
+    assert validate.validate(saved, paper_repo) == []
+
+
+def test_main_adds_a_mod_to_the_fabric_release(fabric_repo, capsys):
+    http = RecordedHttp()
+    before = fabric_repo.load_manifest()
+    krypton = _project(http, "krypton-fork", [
+        _version("krypton-fork", "0.4.0", "release", "2026-09-01T00:00:00Z", "krypton-fork-0.4.0.jar")],
+        kind="mod", mc=before["minecraft"])
+    already = before["mods"][0]
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(sorted(['krypton-fork', already['slug']]))}",
+             [krypton, {"id": already["project_id"], "slug": already["slug"]}])
+    add.main(["mod", "krypton-fork", already["slug"]], repo=fabric_repo, upstream=Upstream(http))
+    saved = fabric_repo.load_manifest()
+    assert len(saved["mods"]) == len(before["mods"]) + 1
+    assert [e["slug"] for e in saved["mods"]] == sorted(e["slug"] for e in saved["mods"])
+    assert "1 added, 1 already present" in capsys.readouterr().out
+    assert validate.validate(saved, fabric_repo) == []

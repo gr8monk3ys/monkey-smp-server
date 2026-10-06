@@ -71,10 +71,16 @@ def test_paper_and_java_entries_from_recorded_responses(recorded):
     assert entries.check("server", server) == [] and entries.check("java", java) == []
 
 
-def test_every_real_artifact_has_a_strong_hash(real_manifest):
-    for _, entry in entries.artifacts(real_manifest):
+@pytest.mark.parametrize("release", ["paper_manifest", "fabric_manifest"])
+def test_every_artifact_of_a_release_has_a_strong_hash(request, release):
+    manifest = request.getfixturevalue(release)
+    kinds = set()
+    for kind, entry in entries.artifacts(manifest):
         algo, value = entries.hash_of(entry)
         assert algo in ("sha256", "sha512") and value
+        kinds.add(kind)
+    assert kinds == {"paper_manifest": {"java", "server", "plugin", "datapack"},
+                     "fabric_manifest": {"java", "server", "mod"}}[release]
 
 
 def test_matches_checks_size_and_strongest_hash():
@@ -86,17 +92,84 @@ def test_matches_checks_size_and_strongest_hash():
     assert not entries.matches({**entry, "size": 1}, data)
 
 
+MISTAKES = [
+    (lambda e: e.update(url="http://evil.example/x.jar"), "allowed host"),
+    (lambda e: e.update(hashes={"sha512": "ABC"}), "lowercase hex"),
+    (lambda e: e.update(hashes={"md5": "abc"}), "no sha512/sha256"),
+    (lambda e: e.update(size=0), "bad size"),
+    (lambda e: e.pop("version_id"), "missing 'version_id'"),
+    (lambda e: e.update(file="bad:name.jar"), "characters Windows"),
+]
+
+
 @pytest.mark.parametrize("kind, mutate, message", [
-    ("plugin", lambda e: e.update(url="http://evil.example/x.jar"), "allowed host"),
-    ("plugin", lambda e: e.update(hashes={"sha512": "ABC"}), "lowercase hex"),
-    ("plugin", lambda e: e.update(hashes={"md5": "abc"}), "no sha512/sha256"),
-    ("plugin", lambda e: e.update(size=0), "bad size"),
-    ("plugin", lambda e: e.pop("version_id"), "missing 'version_id'"),
-    ("plugin", lambda e: e.update(patch={"path": "patches/x", "base_sha512": "a" * 128}), "only datapacks"),
+    *[("plugin", mutate, message) for mutate, message in MISTAKES],
+    ("plugin", lambda e: e.update(patch={"path": "patches/x", "base_sha512": "a" * 128}), "only mods and datapacks"),
     ("datapack", lambda e: e.update(file="bad:name.zip"), "characters Windows"),
 ])
-def test_check_catches_mistakes(real_manifest, kind, mutate, message):
-    e = copy.deepcopy(real_manifest[entries.GROUPS[kind]][0])
+def test_check_catches_mistakes_in_paper_entries(paper_manifest, kind, mutate, message):
+    e = copy.deepcopy(entries.group(paper_manifest, kind)[0])
+    assert entries.check(kind, e) == []
     mutate(e)
     errors = entries.check(kind, e)
     assert any(message in x for x in errors), errors
+
+
+@pytest.mark.parametrize("mutate, message", MISTAKES)
+def test_check_catches_mistakes_in_mod_entries(fabric_manifest, mutate, message):
+    e = copy.deepcopy(fabric_manifest["mods"][0])
+    assert entries.check("mod", e) == []
+    mutate(e)
+    errors = entries.check("mod", e)
+    assert any(message in x for x in errors), errors
+
+
+@pytest.mark.parametrize("release, mutate, message", [
+    ("paper_manifest", lambda s: s.pop("build"), "integer 'build'"),
+    ("paper_manifest", lambda s: s.update(url="https://example.com/paper.jar"), "allowed host"),
+    ("fabric_manifest", lambda s: s.pop("installer"), "needs 'installer'"),
+    ("fabric_manifest", lambda s: s.update(hashes={"sha256": "x"}), "lowercase hex"),
+    ("fabric_manifest", lambda s: s.update(type="quilt"), "type must be one of"),
+])
+def test_check_catches_mistakes_in_server_entries(request, release, mutate, message):
+    server = copy.deepcopy(request.getfixturevalue(release)["server"])
+    assert entries.check("server", server) == []
+    mutate(server)
+    errors = entries.check("server", server)
+    assert any(message in x for x in errors), errors
+
+
+def test_fabric_server_entry_pins_the_downloaded_launcher():
+    jar = b"launcher bytes"
+    e = entries.fabric("26.3", "0.19.5", "1.1.2", jar)
+    assert e == {"type": "fabric", "loader": "0.19.5", "installer": "1.1.2",
+                 "file": "fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar",
+                 "url": "https://meta.fabricmc.net/v2/versions/loader/26.3/0.19.5/1.1.2/server/jar",
+                 "size": len(jar), "hashes": {"sha256": hashlib.sha256(jar).hexdigest()}}
+    assert entries.check("server", e) == [] and entries.matches(e, jar)
+
+
+def test_mods_name_files_like_plugins(recorded):
+    v53, v71 = by_number(recorded, LUCKPERMS, "v5.5.53-bukkit"), by_number(recorded, LUCKPERMS, "v5.5.71-bukkit")
+    old = entries.from_disk(v53, v53["files"][0]["hashes"]["sha1"], "luckperms", disk_name="renamed.jar")
+    assert entries.updated("mod", old, v71)["file"] == "LuckPerms-Bukkit-5.5.71.jar"
+    patched = {**old, "patch": {"path": "patches/luckperms", "base_sha512": old["hashes"]["sha512"]}}
+    assert entries.check("mod", patched) == []
+    with pytest.raises(ValueError, match="re-snapshot"):
+        entries.updated("mod", patched, v71)
+
+
+def test_with_all_groups_adds_mods_after_plugins():
+    m = {"name": "x", "plugins": [], "datapacks": [], "world": {}}
+    assert list(entries.with_all_groups(m)) == ["name", "plugins", "mods", "datapacks", "world"]
+    assert entries.with_all_groups(m)["mods"] == [] and "mods" not in m
+    full = {"plugins": [], "mods": [1], "datapacks": []}
+    assert entries.with_all_groups(full) is full
+    assert entries.group({"plugins": []}, "mod") == []
+
+
+@pytest.mark.parametrize("server_type, allowed", [
+    ("paper", {"plugin", "datapack"}), ("fabric", {"mod", "datapack"}), ("forge", set()),
+])
+def test_kind_allowed(server_type, allowed):
+    assert {k for k in entries.GROUPS if entries.kind_allowed(server_type, k)} == allowed

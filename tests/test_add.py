@@ -5,15 +5,16 @@ import pytest
 
 import add
 import entries
+import validate
 from check_updates import LOADERS
 from upstream import MODRINTH, RecordedHttp, Upstream, json_query
 
 MC = "26.1.2"
 
 
-def _project(http, slug, versions, kind="datapack"):
+def _project(http, slug, versions, kind="datapack", mc=MC):
     pid = f"id-{slug}"
-    url = f"{MODRINTH}/project/{pid}/version?game_versions={json_query([MC])}&loaders={json_query(LOADERS[kind])}"
+    url = f"{MODRINTH}/project/{pid}/version?game_versions={json_query([mc])}&loaders={json_query(LOADERS[kind])}"
     http.add("GET", url, versions)
     return {"id": pid, "slug": slug}
 
@@ -103,15 +104,32 @@ def test_kinds_the_server_type_does_not_run_are_refused(manifest, kind, message)
         add.add(manifest, kind, ["anything"], Upstream(RecordedHttp()))
 
 
-def test_main_adds_a_mod_and_the_saved_manifest_has_every_group(repo_copy):
+def test_main_adds_to_a_1x_paper_manifest_and_saves_every_group(paper_repo):
     http = RecordedHttp()
     corpses = _project(http, "player-corpses", [
         _version("player-corpses", "2.0", "release", "2026-09-01T00:00:00Z", "corpses-2.0.zip")])
     http.add("GET", f"{MODRINTH}/projects?ids={json_query(['player-corpses'])}", [corpses])
-    raw = json.loads(repo_copy.manifest.read_text(encoding="utf-8"))
-    raw.pop("mods", None)  # a 1.x manifest
-    repo_copy.manifest.write_text(json.dumps(raw), encoding="utf-8")
-    add.main(["datapack", "player-corpses"], repo=repo_copy, upstream=Upstream(http))
-    saved = json.loads(repo_copy.manifest.read_text(encoding="utf-8"))
+    raw = json.loads(paper_repo.manifest.read_text(encoding="utf-8"))
+    assert "mods" not in raw  # the frozen 1.1.0 release predates mods
+    add.main(["datapack", "player-corpses"], repo=paper_repo, upstream=Upstream(http))
+    saved = json.loads(paper_repo.manifest.read_text(encoding="utf-8"))
     assert saved["mods"] == [] and list(saved).index("mods") == list(saved).index("plugins") + 1
     assert "player-corpses" in [d["slug"] for d in saved["datapacks"]]
+    assert validate.validate(saved, paper_repo) == []
+
+
+def test_main_adds_a_mod_to_the_fabric_release(fabric_repo, capsys):
+    http = RecordedHttp()
+    before = fabric_repo.load_manifest()
+    krypton = _project(http, "krypton-fork", [
+        _version("krypton-fork", "0.4.0", "release", "2026-09-01T00:00:00Z", "krypton-fork-0.4.0.jar")],
+        kind="mod", mc=before["minecraft"])
+    already = before["mods"][0]
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(sorted(['krypton-fork', already['slug']]))}",
+             [krypton, {"id": already["project_id"], "slug": already["slug"]}])
+    add.main(["mod", "krypton-fork", already["slug"]], repo=fabric_repo, upstream=Upstream(http))
+    saved = fabric_repo.load_manifest()
+    assert len(saved["mods"]) == len(before["mods"]) + 1
+    assert [e["slug"] for e in saved["mods"]] == sorted(e["slug"] for e in saved["mods"])
+    assert "1 added, 1 already present" in capsys.readouterr().out
+    assert validate.validate(saved, fabric_repo) == []

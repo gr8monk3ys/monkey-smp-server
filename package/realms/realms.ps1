@@ -9,10 +9,13 @@
     files that are already correct are skipped, and files from an older manifest are replaced.
 
     This script only parses the command line; the work is done by Realms.psm1 next to it.
+    It runs on Windows PowerShell 5.1 (the .bat files) and on PowerShell 7.2+ on Linux and macOS
+    (realms.sh, which the .sh launchers call, finds or installs one).
 
     Layout next to this folder:
         server\    the Minecraft server (world, plugins or mods, configs)
-        java\      the Java runtime the server uses
+        java\      the Java runtime the server uses (one folder per platform, e.g. java\linux-x64)
+        pwsh\      PowerShell for realms.sh on Linux and macOS (not used on Windows)
         backups\   world backups made by "backup"
         exports\   zips made by "export-host" for running the server on an online host
 
@@ -43,8 +46,13 @@ param(
     # Never prompt; fail instead.
     [switch]$NonInteractive,
 
-    # Server memory in GB. 0 = pick from the computer's RAM. Also read from REALMS_MEMORY_GB.
-    [int]$MemoryGB = 0
+    # Server memory in GB. 0 = pick from the computer's RAM (a container's memory limit on Linux).
+    # Also read from REALMS_MEMORY_GB.
+    [int]$MemoryGB = 0,
+
+    # start only: install, then write how to run the server to this file instead of running it
+    # (realms.sh then runs java itself; see Start-Server in Realms.psm1).
+    [string]$LaunchFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,8 +64,9 @@ $install = @{ Context = $ctx; AcceptEula = $AcceptEula; Owner = $Owner; NoOwner 
 switch ($Command) {
     'start' {
         $java = Install-Server @install
-        $ram = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
-        Start-Server -Context $ctx -Java $java -MemoryGB (Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:REALMS_MEMORY_GB)
+        $ram = Get-TotalMemoryBytes
+        $gb = Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:REALMS_MEMORY_GB
+        Start-Server -Context $ctx -Java $java -MemoryGB $gb -LaunchFile $LaunchFile
     }
     'install' { [void](Install-Server @install) }
     'export-host' {

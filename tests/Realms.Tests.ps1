@@ -2,6 +2,8 @@
 <#
 .SYNOPSIS
     Unit tests for package/realms/Realms.psm1 (Pester 5). No network, no Java, a few seconds.
+    They run on Windows PowerShell 5.1 and on PowerShell 7 (Windows, Linux, macOS); paths are written
+    with / so they work on every platform. Making the .tar.gz fixture JREs needs tar (Windows 10+ has it).
 
 .DESCRIPTION
     Every test builds a throwaway server package in TestDrive: tiny fixture jars and zips, a
@@ -14,10 +16,10 @@
 #>
 
 BeforeDiscovery {
-    $script:realManifestPath = Join-Path $PSScriptRoot '..\package\realms\manifest.json'
+    $script:realManifestPath = Join-Path $PSScriptRoot '../package/realms/manifest.json'
     $real = Get-Content -LiteralPath $script:realManifestPath -Raw | ConvertFrom-Json
     $script:realArtifacts = @(
-        @{ Kind = 'java'; Entry = $real.java }
+        @($real.java.builds.PSObject.Properties | ForEach-Object { @{ Kind = "java $($_.Name)"; Entry = $_.Value } })
         @{ Kind = 'server'; Entry = $real.server }
     ) + @($real.plugins | Where-Object { $_ } | ForEach-Object { @{ Kind = 'plugin'; Entry = $_ } }) +
         @($real.mods | Where-Object { $_ } | ForEach-Object { @{ Kind = 'mod'; Entry = $_ } }) +
@@ -27,9 +29,21 @@ BeforeDiscovery {
 
 BeforeAll {
     $script:RepoRoot = Split-Path $PSScriptRoot -Parent
-    Import-Module (Join-Path $script:RepoRoot 'package\realms\Realms.psm1') -Force
+    Import-Module (Join-Path $script:RepoRoot 'package/realms/Realms.psm1') -Force
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
     $script:Utf8 = New-Object System.Text.UTF8Encoding $false
+    $script:Platforms = @('windows-x64', 'linux-x64', 'linux-aarch64', 'mac-x64', 'mac-aarch64')
+    $script:OnWindows = [IO.Path]::DirectorySeparatorChar -eq '\'
+    $script:RealManifest = Join-Path $script:RepoRoot 'package/realms/manifest.json'
+
+    # $Base joined with a /-separated relative path, with this platform's separator (as the module does).
+    function Join-Native([string]$Base, [string]$Rel) { Join-Path $Base $Rel.Replace('/', [IO.Path]::DirectorySeparatorChar) }
+
+    function Invoke-Tar([string[]]$Arguments) {
+        $tar = if ($script:OnWindows) { "$env:SystemRoot\System32\tar.exe" } else { 'tar' }
+        & $tar @Arguments
+        if ($LASTEXITCODE) { throw "tar $Arguments failed" }
+    }
 
     function Get-Sha512([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA512).Hash.ToLower() }
 
@@ -66,7 +80,7 @@ BeforeAll {
         [IO.File]::WriteAllText($Path, $Text, $script:Utf8)
     }
 
-    # A fixture world: upstream files, a server package (realms\ with defaults\ and patches\), and
+    # A fixture world: upstream files, a server package (realms/ with defaults/ and patches/), and
     # adapters. $F.Fetched counts downloads per url; $F.Map can be edited to serve different bytes.
     function New-Fixture {
         $dir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -74,20 +88,20 @@ BeforeAll {
             Dir      = $dir
             Upstream = Join-Path $dir 'upstream'
             Root     = Join-Path $dir 'pkg'
-            Realms   = Join-Path $dir 'pkg\realms'
+            Realms   = Join-Native $dir 'pkg/realms'
             Map      = @{}
             Fetched  = @{}
             Port     = Get-FreePort
         }
         $F.Server = Join-Path $F.Root 'server'
-        $F.Packs = Join-Path $F.Server 'world\datapacks'
+        $F.Packs = Join-Native $F.Server 'world/datapacks'
         $F.Plugins = Join-Path $F.Server 'plugins'
         $F.Mods = Join-Path $F.Server 'mods'
         New-Item -ItemType Directory -Force -Path $F.Upstream, $F.Realms | Out-Null
-        Write-Text (Join-Path $F.Realms 'defaults\server.properties') (
+        Write-Text (Join-Native $F.Realms 'defaults/server.properties') (
             "#fixture`nlevel-name={{LEVEL_NAME}}`nlevel-seed={{SEED}}`nserver-port=$($F.Port)`n" +
             "enable-rcon=true`nrcon.port=$(Get-FreePort)`nrcon.password={{RCON_PASSWORD}}`n")
-        Write-Text (Join-Path $F.Realms 'defaults\plugins\LuckPerms\config.yml') "storage-method: yaml`n"
+        Write-Text (Join-Native $F.Realms 'defaults/plugins/LuckPerms/config.yml') "storage-method: yaml`n"
         $map = $F.Map
         $fetched = $F.Fetched
         $F.Fetch = {
@@ -101,9 +115,16 @@ BeforeAll {
             if ($Name -eq 'Nobody') { throw "no such player $Name" }
             @{ Name = 'Notch'; Uuid = '069a79f4-44e9-4726-a5be-fca90e38aaf5' }
         }
-        $F.Java = New-Entry $F 'java.zip' @{ 'jdk-fixture/bin/java.exe' = 'not really java'; 'jdk-fixture/release' = 'x' }
-        $F.Java.version = 'jdk-fixture'
-        $F.Java | Add-Member -NotePropertyName vendor -NotePropertyValue 'Fixture JRE'
+        # The fixture JREs are shared by every fixture (see Get-JavaArchive); each fixture serves them at its own urls.
+        $builds = [ordered]@{}
+        foreach ($p in $script:Platforms) {
+            $path = Get-JavaArchive $p
+            $url = "https://fixture.invalid/$([guid]::NewGuid().ToString('N'))/$(Split-Path $path -Leaf)"
+            $F.Map[$url] = $path
+            $builds[$p] = [pscustomobject]@{ file = Split-Path $path -Leaf; url = $url; size = (Get-Item -LiteralPath $path).Length
+                hashes = [pscustomobject]@{ sha512 = Get-Sha512 $path } }
+        }
+        $F.Java = [pscustomobject]@{ vendor = 'Fixture JRE'; version = 'jdk-fixture'; builds = [pscustomobject]$builds }
         $F.Paper = New-Entry $F 'paper-1.jar' @{ 'paper.txt' = 'paper build 1' }
         $F.Paper | Add-Member -NotePropertyName type -NotePropertyValue 'paper'
         $F.Paper | Add-Member -NotePropertyName build -NotePropertyValue 1
@@ -112,6 +133,25 @@ BeforeAll {
         $F.Fabric | Add-Member -NotePropertyName loader -NotePropertyValue '0.1.0'
         $F.Fabric | Add-Member -NotePropertyName installer -NotePropertyValue '1.0.0'
         return $F
+    }
+
+    # A fixture JRE for one platform, made once per test run: jdk-fixture/ with java where that platform
+    # keeps it, as a .zip for Windows and a .tar.gz (made with tar) elsewhere, like Adoptium's.
+    $script:JreDir = Join-Path ([IO.Path]::GetTempPath()) ('realms-tests-jre-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    function Get-JavaArchive([string]$Platform) {
+        $os = $Platform.Split('-')[0]
+        $file = Join-Path $script:JreDir ("java-$Platform" + $(if ($os -eq 'windows') { '.zip' } else { '.tar.gz' }))
+        if (Test-Path -LiteralPath $file) { return $file }
+        $exe = @{ windows = 'bin/java.exe'; linux = 'bin/java'; mac = 'Contents/Home/bin/java' }[$os]
+        if ($os -eq 'windows') {
+            New-Zip $file @{ "jdk-fixture/$exe" = 'not really java'; 'jdk-fixture/release' = 'x' }
+        } else {
+            $src = Join-Path $script:JreDir "src-$Platform"
+            Write-Text (Join-Native $src "jdk-fixture/$exe") "#!/bin/sh`necho $Platform`n"
+            Write-Text (Join-Native $src 'jdk-fixture/release') 'x'
+            Invoke-Tar @('-czf', $file, '-C', $src, 'jdk-fixture')
+        }
+        return $file
     }
 
     # Writes an upstream zip/jar, serves it at a url and returns its manifest entry.
@@ -132,7 +172,7 @@ BeforeAll {
     }
 
     function New-Patch($F, [string]$Slug, [hashtable]$Files) {
-        foreach ($k in $Files.Keys) { Write-Text (Join-Path $F.Realms "patches\$Slug\$k") $Files[$k] }
+        foreach ($k in $Files.Keys) { Write-Text (Join-Native $F.Realms "patches/$Slug/$k") $Files[$k] }
         return "patches/$Slug"
     }
 
@@ -169,10 +209,10 @@ BeforeAll {
         Install-Server -Context $ctx -AcceptEula @Options 6>$null
     }
 
-    # Fabric Defaults in place of the Paper ones New-Fixture writes (LuckPerms config moves to config\).
+    # Fabric Defaults in place of the Paper ones New-Fixture writes (LuckPerms config moves to config/).
     function Use-FabricDefaults($F) {
-        Remove-Item -LiteralPath (Join-Path $F.Realms 'defaults\plugins') -Recurse -Force
-        Write-Text (Join-Path $F.Realms 'defaults\config\luckperms\luckperms.conf') "storage-method = `"yaml`"`n"
+        Remove-Item -LiteralPath (Join-Native $F.Realms 'defaults/plugins') -Recurse -Force
+        Write-Text (Join-Native $F.Realms 'defaults/config/luckperms/luckperms.conf') "storage-method = `"yaml`"`n"
     }
 
     function Get-State($F) { Get-Content -LiteralPath (Join-Path $F.Server '.realms-state.json') -Raw | ConvertFrom-Json }
@@ -191,7 +231,8 @@ Describe 'Install-Server' {
         $m = New-Manifest $F @($plugin) @($pack)
 
         $java = Install-Fixture $F $m
-        $java | Should -Be (Join-Path $F.Root 'java\jdk-fixture\bin\java.exe')
+        $platform = Get-RealmsPlatform
+        $java | Should -Be (Get-JavaExecutable -JavaHome (Join-Native $F.Root "java/$platform/jdk-fixture") -Platform $platform)
         $java | Should -Exist
         Join-Path $F.Server 'paper.jar' | Should -Exist
         Join-Path $F.Plugins 'Foo-1.0.jar' | Should -Exist
@@ -310,7 +351,7 @@ Describe 'Install-Server' {
             $m = New-Manifest $F @() @(Add-PatchTo $F.Pack $F.Patch)
             Install-Fixture $F $m
             $F.Fetched.Clear()
-            Write-Text (Join-Path $F.Realms 'patches\effects\pack.mcmeta') 'patched again'
+            Write-Text (Join-Native $F.Realms 'patches/effects/pack.mcmeta') 'patched again'
             Install-Fixture $F $m
             $F.Fetched[$F.Pack.url] | Should -Be 1
             Read-ZipEntry $F.Dest 'pack.mcmeta' | Should -Be 'patched again'
@@ -327,11 +368,11 @@ Describe 'Install-Server' {
             $m = New-Manifest $F @() @(Add-PatchTo $F.Pack $F.Patch ('cd' * 64))
             { Install-Fixture $F $m } | Should -Throw '*base_sha512*'
             $F.Dest | Should -Not -Exist
-            Join-Path $F.Root 'downloads\Effects.zip' | Should -Not -Exist
+            Join-Native $F.Root 'downloads/Effects.zip' | Should -Not -Exist
         }
 
         It 'throws when a patch adds a file the datapack does not have' {
-            Write-Text (Join-Path $F.Realms 'patches\effects\data\x\new.json') '{}'
+            Write-Text (Join-Native $F.Realms 'patches/effects/data/x/new.json') '{}'
             { Install-Fixture $F (New-Manifest $F @() @(Add-PatchTo $F.Pack $F.Patch)) } |
                 Should -Throw '*no matching file in Effects.zip: data/x/new.json*'
             $F.Dest | Should -Not -Exist
@@ -346,10 +387,10 @@ Describe 'Install-Server' {
     Context 'Defaults' {
         It 'copies only missing files and renders server.properties' {
             $F = New-Fixture
-            Write-Text (Join-Path $F.Server 'plugins\LuckPerms\config.yml') 'host edit'
+            Write-Text (Join-Native $F.Server 'plugins/LuckPerms/config.yml') 'host edit'
             Install-Fixture $F (New-Manifest $F)
 
-            Join-Path $F.Server 'plugins\LuckPerms\config.yml' | Should -FileContentMatchExactly '^host edit$'
+            Join-Native $F.Server 'plugins/LuckPerms/config.yml' | Should -FileContentMatchExactly '^host edit$'
             $propsPath = Join-Path $F.Server 'server.properties'
             [IO.File]::ReadAllText($propsPath) | Should -Not -Match '\{\{'
             $props = Read-ServerProperties $propsPath
@@ -367,7 +408,7 @@ Describe 'Install-Server' {
 
         It 'throws on a placeholder it cannot fill' {
             $F = New-Fixture
-            Write-Text (Join-Path $F.Realms 'defaults\server.properties') "server-port=$($F.Port)`nmotd={{MOTD}}`n"
+            Write-Text (Join-Native $F.Realms 'defaults/server.properties') "server-port=$($F.Port)`nmotd={{MOTD}}`n"
             { Install-Fixture $F (New-Manifest $F) } | Should -Throw '*{{MOTD}}*'
         }
     }
@@ -386,7 +427,7 @@ Describe 'Install-Server' {
             $ops.Count | Should -Be 1
             $ops[0].level | Should -Be 4
             $ops[0].uuid | Should -Be '069a79f4-44e9-4726-a5be-fca90e38aaf5'
-            Join-Path $F.Server 'plugins\LuckPerms\yaml-storage\users\069a79f4-44e9-4726-a5be-fca90e38aaf5.yml' |
+            Join-Native $F.Server 'plugins/LuckPerms/yaml-storage/users/069a79f4-44e9-4726-a5be-fca90e38aaf5.yml' |
                 Should -FileContentMatch '^primary-group: admin$'
             (Get-State $F).owner | Should -Be 'Notch'
         }
@@ -409,7 +450,7 @@ Describe 'Fabric servers' {
         Mock Start-Sleep -ModuleName Realms {}
     }
 
-    It 'installs the launcher as fabric-server-launch.jar and mods in mods\, then is a no-op' {
+    It 'installs the launcher as fabric-server-launch.jar and mods in mods/, then is a no-op' {
         $F = New-Fixture
         Use-FabricDefaults $F
         $mod = New-Entry $F 'Foo-mod [1.0].jar' @{ 'fabric.mod.json' = '{"id":"foo"}' }
@@ -422,7 +463,7 @@ Describe 'Fabric servers' {
         Get-Sha512 (Join-Path $F.Mods 'Foo-mod [1.0].jar') | Should -Be $mod.hashes.sha512
         Join-Path $F.Packs 'Pack.zip' | Should -Exist
         $F.Plugins | Should -Not -Exist
-        Join-Path $F.Server 'config\luckperms\luckperms.conf' | Should -Exist
+        Join-Native $F.Server 'config/luckperms/luckperms.conf' | Should -Exist
         $state = Get-State $F
         $state.server_type | Should -Be 'fabric'
         ($state.mods -join ',') | Should -Be 'Foo-mod [1.0].jar'
@@ -440,14 +481,14 @@ Describe 'Fabric servers' {
         $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' }
         $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' }
         Install-Fixture $F (New-Manifest $F @() @() @($a, $b) $F.Fabric)
-        Write-Text (Join-Path $F.Mods 'luckperms\yaml-storage\groups\admin.yml') 'name: admin'
+        Write-Text (Join-Native $F.Mods 'luckperms/yaml-storage/groups/admin.yml') 'name: admin'
         Write-Text (Join-Path $F.Mods 'HostMod.jar') 'host'
 
         Install-Fixture $F (New-Manifest $F @() @() @($a) $F.Fabric)
         Join-Path $F.Mods 'A.jar' | Should -Exist
         Join-Path $F.Mods 'B.jar' | Should -Not -Exist
         Join-Path $F.Mods 'HostMod.jar' | Should -Exist
-        Join-Path $F.Mods 'luckperms\yaml-storage\groups\admin.yml' | Should -Exist
+        Join-Native $F.Mods 'luckperms/yaml-storage/groups/admin.yml' | Should -Exist
         ((Get-State $F).mods -join ',') | Should -Be 'A.jar'
     }
 
@@ -488,21 +529,21 @@ Describe 'Fabric servers' {
         }
 
         It 'throws when a patch adds a file the mod does not have' {
-            Write-Text (Join-Path $F.Realms 'patches\silvers-lib\data\x\new.json') '{}'
+            Write-Text (Join-Native $F.Realms 'patches/silvers-lib/data/x/new.json') '{}'
             { Install-Fixture $F (New-Manifest $F @() @() @(Add-PatchTo $F.Mod $F.Patch) $F.Fabric) } |
                 Should -Throw '*no matching file in silvers-lib.jar: data/x/new.json*'
             $F.Dest | Should -Not -Exist
         }
     }
 
-    It 'puts the Owner in the LuckPerms admin rank under mods\luckperms' {
+    It 'puts the Owner in the LuckPerms admin rank under mods/luckperms' {
         $F = New-Fixture
         Use-FabricDefaults $F
         $m = New-Manifest $F @() @() @() $F.Fabric
         Install-Fixture $F $m @{ Owner = 'notch' } | Out-Null
-        Join-Path $F.Mods 'luckperms\yaml-storage\users\069a79f4-44e9-4726-a5be-fca90e38aaf5.yml' |
+        Join-Native $F.Mods 'luckperms/yaml-storage/users/069a79f4-44e9-4726-a5be-fca90e38aaf5.yml' |
             Should -FileContentMatch '^primary-group: admin$'
-        Join-Path $F.Server 'plugins\LuckPerms' | Should -Not -Exist
+        Join-Native $F.Server 'plugins/LuckPerms' | Should -Not -Exist
         (Get-State $F).owner | Should -Be 'Notch'
     }
 }
@@ -523,7 +564,7 @@ Describe 'Upgrades and server type switches' {
         $legacy = [ordered]@{ version = $s.version; java = $s.java; owner = $null; plugins = @($s.plugins)
             datapacks = @($s.datapacks); patched = $s.patched }
         Write-Text (Join-Path $F.Server '.realms-state.json') (ConvertTo-Json -InputObject $legacy -Depth 10)
-        Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+        Write-Text (Join-Native $F.Server 'world/level.dat') 'a world'
         $F.Fetched.Clear()
 
         $new = New-Entry $F 'Old-2.jar' @{ 'plugin.yml' = 'v2' } 'old'
@@ -557,7 +598,7 @@ Describe 'Upgrades and server type switches' {
             $s = Get-State $F
             Write-Text $stateFile (ConvertTo-Json -InputObject ([ordered]@{ version = $s.version; java = $s.java; plugins = @($s.plugins); datapacks = @(); patched = @{} }))
         }
-        Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
+        Write-Text (Join-Native $F.Server 'world/level.dat') 'a world'
         $before = @(Get-ChildItem -LiteralPath $F.Root -Recurse -File | ForEach-Object { "$($_.FullName)=$($_.Length)" })
         $stateText = [IO.File]::ReadAllText($stateFile)
         $F.Fetched.Clear()
@@ -609,8 +650,8 @@ Describe 'Server layout and launch' {
     }
 
     It 'describes the server as <Want>' -ForEach @(
-        @{ Server = @{ type = 'paper'; build = 74 }; Want = 'Paper build 74'; AddOns = 'plugins'; LuckPerms = 'plugins\LuckPerms\yaml-storage' }
-        @{ Server = @{ type = 'Fabric'; loader = '0.19.5' }; Want = 'Fabric loader 0.19.5'; AddOns = 'mods'; LuckPerms = 'mods\luckperms\yaml-storage' }
+        @{ Server = @{ type = 'paper'; build = 74 }; Want = 'Paper build 74'; AddOns = 'plugins'; LuckPerms = 'plugins/LuckPerms/yaml-storage' }
+        @{ Server = @{ type = 'Fabric'; loader = '0.19.5' }; Want = 'Fabric loader 0.19.5'; AddOns = 'mods'; LuckPerms = 'mods/luckperms/yaml-storage' }
     ) {
         $l = Get-ServerLayout -Manifest ([pscustomobject]@{ server = [pscustomobject]$Server })
         $l.Description | Should -Be $Want
@@ -664,6 +705,7 @@ Describe 'Export-HostingBundle' {
         }
 
         function Find-Sh {
+            if (-not $script:OnWindows) { return (Get-Command sh -ErrorAction SilentlyContinue | Select-Object -First 1).Source }
             $c = Get-Command sh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
             if ($c) { return $c.Source }
             foreach ($p in "$env:ProgramFiles\Git\bin\sh.exe", "$env:ProgramFiles\Git\usr\bin\sh.exe") { if (Test-Path -LiteralPath $p) { return $p } }
@@ -685,12 +727,12 @@ Describe 'Export-HostingBundle' {
                 $F.Jar = 'paper.jar'
             }
             Install-Fixture $F $F.M | Out-Null
-            foreach ($junk in 'logs\latest.log', 'crash-reports\c.txt', 'cache\x.bin', '.fabric\remapped.jar', 'libraries\lib.jar',
-                'versions\mc.jar', 'bluemap\web\index.html', 'plugins\.paper-remapped\r.jar', 'world\session.lock', 'x.part') {
-                Write-Text (Join-Path $F.Server $junk) 'junk'
+            foreach ($junk in 'logs/latest.log', 'crash-reports/c.txt', 'cache/x.bin', '.fabric/remapped.jar', 'libraries/lib.jar',
+                'versions/mc.jar', 'bluemap/web/index.html', 'plugins/.paper-remapped/r.jar', 'world/session.lock', 'x.part') {
+                Write-Text (Join-Native $F.Server $junk) 'junk'
             }
-            Write-Text (Join-Path $F.Server 'world\level.dat') 'a world'
-            Write-Text (Join-Path $F.Server 'config\keep.json') '{}'
+            Write-Text (Join-Native $F.Server 'world/level.dat') 'a world'
+            Write-Text (Join-Native $F.Server 'config/keep.json') '{}'
             $F.Zip = Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null
             $F.Top = 'TheRealms-1.0.0-hosting/'
             return $F
@@ -701,7 +743,7 @@ Describe 'Export-HostingBundle' {
         @{ Type = 'paper' }, @{ Type = 'fabric' }
     ) {
         $F = New-ExportFixture $Type
-        $F.Zip | Should -Be (Join-Path $F.Root 'exports\TheRealms-1.0.0-hosting.zip')
+        $F.Zip | Should -Be (Join-Native $F.Root 'exports/TheRealms-1.0.0-hosting.zip')
         $z = Read-ExportZip $F.Zip
         @($z.Keys | Where-Object { -not $_.StartsWith($F.Top) }) | Should -BeNullOrEmpty
         foreach ($want in $F.Jar, $F.AddOn, 'world/datapacks/Pack [1].zip', 'world/level.dat', 'eula.txt', 'server.properties',
@@ -766,11 +808,12 @@ Describe 'Export-HostingBundle' {
         $yml | Should -Match '"24454:24454/udp"'
         $yml | Should -Match '"8100:8100/tcp"'
         $yml | Should -Match 'restart: unless-stopped'
+        $yml | Should -Match '(?m)^    stop_grace_period: 2m$'
     }
 
     It 'overwrites an earlier export and leaves no temporary file' {
         $F = New-ExportFixture 'paper'
-        Write-Text (Join-Path $F.Server 'config\later.json') '{}'
+        Write-Text (Join-Native $F.Server 'config/later.json') '{}'
         Export-HostingBundle -Context (New-Ctx $F $F.M) 6>$null | Out-Null
         @(Get-ChildItem -LiteralPath (Join-Path $F.Root 'exports') -Force | ForEach-Object { $_.Name }) | Should -Be @('TheRealms-1.0.0-hosting.zip')
         (Read-ExportZip $F.Zip).Keys | Should -Contain ($F.Top + 'config/later.json')
@@ -793,7 +836,9 @@ Describe 'Export-HostingBundle' {
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },
-        @{ Gb = 16; Want = 5 }, @{ Gb = 16.5; Want = 5 }, @{ Gb = 32; Want = 6 }
+        @{ Gb = 16; Want = 5 }, @{ Gb = 16.5; Want = 5 }, @{ Gb = 32; Want = 6 },
+        # A small container or VPS keeps at least 1 GB for Java itself.
+        @{ Gb = 3.5; Want = 2 }, @{ Gb = 2; Want = 1 }, @{ Gb = 1; Want = 1 }, @{ Gb = 0; Want = 3 }
     ) {
         Get-MemoryGB -TotalBytes ($Gb * 1GB) | Should -Be $Want
     }
@@ -804,12 +849,225 @@ Describe 'Get-MemoryGB' {
     }
 }
 
+Describe 'Platforms' {
+    It 'maps <OS> <Arch> to <Want>' -ForEach @(
+        @{ OS = 'windows'; Arch = 'AMD64'; Want = 'windows-x64' }
+        @{ OS = 'windows'; Arch = 'ARM64'; Want = 'windows-x64' }
+        @{ OS = 'linux'; Arch = 'X64'; Want = 'linux-x64' }
+        @{ OS = 'linux'; Arch = 'x86_64'; Want = 'linux-x64' }
+        @{ OS = 'linux'; Arch = 'Arm64'; Want = 'linux-aarch64' }
+        @{ OS = 'linux'; Arch = 'aarch64'; Want = 'linux-aarch64' }
+        @{ OS = 'mac'; Arch = 'X64'; Want = 'mac-x64' }
+        @{ OS = 'mac'; Arch = 'Arm64'; Want = 'mac-aarch64' }
+    ) {
+        Get-RealmsPlatform -OS $OS -Architecture $Arch | Should -Be $Want
+    }
+
+    It 'refuses <OS> <Arch> in plain words' -ForEach @(
+        @{ OS = 'windows'; Arch = 'x86' }, @{ OS = 'linux'; Arch = 'Arm' }, @{ OS = 'freebsd'; Arch = 'X64' }
+    ) {
+        { Get-RealmsPlatform -OS $OS -Architecture $Arch } | Should -Throw '*runs on 64-bit Windows, Linux and macOS*'
+    }
+
+    It 'detects this computer as one of the five platforms' {
+        $p = Get-RealmsPlatform
+        $p | Should -BeIn $script:Platforms
+        ($p -like 'windows-*') | Should -Be $script:OnWindows
+    }
+
+    It 'names the <Command> launcher <Win> on Windows and <Unix> elsewhere' -ForEach @(
+        @{ Command = 'start'; Win = 'Start Server.bat'; Unix = './start.sh' }
+        @{ Command = 'stop'; Win = 'Stop Server.bat'; Unix = './stop.sh' }
+        @{ Command = 'backup'; Win = 'Backup World.bat'; Unix = './backup.sh' }
+        @{ Command = 'add-player'; Win = 'Add Player.bat'; Unix = './add-player.sh' }
+        @{ Command = 'export-host'; Win = 'Prepare for Hosting.bat'; Unix = './prepare-for-hosting.sh' }
+    ) {
+        Get-LauncherName -Command $Command -Platform 'windows-x64' | Should -Be $Win
+        Get-LauncherName -Command $Command -Platform 'linux-aarch64' | Should -Be $Unix
+        Get-LauncherName -Command $Command -Platform 'mac-x64' | Should -Be $Unix
+        Test-Path -LiteralPath (Join-Native $RepoRoot "package/$Win") | Should -BeTrue
+        Test-Path -LiteralPath (Join-Native $RepoRoot "package/$($Unix.Substring(2))") | Should -BeTrue
+    }
+
+    It 'tells a host to run the launcher of this platform when the server is running' {
+        $F = New-Fixture
+        Mock Test-ServerRunning -ModuleName Realms { $true }
+        Mock Get-RealmsPlatform -ModuleName Realms { 'linux-x64' }
+        { Install-Fixture $F (New-Manifest $F) } | Should -Throw '*or run ./stop.sh)*'
+        Mock Get-RealmsPlatform -ModuleName Realms { 'windows-x64' }
+        { Install-Fixture $F (New-Manifest $F) } | Should -Throw '*or run Stop Server.bat)*'
+    }
+}
+
+Describe 'Java for every platform' {
+    BeforeEach {
+        Mock Start-Sleep -ModuleName Realms {}
+    }
+
+    It 'picks the <Platform> build and finds java at <Exe>' -ForEach @(
+        @{ Platform = 'windows-x64'; Exe = 'bin/java.exe'; Kind = 'zip' }
+        @{ Platform = 'linux-x64'; Exe = 'bin/java'; Kind = 'tar' }
+        @{ Platform = 'linux-aarch64'; Exe = 'bin/java'; Kind = 'tar' }
+        @{ Platform = 'mac-x64'; Exe = 'Contents/Home/bin/java'; Kind = 'tar' }
+        @{ Platform = 'mac-aarch64'; Exe = 'Contents/Home/bin/java'; Kind = 'tar' }
+    ) {
+        $m = Get-Content -LiteralPath $script:RealManifest -Raw | ConvertFrom-Json
+        $b = Get-JavaBuild -Manifest $m -Platform $Platform
+        $b.file | Should -Be $m.java.builds.$Platform.file
+        InModuleScope Realms -Parameters @{ File = $b.file; Kind = $Kind } { Get-ArchiveKind $File | Should -Be $Kind }
+        Get-JavaExecutable -JavaHome (Join-Native $TestDrive 'jre') -Platform $Platform | Should -Be (Join-Native $TestDrive "jre/$Exe")
+    }
+
+    It 'reads a manifest from before 2.3.0 (one Windows build on java) as the windows-x64 build only' {
+        $legacy = [pscustomobject]@{ java = [pscustomobject]@{ version = 'jdk-25'; file = 'j.zip'; url = 'https://x/j.zip'; size = 1 } }
+        (Get-JavaBuild -Manifest $legacy -Platform 'windows-x64').file | Should -Be 'j.zip'
+        { Get-JavaBuild -Manifest $legacy -Platform 'linux-x64' } | Should -Throw '*has no Java for linux-x64*'
+    }
+
+    It 'refuses a release with no Java for this platform before downloading anything' {
+        $F = New-Fixture
+        $F.Java.builds.PSObject.Properties.Remove((Get-RealmsPlatform))
+        { Install-Fixture $F (New-Manifest $F) } | Should -Throw "*has no Java for $(Get-RealmsPlatform)*"
+        $F.Fetched.Count | Should -Be 0
+    }
+
+    It 'unpacks the <Platform> JRE into java/<Platform>/ and leaves other platforms alone' -ForEach @(
+        @{ Platform = 'linux-x64' }, @{ Platform = 'linux-aarch64' }, @{ Platform = 'mac-x64' }, @{ Platform = 'mac-aarch64' }
+    ) {
+        $F = New-Fixture
+        $m = New-Manifest $F
+        $native = Install-Fixture $F $m
+        Mock Get-RealmsPlatform -ModuleName Realms -ParameterFilter { -not $OS } { $Platform }
+        $java = Install-Fixture $F $m
+        $java | Should -Be (Get-JavaExecutable -JavaHome (Join-Native $F.Root "java/$Platform/jdk-fixture") -Platform $Platform)
+        $java | Should -Exist
+        [IO.File]::ReadAllText($java) | Should -Be "#!/bin/sh`necho $Platform`n"
+        if (-not $script:OnWindows) { (& sh -c "'$java'") | Should -Be $Platform }   # kept its executable bit
+        $native | Should -Exist
+        Join-Native $F.Root 'downloads' | Should -Not -Exist
+        Join-Native $F.Root "java/$Platform/.extract" | Should -Not -Exist
+    }
+
+    It 'replaces an older Java of the same platform and moves a pre-2.3.0 Windows JRE into java/windows-x64' {
+        $F = New-Fixture
+        Mock Get-RealmsPlatform -ModuleName Realms -ParameterFilter { -not $OS } { 'windows-x64' }
+        Write-Text (Join-Native $F.Root 'java/jdk-fixture/bin/java.exe') 'unpacked by 2.2'
+        Write-Text (Join-Native $F.Root 'java/windows-x64/jdk-old/bin/java.exe') 'older'
+        Write-Text (Join-Native $F.Root 'java/linux-x64/jdk-old/bin/java') 'another platform'
+        $java = Install-Fixture $F (New-Manifest $F)
+        $java | Should -Be (Join-Native $F.Root 'java/windows-x64/jdk-fixture/bin/java.exe')
+        [IO.File]::ReadAllText($java) | Should -Be 'unpacked by 2.2'
+        $F.Fetched.Keys | Should -Not -Contain $F.Java.builds.'windows-x64'.url
+        Join-Native $F.Root 'java/jdk-fixture' | Should -Not -Exist
+        Join-Native $F.Root 'java/windows-x64/jdk-old' | Should -Not -Exist
+        Join-Native $F.Root 'java/linux-x64/jdk-old/bin/java' | Should -Exist
+    }
+}
+
+Describe 'Get-TotalMemoryBytes' {
+    BeforeEach {
+        $script:Fake = Join-Native $TestDrive ([guid]::NewGuid().ToString('N'))
+        Write-Text (Join-Native $Fake 'proc/meminfo') "MemTotal:       16303428 kB`nMemFree:         1000000 kB`n"
+    }
+
+    It 'reads MemTotal from /proc/meminfo on Linux' {
+        Get-TotalMemoryBytes -Platform 'linux-x64' -LinuxRoot $Fake | Should -Be (16303428 * 1024)
+    }
+
+    It 'uses a smaller <Kind> limit (a container''s memory limit)' -ForEach @(
+        @{ Kind = 'cgroup v2'; File = 'sys/fs/cgroup/memory.max' }
+        @{ Kind = 'cgroup v1'; File = 'sys/fs/cgroup/memory/memory.limit_in_bytes' }
+    ) {
+        Write-Text (Join-Native $Fake $File) "4294967296`n"
+        Get-TotalMemoryBytes -Platform 'linux-aarch64' -LinuxRoot $Fake | Should -Be 4GB
+        Get-MemoryGB -TotalBytes (Get-TotalMemoryBytes -Platform 'linux-x64' -LinuxRoot $Fake) | Should -Be 3
+    }
+
+    It 'ignores <Text> (no limit) and a limit above the RAM' -ForEach @(
+        @{ File = 'sys/fs/cgroup/memory.max'; Text = "max`n" }
+        @{ File = 'sys/fs/cgroup/memory/memory.limit_in_bytes'; Text = "9223372036854771712`n" }
+        @{ File = 'sys/fs/cgroup/memory.max'; Text = "68719476736`n" }
+    ) {
+        Write-Text (Join-Native $Fake $File) $Text
+        Get-TotalMemoryBytes -Platform 'linux-x64' -LinuxRoot $Fake | Should -Be (16303428 * 1024)
+    }
+
+    It 'returns 0 when it can''t tell, which Get-MemoryGB reads as unknown' {
+        $empty = Join-Native $TestDrive 'empty'
+        New-Item -ItemType Directory -Force -Path $empty | Out-Null
+        Get-TotalMemoryBytes -Platform 'linux-x64' -LinuxRoot $empty | Should -Be 0
+        Get-MemoryGB -TotalBytes 0 | Should -Be 3
+    }
+
+    It 'reads this computer''s memory' {
+        Get-TotalMemoryBytes | Should -BeGreaterThan 1GB
+    }
+}
+
+Describe 'Start-Server -LaunchFile' {
+    It 'writes the folder, java and every launch argument, one per line, and starts nothing' {
+        $F = New-Fixture
+        $m = New-Manifest $F @() @() @() $F.Fabric
+        $ctx = New-Ctx $F $m
+        $file = Join-Native $F.Root '.realms-launch'
+        $java = Join-Native $F.Root 'java/linux-x64/jdk/bin/java'
+        Start-Server -Context $ctx -Java $java -MemoryGB 5 -LaunchFile $file 6>$null
+        $text = [IO.File]::ReadAllText($file)
+        $text | Should -Not -Match "`r"
+        $lines = @($text.TrimEnd("`n").Split("`n"))
+        $lines[0] | Should -Be $ctx.ServerDir
+        $lines[1] | Should -Be $java
+        $lines[2..($lines.Count - 1)] | Should -Be @(Get-LaunchArguments -Manifest $m -MemoryGB 5)
+    }
+}
+
+Describe 'Backup-Server on Linux and macOS' {
+    It 'copies like robocopy does on Windows: no jars, caches, logs or session.lock' {
+        Mock Get-RealmsPlatform -ModuleName Realms -ParameterFilter { -not $OS } { 'linux-x64' }
+        Mock robocopy -ModuleName Realms { throw 'robocopy is Windows only' }
+        $F = New-Fixture
+        Write-Text (Join-Native $F.Server 'server.properties') "server-port=$($F.Port)`n"
+        foreach ($keep in 'world/level.dat', 'world/region/r.0.0.mca', 'config/a/b.json', '.realms-state.json', 'mods/luckperms/yaml-storage/x.yml') {
+            Write-Text (Join-Native $F.Server $keep) $keep
+        }
+        foreach ($skip in 'mods/M.jar', 'libraries/l.txt', 'versions/v.txt', 'cache/c', 'logs/latest.log', 'bluemap/b',
+            'plugins/.paper-remapped/r.txt', '.fabric/f', 'world/session.lock') {
+            Write-Text (Join-Native $F.Server $skip) 'skip'
+        }
+        New-Item -ItemType Directory -Force -Path (Join-Native $F.Server 'world/empty') | Out-Null
+
+        Backup-Server -Context (New-Ctx $F (New-Manifest $F)) 6>$null
+
+        $dest = @(Get-ChildItem -LiteralPath (Join-Native $F.Root 'backups') -Directory)[0].FullName
+        $base = (Get-Item -LiteralPath $dest).FullName
+        $got = @(Get-ChildItem -LiteralPath $dest -Recurse -File -Force | ForEach-Object { $_.FullName.Substring($base.Length + 1).Replace('\', '/') } | Sort-Object)
+        $got | Should -Be @('.realms-state.json', 'config/a/b.json', 'mods/luckperms/yaml-storage/x.yml', 'server.properties', 'world/level.dat', 'world/region/r.0.0.mca' | Sort-Object)
+        Join-Native $dest 'world/empty' | Should -Exist
+        [IO.File]::ReadAllText((Join-Native $dest 'world/region/r.0.0.mca')) | Should -Be 'world/region/r.0.0.mca'
+    }
+}
+
+Describe 'JSON files' {
+    It 'reads a whitelist back exactly as written, even names that look like dates' {
+        $F = New-Fixture
+        Write-Text (Join-Native $F.Server 'whitelist.json') '[{"uuid":"1","name":"2026-01-01T00:00:00"}]'
+        Add-Player -Context (New-Ctx $F (New-Manifest $F)) -Name 'notch' 6>$null
+        # Windows PowerShell 5.1 emits a JSON array as one object; ForEach-Object unrolls it.
+        $list = @([IO.File]::ReadAllText((Join-Native $F.Server 'whitelist.json')) | ConvertFrom-Json | ForEach-Object { $_ })
+        $list.Count | Should -Be 2
+        $list[1].name | Should -Be 'Notch'
+        if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) {
+            [IO.File]::ReadAllText((Join-Native $F.Server 'whitelist.json')) | Should -Match '"2026-01-01T00:00:00"'
+        }
+    }
+}
+
 Describe 'Backup-Server' {
     It 'copies the server folder and keeps the newest 14 backups' {
         $F = New-Fixture
         Write-Text (Join-Path $F.Server 'server.properties') "server-port=$($F.Port)`n"
-        Write-Text (Join-Path $F.Server 'world\level.dat') 'level'
-        Write-Text (Join-Path $F.Server 'plugins\Foo.jar') 'jar'
+        Write-Text (Join-Native $F.Server 'world/level.dat') 'level'
+        Write-Text (Join-Native $F.Server 'plugins/Foo.jar') 'jar'
         $backups = Join-Path $F.Root 'backups'
         foreach ($i in 0..14) { New-Item -ItemType Directory -Force -Path (Join-Path $backups ('2020-01-01_00-00-{0:D2}' -f $i)) | Out-Null }
 
@@ -819,8 +1077,8 @@ Describe 'Backup-Server' {
         $left.Count | Should -Be 14
         $left[0].Name | Should -Be '2020-01-01_00-00-02'
         $newest = $left[-1].FullName
-        Join-Path $newest 'world\level.dat' | Should -Exist
-        Join-Path $newest 'plugins\Foo.jar' | Should -Not -Exist
+        Join-Native $newest 'world/level.dat' | Should -Exist
+        Join-Native $newest 'plugins/Foo.jar' | Should -Not -Exist
     }
 }
 
@@ -939,7 +1197,7 @@ Describe 'Invoke-Rcon' {
 
 Describe 'server.properties' {
     It 'round-trips through Read-ServerProperties and Set-ServerProperty' {
-        $path = Join-Path $TestDrive 'rt\server.properties'
+        $path = Join-Native $TestDrive 'rt/server.properties'
         # A Java-escaped colour code as in the real Defaults (kept ASCII).
         $motd = 'motd=\u00a76The Realms = fun'
         Write-Text $path "#comment=not a key`r`n$motd`r`nserver-port=25565`r`nrcon.port=25575`r`n"
@@ -977,6 +1235,10 @@ Describe 'Expand-Template' {
     }
 }
 
+AfterAll {
+    Remove-Item -LiteralPath $script:JreDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Describe 'Real manifest contract' {
     It '<Kind> <Entry.file> has a file name and a usable hash' -ForEach $realArtifacts {
         $Entry.file | Should -Not -BeNullOrEmpty
@@ -988,14 +1250,19 @@ Describe 'Real manifest contract' {
         $h.Value | Should -Match ('^[0-9a-f]{' + $(if ($h.Algorithm -eq 'SHA512') { 128 } else { 64 }) + '}$')
     }
 
+    It 'pins a Java build for every platform' {
+        $m = Get-Content -LiteralPath $script:RealManifest -Raw | ConvertFrom-Json
+        foreach ($p in $script:Platforms) { (Get-JavaBuild -Manifest $m -Platform $p).url | Should -Match '^https://github\.com/adoptium/' }
+    }
+
     It 'has a server type this installer knows' {
-        $l = Get-ServerLayout -Manifest (Get-Content -LiteralPath (Join-Path $RepoRoot 'package\realms\manifest.json') -Raw | ConvertFrom-Json)
+        $l = Get-ServerLayout -Manifest (Get-Content -LiteralPath (Join-Native $RepoRoot 'package/realms/manifest.json') -Raw | ConvertFrom-Json)
         $l.Type | Should -BeIn @('paper', 'fabric')
     }
 
     It 'patched <Entry.file> pins its patch to the upstream file' -ForEach $realPatched {
         $Entry.patch | Should -Not -BeOfType [string]
         $Entry.patch.base_sha512 | Should -Be $Entry.hashes.sha512
-        Join-Path $RepoRoot ('package\realms\' + $Entry.patch.path.Replace('/', '\')) | Should -Exist
+        Join-Native $RepoRoot ('package/realms/' + $Entry.patch.path) | Should -Exist
     }
 }

@@ -15,7 +15,8 @@ import patches
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
 
-PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "READ ME FIRST.txt")
+PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "Prepare for Hosting.bat",
+                 "READ ME FIRST.txt")
 # "mods" is not required: 1.x (Paper-only) manifests predate it, and a missing group reads as [].
 MANIFEST_KEYS = ("name", "version", "minecraft", "java", "server", "world", "plugins", "datapacks")
 

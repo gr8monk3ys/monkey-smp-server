@@ -57,14 +57,14 @@ You do NOT need to install Java or anything else - this folder takes care of it.
 4. WHAT FRIENDS INSTALL (everyone, including you)
 -------------------------------------------------
   Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
-  needs the "TheRealms-Client" modpack (.mrpack file) that came with this server.
-    1. Install the Modrinth App (https://modrinth.com/app) or Prism Launcher
-       (https://prismlauncher.org) and sign in with Microsoft. (The normal Minecraft
-       Launcher can't open .mrpack files.)
-    2. Import the .mrpack file (Modrinth App: + > Import; Prism: Add Instance > Import).
-       It downloads everything.
-    3. Launch it, then Multiplayer > Add Server with your address.
-  Use the client pack with the same version number as this server.
+  needs the mods. Send each player the file  TheRealms-Player-(version).zip  from the same
+  release as this server. Inside it:
+    - "Install for Minecraft Launcher.bat" sets everything up in the normal Minecraft
+      Launcher (they then pick "The Realms" next to the Play button).
+    - "READ ME.txt" explains it step by step, in plain language.
+    - The .mrpack file is for people who already use the Modrinth App or Prism Launcher.
+  Then they add your server address in Multiplayer > Add Server.
+  Remember to add each player with "Add Player.bat" (or  whitelist add NAME ).
 
 
 5. BACKUPS

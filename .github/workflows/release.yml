@@ -35,6 +35,7 @@ jobs:
           ### Downloads
           - **TheRealms-Server-*.zip** - for whoever hosts. Unzip, double-click `Start Server.bat`, read `READ ME FIRST.txt`.
           - **TheRealms-Client-*.mrpack** - for players. Import into Prism Launcher or the Modrinth App.
+          - **TheRealms-Player-*.zip** - for players who use the official Minecraft Launcher. Unzip, double-click `Install for Minecraft Launcher.bat`, read `READ ME.txt`. (Using the Modrinth App or Prism Launcher instead? Import the .mrpack.)
           EOF
       - name: Publish GitHub release
         env:

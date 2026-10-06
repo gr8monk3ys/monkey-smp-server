@@ -4,6 +4,7 @@
 *.psm1 text eol=crlf
 *.psd1 text eol=crlf
 package/*.txt text eol=crlf
+player/*.txt text eol=crlf
 *.png binary
 *.zip binary
 *.jar binary

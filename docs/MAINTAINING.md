@@ -10,6 +10,8 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
+| `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
+| `player/` | the player installer for the official Minecraft Launcher (shipped whole in the player zip) | by hand |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
 
 The command-line tools (`snapshot`, `check_updates`, `validate`, `build`) are thin; the knowledge
@@ -21,6 +23,7 @@ lives in a few modules they share:
 | `tools/patches.py` | making, storing, applying and checking patches |
 | `tools/upstream.py` | the Upstream catalog (Modrinth, PaperMC, Fabric meta, Adoptium) behind a swappable HTTP adapter |
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
+| `tools/launcher_profile.py` | the Fabric launcher profile: its expected id, checks, and comparing profiles while ignoring their generation time |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
 
 ## Server types: Paper or Fabric
@@ -64,6 +67,16 @@ it applies to mods the same way). To take it, put the new upstream file in the s
 `mod-originals/` or `datapack-originals/` and the edited copy in `mods/` or the world's datapacks
 folder, then snapshot the server as below; that re-makes the patch against the new file.
 
+`python tools/build.py` writes three files to `dist/` (it fails if `player/` is missing):
+
+| File | For | Contents |
+|---|---|---|
+| `TheRealms-Server-X.Y.Z.zip` | the host | `package/` under `TheRealms-Server/` |
+| `TheRealms-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
+| `TheRealms-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `TheRealms-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
+
+All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files.
+
 Then boot it locally on spare ports (doesn't disturb a server already on 25565):
 
 ```powershell
@@ -83,6 +96,7 @@ manifest (stop the server first so nothing is mid-write):
 python tools/snapshot.py server C:/MCServer/factions     # Paper
 python tools/snapshot.py server C:/MCServer/smp          # Fabric
 python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
+python tools/snapshot.py profile     # re-pin only client/fabric-profile.json (see below)
 ```
 
 The snapshot tells the server type from the folder:
@@ -115,6 +129,19 @@ way.) A file identical to its original simply pins the original, with no patch. 
 replace files that exist in the upstream file (adding or removing files fails the snapshot), and
 patch folders no mod or datapack uses are deleted. `validate.py` checks that every patch matches its
 entry's pinned hash, and `--online` applies each patch to the real download to prove it still fits.
+
+`snapshot.py client` also pins `client/fabric-profile.json`: Fabric meta's launcher profile for the
+client pack's Minecraft and loader versions (the `minecraft` and `fabric-loader` dependencies in
+`client/modrinth.index.json`), from
+`https://meta.fabricmc.net/v2/versions/loader/<minecraft>/<loader>/profile/json`. The player installer
+gives it to the official Minecraft Launcher as the `fabric-loader-<loader>-<minecraft>` version. After
+changing the loader in the client index by hand, run `python tools/snapshot.py profile` to re-pin just
+this file. Meta generates the profile on request and stamps it with the time (`time`, `releaseTime`);
+everything else is the same for the same versions, so the tools compare profiles ignoring those two
+keys, and a re-pin that only differs in them leaves the file alone. `validate.py` checks the profile's
+`id` and `inheritsFrom` match the client index, and that every library comes over https from Fabric's
+maven or Minecraft's/Maven Central with a sha1 or sha256 (except the loader itself, which meta lists
+without hashes); `--online` checks meta still serves the same profile.
 
 Plugins, mods and datapacks keep the file name they have on the server. On `check_updates.py --apply`,
 plugins and mods take the new upstream file name, but datapacks keep theirs, because the world refers
@@ -150,7 +177,7 @@ python tests/fixtures/record.py
 3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 The release workflow re-runs CI, refuses to publish if the tag and manifest version differ, and attaches
-`TheRealms-Server-X.Y.Z.zip` and `TheRealms-Client-X.Y.Z.mrpack`.
+`TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.
 
 ## Changing Minecraft version
 

@@ -23,12 +23,16 @@ _Avoid_: role, group
 ## What ships
 
 **Release**:
-One numbered version of The Realms, made of a server package and a client pack built from the same manifest.
+One numbered version of The Realms, made of a server package, a player zip and a client pack built from the same manifest.
 _Avoid_: build, version (alone)
 
 **Server package**:
 The small download a host unzips and starts the server from; it holds instructions and configuration, never third-party files.
 _Avoid_: installer, bundle, modpack
+
+**Player zip**:
+The download every player gets: the client pack plus a one-click installer for the normal Minecraft Launcher and a plain-language guide.
+_Avoid_: client zip, installer (alone)
 
 **Client pack**:
 The optional set of mods, resource packs and shaders a player installs to get the intended look and feel.

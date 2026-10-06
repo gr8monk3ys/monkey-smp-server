@@ -1,0 +1,65 @@
+THE REALMS - how to join (players)
+===================================
+
+The Realms is a modded Minecraft server. To join, your Minecraft needs the same mods.
+This folder sets that up for you. You need Minecraft Java Edition (the one you buy at
+minecraft.net), Windows 10 or 11, and about 2 GB of free disk space.
+
+
+OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
+-----------------------------------------------------
+  1. Start the Minecraft Launcher once, sign in, then CLOSE it.
+  2. Double-click  "Install for Minecraft Launcher.bat"  in this folder.
+     - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
+     - It downloads the mods, resource packs and shaders (about 1 GB) from their official
+       websites and checks every file. This takes a few minutes.
+     - When it says it's finished, press a key to close the window.
+  3. Open the Minecraft Launcher. Next to the green Play button, click the box that says
+     the version (e.g. "Latest release") and pick  "The Realms".  Press Play.
+     The first start is slow (a few minutes) - that's normal for a modded game.
+  4. In the game: Multiplayer > Add Server. Type the server address the host gave you,
+     press Done, then Join Server.
+
+  Your normal Minecraft is not changed: The Realms keeps its own mods, settings and
+  worlds in a separate folder.
+
+
+OPTION B: MODRINTH APP OR PRISM LAUNCHER (if you already use one)
+-----------------------------------------------------------------
+  Import the  TheRealms-Client-....mrpack  file from this folder:
+    Modrinth App:      + (Create)  >  Import  >  choose the .mrpack file
+    Prism Launcher:    Add Instance  >  Import  >  choose the .mrpack file
+  Then launch it and add the server as in step 4 above.
+
+
+BEFORE YOU JOIN
+---------------
+  Tell the host your exact Minecraft username - only people on the guest list can join.
+
+
+UPDATING
+--------
+  When the host sends a newer version, unzip it and double-click the installer again.
+  It updates The Realms and keeps your settings, worlds and screenshots.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+  "Minecraft Launcher not found"
+      Install it from minecraft.net, start it once, sign in, close it, and try again.
+  "The Realms" isn't in the launcher
+      Close the launcher completely and run the installer again, then reopen the launcher.
+  The game is slow or stutters
+      Press O in game to choose a lighter shader (or turn shaders off), and lower
+      Options > Video Settings > Render Distance.
+  "Incompatible mods" / can't join the server
+      Your version doesn't match the server. Ask the host for the latest player zip.
+  Anything else
+      Send the host a screenshot of the installer window.
+
+
+REMOVING IT
+-----------
+  Double-click  "Uninstall The Realms.bat".  It asks before deleting anything, then
+  removes "The Realms" from the launcher and deletes its folder (your normal Minecraft
+  is not touched).

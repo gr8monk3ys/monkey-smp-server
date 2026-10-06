@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 from check_updates import LOADERS  # noqa: E402
 from snapshot import JAVA_MAJOR  # noqa: E402
-from upstream import LiveHttp, RecordingHttp, Upstream  # noqa: E402
+from upstream import JAVA_PLATFORMS, LiveHttp, RecordingHttp, Upstream, version_key  # noqa: E402
 
 FOLDER = Path(__file__).resolve().parent / "upstream"
 MC = "26.1.2"
@@ -33,7 +33,11 @@ def main():
     shutil.rmtree(FOLDER, ignore_errors=True)
     up = Upstream(RecordingHttp(LiveHttp(), FOLDER))
     up.paper_builds(MC)
-    up.adoptium_latest_jre(JAVA_MAJOR)
+    for platform in JAVA_PLATFORMS:
+        release = up.adoptium_latest_jre(JAVA_MAJOR, platform)["release_name"]
+        up.adoptium_release_jre(release, platform)
+    lts = max(up.powershell_lts_tags(), key=version_key)
+    up.powershell_release_assets(lts)
     up.fabric_loaders(MC_FABRIC)
     up.fabric_installers()
     up.fabric_profile(MC_FABRIC, LOADER)

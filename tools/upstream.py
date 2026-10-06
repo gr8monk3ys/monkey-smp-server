@@ -1,4 +1,4 @@
-"""The Upstream catalog: what Modrinth, PaperMC, Fabric meta and Adoptium say about artifacts.
+"""The Upstream catalog: what Modrinth, PaperMC, Fabric meta, Adoptium and PowerShell say about artifacts.
 
   Upstream(http)                                   the catalog, over an HTTP adapter
     .modrinth_versions_by_sha1(sha1s)              {sha1: version} for files Modrinth knows
@@ -12,8 +12,14 @@
     .fabric_installers()                           every Fabric installer (= server launcher) version
     .newest_stable_fabric_installer()              the highest stable installer version, or None
     .fabric_profile(mc, loader)                    Fabric meta's launcher profile JSON for a client
-    .adoptium_latest_jre(major)                    newest Temurin JRE (Windows x64) for a Java major
+    .adoptium_latest_jre(major, platform)          newest Temurin JRE for a Java major on one platform
+    .adoptium_release_jre(release, platform)       one Temurin JRE release on one platform (to re-check pins)
+    .powershell_lts_tags()                         the PowerShell release tags that are LTS ("v7.6.6", ...)
+    .powershell_release_assets(tag)                {file name: {"url", "size", "sha256"}} of one release
     .download(url)                                 the bytes at a URL
+
+Platforms are the installer's ids (JAVA_PLATFORMS): windows-x64, linux-x64, linux-aarch64, mac-x64 and
+mac-aarch64, which are Adoptium's os-architecture names.
 
 The seam is the HTTP adapter (get_json, post_json, get_bytes):
   LiveHttp       the real internet (urllib, our User-Agent, timeouts)
@@ -32,8 +38,20 @@ from pathlib import Path
 MODRINTH = "https://api.modrinth.com/v2"
 PAPER = "https://fill.papermc.io/v3/projects/paper"
 ADOPTIUM = "https://api.adoptium.net/v3"
+POWERSHELL_METADATA = "https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json"
+POWERSHELL_RELEASES = "https://api.github.com/repos/PowerShell/PowerShell/releases"
 FABRIC_META = "https://meta.fabricmc.net/v2"
 USER_AGENT = "gr8monk3ys/the-realms-server (github.com/gr8monk3ys/the-realms-server)"
+
+
+# The platforms the installer runs on, as Adoptium's (os, architecture).
+JAVA_PLATFORMS = {
+    "windows-x64": ("windows", "x64"),
+    "linux-x64": ("linux", "x64"),
+    "linux-aarch64": ("linux", "aarch64"),
+    "mac-x64": ("mac", "x64"),
+    "mac-aarch64": ("mac", "aarch64"),
+}
 
 
 def json_query(value) -> str:
@@ -110,12 +128,40 @@ class Upstream:
         """The launcher profile for Fabric `loader` on Minecraft `mc` (see tools/launcher_profile.py)."""
         return self.http.get_json(fabric_profile_url(mc, loader))
 
-    def adoptium_latest_jre(self, major: int) -> dict:
+    def adoptium_latest_jre(self, major: int, platform: str = "windows-x64") -> dict:
+        """{"release_name", "binary": {"package": {name, link, size, checksum}}} of the newest JRE."""
+        os_, arch = JAVA_PLATFORMS[platform]
         assets = self.http.get_json(
-            f"{ADOPTIUM}/assets/latest/{major}/hotspot?os=windows&architecture=x64&image_type=jre")
+            f"{ADOPTIUM}/assets/latest/{major}/hotspot?os={os_}&architecture={arch}&image_type=jre")
         if not assets:
-            raise LookupError(f"Adoptium has no Windows x64 JRE for Java {major}")
+            raise LookupError(f"Adoptium has no {platform} JRE for Java {major}")
         return assets[0]
+
+    def adoptium_release_jre(self, release_name: str, platform: str) -> dict:
+        """The same shape as adoptium_latest_jre, for one named release (e.g. jdk-25.0.4.1+1)."""
+        os_, arch = JAVA_PLATFORMS[platform]
+        release = self.http.get_json(
+            f"{ADOPTIUM}/assets/release_name/eclipse/{urllib.parse.quote(release_name, safe='')}"
+            f"?os={os_}&architecture={arch}&image_type=jre&jvm_impl=hotspot&project=jdk")
+        binaries = release.get("binaries") or []
+        if not binaries:
+            raise LookupError(f"Adoptium has no {platform} JRE in {release_name}")
+        return {"release_name": release["release_name"], "binary": binaries[0]}
+
+    def powershell_lts_tags(self) -> list[str]:
+        """The release tags PowerShell's own build metadata marks as LTS (several majors may be)."""
+        tags = self.http.get_json(POWERSHELL_METADATA)["LTSReleaseTag"]
+        return [tags] if isinstance(tags, str) else list(tags)
+
+    def powershell_release_assets(self, tag: str) -> dict[str, dict]:
+        """{file name: {"url", "size", "sha256"}}; GitHub computes each asset's sha256 digest itself."""
+        release = self.http.get_json(f"{POWERSHELL_RELEASES}/tags/{tag}")
+        out = {}
+        for a in release["assets"]:
+            digest = a.get("digest") or ""
+            if digest.startswith("sha256:"):
+                out[a["name"]] = {"url": a["browser_download_url"], "size": a["size"], "sha256": digest[7:]}
+        return out
 
     def download(self, url: str) -> bytes:
         return self.http.get_bytes(url)
@@ -269,8 +315,18 @@ def trim(url: str, response):
     if url.startswith(f"{FABRIC_META}/versions/installer"):
         newest = sorted(response, key=lambda x: version_key(x["version"]), reverse=True)[:KEEP_LIST_ITEMS]
         return [_pick(x, "version", "stable") for x in newest]
+    if url.startswith(f"{ADOPTIUM}/assets/release_name/"):
+        return {"release_name": response["release_name"],
+                "binaries": [{"package": _pick(b["package"], "name", "link", "size", "checksum")}
+                             for b in response["binaries"]]}
     if url.startswith(ADOPTIUM):
         return [{"release_name": a["release_name"],
                  "binary": {"package": _pick(a["binary"]["package"], "name", "link", "size", "checksum")}}
                 for a in response]
+    if url == POWERSHELL_METADATA:
+        return _pick(response, "LTSReleaseTag", "StableReleaseTag")
+    if url.startswith(POWERSHELL_RELEASES):
+        return {"tag_name": response["tag_name"],
+                "assets": [_pick(a, "name", "browser_download_url", "size", "digest") for a in response["assets"]
+                           if a["name"].endswith(".tar.gz")]}
     return response

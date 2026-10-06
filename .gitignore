@@ -14,3 +14,6 @@ package/smoke-console.log*
 
 # agent worktrees
 .claude/worktrees/
+package/pwsh/
+package/exports/
+package/.realms-launch

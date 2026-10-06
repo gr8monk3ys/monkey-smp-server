@@ -1,0 +1,19 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.adoptium.net/v3/assets/release_name/eclipse/jdk-25.0.4.1%2B1?os=mac&architecture=aarch64&image_type=jre&jvm_impl=hotspot&project=jdk"
+ },
+ "response": {
+  "release_name": "jdk-25.0.4.1+1",
+  "binaries": [
+   {
+    "package": {
+     "name": "OpenJDK25U-jre_aarch64_mac_hotspot_25.0.4.1_1.tar.gz",
+     "link": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jre_aarch64_mac_hotspot_25.0.4.1_1.tar.gz",
+     "size": 56208642,
+     "checksum": "5b02bcc908da092e7e00b9772d4f9bbb87f44a60b7c90f7cf5a91a1d98f37e1b"
+    }
+   }
+  ]
+ }
+}

@@ -42,7 +42,7 @@ import entries
 import launcher_profile
 import patches
 from repo import REPO, load_json, save_json
-from upstream import LiveHttp, Upstream, fabric_server_jar_url
+from upstream import JAVA_PLATFORMS, LiveHttp, Upstream, fabric_server_jar_url
 
 JAVA_MAJOR = 25
 CLIENT_CONTENT = ("mods", "resourcepacks", "shaderpacks")
@@ -249,7 +249,9 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
                          + "\n  ".join(str(p) for p in missing))
 
     server = fabric_entry(upstream, launcher) if launcher else paper_entry(upstream, server_dir, mc)
-    java = old["java"] if keep_java and "java" in old else entries.java(upstream.adoptium_latest_jre(JAVA_MAJOR))
+    # The whole Java section (every platform's build) is kept unless asked to pin the newest release.
+    java = old["java"] if keep_java and "java" in old else entries.java(
+        {p: upstream.adoptium_latest_jre(JAVA_MAJOR, p) for p in JAVA_PLATFORMS})
     same_world = "world" in old and old.get("minecraft") == mc and old.get("server", {}).get("type") == server_type
     world = old["world"] if same_world else {"level_name": level, "seed": level_seed(server_dir)}
 
@@ -365,7 +367,7 @@ def main(argv=None, repo=REPO, upstream=None):
     ap.add_argument("what", choices=["server", "client", "profile"])
     ap.add_argument("path", nargs="?", help="the server folder or Prism instance (not used by 'profile')")
     ap.add_argument("--update-java", action="store_true",
-                    help="pin the newest Temurin JRE instead of keeping the current one")
+                    help="pin the newest Temurin JRE (for every platform) instead of keeping the current one")
     a = ap.parse_args(argv)
     if a.what == "profile":
         snapshot_profile(repo=repo, upstream=upstream)

@@ -11,8 +11,8 @@ with one upload. No Java install, no command line, no port forwarding needed.
 |---|---|
 | Minecraft | Java Edition **26.3** |
 | Server | [Fabric](https://fabricmc.net) (loader pinned in the manifest) |
-| Server mods | 112: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Tectonic, Terralith, Incendium, Nullscape, Moog's structures, Dungeons and Taverns, Naturalist, Variants & Ventures, Strength SMP, C2ME, ... |
-| Client pack | 167 mods, resource packs and shaders (required to join) |
+| Server mods | 114: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Tectonic, Terralith, Incendium, Nullscape, Moog's structures, Dungeons and Taverns, Naturalist, Variants & Ventures, Strength SMP, C2ME, ... |
+| Client pack | 170 mods, resource packs and shaders (required to join) |
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).
 
@@ -33,7 +33,7 @@ Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
 2. Unzip it somewhere permanent (e.g. Documents).
 3. Double-click **`Start Server.bat`** and follow [`READ ME FIRST.txt`](package/READ%20ME%20FIRST.txt).
 
-The first start downloads about 500 MB (Java, the Fabric launcher, 112 mods) straight from their
+The first start downloads about 500 MB (Java, the Fabric launcher, 114 mods) straight from their
 official sources and checks every file's SHA-256/512 hash before using it. It then asks you to agree to
 the Minecraft EULA and for your Minecraft name, which becomes the admin. Friends join through
 [playit.gg](https://playit.gg) (steps in the READ ME).

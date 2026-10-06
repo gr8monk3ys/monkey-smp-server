@@ -1,6 +1,6 @@
 {
   "name": "The Realms",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "minecraft": "26.3",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -270,6 +270,18 @@
       }
     },
     {
+      "slug": "craftablecobwebs",
+      "project_id": "VNMEUT3N",
+      "version": "1.0.1-26.3+mod",
+      "version_id": "g9SIwtWt",
+      "file": "craftablecobwebs-1.0.1-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/VNMEUT3N/versions/g9SIwtWt/craftablecobwebs-1.0.1-26.3.jar",
+      "size": 14010,
+      "hashes": {
+        "sha512": "d71dfdd6e4a19c43cb99de75f2b327d944a377a33146a939312262c70e99af7ea1b5320d5f0a8614ac3c9c61179392d4fcab6bf6061d471a8f7880a4a9e4f081"
+      }
+    },
+    {
       "slug": "creativecore",
       "project_id": "OsZiaDHq",
       "version": "2.14.19",
@@ -330,18 +342,6 @@
       }
     },
     {
-      "slug": "dragonkind-evolved",
-      "project_id": "yo1bGdBx",
-      "version": "1.15+mod",
-      "version_id": "eft9uYXU",
-      "file": "dragonkind-evolved-1.15.jar",
-      "url": "https://cdn.modrinth.com/data/yo1bGdBx/versions/eft9uYXU/dragonkind-evolved-1.15.jar",
-      "size": 2014882,
-      "hashes": {
-        "sha512": "5609d4d4b84ad9317bd6b192ab487110ec9cf7eaab6a050da9df5bcdd966038c8686869fd07b78fd7ba4a5084aa06360556fcb394ae8de5a3693bfb961b71399"
-      }
-    },
-    {
       "slug": "dungeons-and-taverns",
       "project_id": "tpehi7ww",
       "version": "6.0.2+mod",
@@ -375,18 +375,6 @@
       "size": 412138,
       "hashes": {
         "sha512": "00273aa4c758ee25d40532cce082adae3de704ec7a48fe17cab1e30232b132b6c0b76b6cdbe77877e16a19903474e6887a67f7622caa91fd26044af09d39c082"
-      }
-    },
-    {
-      "slug": "dungeons-and-taverns-mineshaft-overhaul",
-      "project_id": "ozLFhOy3",
-      "version": "2.0.1+mod",
-      "version_id": "4kvqc3O1",
-      "file": "dungeons-and-taverns-mineshaft-overhaul-2.0.1.jar",
-      "url": "https://cdn.modrinth.com/data/ozLFhOy3/versions/4kvqc3O1/dungeons-and-taverns-mineshaft-overhaul-2.0.1.jar",
-      "size": 1397873,
-      "hashes": {
-        "sha512": "bf87f5a2ccd95d5166e965369dba98214fd62f2a5c936dc58be6a4c6a3ec5e228fb73a923d9fdea18be73c2bbcb377630860dce20bcc6f28fb32b31e88af9604"
       }
     },
     {
@@ -459,6 +447,18 @@
       "size": 1053799,
       "hashes": {
         "sha512": "8a885f9fafa0faa5b1192ebd10ef2eae1c0b02b11296ccf9f952c744710f4a8d3f48f4f7716933e268a330a173f95ed634d5deb4054012b1f01b77bc54ae6925"
+      }
+    },
+    {
+      "slug": "epic-structures-villages",
+      "project_id": "4OeMBkiG",
+      "version": "2.0.0+mod",
+      "version_id": "hCRa4eFr",
+      "file": "epic-structures-villages-2.0.0.jar",
+      "url": "https://cdn.modrinth.com/data/4OeMBkiG/versions/hCRa4eFr/epic-structures-villages-2.0.0.jar",
+      "size": 18704814,
+      "hashes": {
+        "sha512": "f1c9f907b63e644d1106b61480a458c06bc68527a2278b0407a98bfbfafbe3e6f3fd17bf56b0c7aaedd69bf085c76e8679715e7937f41bde3b72a50c1c2e1789"
       }
     },
     {
@@ -632,25 +632,13 @@
     {
       "slug": "jei",
       "project_id": "u6dRKJwZ",
-      "version": "31.9.0.57",
-      "version_id": "cfeQTcve",
-      "file": "jei-26.3-fabric-31.9.0.57.jar",
-      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/cfeQTcve/jei-26.3-fabric-31.9.0.57.jar",
+      "version": "31.9.0.58",
+      "version_id": "QfoQJyPO",
+      "file": "jei-26.3-fabric-31.9.0.58.jar",
+      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/QfoQJyPO/jei-26.3-fabric-31.9.0.58.jar",
       "size": 2371992,
       "hashes": {
-        "sha512": "456c61e6db64e592506f85a91f158fda8e7503539c4cc368fe217c0ffa316457134e87a5e2ba00cafc9e8850efc53dda4ee451f38eb73f90290e0e56b1262690"
-      }
-    },
-    {
-      "slug": "just-player-heads",
-      "project_id": "YdVBZMNR",
-      "version": "26.3.0-4.5-fabric+forge+neo",
-      "version_id": "6OLPhNHu",
-      "file": "justplayerheads-26.3.0-4.5.jar",
-      "url": "https://cdn.modrinth.com/data/YdVBZMNR/versions/6OLPhNHu/justplayerheads-26.3.0-4.5.jar",
-      "size": 46877,
-      "hashes": {
-        "sha512": "b86014434f06f2bd05aeb7f3d4996a6c59875a3a3bcf85a8baa318f97952b2be536a9e4dec66dee30de9cfb8fab285eae53f6ccf5071bd1bfe95237bdbd34357"
+        "sha512": "cdf5257d2b83f24554291ce39ff06e5b9c30b90c12136be02f8777db4b98beace315c82e1ec6e27553c442cd2ad1fb9f77442235b5ce3183185a2c47dac5adbb"
       }
     },
     {
@@ -966,6 +954,18 @@
       }
     },
     {
+      "slug": "players-drop-heads",
+      "project_id": "NU7qMnLN",
+      "version": "1.1.0+mod",
+      "version_id": "qqNC1aXl",
+      "file": "players-drop-heads-1.1.0.jar",
+      "url": "https://cdn.modrinth.com/data/NU7qMnLN/versions/qqNC1aXl/players-drop-heads-1.1.0.jar",
+      "size": 40231,
+      "hashes": {
+        "sha512": "cbe88303c7fd36b2e0f242535f8f2cccc3dfed11052b8baf6345cc6e8605303f0faca5cb8554a9200d2b264e57ec9aabf3634c91a380eba070eea67d5f56cce7"
+      }
+    },
+    {
       "slug": "potion-cauldron",
       "project_id": "yTSyrZpM",
       "version": "1.0.2+mc26.3",
@@ -992,13 +992,13 @@
     {
       "slug": "puzzles-lib",
       "project_id": "QAGBst4M",
-      "version": "26.3.9",
-      "version_id": "r8taBxu6",
-      "file": "puzzleslib-v26.3.9-mc26.3.x+fabric.jar",
-      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/r8taBxu6/puzzleslib-v26.3.9-mc26.3.x%2Bfabric.jar",
-      "size": 1100133,
+      "version": "26.3.10",
+      "version_id": "kmzKMUtJ",
+      "file": "puzzleslib-v26.3.10-mc26.3.x+fabric.jar",
+      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/kmzKMUtJ/puzzleslib-v26.3.10-mc26.3.x%2Bfabric.jar",
+      "size": 1090359,
       "hashes": {
-        "sha512": "8e0e53feb1f089d167ef6fe06713b6801dc8be3dbe4c0d1bcc579710fd7ef586640ad06148dfb8529cf87d0ed883fddb82426aaa14803c8acdcc7fc92648b2c8"
+        "sha512": "3b5bee2f1827b2570373cc14957321d9575e3ccecc1a59014a02d33acdff93a2fd9abab177d2b670594526a08362432f9047a438c0feaf23c6f80edbfff635f7"
       }
     },
     {
@@ -1100,17 +1100,17 @@
     {
       "slug": "silvers_effects-library",
       "project_id": "wBo7DRiB",
-      "version": "2.8+mod",
-      "version_id": "POQI40Br",
-      "file": "silvers_effects-library-2.8.jar",
-      "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/POQI40Br/silvers_effects-library-2.8.jar",
-      "size": 355079,
+      "version": "2.10+mod",
+      "version_id": "qmSGPBme",
+      "file": "silvers_effects-library-2.10.jar",
+      "url": "https://cdn.modrinth.com/data/wBo7DRiB/versions/qmSGPBme/silvers_effects-library-2.10.jar",
+      "size": 453926,
       "hashes": {
-        "sha512": "7a721477c541ab5191320c0b9fee20be2db2afe32458f481e1a3e1b2896ed0fb2d6ba4b5e1245d74831dab8ca2b6af15d4841cc503cf9abd794fb4886aff080a"
+        "sha512": "f4ff6eb3c41bc16d3747c7bd0326e517a0dcdba15f059ec3424a1db777facff0067a4610e38a0f9c01267195592c67c4834d32e71e70bcf31ee309e3de29cc75"
       },
       "patch": {
         "path": "patches/silvers_effects-library",
-        "base_sha512": "7a721477c541ab5191320c0b9fee20be2db2afe32458f481e1a3e1b2896ed0fb2d6ba4b5e1245d74831dab8ca2b6af15d4841cc503cf9abd794fb4886aff080a"
+        "base_sha512": "f4ff6eb3c41bc16d3747c7bd0326e517a0dcdba15f059ec3424a1db777facff0067a4610e38a0f9c01267195592c67c4834d32e71e70bcf31ee309e3de29cc75"
       }
     },
     {
@@ -1128,17 +1128,13 @@
     {
       "slug": "silvers_strength-restrictions",
       "project_id": "M15Gwx1o",
-      "version": "1.3+mod",
-      "version_id": "mjLM9Ki2",
-      "file": "silvers_strength-restrictions-1.3.jar",
-      "url": "https://cdn.modrinth.com/data/M15Gwx1o/versions/mjLM9Ki2/silvers_strength-restrictions-1.3.jar",
-      "size": 206736,
+      "version": "1.4+mod",
+      "version_id": "W5YtwEYe",
+      "file": "silvers_strength-restrictions-1.4.jar",
+      "url": "https://cdn.modrinth.com/data/M15Gwx1o/versions/W5YtwEYe/silvers_strength-restrictions-1.4.jar",
+      "size": 74858,
       "hashes": {
-        "sha512": "0be81c181c579e6ddb10f2f939c384c7867c0057d6bc0e4c32ca1f208119ec1baf17c3dc47880992d479207e52c94cbd1cf87c9e22c37b4209ed7a2949047ba4"
-      },
-      "patch": {
-        "path": "patches/silvers_strength-restrictions",
-        "base_sha512": "0be81c181c579e6ddb10f2f939c384c7867c0057d6bc0e4c32ca1f208119ec1baf17c3dc47880992d479207e52c94cbd1cf87c9e22c37b4209ed7a2949047ba4"
+        "sha512": "40f42d3641ffcef8d431b41c50f22c9725d4055d8910389a8fefc465b6ae540cf54047bcbf0601a03c7677a1f83d9b9bf2e14167a08a906c9f4bbbd44f18ee32"
       }
     },
     {
@@ -1346,6 +1342,18 @@
       }
     },
     {
+      "slug": "visible-traders",
+      "project_id": "AhllI99f",
+      "version": "2.5.1",
+      "version_id": "TojbcxPs",
+      "file": "Visible Traders-2.5.1-universal.jar",
+      "url": "https://cdn.modrinth.com/data/AhllI99f/versions/TojbcxPs/Visible%20Traders-2.5.1-universal.jar",
+      "size": 57415,
+      "hashes": {
+        "sha512": "6c4ab1376205563a888dfa6b17f4de9a37da6e20d6c024c41bfb16efc1b79e4dabc81fddeba22fb10c4b641a7170f04214df9cb607a9c0d6aa5667096bf0958e"
+      }
+    },
+    {
       "slug": "visual-workbench",
       "project_id": "kfqD1JRw",
       "version": "26.3.0",
@@ -1355,6 +1363,18 @@
       "size": 64535,
       "hashes": {
         "sha512": "52006eaa57053a2f6cba75a0032a81d179f1a47cc4982e391ea5a380179b9b7aaf349afcd5ac3344dcd05e1b0e224f91cf6b1a1135698a7685f1321470966ad0"
+      }
+    },
+    {
+      "slug": "vmp-fabric",
+      "project_id": "wnEe9KBa",
+      "version": "0.2.0+beta.7.238+26.3",
+      "version_id": "2TFDVjDf",
+      "file": "vmp-fabric-mc26.3-0.2.0+beta.7.238-all.jar",
+      "url": "https://cdn.modrinth.com/data/wnEe9KBa/versions/2TFDVjDf/vmp-fabric-mc26.3-0.2.0%2Bbeta.7.238-all.jar",
+      "size": 409480,
+      "hashes": {
+        "sha512": "c8658ccf8818a258e1160a2d394c80fd52708611570dc28d6bc391671a23e193760766ef77ddc5907e1a3a757cf20f4def67ae2bc184269effa547da1f377667"
       }
     },
     {

@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] - 2026-10-06
+
+Synced with the updated mod list. Same Minecraft (26.3) and world seed: hosts can unzip over 2.1 and keep
+their world; players run the new player installer (or import the new .mrpack).
+
+- Added: Craftable Cobwebs, Epic Structures: Villages, Players Drop Heads (replaces Just Player Heads),
+  Very Many Players (server performance), Visible Traders.
+- Removed: Dragonkind Evolved, Dungeons and Taverns Mineshaft Overhaul, Just Player Heads.
+  Structures they already generated stay in existing worlds.
+- Updated: Silver's Effects Library 2.10 (still needs our small compatibility patch, now made against
+  2.10), Strength Restrictions 1.4 (fixed upstream, so its patch is gone), Xaero's Minimap and World Map,
+  JEI, Punchy, Puzzles Lib.
+- 114 server mods, 170 client files. A client with this pack joined a server with these mods.
+
 ## [2.1.0] - 2026-10-06
 
 Easier for players: no Modrinth App or Prism needed.

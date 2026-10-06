@@ -312,8 +312,8 @@ key_iris.keybind.reload:key.keyboard.r
 key_iris.keybind.toggleShaders:key.keyboard.k
 key_iris.keybind.shaderPackSelection:key.keyboard.o
 key_iris.keybind.wireframe:key.keyboard.unknown
-key_key.punchy.triggerable.punchy_sword_inspect_old:key.keyboard.j
 key_key.punchy.triggerable.punchy_sword_inspect_rework:key.keyboard.g
+key_key.punchy.triggerable.punchy_sword_inspect_old:key.keyboard.j
 soundCategory_master:1.0
 soundCategory_music:1.0
 soundCategory_record:1.0

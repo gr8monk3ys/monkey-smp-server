@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "game": "minecraft",
-  "versionId": "1.1.0",
+  "versionId": "2.1.0",
   "name": "The Realms - Client",
   "summary": "Client pack for The Realms factions server.",
   "files": [
@@ -441,6 +441,21 @@
       "fileSize": 86861
     },
     {
+      "path": "mods/craftablecobwebs-1.0.1-26.3.jar",
+      "hashes": {
+        "sha1": "5e61492d6b3a52937a732eeaa0e7fe6d5641e55b",
+        "sha512": "d71dfdd6e4a19c43cb99de75f2b327d944a377a33146a939312262c70e99af7ea1b5320d5f0a8614ac3c9c61179392d4fcab6bf6061d471a8f7880a4a9e4f081"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/VNMEUT3N/versions/g9SIwtWt/craftablecobwebs-1.0.1-26.3.jar"
+      ],
+      "fileSize": 14010
+    },
+    {
       "path": "mods/CreativeCore_FABRIC_v2.14.19_mc26.3.jar",
       "hashes": {
         "sha1": "1b3681bc987c6ce360220d4173139fc392080fe0",
@@ -469,21 +484,6 @@
         "https://cdn.modrinth.com/data/uCdwusMi/versions/TGgEbP9A/DistantHorizons-3.3.4-26.3-fabric-neoforge.jar"
       ],
       "fileSize": 28476894
-    },
-    {
-      "path": "mods/dragonkind-evolved-1.15.jar",
-      "hashes": {
-        "sha1": "55ecfd5d11f4d60ba659e5e82d6113a589da21b4",
-        "sha512": "5609d4d4b84ad9317bd6b192ab487110ec9cf7eaab6a050da9df5bcdd966038c8686869fd07b78fd7ba4a5084aa06360556fcb394ae8de5a3693bfb961b71399"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/yo1bGdBx/versions/eft9uYXU/dragonkind-evolved-1.15.jar"
-      ],
-      "fileSize": 2014882
     },
     {
       "path": "mods/dungeons-and-taverns-6.0.2.jar",
@@ -529,21 +529,6 @@
         "https://cdn.modrinth.com/data/7JTDDmRT/versions/Pz42qz4P/dungeons-and-taverns-desert-temple-overhaul-2.2.jar"
       ],
       "fileSize": 412138
-    },
-    {
-      "path": "mods/dungeons-and-taverns-mineshaft-overhaul-2.0.1.jar",
-      "hashes": {
-        "sha1": "c319caac8371300a8645d54062194d174f95cf28",
-        "sha512": "bf87f5a2ccd95d5166e965369dba98214fd62f2a5c936dc58be6a4c6a3ec5e228fb73a923d9fdea18be73c2bbcb377630860dce20bcc6f28fb32b31e88af9604"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/ozLFhOy3/versions/4kvqc3O1/dungeons-and-taverns-mineshaft-overhaul-2.0.1.jar"
-      ],
-      "fileSize": 1397873
     },
     {
       "path": "mods/dungeons-and-taverns-nether-fortress-overhaul-3.2.1.jar",
@@ -739,6 +724,21 @@
         "https://cdn.modrinth.com/data/NNAgCjsB/versions/F4loCvYt/entityculling-fabric-1.11.2-mc26.3.jar"
       ],
       "fileSize": 1508273
+    },
+    {
+      "path": "mods/epic-structures-villages-2.0.0.jar",
+      "hashes": {
+        "sha1": "fc4f4998c5cfc35484101a9254bd0bd52ed431b2",
+        "sha512": "f1c9f907b63e644d1106b61480a458c06bc68527a2278b0407a98bfbfafbe3e6f3fd17bf56b0c7aaedd69bf085c76e8679715e7937f41bde3b72a50c1c2e1789"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/4OeMBkiG/versions/hCRa4eFr/epic-structures-villages-2.0.0.jar"
+      ],
+      "fileSize": 18704814
     },
     {
       "path": "mods/explosive-enhancement-1.4.2-26.2.jar",
@@ -1026,17 +1026,17 @@
       "fileSize": 265050
     },
     {
-      "path": "mods/jei-26.3-fabric-31.9.0.57.jar",
+      "path": "mods/jei-26.3-fabric-31.9.0.58.jar",
       "hashes": {
-        "sha1": "4cc5a974ce4698051d5ac4604d7278eb5017aaa0",
-        "sha512": "456c61e6db64e592506f85a91f158fda8e7503539c4cc368fe217c0ffa316457134e87a5e2ba00cafc9e8850efc53dda4ee451f38eb73f90290e0e56b1262690"
+        "sha1": "145e8b52dfeabe2d9f1081b98a0682e501ecf2fb",
+        "sha512": "cdf5257d2b83f24554291ce39ff06e5b9c30b90c12136be02f8777db4b98beace315c82e1ec6e27553c442cd2ad1fb9f77442235b5ce3183185a2c47dac5adbb"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/u6dRKJwZ/versions/cfeQTcve/jei-26.3-fabric-31.9.0.57.jar"
+        "https://cdn.modrinth.com/data/u6dRKJwZ/versions/QfoQJyPO/jei-26.3-fabric-31.9.0.58.jar"
       ],
       "fileSize": 2371992
     },
@@ -1371,6 +1371,21 @@
       "fileSize": 581106
     },
     {
+      "path": "mods/players-drop-heads-1.1.0.jar",
+      "hashes": {
+        "sha1": "9fd351af7576d8ebcded4a1fd5bbf31984c7500b",
+        "sha512": "cbe88303c7fd36b2e0f242535f8f2cccc3dfed11052b8baf6345cc6e8605303f0faca5cb8554a9200d2b264e57ec9aabf3634c91a380eba070eea67d5f56cce7"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/NU7qMnLN/versions/qqNC1aXl/players-drop-heads-1.1.0.jar"
+      ],
+      "fileSize": 40231
+    },
+    {
       "path": "mods/potion-cauldron-fabric-1.0.2+mc26.3.jar",
       "hashes": {
         "sha1": "39620eb2dafd1b385a65a390d9d4ae5cd9b39737",
@@ -1416,34 +1431,34 @@
       "fileSize": 60462
     },
     {
-      "path": "mods/punchy-2.8d-fabric-26.3.jar",
+      "path": "mods/punchy-2.8e-fabric-26.3.jar",
       "hashes": {
-        "sha1": "e40dc8d15c8f4c02cf207766ab685f739c0d2b2f",
-        "sha512": "ebe0b94291e96b70f9a060d1e0bfe503a31f01c19e9f4dc3688667b1489ff72e1247db0c6086d3bd2036f4e74ce4d66e59a1e763f565369f32d8878e5ec855f5"
+        "sha1": "6ba01c20a8cc0800fb359af4f3f2ea3339c8df8d",
+        "sha512": "bff5aed0f7e71690ed7b98c216626d707229aa7bc9f90c359a4a459370ac833b4e2dedc5f20fda0add58b22e3baff02c60e6e228cf0e15717378f8a162df842a"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/8aoMKplv/versions/iptzBFXY/punchy-2.8d-fabric-26.3.jar"
+        "https://cdn.modrinth.com/data/8aoMKplv/versions/X4yZP5Sy/punchy-2.8e-fabric-26.3.jar"
       ],
-      "fileSize": 2106643
+      "fileSize": 2463117
     },
     {
-      "path": "mods/puzzleslib-v26.3.9-mc26.3.x+fabric.jar",
+      "path": "mods/puzzleslib-v26.3.10-mc26.3.x+fabric.jar",
       "hashes": {
-        "sha1": "122a61d54c109557d147795c9606a00fc345b51f",
-        "sha512": "8e0e53feb1f089d167ef6fe06713b6801dc8be3dbe4c0d1bcc579710fd7ef586640ad06148dfb8529cf87d0ed883fddb82426aaa14803c8acdcc7fc92648b2c8"
+        "sha1": "3abe65fafb522acb25a2316dae3808c51e5dbe30",
+        "sha512": "3b5bee2f1827b2570373cc14957321d9575e3ccecc1a59014a02d33acdff93a2fd9abab177d2b670594526a08362432f9047a438c0feaf23c6f80edbfff635f7"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/QAGBst4M/versions/r8taBxu6/puzzleslib-v26.3.9-mc26.3.x%2Bfabric.jar"
+        "https://cdn.modrinth.com/data/QAGBst4M/versions/kmzKMUtJ/puzzleslib-v26.3.10-mc26.3.x%2Bfabric.jar"
       ],
-      "fileSize": 1100133
+      "fileSize": 1090359
     },
     {
       "path": "mods/reachbehind-v26.3.0-mc26.3.x+fabric.jar",
@@ -1581,19 +1596,19 @@
       "fileSize": 277512
     },
     {
-      "path": "mods/silvers_effects-library-2.8.jar",
+      "path": "mods/silvers_effects-library-2.10.jar",
       "hashes": {
-        "sha1": "d3417470b8b8f2d427804c9329337ca30df1d99a",
-        "sha512": "7a721477c541ab5191320c0b9fee20be2db2afe32458f481e1a3e1b2896ed0fb2d6ba4b5e1245d74831dab8ca2b6af15d4841cc503cf9abd794fb4886aff080a"
+        "sha1": "3a4573695e59b1aea56593790d983e9a8104c3b6",
+        "sha512": "f4ff6eb3c41bc16d3747c7bd0326e517a0dcdba15f059ec3424a1db777facff0067a4610e38a0f9c01267195592c67c4834d32e71e70bcf31ee309e3de29cc75"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/wBo7DRiB/versions/POQI40Br/silvers_effects-library-2.8.jar"
+        "https://cdn.modrinth.com/data/wBo7DRiB/versions/qmSGPBme/silvers_effects-library-2.10.jar"
       ],
-      "fileSize": 355079
+      "fileSize": 453926
     },
     {
       "path": "mods/silvers_inventory-library-1.2.jar",
@@ -1611,19 +1626,19 @@
       "fileSize": 72852
     },
     {
-      "path": "mods/silvers_strength-restrictions-1.3.jar",
+      "path": "mods/silvers_strength-restrictions-1.4.jar",
       "hashes": {
-        "sha1": "8bc17b64c9535657953a3c278c739fe0f049a0b0",
-        "sha512": "0be81c181c579e6ddb10f2f939c384c7867c0057d6bc0e4c32ca1f208119ec1baf17c3dc47880992d479207e52c94cbd1cf87c9e22c37b4209ed7a2949047ba4"
+        "sha1": "afecbf1d95b8c9f0c0aa55809a549b5f35b6b688",
+        "sha512": "40f42d3641ffcef8d431b41c50f22c9725d4055d8910389a8fefc465b6ae540cf54047bcbf0601a03c7677a1f83d9b9bf2e14167a08a906c9f4bbbd44f18ee32"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/M15Gwx1o/versions/mjLM9Ki2/silvers_strength-restrictions-1.3.jar"
+        "https://cdn.modrinth.com/data/M15Gwx1o/versions/W5YtwEYe/silvers_strength-restrictions-1.4.jar"
       ],
-      "fileSize": 206736
+      "fileSize": 74858
     },
     {
       "path": "mods/silvers_strength-smp-season-4-1.7.jar",
@@ -1851,6 +1866,21 @@
       "fileSize": 124473
     },
     {
+      "path": "mods/Visible Traders-2.5.1-universal.jar",
+      "hashes": {
+        "sha1": "b3a8b4a0dc06ec7a689115a5bd4d46dacae32a98",
+        "sha512": "6c4ab1376205563a888dfa6b17f4de9a37da6e20d6c024c41bfb16efc1b79e4dabc81fddeba22fb10c4b641a7170f04214df9cb607a9c0d6aa5667096bf0958e"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/AhllI99f/versions/TojbcxPs/Visible%20Traders-2.5.1-universal.jar"
+      ],
+      "fileSize": 57415
+    },
+    {
       "path": "mods/visuality-0.7.15+26.3.jar",
       "hashes": {
         "sha1": "9c6c1554114150464716b8a82da8a8872ea3db8e",
@@ -1879,6 +1909,21 @@
         "https://cdn.modrinth.com/data/kfqD1JRw/versions/rcsB2H1O/visualworkbench-v26.3.0-mc26.3.x%2Bfabric.jar"
       ],
       "fileSize": 64535
+    },
+    {
+      "path": "mods/vmp-fabric-mc26.3-0.2.0+beta.7.238-all.jar",
+      "hashes": {
+        "sha1": "ef7581bcd175eda07e2ebff0ddfd3094aa36026b",
+        "sha512": "c8658ccf8818a258e1160a2d394c80fd52708611570dc28d6bc391671a23e193760766ef77ddc5907e1a3a757cf20f4def67ae2bc184269effa547da1f377667"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/wnEe9KBa/versions/2TFDVjDf/vmp-fabric-mc26.3-0.2.0%2Bbeta.7.238-all.jar"
+      ],
+      "fileSize": 409480
     },
     {
       "path": "mods/voicechat-fabric-2.6.24+26.3.jar",
@@ -1911,34 +1956,34 @@
       "fileSize": 196522
     },
     {
-      "path": "mods/xaerominimap-fabric-26.3-26.5.3.jar",
+      "path": "mods/xaerominimap-fabric-26.3-26.6.0.jar",
       "hashes": {
-        "sha1": "28b67391892582747bd17a7525318a954e54c80a",
-        "sha512": "86de35d7c6ae10441d9a1e7f14656a87dc3cfa17487b122ea5bfa6f322b56bfa1b96662903a36f2ff0e0d579644474510c4463ea21dea8223b8931d6dbf64e61"
+        "sha1": "287f670348124261bef5c7833715c49960e74dee",
+        "sha512": "c704ed5154e66e891517b9b6778b3227a276823844ec70b348a32dc91d38e3500a6e74d8c69d7f9c68e3137b49511258b0b7d5e0b503391dd959f31e8c4e5112"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/1bokaNcj/versions/YPkAliDt/xaerominimap-fabric-26.3-26.5.3.jar"
+        "https://cdn.modrinth.com/data/1bokaNcj/versions/B2aG1aya/xaerominimap-fabric-26.3-26.6.0.jar"
       ],
-      "fileSize": 2229348
+      "fileSize": 2230141
     },
     {
-      "path": "mods/xaeroworldmap-fabric-26.3-1.46.4.jar",
+      "path": "mods/xaeroworldmap-fabric-26.3-1.47.0.jar",
       "hashes": {
-        "sha1": "11bd97b82a33585cab32678dc92a1ea7e3da5954",
-        "sha512": "7f77d9bbede1669373293134167378729170c36ab0eb3d28383f517d208de5d465fd3ef1ae32dfc043bac5e3d5f951797db1fa874c1d85375be5c52c3c859d61"
+        "sha1": "9ace0b064668929e3f1df6b7eb012ac713526e96",
+        "sha512": "e80c6bd6729c059c3e433e7e77714ed4c7f20e1a487f7449cf47282e9816b51523efe39183090b76a56834ffc67090317e70324730f311ba2e71fa24eec539c6"
       },
       "env": {
         "client": "required",
         "server": "unsupported"
       },
       "downloads": [
-        "https://cdn.modrinth.com/data/NcUtCpym/versions/UleMm8za/xaeroworldmap-fabric-26.3-1.46.4.jar"
+        "https://cdn.modrinth.com/data/NcUtCpym/versions/nz9xjzWi/xaeroworldmap-fabric-26.3-1.47.0.jar"
       ],
-      "fileSize": 1480980
+      "fileSize": 1485579
     },
     {
       "path": "mods/yet_another_config_lib_v3-3.9.7+26.3-fabric.jar",

@@ -12,7 +12,7 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   a) Put this whole folder somewhere permanent, like Documents (not Downloads).
   b) Double-click  "Start Server.bat".
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads about 500 MB the first time (Java, the server and its 112 mods),
+     - It downloads about 500 MB the first time (Java, the server and its 114 mods),
        and the first start builds the world, so give it 5-10 minutes.
   c) It asks you two things:
      - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.

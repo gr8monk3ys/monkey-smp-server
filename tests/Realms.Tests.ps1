@@ -437,6 +437,15 @@ Describe 'Install-Server' {
             { Add-Owner -Context (New-Ctx $F (New-Manifest $F)) -Name 'Nobody' } | Should -Throw '*no such player*'
         }
 
+        It 'skips the owner question when there is no console input (Read-Host gives nothing)' {
+            $F = New-Fixture
+            Mock Read-Host -ModuleName Realms { $null }
+            $ctx = New-RealmsContext -Root $F.Root -Manifest (New-Manifest $F) -Fetch $F.Fetch -ProfileLookup $F.Profile
+            Install-Server -Context $ctx -AcceptEula 6>$null | Out-Null
+            Should -Invoke Read-Host -ModuleName Realms -Times 1 -Exactly
+            (Get-State $F).owner | Should -BeNullOrEmpty
+        }
+
         It 'fails instead of prompting when non-interactive' {
             $F = New-Fixture
             $ctx = New-Ctx $F (New-Manifest $F)
@@ -786,6 +795,7 @@ Describe 'Export-HostingBundle' {
         [IO.Compression.ZipFile]::ExtractToDirectory($F.Zip, $dir)
         $run = Join-Path $dir 'TheRealms-1.0.0-hosting'
         [IO.File]::WriteAllText((Join-Path $run 'fakejava'), "#!/bin/sh`nprintf '%s\n' `"`$@`"`n", $script:Utf8)
+        if (-not $script:OnWindows) { & chmod +x (Join-Path $run 'fakejava') }
         Push-Location $run
         try {
             $seven = @(& $sh -c 'MEMORY_GB=7 JAVA=./fakejava sh ./start.sh')
@@ -1024,7 +1034,7 @@ Describe 'Start-Server -LaunchFile' {
 Describe 'Backup-Server on Linux and macOS' {
     It 'copies like robocopy does on Windows: no jars, caches, logs or session.lock' {
         Mock Get-RealmsPlatform -ModuleName Realms -ParameterFilter { -not $OS } { 'linux-x64' }
-        Mock robocopy -ModuleName Realms { throw 'robocopy is Windows only' }
+        if ($script:OnWindows) { Mock robocopy -ModuleName Realms { throw 'robocopy is Windows only' } }
         $F = New-Fixture
         Write-Text (Join-Native $F.Server 'server.properties') "server-port=$($F.Port)`n"
         foreach ($keep in 'world/level.dat', 'world/region/r.0.0.mca', 'config/a/b.json', '.realms-state.json', 'mods/luckperms/yaml-storage/x.yml') {

@@ -69,10 +69,12 @@ sha256_of() {
 
 download() {
     if command -v curl >/dev/null 2>&1; then
-        # -C - resumes a download that was cut off earlier.
-        curl -fL --retry 3 --connect-timeout 30 -C - -o "$2" "$1"
+        # -C - resumes a download that was cut off earlier. A progress bar only on a terminal (not in logs).
+        if [ -t 2 ]; then progress=--progress-bar; else progress=-sS; fi
+        curl -fL "$progress" --retry 3 --connect-timeout 30 -C - -o "$2" "$1"
     elif command -v wget >/dev/null 2>&1; then
-        wget -c -O "$2" "$1"
+        if [ -t 2 ]; then progress=; else progress=-nv; fi
+        wget $progress -c -O "$2" "$1"
     else
         fail "can't download PowerShell: install curl or wget (for example: sudo apt install curl)."
     fi
@@ -123,21 +125,31 @@ pinned_pwsh() {
 
 # ---------------------------------------------------------------- run
 
+# True if a shared library $1 (e.g. libssl.so) is installed in one of the usual Linux library folders.
+have_lib() {
+    for f in /usr/lib/"$1"* /usr/lib64/"$1"* /usr/lib/*/"$1"* /lib/*/"$1"* /lib64/"$1"*; do
+        [ -e "$f" ] && return 0
+    done
+    return 1
+}
+
 plat=$(platform) || exit 1
+linux=
+[ "$plat" = "${plat#linux-}" ] || linux=yes
 pwsh=
 if [ "${REALMS_IGNORE_SYSTEM_PWSH:-}" != 1 ] && command -v pwsh >/dev/null 2>&1 && pwsh_ok pwsh; then
     pwsh=pwsh
 else
+    # PowerShell (.NET) needs OpenSSL; a package manager's pwsh brings it, the portable one doesn't.
+    if [ -n "$linux" ] && ! have_lib libssl.so; then
+        fail "PowerShell needs OpenSSL: install it (for example: sudo apt install ca-certificates libssl3) and run this again."
+    fi
     pwsh=$(pinned_pwsh "$plat") || exit 1
 fi
 
 # .NET needs ICU for culture data; minimal Linux images (Debian slim, many containers) don't ship it.
-if [ "$plat" != "${plat#linux-}" ] && [ -z "${DOTNET_SYSTEM_GLOBALIZATION_INVARIANT:-}" ]; then
-    icu=
-    for f in /usr/lib/libicuuc.so* /usr/lib64/libicuuc.so* /usr/lib/*/libicuuc.so* /lib/*/libicuuc.so*; do
-        [ -e "$f" ] && icu=yes
-    done
-    [ -n "$icu" ] || export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+if [ -n "$linux" ] && [ -z "${DOTNET_SYSTEM_GLOBALIZATION_INVARIANT:-}" ] && ! have_lib libicuuc.so; then
+    export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 fi
 export POWERSHELL_TELEMETRY_OPTOUT=1
 export POWERSHELL_UPDATECHECK=Off

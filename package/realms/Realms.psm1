@@ -65,7 +65,10 @@ function Write-Note([string]$Text) { Write-Host "    $Text" -ForegroundColor Yel
 
 function Read-Answer($Context, [string]$Question) {
     if ($Context.NonInteractive) { throw "Needs an answer but -NonInteractive was given: $Question" }
-    return (Read-Host $Question).Trim()
+    # With no console input (closed stdin, e.g. a container or service) Read-Host gives $null: no answer.
+    $answer = Read-Host $Question
+    if ($null -eq $answer) { return '' }
+    return ([string]$answer).Trim()
 }
 
 # ================================================================ files

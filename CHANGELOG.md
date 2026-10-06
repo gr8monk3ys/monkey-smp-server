@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.3.0] - 2026-10-06
+
+Host the server on a Mac, on Linux or with Docker. Same Minecraft (26.3), mods and world as 2.2.1: hosts
+can unzip over 2.2.x and keep their world, and players don't need to do anything.
+
+- New: the server zip runs natively on **macOS** (Intel and Apple Silicon) and **Linux** (x64 and arm64).
+  On a Mac, double-click "Start Server.command"; on a Mac or Linux, `sh start.sh`. `stop.sh`, `backup.sh`,
+  `add-player.sh` and `prepare-for-hosting.sh` do what the .bat files do on Windows. Nothing to install
+  first: Java for that system is downloaded and hash-checked like everything else, and so is PowerShell 7
+  (about 70 MB) if it isn't installed, because the same installer as on Windows runs it (ADR-0007).
+- New: **Docker**. The `docker` folder in the server zip runs the server in a container: put `EULA=TRUE`
+  and `OWNER=<your Minecraft name>` in `.env`, then `docker compose up -d`. The image holds no Minecraft
+  files; it uses the release folder, so the world and backups are the same as in a native run.
+- Prepare for Hosting now works on a Mac or Linux too (`sh prepare-for-hosting.sh`). A Linux VPS no longer
+  needs it: run the release there natively or with Docker. Panel hosts (Pterodactyl and the like) still
+  use the hosting zip.
+- Windows hosts: nothing changes.
+- Docs: Mac and Linux players import the .mrpack into Prism Launcher or the Modrinth App (the player
+  installer stays Windows-only).
+- Fixed: the voice chat config path in READ ME FIRST.txt was garbled
+  (`server\config\voicechat\voicechat-server.properties`).
+- CI also boots the server natively on Linux, with Docker on Linux, and natively on macOS (macOS on
+  releases and manual runs).
+
 ## [2.2.1] - 2026-10-06
 
 Docs only: same mods, server and world as 2.2.0. Nobody needs to reinstall.

@@ -132,7 +132,10 @@ python -m pytest -q && python -m ruff check tools tests && python tools/validate
 The unit tests never touch the network or the real checkout: tools take an `Upstream` catalog and
 a `Repo`, and tests pass a `RecordedHttp` adapter (replaying `tests/fixtures/upstream/*.json`, or
 responses built in the test) and a temporary copy of the repo. A request with no recorded response
-fails loudly. If an upstream API changes shape, or a test needs a new request, re-record the
+fails loudly. Sample manifests are frozen releases in `tests/fixtures/manifests/` (`paper-1.1.0`, the
+last Paper release, and `fabric-2.0.0`, each with its patches and a trimmed client index), so a new
+release never breaks the tests; only `test_real_repo_is_valid` checks what the repo pins today.
+If an upstream API changes shape, or a test needs a new request, re-record the
 fixtures from the live APIs (responses are trimmed to the fields the tools read):
 
 ```bash

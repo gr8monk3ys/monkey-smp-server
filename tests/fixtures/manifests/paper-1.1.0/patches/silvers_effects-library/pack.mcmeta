@@ -1,0 +1,27 @@
+{
+  "pack": {
+    "description": [
+      {
+        "text": "Silver's Effects Library",
+        "color": "light_purple"
+      }
+    ],
+    "pack_format": 55,
+    "min_format": 55,
+    "max_format": 999999999
+  },
+  "overlays": {
+    "entries": [
+      {
+        "directory": "overlay_26.3",
+        "min_format": 120,
+        "max_format": 999
+      },
+      {
+        "directory": "overlay_26.1",
+        "min_format": 100,
+        "max_format": 119
+      }
+    ]
+  }
+}

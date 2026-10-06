@@ -71,10 +71,16 @@ def test_paper_and_java_entries_from_recorded_responses(recorded):
     assert entries.check("server", server) == [] and entries.check("java", java) == []
 
 
-def test_every_real_artifact_has_a_strong_hash(real_manifest):
-    for _, entry in entries.artifacts(real_manifest):
+@pytest.mark.parametrize("release", ["paper_manifest", "fabric_manifest"])
+def test_every_artifact_of_a_release_has_a_strong_hash(request, release):
+    manifest = request.getfixturevalue(release)
+    kinds = set()
+    for kind, entry in entries.artifacts(manifest):
         algo, value = entries.hash_of(entry)
         assert algo in ("sha256", "sha512") and value
+        kinds.add(kind)
+    assert kinds == {"paper_manifest": {"java", "server", "plugin", "datapack"},
+                     "fabric_manifest": {"java", "server", "mod"}}[release]
 
 
 def test_matches_checks_size_and_strongest_hash():
@@ -86,19 +92,50 @@ def test_matches_checks_size_and_strongest_hash():
     assert not entries.matches({**entry, "size": 1}, data)
 
 
+MISTAKES = [
+    (lambda e: e.update(url="http://evil.example/x.jar"), "allowed host"),
+    (lambda e: e.update(hashes={"sha512": "ABC"}), "lowercase hex"),
+    (lambda e: e.update(hashes={"md5": "abc"}), "no sha512/sha256"),
+    (lambda e: e.update(size=0), "bad size"),
+    (lambda e: e.pop("version_id"), "missing 'version_id'"),
+    (lambda e: e.update(file="bad:name.jar"), "characters Windows"),
+]
+
+
 @pytest.mark.parametrize("kind, mutate, message", [
-    ("plugin", lambda e: e.update(url="http://evil.example/x.jar"), "allowed host"),
-    ("plugin", lambda e: e.update(hashes={"sha512": "ABC"}), "lowercase hex"),
-    ("plugin", lambda e: e.update(hashes={"md5": "abc"}), "no sha512/sha256"),
-    ("plugin", lambda e: e.update(size=0), "bad size"),
-    ("plugin", lambda e: e.pop("version_id"), "missing 'version_id'"),
+    *[("plugin", mutate, message) for mutate, message in MISTAKES],
     ("plugin", lambda e: e.update(patch={"path": "patches/x", "base_sha512": "a" * 128}), "only mods and datapacks"),
     ("datapack", lambda e: e.update(file="bad:name.zip"), "characters Windows"),
 ])
-def test_check_catches_mistakes(real_manifest, kind, mutate, message):
-    e = copy.deepcopy(real_manifest[entries.GROUPS[kind]][0])
+def test_check_catches_mistakes_in_paper_entries(paper_manifest, kind, mutate, message):
+    e = copy.deepcopy(entries.group(paper_manifest, kind)[0])
+    assert entries.check(kind, e) == []
     mutate(e)
     errors = entries.check(kind, e)
+    assert any(message in x for x in errors), errors
+
+
+@pytest.mark.parametrize("mutate, message", MISTAKES)
+def test_check_catches_mistakes_in_mod_entries(fabric_manifest, mutate, message):
+    e = copy.deepcopy(fabric_manifest["mods"][0])
+    assert entries.check("mod", e) == []
+    mutate(e)
+    errors = entries.check("mod", e)
+    assert any(message in x for x in errors), errors
+
+
+@pytest.mark.parametrize("release, mutate, message", [
+    ("paper_manifest", lambda s: s.pop("build"), "integer 'build'"),
+    ("paper_manifest", lambda s: s.update(url="https://example.com/paper.jar"), "allowed host"),
+    ("fabric_manifest", lambda s: s.pop("installer"), "needs 'installer'"),
+    ("fabric_manifest", lambda s: s.update(hashes={"sha256": "x"}), "lowercase hex"),
+    ("fabric_manifest", lambda s: s.update(type="quilt"), "type must be one of"),
+])
+def test_check_catches_mistakes_in_server_entries(request, release, mutate, message):
+    server = copy.deepcopy(request.getfixturevalue(release)["server"])
+    assert entries.check("server", server) == []
+    mutate(server)
+    errors = entries.check("server", server)
     assert any(message in x for x in errors), errors
 
 

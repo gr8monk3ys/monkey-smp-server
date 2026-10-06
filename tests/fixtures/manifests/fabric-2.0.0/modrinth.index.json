@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "game": "minecraft",
+  "versionId": "1.1.0",
+  "name": "The Realms - Client",
+  "summary": "Client pack for The Realms factions server.",
+  "files": [
+    {
+      "path": "mods/3d-maps-0.8.2.jar",
+      "hashes": {
+        "sha1": "26d713b838628af37d60dd40934ce425bfccca1f",
+        "sha512": "c21a95dc7e8651f486d088b2f136af2d776a70aeb838c2d5e53de44f9b2d4ea110dc2ab7a04d5a318cbb27f6cabe181adc3603afa5cef6cfd43318946749ac96"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/s4WQHerM/versions/ArCyixUt/3d-maps-0.8.2.jar"
+      ],
+      "fileSize": 114428
+    },
+    {
+      "path": "mods/AccurateBlockPlacement-Reborn-1.4.7+mc-26.3.jar",
+      "hashes": {
+        "sha1": "ca2714e1952ccdcd74b46dc1d834907954fcb0a2",
+        "sha512": "da03640015d53ef3557a5ffac4abd0f32b12a8562f7612ff590f84a808d7750a809b5688e49768b5e1678a38a89009f03a635363a6b0a4b5fa18aec6eaacceaf"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/kzwxhsjp/versions/fofTJCem/AccurateBlockPlacement-Reborn-1.4.7%2Bmc-26.3.jar"
+      ],
+      "fileSize": 46029
+    },
+    {
+      "path": "mods/AdvancementPlaques-26.3-fabric-1.7.3.jar",
+      "hashes": {
+        "sha1": "cfe3e213ad29d4d91ba8b9ea05311a0f05e94f72",
+        "sha512": "9f8b65c611335d0b1a63b671660bd9e35d4719d3ffda57b27133bc8c1ff351a4ca8d61dcf9f0ec5b1068834ea6b8403f1ef73b798cab7524b29f32694eacbb76"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/9NM0dXub/versions/CWKBEIsY/AdvancementPlaques-26.3-fabric-1.7.3.jar"
+      ],
+      "fileSize": 196090
+    }
+  ],
+  "dependencies": {
+    "minecraft": "26.3",
+    "fabric-loader": "0.19.5"
+  }
+}

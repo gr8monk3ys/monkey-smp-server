@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.1] - 2026-10-06
+
+Docs only: same mods, server and world as 2.2.0. Nobody needs to reinstall.
+
+- Fixed: the player READ ME and docs said the player download is about 1 GB; it is about 450 MB.
+
 ## [2.2.0] - 2026-10-06
 
 Synced with the updated mod list. Same Minecraft (26.3) and world seed: hosts can unzip over 2.1 and keep

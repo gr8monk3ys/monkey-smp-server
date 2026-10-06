@@ -47,7 +47,7 @@ Here's how to join The Realms (Minecraft Java Edition, modded):
    (minecraft.net). Start the launcher once, sign in, then close it.
 2. Unzip TheRealms-Player-<version>.zip and double-click "Install for Minecraft Launcher.bat".
    If Windows says "protected your PC", click More info > Run anyway.
-   It downloads the mods (~1 GB) and adds "The Realms" to your launcher. Takes a few minutes.
+   It downloads the mods (~450 MB) and adds "The Realms" to your launcher. Takes a few minutes.
 3. Open the Minecraft Launcher, choose "The Realms" next to the Play button, press Play.
    The first start is slow (a few minutes) - that's normal.
 4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.

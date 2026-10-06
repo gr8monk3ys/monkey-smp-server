@@ -400,7 +400,7 @@ function Get-LauncherTimestamp { return (Get-Date).ToUniversalTime().ToString("y
     The profile fields to set. Other fields of an existing profile (e.g. a resolution the player set) are kept.
 #>
 function Edit-LauncherProfile {
-    param([Parameter(Mandatory)] [string]$Path, [hashtable]$Fields, [switch]$Remove)
+    param([Parameter(Mandatory)] [string]$Path, [Collections.IDictionary]$Fields, [switch]$Remove)
     if (-not $Remove -and -not $Fields) { throw 'Edit-LauncherProfile needs -Fields or -Remove.' }
     $original = Read-TextFile $Path
     try { $data = ConvertFrom-JsonText $original } catch { $data = $null }
@@ -463,7 +463,7 @@ function Edit-LauncherProfile {
 #>
 function Get-ProfileField {
     param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] $Pack, [Parameter(Mandatory)] [string]$VersionId, [Parameter(Mandatory)] [int]$MemoryGB)
-    return @{
+    return [ordered]@{
         name          = (Get-ProfileName $Pack)
         type          = 'custom'
         lastVersionId = $VersionId
@@ -696,7 +696,7 @@ function Uninstall-Client {
         }
     }
     if ($profileRemoved) { Write-Ok 'Removed The Realms from the Minecraft Launcher.' } else { Write-Ok 'The Minecraft Launcher has no The Realms profile.' }
-    Write-Note 'The Fabric version stays in the launcher (versions folder); it is harmless and takes no space worth mentioning.'
+    Write-Note 'The Fabric version (in the launcher''s versions folder) stays; it is harmless and other profiles may use it.'
 
     $gameRemoved = $false
     if ([IO.Directory]::Exists($Context.GameDir)) {

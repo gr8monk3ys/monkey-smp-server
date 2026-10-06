@@ -128,7 +128,8 @@ foreach ($p in $datapacks) {
     $pack = Join-Path $server "$($manifest.world.level_name)\datapacks\$($p.file)"
     if (-not (Test-Path -LiteralPath $pack)) { $failures.Add("datapack missing: $($p.file)") }
 }
-if ($logText -notmatch 'All dimensions are saved|Closing Server') { $failures.Add('server did not shut down cleanly') }
+# 26.1 logs 'All dimensions are saved' (Paper: 'Closing Server'); 26.3 logs 'Saving worlds' on the way down.
+if ($logText -notmatch 'All dimensions are saved|Closing Server|Saving worlds') { $failures.Add('server did not shut down cleanly') }
 
 if ($failures.Count) {
     Write-Host "`nSMOKE TEST FAILED ($($failures.Count)):" -ForegroundColor Red

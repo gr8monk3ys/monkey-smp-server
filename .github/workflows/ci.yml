@@ -64,7 +64,21 @@ jobs:
         shell: powershell
         run: Expand-Archive -Path (Get-Item dist/TheRealms-Server-*.zip) -DestinationPath "$env:RUNNER_TEMP\realms"
 
-      - name: Install, boot, check plugins and datapacks, stop
+      - name: Prepare a hosting bundle (installs first, never starts the server)
+        shell: powershell
+        run: |
+          & "$env:RUNNER_TEMP\realms\TheRealms-Server\realms\realms.ps1" export-host -AcceptEula -NonInteractive -NoOwner
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Upload the hosting bundle for the Linux/Docker test
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosting-bundle
+          path: ${{ runner.temp }}/realms/TheRealms-Server/exports/*.zip
+          retention-days: 1
+          compression-level: 0
+
+      - name: Install, boot, check mods/plugins and datapacks, stop
         shell: powershell
         run: ./tests/smoke.ps1 -Root "$env:RUNNER_TEMP\realms\TheRealms-Server" -MemoryGB 4
 
@@ -83,3 +97,27 @@ jobs:
         with:
           name: dist
           path: dist/
+
+  hosting:
+    name: Boot the hosting bundle with Docker (Linux)
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: hosting-bundle
+          path: bundle
+      - name: docker compose up, wait for Done, stop
+        env:
+          MEMORY_GB: "4"
+          TIMEOUT_MINUTES: "30"
+        run: bash tests/hosting-smoke.sh bundle/*.zip "$RUNNER_TEMP/hosting"
+      - name: Upload the container log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosting-log
+          path: ${{ runner.temp }}/hosting/*/compose.log
+          if-no-files-found: ignore

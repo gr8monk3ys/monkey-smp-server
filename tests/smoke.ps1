@@ -77,8 +77,12 @@ Write-Host "--- started: $doneLine"
 # RCON connection, so wait until RCON answers before checking anything.
 $rconDeadline = (Get-Date).AddMinutes(3)
 while ($true) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script rcon 'list' *> $null
-    if ($LASTEXITCODE -eq 0) { break }
+    # The child's stderr must not become a terminating error under 'Stop' (Windows PowerShell 5.1 turns
+    # redirected native stderr into error records), or the first dropped connection ends the test.
+    $ErrorActionPreference = 'Continue'
+    try { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script rcon 'list' 2>&1 | Out-Null; $code = $LASTEXITCODE }
+    finally { $ErrorActionPreference = 'Stop' }
+    if ($code -eq 0) { break }
     if ((Get-Date) -gt $rconDeadline -or $proc.HasExited) { throw 'RCON did not answer within 3 minutes of "Done"' }
     Write-Host '    RCON not answering yet, retrying in 10 s'
     Start-Sleep -Seconds 10

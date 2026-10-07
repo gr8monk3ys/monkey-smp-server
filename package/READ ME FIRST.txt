@@ -2,8 +2,8 @@ THE REALMS - how to run the server
 ==================================
 
 A modded Minecraft (Java 26.3) factions server: parties, allies, land claims, PvP, new
-structures, mobs and magic. You need: Windows 10 or 11, 12 GB of RAM or more (16 GB is
-better), and about 5 GB of free disk space.
+structures, mobs and magic. You need: Windows 10 or 11, 16 GB of RAM or more (24-32 GB if
+you also play on this PC), and about 10 GB of free disk space.
 You do NOT need to install Java or anything else - this folder takes care of it.
 
 
@@ -12,7 +12,7 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   a) Put this whole folder somewhere permanent, like Documents (not Downloads).
   b) Double-click  "Start Server.bat".
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads about 500 MB the first time (Java, the server and its 114 mods),
+     - It downloads about 500 MB the first time (Java, the server and its 115 mods),
        and the first start builds the world, so give it 5-10 minutes.
   c) It asks you two things:
      - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.
@@ -49,7 +49,7 @@ You do NOT need to install Java or anything else - this folder takes care of it.
     Voice chat (optional, needs one more tunnel):
     6. In playit.gg add a second tunnel: type "UDP" (or "Custom UDP"),
        local address 127.0.0.1, local port 24454. Note the address and port it gives you.
-    7. Stop the server, open  server\configoicechatoicechat-server.properties  in
+    7. Stop the server, open  server\config\voicechat\voicechat-server.properties  in
        Notepad, set  voice_host=THAT-ADDRESS:THAT-PORT  (e.g. 147.185.221.10:51234), save,
        and start the server again. Without this, everything works except voice chat.
 
@@ -72,6 +72,12 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   Double-click "Backup World.bat" (works while the server runs).
   Backups go into the "backups" folder; the newest 14 are kept.
   To restore one: stop the server, then copy the files from a backup folder into "server".
+
+  Automatic backups: double-click "Schedule Backups.bat" once. Windows then backs up the
+  world every 12 hours while you're signed in (14 backups = the last 7 days).
+  A dead disk takes the world AND the backups with it, so every week or so copy the
+  newest backup folder somewhere else (another drive, OneDrive, Google Drive...).
+  Try restoring a backup once (into a copy of this folder) so you know it works.
 
 
 6. ADMIN CHEAT SHEET (type in the server window, or in game with / in front)
@@ -111,3 +117,22 @@ You do NOT need to install Java or anything else - this folder takes care of it.
      step by step, for hosting companies, Docker and plain Linux.
   The world you play here is only included if it already exists; otherwise the host
   creates the same world (same seed) the first time it starts.
+
+
+9. BEFORE A BIG GROUP JOINS (10 or more players)
+------------------------------------------------
+  Memory: the server picks it from your PC's RAM (10 GB on a 32 GB PC, 6 GB on 16 GB).
+     About 10 GB suits 25 players. To choose yourself, set it once in a Command Prompt:
+        setx REALMS_MEMORY_GB 10
+     then start the server from a new window.
+  Players: up to 30 can be online (max-players in server\server.properties).
+  Build the world ahead of time. New land is the main cause of lag when many people
+  explore at once. With nobody online, type in the server window:
+        chunky radius 5000
+        chunky start
+     It takes hours (leave it overnight); "chunky progress" shows how far along it is.
+     Then stop players walking past the built area:
+        worldborder set 10000
+  Lag? Type  spark tps  for the server's speed (20 TPS is perfect), or
+     spark profiler start , wait a few minutes, then  spark profiler stop  for a link
+     showing what's slow.

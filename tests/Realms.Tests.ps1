@@ -723,7 +723,7 @@ Describe 'Export-HostingBundle' {
         $sh.Text | Should -BeLike "#!/bin/sh`n*"
         $sh.Mode | Should -Be 493   # 0755
         $sh.Host | Should -Be 3     # made on Unix, so unzip applies the mode
-        $sh.Text | Should -Match 'MEMORY_GB="\$\{MEMORY_GB:-4\}"'
+        $sh.Text | Should -Match 'MEMORY_GB="\$\{MEMORY_GB:-10\}"'
         $sh.Text | Should -Match '-Xms"\$\{MEMORY_GB\}"G'
         $sh.Text | Should -Match '-Xmx"\$\{MEMORY_GB\}"G'
         foreach ($a in Get-LaunchArguments -Manifest $F.M -MemoryGB 4) {
@@ -793,7 +793,8 @@ Describe 'Export-HostingBundle' {
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },
-        @{ Gb = 16; Want = 5 }, @{ Gb = 16.5; Want = 5 }, @{ Gb = 32; Want = 6 }
+        @{ Gb = 16; Want = 6 }, @{ Gb = 16.5; Want = 6 }, @{ Gb = 24; Want = 8 }, @{ Gb = 32; Want = 10 },
+        @{ Gb = 64; Want = 10 }
     ) {
         Get-MemoryGB -TotalBytes ($Gb * 1GB) | Should -Be $Want
     }

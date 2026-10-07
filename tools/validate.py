@@ -18,12 +18,15 @@ import patches
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
 
-PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Add Player.bat", "Prepare for Hosting.bat",
-                 "READ ME FIRST.txt")
+PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Schedule Backups.bat", "Add Player.bat",
+                 "Prepare for Hosting.bat", "READ ME FIRST.txt")
 # Checked only once player/ exists (the player zip can't be built without it).
 PLAYER_FILES = ("Install for Minecraft Launcher.bat", "READ ME.txt", "installer/install-client.ps1",
                 "installer/PlayerInstall.psm1")
 ASCII_NOTE = "must be plain ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI; see ADR-0003)"
+# Tab, LF, CR. Anything else below 32 in a READ ME is a backslash path eaten by an escape (\v in "config\voicechat").
+CONTROL_OK = (9, 10, 13)
+CONTROL_NOTE = "has a control character (a backslash in a path read as an escape, like \\v or \\b?)"
 # "mods" is not required: 1.x (Paper-only) manifests predate it, and a missing group reads as [].
 MANIFEST_KEYS = ("name", "version", "minecraft", "java", "server", "world", "plugins", "datapacks")
 
@@ -63,6 +66,10 @@ def validate_package(repo=REPO) -> list[str]:
         for script in sorted(repo.player.rglob("*.ps*1")) + sorted(repo.player.rglob("*.bat")):
             if any(b > 127 for b in script.read_bytes()):
                 errors.append(f"{script.relative_to(repo.root).as_posix()} {ASCII_NOTE}")
+    readmes = sorted(repo.package.glob("*.txt")) + (sorted(repo.player.glob("*.txt")) if repo.player.is_dir() else [])
+    for readme in readmes:
+        if any(b < 32 and b not in CONTROL_OK for b in readme.read_bytes()):
+            errors.append(f"{readme.relative_to(repo.root).as_posix()} {CONTROL_NOTE}")
     return errors
 
 

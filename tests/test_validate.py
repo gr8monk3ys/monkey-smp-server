@@ -146,6 +146,15 @@ def test_validate_package_requires_ascii_player_scripts(fabric_repo, name):
     assert errors == [f"player/{name} {validate.ASCII_NOTE}"]
 
 
+@pytest.mark.parametrize("where", ["package", "player"])
+def test_validate_package_rejects_control_characters_in_readmes(fabric_repo, where):
+    fake_player(fabric_repo)
+    readme = (fabric_repo.package / "READ ME FIRST.txt") if where == "package" else (fabric_repo.player / "READ ME.txt")
+    readme.write_bytes(b"open  server\\config\x0boicechat\x0boicechat-server.properties\r\n")
+    errors = validate.validate_package(fabric_repo)
+    assert errors == [f"{readme.relative_to(fabric_repo.root).as_posix()} {validate.CONTROL_NOTE}"]
+
+
 # --- the client's Fabric launcher profile ----------------------------------------------------------
 
 def edit_profile(repo, change):

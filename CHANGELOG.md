@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.2.2] - 2026-10-06
+
+Ready for a bigger group (about 25 players). Same Minecraft (26.3), world and client pack: hosts unzip over
+2.2.x and keep their world; **players don't need to reinstall** (spark is server-only).
+
+- Fixed: READ ME FIRST's voice chat step showed a garbled path; it is
+  `server\config\voicechat\voicechat-server.properties`.
+- Memory: the server now takes up to 10 GB (6 GB on a 16 GB PC, 8 on 24, 10 from 32 up; was 3 to 6 GB).
+  The "Prepare for Hosting" bundle defaults to `MEMORY_GB=10` (was 4).
+- `max-players` is 30 (was 20) and BlueMap renders with 1 thread (was 3) so the map doesn't slow the game.
+  These are first-run defaults: **an existing install keeps its own `server\server.properties` and
+  `server\config\bluemap\core.conf`**, so change those two values there by hand.
+- Added: spark, the performance profiler (`spark tps`, `spark profiler`). 115 server mods.
+- New "Schedule Backups.bat": a Windows scheduled task backs up the world every 12 hours.
+- READ ME FIRST and docs/ADMIN.md: what to do before a big group joins (memory, pre-generating the world with
+  Chunky plus a matching world border, spark, off-site copies of backups).
+- `validate.py` now fails if a READ ME contains a control character, so a garbled path can't ship again.
+
 ## [2.2.1] - 2026-10-06
 
 Docs only: same mods, server and world as 2.2.0. Nobody needs to reinstall.

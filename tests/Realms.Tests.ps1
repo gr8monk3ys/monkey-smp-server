@@ -752,7 +752,7 @@ Describe 'Export-HostingBundle' {
             $badExit = $LASTEXITCODE
         } finally { Pop-Location }
         $seven | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 7)
-        $default | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 4)
+        $default | Should -Be @(Get-LaunchArguments -Manifest $F.M -MemoryGB 10)
         $badExit | Should -Be 1
     }
 

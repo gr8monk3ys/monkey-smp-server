@@ -73,6 +73,17 @@ if (-not $started) {
 $doneLine = (Select-String -Path $log -Pattern 'Done \(' | Select-Object -First 1).Line
 Write-Host "--- started: $doneLine"
 
+# Right after "Done" a slow runner can still be busy (spawn chunks, map and LOD threads) and drop the first
+# RCON connection, so wait until RCON answers before checking anything.
+$rconDeadline = (Get-Date).AddMinutes(3)
+while ($true) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script rcon 'list' *> $null
+    if ($LASTEXITCODE -eq 0) { break }
+    if ((Get-Date) -gt $rconDeadline -or $proc.HasExited) { throw 'RCON did not answer within 3 minutes of "Done"' }
+    Write-Host '    RCON not answering yet, retrying in 10 s'
+    Start-Sleep -Seconds 10
+}
+
 try {
     # Paper shortens long replies with "...", so check the count and that nothing was left disabled.
     $enabled = (Invoke-Realms @('rcon', 'datapack list enabled')) -join "`n"

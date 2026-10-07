@@ -24,7 +24,8 @@ PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Sch
 PLAYER_FILES = ("Install for Minecraft Launcher.bat", "READ ME.txt", "installer/install-client.ps1",
                 "installer/PlayerInstall.psm1")
 ASCII_NOTE = "must be plain ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI; see ADR-0003)"
-# Tab, LF, CR. Anything else below 32 in a READ ME is a backslash path eaten by an escape (\v in "config\voicechat").
+# Tab, LF, CR. Anything else below 32 in a READ ME, script or doc is a backslash path eaten by an escape
+# (\v in "config\voicechat").
 CONTROL_OK = (9, 10, 13)
 CONTROL_NOTE = "has a control character (a backslash in a path read as an escape, like \\v or \\b?)"
 # "mods" is not required: 1.x (Paper-only) manifests predate it, and a missing group reads as [].
@@ -66,10 +67,13 @@ def validate_package(repo=REPO) -> list[str]:
         for script in sorted(repo.player.rglob("*.ps*1")) + sorted(repo.player.rglob("*.bat")):
             if any(b > 127 for b in script.read_bytes()):
                 errors.append(f"{script.relative_to(repo.root).as_posix()} {ASCII_NOTE}")
-    readmes = sorted(repo.package.glob("*.txt")) + (sorted(repo.player.glob("*.txt")) if repo.player.is_dir() else [])
-    for readme in readmes:
-        if any(b < 32 and b not in CONTROL_OK for b in readme.read_bytes()):
-            errors.append(f"{readme.relative_to(repo.root).as_posix()} {CONTROL_NOTE}")
+    # The READ MEs, the scripts (they write HOSTING.txt and every message) and the docs.
+    texts = [path for folder in (repo.package, repo.player) if folder.is_dir()
+             for pattern in ("*.txt", "*.bat", "**/*.ps*1") for path in sorted(folder.glob(pattern))]
+    texts += sorted(repo.root.glob("*.md")) + sorted((repo.root / "docs").rglob("*.md"))
+    for text in texts:
+        if any(b < 32 and b not in CONTROL_OK for b in text.read_bytes()):
+            errors.append(f"{text.relative_to(repo.root).as_posix()} {CONTROL_NOTE}")
     return errors
 
 

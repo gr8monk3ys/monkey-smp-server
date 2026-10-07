@@ -758,13 +758,14 @@ function Get-MemoryGB {
     param([Parameter(Mandatory)] [double]$TotalBytes, [int]$Requested = 0, [string]$EnvValue)
     if ($Requested -gt 0) { return $Requested }
     if ($EnvValue) { return [int]$EnvValue }
-    # About 10 GB suits 25 players on this pack; smaller PCs get less so Windows (and a game) still fit.
+    # 25 players on this pack peaked at about 4.3 GB in use, so 8 GB is plenty (the heap is committed up front,
+    # so more only takes RAM from everything else). Smaller PCs get less so Windows (and a game) still fit.
     $total = $TotalBytes / 1GB
     if ($total -le 8.5) { return 3 }
     if ($total -le 12.5) { return 4 }
-    if ($total -le 16.5) { return 6 }
-    if ($total -le 24.5) { return 8 }
-    return 10
+    if ($total -le 16.5) { return 5 }
+    if ($total -le 24.5) { return 6 }
+    return 8
 }
 
 <#
@@ -905,10 +906,10 @@ function New-StartSh($Manifest) {
     $layout = Get-ServerLayout -Manifest $Manifest
     $lines = @('#!/bin/sh',
         "# Starts $($Manifest.name) $($Manifest.version) ($($layout.Description), Minecraft $($Manifest.minecraft)).",
-        '# Memory in GB comes from MEMORY_GB (default 10); the java to use from JAVA (default: java on the PATH).',
+        '# Memory in GB comes from MEMORY_GB (default 6); the java to use from JAVA (default: java on the PATH).',
         '# Made by "Prepare for Hosting". See HOSTING.txt.',
         'cd "$(dirname "$0")" || exit 1',
-        'MEMORY_GB="${MEMORY_GB:-10}"',
+        'MEMORY_GB="${MEMORY_GB:-6}"',
         'case "$MEMORY_GB" in',
         "    ''|*[!0-9]*) echo `"MEMORY_GB must be a whole number of gigabytes, not '`$MEMORY_GB'`" >&2; exit 1 ;;",
         'esac',
@@ -928,10 +929,10 @@ function New-StartBat($Manifest) {
     $cmd = (Get-HostingLaunchArguments $Manifest '%MEMORY_GB%') -join ' '
     $lines = @('@echo off',
         "rem Starts $($Manifest.name) $($Manifest.version) ($($layout.Description)) on a Windows server.",
-        'rem Memory in GB comes from MEMORY_GB (default 10). Needs Java on the PATH. See HOSTING.txt.',
+        'rem Memory in GB comes from MEMORY_GB (default 6). Needs Java on the PATH. See HOSTING.txt.',
         'setlocal',
         'cd /d "%~dp0"',
-        'if "%MEMORY_GB%"=="" set MEMORY_GB=10',
+        'if "%MEMORY_GB%"=="" set MEMORY_GB=6',
         "java $cmd",
         'if errorlevel 1 pause')
     return ($lines -join "`r`n") + "`r`n"
@@ -949,7 +950,7 @@ function New-DockerCompose($Manifest, [int]$GamePort) {
         '      - .:/data',
         '    command: ["sh", "./start.sh"]',
         '    environment:',
-        '      MEMORY_GB: "10"',
+        '      MEMORY_GB: "6"',
         '    ports:',
         "      - `"${GamePort}:${GamePort}/tcp`"",
         "      - `"$($script:VoicePort):$($script:VoicePort)/udp`"",
@@ -996,7 +997,7 @@ long random one before you go online.
      contents of "$Folder" up into the main folder if the panel kept the folder.
   d) Set the server jar / startup file to:  $($layout.Jar)
      (A panel that downloads its own jar for you would replace the pinned one - use "Custom JAR".)
-  e) Set the memory (RAM): 4 GB or more.
+  e) Set the memory (RAM): 6 GB or more (8 GB for about 25 players).
   f) Start it. The first start downloads a few more files and takes a few minutes.
      It is ready when the console says  Done (...)! For help, type "help"
   g) Voice chat needs UDP port $($script:VoicePort). If the host gives you a second port instead,
@@ -1013,7 +1014,7 @@ long random one before you go online.
      Watch the log:    docker compose logs -f        (Ctrl+C stops watching, not the server)
      Type commands:    docker compose attach realms  (leave with Ctrl+P then Ctrl+Q)
      Stop:             docker compose stop
-  d) Memory: change MEMORY_GB in docker-compose.yml (default 10 GB, enough for about 25
+  d) Memory: change MEMORY_GB in docker-compose.yml (default 6 GB; use 8 for about 25
      players; give the VPS about 2 GB more RAM than that).
   It restarts by itself after a reboot until you stop it.
 
@@ -1025,7 +1026,7 @@ long random one before you go online.
   b) Upload the zip, then:   unzip $Folder.zip   and   cd $Folder
   c) Start it inside screen or tmux so it keeps running when you log out:
         screen -S realms
-        MEMORY_GB=10 sh start.sh
+        MEMORY_GB=6 sh start.sh
      Leave screen with Ctrl+A then D; come back with  screen -r realms
   d) Stop: type  stop  in the server console.
   On a Windows server, install Java $java and double-click start.bat instead.

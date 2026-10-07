@@ -10,7 +10,7 @@ Everything below assumes the release zip is unzipped into a folder, called `TheR
 | Stop (saves the world) | type `stop` in the server window, or `Stop Server.bat` |
 | Let someone join | `Add Player.bat`, or `whitelist add NAME` in the server window |
 | Back up | `Backup World.bat` (safe while running; keeps the newest 14 in `backups\`) |
-| Back up automatically | `Schedule Backups.bat` (Windows scheduled task, every 12 hours while you're signed in) |
+| Back up automatically | `Schedule Backups.bat` (Windows scheduled task, 6 AM and 6 PM while you're signed in; each run is logged to `scheduled-backups.log`) |
 | Update to a new release | stop the server, unzip the new release **over** the old folder, start again |
 
 Updating never touches the world or your config edits. It only swaps mod/datapack/server files to the
@@ -27,19 +27,21 @@ The same actions from PowerShell:
 .\realms\realms.ps1 rcon "list"           # run a console command on the running server
 ```
 
-Memory is picked from the computer's RAM: 3 GB on 8 GB, 4 on 12, 6 on 16, 8 on 24 and 10 GB from 32 GB up.
-About 10 GB suits 25 players on this pack. To force a value, set the environment variable
-`REALMS_MEMORY_GB` (`setx REALMS_MEMORY_GB 10`, then open a new window) or pass `-MemoryGB 10`. Size it from
-spark's numbers rather than giving it everything: more heap than the server uses only makes garbage collection
-pauses longer. The "Prepare for Hosting" bundle defaults to `MEMORY_GB=10`; give that machine about 2 GB more RAM.
+Memory is picked from the computer's RAM: 3 GB on 8 GB, 4 on 12, 5 on 16, 6 on 24 and 8 GB from 32 GB up.
+8 GB is plenty for 25 players on this pack (a 25-player test peaked at about 4.3 GB in use). To force a value,
+set the environment variable `REALMS_MEMORY_GB` (`setx REALMS_MEMORY_GB 8`, then open a new window) or pass
+`-MemoryGB 8`. Size it from spark's numbers rather than giving it everything: the whole heap is reserved at
+start, so more than the server uses only takes RAM from everything else. The "Prepare for Hosting" bundle
+defaults to `MEMORY_GB=6` (use 8 for about 25 players); give that machine about 2 GB more RAM.
 
 ## Before a big group joins
 
 - **Pre-generate the world.** Generating new terrain on the main thread is what drags the tick rate down when
   many players explore at once, and Tectonic's tall terrain makes each chunk expensive. With nobody online, in the
   server console: `chunky radius 5000`, `chunky start` (hours; `chunky progress` shows how far), then
-  `worldborder set 10000` (the border takes a diameter). For the Nether: `chunky world minecraft:the_nether`
-  before `chunky start`, and `execute in minecraft:the_nether run worldborder set 10000`.
+  `worldborder set 10000` (the border takes a diameter). For the Nether (1 block there is 8 in the Overworld):
+  `chunky world minecraft:the_nether` and `chunky radius 625` before `chunky start`, and
+  `execute in minecraft:the_nether run worldborder set 1250`.
 - **Watch it with spark.** `spark tps` shows TPS and tick time (MSPT; under 50 ms keeps 20 TPS), `spark health`
   memory and GC, and `spark profiler start` / `spark profiler stop` uploads a profile that shows which mod or
   area is slow.

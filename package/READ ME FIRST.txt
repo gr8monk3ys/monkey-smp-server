@@ -74,7 +74,9 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   To restore one: stop the server, then copy the files from a backup folder into "server".
 
   Automatic backups: double-click "Schedule Backups.bat" once. Windows then backs up the
-  world every 12 hours while you're signed in (14 backups = the last 7 days).
+  world at 6 AM and 6 PM while you're signed in (14 backups = the last 7 days).
+  Each run is written to "scheduled-backups.log" in this folder: look there if the
+  newest backup is older than it should be.
   A dead disk takes the world AND the backups with it, so every week or so copy the
   newest backup folder somewhere else (another drive, OneDrive, Google Drive...).
   Try restoring a backup once (into a copy of this folder) so you know it works.
@@ -121,9 +123,9 @@ You do NOT need to install Java or anything else - this folder takes care of it.
 
 9. BEFORE A BIG GROUP JOINS (10 or more players)
 ------------------------------------------------
-  Memory: the server picks it from your PC's RAM (10 GB on a 32 GB PC, 6 GB on 16 GB).
-     About 10 GB suits 25 players. To choose yourself, set it once in a Command Prompt:
-        setx REALMS_MEMORY_GB 10
+  Memory: the server picks it from your PC's RAM (8 GB on a 32 GB PC, 5 GB on 16 GB).
+     8 GB is plenty for 25 players. To choose yourself, set it once in a Command Prompt:
+        setx REALMS_MEMORY_GB 8
      then start the server from a new window.
   Players: up to 30 can be online (max-players in server\server.properties).
   Build the world ahead of time. New land is the main cause of lag when many people

@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+- Memory: the server takes at most 8 GB (5 GB on a 16 GB PC, 6 on 24, 8 from 32 up). 2.2.2 took up to 10 GB,
+  but a 25-player test peaked at about 4.3 GB in use, and the whole heap is reserved at start. The
+  "Prepare for Hosting" bundle defaults to `MEMORY_GB=6` (was 10), which fits an 8 GB VPS, and its
+  instructions say 6 GB or more for hosting panels (8 for about 25 players).
+- "Schedule Backups.bat" logs every run to `scheduled-backups.log`, errors included, and now works from a
+  folder with a long path. Backups run at 6 AM and 6 PM. Run it again to update an existing task.
+- docs/ADMIN.md: the Nether pre-generation numbers are 1/8 of the Overworld's (radius 625, border 1250).
+- `validate.py` also checks the docs, the changelog and the package scripts for control characters.
+
 ## [2.2.2] - 2026-10-06
 
 Ready for a bigger group (about 25 players). Same Minecraft (26.3), world and client pack: hosts unzip over

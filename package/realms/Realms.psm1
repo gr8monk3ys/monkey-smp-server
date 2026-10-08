@@ -997,7 +997,9 @@ long random one before you go online.
      contents of "$Folder" up into the main folder if the panel kept the folder.
   d) Set the server jar / startup file to:  $($layout.Jar)
      (A panel that downloads its own jar for you would replace the pinned one - use "Custom JAR".)
-  e) Set the memory (RAM): 6 GB or more (8 GB for about 25 players).
+  e) Set the memory (RAM): 6 GB or more (8 GB for a big group). For more than about 10
+     players the CPU matters more than RAM: pick a plan that names a current CPU
+     (for example Ryzen 7000 or 9000 series), not an older Xeon.
   f) Start it. The first start downloads a few more files and takes a few minutes.
      It is ready when the console says  Done (...)! For help, type "help"
   g) Voice chat needs UDP port $($script:VoicePort). If the host gives you a second port instead,
@@ -1014,8 +1016,8 @@ long random one before you go online.
      Watch the log:    docker compose logs -f        (Ctrl+C stops watching, not the server)
      Type commands:    docker compose attach realms  (leave with Ctrl+P then Ctrl+Q)
      Stop:             docker compose stop
-  d) Memory: change MEMORY_GB in docker-compose.yml (default 6 GB; use 8 for about 25
-     players; give the VPS about 2 GB more RAM than that).
+  d) Memory: change MEMORY_GB in docker-compose.yml (default 6 GB; use 8 for a big
+     group; give the VPS about 2 GB more RAM than that, and a fast CPU for more than ~10 players).
   It restarts by itself after a reboot until you stop it.
 
 

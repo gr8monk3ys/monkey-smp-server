@@ -2,10 +2,14 @@
 
 ## [Unreleased]
 
+- **Correction: 2.2.2 is not ready for 25 players.** Load tests on an i7-8700K gave about 8 TPS with 10 players
+  and about 4 TPS with 25 (20 is full speed); Strength SMP takes about half the tick time. Plan on about
+  10 players on a home PC. docs/ADMIN.md ("How many players"), READ ME FIRST and HOSTING.txt now say so, and
+  `tools/loadtest.py` re-runs the measurement.
 - Memory: the server takes at most 8 GB (5 GB on a 16 GB PC, 6 on 24, 8 from 32 up). 2.2.2 took up to 10 GB,
   but a 25-player test peaked at about 4.3 GB in use, and the whole heap is reserved at start. The
   "Prepare for Hosting" bundle defaults to `MEMORY_GB=6` (was 10), which fits an 8 GB VPS, and its
-  instructions say 6 GB or more for hosting panels (8 for about 25 players).
+  instructions say 6 GB or more for hosting panels (8 for a big group).
 - "Schedule Backups.bat" logs every run to `scheduled-backups.log`, errors included, and now works from a
   folder with a long path. Backups run at 6 AM and 6 PM. Run it again to update an existing task.
 - docs/ADMIN.md: the Nether pre-generation numbers are 1/8 of the Overworld's (radius 625, border 1250).

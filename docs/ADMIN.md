@@ -28,11 +28,32 @@ The same actions from PowerShell:
 ```
 
 Memory is picked from the computer's RAM: 3 GB on 8 GB, 4 on 12, 5 on 16, 6 on 24 and 8 GB from 32 GB up.
-8 GB is plenty for 25 players on this pack (a 25-player test peaked at about 4.3 GB in use). To force a value,
+8 GB is plenty of memory even for 25 players (a 25-player test peaked at about 4.3 GB in use), though the CPU
+can't keep up with that many (see "How many players" below). To force a value,
 set the environment variable `REALMS_MEMORY_GB` (`setx REALMS_MEMORY_GB 8`, then open a new window) or pass
 `-MemoryGB 8`. Size it from spark's numbers rather than giving it everything: the whole heap is reserved at
 start, so more than the server uses only takes RAM from everything else. The "Prepare for Hosting" bundle
-defaults to `MEMORY_GB=6` (use 8 for about 25 players); give that machine about 2 GB more RAM.
+defaults to `MEMORY_GB=6` (use 8 for a big group); give that machine about 2 GB more RAM.
+
+## How many players
+
+Fewer than 2.2.2 said. Memory isn't the limit; one CPU core is, because the world ticks on a single thread and
+needs under 50 ms per tick for full speed (20 TPS). Measured on an Intel i7-8700K (2017) with Carpet fake
+players, after the world was generated:
+
+| Players | Tick time | TPS |
+|---|---|---|
+| 10, moving around | ~115-125 ms | ~8 |
+| 25, standing still | ~230-280 ms | ~4 |
+| 25, standing still, without Strength SMP (and its 4 libraries) | ~90 ms | ~11 |
+| 25, exploring new land | stalls of 10-20 s | under 1 |
+
+So plan on **about 10 players on a typical home PC**, and expect it to feel sluggish even then. With 25 players
+about 60% of the tick goes to datapack commands, mostly the ones Strength SMP runs for every player on every
+tick, and it hits Minecraft's limit of 65,536 commands per tick hundreds of times a run (the rest of that
+tick's commands are skipped, so its mechanics misbehave under load too). A rented
+host with a current Ryzen (7000 or 9000 series) is roughly twice as fast per core; many budget plans run older
+Xeons that are slower than a 2017 desktop. `tools/loadtest.py` re-runs these measurements (see MAINTAINING.md).
 
 ## Before a big group joins
 

@@ -169,6 +169,27 @@ fixtures from the live APIs (responses are trimmed to the fields the tools read)
 python tests/fixtures/record.py
 ```
 
+## Load testing
+
+Before claiming a player count, or after adding a mod that runs every tick, measure it. `tools/loadtest.py`
+starts an installed copy of the package (the one the smoke test above leaves in `$env:TEMP\realms-test`),
+spawns fake players with [Carpet](https://modrinth.com/mod/carpet) over RCON and records tick times plus a
+CPU profile of the main thread:
+
+```powershell
+python tools/loadtest.py $env:TEMP\realms-test\TheRealms-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25
+# what one mod costs: the same run without it (and its libraries)
+python tools/loadtest.py $env:TEMP\realms-test\TheRealms-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25 --without silvers_strength-smp-season-4
+```
+
+Results go to `<copy>\loadtest\<name>\`: `summary.json` (mean and typical tick time, TPS, the slowest ticks, how often the 65,536-commands
+limit was hit), `samples.jsonl`, `profile.txt` (which mod and which methods the main thread spent its time
+in) and `perf.txt` (Minecraft's own 10-second profile from halfway through: the tick by section, entity type
+and datapack function). `--scenario walk` or `explore` measures world generation instead of the steady cost. Run on an idle
+machine and compare runs made on the same copy: fake players stand in for real ones but don't send network
+traffic, and walk/explore change the world for every later run. The numbers in docs/ADMIN.md ("How many
+players") came from this harness on an i7-8700K.
+
 ## Releasing
 
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,

@@ -123,11 +123,14 @@ You do NOT need to install Java or anything else - this folder takes care of it.
 
 9. BEFORE A BIG GROUP JOINS (10 or more players)
 ------------------------------------------------
+  How many: plan on about 10 players on a typical home PC. The limit is the CPU, not
+     memory: tests on a 2017 Intel i7-8700K ran slower than full speed even with 10, and
+     25 was badly laggy. A rented host with a fast, current CPU handles more.
   Memory: the server picks it from your PC's RAM (8 GB on a 32 GB PC, 5 GB on 16 GB).
-     8 GB is plenty for 25 players. To choose yourself, set it once in a Command Prompt:
+     8 GB is plenty. To choose yourself, set it once in a Command Prompt:
         setx REALMS_MEMORY_GB 8
      then start the server from a new window.
-  Players: up to 30 can be online (max-players in server\server.properties).
+  Player slots: 30 (max-players in server\server.properties).
   Build the world ahead of time. New land is the main cause of lag when many people
   explore at once. With nobody online, type in the server window:
         chunky radius 5000

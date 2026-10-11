@@ -1,0 +1,19 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.adoptium.net/v3/assets/latest/25/hotspot?os=linux&architecture=aarch64&image_type=jre"
+ },
+ "response": [
+  {
+   "release_name": "jdk-25.0.4.1+1",
+   "binary": {
+    "package": {
+     "name": "OpenJDK25U-jre_aarch64_linux_hotspot_25.0.4.1_1.tar.gz",
+     "link": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jre_aarch64_linux_hotspot_25.0.4.1_1.tar.gz",
+     "size": 60479792,
+     "checksum": "34828cbb93ed31c281c84ecb31ddab655d11a802f263c1fc019d42e9e0230fed"
+    }
+   }
+  }
+ ]
+}

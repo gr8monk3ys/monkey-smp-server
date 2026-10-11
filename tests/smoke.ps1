@@ -4,9 +4,14 @@
     End-to-end test: install the packaged server, boot it, check every plugin (Paper) or mod (Fabric)
     and datapack loaded, stop it.
 
+.DESCRIPTION
+    Runs realms.ps1 with the PowerShell that runs this script: Windows PowerShell 5.1 (powershell.exe)
+    or PowerShell 7 (pwsh, on Windows, Linux or macOS).
+
 .EXAMPLE
     # From an unzipped release (or a copy of package/):
     .\tests\smoke.ps1 -Root C:\temp\TheRealms-Server -Port 25566 -RconPort 25576
+    pwsh tests/smoke.ps1 -Root /tmp/TheRealms-Server -MemoryGB 4
 #>
 [CmdletBinding()]
 param(
@@ -18,10 +23,15 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path $Root).Path
-$script = Join-Path $Root 'realms\realms.ps1'
+$script = Join-Path (Join-Path $Root 'realms') 'realms.ps1'
 $server = Join-Path $Root 'server'
+$onWindows = [IO.Path]::DirectorySeparatorChar -eq '\'
+# realms.ps1 runs in a new process of this same PowerShell (powershell.exe, or pwsh on any platform).
+$shell = if ($PSVersionTable.PSEdition -eq 'Core') { (Get-Process -Id $PID).Path } else { 'powershell.exe' }
+$shellArgs = @('-NoProfile')
+if ($onWindows) { $shellArgs += @('-ExecutionPolicy', 'Bypass') }
 # The package's own module: one server.properties parser for the installer and this test.
-Import-Module (Join-Path $Root 'realms\Realms.psm1') -Force
+Import-Module (Join-Path (Join-Path $Root 'realms') 'Realms.psm1') -Force
 $manifest = (New-RealmsContext -Root $Root).Manifest
 $layout = Get-ServerLayout -Manifest $manifest
 $isPaper = $layout.Type -eq 'paper'
@@ -29,14 +39,14 @@ $isPaper = $layout.Type -eq 'paper'
 $addOns = @($manifest.($layout.AddOns) | Where-Object { $_ })
 $datapacks = @($manifest.datapacks | Where-Object { $_ })
 # Ranks are whatever LuckPerms groups the Defaults ship, in the server type's LuckPerms storage folder.
-$ranks = @(Get-ChildItem -LiteralPath (Join-Path $Root "realms\defaults\$($layout.LuckPerms)\groups") -Filter *.yml |
+$ranks = @(Get-ChildItem -LiteralPath (Join-Path $Root "realms/defaults/$($layout.LuckPerms)/groups") -Filter *.yml |
     ForEach-Object { $_.BaseName })
 if (-not $ranks.Count) { throw 'No LuckPerms ranks found in the package Defaults' }
 Write-Host "--- $($manifest.name) $($manifest.version): $($layout.Description), $($addOns.Count) $($layout.AddOns), $($datapacks.Count) datapacks"
 $failures = New-Object System.Collections.Generic.List[string]
 
 function Invoke-Realms([string[]]$Arguments) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script @Arguments
+    & $shell @shellArgs -File $script @Arguments
     if ($LASTEXITCODE -ne 0) { throw "realms.ps1 $($Arguments -join ' ') failed ($LASTEXITCODE)" }
 }
 
@@ -44,7 +54,7 @@ Write-Host '--- install (non-interactive)'
 Invoke-Realms @('install', '-AcceptEula', '-NonInteractive', '-NoOwner')
 
 Write-Host '--- second install must be a no-op'
-$again = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script install -NonInteractive -NoOwner | Out-String
+$again = & $shell @shellArgs -File $script install -NonInteractive -NoOwner | Out-String
 if ($again -notmatch 'Everything is up to date') { $failures.Add("re-install was not a no-op:`n$again") }
 
 $props = Join-Path $server 'server.properties'
@@ -57,9 +67,11 @@ Set-ServerProperty -Path $props -Name 'rcon.port' -Value $RconPort
 
 Write-Host "--- start (port $Port)"
 $out = Join-Path $Root 'smoke-console.log'
-$proc = Start-Process powershell.exe -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError "$out.err" `
-    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$script`"", 'start', '-NonInteractive', '-MemoryGB', $MemoryGB)
-$log = Join-Path $server 'logs\latest.log'
+$startArgs = @{ FilePath = $shell; PassThru = $true; RedirectStandardOutput = $out; RedirectStandardError = "$out.err"
+    ArgumentList = $shellArgs + @('-File', "`"$script`"", 'start', '-NonInteractive', '-MemoryGB', $MemoryGB) }
+if ($onWindows) { $startArgs.WindowStyle = 'Hidden' }   # not supported on Linux and macOS
+$proc = Start-Process @startArgs
+$log = Join-Path (Join-Path $server 'logs') 'latest.log'
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 $started = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
@@ -106,7 +118,11 @@ try {
 } finally {
     Write-Host '--- stop'
     Invoke-Realms @('stop')
-    if (-not $proc.WaitForExit(120000)) { $proc.Kill(); $failures.Add('server did not exit after stop') }
+    if (-not $proc.WaitForExit(120000)) {
+        # PowerShell 7 can kill java (a child of realms.ps1) too; 5.1's .NET Framework can't.
+        if ($PSVersionTable.PSEdition -eq 'Core') { $proc.Kill($true) } else { $proc.Kill() }
+        $failures.Add('server did not exit after stop')
+    }
 }
 
 $logText = Get-Content $log -Raw
@@ -122,7 +138,7 @@ if ($isPaper) {
         if ([int]$Matches[1] -lt $addOns.Count) { $failures.Add("Fabric loaded $($Matches[1]) mods, fewer than the $($addOns.Count) pinned") }
     } else { $failures.Add('no "Loading <N> mods" line from Fabric Loader') }
     $crashes = Join-Path $server 'crash-reports'
-    if ((Test-Path -LiteralPath $crashes) -and @(Get-ChildItem -LiteralPath $crashes -File).Count) { $failures.Add('crash-reports\ is not empty') }
+    if ((Test-Path -LiteralPath $crashes) -and @(Get-ChildItem -LiteralPath $crashes -File).Count) { $failures.Add('crash-reports/ is not empty') }
 }
 foreach ($pattern in $bad) {
     foreach ($m in [regex]::Matches($logText, "(?m)^.*$([regex]::Escape($pattern)).*$")) { $failures.Add("log: $($m.Value)") }
@@ -132,15 +148,15 @@ foreach ($pattern in $bad) {
 $storageLine = if ($isPaper) { 'LuckPerms\] Loading storage provider\.\.\. \[YAML\]' } else { '(?i)Loading storage provider\.\.\. \[YAML\]' }
 if ($logText -notmatch $storageLine) { $failures.Add('LuckPerms is not using the YAML ranks') }
 foreach ($g in $ranks) {
-    if (-not (Test-Path -LiteralPath (Join-Path $server "$($layout.LuckPerms)\groups\$g.yml"))) { $failures.Add("LuckPerms rank missing: $g") }
+    if (-not (Test-Path -LiteralPath (Join-Path $server "$($layout.LuckPerms)/groups/$g.yml"))) { $failures.Add("LuckPerms rank missing: $g") }
 }
 $kind = $layout.AddOns.TrimEnd('s')
 foreach ($p in $addOns) {
-    $jar = Join-Path $server "$($layout.AddOns)\$($p.file)"
+    $jar = Join-Path $server "$($layout.AddOns)/$($p.file)"
     if (-not (Test-Path -LiteralPath $jar)) { $failures.Add("$kind jar missing: $($p.file)") }
 }
 foreach ($p in $datapacks) {
-    $pack = Join-Path $server "$($manifest.world.level_name)\datapacks\$($p.file)"
+    $pack = Join-Path $server "$($manifest.world.level_name)/datapacks/$($p.file)"
     if (-not (Test-Path -LiteralPath $pack)) { $failures.Add("datapack missing: $($p.file)") }
 }
 # 26.1 logs 'All dimensions are saved' (Paper: 'Closing Server'); 26.3 logs 'Saving worlds' on the way down.

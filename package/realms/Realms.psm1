@@ -16,7 +16,10 @@
     Importing this module has no side effects: nothing is downloaded, written or changed until a
     function is called.
 
-    Must stay plain ASCII and Windows PowerShell 5.1 compatible (docs/adr/0003).
+    Runs on Windows PowerShell 5.1 (Windows) and on PowerShell 7.2+ (Windows, Linux, macOS; realms.sh
+    starts it there). Must stay plain ASCII and Windows PowerShell 5.1 compatible (docs/adr/0003).
+    Paths inside the package and the server folder are written with / and joined with Join-RealmsPath,
+    which uses the platform's separator.
 #>
 
 # Module scope only: callers keep their own preference.
@@ -28,17 +31,31 @@ $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 $script:TemplateFiles = @('server.properties')
 $script:KeepBackups = 14
 
-# What each kind of server runs and where its add-ons live (relative to server\).
+# What each kind of server runs and where its add-ons live (relative to server/).
 #   Jar        the file name the server entry is saved as, and what java -jar runs
 #   Arguments  what follows the jar on the command line
 #   AddOns     the manifest group it loads add-ons from ('plugins' or 'mods'); datapacks work on both
-#   LuckPerms  the LuckPerms YAML storage folder (ranks in groups\, players in users\)
+#   LuckPerms  the LuckPerms YAML storage folder (ranks in groups/, players in users/)
 $script:ServerTypes = @{
-    paper  = @{ Name = 'Paper'; Jar = 'paper.jar'; Arguments = @('--nogui'); AddOns = 'plugins'; LuckPerms = 'plugins\LuckPerms\yaml-storage' }
-    fabric = @{ Name = 'Fabric'; Jar = 'fabric-server-launch.jar'; Arguments = @('nogui'); AddOns = 'mods'; LuckPerms = 'mods\luckperms\yaml-storage' }
+    paper  = @{ Name = 'Paper'; Jar = 'paper.jar'; Arguments = @('--nogui'); AddOns = 'plugins'; LuckPerms = 'plugins/LuckPerms/yaml-storage' }
+    fabric = @{ Name = 'Fabric'; Jar = 'fabric-server-launch.jar'; Arguments = @('nogui'); AddOns = 'mods'; LuckPerms = 'mods/luckperms/yaml-storage' }
 }
 # The groups of managed files in the manifest, and the word used for one of them in messages.
 $script:Groups = [ordered]@{ plugins = 'plugin'; mods = 'mod'; datapacks = 'datapack' }
+# The platforms the installer runs on (Adoptium's os-architecture names); the manifest pins a Java build for each.
+$script:Platforms = @('windows-x64', 'linux-x64', 'linux-aarch64', 'mac-x64', 'mac-aarch64')
+# The launcher a host runs for a command: the .bat file on Windows, the sh script on Linux and macOS.
+$script:Launchers = @{
+    'start'       = @('Start Server.bat', './start.sh')
+    'stop'        = @('Stop Server.bat', './stop.sh')
+    'backup'      = @('Backup World.bat', './backup.sh')
+    'add-player'  = @('Add Player.bat', './add-player.sh')
+    'export-host' = @('Prepare for Hosting.bat', './prepare-for-hosting.sh')
+}
+# PowerShell 7 reads date-like JSON strings as DateTime; 7.5+ can be told to keep them as text, so a
+# JSON file reads back exactly as written. (No file read here has dates; this keeps it that way.)
+$script:FromJson = @{}
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) { $script:FromJson.DateKind = 'String' }
 
 # ================================================================ output
 
@@ -48,7 +65,10 @@ function Write-Note([string]$Text) { Write-Host "    $Text" -ForegroundColor Yel
 
 function Read-Answer($Context, [string]$Question) {
     if ($Context.NonInteractive) { throw "Needs an answer but -NonInteractive was given: $Question" }
-    return (Read-Host $Question).Trim()
+    # With no console input (closed stdin, e.g. a container or service) Read-Host gives $null: no answer.
+    $answer = Read-Host $Question
+    if ($null -eq $answer) { return '' }
+    return ([string]$answer).Trim()
 }
 
 # ================================================================ files
@@ -62,18 +82,30 @@ function Read-JsonFile([string]$Path, $Default) {
     if (-not (Test-Path -LiteralPath $Path)) { return $Default }
     $text = [IO.File]::ReadAllText($Path, $script:Utf8)
     if (-not $text.Trim()) { return $Default }
-    return $text | ConvertFrom-Json
+    $fromJson = $script:FromJson
+    return $text | ConvertFrom-Json @fromJson
 }
 
 function Write-JsonFile([string]$Path, $Value) {
     Write-TextFile $Path (ConvertTo-Json -InputObject $Value -Depth 10)
 }
 
+# $Base joined with a relative path written with / (or \), using this platform's separator.
+function Join-RealmsPath([string]$Base, [string]$Rel) {
+    $sep = [IO.Path]::DirectorySeparatorChar
+    return Join-Path $Base $Rel.Replace('\', '/').Replace('/', $sep)
+}
+
+# A full path relative to a folder's full path, with forward slashes ('a/b.txt', as inside a zip).
+function Get-RelativeName([string]$Base, [string]$FullName) {
+    return $FullName.Substring($Base.Length + 1).Replace([IO.Path]::DirectorySeparatorChar, '/')
+}
+
 # Files under $Dir with their path relative to it ('a/b.txt', forward slashes, as inside a zip).
 function Get-RelativeFile([string]$Dir) {
-    $base = (Get-Item -LiteralPath $Dir).FullName.TrimEnd('\')
+    $base = (Get-Item -LiteralPath $Dir).FullName.TrimEnd('\', '/')
     foreach ($f in Get-ChildItem -LiteralPath $base -Recurse -File | Sort-Object FullName) {
-        [pscustomobject]@{ Rel = $f.FullName.Substring($base.Length + 1).Replace('\', '/'); FullName = $f.FullName }
+        [pscustomobject]@{ Rel = Get-RelativeName $base $f.FullName; FullName = $f.FullName }
     }
 }
 
@@ -82,6 +114,113 @@ function Get-Hash([string]$Path, [string]$Algorithm) {
 }
 
 function Use-Zip { Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem }
+
+# True when this PowerShell runs on Windows (5.1 always does; it has no $IsWindows).
+function Test-WindowsHost { return [IO.Path]::DirectorySeparatorChar -eq '\' }
+
+function Read-TextIfExists([string]$Path) {
+    try {
+        if (Test-Path -LiteralPath $Path -PathType Leaf) { return [IO.File]::ReadAllText($Path) }
+    } catch { Write-Verbose "Can't read ${Path}: $_" }
+    return ''
+}
+
+# ================================================================ platform
+
+<#
+.SYNOPSIS
+    This computer's platform: windows-x64, linux-x64, linux-aarch64, mac-x64 or mac-aarch64.
+.DESCRIPTION
+    Throws a plain-English error on any other system. -OS ('windows', 'linux' or 'mac') and
+    -Architecture (as the OS reports it: AMD64, x86_64, ARM64, aarch64, ...) replace detection, for tests.
+    Windows on ARM gets the x64 build, which Windows 11 runs through its x64 emulation.
+#>
+function Get-RealmsPlatform {
+    param([string]$OS, [string]$Architecture)
+    if (-not $OS) {
+        if ($PSVersionTable.PSEdition -ne 'Core' -or $IsWindows) { $OS = 'windows' }
+        elseif ($IsMacOS) { $OS = 'mac' }
+        elseif ($IsLinux) { $OS = 'linux' }
+        else { $OS = [string][Environment]::OSVersion.Platform }
+    }
+    if (-not $Architecture) {
+        $Architecture = if ($OS -eq 'windows') {
+            # A 32-bit PowerShell on 64-bit Windows reports x86 here and the real one in PROCESSOR_ARCHITEW6432.
+            if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+        } else { [string][Runtime.InteropServices.RuntimeInformation]::OSArchitecture }
+    }
+    $arch = switch -Regex ($Architecture) {
+        '^(x64|amd64|x86_64)$' { 'x64' }
+        '^(arm64|aarch64)$' { 'aarch64' }
+        default { '' }
+    }
+    if ($OS -eq 'windows' -and $arch) { return 'windows-x64' }
+    $platform = "$OS-$arch"
+    if (-not $arch -or $script:Platforms -notcontains $platform) {
+        throw "The Realms runs on 64-bit Windows, Linux and macOS (Intel/AMD or ARM), not on this computer ($OS, $Architecture)."
+    }
+    return $platform
+}
+
+<#
+.SYNOPSIS
+    The file name (Windows) or command (Linux, macOS) a host runs for a realms.ps1 command, for messages:
+    'stop' is "Stop Server.bat" on Windows and "./stop.sh" elsewhere.
+#>
+function Get-LauncherName {
+    param([Parameter(Mandatory)] [string]$Command, [string]$Platform = (Get-RealmsPlatform))
+    $names = $script:Launchers[$Command]
+    if (-not $names) { throw "No launcher for $Command" }
+    if ($Platform -like 'windows-*') { return $names[0] }
+    return $names[1]
+}
+
+function Get-StopFirstMessage {
+    return "The server is running. Stop it first (type `"stop`" in its window, or run $(Get-LauncherName stop))."
+}
+
+# ================================================================ memory
+
+# MemTotal from /proc/meminfo text, in bytes (0 if it isn't there).
+function ConvertFrom-MemInfo([string]$Text) {
+    if ($Text -match '(?m)^MemTotal:\s+(\d+)\s*kB') { return [double]$Matches[1] * 1024 }
+    return [double]0
+}
+
+# A cgroup memory limit (v2 memory.max, v1 memory.limit_in_bytes) in bytes; 0 for none ('max', or
+# v1's "unlimited", which is a number near 2^63).
+function ConvertFrom-CgroupLimit([string]$Text) {
+    $t = $Text.Trim()
+    if ($t -notmatch '^\d+$') { return [double]0 }
+    $v = [double]$t
+    if ($v -ge [math]::Pow(2, 60)) { return [double]0 }
+    return $v
+}
+
+<#
+.SYNOPSIS
+    The memory this computer or container has for the server, in bytes (0 if it can't tell).
+.DESCRIPTION
+    Windows: the installed RAM. macOS: hw.memsize. Linux: MemTotal from /proc/meminfo, or the cgroup
+    memory limit (v2 /sys/fs/cgroup/memory.max, v1 /sys/fs/cgroup/memory/memory.limit_in_bytes) when that
+    is smaller, so a container's memory limit (docker run --memory) is respected.
+    -LinuxRoot reads those files under another folder instead of /, for tests.
+#>
+function Get-TotalMemoryBytes {
+    param([string]$Platform = (Get-RealmsPlatform), [string]$LinuxRoot = '/')
+    if ($Platform -like 'windows-*') { return [double](Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory }
+    if ($Platform -like 'mac-*') {
+        $out = & sysctl -n hw.memsize 2>$null
+        if ("$out".Trim() -match '^\d+$') { return [double]"$out".Trim() }
+        return [double]0
+    }
+    $total = ConvertFrom-MemInfo (Read-TextIfExists (Join-RealmsPath $LinuxRoot 'proc/meminfo'))
+    foreach ($file in 'sys/fs/cgroup/memory.max', 'sys/fs/cgroup/memory/memory.limit_in_bytes') {
+        $limit = ConvertFrom-CgroupLimit (Read-TextIfExists (Join-RealmsPath $LinuxRoot $file))
+        if ($limit -gt 0 -and ($total -le 0 -or $limit -lt $total)) { $total = $limit }
+    }
+    return $total
+}
 
 # ================================================================ adapters (production)
 
@@ -115,9 +254,10 @@ function Get-MojangProfile {
 .SYNOPSIS
     Builds the context every other function takes: folders, manifest and adapters.
 .PARAMETER Root
-    The unzipped server package folder. server\, java\, backups\ and downloads\ live under it.
+    The unzipped server package folder. server/, java/, backups/ and downloads/ live under it
+    (and pwsh/, the PowerShell realms.sh installs on Linux and macOS).
 .PARAMETER RealmsDir
-    The folder holding manifest.json, defaults\ and patches\. Defaults to Root\realms.
+    The folder holding manifest.json, defaults/ and patches/. Defaults to Root/realms.
 .PARAMETER Manifest
     The parsed manifest. Defaults to RealmsDir\manifest.json.
 #>
@@ -196,7 +336,7 @@ function Get-GroupFolder($Context, [string]$Group) {
     switch ($Group) {
         'plugins' { return Join-Path $Context.ServerDir 'plugins' }
         'mods' { return Join-Path $Context.ServerDir 'mods' }
-        'datapacks' { return Join-Path $Context.ServerDir "$(Get-LevelName $Context)\datapacks" }
+        'datapacks' { return Join-RealmsPath $Context.ServerDir "$(Get-LevelName $Context)/datapacks" }
     }
     throw "Unknown group of files: $Group"
 }
@@ -297,7 +437,7 @@ function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
     if ($Entry.hashes.sha512 -and ([string]$Entry.hashes.sha512).ToLower() -ne $base) {
         throw "Patch $($patch.path) was made against a different upstream file than $($Entry.file) (its base_sha512 is not the entry's sha512)."
     }
-    $patchDir = Join-Path $Context.RealmsDir ([string]$patch.path).Replace('/', '\')
+    $patchDir = Join-RealmsPath $Context.RealmsDir ([string]$patch.path)
     if (-not (Test-Path -LiteralPath $patchDir -PathType Container)) { throw "Patch folder $($patch.path) is missing." }
 
     $id = "$((Get-ExpectedHash $Entry).Value):$(Get-PatchId $patchDir)"
@@ -481,7 +621,7 @@ function Install-Defaults($Context) {
         LEVEL_NAME    = Get-LevelName $Context
     }
     foreach ($f in Get-RelativeFile $defaults) {
-        $dest = Join-Path $Context.ServerDir $f.Rel.Replace('/', '\')
+        $dest = Join-RealmsPath $Context.ServerDir $f.Rel
         if (Test-Path -LiteralPath $dest) { continue }
         if ($script:TemplateFiles -contains $f.Rel) {
             Write-TextFile $dest (Expand-Template ([IO.File]::ReadAllText($f.FullName, $script:Utf8)) $values)
@@ -616,7 +756,7 @@ function Add-Owner {
     Add-ToList $Context 'ops.json' @{ uuid = $p.Uuid; name = $p.Name; level = 4; bypassesPlayerLimit = $true }
     # LuckPerms (YAML storage): put the owner in the admin group.
     $storage = (Get-ServerLayout -Manifest $Context.Manifest).LuckPerms
-    $lp = Join-Path $Context.ServerDir "$storage\users\$($p.Uuid).yml"
+    $lp = Join-RealmsPath $Context.ServerDir "$storage/users/$($p.Uuid).yml"
     if (-not (Test-Path -LiteralPath $lp)) {
         Write-TextFile $lp "uuid: $($p.Uuid)`nname: $($p.Name.ToLower())`nprimary-group: admin`nparents:`n- admin`n"
     }
@@ -642,27 +782,104 @@ function Add-Player {
 
 # ================================================================ install
 
+<#
+.SYNOPSIS
+    The Java build the manifest pins for a platform (file, url, size, hashes). Throws if it has none.
+.DESCRIPTION
+    manifest.json java = { vendor, version, builds = { <platform> = build } }. Manifests before 2.3.0
+    pinned only the Windows build, directly on java; that still reads as the windows-x64 build.
+#>
+function Get-JavaBuild {
+    param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [string]$Platform)
+    $java = $Manifest.java
+    $build = if ($java.builds) { $java.builds.$Platform } elseif ($Platform -eq 'windows-x64') { $java } else { $null }
+    if (-not $build -or -not $build.url) {
+        throw "This release of The Realms has no Java for $Platform. Download the latest release of The Realms."
+    }
+    return $build
+}
+
+<#
+.SYNOPSIS
+    Where java is in an unpacked JRE: bin\java.exe on Windows, bin/java on Linux, Contents/Home/bin/java on macOS.
+#>
+function Get-JavaExecutable {
+    param([Parameter(Mandatory)] [string]$JavaHome, [Parameter(Mandatory)] [string]$Platform)
+    $rel = if ($Platform -like 'windows-*') { 'bin/java.exe' } elseif ($Platform -like 'mac-*') { 'Contents/Home/bin/java' } else { 'bin/java' }
+    return Join-RealmsPath $JavaHome $rel
+}
+
+# How an archive unpacks: 'zip' (the Windows JRE) or 'tar' (.tar.gz, the Linux and macOS JREs).
+function Get-ArchiveKind([string]$File) {
+    if ($File -match '\.zip$') { return 'zip' }
+    if ($File -match '\.(tar\.gz|tgz)$') { return 'tar' }
+    throw "Don't know how to unpack $File"
+}
+
+function Expand-RealmsArchive([string]$Archive, [string]$Destination) {
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    if ((Get-ArchiveKind $Archive) -eq 'zip') {
+        Use-Zip
+        [IO.Compression.ZipFile]::ExtractToDirectory($Archive, $Destination)
+        return
+    }
+    # tar keeps the permission bits (java must stay executable). On Windows use its own tar (bsdtar):
+    # a GNU tar from Git or MSYS on the PATH reads "C:\..." as a remote host.
+    $tar = 'tar'
+    if ((Test-WindowsHost) -and (Test-Path -LiteralPath "$env:SystemRoot\System32\tar.exe")) { $tar = "$env:SystemRoot\System32\tar.exe" }
+    elseif (-not (Get-Command tar -ErrorAction SilentlyContinue)) { throw 'Unpacking Java needs tar. Install it (for example: sudo apt install tar gzip).' }
+    & $tar -xzf $Archive -C $Destination
+    if ($LASTEXITCODE -ne 0) { throw "tar couldn't unpack $(Split-Path $Archive -Leaf) (exit code $LASTEXITCODE)." }
+}
+
+# Makes a file executable on Linux and macOS (nothing to do on Windows).
+function Set-Executable([string]$Path) {
+    if (Test-WindowsHost) { return }
+    & chmod +x $Path
+    if ($LASTEXITCODE -ne 0) { throw "Couldn't make $Path executable (chmod exit code $LASTEXITCODE)." }
+}
+
 function Install-Java($Context) {
+    $platform = Get-RealmsPlatform
     $java = $Context.Manifest.java
-    $home_ = Join-Path $Context.JavaDir $java.version
-    $exe = Join-Path $home_ 'bin\java.exe'
+    $build = Get-JavaBuild -Manifest $Context.Manifest -Platform $platform
+    $platformDir = Join-Path $Context.JavaDir $platform
+    $home_ = Join-Path $platformDir $java.version
+    $exe = Get-JavaExecutable -JavaHome $home_ -Platform $platform
+    # Releases before 2.3.0 unpacked the Windows JRE to java\<version>: move it rather than download it again.
+    $legacy = Join-Path $Context.JavaDir $java.version
+    if ($platform -eq 'windows-x64' -and -not (Test-Path -LiteralPath $home_) -and
+        (Test-Path -LiteralPath (Get-JavaExecutable -JavaHome $legacy -Platform $platform))) {
+        New-Item -ItemType Directory -Force -Path $platformDir | Out-Null
+        Move-Item -LiteralPath $legacy -Destination $home_
+        Remove-OldJava $Context $platformDir $java.version
+    }
     if (Test-Path -LiteralPath $exe) { return $exe }
-    Write-Step "Downloading Java ($($java.vendor) $($java.version), $([math]::Round($java.size / 1MB)) MB)"
-    $zip = Join-Path $Context.DownloadDir $java.file
-    [void](Save-Artifact $Context $java $zip)
-    Use-Zip
-    $tmp = Join-Path $Context.JavaDir '.extract'
+    Write-Step "Downloading Java ($($java.vendor) $($java.version), $([math]::Round($build.size / 1MB)) MB)"
+    $archive = Join-Path $Context.DownloadDir $build.file
+    [void](Save-Artifact $Context $build $archive)
+    $tmp = Join-Path $platformDir '.extract'
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
-    [IO.Compression.ZipFile]::ExtractToDirectory($zip, $tmp)
+    Expand-RealmsArchive $archive $tmp
     $inner = Get-ChildItem -LiteralPath $tmp -Directory | Select-Object -First 1
+    if (-not $inner) { throw "The Java download $($build.file) has no folder inside." }
     Remove-Item -LiteralPath $home_ -Recurse -Force -ErrorAction SilentlyContinue
     Move-Item -LiteralPath $inner.FullName -Destination $home_
-    Remove-Item -LiteralPath $tmp, $zip -Recurse -Force
-    # Old Java versions from earlier manifests.
-    Get-ChildItem -LiteralPath $Context.JavaDir -Directory | Where-Object { $_.Name -ne $java.version } |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $tmp, $archive -Recurse -Force
+    if (-not (Test-Path -LiteralPath $exe)) { throw "The Java download $($build.file) has no $(Split-Path $exe -Leaf) where $platform keeps it." }
+    Set-Executable $exe
+    Remove-OldJava $Context $platformDir $java.version
     Write-Ok 'Java ready.'
     return $exe
+}
+
+# Removes old Java versions of this platform from earlier manifests, and pre-2.3.0 java\<version>
+# folders. Other platforms' folders are left alone (another computer or a container may share this folder).
+function Remove-OldJava($Context, [string]$PlatformDir, [string]$Version) {
+    Get-ChildItem -LiteralPath $PlatformDir -Directory | Where-Object { $_.Name -ne $Version } |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -LiteralPath $Context.JavaDir -Directory | Where-Object { $script:Platforms -notcontains $_.Name } |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 function Confirm-Eula($Context, [bool]$AcceptEula) {
@@ -680,11 +897,11 @@ function Confirm-Eula($Context, [bool]$AcceptEula) {
 
 <#
 .SYNOPSIS
-    Install: brings the server folder in line with the manifest. Idempotent. Returns the java.exe path.
+    Install: brings the server folder in line with the manifest. Idempotent. Returns the java path.
 #>
 function Install-Server {
     param([Parameter(Mandatory)] $Context, [switch]$AcceptEula, [string]$Owner, [switch]$NoOwner)
-    if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
+    if (Test-ServerRunning $Context) { throw (Get-StopFirstMessage) }
     $m = $Context.Manifest
     $server = $Context.ServerDir
     $layout = Get-ServerLayout -Manifest $m
@@ -753,24 +970,27 @@ function Install-Server {
 <#
 .SYNOPSIS
     Server memory in GB: -Requested if set, else -EnvValue (REALMS_MEMORY_GB), else picked from total RAM.
+.DESCRIPTION
+    From the total (Get-TotalMemoryBytes; a container's limit on Linux): 3 GB up to 8.5 GB, 4 up to 12.5,
+    5 up to 16.5, 6 up to 24.5, else 8; but always at least 1 GB less than the total, so a small container
+    or VPS keeps room for Java itself (never below 1 GB). A total of 0 (unknown) gives 3.
 #>
 function Get-MemoryGB {
     param([Parameter(Mandatory)] [double]$TotalBytes, [int]$Requested = 0, [string]$EnvValue)
     if ($Requested -gt 0) { return $Requested }
     if ($EnvValue) { return [int]$EnvValue }
     # 25 players on this pack peaked at about 4.3 GB in use, so 8 GB is plenty (the heap is committed up front,
-    # so more only takes RAM from everything else). Smaller PCs get less so Windows (and a game) still fit.
+    # so more only takes RAM from everything else). Smaller machines get less so the system (and a game) still fit.
     $total = $TotalBytes / 1GB
-    if ($total -le 8.5) { return 3 }
-    if ($total -le 12.5) { return 4 }
-    if ($total -le 16.5) { return 5 }
-    if ($total -le 24.5) { return 6 }
-    return 8
+    $gb = if ($total -le 8.5) { 3 } elseif ($total -le 12.5) { 4 } elseif ($total -le 16.5) { 5 } else { 6 }
+    if ($total -gt 24.5) { $gb = 8 }
+    if ($total -gt 0 -and $gb -gt $total - 1) { $gb = [int][math]::Max(1, [math]::Floor($total - 1)) }
+    return $gb
 }
 
 <#
 .SYNOPSIS
-    The java command line (everything after java.exe) that runs the manifest's server with -MemoryGB of memory.
+    The java command line (everything after java) that runs the manifest's server with -MemoryGB of memory.
 #>
 function Get-LaunchArguments {
     param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [int]$MemoryGB)
@@ -789,9 +1009,14 @@ function Get-LaunchArguments {
 <#
 .SYNOPSIS
     Runs the server in this window until it stops. Throws if it exits with an error.
+.PARAMETER LaunchFile
+    Instead of running the server, write how to run it to this file, one item per line: the folder to
+    run in, the java path, then each argument. realms.sh does this on Linux and macOS and then runs
+    java itself (exec), so the server gets the console and the stop signals directly.
 #>
 function Start-Server {
-    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB)
+    param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB,
+        [string]$LaunchFile)
     $gb = $MemoryGB
     $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb
     Write-Host ''
@@ -800,9 +1025,19 @@ function Start-Server {
     Write-Host '    To stop the server safely, type  stop  here and press Enter.' -ForegroundColor White
     Write-Host '    (Closing this window without "stop" can lose the last few minutes of the world.)' -ForegroundColor White
     Write-Host ''
+    if ($LaunchFile) {
+        $lines = @($Context.ServerDir, $Java) + $jvm
+        if ($lines | Where-Object { $_ -match '[\r\n]' }) { throw 'The server folder or Java path has a line break in it.' }
+        Write-TextFile $LaunchFile (($lines -join "`n") + "`n")
+        return
+    }
     Push-Location $Context.ServerDir
     try { & $Java @jvm; $code = $LASTEXITCODE } finally { Pop-Location }
-    if ($code -ne 0) { throw "The server stopped with an error (exit code $code). See the messages above, or server\logs\latest.log." }
+    # On Linux and macOS, 143 and 130 are SIGTERM and SIGINT: Minecraft saves the world on both.
+    if (-not (Test-WindowsHost) -and ($code -eq 143 -or $code -eq 130)) { $code = 0 }
+    if ($code -ne 0) {
+        throw "The server stopped with an error (exit code $code). See the messages above, or $(Join-RealmsPath 'server' 'logs/latest.log')."
+    }
     Write-Step 'Server stopped.'
 }
 
@@ -818,9 +1053,32 @@ function Stop-Server {
     Write-Ok 'Server stopped.'
 }
 
+# What robocopy does for Backup-Server on Windows, for Linux and macOS: copies $From into $To except
+# the folders in $SkipDirs (relative, '/'-separated), *.jar and session.lock. A file or folder that the
+# running server deletes while this copies is skipped.
+function Copy-ServerFiles([string]$From, [string]$To, [string[]]$SkipDirs) {
+    $base = (Get-Item -LiteralPath $From).FullName.TrimEnd('\', '/')
+    $pending = New-Object System.Collections.Generic.Stack[string]
+    $pending.Push($base)
+    while ($pending.Count) {
+        $dir = $pending.Pop()
+        $target = if ($dir -eq $base) { $To } else { Join-RealmsPath $To (Get-RelativeName $base $dir) }
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        foreach ($item in @(Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue)) {
+            $rel = Get-RelativeName $base $item.FullName
+            if ($item.PSIsContainer) {
+                if ($SkipDirs -notcontains $rel) { $pending.Push($item.FullName) }
+            } elseif ($item.Name -notlike '*.jar' -and $item.Name -ne 'session.lock') {
+                try { [IO.File]::Copy($item.FullName, (Join-RealmsPath $To $rel), $true) }
+                catch [IO.FileNotFoundException], [IO.DirectoryNotFoundException] { Write-Verbose "skipped $rel (gone)" }
+            }
+        }
+    }
+}
+
 <#
 .SYNOPSIS
-    Copies the world, configs and plugin or mod data to backups\<timestamp> and keeps the newest 14.
+    Copies the world, configs and plugin or mod data to backups/<timestamp> and keeps the newest 14.
 #>
 function Backup-Server {
     param([Parameter(Mandatory)] $Context)
@@ -829,16 +1087,19 @@ function Backup-Server {
     $running = Test-ServerRunning $Context
     $stamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
     $dest = Join-Path $Context.BackupDir $stamp
-    Write-Step "Backing up to backups\$stamp"
+    Write-Step "Backing up to $(Join-RealmsPath 'backups' $stamp)"
     if ($running) { [void](Invoke-Rcon $Context @('save-off', 'save-all flush')); Start-Sleep -Seconds 3 }
     try {
         # Worlds, configs and plugin or mod data. Skips things the installer can re-download or the server rebuilds.
-        & robocopy $server $dest /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP `
-            /XD (Join-Path $server 'libraries') (Join-Path $server 'versions') (Join-Path $server 'cache') `
-                (Join-Path $server 'logs') (Join-Path $server 'bluemap') (Join-Path $server 'plugins\.paper-remapped') `
-                (Join-Path $server '.fabric') `
-            /XF '*.jar' 'session.lock' | Out-Null
-        if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
+        $skip = @('libraries', 'versions', 'cache', 'logs', 'bluemap', 'plugins/.paper-remapped', '.fabric')
+        if ((Get-RealmsPlatform) -like 'windows-*') {
+            & robocopy $server $dest /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP `
+                /XD ($skip | ForEach-Object { Join-RealmsPath $server $_ }) `
+                /XF '*.jar' 'session.lock' | Out-Null
+            if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
+        } else {
+            Copy-ServerFiles $server $dest $skip
+        }
     } finally {
         if ($running) { [void](Invoke-Rcon $Context @('save-on')) }
     }
@@ -956,6 +1217,7 @@ function New-DockerCompose($Manifest, [int]$GamePort) {
         "      - `"$($script:VoicePort):$($script:VoicePort)/udp`"",
         "      - `"$($script:MapPort):$($script:MapPort)/tcp`"",
         '    restart: unless-stopped',
+        '    stop_grace_period: 2m',
         '    stdin_open: true',
         '    tty: true')
     return ($lines -join "`n") + "`n"
@@ -1103,7 +1365,7 @@ function Set-ZipUnixHost([string]$Path) {
 
 <#
 .SYNOPSIS
-    Writes exports\TheRealms-<version>-hosting.zip: the installed server folder plus start.sh,
+    Writes exports/TheRealms-<version>-hosting.zip: the installed server folder plus start.sh,
     start.bat, docker-compose.yml and HOSTING.txt, ready to upload to an online host. Returns its path.
 .DESCRIPTION
     Run Install-Server first: the export packs what this PC installed (nothing third-party is
@@ -1111,7 +1373,7 @@ function Set-ZipUnixHost([string]$Path) {
 #>
 function Export-HostingBundle {
     param([Parameter(Mandatory)] $Context)
-    if (Test-ServerRunning $Context) { throw 'The server is running. Stop it first (type "stop" in its window, or run Stop Server).' }
+    if (Test-ServerRunning $Context) { throw (Get-StopFirstMessage) }
     $m = $Context.Manifest
     $layout = Get-ServerLayout -Manifest $m
     $server = $Context.ServerDir
@@ -1128,12 +1390,12 @@ function Export-HostingBundle {
 
     Write-Step "Packing the server for an online host ($folder.zip)"
     Use-Zip
-    $base = (Get-Item -LiteralPath $server).FullName.TrimEnd('\')
+    $base = (Get-Item -LiteralPath $server).FullName.TrimEnd('\', '/')
     try {
         $archive = [IO.Compression.ZipFile]::Open($part, [IO.Compression.ZipArchiveMode]::Create)
         try {
             foreach ($f in Get-ChildItem -LiteralPath $base -Recurse -File -Force | Sort-Object FullName) {
-                $rel = $f.FullName.Substring($base.Length + 1).Replace('\', '/')
+                $rel = Get-RelativeName $base $f.FullName
                 if (Test-ExportSkip $rel) { continue }
                 [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $f.FullName, "$folder/$rel",
                     [IO.Compression.CompressionLevel]::Optimal)
@@ -1155,6 +1417,11 @@ function Export-HostingBundle {
 
 Export-ModuleMember -Function @(
     'New-RealmsContext'
+    'Get-RealmsPlatform'
+    'Get-LauncherName'
+    'Get-TotalMemoryBytes'
+    'Get-JavaBuild'
+    'Get-JavaExecutable'
     'Install-Server'
     'Start-Server'
     'Stop-Server'

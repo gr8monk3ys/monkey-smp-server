@@ -2,24 +2,35 @@
 
   python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack,
                                         Fabric launcher profile, player installer files)
-  python tools/validate.py --online     also download every file (Java, the Paper jar or Fabric launcher,
-                                        plugins, mods, datapacks), verify its size and hash, apply each
+  python tools/validate.py --online     also download every file (Java for every platform, the Paper jar
+                                        or Fabric launcher, plugins, mods, datapacks, and the PowerShell
+                                        builds in pwsh.lock), verify its size and hash, apply each
                                         mod/datapack patch to its download to prove it still fits, and
                                         check Fabric meta still serves the pinned launcher profile
 """
 import argparse
+import hashlib
 import re
 import sys
 
+import build
 import defaults
 import entries
 import launcher_profile
 import patches
+import pwsh_lock
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
 
 PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Schedule Backups.bat", "Add Player.bat",
-                 "Prepare for Hosting.bat", "READ ME FIRST.txt")
+                 "Prepare for Hosting.bat", "READ ME FIRST.txt",
+                 # Linux and macOS: the same launchers as sh scripts, and the PowerShell bootstrap they share.
+                 "start.sh", "stop.sh", "backup.sh", "add-player.sh", "prepare-for-hosting.sh", "Start Server.command",
+                 "realms/realms.sh", "realms/pwsh.lock")
+# The Docker image files (package/docker/), checked once that folder exists.
+DOCKER_FILES = ("docker/Dockerfile", "docker/compose.yaml", "docker/entrypoint.sh", "docker/.env.example")
+# Read by sh (or Docker) on Linux and macOS: a CR at the end of a line breaks them.
+UNIX_FILES = ("*.sh", "*.command", "pwsh.lock", "docker/*")
 # Checked only once player/ exists (the player zip can't be built without it).
 PLAYER_FILES = ("Install for Minecraft Launcher.bat", "READ ME.txt", "installer/install-client.ps1",
                 "installer/PlayerInstall.psm1")
@@ -44,6 +55,7 @@ def validate(manifest: dict, repo=REPO) -> list[str]:
         errors.append("manifest: world.seed must be a number (or empty for random)")
     for kind, e in entries.artifacts(manifest):
         errors += entries.check(kind, e)
+    errors += entries.check_java(manifest)
     errors += entries.check_types(manifest)
     for kind, group in entries.GROUPS.items():
         files = [e.get("file", "").lower() for e in entries.group(manifest, kind)]
@@ -59,9 +71,18 @@ def validate_package(repo=REPO) -> list[str]:
     props = (repo.defaults / "server.properties").read_text(encoding="utf-8")
     errors = defaults.check_server_properties(props)
     errors += [f"package/{name} is missing" for name in PACKAGE_FILES if not (repo.package / name).is_file()]
-    for script in sorted(repo.package.rglob("*.ps*1")) + sorted(repo.package.glob("*.bat")):
+    if (repo.package / "docker").is_dir():
+        errors += [f"package/{name} is missing" for name in DOCKER_FILES if not (repo.package / name).is_file()]
+    unix = sorted({f for _, f in build.package_files(repo)
+                   if any(f.match(pattern) or f.relative_to(repo.package).match(pattern) for pattern in UNIX_FILES)})
+    for script in sorted(repo.package.rglob("*.ps*1")) + sorted(repo.package.glob("*.bat")) + unix:
         if any(b > 127 for b in script.read_bytes()):
             errors.append(f"{script.relative_to(repo.package).as_posix()} {ASCII_NOTE}")
+    for script in unix:
+        if b"\r" in script.read_bytes():
+            errors.append(f"{script.relative_to(repo.package).as_posix()} must have LF line endings (it is run by sh)")
+    if repo.pwsh_lock.is_file():
+        errors += pwsh_lock.check(repo.pwsh_lock.read_text(encoding="ascii", errors="replace"))
     if repo.player.is_dir():
         errors += [f"player/{name} is missing" for name in PLAYER_FILES if not (repo.player / name).is_file()]
         for script in sorted(repo.player.rglob("*.ps*1")) + sorted(repo.player.rglob("*.bat")):
@@ -69,7 +90,8 @@ def validate_package(repo=REPO) -> list[str]:
                 errors.append(f"{script.relative_to(repo.root).as_posix()} {ASCII_NOTE}")
     # The READ MEs, the scripts (they write HOSTING.txt and every message) and the docs.
     texts = [path for folder in (repo.package, repo.player) if folder.is_dir()
-             for pattern in ("*.txt", "*.bat", "**/*.ps*1") for path in sorted(folder.glob(pattern))]
+             for pattern in ("*.txt", "*.bat", "*.command", "**/*.sh", "**/*.ps*1")
+             for path in sorted(folder.glob(pattern))]
     texts += sorted(repo.root.glob("*.md")) + sorted((repo.root / "docs").rglob("*.md"))
     for text in texts:
         if any(b < 32 and b not in CONTROL_OK for b in text.read_bytes()):
@@ -132,6 +154,17 @@ def verify_online(manifest: dict, upstream: Upstream, repo=REPO) -> list[str]:
     return errors
 
 
+def verify_pwsh_online(upstream: Upstream, repo=REPO) -> list[str]:
+    """Every PowerShell build in pwsh.lock must still download with its pinned sha256."""
+    errors = []
+    for pin in pwsh_lock.parse(repo.pwsh_lock.read_text(encoding="ascii")):
+        if hashlib.sha256(upstream.download(pin.url)).hexdigest() != pin.sha256:
+            errors.append(f"pwsh.lock {pin.platform} {pin.file}: download doesn't match the pinned sha256")
+            continue
+        print(f"ok  pwsh     {pin.file}")
+    return errors
+
+
 def main(argv=None, repo=REPO, upstream=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--online", action="store_true")
@@ -140,7 +173,8 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
     errors = validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
-        errors += verify_online(manifest, upstream, repo) + verify_profile_online(upstream, repo)
+        errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)
+                   + verify_profile_online(upstream, repo))
     for e in errors:
         print("ERROR", e)
     counts = ", ".join(f"{len(entries.group(manifest, kind))} {group}" for kind, group in entries.GROUPS.items())

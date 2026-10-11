@@ -5,7 +5,8 @@ import pytest
 
 import entries
 from check_updates import LOADERS
-from upstream import Upstream
+from repo import REPO
+from upstream import JAVA_PLATFORMS, Upstream
 
 MC = "26.1.2"
 LUCKPERMS, INVENTORY, EFFECTS = "Vebnzrzj", "zJhgi9nK", "wBo7DRiB"
@@ -65,10 +66,58 @@ def test_pick_file_prefers_primary_with_same_extension():
 def test_paper_and_java_entries_from_recorded_responses(recorded):
     up = Upstream(recorded)
     server = entries.paper(up.newest_stable_paper_build(MC))
-    java = entries.java(up.adoptium_latest_jre(25))
+    java = entries.java({p: up.adoptium_latest_jre(25, p) for p in JAVA_PLATFORMS})
     assert server["type"] == "paper" and server["file"].startswith("paper-26.1.2-")
-    assert java["vendor"] == "Eclipse Temurin JRE" and java["file"].endswith(".zip")
-    assert entries.check("server", server) == [] and entries.check("java", java) == []
+    assert java["vendor"] == "Eclipse Temurin JRE" and list(java["builds"]) == list(JAVA_PLATFORMS)
+    assert java["builds"]["windows-x64"]["file"].endswith("_x64_windows_hotspot_25.0.4.1_1.zip")
+    assert java["builds"]["mac-aarch64"]["file"].endswith("_aarch64_mac_hotspot_25.0.4.1_1.tar.gz")
+    assert entries.check("server", server) == []
+    assert all(entries.check("java", b) == [] for b in java["builds"].values())
+    assert entries.check_java({"version": "2.3.0", "java": java}) == []
+
+
+def test_java_entry_needs_one_release_for_every_platform(recorded):
+    up = Upstream(recorded)
+    assets = {p: up.adoptium_latest_jre(25, p) for p in JAVA_PLATFORMS}
+    assets["linux-x64"] = {**assets["linux-x64"], "release_name": "jdk-25.0.5+9"}
+    with pytest.raises(ValueError, match="different releases"):
+        entries.java(assets)
+
+
+def test_java_builds_reads_both_manifest_shapes(paper_manifest):
+    legacy = paper_manifest["java"]
+    assert entries.java_builds(paper_manifest) == [("windows-x64", legacy)]
+    current = REPO.load_manifest()
+    assert [p for p, _ in entries.java_builds(current)] == list(JAVA_PLATFORMS)
+    assert sum(k == "java" for k, _ in entries.artifacts(current)) == len(JAVA_PLATFORMS)
+
+
+def java_manifest():
+    return copy.deepcopy(REPO.load_manifest())
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (lambda m: m["java"]["builds"].pop("linux-aarch64"), "java: no build for linux-aarch64"),
+    (lambda m: m["java"]["builds"].update(solaris=m["java"]["builds"]["linux-x64"]), "unknown platform solaris"),
+    (lambda m: m["java"]["builds"].update({"mac-x64": m["java"]["builds"]["mac-aarch64"]}),
+     "java mac-x64: OpenJDK25U-jre_aarch64_mac_hotspot_25.0.4.1_1.tar.gz is not the x64 mac .tar.gz build"),
+    (lambda m: m["java"].update(version="jdk-25.0.5+9"), "url is not from release jdk-25.0.5+9"),
+    (lambda m: m["java"]["builds"]["linux-x64"].update(file="other.tar.gz"), "url doesn't end in the file name"),
+    (lambda m: m["java"].pop("vendor"), "java: missing 'vendor'"),
+    (lambda m: m.update(java={k: v for k, v in m["java"]["builds"]["windows-x64"].items()}),
+     "java: needs 'builds'"),
+])
+def test_check_java_catches_mistakes(mutate, message):
+    m = java_manifest()
+    assert entries.check_java(m) == []
+    mutate(m)
+    errors = entries.check_java(m)
+    assert any(message in e for e in errors), errors
+
+
+def test_a_manifest_before_2_3_may_pin_only_the_windows_java(paper_manifest):
+    assert entries.check_java(paper_manifest) == []
+    assert any("needs 'builds'" in e for e in entries.check_java({**paper_manifest, "version": "2.3.0"}))
 
 
 @pytest.mark.parametrize("release", ["paper_manifest", "fabric_manifest"])

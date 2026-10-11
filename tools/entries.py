@@ -1,6 +1,6 @@
 """Manifest entries: the one place that knows their shape, where they come from and what is valid.
 
-Kinds of artifact: "java" (the Temurin JRE), "server" (the Paper jar or the Fabric server launcher),
+Kinds of artifact: "java" (a Temurin JRE build), "server" (the Paper jar or the Fabric server launcher),
 "plugin", "mod" and "datapack". Every entry has `file`, `url`, `size` and `hashes`; Modrinth entries
 (plugins, mods, datapacks) add `slug`, `project_id`, `version` and `version_id`; a mod or datapack
 may add a `patch` (owned by patches.py).
@@ -10,6 +10,11 @@ Server types (manifest["server"]["type"]) and the groups they may use (GROUPS_BY
   - fabric: {"type", "loader", "installer", file, url, size, hashes}; mods + datapacks, `plugins`
             must be empty. The url is Fabric meta's launcher jar for (minecraft, loader, installer).
 A 1.x manifest has no `mods` group; readers treat it as [] (with_all_groups adds it on load).
+
+Java (manifest["java"]): {"vendor", "version" (Adoptium's release name, e.g. jdk-25.0.4.1+1), "builds"},
+where builds maps every platform of JAVA_PLATFORMS to an entry (file, url, size, hashes) of that one
+release: a .zip for Windows, a .tar.gz elsewhere. Manifests before JAVA_BUILDS_SINCE (2.3.0) pinned
+only the Windows build, as file/url/size/hashes directly on "java"; java_builds reads both shapes.
 
 The rule for `file`: it is the artifact's name on the host's disk, and upstream names it unless
 that name is already established and something depends on it.
@@ -25,14 +30,16 @@ In short: snapshots record what is on disk, updates take upstream's name except 
 sticky (STICKY_NAMES).
 
 Built from upstream responses with: from_disk (snapshot), updated (update check), added (add.py),
-paper, fabric, java. Checked with: check (one entry), check_types (server type vs groups).
+paper, fabric, java. Checked with: check (one entry), check_types (server type vs groups),
+check_java (the Java builds).
 Hash choice: hash_of, matches.
 """
 import hashlib
 import os
 import re
+import urllib.parse
 
-from upstream import fabric_server_jar_url
+from upstream import JAVA_PLATFORMS, fabric_server_jar_url
 
 KINDS = ("java", "server", "plugin", "mod", "datapack")
 GROUPS = {"plugin": "plugins", "mod": "mods", "datapack": "datapacks"}
@@ -40,6 +47,7 @@ STICKY_NAMES = {"datapack"}
 PATCHABLE = ("mod", "datapack")
 SERVER_TYPES = ("paper", "fabric")
 GROUPS_BY_TYPE = {"paper": ("plugins", "datapacks"), "fabric": ("mods", "datapacks")}
+JAVA_BUILDS_SINCE = (2, 3, 0)
 
 HEX = {"sha1": 40, "sha256": 64, "sha512": 128}
 ALLOWED_HOSTS = ("https://cdn.modrinth.com/", "https://fill-data.papermc.io/", "https://meta.fabricmc.net/",
@@ -70,9 +78,20 @@ def kind_allowed(server_type: str, kind: str) -> bool:
     return GROUPS[kind] in GROUPS_BY_TYPE.get(server_type, ())
 
 
+def java_builds(manifest: dict) -> list[tuple[str, dict]]:
+    """(platform, entry) for every pinned Java build; an older manifest's single build is Windows x64."""
+    java = manifest["java"]
+    if "builds" not in java:
+        return [("windows-x64", java)]
+    builds = java["builds"] if isinstance(java["builds"], dict) else {}
+    order = [p for p in JAVA_PLATFORMS if p in builds] + sorted(p for p in builds if p not in JAVA_PLATFORMS)
+    return [(p, builds[p]) for p in order]
+
+
 def artifacts(manifest: dict):
     """Every downloadable file in the manifest as (kind, entry)."""
-    yield "java", manifest["java"]
+    for _, build in java_builds(manifest):
+        yield "java", build
     yield "server", manifest["server"]
     for kind in GROUPS:
         for entry in group(manifest, kind):
@@ -133,10 +152,19 @@ def fabric(mc: str, loader: str, installer: str, jar: bytes) -> dict:
             "size": len(jar), "hashes": {"sha256": hashlib.sha256(jar).hexdigest()}}
 
 
-def java(asset: dict) -> dict:
+def java_build(asset: dict) -> dict:
+    """One build's entry, from an Adoptium asset (Upstream.adoptium_latest_jre / adoptium_release_jre)."""
     p = asset["binary"]["package"]
-    return {"vendor": "Eclipse Temurin JRE", "version": asset["release_name"], "file": p["name"],
-            "url": p["link"], "size": p["size"], "hashes": {"sha256": p["checksum"]}}
+    return {"file": p["name"], "url": p["link"], "size": p["size"], "hashes": {"sha256": p["checksum"]}}
+
+
+def java(assets: dict[str, dict]) -> dict:
+    """manifest["java"] from one Adoptium asset per platform, which must all be the same release."""
+    releases = {a["release_name"] for a in assets.values()}
+    if len(releases) != 1:
+        raise ValueError(f"the Java builds are from different releases: {', '.join(sorted(releases))}")
+    return {"vendor": "Eclipse Temurin JRE", "version": releases.pop(),
+            "builds": {p: java_build(assets[p]) for p in JAVA_PLATFORMS if p in assets}}
 
 
 def _modrinth(version, f, *, slug, project_id, file, patch=None):
@@ -191,6 +219,38 @@ def check(kind: str, e: dict) -> list[str]:
             errors.append(f"{kind} {e['file']}: {algo} is not {HEX[algo]} lowercase hex chars")
     except KeyError as err:
         errors.append(str(err.args[0]))
+    return errors
+
+
+def check_java(manifest: dict) -> list[str]:
+    """Problems with manifest["java"] as a whole (each build is also checked as a "java" artifact)."""
+    java = manifest["java"]
+    if not isinstance(java, dict):
+        return ["java: must be an object"]
+    if "builds" not in java:
+        version = manifest.get("version", "")
+        if re.fullmatch(r"\d+\.\d+\.\d+", version) and tuple(map(int, version.split("."))) >= JAVA_BUILDS_SINCE:
+            return [f"java: needs 'builds' with a JRE for each of {', '.join(JAVA_PLATFORMS)} "
+                    f"(from {'.'.join(map(str, JAVA_BUILDS_SINCE))})"]
+        return []  # an older manifest: the one Windows build is checked as an artifact
+    errors = [f"java: missing '{key}'" for key in ("vendor", "version") if not java.get(key)]
+    builds = java["builds"]
+    if not isinstance(builds, dict):
+        return errors + ["java: 'builds' must be an object of platform -> build"]
+    errors += [f"java: no build for {p}" for p in JAVA_PLATFORMS if p not in builds]
+    errors += [f"java: unknown platform {p}" for p in builds if p not in JAVA_PLATFORMS]
+    release = urllib.parse.quote(str(java.get("version", "")), safe="")
+    for p, build in builds.items():
+        if p not in JAVA_PLATFORMS or not isinstance(build, dict) or not {"file", "url"} <= set(build):
+            continue
+        os_, arch = JAVA_PLATFORMS[p]
+        ext = ".zip" if os_ == "windows" else ".tar.gz"
+        if not build["file"].endswith(ext) or f"_{arch}_{os_}_" not in build["file"]:
+            errors.append(f"java {p}: {build['file']} is not the {arch} {os_} {ext} build")
+        if build["url"].rsplit("/", 1)[-1] != build["file"]:
+            errors.append(f"java {p}: url doesn't end in the file name {build['file']}")
+        if f"/{release}/" not in build["url"]:
+            errors.append(f"java {p}: url is not from release {java.get('version')}")
     return errors
 
 

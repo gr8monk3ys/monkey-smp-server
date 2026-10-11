@@ -29,6 +29,11 @@ class Repo:
         return self.realms / "manifest.json"
 
     @property
+    def pwsh_lock(self) -> Path:
+        """The portable PowerShell realms.sh installs on Linux and macOS (see pwsh_lock.py)."""
+        return self.realms / "pwsh.lock"
+
+    @property
     def patches(self) -> Path:
         return self.realms / "patches"
 

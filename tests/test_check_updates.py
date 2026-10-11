@@ -13,10 +13,11 @@ from conftest import paper_builds_url, serve_fabric_launcher
 import check_updates
 import entries
 import patches
+import pwsh_lock
 import validate
 from check_updates import LOADERS, NEEDS_PATCH
-from repo import Repo
-from upstream import MODRINTH, Upstream, json_query
+from repo import REPO, Repo
+from upstream import ADOPTIUM, JAVA_PLATFORMS, MODRINTH, POWERSHELL_METADATA, POWERSHELL_RELEASES, Upstream, json_query
 
 MC = "26.1.2"
 LUCKPERMS, INVENTORY, EFFECTS = "Vebnzrzj", "zJhgi9nK", "wBo7DRiB"
@@ -261,3 +262,106 @@ def test_main_apply_on_the_fabric_release_keeps_patched_mods_and_stays_valid(up,
     assert validate.validate(saved, fabric_repo) == []
     assert out.read_text().count("re-snapshot needed") == 2
     assert gh.read_text() == "count=3\n"
+
+
+# --- Java and PowerShell ------------------------------------------------------------------------
+
+def adoptium_latest(platform: str) -> str:
+    os_, arch = JAVA_PLATFORMS[platform]
+    return f"{ADOPTIUM}/assets/latest/25/hotspot?os={os_}&architecture={arch}&image_type=jre"
+
+
+def release_newer_java(http, platforms, name="jdk-25.0.5+9"):
+    """Serve a newer Temurin release as the latest for `platforms`."""
+    for p in platforms:
+        os_, arch = JAVA_PLATFORMS[p]
+        ext = "zip" if os_ == "windows" else "tar.gz"
+        file = f"OpenJDK25U-jre_{arch}_{os_}_hotspot_25.0.5_9.{ext}"
+        http.add("GET", adoptium_latest(p), [{"release_name": name, "binary": {"package": {
+            "name": file, "size": 1234, "checksum": "ab" * 32,
+            "link": f"https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B9/{file}"}}}])
+
+
+def test_java_is_current_in_the_recordings(up):
+    assert check_updates.java_update(REPO.load_manifest(), up) is None
+
+
+def test_java_update_waits_until_every_platform_has_the_release(up):
+    release_newer_java(up.http, ["windows-x64", "linux-x64"])
+    u = check_updates.java_update(REPO.load_manifest(), up)
+    assert (u.pinned, u.newest, u.entry) == ("jdk-25.0.4.1+1", "jdk-25.0.5+9", None)
+    assert u.note == "not out for linux-aarch64, mac-x64, mac-aarch64 yet"
+
+
+def test_java_update_pins_every_platform(up):
+    release_newer_java(up.http, JAVA_PLATFORMS)
+    m = REPO.load_manifest()
+    u = check_updates.java_update(m, up)
+    assert u.entry["version"] == "jdk-25.0.5+9" and list(u.entry["builds"]) == list(JAVA_PLATFORMS)
+    new = check_updates.apply(m, [u])
+    assert new["java"] == u.entry and m["java"]["version"] == "jdk-25.0.4.1+1"
+    assert entries.check_java(new) == []
+
+
+def lts(http, tags, version="7.6.7"):
+    http.add("GET", POWERSHELL_METADATA, {"LTSReleaseTag": tags, "StableReleaseTag": f"v{version}"})
+    http.add("GET", f"{POWERSHELL_RELEASES}/tags/v{version}", {"tag_name": f"v{version}", "assets": [
+        {"name": f"powershell-{version}-{t}.tar.gz", "size": 1000, "digest": "sha256:" + "cd" * 32,
+         "browser_download_url": f"https://github.com/PowerShell/PowerShell/releases/download/v{version}/"
+                                 f"powershell-{version}-{t}.tar.gz"}
+        for t in pwsh_lock.PLATFORMS.values()]})
+
+
+def test_pwsh_is_current_in_the_recordings(up):
+    assert check_updates.pwsh_update(REPO.pwsh_lock.read_text(), up) is None
+
+
+def test_pwsh_update_takes_the_newest_lts(up):
+    lts(up.http, ["v7.4.21", "v7.6.7"])
+    u = check_updates.pwsh_update(REPO.pwsh_lock.read_text(), up)
+    assert (u.kind, u.pinned, u.newest) == ("pwsh", "7.6.6", "7.6.7")
+    text = u.entry["pwsh.lock"]
+    assert pwsh_lock.check(text) == [] and pwsh_lock.version(pwsh_lock.parse(text)) == "7.6.7"
+    assert "osx-arm64.tar.gz " + "cd" * 32 in text
+
+
+def test_verify_pins_finds_nothing_wrong_with_the_real_pins(up):
+    assert check_updates.verify_pins(REPO.load_manifest(), up, REPO.pwsh_lock.read_text()) == []
+
+
+def test_verify_pins_reports_java_and_pwsh_pins_upstream_no_longer_lists(up):
+    m = copy.deepcopy(REPO.load_manifest())
+    m["java"]["builds"]["mac-x64"]["hashes"]["sha256"] = "0" * 64
+    lock = REPO.pwsh_lock.read_text()
+    pin = next(p for p in pwsh_lock.parse(lock) if p.platform == "linux-aarch64")
+    problems = check_updates.verify_pins(m, up, lock.replace(pin.sha256, "1" * 64))
+    assert len(problems) == 2
+    assert problems[0].startswith("java mac-x64: Adoptium lists OpenJDK25U-jre_x64_mac_hotspot")
+    assert problems[1] == ("pwsh.lock linux-aarch64: GitHub does not list powershell-7.6.6-linux-arm64.tar.gz "
+                           "with the pinned sha256")
+    assert "### Pins that no longer match upstream" in check_updates.report(m, [], problems)
+
+
+def test_main_apply_pins_java_and_pwsh(up, old, paper_repo, tmp_path, monkeypatch):
+    paper_repo.save_manifest({**old, "java": REPO.load_manifest()["java"]})
+    release_newer_java(up.http, JAVA_PLATFORMS)
+    lts(up.http, ["v7.6.7"])
+    gh = tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(gh))
+    check_updates.main(["--apply"], repo=paper_repo, upstream=up)
+    assert paper_repo.load_manifest()["java"]["version"] == "jdk-25.0.5+9"
+    assert pwsh_lock.version(pwsh_lock.parse(paper_repo.pwsh_lock.read_text())) == "7.6.7"
+    assert b"\r" not in paper_repo.pwsh_lock.read_bytes()
+    # Paper, LuckPerms, two datapacks, Java and PowerShell; the old pins still match what upstream lists.
+    assert gh.read_text() == "count=6\n"
+
+
+def test_main_counts_pin_problems(up, old, paper_repo, tmp_path, monkeypatch):
+    m = copy.deepcopy(old)
+    m["java"]["hashes"]["sha256"] = "0" * 64  # the frozen release's single Windows build
+    paper_repo.save_manifest(m)
+    out, gh = tmp_path / "report.md", tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(gh))
+    check_updates.main(["--out", str(out)], repo=paper_repo, upstream=up)
+    assert "- java windows-x64: Adoptium lists" in out.read_text()
+    assert gh.read_text() == "count=5\n"  # four updates and one problem

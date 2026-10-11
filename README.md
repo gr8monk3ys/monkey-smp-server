@@ -12,8 +12,8 @@ forwarding needed.
 |---|---|
 | Minecraft | Java Edition **26.3** |
 | Server | [Fabric](https://fabricmc.net) (loader pinned in the manifest) |
-| Server mods | 144: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Tectonic, Terralith, Incendium, Nullscape, Moog's structures, Epic Dungeons, Grand Capitals, The Sift, Naturalist, Variants & Ventures, Strength SMP, C2ME, ... |
-| Client pack | 217 mods, resource packs and shaders (required to join) |
+| Server mods | 141: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Tectonic, Terralith, Incendium, Nullscape, Moog's structures, Epic Dungeons, Grand Capitals, Naturalist, Variants & Ventures, Strength SMP, C2ME, ... |
+| Client pack | 213 mods, resource packs and shaders (required to join) |
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).
 
@@ -43,7 +43,7 @@ Then follow [`READ ME FIRST.txt`](package/READ%20ME%20FIRST.txt). The other laun
 `Add Player.bat` / `sh add-player.sh NAME`, `Backup World.bat` / `sh backup.sh`,
 `Prepare for Hosting.bat` / `sh prepare-for-hosting.sh`.
 
-The first start downloads about 500 MB (Java for your system, the Fabric launcher, 144 mods) straight
+The first start downloads about 500 MB (Java for your system, the Fabric launcher, 141 mods) straight
 from their official sources and checks every file's SHA-256/512 hash before using it. It then asks you
 to agree to the Minecraft EULA and for your Minecraft name, which becomes the admin. Friends join through
 [playit.gg](https://playit.gg) (steps in the READ ME).

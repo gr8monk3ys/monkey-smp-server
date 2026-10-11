@@ -14,7 +14,7 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
   a) Put this whole folder somewhere permanent, like Documents (not Downloads).
   b) Double-click  "Start Server.bat".
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads about 500 MB the first time (Java, the server and its 144 mods),
+     - It downloads about 500 MB the first time (Java, the server and its 141 mods),
        and the first start builds the world, so give it 5-10 minutes.
   c) It asks you two things:
      - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.
@@ -44,7 +44,7 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
        - Mac only: type  cd  and a space, drag this folder onto the Terminal window,
          and press Enter.
        - Type  sh start.sh  and press Enter.
-     - The first time it downloads about 500 MB (Java, the server and its 144 mods), plus
+     - The first time it downloads about 500 MB (Java, the server and its 141 mods), plus
        about 70 MB for PowerShell, the tool that runs the setup, if your computer doesn't
        have it. The first start also builds the world, so give it 5-10 minutes.
      - If the Mac asks whether Terminal may use files in your Documents folder, click Allow.

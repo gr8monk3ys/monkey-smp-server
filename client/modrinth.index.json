@@ -81,21 +81,6 @@
       "fileSize": 84821608
     },
     {
-      "path": "mods/amethyst-nether-v4.4.jar",
-      "hashes": {
-        "sha1": "e73a0967fd777ef90d30a3d262fd912b319cf0be",
-        "sha512": "f60127f693cb067cc33aba45fb5b11b20b7d1942c32b95d34aa18d2d482501a4af029c795429aa85eed4399cf2807db9f7a6f287a11f7b45c2cdf2541773afa7"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/9EFaPoo8/versions/XnqamJjB/amethyst-nether-v4.4.jar"
-      ],
-      "fileSize": 1747275
-    },
-    {
       "path": "mods/appleskin-fabric-mc26.3-3.0.10.jar",
       "hashes": {
         "sha1": "3d19e40c5f97186857db98e622c01c2cd0030497",
@@ -1476,21 +1461,6 @@
       "fileSize": 60602
     },
     {
-      "path": "mods/mielon's-the-sift-1.1.2-mc26.3-fabric.jar",
-      "hashes": {
-        "sha1": "af383e317add95b0692a0be9dadf6eeb7796263b",
-        "sha512": "c037fc117de3d979391d1934e78ab23f19295fb5884af99442205a8a2393cc87d67624ac9c5ea4e37fee18e30db70e16abd9a56d87d525a1d9866af3bc94505a"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/j0IfTxBq/versions/QK8RaspH/mielon%27s-the-sift-1.1.2-mc26.3-fabric.jar"
-      ],
-      "fileSize": 20632725
-    },
-    {
       "path": "mods/modmenu-21.0.0.jar",
       "hashes": {
         "sha1": "66ec40f1cd0c037ddca2b5fc6b4b976d479c18e8",
@@ -2209,21 +2179,6 @@
         "https://cdn.modrinth.com/data/EUV7foM2/versions/lOFPSFh0/SkniroNetherAndEndOres-1.2.0-26.3-Fabric.jar"
       ],
       "fileSize": 108521
-    },
-    {
-      "path": "mods/slabbed-0.6.2-alpha+26.2-26.3.jar",
-      "hashes": {
-        "sha1": "b4d23a657d62ca51bad050119269124bcc1a3834",
-        "sha512": "3be43ef1d10835ae7647c7134c0a05297af9021a66b43ef3cc794a6391f3ccab6891e7e6e403d26552b01c34770a2da8b5dc39c4416122d65f0d352b562bb4be"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/5nraCxl9/versions/shP2HDKJ/slabbed-0.6.2-alpha%2B26.2-26.3.jar"
-      ],
-      "fileSize": 504721
     },
     {
       "path": "mods/slabsandstairs-1.15.3-26.3.jar",

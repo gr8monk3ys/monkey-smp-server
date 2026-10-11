@@ -1183,6 +1183,10 @@
       "size": 527780,
       "hashes": {
         "sha512": "0fc1a07eee8bebaa03c1098f2d8eb8e5daee6a17a1d4c7407b54a83a3db177926ccc00b186d6d83425e7cb07e29fcfa05395020382faad81fbd0e998e8c95d91"
+      },
+      "patch": {
+        "path": "patches/silvers_strength-smp-season-4",
+        "base_sha512": "0fc1a07eee8bebaa03c1098f2d8eb8e5daee6a17a1d4c7407b54a83a3db177926ccc00b186d6d83425e7cb07e29fcfa05395020382faad81fbd0e998e8c95d91"
       }
     },
     {

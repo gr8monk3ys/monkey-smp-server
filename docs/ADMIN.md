@@ -69,23 +69,34 @@ players to reach the live map.
 
 ## How many players
 
-Fewer than 2.2.2 said. Memory isn't the limit; one CPU core is, because the world ticks on a single thread and
-needs under 50 ms per tick for full speed (20 TPS). Measured on an Intel i7-8700K (2017) with Carpet fake
-players, after the world was generated:
+One CPU core is the limit, not memory: the world ticks on a single thread and needs under 50 ms per tick for
+full speed (20 TPS). Measured with `tools/loadtest.py` on an Intel i7-8700K (2017) with Carpet fake players
+standing spread out in generated terrain:
 
-| Players | Tick time | TPS |
+| Players | Typical tick | TPS |
 |---|---|---|
-| 10, moving around | ~115-125 ms | ~8 |
-| 25, standing still | ~230-280 ms | ~4 |
-| 25, standing still, without Strength SMP (and its 4 libraries) | ~90 ms | ~11 |
-| 25, exploring new land | stalls of 10-20 s | under 1 |
+| 5 | 19 ms | 20 |
+| 10 | 48 ms | 20 |
+| 25 | 71 ms | about 13 |
 
-So plan on **about 10 players on a typical home PC**, and expect it to feel sluggish even then. With 25 players
-about 60% of the tick goes to datapack commands, mostly the ones Strength SMP runs for every player on every
-tick, and it hits Minecraft's limit of 65,536 commands per tick hundreds of times a run (the rest of that
-tick's commands are skipped, so its mechanics misbehave under load too). A rented
-host with a current Ryzen (7000 or 9000 series) is roughly twice as fast per core; many budget plans run older
-Xeons that are slower than a 2017 desktop. `tools/loadtest.py` re-runs these measurements (see MAINTAINING.md).
+So a PC like that runs **about 10 players at full speed**; with 25 it stays playable but slow. A rented host
+with a current Ryzen (7000 or 9000 series) is roughly twice as fast per core, which is what 25 players need;
+many budget plans run older Xeons that are slower than a 2017 desktop. Exploring ungenerated land costs far
+more than these numbers (see the next section).
+
+What keeps it there:
+
+- **ServerCore** (`server\config\servercore\config.yml`). Mobs far from every player tick less often
+  (`activation-range`), and while a tick takes over 45 ms it steps mob caps and tick/view distances down, then
+  back up when the server recovers (`dynamic`; never above view distance 8 / simulation distance 6).
+  `/servercore status` shows the current values. Mob farms that depend on distant mobs can be slower: set
+  `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.
+- **Two patches in the Strength SMP mods** (docs/MAINTAINING.md lists them). Unpatched, they ran tens of
+  thousands of commands per tick and went past Minecraft's limit of 65,536, which cut their effects off.
+- **Three mods from the shared mod list are left out**: Slabbed (alpha; about doubles the tick, and has an open
+  report of freezing servers on 26.3), The Sift (adds about 65% to the tick), and Amethyst Nether (replaces the
+  whole Nether, as Incendium does; its page lists them as incompatible). To add one anyway, drop its jar into
+  `server\mods` (and players into their mods folder): the installer leaves files it doesn't manage alone.
 
 ## Before a big group joins
 

@@ -218,6 +218,21 @@ Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K wit
 performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
 run to none.
 
+## Mods left out on purpose
+
+The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync.
+
+| Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
+|---|---|
+| Slabbed (0.6.2-alpha) | About 140 ms more per tick, and an open report of 0 TPS deadlocks on 26.3 ([slabbed#102](https://github.com/peetsamods/slabbed/issues/102)). |
+| The Sift | About 90 ms more per tick: it adds an ichor fluid state to block-state definitions and hooks the fluid lookup. It also replaces the same ancient-city centres as the Dungeons and Taverns ancient-city overhaul. |
+| Amethyst Nether | Defines `minecraft:the_nether`, as Incendium does; only one can generate, and its Modrinth page lists Incendium as incompatible. |
+| Just Enough Professions, Improved Inventory Tabs, Villager News | Not on Modrinth, so they can't be pinned (ADR-0002). |
+| PrickleMC | The file in the folder is a NeoForge jar. |
+
+After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't
+start a game client, and a mod on one side only shows up as "registry entries that are unknown to this client".
+
 ## Tests
 
 ```bash

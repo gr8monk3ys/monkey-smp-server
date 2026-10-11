@@ -11,9 +11,14 @@ package/java/
 package/backups/
 package/downloads/
 package/smoke-console.log*
-
-# agent worktrees
-.claude/worktrees/
 package/pwsh/
 package/exports/
 package/.realms-launch
+package/loadtest/
+package/scheduled-backups.log
+
+# agent worktrees
+.claude/worktrees/
+
+# docker compose settings of a maintainer test run from package/docker (never ship them)
+package/docker/.env

@@ -1,0 +1,52 @@
+# The Realms on Docker (a Linux VPS, or Docker Desktop on Windows or macOS).
+#
+# Run these in this folder (TheRealms-Server/docker):
+#   cp .env.example .env          then edit .env: EULA=TRUE, and OWNER=<your Minecraft name>
+#   docker compose up -d          start; the first start downloads about 500 MB and takes a few minutes
+#   docker compose logs -f        watch it (Ctrl+C stops watching, not the server)
+#   docker compose stop           stop it; the world is saved first
+#
+# While it runs:
+#   docker compose exec realms realms add-player Steve     let a player join (whitelist)
+#   docker compose exec realms realms backup               back up the world to ../backups
+#   docker compose exec realms realms rcon "say hello"     run a console command
+#   docker compose attach realms                           the console (leave with Ctrl+P, Ctrl+Q)
+#
+# The image is only Debian plus a few tools, built here. Everything else (PowerShell, Java,
+# Fabric, the mods, the world) is downloaded into and kept in this release folder, the same as
+# when the server runs without Docker, so the two can take turns on the same world.
+# It starts again after a reboot or a crash until you stop it. Typing "stop" in the console
+# restarts it; use docker compose stop to stop it.
+name: the-realms
+
+services:
+  realms:
+    build: .
+    # Rebuild on every "up" (cached, takes a second) so a new release's Dockerfile is picked up.
+    pull_policy: build
+    environment:
+      EULA: ${EULA:-}
+      OWNER: ${OWNER:-}
+      MEMORY_GB: ${MEMORY_GB:-}
+      TZ: ${TZ:-}
+      PUID: ${PUID:-}
+      PGID: ${PGID:-}
+    volumes:
+      # The whole release folder (the one holding realms/ and this docker/ folder).
+      - ..:/realms
+    ports:
+      # Change the numbers on the left in .env, never the right ones (they are the server's own).
+      - "${GAME_PORT:-25565}:25565/tcp"     # the game
+      - "${VOICE_PORT:-24454}:24454/udp"    # Simple Voice Chat
+      - "${MAP_PORT:-8100}:8100/tcp"        # BlueMap web map
+      # RCON (25575) is deliberately not published: use "docker compose exec realms realms rcon".
+    # docker compose stop sends SIGTERM; Minecraft saves every world before it exits. Big worlds
+    # can take a while, so wait up to 2 minutes before Docker kills it.
+    stop_signal: SIGTERM
+    stop_grace_period: 2m
+    restart: unless-stopped
+    # Keep a console for docker compose attach.
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true

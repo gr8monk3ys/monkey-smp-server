@@ -1,0 +1,3 @@
+# The image only needs the entrypoint; keep .env (the host's settings) out of the build.
+*
+!entrypoint.sh

@@ -5,7 +5,17 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+    inputs:
+      macos:
+        description: Also boot the server on macOS (macOS minutes cost 10x)
+        type: boolean
+        default: true
   workflow_dispatch:
+    inputs:
+      macos:
+        description: Also boot the server on macOS (macOS minutes cost 10x)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -28,6 +38,27 @@ jobs:
       - run: ruff check tools tests
       - run: pytest -q
       - run: python tools/validate.py
+      - name: Build release files
+        run: python tools/build.py
+      - name: Upload release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  pester-linux:
+    name: Unit tests (PowerShell 7, Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Unit tests (Pester)
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
+          Import-Module Pester -MinimumVersion 5.5
+          $r = Invoke-Pester -Path tests/Realms.Tests.ps1 -Output Detailed -PassThru
+          if ($r.FailedCount) { exit 1 }
 
   smoke:
     name: Boot the packaged server (Windows)
@@ -36,9 +67,6 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
 
       - name: Lint PowerShell (PSScriptAnalyzer)
         shell: powershell
@@ -58,8 +86,11 @@ jobs:
           $r = Invoke-Pester -Path tests/Realms.Tests.ps1, tests/Player.Tests.ps1 -Output Detailed -PassThru
           if ($r.FailedCount) { exit 1 }
 
-      - name: Build release files
-        run: python tools/build.py
+      - name: Download the release files built by the tools job
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
 
       - name: Unzip like a user would
         shell: powershell
@@ -93,12 +124,6 @@ jobs:
             ${{ runner.temp }}/realms/TheRealms-Server/smoke-console.log*
           if-no-files-found: ignore
 
-      - name: Upload release files
-        uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist/
-
   hosting:
     name: Boot the hosting bundle with Docker (Linux)
     needs: smoke
@@ -121,4 +146,94 @@ jobs:
         with:
           name: hosting-log
           path: ${{ runner.temp }}/hosting/*/compose.log
+          if-no-files-found: ignore
+
+  native:
+    name: Boot the packaged server (${{ matrix.os }})
+    needs: tools
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS minutes cost 10x on this private repo: only on manual runs and for releases
+        # (the macos input is true there and absent on pushes and pull requests).
+        os: ${{ fromJSON(inputs.macos && '["Linux", "macOS"]' || '["Linux"]') }}
+    runs-on: ${{ matrix.os == 'macOS' && 'macos-latest' || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    env:
+      # Exercise the bootstrap's pinned portable PowerShell, not the runner's own pwsh.
+      REALMS_IGNORE_SYSTEM_PWSH: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+
+      - name: Unzip like a user would
+        run: |
+          unzip -q dist/TheRealms-Server-*.zip -d "$RUNNER_TEMP/realms"
+          echo "ROOT=$RUNNER_TEMP/realms/TheRealms-Server" >> "$GITHUB_ENV"
+
+      - name: Launchers kept their executable bit
+        working-directory: ${{ env.ROOT }}
+        run: |
+          for f in start.sh stop.sh backup.sh add-player.sh prepare-for-hosting.sh 'Start Server.command' realms/realms.sh; do
+            [ -x "$f" ] || { echo "$f is missing or not executable"; exit 1; }
+          done
+
+      - name: Install through the bootstrap (downloads the pinned PowerShell, then Java and the mods)
+        working-directory: ${{ env.ROOT }}
+        run: |
+          ./realms/realms.sh install -AcceptEula -NonInteractive -NoOwner
+          find . -type f -name pwsh -perm -u+x | grep -q . || { echo "the bootstrap did not download PowerShell"; exit 1; }
+
+      - name: Unit tests (Pester)
+        if: matrix.os == 'macOS'
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
+          Import-Module Pester -MinimumVersion 5.5
+          $r = Invoke-Pester -Path tests/Realms.Tests.ps1 -Output Detailed -PassThru
+          if ($r.FailedCount) { exit 1 }
+
+      - name: Boot, check mods and datapacks, stop
+        shell: pwsh
+        run: ./tests/smoke.ps1 -Root $env:ROOT -MemoryGB 4
+
+      - name: Upload server logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-logs-${{ matrix.os }}
+          path: |
+            ${{ env.ROOT }}/server/logs/
+            ${{ env.ROOT }}/server/crash-reports/
+            ${{ env.ROOT }}/smoke-console.log*
+          if-no-files-found: ignore
+
+  docker:
+    name: Boot the server with Docker (Linux)
+    needs: tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+      - name: Unzip, EULA in docker/.env, docker compose up, wait for Done, rcon, stop
+        env:
+          MEMORY_GB: "4"
+          TIMEOUT_MINUTES: "30"
+        run: bash tests/docker-smoke.sh dist/TheRealms-Server-*.zip "$RUNNER_TEMP/docker"
+      - name: Upload the container and server logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-logs
+          path: |
+            ${{ runner.temp }}/docker/TheRealms-Server/compose.log
+            ${{ runner.temp }}/docker/TheRealms-Server/server/logs/
+            ${{ runner.temp }}/docker/TheRealms-Server/server/crash-reports/
           if-no-files-found: ignore

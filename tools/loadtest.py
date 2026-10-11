@@ -23,6 +23,7 @@ import argparse
 import contextlib
 import json
 import math
+import os
 import re
 import shutil
 import socket
@@ -206,11 +207,23 @@ def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
         time.sleep(0.5)
 
 
-def find_one(root: Path, pattern: str) -> Path:
-    found = sorted(root.glob(pattern))
+def java_tool(root: Path, name: str) -> Path:
+    """The package's own java or jfr: java/<build>/bin/ on Windows and Linux, deeper (Contents/Home/bin) on macOS."""
+    exe = name + (".exe" if os.name == "nt" else "")
+    found = sorted(p for p in (root / "java").rglob(exe) if p.parent.name == "bin")
     if not found:
-        raise SystemExit(f"{pattern} not found under {root}: is this an installed server package?")
+        raise SystemExit(f"no {exe} under {root / 'java'}: is this an installed server package?")
     return found[0]
+
+
+def powershell(root: Path) -> list[str]:
+    """The PowerShell the package's launchers use: Windows PowerShell, else pwsh from the PATH or the pinned copy."""
+    if os.name == "nt":
+        return ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass"]
+    pwsh = shutil.which("pwsh") or next((str(p) for p in sorted((root / "pwsh").rglob("pwsh")) if p.is_file()), None)
+    if not pwsh:
+        raise SystemExit("PowerShell 7 (pwsh) not found: start the server once with sh start.sh, which installs it")
+    return [pwsh, "-NoProfile"]
 
 
 def launch_arguments(root: Path, memory_gb: int) -> list[str]:
@@ -218,7 +231,7 @@ def launch_arguments(root: Path, memory_gb: int) -> list[str]:
     script = (f"Import-Module '{root / 'realms' / 'Realms.psm1'}'; "
               f"$ctx = New-RealmsContext -Root '{root}' -RealmsDir '{root / 'realms'}' -NonInteractive; "
               f"Get-LaunchArguments -Manifest $ctx.Manifest -MemoryGB {memory_gb}")
-    out = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+    out = subprocess.run([*powershell(root), "-Command", script],
                          capture_output=True, text=True, check=True).stdout
     return [line for line in out.splitlines() if line.strip()]
 
@@ -275,8 +288,8 @@ def main(argv=None):
                                                                          else []) + [time.strftime("%Y%m%d-%H%M")])
     out = root / "loadtest" / name
     out.mkdir(parents=True, exist_ok=True)
-    java = find_one(root, "java/*/bin/java.exe")
-    jfr = find_one(root, "java/*/bin/jfr.exe")
+    java = java_tool(root, "java")
+    jfr = java_tool(root, "jfr")
     jvm = launch_arguments(root, args.memory_gb)
     recording = out / "rec.jfr"
     # JFR writes its chunks here as it goes, so a server that hangs and gets killed still leaves a readable trail.

@@ -31,7 +31,7 @@ Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
 ## Run it on your own computer (Windows, macOS, Linux)
 
 Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
-and unzip it somewhere permanent (e.g. Documents). The computer needs 12 GB of RAM or more.
+and unzip it somewhere permanent (e.g. Documents). The computer needs 16 GB of RAM or more (12 GB is enough for a few players).
 
 | | Start | Stop |
 |---|---|---|

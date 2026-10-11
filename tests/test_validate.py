@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import shutil
 import zipfile
 
 import pytest
@@ -307,6 +308,7 @@ def test_validate_package_requires_ascii_sh_scripts(paper_repo):
 
 def test_validate_package_checks_docker_files_once_the_folder_exists(paper_repo):
     docker = paper_repo.package / "docker"
+    shutil.rmtree(docker, ignore_errors=True)  # the fixture copies today's package, which has the real one
     docker.mkdir()
     (docker / "Dockerfile").write_bytes(b"FROM debian:12-slim\r\n")
     errors = validate.validate_package(paper_repo)

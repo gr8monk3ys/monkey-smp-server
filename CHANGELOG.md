@@ -1,7 +1,26 @@
 # Changelog
 
-## [Unreleased]
+## [2.3.0] - 2026-10-11
 
+Host the server on a Mac, on Linux or with Docker. Same Minecraft (26.3) and world as 2.2.x: hosts can unzip
+over 2.2.x and keep their world, and players don't need to do anything.
+
+- New: the server zip runs natively on **macOS** (Intel and Apple Silicon) and **Linux** (x64 and arm64).
+  On a Mac, double-click "Start Server.command"; on a Mac or Linux, `sh start.sh`. `stop.sh`, `backup.sh`,
+  `add-player.sh` and `prepare-for-hosting.sh` do what the .bat files do on Windows. Nothing to install
+  first: Java for that system is downloaded and hash-checked like everything else, and so is PowerShell 7
+  (about 70 MB) if it isn't installed, because the same installer as on Windows runs it (ADR-0007).
+- New: **Docker**. The `docker` folder in the server zip runs the server in a container: put `EULA=TRUE`
+  and `OWNER=<your Minecraft name>` in `.env`, then `docker compose up -d`. The image holds no Minecraft
+  files; it uses the release folder, so the world and backups are the same as in a native run.
+- Prepare for Hosting now works on a Mac or Linux too (`sh prepare-for-hosting.sh`). A Linux VPS no longer
+  needs it: run the release there natively or with Docker. Panel hosts (Pterodactyl and the like) still
+  use the hosting zip.
+- Windows hosts: nothing changes.
+- Docs: Mac and Linux players import the .mrpack into Prism Launcher or the Modrinth App (the player
+  installer stays Windows-only).
+- CI also boots the server natively on Linux, with Docker on Linux, and natively on macOS (macOS on
+  releases and manual runs).
 - **Correction: 2.2.2 is not ready for 25 players.** Load tests on an i7-8700K gave about 8 TPS with 10 players
   and about 4 TPS with 25 (20 is full speed); Strength SMP takes about half the tick time. Plan on about
   10 players on a home PC. docs/ADMIN.md ("How many players"), READ ME FIRST and HOSTING.txt now say so, and

@@ -2136,21 +2136,6 @@
       "fileSize": 72852
     },
     {
-      "path": "mods/silvers_strength-restrictions-1.3.jar",
-      "hashes": {
-        "sha1": "8bc17b64c9535657953a3c278c739fe0f049a0b0",
-        "sha512": "0be81c181c579e6ddb10f2f939c384c7867c0057d6bc0e4c32ca1f208119ec1baf17c3dc47880992d479207e52c94cbd1cf87c9e22c37b4209ed7a2949047ba4"
-      },
-      "env": {
-        "client": "required",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/M15Gwx1o/versions/mjLM9Ki2/silvers_strength-restrictions-1.3.jar"
-      ],
-      "fileSize": 206736
-    },
-    {
       "path": "mods/silvers_strength-restrictions-1.4.jar",
       "hashes": {
         "sha1": "afecbf1d95b8c9f0c0aa55809a549b5f35b6b688",

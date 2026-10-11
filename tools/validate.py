@@ -109,6 +109,14 @@ def validate_client(manifest: dict, repo=REPO) -> list[str]:
             errors.append(f"client {f['path']}: downloads must be Modrinth CDN URLs")
         if f["path"].startswith(("/", "..")) or ".." in f["path"].split("/"):
             errors.append(f"client {f['path']}: unsafe path")
+    # Two versions of one mod: Fabric refuses to start (or picks one) when two jars have the same mod id.
+    by_project = {}
+    for f in index["files"]:
+        m = re.match(r"https://cdn\.modrinth\.com/data/([^/]+)/", f["downloads"][0]) if f["downloads"] else None
+        if m and f["path"].startswith("mods/"):
+            by_project.setdefault(m.group(1), []).append(f["path"])
+    errors += [f"client: {' and '.join(sorted(paths))} are the same Modrinth project (keep one version)"
+               for paths in by_project.values() if len(paths) > 1]
     return errors + validate_profile(index, repo)
 
 

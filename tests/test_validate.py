@@ -189,6 +189,19 @@ def test_validate_client_checks_the_launcher_profile(fabric_repo, change, messag
     assert any(message in e for e in errors), errors
 
 
+def test_validate_client_rejects_two_versions_of_one_mod(fabric_repo):
+    path = fabric_repo.client / "modrinth.index.json"
+    index = load_json(path)
+    mod = next(f for f in index["files"] if f["path"].startswith("mods/"))
+    older = copy.deepcopy(mod)
+    older["path"] = "mods/an-older-build.jar"
+    index["files"].append(older)
+    save_json(path, index)
+    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
+    both = " and ".join(sorted([mod["path"], older["path"]]))
+    assert errors == [f"client: {both} are the same Modrinth project (keep one version)"]
+
+
 def test_validate_client_matches_the_profile_to_the_client_index(fabric_repo):
     index = load_json(fabric_repo.client / "modrinth.index.json")
     index["dependencies"]["fabric-loader"] = "0.19.6"  # a loader bump without re-pinning the profile

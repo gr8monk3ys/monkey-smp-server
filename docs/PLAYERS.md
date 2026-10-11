@@ -17,7 +17,7 @@
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
-   It downloads about 450 MB (mods, resource packs, shaders) from their official websites and checks
+   It downloads about 520 MB (mods, resource packs, shaders) from their official websites and checks
    every file. When it's done, press a key to close the window.
 3. Open the launcher, click the version box next to the green **Play** button, choose **The Realms**,
    press **Play**. The first start takes a few minutes.

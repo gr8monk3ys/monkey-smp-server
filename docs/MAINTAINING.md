@@ -202,6 +202,22 @@ to datapacks by file name (the rule is written down once, in `tools/entries.py`)
 Config defaults are curated by hand: copy changed configs into `package/realms/defaults/` yourself, and
 never copy files containing secrets (`server.properties` from a live server has the RCON password).
 
+## Patches this pack carries
+
+Each one is a whole replaced file under `package/realms/patches/<slug>/`, pinned to the upstream jar it was made
+against (ADR-0004). When `check_updates.py` reports a patched mod as "patched - re-snapshot needed", re-make the
+patch against the new upstream file: carry the change below over, then check it is still needed.
+
+| Mod | File | What the patch does, and why |
+|---|---|---|
+| `silvers_effects-library` | `pack.mcmeta` | Raises the highest supported pack format so the pack loads on Minecraft 26.3. |
+| `silvers_effects-library` | `overlay_26.3/.../technical/effects.mcfunction` | One command at the top returns early for a non-player entity with none of the 19 `*_duration` scores. Upstream runs the function's 97 commands for every loaded mob on every tick; none can match a mob without a score, and with about 1,900 mobs loaded that went past Minecraft's 65,536-commands-per-tick limit, cutting the function off before it reached every mob. Players must never be skipped: the last line re-arms their tick advancement. |
+| `silvers_strength-smp-season-4` | `.../main/enchant/check.mcfunction` | A per-player counter at the top makes the 968 block checks below it (markers on enchanting tables, anvils and grindstones near the player) run every 10 ticks instead of every tick. It was 26% of the server tick with 25 players. The markers persist, so the only change is that a newly placed block is noticed within half a second. |
+
+Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the two
+performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
+run to none.
+
 ## Tests
 
 ```bash

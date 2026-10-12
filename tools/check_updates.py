@@ -1,4 +1,4 @@
-"""Find newer builds of the server and of every plugin/mod/datapack for the pinned Minecraft version.
+"""Find newer builds of the server, Java, PowerShell and every plugin/mod/datapack for the pinned Minecraft version.
 
   python tools/check_updates.py                 print a Markdown report
   python tools/check_updates.py --apply         also pin the newer builds in manifest.json
@@ -7,6 +7,11 @@
 Only stable releases for the same Minecraft version are considered. The server is Paper's newest
 stable build, or for Fabric the newest stable loader for the Minecraft version and/or the newest
 stable installer (one server update; the launcher jar is downloaded to pin its size and hash).
+Java is a newer Temurin release of the pinned Java major, taken only once Adoptium has it for every
+platform; PowerShell (package/realms/pwsh.lock, used by realms.sh on Linux and macOS) is the newest LTS
+release. Both are pinned from the checksums their publishers list (re-checked by validate.py --online).
+The pinned Java builds and pwsh.lock are also compared with what Adoptium and GitHub list for them now;
+a pin that no longer matches is reported as a problem.
 A patched mod or datapack with a newer release is reported but never pinned by --apply: its patch
 was made against the old file (ADR-0004), so take it by re-making the patch with tools/snapshot.py.
 After --apply, run the smoke test (tests/smoke.ps1) before releasing: updates can change configs.
@@ -14,11 +19,13 @@ After --apply, run the smoke test (tests/smoke.ps1) before releasing: updates ca
 import argparse
 import copy
 import os
+import re
 from dataclasses import dataclass
 
 import entries
+import pwsh_lock
 from repo import REPO
-from upstream import LiveHttp, Upstream, fabric_server_jar_url, version_key
+from upstream import JAVA_PLATFORMS, LiveHttp, Upstream, fabric_server_jar_url, version_key
 
 LOADERS = {"plugin": ["paper", "spigot", "bukkit", "purpur", "folia"], "mod": ["fabric"], "datapack": ["datapack"]}
 NEEDS_PATCH = "patched - re-snapshot needed"
@@ -26,11 +33,11 @@ NEEDS_PATCH = "patched - re-snapshot needed"
 
 @dataclass(frozen=True)
 class Update:
-    kind: str           # "server", "plugin", "mod" or "datapack"
+    kind: str           # "server", "java", "pwsh", "plugin", "mod" or "datapack"
     slug: str
     pinned: str
     newest: str
-    entry: dict | None  # the new manifest entry, or None when it can't be pinned automatically
+    entry: dict | None  # the new manifest entry (pwsh: {"pwsh.lock": text}), or None when it can't be pinned
     note: str = ""
 
 
@@ -78,12 +85,68 @@ def fabric_label(loader: str, installer: str) -> str:
     return f"loader {loader}, installer {installer}"
 
 
-def find_updates(manifest: dict, upstream: Upstream) -> list[Update]:
+def release_key(name: str) -> tuple[int, ...]:
+    """Sort key for an Adoptium release name: jdk-25.0.4.1+1 -> (25, 0, 4, 1, 1)."""
+    return tuple(int(n) for n in re.findall(r"\d+", name))
+
+
+def java_update(manifest: dict, upstream: Upstream) -> Update | None:
+    """A newer Temurin release of the pinned Java major, pinned for every platform at once."""
+    pinned = manifest["java"]["version"]
+    major = release_key(pinned)[0]
+    assets = {p: upstream.adoptium_latest_jre(major, p) for p in JAVA_PLATFORMS}
+    names = {a["release_name"] for a in assets.values()}
+    newest = max(names, key=release_key)
+    if release_key(newest) <= release_key(pinned):
+        return None
+    if len(names) > 1:
+        # Adoptium publishes a release platform by platform; every platform runs the same Java.
+        waiting = ", ".join(p for p, a in assets.items() if a["release_name"] != newest)
+        return Update("java", "temurin", pinned, newest, None, f"not out for {waiting} yet")
+    return Update("java", "temurin", pinned, newest, entries.java(assets))
+
+
+def pwsh_update(lock_text: str, upstream: Upstream) -> Update | None:
+    """The newest PowerShell LTS release, if it is newer than the one pwsh.lock pins."""
+    pinned = pwsh_lock.version(pwsh_lock.parse(lock_text))
+    newest = max((t.lstrip("v") for t in upstream.powershell_lts_tags()), key=version_key)
+    if version_key(newest) <= version_key(pinned):
+        return None
+    text = pwsh_lock.render(newest, upstream.powershell_release_assets(f"v{newest}"))
+    return Update("pwsh", "powershell", pinned, newest, {"pwsh.lock": text})
+
+
+def verify_pins(manifest: dict, upstream: Upstream, lock_text: str | None = None) -> list[str]:
+    """Pinned Java and PowerShell builds that their publisher no longer lists the way they are pinned."""
+    problems = []
+    release = manifest["java"]["version"]
+    for platform, build in entries.java_builds(manifest):
+        try:
+            listed = entries.java_build(upstream.adoptium_release_jre(release, platform))
+        except LookupError as err:
+            problems.append(f"java {platform}: {err}")
+            continue
+        if listed != {k: build.get(k) for k in listed}:
+            problems.append(f"java {platform}: Adoptium lists {listed['file']} ({listed['size']} bytes, sha256 "
+                            f"{listed['hashes']['sha256']}), not the pinned {build.get('file')}")
+    if lock_text is not None:
+        pins = pwsh_lock.parse(lock_text)
+        assets = upstream.powershell_release_assets(f"v{pwsh_lock.version(pins)}")
+        for pin in pins:
+            listed = assets.get(pin.file)
+            if not listed or (listed["url"], listed["sha256"]) != (pin.url, pin.sha256):
+                problems.append(f"pwsh.lock {pin.platform}: GitHub does not list {pin.file} with the pinned sha256")
+    return problems
+
+
+def find_updates(manifest: dict, upstream: Upstream, lock_text: str | None = None) -> list[Update]:
+    """Every update; PowerShell only when `lock_text` (the text of pwsh.lock) is given."""
     mc = manifest["minecraft"]
     updates = []
-    server = server_update(manifest, upstream)
-    if server:
-        updates.append(server)
+    for found in (server_update(manifest, upstream), java_update(manifest, upstream),
+                  pwsh_update(lock_text, upstream) if lock_text is not None else None):
+        if found:
+            updates.append(found)
     for kind in entries.GROUPS:
         for e in entries.group(manifest, kind):
             v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e)
@@ -97,8 +160,10 @@ def find_updates(manifest: dict, upstream: Upstream) -> list[Update]:
     return updates
 
 
-def report(manifest: dict, updates: list[Update]) -> str:
+def report(manifest: dict, updates: list[Update], problems: list[str] = ()) -> str:
     lines = [f"Pinned: Minecraft {manifest['minecraft']}, manifest {manifest['version']}", ""]
+    if problems:
+        lines += ["### Pins that no longer match upstream", ""] + [f"- {p}" for p in problems] + [""]
     if not updates:
         return "\n".join(lines + ["Everything is on the newest stable build."])
     lines += ["| Kind | Project | Pinned | Newest | Note |", "|---|---|---|---|---|"]
@@ -117,8 +182,10 @@ def apply(manifest: dict, updates: list[Update]) -> dict:
     for u in updates:
         if u.entry is None:
             continue
-        if u.kind == "server":
-            out["server"] = u.entry
+        if u.kind in ("server", "java"):
+            out[u.kind] = u.entry
+        elif u.kind == "pwsh":
+            continue  # not part of the manifest: main writes pwsh.lock
         else:
             group = entries.GROUPS[u.kind]
             out[group] = [u.entry if e["slug"] == u.slug else e for e in out[group]]
@@ -132,8 +199,10 @@ def main(argv=None, repo=REPO, upstream=None):
     a = ap.parse_args(argv)
     upstream = upstream or Upstream(LiveHttp())
     manifest = repo.load_manifest()
-    updates = find_updates(manifest, upstream)
-    text = report(manifest, updates)
+    lock_text = repo.pwsh_lock.read_text(encoding="ascii") if repo.pwsh_lock.is_file() else None
+    updates = find_updates(manifest, upstream, lock_text)
+    problems = verify_pins(manifest, upstream, lock_text)
+    text = report(manifest, updates, problems)
     print(text)
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
@@ -141,12 +210,16 @@ def main(argv=None, repo=REPO, upstream=None):
     pinnable = [u for u in updates if u.entry is not None]
     if a.apply and pinnable:
         repo.save_manifest(apply(manifest, updates))
-        print(f"\npinned {len(pinnable)} update(s) in manifest.json")
+        for u in pinnable:
+            if u.kind == "pwsh":
+                with open(repo.pwsh_lock, "w", encoding="ascii", newline="\n") as f:
+                    f.write(u.entry["pwsh.lock"])
+        print(f"\npinned {len(pinnable)} update(s) in manifest.json and pwsh.lock")
     if a.apply and len(pinnable) < len(updates):
         print(f"{len(updates) - len(pinnable)} patched mod(s)/datapack(s) left pinned; they need a fresh patch")
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            f.write(f"count={len(updates)}\n")
+            f.write(f"count={len(updates) + len(problems)}\n")
 
 
 if __name__ == "__main__":

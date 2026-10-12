@@ -5,6 +5,12 @@
 *.psd1 text eol=crlf
 package/*.txt text eol=crlf
 player/*.txt text eol=crlf
+# Read by Linux inside the container: LF even when checked out on Windows.
+package/docker/** text eol=lf
 *.png binary
 *.zip binary
 *.jar binary
+# Run by sh on Linux and macOS: always LF, whatever the checkout.
+*.sh text eol=lf
+*.command text eol=lf
+package/realms/pwsh.lock text eol=lf

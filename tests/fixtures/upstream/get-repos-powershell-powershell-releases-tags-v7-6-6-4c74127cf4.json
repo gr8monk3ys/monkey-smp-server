@@ -1,0 +1,59 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.github.com/repos/PowerShell/PowerShell/releases/tags/v7.6.6"
+ },
+ "response": {
+  "tag_name": "v7.6.6",
+  "assets": [
+   {
+    "name": "powershell-7.6.6-linux-arm32.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-arm32.tar.gz",
+    "size": 73026839,
+    "digest": "sha256:7652b53ea39ca3ea2db4ff3d63769fcccb858bde0eb0ec6be4e927a47544ee55"
+   },
+   {
+    "name": "powershell-7.6.6-linux-arm64.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-arm64.tar.gz",
+    "size": 71867455,
+    "digest": "sha256:924829e54c983648f6f1419a2dc7f9433c861b2fb5bd57736ff096c24f133729"
+   },
+   {
+    "name": "powershell-7.6.6-linux-musl-x64.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-musl-x64.tar.gz",
+    "size": 75863303,
+    "digest": "sha256:9537c256a60c34f6bc2dd60c1c10b31a0c2ef26e96799d066be78325ab4947cc"
+   },
+   {
+    "name": "powershell-7.6.6-linux-x64-fxdependent.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-x64-fxdependent.tar.gz",
+    "size": 23621829,
+    "digest": "sha256:7e851d01dba116269d1e7f4505ef7b54bfa6c0b5b08965b67ac229503154a9da"
+   },
+   {
+    "name": "powershell-7.6.6-linux-x64-musl-noopt-fxdependent.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-x64-musl-noopt-fxdependent.tar.gz",
+    "size": 23632677,
+    "digest": "sha256:29a3d89b5d54f3aa67decaf64bd9cbf72cea469aa9e69330e5dc2c5ffdb37f38"
+   },
+   {
+    "name": "powershell-7.6.6-linux-x64.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-x64.tar.gz",
+    "size": 75876271,
+    "digest": "sha256:ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc"
+   },
+   {
+    "name": "powershell-7.6.6-osx-arm64.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-osx-arm64.tar.gz",
+    "size": 70604356,
+    "digest": "sha256:6df833d094ebac1c1a74340d7b3437f4aaf5e03ce640484a1c4359f3ce8b3db1"
+   },
+   {
+    "name": "powershell-7.6.6-osx-x64.tar.gz",
+    "browser_download_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-osx-x64.tar.gz",
+    "size": 74677830,
+    "digest": "sha256:e325ed9f666894eb39a5ea52800b602da2fb4242bbe9747ceddb39cdc66de805"
+   }
+  ]
+ }
+}

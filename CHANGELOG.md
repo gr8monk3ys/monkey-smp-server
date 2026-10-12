@@ -1,11 +1,47 @@
 # Changelog
 
-## [Unreleased]
+## [2.3.0] - 2026-10-11
 
+Host the server on a Mac, on Linux or with Docker. Same Minecraft (26.3) and world as 2.2.x: hosts can unzip
+over 2.2.x and keep their world. Players reinstall the client pack (the mod list changed).
+
+- New: the server zip runs natively on **macOS** (Intel and Apple Silicon) and **Linux** (x64 and arm64).
+  On a Mac, double-click "Start Server.command"; on a Mac or Linux, `sh start.sh`. `stop.sh`, `backup.sh`,
+  `add-player.sh` and `prepare-for-hosting.sh` do what the .bat files do on Windows. Nothing to install
+  first: Java for that system is downloaded and hash-checked like everything else, and so is PowerShell 7
+  (about 70 MB) if it isn't installed, because the same installer as on Windows runs it (ADR-0007).
+- New: **Docker**. The `docker` folder in the server zip runs the server in a container: put `EULA=TRUE`
+  and `OWNER=<your Minecraft name>` in `.env`, then `docker compose up -d`. The image holds no Minecraft
+  files; it uses the release folder, so the world and backups are the same as in a native run.
+- Prepare for Hosting now works on a Mac or Linux too (`sh prepare-for-hosting.sh`). A Linux VPS no longer
+  needs it: run the release there natively or with Docker. Panel hosts (Pterodactyl and the like) still
+  use the hosting zip.
+- Windows hosts: the launchers work as before.
+- Docs: Mac and Linux players import the .mrpack into Prism Launcher or the Modrinth App (the player
+  installer stays Windows-only).
+- CI also boots the server natively on Linux, with Docker on Linux, and natively on macOS (macOS on
+  releases and manual runs).
+- **Mod list synced** with the shared folder: 142 server mods, 213 client files. New on the server: Epic
+  Dungeons, Moog's Voyager Structures, Grand Capitals, Better Underwater Ruins, Slabs & Stairs, Copper Rails,
+  More Villagers, More Mobs, Stormie's Spiders, Sulfur Caves Plus and about 20 smaller ones. Gone: Dungeons and
+  Taverns (the base mod; its structure overhauls stay) and Epic Structures: Villages. In a world that already has
+  Dungeons and Taverns buildings they stay, and the log says "Unknown structure start: nova_structures:..." when
+  it loads them. **Players must reinstall the client pack** (about 520 MB).
+- Left out of that list, with the measurements in docs/ADMIN.md: Slabbed, The Sift and Amethyst Nether. Also
+  not included because they aren't on Modrinth: Just Enough Professions, Improved Inventory Tabs, Villager News.
+- **Performance.** 2.2.2 said it was ready for 25 players; load tests on an i7-8700K gave about 4 TPS. Now, on
+  the same PC: 10 players at 20 TPS and 25 at about 13 (docs/ADMIN.md, "How many players"). What changed:
+  - Two patches inside the Strength SMP mods, which ran tens of thousands of commands every tick and went past
+    Minecraft's 65,536 limit (docs/MAINTAINING.md, "Patches this pack carries"). Strength SMP itself is unchanged
+    apart from noticing a newly placed enchanting table or anvil within half a second instead of at once.
+  - New: ServerCore. Mobs far from players tick less often, and while the server is behind it lowers mob caps
+    and tick distances, then raises them again. Its config is a first-run default
+    (`server\config\servercore\config.yml`).
+  - `tools/loadtest.py` re-runs the measurement (docs/MAINTAINING.md, "Load testing").
 - Memory: the server takes at most 8 GB (5 GB on a 16 GB PC, 6 on 24, 8 from 32 up). 2.2.2 took up to 10 GB,
   but a 25-player test peaked at about 4.3 GB in use, and the whole heap is reserved at start. The
   "Prepare for Hosting" bundle defaults to `MEMORY_GB=6` (was 10), which fits an 8 GB VPS, and its
-  instructions say 6 GB or more for hosting panels (8 for about 25 players).
+  instructions say 6 GB or more for hosting panels (8 for a big group).
 - "Schedule Backups.bat" logs every run to `scheduled-backups.log`, errors included, and now works from a
   folder with a long path. Backups run at 6 AM and 6 PM. Run it again to update an existing task.
 - docs/ADMIN.md: the Nether pre-generation numbers are 1/8 of the Overworld's (radius 625, border 1250).

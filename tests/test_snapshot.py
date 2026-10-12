@@ -121,7 +121,11 @@ def test_snapshot_server_can_pin_the_newest_java(server, paper_repo, recorded):
     http = server.modrinth.http
     http.responses.update({k: v for k, v in recorded.responses.items() if "adoptium" in k})
     m = snapshot.snapshot_server(server.root, repo=paper_repo, upstream=Upstream(http), keep_java=False)
-    assert m["java"]["file"].startswith("OpenJDK25U-jre_x64_windows")
+    builds = m["java"]["builds"]
+    assert list(builds) == ["windows-x64", "linux-x64", "linux-aarch64", "mac-x64", "mac-aarch64"]
+    assert builds["windows-x64"]["file"].startswith("OpenJDK25U-jre_x64_windows")
+    assert builds["linux-aarch64"]["file"].startswith("OpenJDK25U-jre_aarch64_linux")
+    assert validate.validate(m, paper_repo) == []
 
 
 # --- Fabric --------------------------------------------------------------------------------------

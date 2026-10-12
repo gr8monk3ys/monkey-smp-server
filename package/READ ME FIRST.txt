@@ -2,17 +2,19 @@ THE REALMS - how to run the server
 ==================================
 
 A modded Minecraft (Java 26.3) factions server: parties, allies, land claims, PvP, new
-structures, mobs and magic. You need: Windows 10 or 11, 16 GB of RAM or more (24-32 GB if
-you also play on this PC), and about 10 GB of free disk space.
+structures, mobs and magic. You need: a computer with Windows 10 or 11, macOS, or Linux,
+16 GB of RAM or more (24-32 GB if you also play on it), and about 10 GB of free disk space.
 You do NOT need to install Java or anything else - this folder takes care of it.
 
+On Windows, start with section 1. On a Mac or Linux, start with section 2.
 
-1. FIRST TIME
--------------
+
+1. FIRST TIME ON WINDOWS
+------------------------
   a) Put this whole folder somewhere permanent, like Documents (not Downloads).
   b) Double-click  "Start Server.bat".
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads about 500 MB the first time (Java, the server and its 115 mods),
+     - It downloads about 500 MB the first time (Java, the server and its 142 mods),
        and the first start builds the world, so give it 5-10 minutes.
   c) It asks you two things:
      - Do you agree to the Minecraft EULA?  Type  YES  and press Enter.
@@ -22,25 +24,62 @@ You do NOT need to install Java or anything else - this folder takes care of it.
      Keep that window open while people play.
 
 
-2. EVERY TIME AFTER THAT
+2. FIRST TIME ON A MAC OR LINUX
+-------------------------------
+  The rest of this file says "window" for the server window and writes folders like
+  server\logs . On a Mac or Linux that is the Terminal window, and folders use / instead
+  of \  (server/logs).
+
+  a) Put this whole folder somewhere permanent, like Documents (not Downloads).
+  b) Start it:
+     On a Mac: double-click  "Start Server.command".
+       - The first time, macOS may say it "cannot be opened" or "could not be verified".
+         Click Done (or Cancel), then RIGHT-click "Start Server.command" and choose Open,
+         then Open again. On newer macOS, if Open isn't offered: open System Settings >
+         Privacy & Security, scroll down and click "Open Anyway" next to Start Server.
+       - If that still doesn't work, use the Terminal way below. It always works.
+     The Terminal way (Mac or Linux):
+       - Open Terminal. (Mac: press Cmd+Space, type Terminal, press Enter.
+         Linux: right-click inside this folder and choose "Open in Terminal".)
+       - Mac only: type  cd  and a space, drag this folder onto the Terminal window,
+         and press Enter.
+       - Type  sh start.sh  and press Enter.
+     - The first time it downloads about 500 MB (Java, the server and its 142 mods), plus
+       about 70 MB for PowerShell, the tool that runs the setup, if your computer doesn't
+       have it. The first start also builds the world, so give it 5-10 minutes.
+     - If the Mac asks whether Terminal may use files in your Documents folder, click Allow.
+  c) It asks you the same two things as on Windows (see 1c): type  YES  for the
+     Minecraft EULA, then your Minecraft username. You become the admin.
+  d) If the Mac asks whether "java" may accept incoming network connections, click Allow.
+  e) When the window says  Done (...)! For help, type "help"  the server is running.
+     Keep that window open while people play (and keep the computer from going to sleep).
+
+
+3. EVERY TIME AFTER THAT
 ------------------------
-  Start:  double-click "Start Server.bat".
+  Start:  Windows: double-click "Start Server.bat".
+          Mac: double-click "Start Server.command" (or  sh start.sh  in Terminal).
+          Linux:  sh start.sh  in the folder.
   Stop:   click in the server window, type  stop  and press Enter.
-          (or double-click "Stop Server.bat")
+          (or double-click "Stop Server.bat"; on a Mac or Linux:  sh stop.sh )
   Please don't just close the window - that can lose the last few minutes of the world.
 
 
-3. LETTING FRIENDS JOIN
+4. LETTING FRIENDS JOIN
 -----------------------
   Only people on the guest list (the "whitelist") can join.
   Add someone: double-click "Add Player.bat" and type their Minecraft username.
-     (or type  whitelist add THEIRNAME  in the server window)
+     (Mac or Linux:  sh add-player.sh THEIRNAME
+      or anywhere: type  whitelist add THEIRNAME  in the server window)
 
-  Friends in the same house: they join with your computer's local address
-  (shown as "IPv4 Address" when you run  ipconfig  in a Command Prompt).
+  Friends in the same house: they join with your computer's local address.
+     Windows: it is the "IPv4 Address" shown when you run  ipconfig  in a Command Prompt.
+     Mac: System Settings > Wi-Fi > Details next to your network > IP address.
+     Linux: run  hostname -I  in a terminal (the first address).
 
   Friends somewhere else: use playit.gg (free, no router setup needed):
-    1. Go to https://playit.gg, make a free account, and download the Windows app.
+    1. Go to https://playit.gg, make a free account, and download the app for
+       your computer.
     2. Run it and follow its "claim" link to connect it to your account.
     3. In the playit.gg website, add a tunnel:  type "Minecraft Java",
        local address 127.0.0.1, local port 25565.
@@ -50,31 +89,34 @@ You do NOT need to install Java or anything else - this folder takes care of it.
     6. In playit.gg add a second tunnel: type "UDP" (or "Custom UDP"),
        local address 127.0.0.1, local port 24454. Note the address and port it gives you.
     7. Stop the server, open  server\config\voicechat\voicechat-server.properties  in
-       Notepad, set  voice_host=THAT-ADDRESS:THAT-PORT  (e.g. 147.185.221.10:51234), save,
-       and start the server again. Without this, everything works except voice chat.
+       a text editor (Notepad, TextEdit), set  voice_host=THAT-ADDRESS:THAT-PORT
+       (e.g. 147.185.221.10:51234), save, and start the server again.
+       Without this, everything works except voice chat.
 
 
-4. WHAT FRIENDS INSTALL (everyone, including you)
+5. WHAT FRIENDS INSTALL (everyone, including you)
 -------------------------------------------------
   Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
   needs the mods. Send each player the file  TheRealms-Player-(version).zip  from the same
   release as this server. Inside it:
     - "Install for Minecraft Launcher.bat" sets everything up in the normal Minecraft
-      Launcher (they then pick "The Realms" next to the Play button).
+      Launcher on Windows (they then pick "The Realms" next to the Play button).
+    - The .mrpack file is for Mac and Linux players, and anyone who already uses the
+      Modrinth App or Prism Launcher: they import it there.
     - "READ ME.txt" explains it step by step, in plain language.
-    - The .mrpack file is for people who already use the Modrinth App or Prism Launcher.
   Then they add your server address in Multiplayer > Add Server.
-  Remember to add each player with "Add Player.bat" (or  whitelist add NAME ).
+  Remember to add each player to the guest list (section 4).
 
 
-5. BACKUPS
+6. BACKUPS
 ----------
-  Double-click "Backup World.bat" (works while the server runs).
-  Backups go into the "backups" folder; the newest 14 are kept.
+  Double-click "Backup World.bat" (Mac or Linux:  sh backup.sh ). It works while the
+  server runs. Backups go into the "backups" folder; the newest 14 are kept.
   To restore one: stop the server, then copy the files from a backup folder into "server".
 
-  Automatic backups: double-click "Schedule Backups.bat" once. Windows then backs up the
-  world at 6 AM and 6 PM while you're signed in (14 backups = the last 7 days).
+  Automatic backups on Windows: double-click "Schedule Backups.bat" once. Windows then
+  backs up the world at 6 AM and 6 PM while you're signed in (14 backups = the last 7 days).
+  On a Mac or Linux, add a cron job that runs  sh backup.sh  in this folder.
   Each run is written to "scheduled-backups.log" in this folder: look there if the
   newest backup is older than it should be.
   A dead disk takes the world AND the backups with it, so every week or so copy the
@@ -82,7 +124,7 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   Try restoring a backup once (into a copy of this folder) so you know it works.
 
 
-6. ADMIN CHEAT SHEET (type in the server window, or in game with / in front)
+7. ADMIN CHEAT SHEET (type in the server window, or in game with / in front)
 -----------------------------------------------------------------------------
   whitelist add NAME            let someone join
   whitelist remove NAME         stop someone joining
@@ -98,36 +140,61 @@ You do NOT need to install Java or anything else - this folder takes care of it.
   Near spawn only admins can build. PvP is on everywhere else.
 
 
-7. IF SOMETHING GOES WRONG
+8. IF SOMETHING GOES WRONG
 --------------------------
   "The server is running. Stop it first"  - it's already open in another window.
   "Failed to bind to port"  - another server is already using port 25565.
   "This folder already has a ... server with a world in it"  - you unzipped 2.x over an
       old 1.x server.
       Unzip it into a new, empty folder instead (the old world stays where it was).
+  Mac: "Start Server.command" won't open, or says "permission denied"
+      - use the Terminal way in section 2 ( sh start.sh ).
+  Linux: "curl: not found" (or no wget)  - install curl, e.g.  sudo apt install curl
   Anything else: send the person who gave you this folder a screenshot of the window,
   plus the file  server\logs\latest.log
 
-8. HOSTING ONLINE (so the server runs without your PC)
-------------------------------------------------------
+
+9. HOSTING ONLINE (so the server runs without your computer)
+------------------------------------------------------------
   You can run the same server on a Minecraft hosting company (Shockbyte, Apex,
   BisectHosting, any Pterodactyl panel) or on your own Linux server (VPS).
-  a) Stop the server if it is running.
-  b) Double-click  "Prepare for Hosting.bat". It downloads anything missing (it asks the
-     same questions as Start Server the first time) and makes a zip in the "exports" folder.
-  c) Open that zip and read  HOSTING.txt  - it explains how to upload and start it,
-     step by step, for hosting companies, Docker and plain Linux.
-  The world you play here is only included if it already exists; otherwise the host
-  creates the same world (same seed) the first time it starts.
+
+  Your own Linux server (VPS): it runs this folder as it is.
+    - Copy this folder (or the zip it came in) to the server and follow section 2 with
+      sh start.sh . Start it inside  screen  or  tmux  so it keeps running when you log out.
+    - Or with Docker: go into the "docker" folder, put these two lines in a file named
+      .env  there (use your own Minecraft username):
+          EULA=TRUE
+          OWNER=YourMinecraftName
+      then run  docker compose up -d . Watch it with  docker compose logs -f , stop it
+      with  docker compose down . The world and backups stay in this folder.
+    - Open these ports in the server's firewall: 25565 TCP (the game) and 24454 UDP
+      (voice chat).
+
+  A Minecraft hosting company:
+    a) Stop the server if it is running.
+    b) Double-click  "Prepare for Hosting.bat"  (Mac or Linux:  sh prepare-for-hosting.sh ).
+       It downloads anything missing (it asks the same questions as Start Server the
+       first time) and makes a zip in the "exports" folder.
+    c) Open that zip and read  HOSTING.txt  - it explains how to upload and start it,
+       step by step.
+    The world you play here is only included if it already exists; otherwise the host
+    creates the same world (same seed) the first time it starts.
 
 
-9. BEFORE A BIG GROUP JOINS (10 or more players)
-------------------------------------------------
-  Memory: the server picks it from your PC's RAM (8 GB on a 32 GB PC, 5 GB on 16 GB).
-     8 GB is plenty for 25 players. To choose yourself, set it once in a Command Prompt:
+10. BEFORE A BIG GROUP JOINS (10 or more players)
+-------------------------------------------------
+  How many: about 10 players at full speed on a typical home PC. The limit is the CPU,
+     not memory: on a 2017 Intel i7-8700K, 10 players ran at full speed and 25 at about
+     two thirds speed. For 25, rent a host with a fast, current CPU.
+     When the server falls behind it automatically lowers how many mobs spawn and how
+     far things tick, and raises them again later ( /servercore status  shows it).
+  Memory: the server picks it from the computer's RAM (8 GB with 32 GB, 5 GB with 16 GB).
+     8 GB is plenty. To choose yourself on Windows, set it once in a Command Prompt:
         setx REALMS_MEMORY_GB 8
-     then start the server from a new window.
-  Players: up to 30 can be online (max-players in server\server.properties).
+     then start the server from a new window. On a Mac or Linux, start it with:
+        REALMS_MEMORY_GB=8 sh start.sh
+  Player slots: 30 (max-players in server\server.properties).
   Build the world ahead of time. New land is the main cause of lag when many people
   explore at once. With nobody online, type in the server window:
         chunky radius 5000

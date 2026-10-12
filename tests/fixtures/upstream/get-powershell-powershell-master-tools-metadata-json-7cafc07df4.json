@@ -1,0 +1,13 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json"
+ },
+ "response": {
+  "LTSReleaseTag": [
+   "v7.4.20",
+   "v7.6.6"
+  ],
+  "StableReleaseTag": "v7.6.6"
+ }
+}

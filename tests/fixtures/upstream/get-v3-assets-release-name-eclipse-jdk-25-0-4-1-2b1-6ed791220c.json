@@ -1,0 +1,19 @@
+{
+ "request": {
+  "method": "GET",
+  "url": "https://api.adoptium.net/v3/assets/release_name/eclipse/jdk-25.0.4.1%2B1?os=windows&architecture=x64&image_type=jre&jvm_impl=hotspot&project=jdk"
+ },
+ "response": {
+  "release_name": "jdk-25.0.4.1+1",
+  "binaries": [
+   {
+    "package": {
+     "name": "OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip",
+     "link": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip",
+     "size": 58475080,
+     "checksum": "4c95451cea98556def2c54f7782933f52a26d4a36bd85e1d59f0364464828b07"
+    }
+   }
+  ]
+ }
+}

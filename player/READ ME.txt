@@ -3,7 +3,8 @@ THE REALMS - how to join (players)
 
 The Realms is a modded Minecraft server. To join, your Minecraft needs the same mods.
 This folder sets that up for you. You need Minecraft Java Edition (the one you buy at
-minecraft.net), Windows 10 or 11, and about 2 GB of free disk space.
+minecraft.net) and about 2 GB of free disk space. Option A is for Windows 10 or 11;
+on a Mac or Linux, use option B.
 
 
 OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
@@ -11,7 +12,7 @@ OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
   1. Start the Minecraft Launcher once, sign in, then CLOSE it.
   2. Double-click  "Install for Minecraft Launcher.bat"  in this folder.
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads the mods, resource packs and shaders (about 450 MB) from their official
+     - It downloads the mods, resource packs and shaders (about 520 MB) from their official
        websites and checks every file. This takes a few minutes.
      - When it says it's finished, press a key to close the window.
   3. Open the Minecraft Launcher. Next to the green Play button, click the box that says
@@ -24,8 +25,9 @@ OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
   worlds in a separate folder.
 
 
-OPTION B: MODRINTH APP OR PRISM LAUNCHER (if you already use one)
------------------------------------------------------------------
+OPTION B: MODRINTH APP OR PRISM LAUNCHER (Mac, Linux, or if you already use one)
+---------------------------------------------------------------------------------
+  Install one of them (both free): https://modrinth.com/app or https://prismlauncher.org
   Import the  TheRealms-Client-....mrpack  file from this folder:
     Modrinth App:      + (Create)  >  Import  >  choose the .mrpack file
     Prism Launcher:    Add Instance  >  Import  >  choose the .mrpack file

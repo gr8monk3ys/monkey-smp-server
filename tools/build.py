@@ -1,6 +1,7 @@
 """Build the release files into dist/.
 
-  dist/TheRealms-Server-<version>.zip     unzip anywhere on Windows, double-click Start Server.bat
+  dist/TheRealms-Server-<version>.zip     unzip anywhere; double-click Start Server.bat (Windows) or
+                                          Start Server.command (macOS), or run ./start.sh (Linux)
   dist/TheRealms-Client-<version>.mrpack  import into Prism Launcher / Modrinth App to play
   dist/TheRealms-Player-<version>.zip     for the official Minecraft Launcher: unzip, double-click
                                           Install for Minecraft Launcher.bat
@@ -12,6 +13,7 @@ client/fabric-profile.json, the Fabric launcher profile the installer adds to th
 None of the files contains third-party jars or datapacks: the server downloads them on first start
 and the launcher downloads the client mods, both from their official sources.
 """
+import fnmatch
 import json
 import os
 import zipfile
@@ -22,12 +24,22 @@ from repo import REPO, load_json
 TOP = "TheRealms-Server"
 # Fixed timestamp so the same inputs give byte-identical zips.
 EPOCH = (2026, 1, 1, 0, 0, 0)
+# Files Linux and macOS run directly (including docker/entrypoint.sh); unzip and Archive Utility give
+# them these permission bits.
+EXECUTABLE = (".sh", ".command")
+# What a local test install (or Docker) leaves in package/: never part of a release. Top-level folders,
+# then files by their path relative to package/ (fnmatch patterns).
+RUNTIME_DIRS = {"server", "java", "backups", "exports", "downloads", "pwsh"}
+RUNTIME_FILES = (".realms-launch", "smoke-console.log*", "docker/.env")
 
 
 def _add(z: zipfile.ZipFile, arcname: str, data: bytes) -> None:
     info = zipfile.ZipInfo(arcname, EPOCH)
     info.compress_type = zipfile.ZIP_DEFLATED
-    info.external_attr = 0o644 << 16
+    # Made on Unix whatever builds it (zipfile picks the build machine's OS), so the permission bits
+    # are honoured and a build on Windows is byte-identical to one on Linux.
+    info.create_system = 3
+    info.external_attr = (0o100755 if arcname.endswith(EXECUTABLE) else 0o100644) << 16
     z.writestr(info, data)
 
 
@@ -38,11 +50,22 @@ def _walk(folder: Path):
             yield Path(root) / f
 
 
+def package_files(repo=REPO):
+    """Every file of package/ that ships, as (path relative to package/, Path)."""
+    for path in _walk(repo.package):
+        rel = path.relative_to(repo.package).as_posix()
+        if rel.split("/", 1)[0] in RUNTIME_DIRS and "/" in rel:
+            continue
+        if any(fnmatch.fnmatchcase(rel, pattern) for pattern in RUNTIME_FILES):
+            continue
+        yield rel, path
+
+
 def build_server(version: str, repo=REPO, dist: Path | None = None) -> Path:
     out = Path(dist or repo.dist) / f"TheRealms-Server-{version}.zip"
     with zipfile.ZipFile(out, "w") as z:
-        for path in _walk(repo.package):
-            _add(z, f"{TOP}/{path.relative_to(repo.package).as_posix()}", path.read_bytes())
+        for rel, path in package_files(repo):
+            _add(z, f"{TOP}/{rel}", path.read_bytes())
     return out
 
 

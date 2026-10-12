@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import shutil
 import zipfile
 
 import pytest
@@ -9,6 +10,7 @@ import build
 import defaults
 import entries
 import patches
+import pwsh_lock
 import validate
 from repo import REPO, load_json, save_json
 from upstream import RecordedHttp, Upstream
@@ -187,6 +189,19 @@ def test_validate_client_checks_the_launcher_profile(fabric_repo, change, messag
     assert any(message in e for e in errors), errors
 
 
+def test_validate_client_rejects_two_versions_of_one_mod(fabric_repo):
+    path = fabric_repo.client / "modrinth.index.json"
+    index = load_json(path)
+    mod = next(f for f in index["files"] if f["path"].startswith("mods/"))
+    older = copy.deepcopy(mod)
+    older["path"] = "mods/an-older-build.jar"
+    index["files"].append(older)
+    save_json(path, index)
+    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
+    both = " and ".join(sorted([mod["path"], older["path"]]))
+    assert errors == [f"client: {both} are the same Modrinth project (keep one version)"]
+
+
 def test_validate_client_matches_the_profile_to_the_client_index(fabric_repo):
     index = load_json(fabric_repo.client / "modrinth.index.json")
     index["dependencies"]["fabric-loader"] = "0.19.6"  # a loader bump without re-pinning the profile
@@ -281,3 +296,82 @@ def test_verify_online_catches_a_patch_that_no_longer_fits(online):
     errors = validate.verify_online(m, Upstream(http), repo)
     assert len(errors) == 1 and errors[0].startswith(f"{kind} {entry['file']}:")
     assert "doesn't fit" in errors[0] and "data/gone.json" in errors[0]
+
+
+# --- Linux and macOS: the sh launchers and pwsh.lock ------------------------------------------------
+
+@pytest.mark.parametrize("name", ["start.sh", "Start Server.command", "realms/realms.sh", "realms/pwsh.lock"])
+def test_validate_package_requires_the_unix_launchers(paper_repo, name):
+    (paper_repo.package / name).unlink()
+    assert f"package/{name} is missing" in validate.validate_package(paper_repo)
+
+
+@pytest.mark.parametrize("name", ["stop.sh", "Start Server.command", "realms/realms.sh"])
+def test_validate_package_rejects_crlf_in_sh_scripts(paper_repo, name):
+    path = paper_repo.package / name
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    assert f"{name} must have LF line endings (it is run by sh)" in validate.validate_package(paper_repo)
+
+
+def test_validate_package_requires_ascii_sh_scripts(paper_repo):
+    path = paper_repo.package / "backup.sh"
+    path.write_bytes(path.read_bytes() + "# café\n".encode())
+    assert f"backup.sh {validate.ASCII_NOTE}" in validate.validate_package(paper_repo)
+
+
+def test_validate_package_checks_docker_files_once_the_folder_exists(paper_repo):
+    docker = paper_repo.package / "docker"
+    shutil.rmtree(docker, ignore_errors=True)  # the fixture copies today's package, which has the real one
+    docker.mkdir()
+    (docker / "Dockerfile").write_bytes(b"FROM debian:12-slim\r\n")
+    errors = validate.validate_package(paper_repo)
+    assert "package/docker/entrypoint.sh is missing" in errors
+    assert "docker/Dockerfile must have LF line endings (it is run by sh)" in errors
+
+
+def lock_lines(repo):
+    return repo.pwsh_lock.read_text().splitlines(keepends=True)
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda ls: [x for x in ls if not x.startswith("mac-aarch64 ")], "pwsh.lock: no line for mac-aarch64"),
+    (lambda ls: ls + ["windows-x64 https://example.com/x.zip " + "a" * 64 + "\n"], "url must be a PowerShell release"),
+    (lambda ls: [x.replace("osx-x64", "osx-arm64") if x.startswith("mac-x64 ") else x for x in ls],
+     "pwsh.lock mac-x64: url is the osx-arm64 build, not osx-x64"),
+    (lambda ls: [x.replace("7.6.6", "7.6.5") if x.startswith("linux-x64 ") else x for x in ls],
+     "same PowerShell version"),
+    (lambda ls: [x.upper() if x.startswith("linux-aarch64 ") else x for x in ls], "unknown platform LINUX-AARCH64"),
+    (lambda ls: ls + [ls[-1]], "listed twice"),
+    (lambda ls: ls + ["linux-x64 https://two-words-only\n"], "expected '<platform> <url> <sha256>'"),
+])
+def test_validate_package_checks_pwsh_lock(paper_repo, change, message):
+    assert validate.validate_package(paper_repo) == []
+    paper_repo.pwsh_lock.write_text("".join(change(lock_lines(paper_repo))), newline="\n")
+    errors = validate.validate_package(paper_repo)
+    assert any(message in e for e in errors), errors
+
+
+def test_verify_pwsh_online(paper_repo, capsys):
+    http = RecordedHttp()
+    pins = pwsh_lock.parse(paper_repo.pwsh_lock.read_text())
+    text = "".join(f"{p.platform} {p.url} {hashlib.sha256(p.platform.encode()).hexdigest()}\n" for p in pins)
+    paper_repo.pwsh_lock.write_text(text, newline="\n")
+    for p in pins:
+        http.add("GET", p.url, p.platform.encode())
+    assert validate.verify_pwsh_online(Upstream(http), paper_repo) == []
+    assert "ok  pwsh     powershell-7.6.6-osx-arm64.tar.gz" in capsys.readouterr().out
+    http.add("GET", pins[0].url, b"tampered")
+    assert validate.verify_pwsh_online(Upstream(http), paper_repo) == [
+        "pwsh.lock linux-x64 powershell-7.6.6-linux-x64.tar.gz: download doesn't match the pinned sha256"]
+
+
+def test_verify_online_downloads_every_java_build(capsys):
+    m = copy.deepcopy(REPO.load_manifest())
+    http = RecordedHttp()
+    for _, jre in entries.java_builds(m):
+        serve(http, jre, jre["file"].encode(), "sha256")
+    m["server"] = {**m["server"]}
+    serve(http, m["server"], b"server", "sha256")
+    m["mods"] = []
+    assert validate.verify_online(m, Upstream(http)) == []
+    assert capsys.readouterr().out.count("ok  java ") == 5

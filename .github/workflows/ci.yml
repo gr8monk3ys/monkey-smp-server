@@ -63,6 +63,10 @@ jobs:
   smoke:
     name: Boot the packaged server (Windows)
     needs: tools
+    # Windows minutes count double on this private repo. A push to main is a PR that this job already
+    # booted, so it runs on pull requests, tag releases (workflow_call keeps the tag push's event) and
+    # manual runs only. Skipping it on main also skips `hosting`, which the same PR ran.
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
     runs-on: windows-latest
     timeout-minutes: 45
     steps:

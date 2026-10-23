@@ -69,7 +69,8 @@ ul, ol { padding-left: 1.2em; }
 
 /* Wall label: every piece of metadata is a small mono caption. */
 .eyebrow, .label, .tag, .alt, .price span, .plan th span, .ladder b,
-.top nav a, footer p:first-child, section > h2::before, .steps li::before, .rules li::before {
+.top nav a, footer p:first-child, section > h2::before, .steps li::before, .rules li::before,
+.gallery figcaption span {
   font: 500 0.72rem/1.4 var(--mono);
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -212,6 +213,17 @@ details[open] summary::after { transform: rotate(45deg); }
 details[open] summary { margin-bottom: 10px; }
 details p { color: var(--muted); margin: 0; }
 
+/* Gallery: one large plate with two stacked beside it, then a row of three. */
+.gallery { display: grid; gap: 32px 20px; margin-top: 40px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.gallery figure { margin: 0; grid-column: span 2; }
+.gallery figure:first-child { grid-column: span 4; grid-row: span 2; }
+.gallery img {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover;
+  border-radius: 18px; border: 1px solid var(--hairline); background: var(--tinted);
+}
+.gallery figcaption { margin-top: 12px; color: var(--muted); font-size: 0.95rem; max-width: var(--narrow); }
+.gallery figcaption span { display: block; margin-bottom: 4px; }
+
 footer {
   padding: 48px max(16px, calc((100% - var(--wide)) / 2)) 64px;
   border-top: 1px solid var(--hairline);
@@ -228,6 +240,8 @@ footer a:hover { color: var(--pen); }
   section { padding-top: 64px; padding-bottom: 64px; }
   .hero { padding-top: 56px; }
   .grid.three article { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: 1fr; gap: 28px; }
+  .gallery figure, .gallery figure:first-child { grid-column: auto; grid-row: auto; }
   .plan { padding: 22px; }
   .plan th { white-space: normal; }
 }

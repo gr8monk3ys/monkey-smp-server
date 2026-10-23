@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Realms</title>
+  <meta name="description" content="A modded Minecraft Java factions server: parties, alliances and land claims, PvP, new terrain, dungeons and magic. One pass, same price for everyone.">
+  <meta property="og:title" content="The Realms">
+  <meta property="og:description" content="A modded Minecraft Java factions server. Claim land, make allies, take what isn't nailed down.">
+  <meta name="theme-color" content="#14130f">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="#">The Realms</a>
+    <nav aria-label="Sections">
+      <a href="#world">The world</a>
+      <a href="#join">Join</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#rules">Rules</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <p class="eyebrow">Minecraft Java 26.3 &middot; Fabric &middot; factions</p>
+      <h1>Claim land. Make allies.<br>Keep what you can hold.</h1>
+      <p class="lede">The Realms is a modded factions server for a small crowd that plays evenings, Pacific time.
+        Parties, alliances and land claims, PvP outside your walls, reworked terrain, new dungeons, mobs and magic.</p>
+      <div class="address">
+        <span class="label">Server address</span>
+        <code id="address">therealmsmc.lscaturchio.xyz</code>
+        <button type="button" id="copy" class="ghost">Copy</button>
+      </div>
+      <div class="cta">
+        <a class="button" data-link="STORE_URL" href="#pricing">Get a pass</a>
+        <a class="button ghost" data-link="DISCORD_INVITE" href="#">Join the Discord</a>
+      </div>
+    </section>
+
+    <section id="world" class="band">
+      <h2>The world</h2>
+      <div class="grid three">
+        <article>
+          <h3>Parties, alliances, claims</h3>
+          <p>Open Parties and Claims runs parties, alliances and claims. Your claim is yours; everything outside it is contested.</p>
+        </article>
+        <article>
+          <h3>Land worth fighting over</h3>
+          <p>Tectonic and Terralith reshape the overworld, Incendium the Nether, Nullscape the End. Dungeons, taverns and capitals are scattered across it.</p>
+        </article>
+        <article>
+          <h3>Strength on the line</h3>
+          <p>Strength SMP is the centerpiece: win fights and your strength grows, lose them and it drains away. Every fight has stakes.</p>
+        </article>
+        <article>
+          <h3>Talk in the world</h3>
+          <p>Proximity voice chat is built in. Negotiate at the border, or hear them coming.</p>
+        </article>
+        <article>
+          <h3>A live map</h3>
+          <p>BlueMap renders the world in 3D in your browser, so you can plan the next expedition before logging in.</p>
+        </article>
+        <article>
+          <h3>Runs smooth</h3>
+          <p>A fast dedicated CPU, a pre-generated world and tuned mob ticking keep it at 20 TPS for the crowd we let in.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="join">
+      <h2>How to join</h2>
+      <ol class="steps">
+        <li>
+          <h3>Get a pass</h3>
+          <p>Buy it with your Minecraft Java name. You're on the whitelist within a minute or two, and you get the
+            member role in the Discord.</p>
+        </li>
+        <li>
+          <h3>Install the modpack</h3>
+          <p>The server adds blocks, mobs and items, so you need the pack (about 520 MB). Import it into the
+            Modrinth App or Prism Launcher, or use the installer for the regular Minecraft Launcher.
+            <a data-link="MODPACK_URL" href="#">Get the modpack</a>.</p>
+        </li>
+        <li>
+          <h3>Connect</h3>
+          <p>Multiplayer, Add Server, <code>therealmsmc.lscaturchio.xyz</code>. No port needed.
+            The game wants about 6 GB of memory and a mid-range graphics card.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="pricing" class="band">
+      <h2>Pricing</h2>
+      <p class="note">One price to play, the same for everyone. Supporter tiers are cosmetic only: nothing that helps
+        you fight, build faster or earn more.</p>
+
+      <div class="grid two">
+        <article class="plan main">
+          <h3>Realm Pass</h3>
+          <p class="price">$5 <span>/ month</span></p>
+          <p class="alt">or $12 for 3 months</p>
+          <ul>
+            <li>Full access to the server and every mod</li>
+            <li>Voice chat and the live map</li>
+            <li>Member role, forum and events in the Discord</li>
+          </ul>
+          <a class="button" data-link="STORE_URL" href="#">Get a pass</a>
+        </article>
+        <article class="plan">
+          <h3>Supporter <span class="tag">optional</span></h3>
+          <table>
+            <tbody>
+              <tr><th>Ember <span>$3 / mo</span></th><td>Chat name color, supporter tag in the Discord</td></tr>
+              <tr><th>Banner <span>$7 / mo</span></th><td>Ember, plus a title of your choice and your faction's banner in the spawn hall</td></tr>
+              <tr><th>Crown <span>$15 / mo</span></th><td>Banner, plus your name on the founders' wall and a vote on next season's mods and events</td></tr>
+            </tbody>
+          </table>
+          <a class="button ghost" data-link="STORE_URL" href="#">Support the server</a>
+        </article>
+      </div>
+
+      <div class="grid two">
+        <article>
+          <h3>Bring your friends</h3>
+          <p>When a friend buys a pass and names you at checkout, you earn supporter time:</p>
+          <ul class="ladder">
+            <li><b>1 friend</b> one month of Ember</li>
+            <li><b>3 friends</b> one month of Banner and the Herald title</li>
+            <li><b>5 friends</b> one month of Crown</li>
+            <li><b>10 friends</b> Herald for good, and your name on the founders' wall</li>
+          </ul>
+          <p class="small">Your friends pay the same price as everyone else. Mojang's rules require one price for
+            access, so invites earn perks rather than discounts.</p>
+        </article>
+        <article>
+          <h3>Where the money goes</h3>
+          <p>The server costs about $50 a month to run: the machine, backups off-site, and the fallback tunnel.
+            Everything above that goes back into the server first: a reserve, faster hardware when it fills up,
+            and events. Each month we post what came in and what it paid for in the Discord.</p>
+          <p class="small">Streaming or making videos on the server? Ask in the Discord about a creator code.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="rules">
+      <h2>Rules</h2>
+      <p class="note">Short version: fight hard, play fair, don't be cruel. Staff decide edge cases; you can appeal any
+        decision in the Discord.</p>
+      <ol class="rules">
+        <li>
+          <h3>Respect people</h3>
+          <p>No slurs, hate, harassment, threats or sharing anyone's personal information, in game, in voice
+            or in the Discord. Trash talk about the game is fine; going after the person is not.</p>
+        </li>
+        <li>
+          <h3>No cheating</h3>
+          <p>No hacked clients, x-ray (mods, resource packs or glitches), combat macros, auto-clickers or entity
+            radar. Play with the modpack; shaders and client-side performance mods are fine. If you're not sure
+            about a mod, ask first.</p>
+        </li>
+        <li>
+          <h3>Report exploits, don't use them</h3>
+          <p>No duplication glitches, lag machines or chunk-loading tricks. Report bugs privately in the Discord;
+            a real find earns a thank-you title.</p>
+        </li>
+        <li>
+          <h3>Claims are the line</h3>
+          <p>Inside a claim, the owner's settings decide. Outside claims everything is contested: PvP, looting and
+            taking down unclaimed builds are part of the game. Claim what you want to keep.</p>
+        </li>
+        <li>
+          <h3>Fight fair</h3>
+          <p>No PvP at spawn. Don't log out to escape a fight. Don't camp someone's respawn: after you kill a
+            player, leave them alone for five minutes.</p>
+        </li>
+        <li>
+          <h3>One account each</h3>
+          <p>No alternate accounts to dodge a ban, stretch claim limits or feed your own strength.</p>
+        </li>
+        <li>
+          <h3>No real-money trading</h3>
+          <p>Don't sell or buy items, land, strength or accounts for real money or gift cards.</p>
+        </li>
+        <li>
+          <h3>Keep the server fast</h3>
+          <p>Farms are welcome; giant ones that drag everyone's tick rate down are not. If a build causes lag,
+            staff will talk to you before changing anything.</p>
+        </li>
+        <li>
+          <h3>Keep it all-ages</h3>
+          <p>Names, skins, signs, builds and chat stay free of sexual or hateful content.</p>
+        </li>
+      </ol>
+      <p class="small">Enforcement goes warning, temporary ban, permanent ban. Cheating, hate and doxxing can skip
+        straight to a ban. A ban doesn't refund time already paid for.</p>
+    </section>
+
+    <section id="faq" class="band">
+      <h2>Questions</h2>
+      <div class="grid two">
+        <details>
+          <summary>Why does it cost money?</summary>
+          <p>A modded server this size needs a fast dedicated CPU to stay smooth, and the pass keeps out players who
+            are only there to wreck things. The pass pays for the machine; anything above that goes back into it.</p>
+        </details>
+        <details>
+          <summary>Can I play on Bedrock, console or mobile?</summary>
+          <p>No. The Realms is Java Edition with mods, so it needs a computer: Windows, macOS or Linux.</p>
+        </details>
+        <details>
+          <summary>How many players?</summary>
+          <p>We cap the server where it stays at full speed, about 25 online at once. When it fills up, we open a
+            waitlist before we add anyone.</p>
+        </details>
+        <details>
+          <summary>Refunds?</summary>
+          <p>If you can't get the pack to run in your first 48 hours, ask in the Discord and you get your money
+            back. After that, passes don't renew unless you keep them on, so you can stop any time.</p>
+        </details>
+        <details>
+          <summary>I'm under 18.</summary>
+          <p>Welcome. Ask a parent or guardian before buying anything. The server and the Discord are moderated
+            all-ages spaces.</p>
+        </details>
+        <details>
+          <summary>What happens when the server updates?</summary>
+          <p>Updates are announced in the Discord, with a five-minute warning in chat. When the mod list changes,
+            the Modrinth App updates the pack for you; otherwise reinstall it from the modpack link.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><a data-link="DISCORD_INVITE" href="#">Discord</a> &middot; <a href="#rules">Rules</a> &middot; <a data-link="MAP_URL" href="#">Live map</a></p>
+    <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+  </footer>
+</body>
+</html>

@@ -67,10 +67,8 @@ That is deliberate: taking away a cosmetic someone paid for feels worse than the
 - **The first hour.** Most players who leave do so on day one. Greet new names in chat and in
   Discord, give them a faction to join, and point them at `/trigger wardrobe`, where Wayfarer is
   3 days away.
-- **A weekly rhythm.** One small scheduled event a week (a build contest, a boss night or a market
-  day) at the same time each week, announced in Discord. People plan around a fixed slot.
-- **Seasons.** A new season every few months (a map reset or a new region, plus a new founder-style
-  skin) gives lapsed players a reason to return and new players a fair start.
+- **A weekly rhythm and seasons.** One event a week in a fixed slot, a big moment every two to three
+  weeks, and 12-week seasons with a finale and a fresh world: see `docs/SEASONS.md`.
 - **Comebacks.** When someone's pass lapses, a short Discord DM from staff about what's new does more
   than a discount.
 

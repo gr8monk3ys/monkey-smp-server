@@ -5,7 +5,8 @@
 - Docs: `docs/SEASONS.md`, the plan for seasons and events. It covers 12-week seasons in acts (border growth, Dragon Night,
   Netherite age, a finale), one event a week from a catalog (KOTH, supply drops, bounties, tournaments), what
   carries over between seasons, and the research behind it. The owners' three pillar events (Build Battle with a block wheel, Faction Raid
-  capture the flag, Arena Glory kit combat) run every season and score a faction Season Cup.
+  capture the flag, Arena Glory kit combat) run every season and score a faction Season Cup, plus
+  Anarchy (90 minutes of suspended combat rules when the End opens; griefing, cheating and conduct rules stay).
 - The server is now called **Monkey SMP** (was The Realms): server list message, window titles, the launcher
   profile, the client pack and the site. Download names (`TheRealms-*`), the `.the-realms` game folder and the
   backup task keep their old names, so updating needs nothing new. The uninstaller is now "Uninstall Monkey SMP.bat".

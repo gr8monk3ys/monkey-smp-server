@@ -63,14 +63,14 @@ What resets: the world, items, Strength and territory. Factions can re-form.
 The Season I rules already hold back some of the world (the first hour, the End, Netherite armor, the
 2500 border). Opening those on a schedule turns them into the season's story. Weeks count from launch.
 
-The three pillar events (below) run in every season. The acts and the catalog fill the weeks between them.
+The four pillar events (below) run in every season. The acts and the catalog fill the weeks between them.
 
 | Week | Act or event | What happens |
 | --- | --- | --- |
 | 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
 | 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. |
-| 3 | **Dragon Night** | The End opens with a scheduled dragon fight. Truce until the dragon dies. |
+| 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
 | 4 | **Arena Glory I** | Kit duels (1v1) for individuals, then the 4v4 faction bracket. |
 | 5 | **Netherite age** | Netherite armor is allowed (rule 24). Announced a week ahead. |
 | 6 | **Faction Raid II** | Flags again, now with Netherite and bigger bases. |
@@ -98,7 +98,7 @@ Most weeks it is the act or pillar event from the table above. When a week has o
 
 ### The pillar events
 
-The owners' three events. They come back every season, so players know them and get better at them.
+The owners' four events. They come back every season, so players know them and get better at them.
 Each one awards **Season Cup** points to factions. The Cup decides the season champion, so a faction
 that loses one fight is still in the race.
 
@@ -108,6 +108,7 @@ that loses one fight is still in the race.
 | Faction Raid | 10 a captured flag held at the end, +10 for still holding your own | | | 5 |
 | Arena Glory, faction bracket | 30 | 20 | 10 | 5 |
 | Arena Glory, individual champion | 10 to their faction | | | |
+| Anarchy | 20 to the faction with the dragon's last hit | | | |
 | The finale | 50 | 30 | 15 | 5 |
 
 Keep the standings on a sidebar at spawn (`scoreboard objectives add ev.cup dummy`, one entry per
@@ -122,8 +123,16 @@ faction) and post them in `#monkey-smp` after every event.
 - **Builders and scavengers.** Factions split up: some build, and some go out for the bonus blocks. PvP
   opens after the first hour (rule 23), so the scavengers fight over the same caves, villages and
   Nether spots.
-- **Where.** In the faction's own territory. The build then becomes the base feature that rule 1
-  requires, and it is protected by the territory rules after judging.
+- **Where.** On equal 32 x 32 plots in a showcase area next to spawn. Each plot is claimed for one
+  faction for the event, so only that faction can place or break blocks there. Plots rather than
+  territory, because on launch day nobody has territory yet, and a four-player faction's territory is
+  four times a solo player's. The finished builds stay as the season's gallery.
+- **The plots are a no-PvP zone** while the event runs. Everywhere else PvP opens after the first hour
+  as usual, so the fight is over materials, not over the builds.
+- **Visibly used** means at least 9 blocks of the wheel block, seen from the plot's edge. One block
+  hidden in a wall doesn't count.
+- **Survival only.** Every block comes from this world (it is new, so nothing is pre-built), and no
+  schematic printers or other mods that place blocks (B15).
 - **Judging,** on the second night: owners plus one guest judge. Each scores look (10) and idea (10).
   Each wheel block used visibly adds 5. Players vote in Discord as the tiebreak, and nobody can vote for
   their own faction.
@@ -143,8 +152,18 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
 - **Raid window.** Two hours, Saturday evening. Inside the window, a flag yard counts as open ground:
   KOS there is fine, and every combat rule and ban still applies (no elytra into the fight, no lava, no
   pearls, no restocking mid-fight).
+- **Yard checks.** Staff check every yard in the hour before the window. The flag stands on open ground,
+  with nothing within 3 blocks of it except the post it stands on, and no decoy banners in the yard. A
+  faction whose yard fails the check sits the raid out.
 - **Capturing.** Break the enemy flag, carry it to your own yard and plant it next to yours. You can't
   capture while your own flag is missing. A carrier who dies drops the flag, and anyone can pick it up.
+- **A flag travels in your inventory,** never in a shulker box or ender chest. A flag stored there, or
+  carried by a player who logs out, goes back to its owners and the capture doesn't count.
+- **Swapping flags with an ally gains nothing:** both factions lose the bonus for holding their own,
+  and neither can plant while its own flag is missing.
+- **Deaths count as usual,** Strength included. A raid that is "Strength-safe" would need everyone's
+  Strength saved and restored, and a player could withdraw Strength into items in between and then get
+  the level back: a duplication bug. Raids are a risk worth taking, so they stay real.
 - **Scoring.** At the end of the window, staff count the official flags in each yard (Cup table above).
   Flags go back to their factions afterwards.
 - **Safety net.** Anything griefed outside the yards is rolled back with Ledger (`ledger rollback
@@ -158,8 +177,14 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
   nothing. Your own gear can't be lost, and a day-one player is on even terms with a veteran. Items
   dropped in the arena are cleared after each round.
 - **Strength is set aside.** On entry your Strength level (`Strength_SMP+Strength_Level`) is saved and
-  set to the same level for everyone; on exit it is restored. Dying in the arena costs no real
-  Strength.
+  set to +3 for everyone, which is the level every player starts with. On exit it is restored. Dying in
+  the arena costs no real Strength, and winning gains none.
+- **No way to carry anything out.** The arena runs in adventure mode, so nobody can place an ender chest
+  or break blocks. Your inventory is cleared when you leave, and items on the floor are cleared after
+  every round. That also stops the Strength exploit: anything withdrawn as an item inside the arena is
+  destroyed, and the restored level is the one you came in with.
+- **Logging out inside** clears you on your next join: inventory cleared, Strength restored, sent back
+  to the waiting room.
 - **Kits follow the bans:** no totems, pearls, crystals, enchanted golden apples, enchanted maces or
   Fire Aspect/Flame; bow debuffs only as B6 allows. Rotate kits between rounds: sword and shield, bow
   and crossbow, axe, spear, and an unenchanted mace.
@@ -167,6 +192,50 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
   for teams.
 - **Prizes.** Individual champions get a title, an arena skin in the wardrobe and one event book (B18).
   Team winners get Cup points, and their banner hangs on the arena wall until the next Arena Glory.
+- **Event books carry lore** ("Monkey SMP event reward, Season I"). An anvil can rename a book but
+  can't add lore, so only books with that line may be applied under B18. A book is never above the
+  vanilla maximum level, and never Fire Aspect or Flame.
+- **Bracket seeding** keeps players from the same faction apart until the semifinal, so teammates can't
+  throw matches to each other early.
+
+#### Anarchy (when the End opens)
+
+Staff open the End in the event slot in week 3, and a 90-minute countdown starts (a boss bar for
+everyone). The dragon fight happens in the middle of it.
+
+**Off for the 90 minutes:** the combat rules (2 to 6, 9, 11 to 19), KOS limits in territory (34, 35
+and 38), the faction size limit while fighting (32), and the gameplay bans B1 to B10 and B12: crystals,
+beds, pearls, totems, enchanted golden apples, maces, debuffs, escape tunnels, TNT carts.
+
+**Still on:**
+- **Griefing.** Spawn (8, 22, B11), territory (36, 37, 39) and pets (20). You may kill someone in their
+  base, but you may not break, rob or burn it. Lava and TNT in someone's territory are griefing.
+  Claims still protect blocks.
+- **Cheating.** Hacked clients, x-ray, exploits and duping (7, B13 to B17, B19), account sharing (21),
+  and leaving the world border (25). Anarchy is about the rules of the fight, not the rules of the
+  game.
+- **People.** Harassment, hate, real-money trading and the all-ages rules.
+- **Permanent gains.** The Strength crafting cap (28) and faction membership (29, 30, 33) stay, because
+  their effects outlast the window.
+- **Server config.** Anything the server disables (Fire Aspect and Flame, and Netherite armor until
+  week 5) stays disabled. Anarchy doesn't change the config.
+
+**When the window ends:**
+- **Ceasefire for 10 minutes.** A fight that started in Anarchy doesn't carry over into normal rules,
+  and nobody argues about who hit first.
+- **Banned items must be gone by the end of the ceasefire:** used, destroyed or thrown in the void.
+  Staff run `clear` on everyone online for totems, end crystals and enchanted golden apples, and the
+  usual bans apply to anything found later, in an ender chest too. Pearls and golden apples kept for
+  crafting stay legal, as before.
+- **Traps come down.** Respawn and logout traps, and lava traps, built during Anarchy are removed by
+  their builders during the ceasefire. Staff remove what's left with Ledger, and a death to one
+  afterwards is judged under the normal rules.
+- **What you won, you keep:** Strength taken in fights, and loot. Feeding Strength on purpose (a friend
+  or an alt dying to you again and again) is an exploit (B13), Anarchy or not.
+- **The dragon's last hit** earns its faction 20 Cup points and the egg.
+
+Anyone who doesn't want to take part logs out before the countdown starts. That isn't combat logging,
+because nobody is in a fight yet.
 
 ### The event catalog
 
@@ -221,17 +290,26 @@ Not built:
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
 | Border acts | `worldborder set` over RCON on the date. The config-enforcement work owns the starting border |
 | The block wheel | `tools/wheel.py`: draws from a pool of survival blocks built from the game's data reports, with a published seed so anyone can check the draw. Could also be a page on the site for the live spin |
-| Arena functions | A small data pack: join (empty-inventory check, save and equalise Strength, give kit), leave (restore Strength), clear dropped items, one function per kit |
+| Arena functions | A small data pack: join (empty-inventory check, adventure mode, save Strength and set +3, give kit), leave (clear inventory, restore Strength), rejoin handling, clear dropped items, one function per kit |
+| Anarchy timer | A boss-bar countdown, the ceasefire, and the `clear` list for banned items |
+| Event books | A function that gives a lore-tagged book |
 | Official flags and the Cup | A function that gives a faction's tagged flag, and the `ev.cup` sidebar |
 
-Decisions for the owners before Season I:
+Decided (the owners asked for whatever closes loopholes; change any of it in this file):
 
-1. Faction Raid deaths: do they cost real Strength (the mod's normal rule), or is the raid window
-   Strength-safe like the arena?
-2. Arena Glory: everyone at the same Strength (say +3), or bring your own?
-3. Build Battle: in each faction's territory (as written) or on equal plots at spawn?
-4. Prizes: is one B18 event book per individual champion the right amount?
-5. The slot: Saturday 6 pm Pacific for every event?
+1. Raid deaths cost real Strength. A Strength-safe raid would need save and restore for the whole
+   server, which opens a duplication exploit (Faction Raid, above).
+2. Arena Glory sets everyone to +3, in adventure mode, and clears inventories on the way out.
+3. Build Battle uses equal plots next to spawn, not territory.
+4. One lore-tagged event book per individual champion, two Arena Glories a season. One book per event
+   can't decide a season.
+5. Every event is Saturday at 6 pm Pacific, announced a week ahead as a Discord event.
+6. Anarchy keeps the griefing, cheating, conduct and permanent-gain rules, ends with a 10-minute
+   ceasefire, and banned items must be gone when the ceasefire ends.
+
+Add to `docs/RULES.md` when the rulebook is next edited (the config-enforcement session owns it right
+now): an "Events" section that points here and says that event rules override the numbered rules
+only for an event's window.
 | KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
 | Season-end runbook | Lock the world, back it up, publish the download, start the next world. Add it to `docs/LIVE.md` |
 

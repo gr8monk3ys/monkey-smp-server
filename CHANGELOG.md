@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- The server is now called **Monkey SMP** (was The Realms): server list message, window titles, the launcher
+  profile, the client pack and the site. Download names (`TheRealms-*`), the `.the-realms` game folder and the
+  backup task keep their old names, so updating needs nothing new. The uninstaller is now "Uninstall Monkey SMP.bat".
+- New: the **wardrobe**, cosmetic skins for swords and helmets (`/trigger wardrobe`), unlocked by days played,
+  tenure, invites, supporter tier or being a founder. Look only: no damage, armor or durability changes.
+- New: `tools/retention.py` reports D1/D7/D30 return rates and weekly players from the server logs.
+
 ## [2.3.0] - 2026-10-11
 
 Host the server on a Mac, on Linux or with Docker. Same Minecraft (26.3) and world as 2.2.x: hosts can unzip

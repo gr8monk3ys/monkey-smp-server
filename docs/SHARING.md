@@ -1,4 +1,4 @@
-# Sharing The Realms
+# Sharing Monkey SMP
 
 Each release has three downloads. Send each person only what they need.
 
@@ -19,7 +19,7 @@ can't join a server on 2.1.0 if the mods changed.
 Copy, fill in the blanks, and send with `TheRealms-Server-<version>.zip`:
 
 ```text
-Here's The Realms server (Minecraft Java 26.3, modded factions/PvP).
+Here's Monkey SMP server (Minecraft Java 26.3, modded factions/PvP).
 
 To run it on your computer (Windows 10/11, a Mac or Linux, 12 GB+ RAM):
 1. Unzip it somewhere permanent, like Documents.
@@ -44,14 +44,14 @@ You also need to play with the mods: use the player zip I'm sending everyone.
 Copy, fill in the server address, and send with `TheRealms-Player-<version>.zip`:
 
 ```text
-Here's how to join The Realms (Minecraft Java Edition, modded):
+Here's how to join Monkey SMP (Minecraft Java Edition, modded):
 
 1. Make sure you have Minecraft Java Edition and the normal Minecraft Launcher
    (minecraft.net). Start the launcher once, sign in, then close it.
 2. Unzip TheRealms-Player-<version>.zip and double-click "Install for Minecraft Launcher.bat".
    If Windows says "protected your PC", click More info > Run anyway.
-   It downloads the mods (~520 MB) and adds "The Realms" to your launcher. Takes a few minutes.
-3. Open the Minecraft Launcher, choose "The Realms" next to the Play button, press Play.
+   It downloads the mods (~520 MB) and adds "Monkey SMP" to your launcher. Takes a few minutes.
+3. Open the Minecraft Launcher, choose "Monkey SMP" next to the Play button, press Play.
    The first start is slow (a few minutes) - that's normal.
 4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
 
@@ -67,5 +67,5 @@ Tell me your exact Minecraft username so I can add you to the guest list.
   (Exception: going from 1.x to 2.x needs a new folder - it's a new world.) On a Mac, Finder won't
   unzip over a folder; [ADMIN.md](ADMIN.md#day-to-day) says what to do instead.
 - **Players:** unzip the new player zip and double-click the installer again. It updates the same
-  "The Realms" installation and keeps your settings, worlds and screenshots. Prism Launcher and
+  "Monkey SMP" installation and keeps your settings, worlds and screenshots. Prism Launcher and
   Modrinth App players import the new `.mrpack`.

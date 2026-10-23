@@ -1,12 +1,12 @@
-# The live server (therealmsmc.lscaturchio.xyz)
+# The live server (monkeysmp.lscaturchio.xyz)
 
-How the paid, always-on copy of The Realms runs: one Linux VPS running the Docker setup from the release,
+How the paid, always-on copy of Monkey SMP runs: one Linux VPS running the Docker setup from the release,
 kept in step with this repo by `deploy/realms-deploy.sh`, with a home PC on playit.gg as the fallback.
 The business side (prices, costs, referrals) is in the plan linked from the PR that added this file; the
 public site is `site/`.
 
 ```
-players --> therealmsmc.lscaturchio.xyz (SRV record) --> play.therealmsmc.lscaturchio.xyz (A) --> VPS :25565
+players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchio.xyz (A) --> VPS :25565
                                                      \-> failover: SRV target swapped to the playit.gg address
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: realms-deploy.timer --> docker compose (the release's docker/)
 ```
@@ -49,11 +49,12 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
    anything else. In the console: `worldborder set 12000`, then `chunky radius 6000` and `chunky start`
    (hours; it carries on after a restart). Do the Nether at a smaller radius the same way.
-7. **Timer.** `sudo cp /srv/realms/repo/deploy/realms-deploy.{service,timer} /etc/systemd/system/`,
-   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer`.
+7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
+   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
+   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
 8. **DNS** (Vercel, which holds the lscaturchio.xyz zone): an `A` record `play.therealmsmc` to the VPS
    address, and an `SRV` record `_minecraft._tcp.therealmsmc` with priority 0, weight 5, port 25565, target
-   `play.therealmsmc.lscaturchio.xyz`, TTL 60. Players then type `therealmsmc.lscaturchio.xyz` with no
+   `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
    port, while the same name serves the website. Voice chat finds the server by itself.
 
 ## Day to day
@@ -67,6 +68,8 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 | Console | `cd /srv/realms/TheRealms-Server/docker && docker compose attach realms` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec realms realms rcon "say hi"` |
 | Let a player in by hand | `docker compose exec realms realms add-player NAME` |
+| Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
+| Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
 
 If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previous release back, restarts
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took

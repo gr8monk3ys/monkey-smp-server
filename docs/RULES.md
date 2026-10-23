@@ -1,6 +1,6 @@
-# The Realms: rules
+# Monkey SMP: rules
 
-The full rulebook, for `#realms-rules` in the Discord. The website (`site/index.html`, "Rules") shows the
+The full rulebook, for `#smp-rules` in the Discord. The website (`site/index.html`, "Rules") shows the
 short version; when a rule changes, change both. Draft until the owners approve it.
 
 **Short version:** fight hard, play fair, don't be cruel. Staff decide edge cases, and you can appeal any
@@ -74,8 +74,8 @@ decision.
 ## In the Discord
 
 1. Rules 1, 8 and 9 apply here too.
-2. Use the right place: questions before buying in `#realms-faq`; suggestions, bugs, recruitment and trading
-   in `#realms-forum` with the right tag; payment problems, reports and appeals in a ticket.
+2. Use the right place: questions before buying in `#smp-faq`; suggestions, bugs, recruitment and trading
+   in `#smp-forum` with the right tag; payment problems, reports and appeals in a ticket.
 3. No spam, mass pings, or pinging staff for something a ticket can handle.
 4. No DMs to staff about bans or reports. Use a ticket so there's a record and anyone on staff can help.
 5. Recruitment and trading posts go in the forum, not in chat.
@@ -99,7 +99,7 @@ decision.
 
 ## Payments and bans
 
-- The Realm Pass is the same price for everyone. Supporter tiers are cosmetic and give no advantage.
+- The Server Pass is the same price for everyone. Supporter tiers are cosmetic and give no advantage.
 - A ban doesn't refund time already paid for. Cancel your pass in the store if you don't want it to renew.
 - If you can't get the modpack running in your first 48 hours, open a ticket for a refund.
 - Chargebacks on a pass are a permanent ban; open a ticket instead and we'll sort it out.

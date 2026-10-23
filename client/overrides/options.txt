@@ -66,7 +66,7 @@ damageTiltStrength:1.0
 highContrast:true
 highContrastBlockOutline:false
 narratorHotkey:true
-resourcePacks:["vanilla","file/Enhanced Audio r7.zip","file/Simple Grass Flowers v2.0.0.zip","file/Os\u0027 Colorful Grasses (Tall).zip","file/Better-Leaves-9.6.zip","file/Fancy Crops v1.3.zip","file/§3Fresh §bFlower Pots.zip","file/RAYs_3D_Rails_v3.6.zip","file/RAYs_3D_Ladders_v2.4.zip","file/animated-items 1.21.x-26.3 - v1.6.3.zip","file/EvenBetterEnchants_v3_1.21.5+.zip","file/visual_armor_trims_4.2.zip","file/LowOnFire v26.2§8.zip","file/§a§lVocal Villagers §r§71.4.zip","file/Icon Fresh 0.5.zip","file/FreshAnimations_v1.10.5.zip","file/FA+All_Extensions-v1.9.2.zip","punchy:punchy","high_contrast"]
+resourcePacks:["vanilla","file/Enhanced Audio r7.zip","file/Simple Grass Flowers v2.0.0.zip","file/Os\u0027 Colorful Grasses (Tall).zip","file/Better-Leaves-9.6.zip","file/Fancy Crops v1.3.zip","file/§3Fresh §bFlower Pots.zip","file/RAYs_3D_Rails_v3.6.zip","file/RAYs_3D_Ladders_v2.4.zip","file/animated-items 1.21.x-26.3 - v1.6.3.zip","file/EvenBetterEnchants_v3_1.21.5+.zip","file/visual_armor_trims_4.2.zip","file/LowOnFire v26.2§8.zip","file/§a§lVocal Villagers §r§71.4.zip","file/Icon Fresh 0.5.zip","file/FreshAnimations_v1.10.5.zip","file/FA+All_Extensions-v1.9.2.zip","punchy:punchy","high_contrast","file/Monkey SMP Wardrobe"]
 incompatibleResourcePacks:[]
 lastServer:
 lang:en_us

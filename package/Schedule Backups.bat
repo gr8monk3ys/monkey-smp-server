@@ -2,7 +2,7 @@
 rem Makes Windows back up the world every 12 hours (a scheduled task for this user). Run again to update it.
 rem The task runs from this folder with relative paths, so a long folder path still fits, and each run adds
 rem a transcript (errors included) to "scheduled-backups.log" here so a failing backup doesn't go unnoticed.
-title The Realms - Schedule Backups
+title Monkey SMP - Schedule Backups
 cd /d "%~dp0"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $run = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory (Get-Location).Path -Argument '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command Start-Transcript -Append -Path .\scheduled-backups.log; & .\realms\realms.ps1 backup'; $twiceADay = @((New-ScheduledTaskTrigger -Daily -At '06:00'), (New-ScheduledTaskTrigger -Daily -At '18:00')); Register-ScheduledTask -TaskName 'The Realms backup' -Action $run -Trigger $twiceADay -Force | Out-Null"
 if errorlevel 1 (

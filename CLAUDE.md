@@ -1,4 +1,6 @@
-# The Realms server
+# Monkey SMP server
+
+Players see the name Monkey SMP (formerly The Realms); internal names keep `realms` (see `GLOSSARY.md`).
 
 Server package for a Fabric 26.3 factions server (1.x releases were Paper 26.1.2) that runs natively on
 Windows (`.bat`), Linux and macOS (`.sh` launchers + the `realms/realms.sh` PowerShell bootstrap) and in

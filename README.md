@@ -1,4 +1,4 @@
-# The Realms
+# Monkey SMP
 
 [![CI](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml)
 
@@ -26,7 +26,7 @@ Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
 | File | For | |
 |---|---|---|
 | `TheRealms-Server-<version>.zip` | the **host** | run the server on Windows, macOS or Linux (or with Docker), or prepare it for an online host |
-| `TheRealms-Player-<version>.zip` | every **player** on Windows | double-click `Install for Minecraft Launcher.bat`, then pick "The Realms" in the normal Minecraft Launcher |
+| `TheRealms-Player-<version>.zip` | every **player** on Windows | double-click `Install for Minecraft Launcher.bat`, then pick "Monkey SMP" in the normal Minecraft Launcher |
 | `TheRealms-Client-<version>.mrpack` | players on **macOS/Linux**, or using the Modrinth App or Prism | import it into Prism Launcher or the Modrinth App (it's also inside the player zip) |
 
 ## Run it on your own computer (Windows, macOS, Linux)
@@ -91,7 +91,7 @@ The bundle is built from the official downloads on your own computer, so nothing
 Players need the mods (the server adds blocks, mobs and items). On **Windows**, unzip
 `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**: it installs
 Fabric and every mod, resource pack and shader into a separate folder (downloaded from Modrinth, each
-file hash-checked) and adds a **The Realms** installation to the normal Minecraft Launcher. On **macOS
+file hash-checked) and adds a **Monkey SMP** installation to the normal Minecraft Launcher. On **macOS
 and Linux**, players import the `.mrpack` into [Prism Launcher](https://prismlauncher.org) or the
 [Modrinth App](https://modrinth.com/app) instead (so can Windows players who already use one). Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
 

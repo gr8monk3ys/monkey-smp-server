@@ -134,7 +134,7 @@ BeforeAll {
             formatVersion = 1
             game          = 'minecraft'
             versionId     = $Version
-            name          = 'The Realms - Client'
+            name          = 'Monkey SMP - Client'
             summary       = 'Fixture pack'
             files         = @($Files)
             dependencies  = [ordered]@{ minecraft = $Mc; 'fabric-loader' = $Loader }
@@ -230,9 +230,9 @@ Describe 'Install-Client' {
             $s.version | Should -Be '1.0.0'
         }
 
-        It 'adds The Realms profile' {
+        It 'adds Monkey SMP profile' {
             $p = (Get-Profiles $F.Profiles).'the-realms'
-            $p.name | Should -Be 'The Realms 1.0.0'
+            $p.name | Should -Be 'Monkey SMP 1.0.0'
             $p.type | Should -Be 'custom'
             $p.lastVersionId | Should -Be $script:FabricId
             $p.gameDir | Should -Be $F.Game
@@ -331,7 +331,7 @@ Describe 'Install-Client' {
 
         It 'renames the profile and keeps its created time and the first backup' {
             $p = (Get-Profiles $F.Profiles).'the-realms'
-            $p.name | Should -Be 'The Realms 1.1.0'
+            $p.name | Should -Be 'Monkey SMP 1.1.0'
             $p.created | Should -Be $script:created
             [IO.File]::ReadAllBytes("$($F.Profiles).the-realms-backup") | Should -Be $script:original
             @((Get-Profiles $F.Profiles).PSObject.Properties).Count | Should -Be 4
@@ -486,9 +486,9 @@ Describe 'Minecraft Launcher checks' {
         $store = Join-Path $F.Minecraft 'launcher_profiles_microsoft_store.json'
         Write-Text $store '{"profiles":{"x":{"name":"x","type":"custom","lastVersionId":"1.0"}}}'
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 3)
-        (Get-Profiles $store).'the-realms'.name | Should -Be 'The Realms 1.0.0'
+        (Get-Profiles $store).'the-realms'.name | Should -Be 'Monkey SMP 1.0.0'
         (Get-Profiles $store).x.name | Should -Be 'x'
-        (Get-Profiles $F.Profiles).'the-realms'.name | Should -Be 'The Realms 1.0.0'
+        (Get-Profiles $F.Profiles).'the-realms'.name | Should -Be 'Monkey SMP 1.0.0'
     }
 
     It 'only warns about a running launcher with -NonInteractive' {

@@ -1,6 +1,8 @@
-# The Realms
+# Monkey SMP
 
 A Minecraft factions server packaged so that anyone can host it on Windows, macOS or Linux from a single download, and kept reproducible by pinning everything it runs.
+
+Formerly **The Realms**. Only the name players see changed: code, folders, the `realms` command, the `realms:` data pack namespace, the `TheRealms-*` download names and the `.the-realms` game folder keep the old name so existing installs and the live deploy keep working.
 
 ## People
 
@@ -23,7 +25,7 @@ _Avoid_: role, group
 ## What ships
 
 **Release**:
-One numbered version of The Realms, made of a server package, a player zip and a client pack built from the same manifest.
+One numbered version of Monkey SMP, made of a server package, a player zip and a client pack built from the same manifest.
 _Avoid_: build, version (alone)
 
 **Server package**:

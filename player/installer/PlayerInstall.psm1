@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    The Realms player installer: puts the client pack into the official Minecraft Launcher.
+    Monkey SMP player installer: puts the client pack into the official Minecraft Launcher.
 
 .DESCRIPTION
     Does what the official Fabric installer and a modpack launcher would do, for players who only
@@ -12,7 +12,7 @@
         3. places the Fabric version json in <MinecraftDir>\versions\<id>\
         4. downloads every client file into the game folder and checks its size and hash
         5. copies the pack's overrides (configs, options.txt) that don't exist yet
-        6. adds or updates one "The Realms" profile in launcher_profiles.json, keeping
+        6. adds or updates one "Monkey SMP" profile in launcher_profiles.json, keeping
            everything else in that file exactly as it was
 
     Running it again changes nothing unless the pack changed. Files a previous run placed and the
@@ -189,7 +189,7 @@ function New-PlayerContext {
     $mc = [IO.Path]::GetFullPath($MinecraftDir).TrimEnd('\')
     $game = [IO.Path]::GetFullPath($GameDir).TrimEnd('\')
     if ($game -eq $mc) {
-        throw "The game folder can't be the Minecraft Launcher's own folder ($mc). Pick a separate folder for The Realms."
+        throw "The game folder can't be the Minecraft Launcher's own folder ($mc). Pick a separate folder for Monkey SMP."
     }
     return [pscustomobject]@{
         MinecraftDir      = $mc
@@ -473,7 +473,7 @@ function Get-ProfileField {
     }
 }
 
-function Get-ProfileName($Pack) { return ("The Realms $($Pack.VersionId)").Trim() }
+function Get-ProfileName($Pack) { return ("Monkey SMP $($Pack.VersionId)").Trim() }
 
 # ================================================================ client files
 
@@ -652,7 +652,7 @@ function Install-Client {
     $copied = Install-Overrides -Context $Context -Pack $pack
     Write-Ok "$copied new settings file(s) copied (your own settings are never replaced)."
 
-    Write-Step 'Adding The Realms to the Minecraft Launcher'
+    Write-Step 'Adding Monkey SMP to the Minecraft Launcher'
     $fields = Get-ProfileField -Context $Context -Pack $pack -VersionId $fabric.Id -MemoryGB $MemoryGB
     $profileChanged = $false
     foreach ($file in $profileFiles) {
@@ -666,7 +666,7 @@ function Install-Client {
     Write-Host "  2. Pick '$($fields.name)' next to the Play button (or under Installations)."
     Write-Host '  3. Press Play. The first start takes a few minutes.'
     Write-Host '  4. In the game: Multiplayer > Add Server, and type the address your host gave you.'
-    Write-Host "  Your mods, worlds and screenshots for The Realms live in $($Context.GameDir)"
+    Write-Host "  Your mods, worlds and screenshots for Monkey SMP live in $($Context.GameDir)"
     return [pscustomobject]@{
         Downloaded      = $sync.Downloaded
         Removed         = $sync.Removed
@@ -681,7 +681,7 @@ function Install-Client {
 
 <#
 .SYNOPSIS
-    Removes The Realms profile from the launcher and, after a typed confirmation (none with
+    Removes Monkey SMP profile from the launcher and, after a typed confirmation (none with
     -NonInteractive), the game folder. The Fabric version json stays: it is harmless and other
     profiles may use it. Returns @{ ProfileRemoved; GameDirRemoved }.
 #>
@@ -695,7 +695,7 @@ function Uninstall-Client {
             if (Edit-LauncherProfile -Path $file -Remove) { $profileRemoved = $true }
         }
     }
-    if ($profileRemoved) { Write-Ok 'Removed The Realms from the Minecraft Launcher.' } else { Write-Ok 'The Minecraft Launcher has no The Realms profile.' }
+    if ($profileRemoved) { Write-Ok 'Removed Monkey SMP from the Minecraft Launcher.' } else { Write-Ok 'The Minecraft Launcher has no Monkey SMP profile.' }
     Write-Note 'The Fabric version (in the launcher''s versions folder) stays; it is harmless and other profiles may use it.'
 
     $gameRemoved = $false
@@ -706,7 +706,7 @@ function Uninstall-Client {
             $go = $Context.NonInteractive
             if (-not $go) {
                 Write-Host ''
-                Write-Host "The Realms game folder is $($Context.GameDir)" -ForegroundColor White
+                Write-Host "Monkey SMP game folder is $($Context.GameDir)" -ForegroundColor White
                 Write-Host 'Deleting it also deletes the worlds, screenshots and settings inside it.' -ForegroundColor White
                 $a = Read-Answer $Context 'Type DELETE to delete it, or just press Enter to keep it'
                 $go = $a -ceq 'DELETE'

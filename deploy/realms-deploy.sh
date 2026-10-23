@@ -173,7 +173,7 @@ if restart_and_wait; then
     # into them, so the copy running now is unaffected.
     git -C "$REPO_DIR" checkout --quiet --force --detach "$commit"
     log "live: $label"
-    msg="The Realms is back up on $label."
+    msg="Monkey SMP is back up on $label."
     [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."
     discord "$msg"
     exit 0

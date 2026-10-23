@@ -406,6 +406,21 @@ Describe 'Install-Server' {
             (Read-ServerProperties (Join-Path $F.Server 'server.properties'))['motd'] | Should -Be 'mine'
         }
 
+        It 'replaces the folder data packs the package ships, leaving other packs alone' {
+            $F = New-Fixture
+            Write-Text (Join-Native $F.Realms 'datapacks/realms-wardrobe/pack.mcmeta') 'new'
+            Write-Text (Join-Native $F.Realms 'datapacks/realms-wardrobe/data/realms/function/load.mcfunction') 'say hi'
+            Write-Text (Join-Native $F.Packs 'realms-wardrobe/pack.mcmeta') 'old'
+            Write-Text (Join-Native $F.Packs 'realms-wardrobe/data/realms/function/gone.mcfunction') 'say bye'
+            Write-Text (Join-Native $F.Packs 'host-pack/pack.mcmeta') 'host'
+            Install-Fixture $F (New-Manifest $F)
+
+            Join-Native $F.Packs 'realms-wardrobe/pack.mcmeta' | Should -FileContentMatchExactly '^new$'
+            Join-Native $F.Packs 'realms-wardrobe/data/realms/function/load.mcfunction' | Should -Exist
+            Join-Native $F.Packs 'realms-wardrobe/data/realms/function/gone.mcfunction' | Should -Not -Exist
+            Join-Native $F.Packs 'host-pack/pack.mcmeta' | Should -FileContentMatchExactly '^host$'
+        }
+
         It 'throws on a placeholder it cannot fill' {
             $F = New-Fixture
             Write-Text (Join-Native $F.Realms 'defaults/server.properties') "server-port=$($F.Port)`nmotd={{MOTD}}`n"
@@ -1210,7 +1225,7 @@ Describe 'server.properties' {
     It 'round-trips through Read-ServerProperties and Set-ServerProperty' {
         $path = Join-Native $TestDrive 'rt/server.properties'
         # A Java-escaped colour code as in the real Defaults (kept ASCII).
-        $motd = 'motd=\u00a76The Realms = fun'
+        $motd = 'motd=\u00a76Monkey SMP = fun'
         Write-Text $path "#comment=not a key`r`n$motd`r`nserver-port=25565`r`nrcon.port=25575`r`n"
 
         $before = Read-ServerProperties $path

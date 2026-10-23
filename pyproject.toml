@@ -1,7 +1,7 @@
 [project]
 name = "the-realms-server-tools"
 version = "0.0.0"
-description = "Maintainer tools for The Realms Minecraft server package (stdlib only)."
+description = "Maintainer tools for Monkey SMP Minecraft server package (stdlib only)."
 requires-python = ">=3.11"
 
 [tool.ruff]
@@ -13,7 +13,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 ignore = ["SIM115"]  # short scripts read small files with open(); the OS closes them
 
 [tool.ruff.lint.isort]
-known-first-party = ["add", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "validate"]
+known-first-party = ["add", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "retention", "validate", "wardrobe"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

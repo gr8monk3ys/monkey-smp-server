@@ -1,10 +1,10 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs (or updates, or removes) The Realms client pack in the official Minecraft Launcher.
+    Installs (or updates, or removes) Monkey SMP client pack in the official Minecraft Launcher.
 
 .DESCRIPTION
-    Adds a "The Realms" profile to the Minecraft Launcher that plays Fabric with the pack's mods,
+    Adds a "Monkey SMP" profile to the Minecraft Launcher that plays Fabric with the pack's mods,
     resource packs and shaders from its own game folder. Every file is downloaded from its official
     source (Modrinth) and checked against the hash in the pack before it is used. Running it again
     is safe: files that are already correct are skipped and mods the new pack dropped are removed.
@@ -26,7 +26,7 @@ param(
     # The Minecraft Launcher's data folder.
     [string]$MinecraftDir = (Join-Path $env:APPDATA '.minecraft'),
 
-    # The folder The Realms plays from (mods, worlds, screenshots). Fixed, so updates reuse it.
+    # The folder Monkey SMP plays from (mods, worlds, screenshots). Fixed, so updates reuse it.
     [string]$GameDir = (Join-Path $env:APPDATA '.the-realms'),
 
     # Game memory in GB. 0 = pick from the computer's RAM.

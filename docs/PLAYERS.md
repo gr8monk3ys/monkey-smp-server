@@ -1,4 +1,4 @@
-# Joining The Realms
+# Joining Monkey SMP
 
 ## What you need
 
@@ -19,12 +19,12 @@
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
    It downloads about 520 MB (mods, resource packs, shaders) from their official websites and checks
    every file. When it's done, press a key to close the window.
-3. Open the launcher, click the version box next to the green **Play** button, choose **The Realms**,
+3. Open the launcher, click the version box next to the green **Play** button, choose **Monkey SMP**,
    press **Play**. The first start takes a few minutes.
 4. **Multiplayer > Add Server**, type the address from the host, **Done**, **Join Server**.
 
-Your normal Minecraft isn't touched: The Realms keeps its own mods, settings and worlds in a separate
-folder (`%APPDATA%\.the-realms`). To remove it, double-click **`Uninstall The Realms.bat`**.
+Your normal Minecraft isn't touched: Monkey SMP keeps its own mods, settings and worlds in a separate
+folder (`%APPDATA%\.the-realms`). To remove it, double-click **`Uninstall Monkey SMP.bat`**.
 
 ### B. Mac, Linux, or anyone using the Modrinth App or Prism Launcher
 

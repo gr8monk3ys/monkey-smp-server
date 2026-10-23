@@ -1,6 +1,6 @@
 @echo off
-rem Safely stops The Realms (saves the world first).
-title The Realms - Stop Server
+rem Safely stops Monkey SMP (saves the world first).
+title Monkey SMP - Stop Server
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0realms\realms.ps1" stop
 if errorlevel 1 (
   echo.

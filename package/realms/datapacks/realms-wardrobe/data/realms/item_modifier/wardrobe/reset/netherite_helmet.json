@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:set_components",
+  "components": {
+    "minecraft:item_model": "minecraft:netherite_helmet",
+    "minecraft:equippable": {
+      "slot": "head",
+      "asset_id": "minecraft:netherite",
+      "equip_sound": "minecraft:item.armor.equip_netherite"
+    }
+  }
+}

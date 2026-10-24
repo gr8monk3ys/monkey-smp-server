@@ -28,7 +28,7 @@
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
-    <a class="brand" href="#">Monkey SMP</a>
+    <a class="brand" href="#"><img src="favicon.svg" alt="" width="32" height="32">Monkey SMP</a>
     <nav aria-label="Sections">
       <a href="#world">The world</a>
       <a href="#gallery">Gallery</a>
@@ -53,6 +53,13 @@
         <a class="button" data-link="STORE_URL" href="#pricing">Get a pass</a>
         <a class="button ghost" data-link="DISCORD_INVITE" href="#">Join the Discord</a>
       </div>
+      <figure class="trailer">
+        <video controls preload="none" playsinline width="1280" height="720" poster="media/trailer-poster.webp"
+          aria-label="Monkey SMP trailer">
+          <source src="media/trailer-720p.mp4" type="video/mp4">
+        </video>
+        <figcaption>The trailer, 45 seconds. Sound on. <a href="media/trailer-720p.mp4" download>Download it</a> to share.</figcaption>
+      </figure>
     </section>
 
     <section id="world" class="band">
@@ -190,7 +197,7 @@
         </article>
         <article>
           <h3>Where the money goes</h3>
-          <p>The server costs about $50 a month to run: the machine, backups off-site, and the fallback tunnel.
+          <p>The server costs about $62 a month to run: the machine, backups off-site, and the fallback tunnel.
             Everything above that goes back into the server first: a reserve, faster hardware when it fills up,
             and events. Each month we post what came in and what it paid for in the Discord.</p>
           <p class="small">Streaming or making videos on the server? Ask in the Discord about a creator code.</p>
@@ -274,10 +281,30 @@
         </details>
       </div>
     </section>
+
+    <section id="kit">
+      <h2>Spread the word</h2>
+      <p class="note">The logo, banners and trailer, free to use when you post about the server: videos, server lists, your own Discord.</p>
+      <div class="kit">
+        <figure class="kit-logo">
+          <img src="kit/logo-1392w.png" width="348" height="64" alt="The Monkey SMP logo: a pixel-art monkey on a green tile beside the words MONKEY SMP">
+          <figcaption>Logo, for dark backgrounds. <a href="kit/logo-1392w.png" download>Wide</a> &middot;
+            <a href="kit/logo-stacked-704w.png" download>Stacked</a> &middot; <a href="kit/mark-512.png" download>Monkey only</a></figcaption>
+        </figure>
+        <figure>
+          <img src="kit/server-list-468x60.png" width="468" height="60" loading="lazy" alt="Monkey SMP server-list banner">
+          <figcaption>Server-list banner, 468 &times; 60. <a href="kit/server-list-468x60.png" download>Download</a></figcaption>
+        </figure>
+        <figure>
+          <img src="kit/discord-banner-960x540.png" width="960" height="540" loading="lazy" alt="Monkey SMP Discord banner">
+          <figcaption>Discord banner, 960 &times; 540. <a href="kit/discord-banner-960x540.png" download>Download</a></figcaption>
+        </figure>
+      </div>
+    </section>
   </main>
 
   <footer>
-    <p><a data-link="DISCORD_INVITE" href="#">Discord</a> &middot; <a href="#rules">Rules</a> &middot; <a data-link="MAP_URL" href="#">Live map</a></p>
+    <p><a data-link="DISCORD_INVITE" href="#">Discord</a> &middot; <a href="#rules">Rules</a> &middot; <a data-link="MAP_URL" href="#">Live map</a> &middot; <a href="#kit">Logo and banners</a></p>
     <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
   </footer>
 </body>

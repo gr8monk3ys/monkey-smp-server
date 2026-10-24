@@ -22,6 +22,8 @@ this folder, so a change is an edit and a re-run, not a redraw.
 
 The site also uses `site/img/og.jpg` (Open Graph / Twitter card, wired into `site/index.html`) and
 `site/img/icon-256.png` (apple-touch-icon).
+`site/media/` holds the 720p trailer and its poster (the logo-reveal frame), and `site/kit/` copies of the
+logo PNGs and both banners for the site's "Spread the word" section. Copy them again after a re-export.
 
 ## Kept out of git
 

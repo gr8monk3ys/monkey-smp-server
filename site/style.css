@@ -93,7 +93,8 @@ ul, ol { padding-left: 1.2em; }
   border-bottom: 1px solid color-mix(in srgb, var(--hairline) 40%, transparent);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
-.brand { font: 700 1.3rem var(--display); letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
+.brand { font: 700 1.3rem var(--display); letter-spacing: -0.02em; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+.brand img { image-rendering: pixelated; }
 .top nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .top nav a { text-decoration: none; padding: 6px 10px; border-radius: 999px; min-height: 24px; }
 .top nav a:hover { color: var(--ink); background: color-mix(in srgb, var(--pen) 6%, transparent); }
@@ -222,6 +223,21 @@ details p { color: var(--muted); margin: 0; }
 }
 .gallery figcaption { margin-top: 12px; color: var(--muted); font-size: 0.95rem; max-width: var(--narrow); }
 .gallery figcaption span { display: block; margin-bottom: 4px; }
+
+/* Trailer under the hero; pixel art scales by whole numbers, so no smoothing. */
+.trailer { margin: 64px 0 0; }
+.trailer video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+  border-radius: 18px; border: 1px solid var(--hairline); background: #111317;
+}
+.trailer figcaption, .kit figcaption { margin-top: 12px; color: var(--muted); font-size: 0.95rem; }
+
+/* Press kit: images at their own size, capped to the column. */
+.kit { display: grid; gap: 40px; margin-top: 40px; }
+.kit figure { margin: 0; }
+.kit img { display: block; max-width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; }
+.kit-logo img { box-sizing: border-box; width: 412px; padding: 28px 32px; background: #111317; border-radius: 18px; }
+.kit figure:last-child img { max-width: min(100%, 640px); image-rendering: auto; }
 
 footer {
   padding: 48px max(16px, calc((100% - var(--wide)) / 2)) 64px;

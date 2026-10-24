@@ -72,7 +72,7 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 | 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
 | 4 | **Arena Glory I** | Kit duels (1v1) for individuals, then the 4v4 faction bracket. |
-| 5 | **Netherite age** | Netherite armor is allowed (rule 24). Announced a week ahead. |
+| 5 | **Netherite age** | Netherite armor is allowed (rule 24): `datapack disable "file/realms-no-netherite-armor"`. Announced a week ahead. |
 | 6 | **Faction Raid II** | Flags again, now with Netherite and bigger bases. |
 | 7 | **Build Battle II** | A shorter one: one evening, one spin, at spawn plots. |
 | 8 | **The border breaks again** | 4000 to 6000. |
@@ -200,7 +200,7 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
 
 #### Anarchy (when the End opens)
 
-Staff open the End in the event slot in week 3, and a 90-minute countdown starts (a boss bar for
+Staff open the End in the event slot in week 3 (`function realms:rules/open_end`, docs/RULES.md), and a 90-minute countdown starts (a boss bar for
 everyone). The dragon fight happens in the middle of it.
 
 **Off for the 90 minutes:** the combat rules (2 to 6, 9, 11 to 19), KOS limits in territory (34, 35
@@ -303,7 +303,7 @@ Not built:
 | --- | --- |
 | Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
-| Border acts | `worldborder set` over RCON on the date. The config-enforcement work owns the starting border |
+| Border acts | `worldborder set` over RCON on the date. The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
 | Attendance skins | Skins at 3 and 10 events in `tools/wardrobe.py`, unlocked by `rw.events` |
 | KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
 | Season-end runbook | Lock the world, back it up, publish the download, start the next world. Add it to `docs/LIVE.md` |

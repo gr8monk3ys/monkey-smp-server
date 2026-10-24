@@ -1,0 +1,6 @@
+#Monkey SMP: a faction (an Open Parties and Claims party) holds at most 4 players (rule 29).
+#Only this option is set here; the mod fills in every other one with its default on first start.
+[serverConfig]
+	[serverConfig.parties]
+		#The maximum number of members in a party. Existing members are not removed if the limit is reduced.
+		maxPartyMembers = 4

@@ -169,7 +169,37 @@ Open items from the owners' draft:
 - Rule 3: disengage rules are still to be discussed (when a fight counts as over).
 - Rule 26 was blank in the draft, so the numbering skips it.
 - "The mods" section is still to be written.
-- B9: the owners want Fire Aspect and Flame disabled on the server, not just banned.
 - B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack.
-- Rules 23 to 25 (closed dimensions in the first hour, no Netherite armor, the 2500 x 2500 border) and
-  rule 29 (4-player factions) can be enforced in server config instead of relying on players.
+
+What the server enforces by itself (two data packs from `tools/rules.py`, plus one config default).
+Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
+
+- **Rule 23, the launch hour.** At launch, run `function realms:rules/launch`. PvP and the Nether close
+  (the `pvp` and `allow_entering_nether_using_portals` gamerules), and after 3600 seconds of server time
+  both open again by themselves. The timer is saved with the world, so a restart doesn't reset it.
+  The End is closed from the start: anyone who gets in is sent to the surface at spawn within a second.
+  Open it with
+  `function realms:rules/open_end`; `function realms:rules/close_end` closes it again.
+- **Rule 24, no Netherite armor** (pack `realms-no-netherite-armor`). The smithing table won't upgrade
+  diamond armor to Netherite. Netherite armor from mod loot (Incendium, Moog's structures) or from a mob is
+  taken off once a second and dropped at the player's feet, so nothing is lost. Netherite tools, weapons
+  and horse armor are untouched. To lift the rule: `datapack disable "file/realms-no-netherite-armor"`.
+  The world remembers that across restarts and updates. `datapack enable` turns the rule back on.
+- **Rule 25, the border.** The first time the server starts with the pack, the border is set to
+  2500 x 2500, centred on spawn. Since Minecraft 26.3 every dimension has its own border, so the pack also
+  gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
+  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
+  and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
+- **Rule 29, 4-player factions.** Open Parties and Claims' `maxPartyMembers` is 4
+  (`defaults/config/openpartiesandclaims-server.toml`). On a server installed before this setting
+  shipped, the installer keeps your existing `config/openpartiesandclaims-server.toml`: set
+  `maxPartyMembers = 4` there yourself (server stopped). Lowering it doesn't remove members already in a
+  bigger party.
+- **B9, Fire Aspect and Flame** (pack `realms-rules`). They're out of the enchanting table, loot, villager
+  trades and mob gear. A copy that still turns up (a book in a mod's chest, a mob's weapon) shows as
+  "(disabled)", does nothing, and can't be put on an item at an anvil. This replaces vanilla's
+  `#minecraft:non_treasure` enchantment tag; if a future mod adds its enchantments to that tag, add them to
+  `VANILLA_NON_TREASURE` in `tools/rules.py` too.
+
+Still on players and admins: everything else, including rule 33 (leaving a faction needs an admin's
+approval; the mod lets players leave a party freely).

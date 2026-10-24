@@ -16,6 +16,12 @@
   backup task keep their old names, so updating needs nothing new. The uninstaller is now "Uninstall Monkey SMP.bat".
 - New: the **wardrobe**, cosmetic skins for swords and helmets (`/trigger wardrobe`), unlocked by days played,
   tenure, invites, supporter tier or being a founder. Look only: no damage, armor or durability changes.
+- New: the server enforces the Season I rules it can (two data packs from `tools/rules.py`): a 2500 x 2500
+  border centred on spawn, set once (the Nether's at 1:8); the launch hour (`function realms:rules/launch`
+  closes PvP and the Nether for an hour, the End stays closed until `function realms:rules/open_end`); no
+  Netherite armor until `datapack disable "file/realms-no-netherite-armor"`; Fire Aspect and Flame disabled.
+  Factions (Open Parties and Claims parties) hold at most 4 players on new installs. See the admin notes
+  in `docs/RULES.md`.
 - New: `tools/retention.py` reports D1/D7/D30 return rates and weekly players from the server logs.
 
 ## [2.3.0] - 2026-10-11

@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:copy_components",
+            "source": "block_entity",
+            "include": [
+              "minecraft:custom_name",
+              "minecraft:item_name",
+              "minecraft:tooltip_display",
+              "minecraft:banner_patterns",
+              "minecraft:rarity",
+              "minecraft:custom_data",
+              "minecraft:lore",
+              "minecraft:enchantment_glint_override"
+            ]
+          },
+          "name": "minecraft:gray_banner"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "minecraft:blocks/gray_banner"
+}

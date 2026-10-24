@@ -280,20 +280,30 @@ Built:
 - The season counter (`#season rw.day`).
 - `/gamenight` and the Town Hall in Front Desk.
 - `tools/retention.py`.
+- The event tooling, in the `realms-events` data pack (`tools/events.py`; commands in `docs/ADMIN.md`):
+  - Arena functions: join (empty inventory, armor and offhand, at the entrance), leave, five kits that
+    follow the bans, Strength saved and held at +3 (withdrawals blocked), drops cleaned every tick, and a
+    player who logs out or is teleported out of the radius taken out with their Strength back.
+  - The Anarchy timer: a boss bar for 90 minutes, then the 10-minute ceasefire, then the `clear` of
+    totems, end crystals and enchanted golden apples.
+  - The Faction Raid timer: a 2-hour boss bar. A player who logs out during a raid loses any flag they
+    carry.
+  - Official flags: a faction's banner with a tag and a serial number, kept when placed and broken.
+  - Event books (lore-tagged, vanilla max level, none for banned enchantments) and the `ev.cup` sidebar.
+  - The attendance counter (`rw.events`, once per event). The skins at 3 and 10 events are not built.
+- The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
+  block, built from the game's data reports) with a published seed, so anyone can check the draw.
 
 Not built:
 
 | To build | Notes |
 | --- | --- |
 | Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
-| An event attendance counter | `rw.events` plus skins at 3 and 10 events: rewards turning up, not winning |
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
 | Border acts | `worldborder set` over RCON on the date. The config-enforcement work owns the starting border |
-| The block wheel | `tools/wheel.py`: draws from a pool of survival blocks built from the game's data reports, with a published seed so anyone can check the draw. Could also be a page on the site for the live spin |
-| Arena functions | A small data pack: join (empty-inventory check, adventure mode, save Strength and set +3, give kit), leave (clear inventory, restore Strength), rejoin handling, clear dropped items, one function per kit |
-| Anarchy timer | A boss-bar countdown, the ceasefire, and the `clear` list for banned items |
-| Event books | A function that gives a lore-tagged book |
-| Official flags and the Cup | A function that gives a faction's tagged flag, and the `ev.cup` sidebar |
+| Attendance skins | Skins at 3 and 10 events in `tools/wardrobe.py`, unlocked by `rw.events` |
+| KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
+| Season-end runbook | Lock the world, back it up, publish the download, start the next world. Add it to `docs/LIVE.md` |
 
 Decided (the owners asked for whatever closes loopholes; change any of it in this file):
 
@@ -310,8 +320,6 @@ Decided (the owners asked for whatever closes loopholes; change any of it in thi
 Add to `docs/RULES.md` when the rulebook is next edited (the config-enforcement session owns it right
 now): an "Events" section that points here and says that event rules override the numbered rules
 only for an event's window.
-| KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
-| Season-end runbook | Lock the world, back it up, publish the download, start the next world. Add it to `docs/LIVE.md` |
 
 Check after every event: did the D7 of that week's new players rise, and how many people marked
 Interested compared with how many joined. Drop events that nobody marks Interested twice in a row.

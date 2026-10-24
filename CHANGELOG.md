@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- New: **event tooling**. The `realms-events` data pack (made by `tools/events.py`) runs Arena Glory (join,
+  kits, Strength held at +3, drops cleaned), the Anarchy and Faction Raid timers, official faction flags,
+  event books, the Season Cup and an attendance count; `/function realms:events/help` lists the commands.
+  `tools/block_wheel.py` draws Build Battle blocks from a published seed. See the Events section of `docs/ADMIN.md`.
 - Docs: `docs/SEASONS.md`, the plan for seasons and events. It covers 12-week seasons in acts (border growth, Dragon Night,
   Netherite age, a finale), one event a week from a catalog (KOTH, supply drops, bounties, tournaments), what
   carries over between seasons, and the research behind it. The owners' three pillar events (Build Battle with a block wheel, Faction Raid

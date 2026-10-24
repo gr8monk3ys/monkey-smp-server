@@ -173,6 +173,69 @@ Players outside your network can't reach it unless you tunnel that port too (pla
 Stop the server, then replace `server\world`, `server\world_nether` and `server\world_the_end` with the
 folders you want, and keep `server\world\datapacks` (the installer re-adds missing datapacks on next start).
 
+## Events
+
+The `realms-events` data pack (made by `tools/events.py`) has the staff side of the events in
+`docs/SEASONS.md`. Run `/function realms:events/help` in game for a clickable list. Commands below are
+typed in game as an op, or over RCON without the `/`.
+
+**Arena Glory.** Build the arena in the overworld: walls and a roof, and no chests, hoppers or other
+containers within the radius. Everything inside the radius is cleaned every tick (dropped items and XP
+vanish), and players inside are held at Strength +3 and can't withdraw Strength.
+
+```
+/function realms:events/arena/set_lobby            # stand at the entrance; players must be within 8 blocks to join
+/function realms:events/arena/set_pit              # stand in the pit; joiners and respawns go here
+/function realms:events/arena/set_size {size:48}   # radius around the pit; leaving it takes a player out
+/function realms:events/arena/open                 # announces a clickable join
+/execute as @a[tag=ev.arena] run function realms:events/arena/kit/sword   # or archer, axe, spear, mace
+/function realms:events/arena/round                # clears arrows, tridents and items between rounds
+/function realms:events/arena/close                # takes everyone out
+```
+
+Players join with `/trigger arena set 1` (empty inventory, armor and offhand, survival mode, at the
+entrance) and leave with `/trigger arena set 2`. Going in saves their Strength and sets +3 in adventure
+mode; coming out clears the inventory, restores their Strength and puts them back in survival at the
+entrance. Logging out, or being teleported out of the radius, takes them out the same way.
+
+**Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.
+
+```
+/function realms:events/anarchy/start   # 90 minutes, then a 10-minute ceasefire; then clears totems, end crystals, enchanted golden apples
+/function realms:events/anarchy/stop
+/function realms:events/raid/start      # 2 hours; a player who logs out during it loses any flag they carry
+/function realms:events/raid/stop
+```
+
+**Flags, books and the Cup.**
+
+```
+/function realms:events/flag/make {id:"red",name:"Red Monkeys"}    # hold a banner: makes it that faction's numbered flag
+/function realms:events/book/sharpness {season:"I"}                # run as the winner: a lore-tagged event book
+/function realms:events/cup/faction {id:"red",name:"Red Monkeys"}  # once per faction
+/function realms:events/cup/add {id:"red",points:30,why:"Build Battle, 1st"}
+/function realms:events/cup/show                                   # or cup/hide
+```
+
+A flag keeps its tag and number when it is placed and broken. Copies made in a crafting grid carry the
+same number, so two flags with one number means a copy. Book names are the enchantment ids (`book/protection`,
+`book/efficiency`, ...); Fire Aspect, Flame, Breach, Density, Wind Burst and the curses have none.
+
+**Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
+`/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
+on its own). Each player counts once per event, in the `rw.events` score.
+
+**Block wheel (Build Battle).** On the maintainer's computer:
+
+```
+python tools/block_wheel.py "S1 week 3"            # three blocks, the same for anyone with that seed
+python tools/block_wheel.py "S1 week 3" --spins 5
+```
+
+Announce the seed before the draw so anyone can check it. The output ends with a `tellraw` line to paste
+into the console. The pool (`tools/wheel_pool.txt`) is every survival-obtainable block; rebuild it after a
+Minecraft update with `--pool <data reports folder>`.
+
 ## Troubleshooting
 
 | Message | Fix |

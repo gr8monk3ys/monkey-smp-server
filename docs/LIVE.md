@@ -52,8 +52,8 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
    `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
    The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
-8. **DNS** (Vercel, which holds the lscaturchio.xyz zone): an `A` record `play.therealmsmc` to the VPS
-   address, and an `SRV` record `_minecraft._tcp.therealmsmc` with priority 0, weight 5, port 25565, target
+8. **DNS** (Vercel, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
+   address, and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
    port, while the same name serves the website. Voice chat finds the server by itself.
 
@@ -90,7 +90,7 @@ When the VPS or its provider is down for longer than a restart:
    it with `Start Server.bat`.
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Vercel DNS, point the `_minecraft._tcp.therealmsmc` SRV record at the playit address and port.
+3. In Vercel DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
    With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
    record back, and start the VPS.

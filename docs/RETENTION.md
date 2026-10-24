@@ -53,13 +53,45 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | When | Command |
 | --- | --- |
 | A supporter tier is bought (1 Ember, 2 Banner, 3 Crown) | `scoreboard players set {username} rw.tier 2` |
-| It expires or is refunded | `scoreboard players set {username} rw.tier 0` |
+| The same purchase: chat name color | `team join tier_banner {username}` (or `tier_ember`, `tier_crown`) |
+| It expires or is refunded | `scoreboard players set {username} rw.tier 0` and `team leave {username}` |
+| A Banner or Crown player picks a title, or earns Herald (staff) | see "Titles" below |
 | A monthly pass renews | `scoreboard players add {username} rw.months 1` |
 | A 3-month pass is bought | `scoreboard players add {username} rw.months 3` |
 | A friend they invited buys a pass (staff) | `scoreboard players add NAME rw.invites 1` |
 | Season 1 ends (once) | `scoreboard players set #season rw.day 2` |
 
 Skins already applied stay on the item when a tier expires; the menu just stops offering locked ones.
+
+### Name colors and titles
+
+The server has no chat-formatting mod, so supporter colors and titles use vanilla scoreboard teams: a
+team's color and prefix show on the player's name in chat, the player list and the name tag. Nothing else on
+the server uses teams (factions are Open Parties and Claims parties), and a player is on one team at a time.
+
+Once, before the store opens:
+
+```
+team add tier_ember
+team modify tier_ember color gold
+team add tier_banner
+team modify tier_banner color green
+team add tier_crown
+team modify tier_crown color light_purple
+```
+
+A title is a team of its own, with the tier's color and the title as a prefix (staff, by hand):
+
+```
+team add title_NAME
+team modify title_NAME color green
+team modify title_NAME prefix "[Herald] "
+team join title_NAME NAME
+```
+
+When the tier expires, `team leave NAME` drops the color and the title; Herald earned with 10 invites is kept,
+so put that player back with `team join title_NAME NAME`. Not yet checked in game: run these on a test server
+and look at chat before the store opens.
 That is deliberate: taking away a cosmetic someone paid for feels worse than the few cents it costs.
 
 ## What else keeps people playing

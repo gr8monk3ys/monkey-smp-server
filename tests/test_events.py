@@ -60,11 +60,21 @@ def test_arena_keeps_strength_aside_and_lets_nothing_out():
     # chest on the way out, and no bundle in the ender chest can hide it; other people's things are left alone
     assert f"clear @a[tag=!ev.arena] {events.KIT_ITEM}" in fn("tick")
     for i in range(27):
-        assert (f"if items entity @s enderchest.{i} {events.KIT_ITEM} run item replace entity @s "
-                f"enderchest.{i} with minecraft:air") in leave
+        for what in (events.KIT_ITEM, "#minecraft:bundles"):
+            assert (f"if items entity @s enderchest.{i} {what} run item replace entity @s "
+                    f"enderchest.{i} with minecraft:air") in leave
     assert "if items entity @s enderchest.* #minecraft:bundles run return" in join
     assert join.index("#minecraft:bundles") < join.index("tag @s add ev.arena")
-    assert "kill @e[type=minecraft:item" in tick and tick.count("kill @e") == 2  # items and XP orbs only
+    # in the arena: nothing but kit gear in hand, and nothing that holds items survives a tick
+    assert f"clear @a[tag=ev.arena] {events.NOT_KIT_ITEM}" in tick
+    assert tick.index(f"kill @e[type=#{events.NS}:holds_items") < tick.index("kill @e[type=minecraft:item")
+
+
+def test_holds_items_tag_covers_vehicles_and_pack_animals():
+    tag = set(json.loads(FILES[f"data/{events.NS}/tags/entity_type/holds_items.json"])["values"])
+    assert {"minecraft:chest_minecart", "minecraft:hopper_minecart", "minecraft:oak_chest_boat",
+            "minecraft:bamboo_chest_raft", "minecraft:donkey", "minecraft:mule", "minecraft:llama",
+            "minecraft:trader_llama"} <= tag
 
 
 def test_strength_sync_removes_every_modifier_above_the_level():

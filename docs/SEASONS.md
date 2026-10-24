@@ -284,8 +284,9 @@ Built:
   - Arena functions: join (empty inventory, armor and offhand, at the entrance), leave, five kits that
     follow the bans, Strength saved and held at +3 (withdrawals blocked), drops cleaned every tick, and a
     player who logs out or is teleported out of the radius taken out with their Strength back. Kit gear
-    is marked and can't leave: it is stripped from the ender chest on the way out (no bundles allowed in
-    it while you fight) and cleared from anyone outside the arena who takes it from any container.
+    is marked and can't leave: players inside hold nothing else, minecarts, chest boats and pack animals
+    in the arena are removed, the ender chest can't hold a bundle and is stripped on the way out, and
+    gear that still gets out is cleared from anyone outside the arena who takes it.
   - The Anarchy timer: a boss bar for 90 minutes, then the 10-minute ceasefire, then the `clear` of
     totems, end crystals and enchanted golden apples.
   - The Faction Raid timer: a 2-hour boss bar. A player who logs out during a raid loses any flag they

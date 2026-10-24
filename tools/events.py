@@ -39,6 +39,7 @@ LEVEL = "Strength_SMP+Strength_Level"
 WITHDRAW = "Withdraw_Strength"
 STRENGTH_ITEM = '*[custom_data~{"Strength_SMP+Item":{}}]'
 KIT_ITEM = "*[custom_data~{realms_kit:{}}]"
+NOT_KIT_ITEM = "*[!custom_data~{realms_kit:{}}]"
 ARENA_LEVEL = 3   # the level every player starts with
 
 COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan",
@@ -188,6 +189,11 @@ def arena_files() -> dict[str, str]:
     f: dict[str, str] = {}
     fn = f"{FN}/arena"
     arena = f"with storage {STORE} arena"
+    f[f"data/{NS}/tags/entity_type/holds_items.json"] = json.dumps({"values": [
+        f"minecraft:{e}" for e in ("chest_minecart", "hopper_minecart", "bamboo_chest_raft", *(
+            f"{wood}_chest_boat" for wood in ("oak", "spruce", "birch", "jungle", "acacia", "cherry", "dark_oak",
+                                              "pale_oak", "mangrove", "poplar")),
+            "donkey", "mule", "llama", "trader_llama")]}, indent=2)
     f[f"{fn}/strength_sync.mcfunction"] = lines(
         "# Removes the Strength mod's damage modifiers above the player's level; the mod adds the rest.",
         *(f"attribute @s[scores={{{LEVEL}=..{n - 1}}}] minecraft:attack_damage modifier remove "
@@ -203,7 +209,8 @@ def arena_files() -> dict[str, str]:
             say({"text": f"Arena {point} set here.", "color": "green"}),
         )
     f[f"{fn}/set_size.mcfunction"] = lines(
-        "# Macro {size:N}: the arena's radius around the pit. Items there are removed every tick, and a",
+        "# Macro {size:N}: the arena's radius around the pit; keep it inside the walls. Items there, and",
+        "# anything that holds items (minecarts, chest boats, donkeys, llamas), are removed every tick, and a",
         "# player in the arena who ends up farther away (a teleport) is taken out.",
         f"$data modify storage {STORE} arena.size set value $(size)",
         say({"text": "Arena size set.", "color": "green"}),
@@ -278,8 +285,9 @@ def arena_files() -> dict[str, str]:
         "clear @s",
         "item replace entity @s player.cursor with minecraft:air",
         *(f"item replace entity @s player.crafting.{i} with minecraft:air" for i in range(4)),
-        *(f"execute if items entity @s enderchest.{i} {KIT_ITEM} run item replace entity @s enderchest.{i} "
-          "with minecraft:air" for i in range(27)),
+        "# Kit gear stashed in the ender chest stays here. So does any bundle: there was none at the join.",
+        *(f"execute if items entity @s enderchest.{i} {what} run item replace entity @s enderchest.{i} "
+          "with minecraft:air" for i in range(27) for what in (KIT_ITEM, "#minecraft:bundles")),
         "effect clear @s",
         f"scoreboard players operation @s {LEVEL} = @s ev.strength",
         "scoreboard players reset @s ev.strength",
@@ -296,8 +304,13 @@ def arena_files() -> dict[str, str]:
         f"scoreboard players reset @a[tag=ev.arena] {WITHDRAW}",
         f"execute as @a[tag=ev.arena] run function {NS}:events/arena/strength_sync",
         f"clear @a[tag=ev.arena] {STRENGTH_ITEM}",
-        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall. Kit gear put",
-        "# in a container instead is marked, and cleared from whoever takes it out (tick.mcfunction).",
+        "# Players in the arena hold kit gear and nothing else (no bundle to hide gear in).",
+        f"clear @a[tag=ev.arena] {NOT_KIT_ITEM}",
+        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall, and nothing",
+        "# that holds items (a chest minecart, a chest boat, a donkey) can carry gear or a bundle out: killing",
+        "# one drops its contents, which the next line removes. Kit gear stashed anywhere else is marked, and",
+        "# cleared from whoever takes it out (tick.mcfunction).",
+        f"$execute {at_point('p')} run kill @e[type=#{NS}:holds_items,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:item,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:experience_orb,distance=..$(size)]",
         "# Died: back to the waiting room, still in the arena.",

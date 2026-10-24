@@ -198,11 +198,15 @@ entrance) and leave with `/trigger arena set 2`. Going in saves their Strength a
 mode; coming out clears the inventory, restores their Strength and puts them back in survival at the
 entrance. Logging out, or being teleported out of the radius, takes them out the same way.
 
-Kit gear is marked, so it can't be smuggled out. Leaving strips it from the player's ender chest, and
-the pack clears it from any player outside the arena (gear stashed in a chest, a minecart, a donkey, a
-hopper under the floor or a corpse goes as soon as someone takes it). Nothing else in a container is
-touched. Players can't join with a bundle in their ender chest, because gear inside a bundle would be
-missed.
+Kit gear is marked, so it can't be smuggled out:
+- Players in the arena hold kit gear and nothing else; anything else is cleared every tick.
+- While the arena is open, everything inside the radius that holds items is removed every tick with
+  its contents: chest and hopper minecarts, chest boats, donkeys, mules and llamas. Keep the size
+  inside the arena's walls so nobody else's things are in that radius.
+- Players can't join with a bundle in their ender chest (gear in a bundle would be missed), and leaving
+  strips kit gear and any bundle from the ender chest.
+- Kit gear that still gets out (a hopper under the floor, a corpse) is cleared from any player outside
+  the arena as soon as they take it; nothing else in that container is touched.
 
 **Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.
 

@@ -21,7 +21,7 @@ are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server.
 
 ### Issue tracker
 
-Issues live in GitHub Issues for gr8monk3ys/the-realms-server (via `gh`). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for gr8monk3ys/monkey-smp-server (via `gh`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

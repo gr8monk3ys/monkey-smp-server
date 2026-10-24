@@ -32,7 +32,7 @@
 # Module scope only: callers keep their own preference.
 $ErrorActionPreference = 'Stop'
 
-$script:UserAgent = 'gr8monk3ys/the-realms-server'
+$script:UserAgent = 'gr8monk3ys/monkey-smp-server'
 $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 # The key of our profile in launcher_profiles.json. Fixed, so updates replace it instead of adding more.
 $script:ProfileKey = 'the-realms'

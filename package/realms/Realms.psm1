@@ -25,7 +25,7 @@
 # Module scope only: callers keep their own preference.
 $ErrorActionPreference = 'Stop'
 
-$script:UserAgent = 'gr8monk3ys/the-realms-server'
+$script:UserAgent = 'gr8monk3ys/monkey-smp-server'
 $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 # Defaults that are rendered with Expand-Template instead of copied byte for byte.
 $script:TemplateFiles = @('server.properties')

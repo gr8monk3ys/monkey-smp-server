@@ -1,6 +1,6 @@
 # Monkey SMP
 
-[![CI](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml)
+[![CI](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml)
 
 A modded Minecraft Java **factions server** with PvP and roleplay: parties, alliances and land claims,
 reworked terrain (Tectonic, Terralith), new structures, mobs and magic. It is packaged so that
@@ -20,7 +20,7 @@ forwarding needed.
 
 ## Downloads: who gets what
 
-Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest) has three small files.
+Every [release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest) has three small files.
 [docs/SHARING.md](docs/SHARING.md) has copy-paste messages to send with them.
 
 | File | For | |
@@ -31,7 +31,7 @@ Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
 
 ## Run it on your own computer (Windows, macOS, Linux)
 
-Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
+Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest)
 and unzip it somewhere permanent (e.g. Documents). The computer needs 16 GB of RAM or more (12 GB is enough for a few players).
 
 | | Start | Stop |

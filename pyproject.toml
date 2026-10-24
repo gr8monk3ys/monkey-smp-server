@@ -1,5 +1,5 @@
 [project]
-name = "the-realms-server-tools"
+name = "monkey-smp-server-tools"
 version = "0.0.0"
 description = "Maintainer tools for Monkey SMP Minecraft server package (stdlib only)."
 requires-python = ">=3.11"

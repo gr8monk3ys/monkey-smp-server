@@ -37,7 +37,7 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then
    ```sh
    printf 'Host github.com\n  IdentityFile ~/.ssh/realms_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
-   git clone git@github.com:gr8monk3ys/the-realms-server.git /srv/realms/repo
+   git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/realms/repo
    ```
 4. **Settings.** `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
    it (the Discord webhook is optional), `sudo chmod 600 /etc/realms-deploy.env`.

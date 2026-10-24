@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- The GitHub repo is now **gr8monk3ys/monkey-smp-server** (was `the-realms-server`). GitHub redirects the old
+  URLs, so existing clones, release links and installers keep working; update a clone's remote with
+  `git remote set-url origin https://github.com/gr8monk3ys/monkey-smp-server.git`.
 - New: a **server icon**, the Monkey SMP monkey in the multiplayer server list. It ships in `defaults/`, so it is
   copied only where the server has no `server-icon.png` yet; a host's own icon is kept. Logo, banners and the
   trailer are in `marketing/`.

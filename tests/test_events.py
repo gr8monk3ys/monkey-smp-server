@@ -56,6 +56,18 @@ def test_arena_keeps_strength_aside_and_lets_nothing_out():
     assert events.STRENGTH_ITEM in tick
     assert "kill @e[type=minecraft:item" in tick
     assert "ev.away" in tick
+    # kit gear can't be carried out: container entities go, and marked gear is cleared outside the arena
+    assert tick.index(f"kill @e[type=#{events.NS}:arena_containers") < tick.index("kill @e[type=minecraft:item")
+    assert f"clear @a[tag=!ev.arena] {events.KIT_ITEM}" in fn("tick")
+    for i in range(27):
+        assert (f"if items entity @s enderchest.{i} {events.KIT_ITEM} run item replace entity @s "
+                f"enderchest.{i} with minecraft:air") in leave
+
+
+def test_arena_container_tag_holds_only_real_container_entities():
+    tag = json.loads(FILES[f"data/{events.NS}/tags/entity_type/arena_containers.json"])["values"]
+    assert "minecraft:chest_minecart" in tag and "minecraft:oak_chest_boat" in tag
+    assert all(v.endswith(("_minecart", "_chest_boat", "_chest_raft")) for v in tag)
 
 
 def test_strength_sync_removes_every_modifier_above_the_level():
@@ -77,7 +89,10 @@ def test_kits_follow_the_bans():
         body = fn(f"arena/kit/{kit}")
         names = [n for n, _ in items + events.FOOD] + list(events.ARMOR.values())
         assert not set(names) & events.BANNED, kit
-        assert "[" not in body.split("clear @s", 1)[1].replace("tellraw", ""), f"{kit}: no item components"
+        gear = [line for line in body.splitlines() if line.startswith(("give ", "item replace"))]
+        assert gear and all("[custom_data={realms_kit:{}}]" in line for line in gear), f"{kit}: every item marked"
+        for line in gear:
+            assert "[" not in line.replace("[custom_data={realms_kit:{}}]", ""), f"{kit}: no other components"
         assert "unless entity @s[tag=ev.arena] run return" in body
 
 

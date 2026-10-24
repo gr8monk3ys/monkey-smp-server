@@ -38,6 +38,7 @@ STORE = f"{NS}:events"   # the command storage that holds the arena's points and
 LEVEL = "Strength_SMP+Strength_Level"
 WITHDRAW = "Withdraw_Strength"
 STRENGTH_ITEM = '*[custom_data~{"Strength_SMP+Item":{}}]'
+KIT_ITEM = "*[custom_data~{realms_kit:{}}]"
 ARENA_LEVEL = 3   # the level every player starts with
 
 COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan",
@@ -114,6 +115,11 @@ def item(name: str) -> str:
     return f"minecraft:{name}"
 
 
+def kit_item(name: str) -> str:
+    """A kit item, marked so it is cleared wherever it turns up outside the arena."""
+    return f"minecraft:{name}[custom_data={{realms_kit:{{}}}}]"
+
+
 def at_point(prefix: str) -> str:
     """Macro: the overworld position of an arena point stored as <prefix>x/y/z."""
     return f"in minecraft:overworld positioned $({prefix}x) $({prefix}y) $({prefix}z)"
@@ -147,6 +153,8 @@ def datapack_files() -> dict[str, str]:
         f"execute unless score #arena ev.state matches 1 as @e[type=player,tag=ev.arena] run function "
         f"{NS}:events/arena/leave with storage {STORE} arena",
         f"execute as @e[type=player,scores={{ev.left=1..}}] run function {NS}:events/rejoined",
+        "# Kit gear smuggled out (an ender chest, a chest boat, a hopper under the floor) is gone once picked up.",
+        f"clear @a[tag=!ev.arena] {KIT_ITEM}",
     )
     f[f"{FN}/second.mcfunction"] = lines(
         f"schedule function {NS}:events/second 20t replace",
@@ -180,6 +188,10 @@ def arena_files() -> dict[str, str]:
     f: dict[str, str] = {}
     fn = f"{FN}/arena"
     arena = f"with storage {STORE} arena"
+    f[f"data/{NS}/tags/entity_type/arena_containers.json"] = json.dumps({"values": [
+        f"minecraft:{e}" for e in ("chest_minecart", "hopper_minecart", "bamboo_chest_raft", *(
+            f"{wood}_chest_boat" for wood in ("oak", "spruce", "birch", "jungle", "acacia", "cherry", "dark_oak",
+                                              "pale_oak", "mangrove", "poplar")))]}, indent=2)
     f[f"{fn}/strength_sync.mcfunction"] = lines(
         "# Removes the Strength mod's damage modifiers above the player's level; the mod adds the rest.",
         *(f"attribute @s[scores={{{LEVEL}=..{n - 1}}}] minecraft:attack_damage modifier remove "
@@ -267,6 +279,8 @@ def arena_files() -> dict[str, str]:
         "clear @s",
         "item replace entity @s player.cursor with minecraft:air",
         *(f"item replace entity @s player.crafting.{i} with minecraft:air" for i in range(4)),
+        *(f"execute if items entity @s enderchest.{i} {KIT_ITEM} run item replace entity @s enderchest.{i} "
+          "with minecraft:air" for i in range(27)),
         "effect clear @s",
         f"scoreboard players operation @s {LEVEL} = @s ev.strength",
         "scoreboard players reset @s ev.strength",
@@ -283,7 +297,9 @@ def arena_files() -> dict[str, str]:
         f"scoreboard players reset @a[tag=ev.arena] {WITHDRAW}",
         f"execute as @a[tag=ev.arena] run function {NS}:events/arena/strength_sync",
         f"clear @a[tag=ev.arena] {STRENGTH_ITEM}",
-        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall.",
+        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall, and no",
+        "# container minecart or chest boat can carry gear out (killing one drops its contents, killed next).",
+        f"$execute {at_point('p')} run kill @e[type=#{NS}:arena_containers,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:item,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:experience_orb,distance=..$(size)]",
         "# Died: back to the waiting room, still in the arena.",
@@ -302,8 +318,8 @@ def arena_files() -> dict[str, str]:
             "effect clear @s",
             "effect give @s minecraft:instant_health 1 10 true",
             "effect give @s minecraft:saturation 1 10 true",
-            *(f"item replace entity @s {slot} with {item(name)}" for slot, name in ARMOR.items()),
-            *(f"give @s {item(name)} {n}" for name, n in [*items, *FOOD]),
+            *(f"item replace entity @s {slot} with {kit_item(name)}" for slot, name in ARMOR.items()),
+            *(f"give @s {kit_item(name)} {n}" for name, n in [*items, *FOOD]),
             say({"text": f"Kit: {kit}.", "color": "green"}),
         )
     return f

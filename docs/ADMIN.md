@@ -198,6 +198,11 @@ entrance) and leave with `/trigger arena set 2`. Going in saves their Strength a
 mode; coming out clears the inventory, restores their Strength and puts them back in survival at the
 entrance. Logging out, or being teleported out of the radius, takes them out the same way.
 
+Kit gear is marked, so it can't be smuggled out. Leaving strips it from the player's ender chest, and
+the pack clears it from any player outside the arena (gear stashed in a chest, a hopper under the floor
+or a corpse goes as soon as someone picks it up). Container minecarts and chest boats inside the radius
+are removed every tick.
+
 **Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.
 
 ```

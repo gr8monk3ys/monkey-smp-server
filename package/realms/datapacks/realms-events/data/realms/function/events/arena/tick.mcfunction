@@ -4,7 +4,9 @@ scoreboard players set @a[tag=ev.arena] Strength_SMP+Strength_Level 3
 scoreboard players reset @a[tag=ev.arena] Withdraw_Strength
 execute as @a[tag=ev.arena] run function realms:events/arena/strength_sync
 clear @a[tag=ev.arena] *[custom_data~{"Strength_SMP+Item":{}}]
-# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall.
+# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall, and no
+# container minecart or chest boat can carry gear out (killing one drops its contents, killed next).
+$execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=#realms:arena_containers,distance=..$(size)]
 $execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=minecraft:item,distance=..$(size)]
 $execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=minecraft:experience_orb,distance=..$(size)]
 # Died: back to the waiting room, still in the arena.

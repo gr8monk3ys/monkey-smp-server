@@ -283,7 +283,9 @@ Built:
 - The event tooling, in the `realms-events` data pack (`tools/events.py`; commands in `docs/ADMIN.md`):
   - Arena functions: join (empty inventory, armor and offhand, at the entrance), leave, five kits that
     follow the bans, Strength saved and held at +3 (withdrawals blocked), drops cleaned every tick, and a
-    player who logs out or is teleported out of the radius taken out with their Strength back.
+    player who logs out or is teleported out of the radius taken out with their Strength back. Kit gear
+    is marked and can't leave: it is stripped from the ender chest on the way out and cleared from anyone
+    outside the arena, and container minecarts and chest boats in the arena are removed.
   - The Anarchy timer: a boss bar for 90 minutes, then the 10-minute ceasefire, then the `clear` of
     totems, end crystals and enchanted golden apples.
   - The Faction Raid timer: a 2-hour boss bar. A player who logs out during a raid loses any flag they

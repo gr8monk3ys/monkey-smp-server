@@ -56,18 +56,15 @@ def test_arena_keeps_strength_aside_and_lets_nothing_out():
     assert events.STRENGTH_ITEM in tick
     assert "kill @e[type=minecraft:item" in tick
     assert "ev.away" in tick
-    # kit gear can't be carried out: container entities go, and marked gear is cleared outside the arena
-    assert tick.index(f"kill @e[type=#{events.NS}:arena_containers") < tick.index("kill @e[type=minecraft:item")
+    # kit gear can't be carried out: it is marked and cleared outside the arena, stripped from the ender
+    # chest on the way out, and no bundle in the ender chest can hide it; other people's things are left alone
     assert f"clear @a[tag=!ev.arena] {events.KIT_ITEM}" in fn("tick")
     for i in range(27):
         assert (f"if items entity @s enderchest.{i} {events.KIT_ITEM} run item replace entity @s "
                 f"enderchest.{i} with minecraft:air") in leave
-
-
-def test_arena_container_tag_holds_only_real_container_entities():
-    tag = json.loads(FILES[f"data/{events.NS}/tags/entity_type/arena_containers.json"])["values"]
-    assert "minecraft:chest_minecart" in tag and "minecraft:oak_chest_boat" in tag
-    assert all(v.endswith(("_minecart", "_chest_boat", "_chest_raft")) for v in tag)
+    assert "if items entity @s enderchest.* #minecraft:bundles run return" in join
+    assert join.index("#minecraft:bundles") < join.index("tag @s add ev.arena")
+    assert "kill @e[type=minecraft:item" in tick and tick.count("kill @e") == 2  # items and XP orbs only
 
 
 def test_strength_sync_removes_every_modifier_above_the_level():

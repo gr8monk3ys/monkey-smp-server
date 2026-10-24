@@ -199,9 +199,10 @@ mode; coming out clears the inventory, restores their Strength and puts them bac
 entrance. Logging out, or being teleported out of the radius, takes them out the same way.
 
 Kit gear is marked, so it can't be smuggled out. Leaving strips it from the player's ender chest, and
-the pack clears it from any player outside the arena (gear stashed in a chest, a hopper under the floor
-or a corpse goes as soon as someone picks it up). Container minecarts and chest boats inside the radius
-are removed every tick.
+the pack clears it from any player outside the arena (gear stashed in a chest, a minecart, a donkey, a
+hopper under the floor or a corpse goes as soon as someone takes it). Nothing else in a container is
+touched. Players can't join with a bundle in their ender chest, because gear inside a bundle would be
+missed.
 
 **Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.
 

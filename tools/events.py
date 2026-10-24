@@ -188,10 +188,6 @@ def arena_files() -> dict[str, str]:
     f: dict[str, str] = {}
     fn = f"{FN}/arena"
     arena = f"with storage {STORE} arena"
-    f[f"data/{NS}/tags/entity_type/arena_containers.json"] = json.dumps({"values": [
-        f"minecraft:{e}" for e in ("chest_minecart", "hopper_minecart", "bamboo_chest_raft", *(
-            f"{wood}_chest_boat" for wood in ("oak", "spruce", "birch", "jungle", "acacia", "cherry", "dark_oak",
-                                              "pale_oak", "mangrove", "poplar")))]}, indent=2)
     f[f"{fn}/strength_sync.mcfunction"] = lines(
         "# Removes the Strength mod's damage modifiers above the player's level; the mod adds the rest.",
         *(f"attribute @s[scores={{{LEVEL}=..{n - 1}}}] minecraft:attack_damage modifier remove "
@@ -258,6 +254,9 @@ def arena_files() -> dict[str, str]:
         *(f"execute if items entity @s {slots} * run " + refuse(
             "Empty your inventory, armor and offhand first: you fight with the round's kit, not your gear.")
           for slots in ("container.*", "armor.*", "weapon.offhand")),
+        "# Leaving strips kit gear from the ender chest's slots, but not from inside a bundle kept there.",
+        "execute if items entity @s enderchest.* #minecraft:bundles run " + refuse(
+            "Take the bundles out of your ender chest first."),
         "tag @s add ev.arena",
         f"scoreboard players operation @s ev.strength = @s {LEVEL}",
         f"scoreboard players set @s {LEVEL} {ARENA_LEVEL}",
@@ -297,9 +296,8 @@ def arena_files() -> dict[str, str]:
         f"scoreboard players reset @a[tag=ev.arena] {WITHDRAW}",
         f"execute as @a[tag=ev.arena] run function {NS}:events/arena/strength_sync",
         f"clear @a[tag=ev.arena] {STRENGTH_ITEM}",
-        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall, and no",
-        "# container minecart or chest boat can carry gear out (killing one drops its contents, killed next).",
-        f"$execute {at_point('p')} run kill @e[type=#{NS}:arena_containers,distance=..$(size)]",
+        "# Nothing dropped in the arena survives a tick, so nothing can be passed over the wall. Kit gear put",
+        "# in a container instead is marked, and cleared from whoever takes it out (tick.mcfunction).",
         f"$execute {at_point('p')} run kill @e[type=minecraft:item,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:experience_orb,distance=..$(size)]",
         "# Died: back to the waiting room, still in the arena.",

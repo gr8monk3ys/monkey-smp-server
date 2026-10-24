@@ -1,15 +1,21 @@
-"""Renders the Monkey SMP trailer: slow pans over the in-game screenshots, a title card per hook, the
-self-made music from music.py, and a call to action. Frames are drawn with Pillow and piped to ffmpeg.
+"""Renders the Monkey SMP trailer: slow pans over the in-game screenshots, staged gameplay footage of the
+events, a title card per hook, the self-made music from music.py, and a call to action. Frames are drawn
+with Pillow and piped to ffmpeg.
 
-    python marketing/trailer.py              # 1920 x 1080, 30 fps, about 45 s
+    python marketing/trailer.py              # 1920 x 1080, 30 fps, about 60 s
     python marketing/trailer.py --preview    # contact sheet of one frame per section, no video
 
 Every section is two bars of the music (4.8 s at 100 BPM), so cuts land on the downbeat.
+
+The footage (FOOTAGE, 1080p30 mp4s, not in git) was filmed on a throwaway copy of the server with
+Carpet fake players standing in for real ones, driven by the real event functions: the raid timer and
+flags, the arena kit, the Cup sidebar and the wardrobe items.
 """
 
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import music
 from PIL import Image, ImageDraw, ImageFilter
@@ -37,6 +43,7 @@ SECTION = 2 * music.BAR
 FADE = 0.5  # crossfade between sections, seconds
 DISCORD = "discord.gg/C25hy9Ca9W"
 SOFT = (226, 221, 210)
+FOOTAGE = Path(r"D:\DevData\monkey-smp-marketing\footage")
 
 
 @dataclass
@@ -46,6 +53,7 @@ class Section:
     headline: str = ""
     sub: str = ""
     bars: int = 2
+    clip: tuple = ()  # (footage name, start in the file, playback speed) instead of shots
     start: float = 0.0
     layers: dict = field(default_factory=dict)
 
@@ -90,21 +98,88 @@ SECTIONS = [
         "Tectonic, Terralith, Incendium and Nullscape. Castles, citadels and deep dark cities.",
     ),
     Section(
-        [("mage_tower", (1.15, 1.05), (0.55, 0.45), (0.5, 0.5))],
-        "05  ·  SEASON I",
-        "The launch hour.",
-        "One hour of peace. Then PvP and the Nether open.",
+        [],
+        "05  ·  SEASON I LAUNCH WEEKEND",
+        "Build Battle.",
+        "A wheel picks bonus blocks. Factions build until judging night.",
+        clip=("build", 1.4, 2.4),
     ),
     Section(
-        [("floating_island", (1.0, 1.12), (0.5, 0.5), (0.5, 0.45))],
-        "06  ·  ONE PASS",
+        [],
+        "06  ·  FACTION RAID",
+        "Capture the flag.",
+        "Carry a rival's flag home and plant it beside your own.",
+        clip=("raid", 3.42, 0.68),
+    ),
+    Section(
+        [],
+        "07  ·  ARENA GLORY",
+        "Same kit. Best fighter wins.",
+        "Kit duels, then the 4v4 faction bracket.",
+        clip=("arena", 2.4, 1.0),
+    ),
+    Section(
+        [],
+        "08  ·  THE SEASON CUP",
+        "Every event scores.",
+        "A new event every Saturday, 6 PM Pacific. Twelve weeks, one champion faction.",
+        clip=("cup", 0.4, 1.0),
+    ),
+    Section(
+        [],
+        "09  ·  ONE PASS",
         "Same price for everyone.",
         "$5 a month. Supporter perks are cosmetic only.",
+        clip=("wardrobe", 3.6, 1.0),
     ),
     Section([("mountains", (1.25, 1.15), (0.5, 0.45), (0.5, 0.42))], bars=3),  # call to action
 ]
 
 _shots = {}
+
+
+class Clip:
+    """One section's footage, read in order from a single ffmpeg process.
+
+    Frame k is the file at start + (k / FPS - FADE) * speed, so the crossfade into the section already
+    has footage to show. Asking for an earlier frame restarts the reader; past the end, the last frame holds.
+    """
+
+    def __init__(self, name, start, speed):
+        self.path, self.start, self.speed = FOOTAGE / f"{name}.mp4", start, speed
+        self.proc, self.pos, self.last = None, -1, None
+
+    def open(self):
+        self.close()
+        ss = max(self.start - FADE * self.speed, 0.0)
+        vf = f"setpts=PTS/{self.speed},fps={FPS},scale={W}:{H}"
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", f"{ss:.3f}", "-i", str(self.path),
+            "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+        ]  # fmt: skip
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        self.pos = -1
+
+    def frame(self, local):
+        k = max(0, round((local + FADE) * FPS))
+        if self.proc is None or k < self.pos:
+            self.open()
+        while self.pos < k:
+            buf = self.proc.stdout.read(W * H * 3)
+            if len(buf) < W * H * 3:
+                break
+            self.last = Image.frombytes("RGB", (W, H), buf)
+            self.pos += 1
+        if self.last is None:
+            sys.exit(f"no frames from {self.path}")
+        return self.last
+
+    def close(self):
+        if self.proc:
+            self.proc.kill()
+            self.proc.wait()
+            self.proc.stdout.close()
+            self.proc = None
 
 
 def source(name):
@@ -231,6 +306,8 @@ def prepare():
         t += sec.bars * music.BAR
         if sec.headline:
             sec.layers["card"] = card_layer(sec)
+        if sec.clip:
+            sec.layers["clip"] = Clip(*sec.clip)
     first, last = SECTIONS[0], SECTIONS[-1]
     logo, pad = with_glow(svg_png("logo-stacked", 11), 22)
     first.layers["logo"] = logo
@@ -251,7 +328,9 @@ def prepare():
 def section_frame(sec, t, shared):
     u = (t - sec.start) / (sec.end - sec.start)
     # Sections with two shots switch halfway, with a short crossfade.
-    if len(sec.shots) == 1:
+    if sec.clip:
+        frame = sec.layers["clip"].frame(t - sec.start)
+    elif len(sec.shots) == 1:
         name, zoom, c0, c1 = sec.shots[0]
         frame = pan(name, zoom, c0, c1, u)
     else:
@@ -292,15 +371,22 @@ def frame_at(t, shared):
     return img.convert("RGB")
 
 
+def close_clips():
+    for sec in SECTIONS:
+        if sec.clip:
+            sec.layers["clip"].close()
+
+
 def main():
     total = prepare()
     shared = {"legibility": legibility_layer(), "bug": bug_layer()}
     OUT.mkdir(parents=True, exist_ok=True)
     if "--preview" in sys.argv:
         thumbs = [frame_at(s.start + 2.4, shared).resize((640, 360)) for s in SECTIONS]
-        sheet = Image.new("RGB", (640 * 3, 360 * 3))
+        sheet = Image.new("RGB", (640 * 3, 360 * ((len(thumbs) + 2) // 3)))
         for k, im in enumerate(thumbs):
             sheet.paste(im, ((k % 3) * 640, (k // 3) * 360))
+        close_clips()
         sheet.save(OUT / "trailer-preview.jpg", quality=88)
         print("wrote", OUT / "trailer-preview.jpg")
         return
@@ -323,6 +409,7 @@ def main():
         if n % FPS == 0:
             print(f"\r{n / FPS:5.1f} / {total:.1f} s", end="", flush=True)
     proc.stdin.close()
+    close_clips()
     if proc.wait():
         sys.exit("ffmpeg failed")
     print("\nwrote", mp4)

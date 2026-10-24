@@ -29,10 +29,15 @@ logo PNGs and both banners for the site's "Spread the word" section. Copy them a
 
 The big renders live in `D:\DevData\monkey-smp-marketing\out\` (override with `MONKEY_MARKETING`):
 
-- `monkey-smp-trailer-1080p.mp4`: the trailer, 1920 x 1080, 30 fps, 45.6 s, H.264 + AAC, -14 LUFS.
+- `monkey-smp-trailer-1080p.mp4`: the trailer, 1920 x 1080, 30 fps, 60 s, H.264 + AAC, -14 LUFS.
 - `trailer-music.wav`: its music on its own.
 - `discord-invite-splash-1920x1080.png`, `youtube-header-2560x1440.png`, `twitter-header-1500x500.png`,
   `og-1200x630.png` (PNG master of `site/img/og.jpg`), plus copies of everything in the repo.
+
+The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketingootage\` (`build`,
+`raid`, `arena`, `cup`, `wardrobe`, each a 1080p30 mp4). It was filmed on the photo server with Carpet
+fake players acting out each event through the real `realms:events` functions, so the bossbar, titles,
+sidebar and wardrobe items are what players will see. It is staged, not a recording of a real event.
 
 Fonts sit in `D:\DevData\monkey-smp-marketing\fonts\`; the screenshots are the full-size originals in
 `D:\DevData\realms-photos\shots\` (override with `MONKEY_SHOTS`; `site/img` has smaller copies).

@@ -2,9 +2,10 @@
 
     python marketing/music.py [out.wav]
 
-100 BPM in A minor (Am F C G), 19 bars = 45.6 s, laid out to match trailer.py's two-bar sections:
-bars 0-1 pad and arp alone, drums in from bar 2, a snare roll and riser in bar 15, an impact on the
-call to action at bar 16, then the pad rings out.
+100 BPM in A minor (Am F C G), 25 bars = 60 s, laid out to match trailer.py's two-bar sections:
+bars 0-1 pad and arp alone, drums in from bar 2, 16th hats from bar 12 (where the event footage
+starts), a snare roll and riser in the bar before the call to action, an impact on it (bar 22), then
+the pad rings out.
 """
 
 import sys
@@ -18,7 +19,9 @@ SR = 48000
 BPM = 100
 BEAT = 60 / BPM
 BAR = 4 * BEAT
-BARS = 19
+BARS = 25
+CTA = BARS - 3  # the call to action's first bar: the impact lands here
+LIFT = 12  # the event footage starts here, and the hats double
 LENGTH = BARS * BAR
 CHORDS = [  # (bass root, pad voicing) as MIDI notes
     (45, [57, 60, 64, 69]),  # Am
@@ -133,14 +136,14 @@ def render():
     for bar in range(BARS):
         root, voicing = CHORDS[bar % 4]
         start = bar * BAR
-        full = 2 <= bar < 18
+        full = 2 <= bar < CTA + 2
         # Pad: detuned saws, slow swell; the last bar rings out.
         length = BAR * (2.5 if bar == BARS - 1 else 1.05)
         chord = sum(saw(hz(m), length, rolloff=4, detune=d) for m in voicing for d in (-0.004, 0.0, 0.004))
         chord *= env(len(chord), 0.35, 0.4, length)
-        place(pad, chord, start, 0.06 if bar < 16 else 0.08)
+        place(pad, chord, start, 0.06 if bar < CTA else 0.08)
         # Arp: chord tones up an octave in 16ths, quieter in the intro.
-        if bar < 18:
+        if bar < CTA + 2:
             pattern = [0, 1, 2, 3, 2, 1, 2, 3]
             for step in range(16):
                 note = voicing[pattern[step % 8]] + 12
@@ -156,6 +159,9 @@ def render():
                 place(drums, s, at, 0.55)
             place(drums, hat(), at + BEAT / 2, 1.0)
             place(drums, hat(), at, 0.6)
+            if LIFT <= bar < CTA:
+                for q in (0.25, 0.75):
+                    place(drums, hat(), at + q * BEAT, 0.35)
         place(drums, k, start + 3.5 * BEAT, 0.6)
         if bar % 4 == 3:
             place(drums, hat(open_=True), start + 3.5 * BEAT, 1.0)
@@ -166,15 +172,16 @@ def render():
             b = lowpass(b, 900) * env(len(b), 0.005, 0.06, BEAT / 2)
             place(bass, b, start + eighth * BEAT / 2, 0.32)
 
-    # Build into the call to action: snare roll and noise riser through bar 15, impact on bar 16.
-    roll_start = 15 * BAR
+    # Build into the call to action: snare roll and noise riser through the bar before it, impact on it.
+    roll_start = (CTA - 1) * BAR
     for i in range(16):
         place(drums, s, roll_start + i * BEAT / 4, 0.25 + 0.35 * i / 15)
     riser_t = t_of(BAR)
     riser = highpass(rng.standard_normal(len(riser_t)), 3000) * (riser_t / BAR) ** 2 * 0.3
     place(fx, riser, roll_start)
-    place(fx, crash(), 16 * BAR, 0.8)
-    place(fx, boom(), 16 * BAR, 0.9)
+    place(fx, crash(), CTA * BAR, 0.8)
+    place(fx, boom(), CTA * BAR, 0.9)
+    place(fx, crash(), LIFT * BAR, 0.45)
     # The opening hit, when the logo lands.
     place(fx, boom(), 0.0, 0.5)
     place(fx, crash(), BAR, 0.35)

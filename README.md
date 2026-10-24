@@ -113,7 +113,7 @@ package/                    <- exactly what goes in the release zip
     Realms.psm1             <- the installer module: install, start/stop, backup, RCON, hosting export
     manifest.json           <- every download, pinned by URL + size + hash (Java once per platform)
     pwsh.lock               <- the portable PowerShell 7 builds realms.sh may download, pinned the same way
-    defaults/               <- first-run configs (server.properties, LuckPerms ranks, Tectonic, BlueMap)
+    defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, Tectonic, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
 player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
 client/                     <- source of the player modpack (.mrpack) + the pinned Fabric launcher profile

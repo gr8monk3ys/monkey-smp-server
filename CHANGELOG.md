@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- New: a **server icon**, the Monkey SMP monkey in the multiplayer server list. It ships in `defaults/`, so it is
+  copied only where the server has no `server-icon.png` yet; a host's own icon is kept. Logo, banners and the
+  trailer are in `marketing/`.
 - New: **event tooling**. The `realms-events` data pack (made by `tools/events.py`) runs Arena Glory (join,
   kits, Strength held at +3, drops cleaned), the Anarchy and Faction Raid timers, official faction flags,
   event books, the Season Cup and an attendance count; `/function realms:events/help` lists the commands.

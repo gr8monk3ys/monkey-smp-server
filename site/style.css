@@ -68,7 +68,7 @@ ul, ol { padding-left: 1.2em; }
 :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
 
 /* Wall label: every piece of metadata is a small mono caption. */
-.eyebrow, .label, .tag, .alt, .price span, .plan th span, .ladder b,
+.label, .tag, .alt, .price span, .plan th span, .ladder b,
 .top nav a, footer p:first-child, section > h2::before, .steps li::before, .rules li::before,
 .gallery figcaption span {
   font: 500 0.72rem/1.4 var(--mono);
@@ -108,7 +108,6 @@ section > h2::before { content: "0" counter(sec); display: block; margin-bottom:
 /* Hero: asymmetric, left-weighted, no decoration beyond the type. */
 .hero { padding-top: 112px; padding-bottom: 96px; }
 .hero h1 { max-width: 16ch; }
-.eyebrow { margin-bottom: 20px; }
 .lede { max-width: var(--narrow); font-size: 1.15rem; color: var(--muted); }
 
 .address {

@@ -1,4 +1,4 @@
-THE REALMS - how to run the server
+MONKEY SMP - how to run the server
 ==================================
 
 A modded Minecraft (Java 26.3) factions server: parties, allies, land claims, PvP, new
@@ -100,7 +100,7 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
   needs the mods. Send each player the file  TheRealms-Player-(version).zip  from the same
   release as this server. Inside it:
     - "Install for Minecraft Launcher.bat" sets everything up in the normal Minecraft
-      Launcher on Windows (they then pick "The Realms" next to the Play button).
+      Launcher on Windows (they then pick "Monkey SMP" next to the Play button).
     - The .mrpack file is for Mac and Linux players, and anyone who already uses the
       Modrinth App or Prism Launcher: they import it there.
     - "READ ME.txt" explains it step by step, in plain language.

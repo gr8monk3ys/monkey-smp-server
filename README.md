@@ -1,6 +1,6 @@
-# The Realms
+# Monkey SMP
 
-[![CI](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/the-realms-server/actions/workflows/ci.yml)
+[![CI](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml)
 
 A modded Minecraft Java **factions server** with PvP and roleplay: parties, alliances and land claims,
 reworked terrain (Tectonic, Terralith), new structures, mobs and magic. It is packaged so that
@@ -20,18 +20,18 @@ forwarding needed.
 
 ## Downloads: who gets what
 
-Every [release](https://github.com/gr8monk3ys/the-realms-server/releases/latest) has three small files.
+Every [release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest) has three small files.
 [docs/SHARING.md](docs/SHARING.md) has copy-paste messages to send with them.
 
 | File | For | |
 |---|---|---|
 | `TheRealms-Server-<version>.zip` | the **host** | run the server on Windows, macOS or Linux (or with Docker), or prepare it for an online host |
-| `TheRealms-Player-<version>.zip` | every **player** on Windows | double-click `Install for Minecraft Launcher.bat`, then pick "The Realms" in the normal Minecraft Launcher |
+| `TheRealms-Player-<version>.zip` | every **player** on Windows | double-click `Install for Minecraft Launcher.bat`, then pick "Monkey SMP" in the normal Minecraft Launcher |
 | `TheRealms-Client-<version>.mrpack` | players on **macOS/Linux**, or using the Modrinth App or Prism | import it into Prism Launcher or the Modrinth App (it's also inside the player zip) |
 
 ## Run it on your own computer (Windows, macOS, Linux)
 
-Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/the-realms-server/releases/latest)
+Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest)
 and unzip it somewhere permanent (e.g. Documents). The computer needs 16 GB of RAM or more (12 GB is enough for a few players).
 
 | | Start | Stop |
@@ -91,7 +91,7 @@ The bundle is built from the official downloads on your own computer, so nothing
 Players need the mods (the server adds blocks, mobs and items). On **Windows**, unzip
 `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**: it installs
 Fabric and every mod, resource pack and shader into a separate folder (downloaded from Modrinth, each
-file hash-checked) and adds a **The Realms** installation to the normal Minecraft Launcher. On **macOS
+file hash-checked) and adds a **Monkey SMP** installation to the normal Minecraft Launcher. On **macOS
 and Linux**, players import the `.mrpack` into [Prism Launcher](https://prismlauncher.org) or the
 [Modrinth App](https://modrinth.com/app) instead (so can Windows players who already use one). Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
 
@@ -113,7 +113,7 @@ package/                    <- exactly what goes in the release zip
     Realms.psm1             <- the installer module: install, start/stop, backup, RCON, hosting export
     manifest.json           <- every download, pinned by URL + size + hash (Java once per platform)
     pwsh.lock               <- the portable PowerShell 7 builds realms.sh may download, pinned the same way
-    defaults/               <- first-run configs (server.properties, LuckPerms ranks, Tectonic, BlueMap)
+    defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, Tectonic, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
 player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
 client/                     <- source of the player modpack (.mrpack) + the pinned Fabric launcher profile

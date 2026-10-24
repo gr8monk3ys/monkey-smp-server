@@ -1,6 +1,6 @@
 @echo off
 rem Makes a zip of the server for running it on an online host instead of this PC (see HOSTING.txt inside).
-title The Realms - Prepare for Hosting
+title Monkey SMP - Prepare for Hosting
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0realms\realms.ps1" export-host
 if errorlevel 1 (
   echo.

@@ -1,5 +1,35 @@
 # Changelog
 
+## [Unreleased]
+
+- The GitHub repo is now **gr8monk3ys/monkey-smp-server** (was `the-realms-server`). GitHub redirects the old
+  URLs, so existing clones, release links and installers keep working; update a clone's remote with
+  `git remote set-url origin https://github.com/gr8monk3ys/monkey-smp-server.git`.
+- New: a **server icon**, the Monkey SMP monkey in the multiplayer server list. It ships in `defaults/`, so it is
+  copied only where the server has no `server-icon.png` yet; a host's own icon is kept. Logo, banners and the
+  trailer are in `marketing/`.
+- New: **event tooling**. The `realms-events` data pack (made by `tools/events.py`) runs Arena Glory (join,
+  kits, Strength held at +3, drops cleaned), the Anarchy and Faction Raid timers, official faction flags,
+  event books, the Season Cup and an attendance count; `/function realms:events/help` lists the commands.
+  `tools/block_wheel.py` draws Build Battle blocks from a published seed. See the Events section of `docs/ADMIN.md`.
+- Docs: `docs/SEASONS.md`, the plan for seasons and events. It covers 12-week seasons in acts (border growth, Dragon Night,
+  Netherite age, a finale), one event a week from a catalog (KOTH, supply drops, bounties, tournaments), what
+  carries over between seasons, and the research behind it. The owners' three pillar events (Build Battle with a block wheel, Faction Raid
+  capture the flag, Arena Glory kit combat) run every season and score a faction Season Cup, plus
+  Anarchy (90 minutes of suspended combat rules when the End opens; griefing, cheating and conduct rules stay).
+- The server is now called **Monkey SMP** (was The Realms): server list message, window titles, the launcher
+  profile, the client pack and the site. Download names (`TheRealms-*`), the `.the-realms` game folder and the
+  backup task keep their old names, so updating needs nothing new. The uninstaller is now "Uninstall Monkey SMP.bat".
+- New: the **wardrobe**, cosmetic skins for swords and helmets (`/trigger wardrobe`), unlocked by days played,
+  tenure, invites, supporter tier or being a founder. Look only: no damage, armor or durability changes.
+- New: the server enforces the Season I rules it can (two data packs from `tools/rules.py`): a 2500 x 2500
+  border centred on spawn, set once (the Nether's at 1:8); the launch hour (`function realms:rules/launch`
+  closes PvP and the Nether for an hour, the End stays closed until `function realms:rules/open_end`); no
+  Netherite armor until `datapack disable "file/realms-no-netherite-armor"`; Fire Aspect and Flame disabled.
+  Factions (Open Parties and Claims parties) hold at most 4 players on new installs. See the admin notes
+  in `docs/RULES.md`.
+- New: `tools/retention.py` reports D1/D7/D30 return rates and weekly players from the server logs.
+
 ## [2.3.0] - 2026-10-11
 
 Host the server on a Mac, on Linux or with Docker. Same Minecraft (26.3) and world as 2.2.x: hosts can unzip

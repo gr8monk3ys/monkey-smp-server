@@ -19,7 +19,7 @@ here=$(cd "$(dirname "$0")" && pwd) || exit 1
 root=$(dirname "$here")
 
 fail() {
-    printf 'The Realms: %s\n' "$*" >&2
+    printf 'Monkey SMP: %s\n' "$*" >&2
     exit 1
 }
 
@@ -29,12 +29,12 @@ platform() {
     case "$(uname -s)" in
         Linux) os=linux ;;
         Darwin) os=mac ;;
-        *) fail "this computer runs $(uname -s), but The Realms runs on Windows, Linux and macOS only." ;;
+        *) fail "this computer runs $(uname -s), but Monkey SMP runs on Windows, Linux and macOS only." ;;
     esac
     case "$(uname -m)" in
         x86_64 | amd64) arch=x64 ;;
         aarch64 | arm64) arch=aarch64 ;;
-        *) fail "this computer has a $(uname -m) processor, but The Realms needs a 64-bit Intel/AMD (x64) or ARM (aarch64) one." ;;
+        *) fail "this computer has a $(uname -m) processor, but Monkey SMP needs a 64-bit Intel/AMD (x64) or ARM (aarch64) one." ;;
     esac
     # A Terminal running under Rosetta on an Apple Silicon Mac reports x86_64; use the native builds.
     if [ "$os" = mac ] && [ "$arch" = x64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then

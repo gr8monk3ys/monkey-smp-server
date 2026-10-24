@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    The Realms installer and launcher: installs, updates, starts, stops and backs up the server.
+    Monkey SMP installer and launcher: installs, updates, starts, stops and backs up the server.
 
 .DESCRIPTION
     Every public function takes one context object (New-RealmsContext) instead of script globals.
@@ -25,7 +25,7 @@
 # Module scope only: callers keep their own preference.
 $ErrorActionPreference = 'Stop'
 
-$script:UserAgent = 'gr8monk3ys/the-realms-server'
+$script:UserAgent = 'gr8monk3ys/monkey-smp-server'
 $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 # Defaults that are rendered with Expand-Template instead of copied byte for byte.
 $script:TemplateFiles = @('server.properties')
@@ -157,7 +157,7 @@ function Get-RealmsPlatform {
     if ($OS -eq 'windows' -and $arch) { return 'windows-x64' }
     $platform = "$OS-$arch"
     if (-not $arch -or $script:Platforms -notcontains $platform) {
-        throw "The Realms runs on 64-bit Windows, Linux and macOS (Intel/AMD or ARM), not on this computer ($OS, $Architecture)."
+        throw "Monkey SMP runs on 64-bit Windows, Linux and macOS (Intel/AMD or ARM), not on this computer ($OS, $Architecture)."
     }
     return $platform
 }
@@ -315,7 +315,7 @@ function Get-ServerLayout {
     $server = $Manifest.server
     $type = ([string]$server.type).ToLower()
     if (-not $type -or -not $script:ServerTypes.ContainsKey($type)) {
-        throw "manifest.json has server type '$($server.type)', but this installer only knows 'paper' and 'fabric'. Download the latest release of The Realms."
+        throw "manifest.json has server type '$($server.type)', but this installer only knows 'paper' and 'fabric'. Download the latest release of Monkey SMP."
     }
     $t = $script:ServerTypes[$type]
     $description = if ($type -eq 'paper') { "Paper build $($server.build)" } else { "Fabric loader $($server.loader)" }
@@ -544,7 +544,7 @@ function Assert-SameServerType($Context, $Layout, $State) {
     if (-not $was -or $was -eq $Layout.Type) { return $was }
     if (Test-WorldExists $Context) {
         $old = if ($script:ServerTypes.ContainsKey($was)) { $script:ServerTypes[$was].Name } else { $was }
-        throw ("This folder already has a $old server with a world in it, but this release of The Realms is a " +
+        throw ("This folder already has a $old server with a world in it, but this release of Monkey SMP is a " +
             "$($Layout.Name) server. A world can't be moved from one to the other, so nothing was changed. " +
             "Unzip this release into a NEW, empty folder and start it from there. To keep playing the old " +
             "world, unzip the release you had before into this folder again.")
@@ -629,6 +629,20 @@ function Install-Defaults($Context) {
             New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent) | Out-Null
             Copy-Item -LiteralPath $f.FullName -Destination $dest
         }
+    }
+}
+
+# Copies the data packs this package ships as folders (realms/datapacks/<name>, e.g. the wardrobe) into the
+# world, replacing the old copy. Unlike Defaults they are ours, not the host's, so every update must reach the world.
+function Install-PackageDatapacks($Context) {
+    $source = Join-Path $Context.RealmsDir 'datapacks'
+    if (-not (Test-Path -LiteralPath $source)) { return }
+    $dest = Get-GroupFolder $Context 'datapacks'
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    foreach ($pack in Get-ChildItem -LiteralPath $source -Directory) {
+        $target = Join-Path $dest $pack.Name
+        if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+        Copy-Item -LiteralPath $pack.FullName -Destination $target -Recurse
     }
 }
 
@@ -794,7 +808,7 @@ function Get-JavaBuild {
     $java = $Manifest.java
     $build = if ($java.builds) { $java.builds.$Platform } elseif ($Platform -eq 'windows-x64') { $java } else { $null }
     if (-not $build -or -not $build.url) {
-        throw "This release of The Realms has no Java for $Platform. Download the latest release of The Realms."
+        throw "This release of Monkey SMP has no Java for $Platform. Download the latest release of Monkey SMP."
     }
     return $build
 }
@@ -892,7 +906,7 @@ function Confirm-Eula($Context, [bool]$AcceptEula) {
         $a = Read-Answer $Context 'Do you agree to it? Type YES and press Enter'
         if ($a -notmatch '^(y|yes)$') { throw 'The server cannot run unless you agree to the Minecraft EULA.' }
     }
-    Write-TextFile $path "# Agreed via The Realms installer on $(Get-Date -Format s)`neula=true`n"
+    Write-TextFile $path "# Agreed via Monkey SMP installer on $(Get-Date -Format s)`neula=true`n"
 }
 
 <#
@@ -936,6 +950,7 @@ function Install-Server {
     if ($n -eq 0) { Write-Ok 'Everything is up to date.' }
 
     Install-Defaults $Context
+    Install-PackageDatapacks $Context
 
     $ownerName = $state.owner
     if (-not $ownerName -and -not $NoOwner) {
@@ -1020,7 +1035,7 @@ function Start-Server {
     $gb = $MemoryGB
     $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb
     Write-Host ''
-    Write-Step "Starting The Realms with $gb GB of memory"
+    Write-Step "Starting Monkey SMP with $gb GB of memory"
     Write-Host '    Friends join at the address shown by playit.gg (see READ ME FIRST.txt).' -ForegroundColor White
     Write-Host '    To stop the server safely, type  stop  here and press Enter.' -ForegroundColor White
     Write-Host '    (Closing this window without "stop" can lose the last few minutes of the world.)' -ForegroundColor White
@@ -1231,7 +1246,7 @@ function New-HostingGuide($Manifest, [int]$GamePort, [string]$Folder) {
 $($Manifest.name.ToUpper()) $($Manifest.version) - RUNNING THE SERVER ON AN ONLINE HOST
 =====================================================================
 
-This zip is your own copy of The Realms server, made by "Prepare for Hosting" on your PC:
+This zip is your own copy of Monkey SMP server, made by "Prepare for Hosting" on your PC:
 $($layout.Name) ($($layout.Description)) for Minecraft $($Manifest.minecraft), with its $($layout.AddOns),
 datapacks and settings. Upload it to an online Minecraft host or to your own server
 and players can join without your PC being on.

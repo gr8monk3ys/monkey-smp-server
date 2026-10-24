@@ -1,4 +1,4 @@
-# The Realms: ServerCore's own defaults, except
+# Monkey SMP: ServerCore's own defaults, except
 #   dynamic.enabled: true, target-mspt: 45. While a tick takes under 45 ms nothing changes. When the server
 #     falls behind, mob caps and tick/view distances step down (never above this pack's own view distance 8
 #     and simulation distance 6), and step back up when it recovers. See it with  /servercore status .

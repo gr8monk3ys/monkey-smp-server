@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:set_components",
+  "components": {
+    "minecraft:item_model": "realms:laurel",
+    "minecraft:equippable": {
+      "slot": "head",
+      "asset_id": "realms:laurel",
+      "equip_sound": "minecraft:item.armor.equip_leather"
+    }
+  }
+}

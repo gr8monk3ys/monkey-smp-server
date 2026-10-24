@@ -20,6 +20,7 @@
       Rewrites client/ (a Modrinth modpack source) from a Prism instance: mods, resource packs
       and shader packs are linked by hash, and config/, shader settings and options.txt are
       copied as overrides. Files that aren't on Modrinth are left out (not redistributed).
+      overrides/resourcepacks/ is the repo's own (tools/wardrobe.py) and is kept, and turned on in options.txt.
       Also pins client/fabric-profile.json, Fabric meta's launcher profile for the pack's Minecraft
       and loader versions (the player installer gives it to the official Minecraft Launcher).
 
@@ -41,6 +42,7 @@ import defaults
 import entries
 import launcher_profile
 import patches
+import wardrobe
 from repo import REPO, load_json, save_json
 from upstream import JAVA_PLATFORMS, LiveHttp, Upstream, fabric_server_jar_url
 
@@ -263,7 +265,7 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
         patches.write(repo.patches / slug, files)
 
     manifest = {
-        "name": old.get("name", "The Realms"),
+        "name": old.get("name", "Monkey SMP"),
         "version": old.get("version", "1.0.0"),
         "minecraft": mc,
         "java": java,
@@ -304,15 +306,17 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
     if not loader:
         raise SystemExit("can't tell the Fabric loader version (no mmc-pack.json next to the instance)")
     index = {"formatVersion": 1, "game": "minecraft",
-             "versionId": manifest["version"], "name": old.get("name", "The Realms - Client"),
-             "summary": old.get("summary", "Client pack for The Realms factions server."),
+             "versionId": manifest["version"], "name": old.get("name", "Monkey SMP - Client"),
+             "summary": old.get("summary", "Client pack for Monkey SMP factions server."),
              "files": files,
              "dependencies": {"minecraft": manifest["minecraft"], "fabric-loader": loader}}
     profile = fetch_profile(upstream, manifest["minecraft"], loader)  # before writing anything
 
     overrides = repo.client / "overrides"
-    shutil.rmtree(overrides, ignore_errors=True)
-    overrides.mkdir(parents=True)
+    overrides.mkdir(parents=True, exist_ok=True)
+    for old in overrides.iterdir():  # everything but resourcepacks/, which this repo generates
+        if old.name != "resourcepacks":
+            shutil.rmtree(old) if old.is_dir() else old.unlink()
     if (instance / "config").is_dir():
         shutil.copytree(instance / "config", overrides / "config", ignore=shutil.ignore_patterns("*.bak*", "*.old"))
     (overrides / "shaderpacks").mkdir()
@@ -320,6 +324,8 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
         shutil.copy2(f, overrides / "shaderpacks" / f.name)
     if (instance / "options.txt").is_file():
         shutil.copy2(instance / "options.txt", overrides / "options.txt")
+        if (overrides / "resourcepacks" / wardrobe.RESOURCEPACK).is_dir():
+            wardrobe.enable_in_options(overrides / "options.txt")
     save_json(index_path, index)
     save_profile(repo, profile)
     print(f"client: {len(files)} files linked from Modrinth")

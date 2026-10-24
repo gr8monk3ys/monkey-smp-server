@@ -1,4 +1,4 @@
-# The Realms on Docker: a small Debian base that runs the release folder's own installer.
+# Monkey SMP on Docker: a small Debian base that runs the release folder's own installer.
 #
 # The image holds no Minecraft, mod or Java files (docs/adr/0002): compose.yaml mounts the whole
 # release folder at /realms, and realms/realms.sh downloads PowerShell, Java, Fabric and the mods

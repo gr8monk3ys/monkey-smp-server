@@ -309,6 +309,22 @@ def test_snapshot_client(tmp_path, fake_modrinth, request, release):
     assert validate.validate_client(repo.load_manifest(), repo) == []
 
 
+def test_snapshot_client_keeps_the_wardrobe_resource_pack(tmp_path, fake_modrinth, fabric_repo):
+    mc = fabric_repo.load_manifest()["minecraft"]
+    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
+    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
+    pack = fabric_repo.client / "overrides" / "resourcepacks" / "Monkey SMP Wardrobe" / "pack.mcmeta"
+    write(pack, "{}")
+    write(fabric_repo.client / "overrides" / "stale.txt", "from an old snapshot")
+
+    snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
+
+    overrides = fabric_repo.client / "overrides"
+    assert pack.read_text() == "{}"
+    assert not (overrides / "stale.txt").exists()
+    assert '"file/Monkey SMP Wardrobe"' in (overrides / "options.txt").read_text(encoding="utf-8")
+
+
 def test_snapshot_client_pins_the_recorded_launcher_profile(tmp_path, fake_modrinth, recorded, fabric_repo, capsys):
     fabric_repo.fabric_profile.unlink()
     instance = client_instance(tmp_path, fake_modrinth, "26.3", "0.19.5")

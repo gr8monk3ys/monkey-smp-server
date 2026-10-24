@@ -1,7 +1,7 @@
-THE REALMS - how to join (players)
+MONKEY SMP - how to join (players)
 ===================================
 
-The Realms is a modded Minecraft server. To join, your Minecraft needs the same mods.
+Monkey SMP is a modded Minecraft server. To join, your Minecraft needs the same mods.
 This folder sets that up for you. You need Minecraft Java Edition (the one you buy at
 minecraft.net) and about 2 GB of free disk space. Option A is for Windows 10 or 11;
 on a Mac or Linux, use option B.
@@ -16,12 +16,12 @@ OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
        websites and checks every file. This takes a few minutes.
      - When it says it's finished, press a key to close the window.
   3. Open the Minecraft Launcher. Next to the green Play button, click the box that says
-     the version (e.g. "Latest release") and pick  "The Realms".  Press Play.
+     the version (e.g. "Latest release") and pick  "Monkey SMP".  Press Play.
      The first start is slow (a few minutes) - that's normal for a modded game.
   4. In the game: Multiplayer > Add Server. Type the server address the host gave you,
      press Done, then Join Server.
 
-  Your normal Minecraft is not changed: The Realms keeps its own mods, settings and
+  Your normal Minecraft is not changed: Monkey SMP keeps its own mods, settings and
   worlds in a separate folder.
 
 
@@ -42,14 +42,14 @@ BEFORE YOU JOIN
 UPDATING
 --------
   When the host sends a newer version, unzip it and double-click the installer again.
-  It updates The Realms and keeps your settings, worlds and screenshots.
+  It updates Monkey SMP and keeps your settings, worlds and screenshots.
 
 
 IF SOMETHING GOES WRONG
 -----------------------
   "Minecraft Launcher not found"
       Install it from minecraft.net, start it once, sign in, close it, and try again.
-  "The Realms" isn't in the launcher
+  "Monkey SMP" isn't in the launcher
       Close the launcher completely and run the installer again, then reopen the launcher.
   The game is slow or stutters
       Press O in game to choose a lighter shader (or turn shaders off), and lower
@@ -62,6 +62,6 @@ IF SOMETHING GOES WRONG
 
 REMOVING IT
 -----------
-  Double-click  "Uninstall The Realms.bat".  It asks before deleting anything, then
-  removes "The Realms" from the launcher and deletes its folder (your normal Minecraft
+  Double-click  "Uninstall Monkey SMP.bat".  It asks before deleting anything, then
+  removes "Monkey SMP" from the launcher and deletes its folder (your normal Minecraft
   is not touched).

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:set_components",
+  "components": {
+    "minecraft:item_model": "minecraft:golden_helmet",
+    "minecraft:equippable": {
+      "slot": "head",
+      "asset_id": "minecraft:gold",
+      "equip_sound": "minecraft:item.armor.equip_gold"
+    }
+  }
+}

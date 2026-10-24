@@ -1,0 +1,13 @@
+# Runs one deploy check (realms-deploy.sh). Started by realms-deploy.timer; install with docs/LIVE.md.
+[Unit]
+Description=Monkey SMP: deploy the newest release if it isn't live
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=realms
+Group=realms
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-deploy.sh
+# A deploy with a 5-minute warning, a backup and a first-start download can take a while.
+TimeoutStartSec=45min

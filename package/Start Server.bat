@@ -1,6 +1,6 @@
 @echo off
-rem Starts The Realms. The first time, it downloads everything and asks two questions.
-title The Realms - Start Server
+rem Starts Monkey SMP. The first time, it downloads everything and asks two questions.
+title Monkey SMP - Start Server
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0realms\realms.ps1" start
 if errorlevel 1 (
   echo.

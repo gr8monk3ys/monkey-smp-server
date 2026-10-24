@@ -1,5 +1,5 @@
 #!/bin/sh
-# Entrypoint of The Realms Docker image (see Dockerfile and compose.yaml). /realms is the release
+# Entrypoint of Monkey SMP Docker image (see Dockerfile and compose.yaml). /realms is the release
 # folder (TheRealms-Server), mounted from the host.
 #
 #   realms-entrypoint [server]      install or update, then run the server until docker stop (default)
@@ -43,7 +43,7 @@ drop_privileges() {
     [ "$uid" != 0 ] || return 0
     # Give the user a name and home for programs that look them up (Java, PowerShell). The
     # container's /etc is its own, so this never touches the host.
-    getent passwd "$uid" >/dev/null || echo "realms:x:$uid:$gid:The Realms:$HOME:/bin/sh" >>/etc/passwd
+    getent passwd "$uid" >/dev/null || echo "realms:x:$uid:$gid:Monkey SMP:$HOME:/bin/sh" >>/etc/passwd
     getent group "$gid" >/dev/null || echo "realms:x:$gid:" >>/etc/group
     exec setpriv --reuid="$uid" --regid="$gid" --clear-groups -- "$0" "$@"
 }
@@ -136,7 +136,7 @@ run_server() {
     if { true <&0; } 2>/dev/null; then exec 3<&0; else exec 3</dev/null; fi
     trap on_stop TERM INT
 
-    say "Installing or updating The Realms in the release folder (as user $(id -u))"
+    say "Installing or updating Monkey SMP in the release folder (as user $(id -u))"
     rc=0
     run_child sh "$REALMS" "$@" || rc=$?
     [ -z "$stopping" ] || exit 0

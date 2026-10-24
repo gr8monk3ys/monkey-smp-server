@@ -41,7 +41,7 @@ ADOPTIUM = "https://api.adoptium.net/v3"
 POWERSHELL_METADATA = "https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json"
 POWERSHELL_RELEASES = "https://api.github.com/repos/PowerShell/PowerShell/releases"
 FABRIC_META = "https://meta.fabricmc.net/v2"
-USER_AGENT = "gr8monk3ys/the-realms-server (github.com/gr8monk3ys/the-realms-server)"
+USER_AGENT = "gr8monk3ys/monkey-smp-server (github.com/gr8monk3ys/monkey-smp-server)"
 
 
 # The platforms the installer runs on, as Adoptium's (os, architecture).

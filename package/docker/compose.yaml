@@ -1,4 +1,4 @@
-# The Realms on Docker (a Linux VPS, or Docker Desktop on Windows or macOS).
+# Monkey SMP on Docker (a Linux VPS, or Docker Desktop on Windows or macOS).
 #
 # Run these in this folder (TheRealms-Server/docker):
 #   cp .env.example .env          then edit .env: EULA=TRUE, and OWNER=<your Minecraft name>

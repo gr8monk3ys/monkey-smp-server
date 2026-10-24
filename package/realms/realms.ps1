@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs, updates, starts, stops and backs up The Realms Minecraft server.
+    Installs, updates, starts, stops and backs up Monkey SMP Minecraft server.
 
 .DESCRIPTION
     Everything is downloaded from its official source (Adoptium, PaperMC or Fabric, Modrinth) and checked

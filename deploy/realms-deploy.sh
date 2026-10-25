@@ -185,9 +185,15 @@ label=$ref
 [ "$TRACK" = tags ] || label="$TRACK@$(git -C "$REPO_DIR" rev-parse --short "$commit")"
 log "deploying $label ($commit); live: ${deployed:-nothing}"
 
-# Players need the new client pack when client/ changed (mods added, removed or updated).
+# Players need the new client pack when client/ changed (mods added, removed or updated). Every
+# release bumps "versionId" in the pack index, and that alone doesn't make an old pack unable to join.
+index_without_version() {
+    git -C "$REPO_DIR" show "$1:client/modrinth.index.json" 2>/dev/null | grep -v '^[[:space:]]*"versionId":'
+}
 pack_changed=''
-if [ -z "$deployed" ] || ! git -C "$REPO_DIR" diff --quiet "$deployed" "$commit" -- client/ 2>/dev/null; then
+if [ -z "$deployed" ] ||
+    ! git -C "$REPO_DIR" diff --quiet "$deployed" "$commit" -- client/ ':(exclude)client/modrinth.index.json' 2>/dev/null ||
+    [ "$(index_without_version "$deployed")" != "$(index_without_version "$commit")" ]; then
     pack_changed=1
 fi
 

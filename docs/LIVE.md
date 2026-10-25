@@ -40,7 +40,7 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
    git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/realms/repo
    ```
 4. **Settings.** `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
-   it (the Discord webhook is optional), `sudo chmod 600 /etc/realms-deploy.env`.
+   it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), `sudo chmod 600 /etc/realms-deploy.env`.
 5. **First deploy.** `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
    `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
    there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10` and `TZ=America/Los_Angeles`.
@@ -61,8 +61,9 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 
 | Do this | How (on the VPS, as `realms`) |
 |---|---|
-| Ship a change | merge to `main`, then tag a release as in docs/MAINTAINING.md. Within 5 minutes the VPS warns players, backs up, updates and restarts |
-| Ship it right now | `sh /srv/realms/repo/deploy/realms-deploy.sh --now` |
+| Ship a change | merge to `main`, then tag a release as in docs/MAINTAINING.md. In the next deploy window (`DEPLOY_WINDOW`, 4-5 AM Pacific in the example settings) the VPS warns anyone online, backs up, updates and restarts |
+| Ship it right now | `sh /srv/realms/repo/deploy/realms-deploy.sh --now` (ignores the window and skips the warning) |
+| When will it go live? | `sh /srv/realms/repo/deploy/realms-deploy.sh --status`: the newest tag, what is live, and whether the window is open |
 | What is live? | `sh /srv/realms/repo/deploy/realms-deploy.sh --status` |
 | Deploy log | `journalctl -u realms-deploy -n 100` |
 | Console | `cd /srv/realms/TheRealms-Server/docker && docker compose attach realms` (leave with Ctrl+P, Ctrl+Q) |

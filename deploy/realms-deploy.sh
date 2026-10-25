@@ -3,8 +3,11 @@
 # every few minutes; it does nothing unless there is something new to deploy.
 #
 #   sh realms-deploy.sh            deploy the newest release tag (or TRACK branch) if it isn't live yet
-#   sh realms-deploy.sh --now      the same, without the 5-minute warning to players online
+#   sh realms-deploy.sh --now      the same, right away: ignores DEPLOY_WINDOW and skips the warning
 #   sh realms-deploy.sh --status   print what is deployed and what would be
+#
+# With DEPLOY_WINDOW set (e.g. 04:00-05:00, in DEPLOY_TZ), a new release waits for that window, so a
+# fix tagged in the afternoon goes live at 4 AM. The first deploy on a new machine doesn't wait.
 #
 # What a deploy does:
 #   1. git fetch; pick the newest vX.Y.Z tag (TRACK=tags, the default) or the tip of TRACK=<branch>
@@ -31,6 +34,8 @@ LIVE_DIR=${LIVE_DIR:-/srv/realms/TheRealms-Server}
 TRACK=${TRACK:-tags}
 WARN_MINUTES=${WARN_MINUTES:-5}
 BOOT_TIMEOUT=${BOOT_TIMEOUT:-900}
+DEPLOY_WINDOW=${DEPLOY_WINDOW:-}
+DEPLOY_TZ=${DEPLOY_TZ:-America/Los_Angeles}
 DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 LOCK_FILE=${LOCK_FILE:-/tmp/realms-deploy.lock}
 
@@ -54,6 +59,34 @@ done
 # One deploy at a time: the timer and a manual run must not overlap.
 exec 9>"$LOCK_FILE"
 flock -n 9 || { log 'another deploy is running; skipping'; exit 0; }
+
+# DEPLOY_WINDOW "HH:MM-HH:MM" as two HHMM numbers; a window may cross midnight (23:00-01:00).
+window_start=''
+window_end=''
+if [ -n "$DEPLOY_WINDOW" ]; then
+    window_start=$(printf '%s' "${DEPLOY_WINDOW%%-*}" | tr -d ':')
+    window_end=$(printf '%s' "${DEPLOY_WINDOW#*-}" | tr -d ':')
+    for t in "$window_start" "$window_end"; do
+        case "$t" in
+            [01][0-9][0-5][0-9] | 2[0-3][0-5][0-9]) ;;
+            *) die "DEPLOY_WINDOW '$DEPLOY_WINDOW' is not HH:MM-HH:MM (e.g. 04:00-05:00)" ;;
+        esac
+    done
+    [ "$window_start" != "$window_end" ] || die "DEPLOY_WINDOW '$DEPLOY_WINDOW' starts and ends at the same time"
+fi
+
+clock() { TZ=$DEPLOY_TZ date +%H%M; }
+
+# True when there is no window or the clock in DEPLOY_TZ is inside it. `[ -lt ]` reads 0400 as decimal.
+in_window() {
+    [ -n "$DEPLOY_WINDOW" ] || return 0
+    t=$(clock)
+    if [ "$window_start" -lt "$window_end" ]; then
+        [ "$t" -ge "$window_start" ] && [ "$t" -lt "$window_end" ]
+    else
+        [ "$t" -ge "$window_start" ] || [ "$t" -lt "$window_end" ]
+    fi
+}
 
 [ -d "$REPO_DIR/.git" ] || die "$REPO_DIR is not a git clone of the repo (docs/LIVE.md, step 3)"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || [ ! -e "$LIVE_DIR" ] || die "$LIVE_DIR has no docker/compose.yaml"
@@ -81,12 +114,20 @@ if [ -n "$status_only" ]; then
     echo "newest:   $ref ($commit)"
     echo "deployed: ${deployed:-nothing yet}"
     [ -z "$failed" ] || echo "failed:   $failed (skipped until a newer commit)"
+    if [ -n "$DEPLOY_WINDOW" ]; then
+        if in_window; then state='open'; else state='closed'; fi
+        echo "window:   $DEPLOY_WINDOW $DEPLOY_TZ (now $(clock), $state)"
+    fi
     exit 0
 fi
 
 [ "$commit" != "$deployed" ] || exit 0
 if [ "$commit" = "$failed" ]; then
     log "$ref ($commit) failed to boot before; waiting for a newer commit"
+    exit 0
+fi
+if [ -z "$now" ] && [ -n "$deployed" ] && ! in_window; then
+    log "$ref is waiting for the $DEPLOY_WINDOW $DEPLOY_TZ deploy window (--now deploys it now)"
     exit 0
 fi
 

@@ -37,10 +37,13 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then
    ```sh
    printf 'Host github.com\n  IdentityFile ~/.ssh/realms_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+   ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
    git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/realms/repo
    ```
 4. **Settings.** `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
-   it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), `sudo chmod 600 /etc/realms-deploy.env`.
+   it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), then
+   `sudo chown root:realms /etc/realms-deploy.env && sudo chmod 640 /etc/realms-deploy.env` (the deploy
+   service runs as `realms`, so it has to be able to read the file).
 5. **First deploy.** `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
    `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
    there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10` and `TZ=America/Los_Angeles`.
@@ -48,12 +51,14 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
    anything else. In the console: `worldborder set 12000`, then `chunky radius 6000` and `chunky start`
-   (hours; it carries on after a restart). Do the Nether at a smaller radius the same way.
+   (hours; it carries on after a restart). The Nether is 1/8 the size:
+   `execute in minecraft:the_nether run worldborder set 1500`, then `chunky world minecraft:the_nether`,
+   `chunky radius 750` and `chunky start`.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
    `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
    The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
-8. **DNS** (Vercel, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
-   address, and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
+8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
+   address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
    port, while the same name serves the website. Voice chat finds the server by itself.
 
@@ -91,7 +96,7 @@ When the VPS or its provider is down for longer than a restart:
    it with `Start Server.bat`.
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Vercel DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
+3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
    With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
    record back, and start the VPS.

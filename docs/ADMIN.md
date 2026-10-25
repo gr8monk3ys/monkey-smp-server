@@ -201,11 +201,12 @@ entrance. Logging out, or being teleported out of the radius, takes them out the
 Kit gear is marked, so it can't be smuggled out:
 - Players in the arena hold kit gear and nothing else; anything else is cleared every tick.
 - While the arena is open, everything inside the radius that holds items is removed every tick with
-  its contents: chest and hopper minecarts, chest boats, donkeys, mules and llamas. Keep the size
-  inside the arena's walls so nobody else's things are in that radius.
+  its contents: chest and hopper minecarts, chest boats, donkeys, mules and llamas. So is the corpse a
+  death leaves (player-death-corpses), which would otherwise hold the dead player's kit for anyone to
+  loot. Keep the size inside the arena's walls so nobody else's things, or corpses, are in that radius.
 - Players can't join with a bundle in their ender chest (gear in a bundle would be missed), and leaving
   strips kit gear and any bundle from the ender chest.
-- Kit gear that still gets out (a hopper under the floor, a corpse) is cleared from any player outside
+- Kit gear that still gets out (a hopper under the floor) is cleared from any player outside
   the arena as soon as they take it; nothing else in that container is touched.
 
 **Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.

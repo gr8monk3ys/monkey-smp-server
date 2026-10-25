@@ -41,6 +41,11 @@ STRENGTH_ITEM = '*[custom_data~{"Strength_SMP+Item":{}}]'
 KIT_ITEM = "*[custom_data~{realms_kit:{}}]"
 NOT_KIT_ITEM = "*[!custom_data~{realms_kit:{}}]"
 ARENA_LEVEL = 3   # the level every player starts with
+# The player-death-corpses mod (a data pack in a jar) turns keep_inventory on and, the tick after a death,
+# moves the dead player's gear onto a mannequin tagged player_corpses.corpse. A timer text_display with the
+# same tag rides it, and a click box (an interaction) does when right-click looting is on.
+CORPSE = "tag=player_corpses.corpse"
+CORPSE_CLICK = "type=minecraft:interaction,tag=player_corpses.interaction"
 
 COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan",
           "purple", "blue", "brown", "green", "red", "black"]
@@ -239,6 +244,7 @@ def arena_files() -> dict[str, str]:
     )
     f[f"{fn}/round.mcfunction"] = lines(
         "# Between rounds: clear the floor (items go every tick anyway; this takes arrows and tridents too).",
+        *(f"$execute {at_point('p')} run kill @e[{what},distance=..$(size)]" for what in (CORPSE, CORPSE_CLICK)),
         f"$execute {at_point('p')} run kill @e[type=#minecraft:arrows,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:trident,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:item,distance=..$(size)]",
@@ -311,6 +317,9 @@ def arena_files() -> dict[str, str]:
         "# one drops its contents, which the next line removes. Kit gear stashed anywhere else is marked, and",
         "# cleared from whoever takes it out (tick.mcfunction).",
         f"$execute {at_point('p')} run kill @e[type=#{NS}:holds_items,distance=..$(size)]",
+        "# A death leaves a corpse holding the kit (CORPSE in tools/events.py), which anyone could loot for a",
+        "# second kit: it goes the same way, with its timer and click box, and what it drops goes next.",
+        *(f"$execute {at_point('p')} run kill @e[{what},distance=..$(size)]" for what in (CORPSE, CORPSE_CLICK)),
         f"$execute {at_point('p')} run kill @e[type=minecraft:item,distance=..$(size)]",
         f"$execute {at_point('p')} run kill @e[type=minecraft:experience_orb,distance=..$(size)]",
         "# Died: back to the waiting room, still in the arena.",

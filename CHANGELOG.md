@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Live server: updates wait for a deploy window. Set `DEPLOY_WINDOW` (e.g. `04:00-05:00`) and `DEPLOY_TZ` in
+  `/etc/realms-deploy.env` and a release tagged during the day goes live at 4 AM; `realms-deploy.sh --now` still
+  deploys right away, and `--status` says whether the window is open. The first deploy on a new machine doesn't wait.
+
 ## [2.4.0] - 2026-10-25
 
 Monkey SMP: the new name, the Season I rules, event tooling and the wardrobe. Same Minecraft (26.3), mods and

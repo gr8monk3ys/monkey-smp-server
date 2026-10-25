@@ -11,6 +11,10 @@ clear @a[tag=ev.arena] *[!custom_data~{realms_kit:{}}]
 # one drops its contents, which the next line removes. Kit gear stashed anywhere else is marked, and
 # cleared from whoever takes it out (tick.mcfunction).
 $execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=#realms:holds_items,distance=..$(size)]
+# A death leaves a corpse holding the kit (CORPSE in tools/events.py), which anyone could loot for a
+# second kit: it goes the same way, with its timer and click box, and what it drops goes next.
+$execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[tag=player_corpses.corpse,distance=..$(size)]
+$execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=minecraft:interaction,tag=player_corpses.interaction,distance=..$(size)]
 $execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=minecraft:item,distance=..$(size)]
 $execute in minecraft:overworld positioned $(px) $(py) $(pz) run kill @e[type=minecraft:experience_orb,distance=..$(size)]
 # Died: back to the waiting room, still in the arena.

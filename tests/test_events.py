@@ -70,6 +70,16 @@ def test_arena_keeps_strength_aside_and_lets_nothing_out():
     assert tick.index(f"kill @e[type=#{events.NS}:holds_items") < tick.index("kill @e[type=minecraft:item")
 
 
+def test_arena_deaths_leave_no_lootable_corpse():
+    # player-death-corpses moves a dead player's kit onto a mannequin; it, its riders and its click box go
+    # every tick and between rounds, before the item sweep that takes whatever they drop
+    for body in (fn("arena/tick"), fn("arena/round")):
+        for what in ("tag=player_corpses.corpse", "type=minecraft:interaction,tag=player_corpses.interaction"):
+            line = next(line for line in body.splitlines() if f"kill @e[{what},distance=..$(size)]" in line)
+            assert line.startswith("$execute in minecraft:overworld positioned $(px) $(py) $(pz) run")
+            assert body.index(line) < body.index("kill @e[type=minecraft:item")
+
+
 def test_holds_items_tag_covers_vehicles_and_pack_animals():
     tag = set(json.loads(FILES[f"data/{events.NS}/tags/entity_type/holds_items.json"])["values"])
     assert {"minecraft:chest_minecart", "minecraft:hopper_minecart", "minecraft:oak_chest_boat",

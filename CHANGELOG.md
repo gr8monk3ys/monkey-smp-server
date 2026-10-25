@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-10-25
+
+Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and world as 2.4.0: hosts unzip over
+2.4.0; players need nothing new.
+
+- Fix: Arena Glory no longer leaves a death corpse wearing the kit inside the arena, so nobody loots a second
+  kit. The arena tick and the between-rounds clear remove `player-death-corpses` mannequins in the radius.
 - Live server: updates wait for a deploy window. Set `DEPLOY_WINDOW` (e.g. `04:00-05:00`) and `DEPLOY_TZ` in
   `/etc/realms-deploy.env` and a release tagged during the day goes live at 4 AM; `realms-deploy.sh --now` still
   deploys right away, and `--status` says whether the window is open. The first deploy on a new machine doesn't wait.

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-25
+
+Monkey SMP: the new name, the Season I rules, event tooling and the wardrobe. Same Minecraft (26.3), mods and
+world as 2.3.0: hosts can unzip over 2.3.0 and keep their world. Players update the client pack (it adds the
+wardrobe resource pack).
+
+- New: the **live server** setup in `deploy/` (`docs/LIVE.md`): a VPS pulls and deploys the newest release tag,
+  with world backups, a chunky pregen and the public site.
 - The GitHub repo is now **gr8monk3ys/monkey-smp-server** (was `the-realms-server`). GitHub redirects the old
   URLs, so existing clones, release links and installers keep working; update a clone's remote with
   `git remote set-url origin https://github.com/gr8monk3ys/monkey-smp-server.git`.

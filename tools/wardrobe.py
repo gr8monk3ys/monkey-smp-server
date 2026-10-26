@@ -13,12 +13,16 @@ usage guidelines: paid perks must be cosmetic). See docs/RETENTION.md for the un
 
 Unlock scores (all per player name, so the store and staff can set them while the player is offline):
   rw.days     days played (one per real day the player logs in; never resets, so no streak anxiety)
-  rw.hours    hours played (from the play_time statistic)
+  rw.hours    hours played (from the play_time statistic, plus rw.playbase: play carried from earlier worlds)
   rw.months   months of access pass bought in total
   rw.invites  friends invited who bought a pass
   rw.tier     supporter tier: 1 Ember, 2 Banner, 3 Crown (0 when it lapses)
   rw.founder  1 for everyone who played during the first season
+  rw.events   events attended (the realms-events pack counts it, once per event)
+  rw.<holiday>  1 for coming to that holiday's event (staff set it at the event; never sold)
 `function realms:wardrobe/day` starts a new day; deploy/realms-day.timer runs it at midnight UTC.
+Every rw.* score lives in the world's scoreboard, so a new season's world starts without them:
+tools/season.py carries them over (docs/SEASONS.md, "Ending a season").
 """
 import argparse
 import json
@@ -44,8 +48,20 @@ SCORES = {
     "rw.hours": ("hour played", "hours played"),
     "rw.months": ("pass month", "pass months"),
     "rw.invites": ("friend invited", "friends invited"),
+    "rw.events": ("event attended", "events attended"),
 }
 TIERS = {1: "Ember", 2: "Banner", 3: "Crown"}
+# Holiday overlays (docs/SEASONS.md): objective -> (name, when). A skin is earned by coming to the event.
+HOLIDAYS = {
+    "rw.hallowtide": ("Hallowtide", "late October"),
+    "rw.midwinter": ("Midwinter", "late December"),
+    "rw.midsummer": ("Midsummer", "late June"),
+}
+# Scores that can jump while a player is online (the store, staff, an event): crossing a skin's threshold
+# says so in chat. Days say so in new_day; hours and tiers don't.
+NOTIFY = ["rw.months", "rw.events", *HOLIDAYS]
+# The scores the Tebex store sets (docs/RETENTION.md). Event and holiday skins must never use them.
+SOLD = {"rw.months", "rw.tier"}
 
 # ---------------------------------------------------------------- the skins
 
@@ -61,10 +77,23 @@ BLADES = [
          pal="o13240f Lc9f29b M6cbf3a D3a7d22 Ge7c14a ga8842a H5a3d22 h3d2914 Pe7c14a"),
     dict(id="starfall", name="Starfall", unlock=("rw.days", 30), broad=True, runes=(6, 9, 12),
          pal="o070a1c L5866b8 M2b3478 D171d4d Rffe98a Gc9ced8 g8a90a0 H20253f h13172a Pffe98a"),
-    dict(id="old_guard", name="Old Guard", unlock=("rw.months", 6), broad=True,
-         pal="o2a1a0c Lf0c58a Mb8803f D7a4f22 G5c5c64 g3c3c44 H3d2a1a h2a1c10 Pb8803f"),
+    dict(id="rallier", name="Rallier", unlock=("rw.events", 3), broad=True, runes=(8, 12),
+         pal="o2a0b0d Lfaf6ee Me2ddd2 Db0262f Rb0262f Ge7c14a ga8842a H8a1c22 h5a1016 Pe7c14a"),
     dict(id="founders_edge", name="Founder's Edge", unlock=("rw.founder", 1), runes=(8, 10, 12),
          pal="o1b1430 Lf3e9ff Mb9a3e8 D7b62c0 Rffffff Ge7c14a ga8842a H3a2b5c h251b3d Pff6fb1"),
+    dict(id="gravelight", name="Gravelight", unlock=("rw.hallowtide", 1), teeth=True, runes=(7, 10, 13),
+         pal="o0c0810 Lff9a2e M3b2a45 D20162a R9dff8a Gff9a2e gb85e12 H2a1f33 h19121f P9dff8a"),
+    dict(id="solstice", name="Solstice", unlock=("rw.midsummer", 1), broad=True, runes=(8, 11),
+         pal="o2a2205 Lfffbe0 Mf6d743 Dc79a14 Rff7a1a G3f9a4a g24652c H3f9a4a h24652c Pff7a1a"),
+    # The tenure ladder: one step a month for the first three, so a new buyer has something by renewal day.
+    dict(id="oath_i", name="Oathblade I", unlock=("rw.months", 1),
+         pal="o15171c L9aa3ad M5d6670 D3b424c G9c6b3a g6b4826 H2c4a7a h1c3054 P9c6b3a"),
+    dict(id="oath_ii", name="Oathblade II", unlock=("rw.months", 2), runes=(8, 11),
+         pal="o141a24 Le9eef5 Mb3bccb D6e7a8c R5ab0ff G9aa4b4 g5f6878 H2c4a7a h1c3054 P5ab0ff"),
+    dict(id="oath_iii", name="Oathblade III", unlock=("rw.months", 3), broad=True, runes=(7, 9, 11, 13),
+         pal="o1d1a10 Lfffdf2 Me3e6ee D9aa3b5 R4aa8ff Ge7c14a ga8842a H2c4a7a h1c3054 Pe7c14a"),
+    dict(id="old_guard", name="Old Guard", unlock=("rw.months", 6), broad=True,
+         pal="o2a1a0c Lf0c58a Mb8803f D7a4f22 G5c5c64 g3c3c44 H3d2a1a h2a1c10 Pb8803f"),
     dict(id="lantern", name="Lantern", unlock=("rw.tier", 1), runes=(7, 11),
          pal="o2b1505 Lffe0a3 Mf0a23b Db5651a Rfff4c2 G4a3a2a g2e2219 H4a3a2a h2e2219 Pffcf5a"),
     dict(id="standard", name="Standard", unlock=("rw.tier", 2),
@@ -91,6 +120,42 @@ HELMS = [
                "....MDdMMdMD....",
                "....MDdMMdMD....",
                "....DD.DD.DD....",
+               "................",
+               "................",
+               "................",
+               "................"]),
+    dict(id="plumed", name="Plumed Helm", unlock=("rw.events", 10), sound="iron",
+         pal="o1a1a1e Ma7adb5 Ld9dee3 D5f656d d2c3036 Rd8262f r8f1820",
+         icon=["................",
+               "....R..RR..R....",
+               "....RR.RR.RR....",
+               ".....RRrrRR.....",
+               "......RrrR......",
+               ".....MMLLMM.....",
+               "....MLLMMMMD....",
+               "....MLMMMMMD....",
+               "....MMMMMMMD....",
+               "....MMddddMD....",
+               "....MDdMMdMD....",
+               "....MDdMMdMD....",
+               "....DD.DD.DD....",
+               "................",
+               "................",
+               "................"]),
+    dict(id="midwinter_cap", name="Midwinter Cap", unlock=("rw.midwinter", 1), sound="leather",
+         pal="o3a0a0e Kc8102e k8a0b1f Wf4f4f4 wc9d1d9",
+         icon=["................",
+               "................",
+               ".......WW.......",
+               "......WWwW......",
+               ".......Ww.......",
+               ".....KKKKKK.....",
+               "....KKKKKKKk....",
+               "...KKKKKKKKkk...",
+               "...KWKKWKKWkk...",
+               "..KKKKKKKKKKkk..",
+               "..WWWWWWWWWWWW..",
+               "..wWwWwWwWwWww..",
                "................",
                "................",
                "................",
@@ -142,7 +207,8 @@ HELMETS = {  # item -> (equipment asset, equip sound)
     "netherite_helmet": ("netherite", "netherite"), "turtle_helmet": ("turtle_scute", "turtle"),
 }
 
-FIRST_BLADE, FIRST_HELM = 101, 201  # trigger values: 1 menu, 2 reset blade, 3 reset helm
+FIRST_BLADE, FIRST_HELM = 101, 201  # trigger values: 1 menu, 2 reset blade, 3 reset helm, 4 menu page two
+MENU_SUPPORT = 4
 
 
 def palette(spec: str) -> dict[str, tuple[int, int, int, int]]:
@@ -254,6 +320,37 @@ def equipment_pixels(skin: dict) -> list[list[str | None]]:
             for col, row in ((1, 3), (2, 2), (3, 2), (4, 1), (5, 1), (5, 0), (6, 0)):
                 side(32, row, face + (col if face == 16 else 7 - col), "W")
             side(32, 3, face + (2 if face == 16 else 5), "w")
+    elif kind == "plumed":
+        for x in range(8):
+            for y in range(8):
+                top(0, x, y, shade(x, y, "M", "D") if 0 < x < 7 and 0 < y < 7 else "D")
+                if x in (3, 4):  # the crest runs front to back over the top of the hat layer
+                    top(32, x, y, "R" if x == 3 else "r")
+        for col in range(32):
+            for row in range(3):
+                side(0, row, col, "L" if row == 0 else shade(col, row, "M", "D"))
+            side(0, 3, col, "L" if col % 4 == 1 else "d")
+        for row in range(4, 7):
+            side(0, row, 11, "M")
+            side(0, row, 12, "D")
+        side(32, 0, 11, "R")  # the crest's front edge, then its tail down the back
+        side(32, 0, 12, "r")
+        for row in range(4):
+            side(32, row, 27, "R")
+            side(32, row, 28, "r")
+    elif kind == "midwinter_cap":
+        for x in range(8):
+            for y in range(8):
+                top(0, x, y, shade(x, y, "K", "k"))
+        for x, y in ((3, 3), (4, 3), (3, 4), (4, 4)):  # the pompom
+            top(32, x, y, "W")
+        for x, y in ((2, 3), (5, 4), (3, 2), (4, 5)):
+            top(32, x, y, "w")
+        for col in range(32):
+            for row in range(3):
+                side(0, row, col, "W" if row == 1 and col % 4 == 2 else shade(col, row, "K", "k"))
+            side(0, 3, col, "W")
+            side(32, 3, col, "W" if col % 2 else "w")  # the brim, turned up on the outer layer
     elif kind == "wanderers_hood":
         for x in range(8):
             for y in range(8):
@@ -302,8 +399,24 @@ def how_to_unlock(unlock) -> str:
         return f"Supporters at {TIERS[n]} or above"
     if objective == "rw.founder":
         return "Played during the first season"
+    if objective in HOLIDAYS:
+        name, when = HOLIDAYS[objective]
+        return f"From the {name} event ({when})"
+    return earned_for(unlock)
+
+
+def earned_for(unlock) -> str:
+    """What the player did, for "Unlocked X for ..." in chat."""
+    objective, n = unlock
+    if objective in HOLIDAYS:
+        return f"coming to {HOLIDAYS[objective][0]}"
     one, many = SCORES[objective]
     return f"{n} {one if n == 1 else many}"
+
+
+def page(unlock) -> int:
+    """The menu page a skin is on: 1 for skins earned in game, MENU_SUPPORT for the pass and supporter tiers."""
+    return MENU_SUPPORT if unlock[0] in SOLD else 1
 
 
 def skins():
@@ -328,7 +441,8 @@ def datapack_files() -> dict[str, str]:
 
     objectives = ["wardrobe trigger", "rw.play minecraft.custom:minecraft.play_time", "rw.hours dummy",
                   "rw.days dummy", "rw.lastday dummy", "rw.months dummy", "rw.invites dummy", "rw.tier dummy",
-                  "rw.founder dummy", "rw.day dummy", "rw.const dummy"]
+                  "rw.founder dummy", "rw.day dummy", "rw.const dummy", "rw.events dummy", "rw.playbase dummy",
+                  *(f"{o} dummy" for o in HOLIDAYS), *(f"{o}.seen dummy" for o in NOTIFY)]
     f[f"{fn}/load.mcfunction"] = "\n".join([
         "# Generated by tools/wardrobe.py. Scores are created once and kept across restarts.",
         *(f"scoreboard objectives add {o}" for o in objectives),
@@ -340,15 +454,27 @@ def datapack_files() -> dict[str, str]:
     ]) + "\n"
     f[f"{fn}/tick.mcfunction"] = f"execute as @a[scores={{wardrobe=1..}}] run function {NS}:wardrobe/use\n"
     f[f"{fn}/second.mcfunction"] = "\n".join([
-        "# Once a second: let everyone use the trigger, count days and hours, mark founders.",
+        "# Once a second: let everyone use the trigger, count days and hours, mark founders, announce unlocks.",
         "scoreboard players enable @a wardrobe",
-        *(f"scoreboard players add @a {o} 0" for o in ("rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder")),
+        *(f"scoreboard players add @a {o} 0" for o in (
+            "rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder", "rw.events", *HOLIDAYS, "rw.playbase")),
         "execute as @a run scoreboard players operation @s rw.hours = @s rw.play",
+        "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase",
         "scoreboard players operation @a rw.hours /= #hour rw.const",
         "execute if score #season rw.day matches 1 run scoreboard players set @a rw.founder 1",
         f"execute as @a unless score @s rw.lastday = #today rw.day run function {NS}:wardrobe/new_day",
+        *(f"execute as @a unless score @s {o}.seen = @s {o} run function {NS}:wardrobe/notice/{o[3:]}"
+          for o in NOTIFY),
         f"schedule function {NS}:wardrobe/second 20t replace",
     ]) + "\n"
+
+    def unlocked(s) -> str:
+        command = "/trigger wardrobe" if page(s["unlock"]) == 1 else f"/trigger wardrobe set {MENU_SUPPORT}"
+        return "tellraw @s " + text(
+            {"text": "Unlocked ", "color": "gold"}, {"text": s["name"], "color": "yellow"},
+            {"text": f" for {earned_for(s['unlock'])}. ", "color": "gold"},
+            {"text": "[Open the wardrobe]", "color": "aqua", "underlined": True,
+             "click_event": {"action": "run_command", "command": command}})
     f[f"{fn}/day.mcfunction"] = (
         "# A new real day (deploy/realms-day.timer runs this at midnight UTC). Players online get it within a second.\n"
         "scoreboard players add #today rw.day 1\n")
@@ -357,52 +483,71 @@ def datapack_files() -> dict[str, str]:
     for _, _kind, s in skins():
         objective, n = s["unlock"]
         if objective == "rw.days":
-            lines.append(f"execute if score @s rw.days matches {n} run tellraw @s " + text(
-                {"text": "Unlocked ", "color": "gold"}, {"text": s["name"], "color": "yellow"},
-                {"text": f" for {n} days played. ", "color": "gold"},
-                {"text": "[Open the wardrobe]", "color": "aqua", "underlined": True,
-                 "click_event": {"action": "run_command", "command": "/trigger wardrobe"}}))
+            lines.append(f"execute if score @s rw.days matches {n} run " + unlocked(s))
     f[f"{fn}/new_day.mcfunction"] = "\n".join(lines) + "\n"
+    for objective in NOTIFY:
+        lines = [f"# {objective} moved (the store, staff or an event set it): say which skins it just unlocked."]
+        for _, _kind, s in skins():
+            o, n = s["unlock"]
+            if o == objective:
+                lines.append(f"execute if score @s {o} matches {n}.. unless score @s {o}.seen matches {n}.. run "
+                             + unlocked(s))
+        lines.append(f"scoreboard players operation @s {objective}.seen = @s {objective}")
+        f[f"{fn}/notice/{objective[3:]}.mcfunction"] = "\n".join(lines) + "\n"
 
     use = ["# Runs as a player who just used /trigger wardrobe.",
            f"execute if score @s wardrobe matches 1 run function {NS}:wardrobe/menu",
            f"execute if score @s wardrobe matches 2 run function {NS}:wardrobe/reset_blade",
-           f"execute if score @s wardrobe matches 3 run function {NS}:wardrobe/reset_helm"]
+           f"execute if score @s wardrobe matches 3 run function {NS}:wardrobe/reset_helm",
+           f"execute if score @s wardrobe matches {MENU_SUPPORT} run function {NS}:wardrobe/menu_support"]
     use += [f"execute if score @s wardrobe matches {value} run function {NS}:wardrobe/skin/{s['id']}"
             for value, _, s in skins()]
     use += ["scoreboard players set @s wardrobe 0", "scoreboard players enable @s wardrobe"]
     f[f"{fn}/use.mcfunction"] = "\n".join(use) + "\n"
 
-    menu = ["# The wardrobe menu: owned skins are green and clickable, locked ones say how to get them.",
-            "tellraw @s " + text("", {"text": "\nWardrobe", "color": "gold", "bold": True},
-                                 {"text": "  looks only, never stats", "color": "gray"}),
-            "tellraw @s " + text(
-                {"text": "", "color": "gray"}, {"score": {"name": "@s", "objective": "rw.days"}, "color": "white"},
-                " days, ", {"score": {"name": "@s", "objective": "rw.hours"}, "color": "white"},
-                " hours, ", {"score": {"name": "@s", "objective": "rw.months"}, "color": "white"},
-                " pass months, ", {"score": {"name": "@s", "objective": "rw.invites"}, "color": "white"},
-                " friends invited")]
-    for value, kind, s in skins():
-        if value in (FIRST_BLADE, FIRST_HELM):
-            title = "Blades (hold the sword)" if kind == "blade" else "Helms (wear the helmet)"
-            menu.append("tellraw @s " + text({"text": title, "color": "gold"}))
-        how = how_to_unlock(s["unlock"])
-        target = "the sword in your hand" if kind == "blade" else "the helmet you're wearing"
-        menu.append(f"execute if {condition(s['unlock'])} run tellraw @s " + text(
-            " ", {"text": f"[{s['name']}]", "color": "green",
-                  "click_event": {"action": "run_command", "command": f"/trigger wardrobe set {value}"},
-                  "hover_event": {"action": "show_text", "value": f"Put {s['name']} on {target}"}},
-            {"text": f"  {how}", "color": "dark_gray"}))
-        menu.append(f"execute unless {condition(s['unlock'])} run tellraw @s " + text(
-            " ", {"text": s["name"], "color": "gray",
-                  "hover_event": {"action": "show_text", "value": f"Locked: {how}"}},
-            {"text": f"  {how}", "color": "dark_gray"}))
-    menu.append("tellraw @s " + text(
-        " ", {"text": "[Reset blade]", "color": "aqua",
-              "click_event": {"action": "run_command", "command": "/trigger wardrobe set 2"}},
-        "  ", {"text": "[Reset helm]", "color": "aqua",
-               "click_event": {"action": "run_command", "command": "/trigger wardrobe set 3"}}))
-    f[f"{fn}/menu.mcfunction"] = "\n".join(menu) + "\n"
+    # Two pages, so each fits the 20 lines of open chat: skins earned in game, and the pass and supporter skins.
+    pages = [(1, "menu", "skins earned in game", ["rw.days", "rw.hours", "rw.invites", "rw.events"],
+              MENU_SUPPORT, "[Pass & supporter]"),
+             (MENU_SUPPORT, "menu_support", "pass and supporter skins", ["rw.months"],
+              1, "[Earned in game]")]
+    counted = {"rw.days": "days", "rw.hours": "hours", "rw.invites": "friends invited", "rw.events": "events",
+               "rw.months": "pass months"}
+    for number, name, about, counts, other, other_label in pages:
+        line: list = [{"text": "", "color": "gray"}]
+        for i, o in enumerate(counts):
+            line += [{"score": {"name": "@s", "objective": o}, "color": "white"},
+                     f" {counted[o]}" + (", " if i < len(counts) - 1 else "")]
+        menu = [f"# The wardrobe menu, {about}: owned skins are green and clickable, locked ones say how to get them.",
+                "tellraw @s " + text("", {"text": "\nWardrobe", "color": "gold", "bold": True},
+                                     {"text": "  looks only, never stats", "color": "gray"}),
+                "tellraw @s " + text(*line)]
+        last = None
+        for value, kind, s in skins():
+            if page(s["unlock"]) != number:
+                continue
+            if kind != last:
+                title = "Blades (hold the sword)" if kind == "blade" else "Helms (wear the helmet)"
+                menu.append("tellraw @s " + text({"text": title, "color": "gold"}))
+                last = kind
+            how = how_to_unlock(s["unlock"])
+            target = "the sword in your hand" if kind == "blade" else "the helmet you're wearing"
+            menu.append(f"execute if {condition(s['unlock'])} run tellraw @s " + text(
+                " ", {"text": f"[{s['name']}]", "color": "green",
+                      "click_event": {"action": "run_command", "command": f"/trigger wardrobe set {value}"},
+                      "hover_event": {"action": "show_text", "value": f"Put {s['name']} on {target}"}},
+                {"text": f"  {how}", "color": "dark_gray"}))
+            menu.append(f"execute unless {condition(s['unlock'])} run tellraw @s " + text(
+                " ", {"text": s["name"], "color": "gray",
+                      "hover_event": {"action": "show_text", "value": f"Locked: {how}"}},
+                {"text": f"  {how}", "color": "dark_gray"}))
+        menu.append("tellraw @s " + text(
+            " ", {"text": "[Reset blade]", "color": "aqua",
+                  "click_event": {"action": "run_command", "command": "/trigger wardrobe set 2"}},
+            "  ", {"text": "[Reset helm]", "color": "aqua",
+                   "click_event": {"action": "run_command", "command": "/trigger wardrobe set 3"}},
+            "  ", {"text": other_label, "color": "aqua",
+                   "click_event": {"action": "run_command", "command": f"/trigger wardrobe set {other}"}}))
+        f[f"{fn}/{name}.mcfunction"] = "\n".join(menu) + "\n"
 
     def refuse(msg):
         return "return run tellraw @s " + text({"text": msg, "color": "red"})

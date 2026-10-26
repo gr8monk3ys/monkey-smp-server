@@ -50,13 +50,31 @@ Each season has:
 - **A season skin.** A blade that anyone who plays in the season unlocks, like Founder's Edge in Season I.
   Season skins never come back, so playing in a season is a keepsake.
 - **A champion.** The faction with the most Season Cup points (below) gets its banner hung in the Hall of
-  Banners at the next season's spawn, and a champion helm in the wardrobe.
+  Banners at the next season's spawn, a champion helm in the wardrobe, its name held for it next season,
+  and a title for the whole roster ("The season champion", below).
 - **Factions registered before launch.** Teams of up to four sign up in Discord before the server opens
   (one Open Parties and Claims party each, rule 29), so the first events have teams from day one.
-  Solo players are matched into factions by staff.
+  Solo players are matched into factions by staff. Each faction writes a one-paragraph charter when it
+  signs up (below).
 
-What carries over between seasons: wardrobe unlocks, days played, tenure, invites and supporter tiers.
-What resets: the world, items, Strength and territory. Factions can re-form.
+What carries over between seasons: wardrobe unlocks, days and hours played, tenure, invites, events
+attended, holiday skins, supporter tiers and titles, including the champion's (`tools/season.py carry`,
+"Ending a season" below). What resets: the world, items, Strength and territory. Factions can re-form.
+
+### Registering a faction
+
+Sign-up opens in Discord a week before launch: one post per faction with its name, its members' Minecraft
+names (up to four), its banner (the official flag is made from it) and a charter.
+
+The **charter** is one paragraph in the faction's own words: who they are, what they are after this
+season, and how they deal with everyone else ("We hold the river and trade with anyone. We raid the
+Red Monkeys and nobody else."). It gives each faction a story other players can read, so alliances and
+rivalries start sooner, newcomers can pick a faction to join, and event posts have something to say
+about the teams. A charter is not a rule: nobody is punished for breaking one, and the rulebook applies
+as usual. Like any post it follows the conduct rules (all ages, no hate). Staff pin the charters in
+`#smp-forum` at launch, and a faction can rewrite its own at any time.
+
+A name held by last season's champion can't be taken by another faction, nor one a letter or two away.
 
 ### The acts of a season
 
@@ -237,6 +255,31 @@ beds, pearls, totems, enchanted golden apples, maces, debuffs, escape tunnels, T
 Anyone who doesn't want to take part logs out before the countdown starts. That isn't combat logging,
 because nobody is in a fight yet.
 
+### The season champion
+
+The faction with the most Cup points after the finale is the season's champion. Its prizes last into
+the next season, because a prize that resets with the world is forgotten in a week:
+
+- **Its name is held for it.** At the next season's sign-up no other faction may register that name.
+  The champions can re-form under it or let it go; if none of them comes back, it is free again.
+- **A title for the whole roster.** Everyone in the faction when the finale ended gets `[S1 Champion]`
+  in gold before their name, in chat, the player list and on name tags, for good. Staff set it up once,
+  after the finale (one team per season, so a two-time champion picks which to show):
+
+  ```
+  team add champion_s1
+  team modify champion_s1 color gold
+  team modify champion_s1 prefix "[S1 Champion] "
+  team join champion_s1 NAME          # each member of the winning faction
+  ```
+
+  It is a scoreboard team like the supporter titles in `docs/RETENTION.md` ("Name colors and titles"),
+  and a player shows one team at a time. A champion who is also a supporter picks the title or the
+  supporter color; the supporter skins stay either way. The store's expiry command (`team leave`) also
+  drops the title, so put the player back with `team join champion_s1 NAME`.
+- **The banner and the helm** (above): the banner in the Hall of Banners at the next spawn, and a
+  champion helm in the wardrobe. Neither is built yet.
+
 ### The event catalog
 
 The weeks between pillar events rotate through these. All events follow the rulebook: no crystals, totems, pearls or Fire Aspect, and the combat rules apply.
@@ -261,6 +304,49 @@ Twists for later seasons (pick two or three for the vote):
 - One shared village that every faction must protect from raids.
 - A world seed with a huge ocean, so travel and the Happy Ghast matter.
 
+### Holidays
+
+Three dated events a year, whatever week of the season they fall in. A holiday is an overlay: spawn
+gets decorated for the week and that Saturday's event takes the holiday's theme, but the season's acts
+don't move.
+
+| Holiday | When | Next | Spawn | The event | Skin |
+| --- | --- | --- | --- | --- | --- |
+| Hallowtide | the last Saturday of October | 2026-10-31 | pumpkins, soul lanterns, cobwebs | boss night after dark, or a haunted maze | Gravelight (blade) |
+| Midwinter | the Saturday before December 25 | 2026-12-19 | snow, lights, a tree | snowball fight in the arena, then gifts at spawn | Midwinter Cap (helm) |
+| Midsummer | the Saturday nearest June 21 | 2027-06-19 | flowers, banners, a bonfire | boat race or treasure hunt | Solstice (blade) |
+
+- **The skin comes from being there.** Near the end of the event, a staff member standing with the crowd
+  runs `/scoreboard players set @a[distance=..48] rw.hallowtide 1` (`rw.midwinter`, `rw.midsummer`),
+  or `scoreboard players set NAME rw.hallowtide 1` one name at a time. Players see "Unlocked Gravelight"
+  in chat. Run `begin` and `attend` too (`docs/ADMIN.md`, "Attendance"), so it counts toward Rallier and
+  the Plumed Helm like any event.
+- **Never sold.** No store package, supporter tier or favour sets a holiday score, and
+  `tests/test_wardrobe.py` fails if a store command in `docs/RETENTION.md` does. A skin missed this
+  year comes back at next year's event, so missing one costs a year's wait, not the skin.
+- **Announce it two weeks ahead** with `/gamenight`, like any event, and say which skin it brings.
+- **Decorate in creative** (spawn rules, 22) the week before, and take it down the weekend after.
+- **In the off-season week** it runs anyway, in the locked world.
+
+A holiday skin needs the client pack it shipped in. A player on an older pack still gets the score; the
+skin is waiting in the wardrobe once they update.
+
+### Base of the Month
+
+Once a month the owners pick one base and show it off. A factions server mostly rewards building with
+safety; this gives builders a moment of their own, the way events do for fighters.
+
+- **Opt in.** A faction or a solo player enters by posting in the month's Base of the Month thread in
+  `#smp-forum` by the 25th. Nobody's base is shown without asking.
+- **Pictures from the live map, no coordinates.** Staff take two or three screenshots in BlueMap's free
+  view, close enough to show the build. No coordinates and no map link in the post: the map is public,
+  but there is no need to point raiders at the door.
+- **Judged by the owners** on look and idea (10 each, as in Build Battle). The same faction can't win two
+  months running.
+- **Posted on the first Saturday**, at the Town Hall, in `#monkey-smp`: the pictures, the builders' names
+  and a line from them about the build. The winners get a Base of the Month role in Discord for the month.
+- **No Cup points.** It is for builders, and points would turn it into a chore for every faction.
+
 ### New players in mid-season
 
 A Strength server gets harder to join every week, so catching up has to be built in:
@@ -272,6 +358,93 @@ A Strength server gets harder to join every week, so catching up has to be built
   `#smp-forum` recruitment on their first day.
 - An owner decision: a 48-hour PvP grace period for a first join. It would be a new rule, and it needs
   a plugin or command to enforce. Not built.
+
+### Telling players what changed
+
+Every rule, mod or config change players will notice goes in the player changelog, `site/changes.html`
+on the site (`docs/ADMIN.md`, "Telling players what changed"), and the same lines go in Discord's
+`#changelog` channel the day it goes live. A season that changes a rule mid-way without saying so loses
+trust faster than one that never changes.
+
+## Ending a season
+
+The runbook for weeks 11 to 13, written before Season I's week 12 so the last weeks run from a checklist.
+Paths are the live server's (`docs/LIVE.md`): commands run in `/srv/realms/TheRealms-Server/docker`, and
+`realms rcon "..."` is short for `docker compose exec realms realms rcon "..."`. Season I and season 2
+are the example; change the numbers.
+
+**Two weeks before the end**
+
+1. Announce the end date again (it was announced on day one), the finale, and what carries over (above).
+2. Open the vote on next season's twist in Discord, and set the next start date.
+3. Pick the next seed: try a few in singleplayer with the modpack, then put the winner in
+   `package/realms/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
+   matches the live world.
+
+**After the finale (end of week 11)**
+
+4. Post the final Cup standings and crown the champion: its title team ("The season champion", above).
+5. Lock the world: `realms rcon "function realms:events/season/lock"`. Players in survival switch to
+   adventure (they can look around and use doors, but not build or break; claims still guard
+   containers), PvP is off and the difficulty is peaceful. It stays locked across restarts, and players who log in during the off-season
+   are locked too. Staff in creative are not affected. `function realms:events/season/unlock` undoes it.
+6. Back it up: `docker compose exec realms realms backup`. The backup folder keeps only the newest 14, so
+   copy this one out of the rotation:
+   `mkdir -p /srv/realms/seasons && cp -a ../backups/<newest> /srv/realms/seasons/season-I`. Keep a copy
+   off the machine too: the off-site backups in `docs/LIVE.md` copy `backups/` only, so add
+   `/srv/realms/seasons` to that job or upload the folder by hand.
+7. Make the download:
+
+   ```sh
+   python3 /srv/realms/repo/tools/season.py download /srv/realms/seasons/season-I/world \
+       --season I --modpack 2.5.0 --out "/srv/realms/seasons/Monkey SMP Season I.zip"
+   ```
+
+   `--modpack` is the release that is live (`realms-deploy.sh --status`). The zip holds the map, every
+   player's inventory and stats, and the data packs, with a READ ME on opening it. It leaves out the Ledger
+   database, server config and everything outside the world folder (the RCON password, ops, whitelist).
+   Open it in singleplayer once before posting it.
+8. Upload it where anyone can download it without an account (a public bucket of its own, or a file
+   share set to "anyone with the link"), never the private backup bucket. Post the link in
+   `#monkey-smp` and on the changelog page.
+
+**Off-season (week 12)**
+
+The locked world stays up for tours and screenshots. Holidays and the Town Hall run as usual. Pass
+renewals keep counting: the store's commands still reach the old world, and the carry below picks them up.
+
+**Starting the next season**
+
+9. Release the update that opens the season (the new seed, the season's skin, the twist) and let it
+   deploy. Then pause deploys for the switch: `sudo systemctl stop realms-deploy.timer`.
+10. Stop the server: `docker compose stop`.
+11. Move the old world out: `mv ../server/world /srv/realms/seasons/season-I/world-end`. This is the final
+    state, off-season renewals included; the carry reads it.
+12. Set the new seed in the live `../server/server.properties` (`level-seed=...`). Nothing else changes.
+13. Carry the wardrobe over, before the first start:
+
+    ```sh
+    python3 /srv/realms/repo/tools/season.py carry /srv/realms/seasons/season-I/world-end \
+        --into /srv/realms/TheRealms-Server/server/world --season 2
+    ```
+
+    It writes one small data pack, `realms-carry`, into the new world folder. It holds every player's
+    wardrobe scores (days, months, invites, events, holidays, tier, founder), their hours played, and the
+    supporter, title and champion teams. It runs by itself at the new world's first load, once, and sets
+    the season to 2, so no one gets Founder's Edge in the new world.
+14. Start it: `docker compose up -d`. The world generates, the installer adds the Monkey SMP data packs, and
+    the console says "Carried N players' wardrobe scores and K teams into season 2."
+15. Check: `realms rcon "scoreboard players get #carried rw.day"` gives 1,
+    `realms rcon "scoreboard players get #season rw.day"` gives 2, and one regular's
+    `scoreboard players get NAME rw.days` matches the old world.
+16. Clear the old world off the live map (`realms rcon "bluemap purge world"`, and the same for
+    `world_the_nether` and `world_the_end`, BlueMap's map ids), then pre-generate the new one as on the
+    first setup (`docs/LIVE.md`, step 6).
+17. Turn deploys back on: `sudo systemctl start realms-deploy.timer`. Launch as in week 0, with
+    `function realms:rules/launch` (`docs/RULES.md`).
+
+The new world starts unlocked; the lock lives in the old world. The `realms-carry` pack can stay (it
+won't run twice). Delete its folder at the next restart to tidy up.
 
 ## What is built and what isn't
 
@@ -293,7 +466,13 @@ Built:
     carry.
   - Official flags: a faction's banner with a tag and a serial number, kept when placed and broken.
   - Event books (lore-tagged, vanilla max level, none for banned enchantments) and the `ev.cup` sidebar.
-  - The attendance counter (`rw.events`, once per event). The skins at 3 and 10 events are not built.
+  - The attendance counter (`rw.events`, once per event), and its skins at 3 and 10 events (Rallier, the
+    Plumed Helm).
+  - The season lock (`function realms:events/season/lock` and `unlock`).
+- The holiday skins (Gravelight, Midwinter Cap, Solstice) and the tenure ladder at 1, 2 and 3 months.
+- The season-end runbook ("Ending a season") and `tools/season.py`: the world download, and carrying
+  the wardrobe, hours played and title teams into the next world.
+- The player changelog page, `site/changes.html`.
 - The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
   block, built from the game's data reports) with a published seed, so anyone can check the draw.
 
@@ -306,7 +485,8 @@ Not built:
 | Border acts | `worldborder set` over RCON on the date. The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
 | Attendance skins | Skins at 3 and 10 events in `tools/wardrobe.py`, unlocked by `rw.events` |
 | KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
-| Season-end runbook | Lock the world, back it up, publish the download, start the next world. Add it to `docs/LIVE.md` |
+| Faction sign-up form | A form (Front Desk, in the Discord repo) for the name, members, banner and charter; a forum post works until then |
+| Base of the Month role | A Discord role, handed out by hand |
 
 Decided (the owners asked for whatever closes loopholes; change any of it in this file):
 

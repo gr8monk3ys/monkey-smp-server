@@ -16,3 +16,5 @@ tellraw @s [{"text":" cup/add {id:\"red\",points:30,why:\"Build Battle\"}","colo
 tellraw @s [{"text":" cup/show","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:events/cup/show"}},{"text":"","color":"dark_gray"}]
 tellraw @s [{"text":" begin {name:\"Faction Raid\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:events/begin {name:\"Faction Raid\"}"}},{"text":"","color":"dark_gray"}]
 tellraw @s [{"text":" attend","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:events/attend"}},{"text":"  as each player who came","color":"dark_gray"}]
+tellraw @s [{"text":" season/lock","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:events/season/lock"}},{"text":"  season end: adventure, no PvP","color":"dark_gray"}]
+tellraw @s [{"text":" season/unlock","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:events/season/unlock"}},{"text":"","color":"dark_gray"}]

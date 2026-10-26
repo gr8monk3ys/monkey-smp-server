@@ -2,6 +2,35 @@
 
 ## [Unreleased]
 
+Wardrobe skins for events, holidays and the first months of pass, the pass funnel, and the season-end
+tooling. Same Minecraft (26.3), mods and world: hosts unzip over 2.4.x. Players update the client pack (new
+skin textures).
+
+- New wardrobe skins: the Oathblades I, II and III at 1, 2 and 3 months of pass (the tenure ladder used to
+  start at 6), Rallier at 3 events attended and the Plumed Helm at 10, and three holiday skins earned only
+  by being at that holiday's event, never sold: Gravelight (Hallowtide), Midwinter Cap (Midwinter) and
+  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too.
+- The wardrobe menu has two pages (earned in game; pass and supporter), so it fits in open chat, and a player
+  gets an "Unlocked ..." line in chat when the store, staff or an event raises their months, events or a
+  holiday score (at their next login if they were offline).
+- New: `tools/season.py`. `download` zips a season's final world for singleplayer and leaves out the Ledger
+  database, mod server config and session files. `carry` writes a one-shot data pack into the next season's
+  world that puts back every wardrobe score, hours played (as `rw.playbase`) and the supporter, title and
+  champion teams.
+- New: `function realms:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
+  with PvP off and peaceful difficulty, and holds across restarts.
+- New: `tools/funnel.py` matches a Tebex payments export to the server logs: purchase, first join, 30 minutes
+  played, D7 and renewal, with the month-2 renewal rate as the headline and a list of buyers who never
+  joined. Payment exports are ignored by git (`*.csv`); the test fixture is made up.
+- Fix: `tools/retention.py` reads 26.3's join lines (`System chat: NAME joined the game`), so it no longer
+  reports zero players, and reads rotated logs in order (`-10` after `-9`).
+- New: `site/changes.html`, the player changelog ("What changed"), seeded with the player-facing changes
+  since 2.0.0.
+- Docs: `docs/SEASONS.md` gains the holidays, Base of the Month, the season champion (a held faction name
+  and a roster title), faction charters at sign-up, and the season-end runbook. `docs/RETENTION.md` gains
+  the pass funnel and DMs to passes that show Ending in Tebex; `docs/ADMIN.md` the season and holiday
+  commands and how to tell players what changed.
+
 ## [2.4.1] - 2026-10-25
 
 Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and world as 2.4.0: hosts unzip over

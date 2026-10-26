@@ -6,13 +6,16 @@ read retention from the server logs.
 
 ## The wardrobe
 
-`/trigger wardrobe` opens a clickable menu of skins for swords and helmets. A skin changes only how the
+`/trigger wardrobe` opens a clickable menu of skins for swords and helmets, on two pages: skins earned in
+game, and pass and supporter skins (a link at the bottom switches). A skin changes only how the
 item looks (its model, and on a helmet the worn look). Damage, armor, durability and enchantments
 never change, and `tests/test_wardrobe.py` fails the build if one ever does. This follows Mojang's
 rule that what players pay for must be cosmetic, and it keeps the server fair: the same pass price
 for everyone, no advantage for sale.
 
-Skins unlock by playing, by staying, by bringing friends, or by supporting:
+Skins unlock by playing, by coming to events, by staying, by bringing friends, or by supporting:
+
+![Every wardrobe skin: blades, helm icons and the helms as worn](img/wardrobe.png)
 
 | Skin | Kind | Unlocks at | Score |
 | --- | --- | --- | --- |
@@ -23,6 +26,14 @@ Skins unlock by playing, by staying, by bringing friends, or by supporting:
 | Starfall | blade | 30 days played | `rw.days 30` |
 | Verdant | blade | 1 friend invited | `rw.invites 1` |
 | Horned Helm | helm | 3 friends invited | `rw.invites 3` |
+| Rallier | blade | 3 events attended | `rw.events 3` |
+| Plumed Helm | helm | 10 events attended | `rw.events 10` |
+| Gravelight | blade | came to Hallowtide (late October) | `rw.hallowtide 1` |
+| Midwinter Cap | helm | came to Midwinter (late December) | `rw.midwinter 1` |
+| Solstice | blade | came to Midsummer (late June) | `rw.midsummer 1` |
+| Oathblade I | blade | 1 month of pass | `rw.months 1` |
+| Oathblade II | blade | 2 months of pass | `rw.months 2` |
+| Oathblade III | blade | 3 months of pass | `rw.months 3` |
 | Old Guard | blade | 6 months of pass | `rw.months 6` |
 | Wanderer's Hood | helm | 12 months of pass | `rw.months 12` |
 | Founder's Edge | blade | played in season 1 | `rw.founder 1` |
@@ -35,15 +46,32 @@ Why these counters:
 
 - **Days played, not streaks.** A day counts when a player is online at any point that UTC day. Streaks
   punish a missed weekend and push people to log in out of guilt; a count only goes up.
-- **Tenure** (`rw.months`) rewards renewing the pass: the Old Guard and the Wanderer's Hood can't be
-  bought, only kept.
+- **Tenure** (`rw.months`) rewards renewing the pass: the Oathblades, the Old Guard and the Wanderer's
+  Hood can't be bought, only kept. The ladder starts at month 1 and steps at 2 and 3, so a new buyer gets
+  something at each early renewal, when most passes lapse, instead of waiting six months. Steps add up:
+  a 3-month pass unlocks the first three at once.
+- **Events attended** (`rw.events`): Rallier at 3 and the Plumed Helm at 10. The events pack counts one
+  per event when staff run `attend` (`docs/ADMIN.md`, "Attendance").
+- **Holidays** (Gravelight, Midwinter Cap, Solstice) come only from being at that holiday's event
+  (`docs/SEASONS.md`, "Holidays"). They are never sold: no store command sets these scores, and
+  `tests/test_wardrobe.py` fails if one does. A skin missed this year comes back at next year's event.
 - **Founder.** Everyone who plays while `#season` is 1 gets Founder's Edge for good. End season 1 when
-  the first wave is in (see below) so that the edge stays rare.
+  the first wave is in (see below) so that the edge stays rare. If nobody does, the next season's carry
+  sets `#season` to 2 in the new world.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
 `realms-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7). Without it, nobody's day
 count moves.
+
+When the store, staff or an event raises a player's months, events or a holiday score, they get an
+"Unlocked ..." line in chat within a second, or at their next login if they were offline. Days played
+announce themselves the same way.
+
+All these scores live in the world, so a new season's world would start them at zero. The season-end
+runbook carries them over, hours played included, along with the supporter, title and champion teams
+below (`docs/SEASONS.md`, "Ending a season"). The season champion's title is a team like the titles
+below, `champion_s1` and so on (`docs/SEASONS.md`, "The season champion").
 
 ## Commands for the store and staff
 
@@ -101,8 +129,26 @@ That is deliberate: taking away a cosmetic someone paid for feels worse than the
   3 days away.
 - **A weekly rhythm and seasons.** One event a week in a fixed slot, a big moment every two to three
   weeks, and 12-week seasons with a finale and a fresh world: see `docs/SEASONS.md`.
-- **Comebacks.** When someone's pass lapses, a short Discord DM from staff about what's new does more
-  than a discount.
+- **Comebacks.** Reach out while a cancelled pass is still running, not after it has lapsed (below). A
+  short, personal Discord DM about what's coming does more than a discount.
+
+### When a pass is ending
+
+A player who cancels a monthly pass keeps it until the month they paid for runs out. Until then Tebex
+lists it as **Ending** (creator panel, Payments, Recurring Payments). That is the moment to talk to
+them: they still have the server, and they decided recently enough to change their mind. A month after
+it has lapsed, they have usually moved on.
+
+- **Twice a week** (Monday and Thursday), a staff member filters Recurring Payments to Ending and sends
+  each new name one Discord DM: what's coming this season, the next event, and one question, "Was there
+  something that would have kept you?" No discount, no guilt, and no second message if they don't answer.
+- **Write down the answer** next to their name in the staff channel, even when it is "no time".
+- **Once a month**, read those answers with the reasons buyers gave Tebex when they cancelled, in the
+  same sitting as the funnel numbers below. Three people saying the same thing is the next thing to fix.
+
+Tebex can also send a webhook when a buyer cancels (`recurring-payment.cancellation.requested`), so
+Front Desk could post each new Ending pass in the staff channel instead of someone checking. That is a
+job for the Discord bot's repo, not built yet.
 
 ## Reading the numbers
 
@@ -114,12 +160,45 @@ This reads the joins in the server logs. Nothing leaves the machine. It prints, 
 players, the share who came back at least 1, 7 and 30 days later (D1, D7, D30), plus the number of
 different players each week. A cell shows `-` until enough days have passed to judge it.
 
-Worth checking monthly, next to the store's pass renewals:
+Worth checking monthly, next to the pass funnel below:
 
 - **D7 under about 30%**: the first days aren't landing. Work on onboarding before adding content.
 - **Different players each week falling** while D7 holds steady: you aren't getting new players. The
   invite ladder and the site matter more than features.
 - **Pass churn** (passes not renewed, divided by passes active at the start of the month).
+
+### The pass funnel: from purchase to renewal
+
+```sh
+python3 /srv/realms/repo/tools/funnel.py ~/payments.csv /srv/realms/TheRealms-Server/server/logs --log-tz America/Los_Angeles
+```
+
+Export the payments from Tebex (creator panel, Payments, Export as CSV) and copy the file to the VPS.
+The tool matches each buyer to the server logs by name, and by UUID after a name change, and follows
+them through five steps: the purchase, their first join, 30 minutes played, coming back a week after
+that first join (D7), and the pass renewed. It prints:
+
+- **Month-2 renewal**, the headline: of the monthly passes whose first month is over, the share that
+  paid for a second. The budget below runs on this number. Passes whose month isn't over yet are counted
+  as "not due yet", not as lost.
+- The same for 3-month passes, once their three months are up.
+- A row for each month's new buyers: how many joined, played 30 minutes, came back after a week, and
+  renewed.
+- **Bought a pass but never joined**: send each of them the install help (`docs/SHARING.md`) that day.
+
+D7 is the diagnostic, renewal is the result. Read the steps in order and fix the first one that leaks:
+
+- **Buyers who never join, or leave before 30 minutes**: the install or the first hour is the problem
+  (the modpack download, the launch-hour rules, nobody saying hello), not the content.
+- **30 minutes, but no D7**: the first week. See "The first hour" and the weekly rhythm above.
+- **A good D7, but no renewal**: the month itself, its events and the Ending DMs' answers.
+
+The CSV holds buyers' emails and IP addresses: keep it on the VPS or your own machine, never in the
+repo (`.gitignore` skips `*.csv`; the only one committed is the made-up fixture in `tests/fixtures/`),
+and delete it after the run. Tebex's dates are UTC and the live server logs Pacific time (`TZ` in
+`docker/.env`), which is what `--log-tz` is for. The tool finds Tebex's columns by name and says
+which it used; `--col username="Minecraft Username"` overrides a wrong guess. It warns about buyers who
+bought before the oldest log, since it can't follow them.
 
 ## Churn and the budget
 

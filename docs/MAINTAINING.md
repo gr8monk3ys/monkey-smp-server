@@ -278,7 +278,9 @@ players") came from this harness on an i7-8700K.
 
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
-2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
+2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
+   pack, the wardrobe, events), date its entry at the top of `site/changes.html` too, in players' words
+   (`docs/ADMIN.md`, "Telling players what changed").
 3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches

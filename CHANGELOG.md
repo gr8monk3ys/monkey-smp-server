@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+X-ray protection and moderation tools. Server only: players need nothing new.
+
+- New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
+  players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
+  stone. It covers Skniro's Nether and End ores too, which aren't in the `c:ores` tag. This is what now enforces
+  B15 (x-ray), B17 and B19 (`docs/RULES.md`).
+- New: **MinerTrack**, alert only (`defaults/config/MinerTrack/config.yml`). It flags players who mine from one
+  buried diamond, emerald or ancient debris vein straight to the next, and alerts moderators at VL 2, 4 and 5
+  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, say). ADMIN.md also has the saved Ledger
+  query for diamond-ore breaks.
+- New: a test that the world seed never ends up in what players get (the client pack, the player zip, the site,
+  RULES.md). It isn't in any of them today; only the server zip has it.
+- New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
+  **InvView** (look into a player's inventory and ender chest). The rules' "temporary ban (1 to 7 days)" is now
+  `tempban NAME 3d reason`. See "Moderation" in `docs/ADMIN.md`.
+- New: **Vanilla Permissions**, so LuckPerms ranks can grant vanilla commands. Builders' `/gamemode` and
+  moderators' teleport and whitelist now work without op.
+- Ranks: moderators get the BanHammer, Vanish and InvView commands (InvView look only); admins can also move items
+  in other players' inventories. Rank files are only copied where missing, so an existing server keeps its old
+  ranks: see "Existing servers" under "Moderation" in `docs/ADMIN.md`.
+- Changed: Distant Horizons on the server no longer builds or sends LODs (`defaults/config/DistantHorizons.toml`:
+  `synchronizeOnLoad` and `enableRealTimeUpdates` off, `generatorPlan = "DISABLED"`). Its LODs came from the real
+  world, so they carried every real ore, buried or not, past AntiXray. Players still see LODs of land they have
+  walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
+  A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
+  `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
+
+## [2.4.2] - 2026-10-25
+
+Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts
+unzip over 2.4.1; players need nothing new. Default config changes reach only new servers; the entries
+below say what to change on an existing one.
+
 - Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).
@@ -54,6 +87,17 @@
   `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
   Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
   pinned by hand"). Players need nothing new: it isn't in the client pack.
+- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
+  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
+  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
+  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
+  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
+- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
+  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
+  approves the pack, Modrinth App players import the `.mrpack` as before.
+- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
+  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
+  without Actions") lists the steps.
 - Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
   the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
   morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory

@@ -8,9 +8,9 @@ window.REALMS = {
   STORE_URL: "",
   // The player modpack. The GitHub releases are private, so until the Modrinth project is up the site serves
   // the release's own .mrpack and player zip from site/pack/ (docs/MAINTAINING.md, Releasing).
-  MODPACK_URL: "pack/TheRealms-Client-2.4.1.mrpack",
+  MODPACK_URL: "pack/TheRealms-Client-2.4.2.mrpack",
   // The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same .mrpack.
-  INSTALLER_URL: "pack/TheRealms-Player-2.4.1.zip",
+  INSTALLER_URL: "pack/TheRealms-Player-2.4.2.zip",
   // Live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone.
   MAP_URL: "https://map.monkeysmp.lscaturchio.xyz",
 };

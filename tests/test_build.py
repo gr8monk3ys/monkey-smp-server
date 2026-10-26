@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import zipfile
 
@@ -6,6 +7,7 @@ import pytest
 from conftest import PLAYER_FILES, fake_player
 
 import build
+from repo import REPO
 
 RELEASES = ["paper_repo", "fabric_repo"]
 
@@ -84,6 +86,38 @@ def test_build_main_writes_all_three_files(tmp_path, fabric_repo, capsys, monkey
                                         "TheRealms-Player-2.0.0.zip"))
 
 
+CHANGELOG = ("# Changelog\n\n## [Unreleased]\n\n## [2.0.0] - 2026-10-01\n\nFabric.\n\n- New mods.\n\n"
+             "## [1.1.0]\n\nOld.\n")
+
+
+def test_changelog_section_is_one_versions_section():
+    assert build.changelog_section(CHANGELOG, "2.0.0") == "Fabric.\n\n- New mods."
+    assert build.changelog_section(CHANGELOG, "1.1.0") == "Old."
+    with pytest.raises(SystemExit, match=r"no '## \[9.9.9\]' section"):
+        build.changelog_section(CHANGELOG, "9.9.9")
+    with pytest.raises(SystemExit, match="no"):
+        build.changelog_section(CHANGELOG, "Unreleased")
+
+
+def test_build_main_writes_the_release_notes(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    (fabric_repo.root / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
+    build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
+    notes = (tmp_path / "notes.md").read_text(encoding="utf-8")
+    assert notes == "Fabric.\n\n- New mods.\n\n" + build.DOWNLOADS
+    assert notes.splitlines()[4] == "### Downloads" and notes.endswith(".mrpack.)\n")
+
+
+def test_build_main_needs_a_changelog_section_for_the_notes(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    (fabric_repo.root / "CHANGELOG.md").write_text("# Changelog\n\n## [1.1.0]\n\nOld.\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match=r"no '## \[2.0.0\]' section"):
+        build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
+    assert not (tmp_path / "dist").exists() and not (tmp_path / "notes.md").exists()
+
+
 def test_build_fails_clearly_without_player_folder(tmp_path, fabric_repo, monkeypatch):
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
     assert not fabric_repo.player.exists()
@@ -137,3 +171,28 @@ def test_build_leaves_out_what_a_local_install_or_docker_left_in_package(tmp_pat
                 or n.startswith("smoke-console")}
     assert "docker/entrypoint.sh" in names
     assert (z.getinfo("TheRealms-Server/docker/entrypoint.sh").external_attr >> 16) & 0o777 == 0o755
+
+
+# --- the world seed --------------------------------------------------------------------------------
+
+def _members(z: zipfile.ZipFile):
+    """(name, bytes) of every file, including the files inside a zipped .mrpack."""
+    for name in z.namelist():
+        data = z.read(name)
+        if name.endswith(".mrpack"):
+            yield from ((f"{name}/{inner}", d) for inner, d in _members(zipfile.ZipFile(io.BytesIO(data))))
+        else:
+            yield name, data
+
+
+def test_nothing_players_get_contains_the_world_seed(tmp_path):
+    """The seed shows where every ore and structure is (seed-based x-ray), so only the server zip has it."""
+    seed = REPO.load_manifest()["world"]["seed"].lstrip("-").encode()
+    mrpack = build.build_client("0.0.0", REPO, tmp_path)
+    player = build.build_player("0.0.0", mrpack, REPO, tmp_path)
+    for out in (mrpack, player):
+        assert not [name for name, data in _members(zipfile.ZipFile(out)) if seed in data], out.name
+    server = zipfile.ZipFile(build.build_server("0.0.0", REPO, tmp_path))
+    assert seed in server.read("TheRealms-Server/realms/manifest.json")  # the check can see it where it is
+    public = [*REPO.root.joinpath("site").rglob("*"), REPO.root / "docs" / "RULES.md"]
+    assert not [p for p in public if p.is_file() and seed in p.read_bytes()]

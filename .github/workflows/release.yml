@@ -22,22 +22,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Build (fails if the tag doesn't match the manifest version)
-        run: python tools/build.py
-      - name: Release notes from CHANGELOG.md
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          # Literal match on "## [x.y.z]": the section up to the next "## " heading.
-          awk -v h="## [$version]" 'index($0, h) == 1 {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then echo "CHANGELOG.md has no '## [$version]' section"; exit 1; fi
-          cat >> notes.md <<'EOF'
-
-          ### Downloads
-          - **TheRealms-Server-*.zip** - for whoever hosts. Unzip, double-click `Start Server.bat`, read `READ ME FIRST.txt`.
-            - Hosting on a Mac, Linux or with Docker? Same zip: double-click `Start Server.command` (Mac), run `./start.sh` (Linux), or in the `docker` folder copy `.env.example` to `.env`, set `EULA=TRUE` and run `docker compose up -d`.
-          - **TheRealms-Client-*.mrpack** - for players. Import into Prism Launcher or the Modrinth App.
-          - **TheRealms-Player-*.zip** - for players who use the official Minecraft Launcher. Unzip, double-click `Install for Minecraft Launcher.bat`, read `READ ME.txt`. (Using the Modrinth App or Prism Launcher instead? Import the .mrpack.)
-          EOF
+      # The notes are the version's CHANGELOG.md section plus what each download is for; the build fails
+      # if the tag doesn't match the manifest version or the CHANGELOG has no section for it.
+      - name: Build, and the release notes from CHANGELOG.md
+        run: python tools/build.py --notes notes.md
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -12,10 +12,15 @@ client/fabric-profile.json, the Fabric launcher profile the installer adds to th
 
 None of the files contains third-party jars or datapacks: the server downloads them on first start
 and the launcher downloads the client mods, both from their official sources.
+
+  python tools/build.py --notes notes.md  also writes the GitHub release's notes: the version's CHANGELOG.md
+                                          section and what each download is for
 """
+import argparse
 import fnmatch
 import json
 import os
+import sys
 import zipfile
 from pathlib import Path
 
@@ -31,6 +36,19 @@ EXECUTABLE = (".sh", ".command")
 # then files by their path relative to package/ (fnmatch patterns).
 RUNTIME_DIRS = {"server", "java", "backups", "exports", "downloads", "pwsh"}
 RUNTIME_FILES = (".realms-launch", "smoke-console.log*", "docker/.env")
+# The end of every GitHub release's notes, one markdown line per entry.
+DOWNLOADS = "\n".join([
+    "### Downloads",
+    "- **TheRealms-Server-*.zip** - for whoever hosts. Unzip, double-click `Start Server.bat`, read "
+    "`READ ME FIRST.txt`.",
+    "  - Hosting on a Mac, Linux or with Docker? Same zip: double-click `Start Server.command` (Mac), run "
+    "`./start.sh` (Linux), or in the `docker` folder copy `.env.example` to `.env`, set `EULA=TRUE` and run "
+    "`docker compose up -d`.",
+    "- **TheRealms-Client-*.mrpack** - for players. Import into Prism Launcher or the Modrinth App.",
+    "- **TheRealms-Player-*.zip** - for players who use the official Minecraft Launcher. Unzip, double-click "
+    "`Install for Minecraft Launcher.bat`, read `READ ME.txt`. (Using the Modrinth App or Prism Launcher "
+    "instead? Import the .mrpack.)",
+]) + "\n"
 
 
 def _add(z: zipfile.ZipFile, arcname: str, data: bytes) -> None:
@@ -103,18 +121,48 @@ def build_player(version: str, mrpack: Path, repo=REPO, dist: Path | None = None
     return out
 
 
-def main(repo=REPO, dist: Path | None = None):
+def changelog_section(changelog: str, version: str) -> str:
+    """The `## [version]` section of CHANGELOG.md, up to the next `## ` heading."""
+    heading = f"## [{version}]"
+    lines, on = [], False
+    for line in changelog.splitlines():
+        if line.startswith(heading):
+            on = True
+        elif on and line.startswith("## "):
+            break
+        elif on:
+            lines.append(line)
+    section = "\n".join(lines).strip()
+    if not section:
+        raise SystemExit(f"CHANGELOG.md has no '{heading}' section")
+    return section
+
+
+def release_notes(version: str, repo=REPO) -> str:
+    """The GitHub release's notes: the version's CHANGELOG section, then what each download is for."""
+    return changelog_section((repo.root / "CHANGELOG.md").read_text(encoding="utf-8"), version) + "\n\n" + DOWNLOADS
+
+
+def main(repo=REPO, dist: Path | None = None, argv=()):
+    p = argparse.ArgumentParser(description="Build the release files into dist/.")
+    p.add_argument("--notes", type=Path, metavar="FILE",
+                   help="also write the GitHub release notes (CHANGELOG section + downloads) to FILE")
+    args = p.parse_args(argv)
     version = repo.load_manifest()["version"]
     tag = os.environ.get("GITHUB_REF_NAME", "")
     if tag.startswith("v") and tag[1:] != version:
         raise SystemExit(f"tag {tag} doesn't match manifest version {version}")
     _require_player(repo)
+    notes = release_notes(version, repo) if args.notes else None
     dist = Path(dist or repo.dist)
     dist.mkdir(parents=True, exist_ok=True)
     mrpack = build_client(version, repo, dist)
     for path in (build_server(version, repo, dist), mrpack, build_player(version, mrpack, repo, dist)):
         print(f"{path}  {path.stat().st_size / 1e6:.1f} MB")
+    if notes:
+        args.notes.write_text(notes, encoding="utf-8", newline="\n")
+        print(f"{args.notes}  release notes for {version}")
 
 
 if __name__ == "__main__":
-    main()
+    main(argv=sys.argv[1:])

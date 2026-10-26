@@ -5,8 +5,12 @@ Each release has three downloads. Send each person only what they need.
 | File | Who gets it | What they do with it |
 |---|---|---|
 | `TheRealms-Server-<version>.zip` | **the host** (one person) | Runs the server on their Windows PC, Mac or Linux machine (or with Docker), or prepares it for an online host |
-| `TheRealms-Player-<version>.zip` | **every player** (the host too, if they play) | Installs the game mods (Windows), then joins |
-| `TheRealms-Client-<version>.mrpack` | players on a **Mac or Linux**, or who already use the Modrinth App or Prism Launcher | Import it instead of using the player zip (the player zip contains this file too) |
+| `TheRealms-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | Installs the game mods, then joins |
+| `TheRealms-Client-<version>.mrpack` | players using the Modrinth App or Prism Launcher, while the Modrinth page isn't up | Import it instead of using the player zip (the player zip contains this file too) |
+
+Most players need no file at all: the client pack is the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
+on Modrinth, which the Modrinth App installs and updates on any computer. Send them the link (once Modrinth has
+approved the page; see [MODRINTH.md](MODRINTH.md)).
 
 All three are tiny (under 1 MB). They don't contain the game files themselves: those are downloaded from
 their official websites the first time, and every file is checked before it is used.
@@ -41,7 +45,28 @@ You also need to play with the mods: use the player zip I'm sending everyone.
 
 ## Message for players
 
-Copy, fill in the server address, and send with `TheRealms-Player-<version>.zip`:
+Copy, fill in the server address, and send. Most players need nothing else:
+
+```text
+Here's how to join Monkey SMP (Minecraft Java Edition, modded):
+
+1. Install the Modrinth App (free, Windows, Mac or Linux): https://modrinth.com/app
+   Sign in with the Microsoft account you play Minecraft with.
+2. Open https://modrinth.com/modpack/monkeysmp and press Install (or search "Monkey SMP"
+   in the app). It downloads the mods (~520 MB).
+3. In the instance's settings, Java and memory: give it 6 GB. Then press Play.
+   The first start is slow (a few minutes) - that's normal.
+4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
+
+When the pack changes, the app offers the update: take it before you play.
+Tell me your exact Minecraft username so I can add you to the guest list.
+```
+
+Until Modrinth has approved the page, send `TheRealms-Client-<version>.mrpack` with it and change step 2 to
+"In the app, + > Import, choose the .mrpack file".
+
+For a Windows player who'd rather keep the normal Minecraft Launcher, send `TheRealms-Player-<version>.zip`
+with this instead:
 
 ```text
 Here's how to join Monkey SMP (Minecraft Java Edition, modded):
@@ -55,9 +80,6 @@ Here's how to join Monkey SMP (Minecraft Java Edition, modded):
    The first start is slow (a few minutes) - that's normal.
 4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
 
-On a Mac or Linux (or if you already use the Modrinth App or Prism Launcher): skip step 2,
-install Prism Launcher (prismlauncher.org) or the Modrinth App, and import the .mrpack file
-from the zip instead. Then do step 4 there.
 Tell me your exact Minecraft username so I can add you to the guest list.
 ```
 
@@ -66,6 +88,7 @@ Tell me your exact Minecraft username so I can add you to the guest list.
 - **Host:** stop the server, unzip the new server zip **over** the old folder, start it again.
   (Exception: going from 1.x to 2.x needs a new folder - it's a new world.) On a Mac, Finder won't
   unzip over a folder; [ADMIN.md](ADMIN.md#day-to-day) says what to do instead.
-- **Players:** unzip the new player zip and double-click the installer again. It updates the same
-  "Monkey SMP" installation and keeps your settings, worlds and screenshots. Prism Launcher and
-  Modrinth App players import the new `.mrpack`.
+- **Players:** Modrinth App players take the update the app offers (it appears once `tools/modrinth.py` has
+  published the release). Players on the normal launcher unzip the new player zip and double-click the
+  installer again: it updates the same "Monkey SMP" installation and keeps their settings, worlds and
+  screenshots. Players who imported a `.mrpack` import the new one.

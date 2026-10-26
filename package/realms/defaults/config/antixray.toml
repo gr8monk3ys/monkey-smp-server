@@ -1,0 +1,46 @@
+# AntiXray (DrexHD). The mod's own default with four changes: it is switched on (the mod ships
+# `enabled = false`), the Overworld also disguises sulfur and cinnabar, the Nether also hides Skniro's
+# Nether ores, and the End gets a section for Skniro's End ores. Skniro's ores aren't in the `c:ores`
+# tag (the Nether ores are only in the older `c:coal_ores`-style tags, the End ores in no `c:` tag), so
+# they are listed by id. A section is named after its dimension; a dimension without one uses the
+# top-level values, which hide nothing.
+
+enabled = true
+usePermission = false
+
+# Engine mode 3 sends fake ores everywhere ores could be, so x-ray shows noise. Tectonic's mountains go
+# above maxBlockHeight; the only ores up there are coal, iron and emerald. Sulfur Caves Plus ores (in
+# `c:ores`) sit in sulfur and cinnabar, so those two are replacement blocks as well: otherwise the
+# only fake ores in a sulfur cave would be exactly where the real ones are.
+[overworld]
+enabled = true
+engineMode = 3
+maxBlockHeight = 256
+updateRadius = 2
+lavaObscures = false
+hiddenBlocks = ["#c:ores", "raw_copper_block", "raw_iron_block", "raw_gold_block", "!#antixray:hidden_only_ores"]
+replacementBlocks = ["#antixray:hidden_only_ores", "stone", "deepslate", "andesite", "calcite", "diorite", "dirt", "granite", "gravel", "sand", "tuff", "mossy_cobblestone", "obsidian", "clay", "infested_stone", "amethyst_block", "budding_amethyst", "chest", "sulfur", "cinnabar"]
+
+# Engine mode 1 swaps hidden blocks for netherrack (end stone in the End).
+[the_nether]
+enabled = true
+engineMode = 1
+maxBlockHeight = 128
+updateRadius = 2
+lavaObscures = true
+hiddenBlocks = ["ancient_debris", "nether_quartz_ore", "nether_gold_ore", "gold_block", "gilded_blackstone",
+    "nether_ores_reborn:coal_ore", "nether_ores_reborn:copper_ore", "nether_ores_reborn:diamond_ore",
+    "nether_ores_reborn:emerald_ore", "nether_ores_reborn:gold_ore", "nether_ores_reborn:iron_ore",
+    "nether_ores_reborn:lapis_ore", "nether_ores_reborn:redstone_ore"]
+
+# Skniro's End ores generate from y 0 to 256.
+[the_end]
+enabled = true
+engineMode = 1
+maxBlockHeight = 256
+updateRadius = 2
+lavaObscures = false
+hiddenBlocks = ["nether_ores_reborn:end_coal_ore", "nether_ores_reborn:end_copper_ore",
+    "nether_ores_reborn:end_diamond_ore", "nether_ores_reborn:end_emerald_ore",
+    "nether_ores_reborn:end_gold_ore", "nether_ores_reborn:end_iron_ore",
+    "nether_ores_reborn:end_lapis_ore", "nether_ores_reborn:end_redstone_ore"]

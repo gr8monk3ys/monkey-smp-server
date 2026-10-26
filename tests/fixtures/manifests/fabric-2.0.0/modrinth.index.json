@@ -27,7 +27,7 @@
         "sha512": "da03640015d53ef3557a5ffac4abd0f32b12a8562f7612ff590f84a808d7750a809b5688e49768b5e1678a38a89009f03a635363a6b0a4b5fa18aec6eaacceaf"
       },
       "env": {
-        "client": "required",
+        "client": "optional",
         "server": "unsupported"
       },
       "downloads": [
@@ -42,7 +42,7 @@
         "sha512": "9f8b65c611335d0b1a63b671660bd9e35d4719d3ffda57b27133bc8c1ff351a4ca8d61dcf9f0ec5b1068834ea6b8403f1ef73b798cab7524b29f32694eacbb76"
       },
       "env": {
-        "client": "required",
+        "client": "optional",
         "server": "unsupported"
       },
       "downloads": [

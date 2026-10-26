@@ -82,6 +82,76 @@ def test_an_unknown_key_is_reported():
     assert errors == ['data-link="NOPE" is not set in config.js']
 
 
+LAUNCH = "2026-11-22T01:00:00Z"   # Saturday 21 November 2026, 5 PM Pacific
+
+
+def launching(at=LAUNCH):
+    return {**links(), "LAUNCH_AT": at}
+
+
+def test_a_launch_time_gets_written_into_its_element():
+    page, errors = site_links.stamp('<p class="launch"><time data-launch="{date}, {pacific} ({eastern})">'
+                                    "soon</time></p>", launching())
+    assert page == ('<p class="launch"><time data-launch="{date}, {pacific} ({eastern})" '
+                    f'datetime="{LAUNCH}">Saturday 21 November 2026, 5 PM Pacific (8 PM Eastern)</time></p>')
+    assert errors == []
+    assert site_links.stamp(page, launching())[0] == page
+
+
+def test_a_meta_tag_gets_the_launch_in_its_content():
+    tag = ('<meta name="description" content="Old." data-launch="Claim what isn\'t nailed down & more. '
+           'Season I launch: {date}, {pacific}.">')
+    page, errors = site_links.stamp(tag, launching())
+    assert page == ('<meta name="description" content="Claim what isn\'t nailed down &amp; more. Season I launch: '
+                    'Saturday 21 November 2026, 5 PM Pacific." data-launch="Claim what isn\'t nailed down & more. '
+                    'Season I launch: {date}, {pacific}.">')
+    assert errors == []
+    assert site_links.stamp(page, launching())[0] == page
+
+
+def test_moving_the_launch_rewrites_the_text_and_datetime():
+    once, _ = site_links.stamp('<time data-launch="{date} at {pacific}">x</time>', launching())
+    page, _ = site_links.stamp(once, launching("2027-02-21T01:30:00+00:00"))
+    assert page == ('<time data-launch="{date} at {pacific}" datetime="2027-02-21T01:30:00+00:00">'
+                    "Saturday 20 February 2027 at 5:30 PM Pacific</time>")
+
+
+def test_launch_words_follow_daylight_saving_and_the_eastern_date():
+    summer = site_links.launch_words(site_links.launch_time("2027-06-19T19:00:00-07:00"))
+    assert summer == {"date": "Saturday 19 June 2027", "pacific": "7 PM Pacific", "eastern": "10 PM Eastern"}
+    late = site_links.launch_words(site_links.launch_time("2026-11-22T06:00:00Z"))
+    assert late == {"date": "Saturday 21 November 2026", "pacific": "10 PM Pacific", "eastern": "Sunday 1 AM Eastern"}
+    noon = site_links.launch_words(site_links.launch_time("2026-12-01T20:00:00Z"))
+    assert noon["pacific"] == "12 PM Pacific"
+
+
+def test_a_page_without_a_launch_element_needs_no_launch_time():
+    assert site_links.stamp('<p>Nothing to launch.</p>', links()) == ('<p>Nothing to launch.</p>', [])
+
+
+def test_a_missing_or_bad_launch_time_is_reported():
+    for value in [None, "", "next Saturday", "2026-11-21T17:00:00"]:
+        given = links() if value is None else launching(value)
+        page, errors = site_links.stamp('<time data-launch="{date}">x</time>', given)
+        assert page == '<time data-launch="{date}">x</time>'
+        assert len(errors) == 1 and "LAUNCH_AT" in errors[0], value
+
+
+def test_a_launch_element_must_hold_only_text_and_known_words():
+    page, errors = site_links.stamp('<p data-launch="{date}">On <b>launch</b> day</p>', launching())
+    assert page == '<p data-launch="{date}">On <b>launch</b> day</p>'
+    assert errors == ['<p data-launch="{date}"> must hold only text']
+    _, errors = site_links.stamp('<span data-launch="{when}">x</span>', launching())
+    assert errors == ['data-launch="{when}" can only use {date}, {pacific} and {eastern}']
+
+
+def test_the_real_site_says_when_the_season_opens():
+    config = (REPO.root / "site" / "config.js").read_text(encoding="utf-8")
+    when = site_links.launch_time(site_links.load_links(config)["LAUNCH_AT"])
+    index = (REPO.root / "site" / "index.html").read_text(encoding="utf-8")
+    assert site_links.launch_words(when)["date"] in index
+
+
 def fake_site(tmp_path, pack_version="1.2.3", manifest_version="1.2.3"):
     repo = Repo(tmp_path)
     (tmp_path / "site" / "pack").mkdir(parents=True)

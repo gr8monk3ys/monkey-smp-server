@@ -58,7 +58,8 @@ Each season has:
   signs up (below).
 
 What carries over between seasons: wardrobe unlocks, days and hours played, tenure, invites, events
-attended, holiday skins, supporter tiers and titles, including the champion's (`tools/season.py carry`,
+attended, holiday skins, weekly challenges done, the launch weekend's skin, supporter tiers and titles,
+including the champion's (`tools/season.py carry`,
 "Ending a season" below). What resets: the world, items, Strength and territory. Factions can re-form.
 
 ### Registering a faction
@@ -85,7 +86,7 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 
 | Week | Act or event | What happens |
 | --- | --- | --- |
-| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone. |
+| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone, and Founder's Circlet for 10 minutes online before the end of Sunday (Pacific). Challenge week 0. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
 | 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
@@ -102,6 +103,37 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 If the server is full early, open things sooner. If it is quiet, hold the finale back a week. The acts
 are a plan, not a contract. What is promised is the end date.
 
+#### Season I calendar
+
+Season I opens on **Saturday 21 November 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
+`site/config.js`, and the run sheet in docs/LAUNCH.md). Week N's event is the Saturday N weeks later at
+6 PM Pacific, 9 PM Eastern. Daylight saving time ends on 1 November 2026 and starts again on 14 March 2027,
+so every Season I time is standard time.
+
+| Week | Saturday | The event | Also that week |
+| --- | --- | --- | --- |
+| 0 | 21 Nov 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 22 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 22 Nov |
+| 1 | 28 Nov | Faction Raid I | Thanksgiving is Thursday 26 Nov |
+| 2 | 5 Dec | The border breaks: 2500 to 4000 | Town Hall (first Saturday). Midwinter announced. |
+| 3 | 12 Dec | **Dragon Night**: the End opens, Anarchy for 90 minutes | Midwinter decorating at spawn starts |
+| 4 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | Netherite age announced |
+| 5 | 26 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter comes down. The day after Christmas: expect a thin crowd. |
+| 6 | 2 Jan 2027 | Faction Raid II | Town Hall. The first Base of the Month (entries by 25 Dec). |
+| 7 | 9 Jan | Build Battle II | |
+| 8 | 16 Jan | The border breaks again: 4000 to 6000 | |
+| 9 | 23 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
+| 10 | 30 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
+| 11 | 6 Feb | **The finale**. The world locks after it. | Town Hall. Base of the Month (entries by 25 Jan). |
+| 12 | 13 Feb | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 19 Feb |
+| | 20 Feb | Season II opens (proposed; owners confirm it by 23 Jan) | |
+
+- **The end date to announce on day one:** Season I ends with the finale on Saturday 6 February 2027. The
+  world stays up, locked, through the off-season week, and Season II is planned for Saturday 20 February.
+- **Holidays in the season:** only Midwinter (19 Dec). Hallowtide (31 Oct 2026) comes before launch, while
+  the world is still closed, so Gravelight waits for Hallowtide 2027 (30 Oct). Midsummer (19 Jun 2027) is
+  after Season I.
+- **No Base of the Month in December.** Bases are four days old on 25 November.
+
 ### A weekly rhythm
 
 One headline event a week, at a fixed time (Saturday, 6 pm Pacific, which is the group's evening).
@@ -113,6 +145,53 @@ Most weeks it is the act or pillar event from the table above. When a week has o
 - The monthly Town Hall the bot already runs (first Saturday) is where players give feedback on the
   season.
 - Post the result and the screenshots in `#monkey-smp` the same night.
+- On Sunday at 7 pm Pacific the week's faction standings close (below) and post themselves, the day
+  after the event, so the event's Cup points are in.
+
+### Weekly standings
+
+Every faction gets one rank a week, from four things: event wins, land, strength and fighting. The Cup
+alone decides the champion; the standings give the weeks between events something to play for, and a
+faction that never wins an event still has a column it can lead.
+
+| Column | What counts | Weight |
+| --- | --- | --- |
+| Cup | The faction's Season Cup points so far (`ev.cup`) | 40 |
+| Land | Chunks its members have claimed (Open Parties and Claims) | 20 |
+| Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
+| Kills | PvP kills by its members this week, outside the event arena | 20 |
+| Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
+
+Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
+the faction with the most land gets 20, one with half as much gets 10. Add the columns up and the bounties
+on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
+7 chunks (the most), Strength 7 (the most) and 4 kills to the Blue Herons' 6: 40 + 20 + 20 + 13 = 93, and
+98 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
+the factions share the rank. Strength below zero counts as zero.
+
+- **Who is a faction.** An Open Parties and Claims party; its name is the party name (`/openpac`), or
+  "NAME's faction" after its owner if it has none. Players outside a party aren't ranked.
+- **The Cup column** is matched on names: name a faction's Cup entry as the party is named (or after its
+  owner), ignoring case, spaces and symbols. An entry that matches no party shows on its own.
+- **Kills** count from a snapshot taken when the week starts, so only this week's count. Arena kills
+  don't (the arena's fights are for the Cup). Feeding kills to a friend is exploit B13: staff take them
+  back.
+- **Where it shows.** Sunday at 7 pm Pacific the week closes: the final table is posted in Discord
+  (`STANDINGS_WEBHOOK_URL`, else the main channel), announced in chat, and kept on the board. The board is
+  a text display at spawn, and `/trigger standings` shows it in chat anywhere. It has this week so far,
+  updated every hour, and last week's final top five.
+- Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
+  board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
+
+`tools/standings.py` works it out, the `realms-standings` data pack counts kills and holds the board, and
+`deploy/realms-standings.sh` runs it on the VPS (docs/LIVE.md); staff commands are in docs/ADMIN.md.
+
+Between events, three **weekly challenges** (one solo, one faction, one explore) give everyone something to
+do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
+the Saturday event, and each one done counts toward three wardrobe skins (`docs/RETENTION.md`, "Weekly
+challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
+launch weekend is challenge week 0, and week 1 starts on Monday 23 November 2026. See what runs when with
+`python tools/challenges.py schedule`.
 
 ### The pillar events
 
@@ -130,7 +209,8 @@ that loses one fight is still in the race.
 | The finale | 50 | 30 | 15 | 5 |
 
 Keep the standings on a sidebar at spawn (`scoreboard objectives add ev.cup dummy`, one entry per
-faction) and post them in `#monkey-smp` after every event.
+faction) and post them in `#monkey-smp` after every event. The Cup is also the biggest column of the
+weekly standings (above).
 
 #### Build Battle (launch days 1 and 2)
 
@@ -290,7 +370,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | --- | --- | --- |
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. | Exploration, small fights, new players |
-| **Bounty board** | Staff post bounties on the top Strength holders. Claiming one pays coins and a title. | Keeping the top in check |
+| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
 | **Market day** | Trading at spawn with stalls; spawn rules apply. | The economy, meeting other factions |
@@ -429,11 +509,14 @@ renewals keep counting: the store's commands still reach the old world, and the 
     ```
 
     It writes one small data pack, `realms-carry`, into the new world folder. It holds every player's
-    wardrobe scores (days, months, invites, events, holidays, tier, founder), their hours played, and the
+    wardrobe scores (days, months, invites, events, holidays, weekly challenges done, tier, founder and
+    the launch weekend), their hours played, and the
     supporter, title and champion teams. It runs by itself at the new world's first load, once, and sets
     the season to 2, so no one gets Founder's Edge in the new world.
 14. Start it: `docker compose up -d`. The world generates, the installer adds the Monkey SMP data packs, and
-    the console says "Carried N players' wardrobe scores and K teams into season 2."
+    the console says "Carried N players' wardrobe scores and K teams into season 2." Within the hour,
+    `realms-week.timer` tells the new world the challenge week (it keeps the rotation going; this week's
+    progress starts from zero).
 15. Check: `realms rcon "scoreboard players get #carried rw.day"` gives 1,
     `realms rcon "scoreboard players get #season rw.day"` gives 2, and one regular's
     `scoreboard players get NAME rw.days` matches the old world.
@@ -450,6 +533,11 @@ won't run twice). Delete its folder at the next restart to tidy up.
 
 Built:
 - The wardrobe and Founder's Edge.
+- Weekly challenges (`tools/challenges.py`, in the `realms-wardrobe` data pack): three a week from a pool
+  that rotates every Monday at 12 AM Pacific, `/trigger challenges`, and their skins at 3, 9 and 18
+  challenges done (Trailblazer, the Vanguard Helm, Pinnacle). `realms-week.timer` sends the week.
+- Founder's Circlet, for 10 minutes online on Season I's launch weekend: opened by `rules/launch`, closed
+  at the end of Sunday, Pacific.
 - The season counter (`#season rw.day`).
 - `/gamenight` and the Town Hall in Front Desk.
 - `tools/retention.py`.
@@ -478,6 +566,10 @@ Built:
 - The first-join welcome, the pause menu's links and the 48-hour PvP grace (rule 26), in the
   `realms-rules` data pack (`tools/rules.py`). Grace is off in the arena, and fighting there doesn't end
   it.
+- The weekly standings ("Weekly standings"): `tools/standings.py`, the `realms-standings` data pack (the
+  week's kills, the board at spawn, `/trigger standings`, the bounty commands and the Bounty Hunter title)
+  and the Sunday timer on the VPS (`deploy/realms-standings.sh`, set up with `deploy/install-standings.sh`).
+  Not yet seen in game on a test server.
 
 Not built:
 

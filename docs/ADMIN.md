@@ -284,6 +284,37 @@ each player may claim, whether claims are protected from explosions, and so on).
 for the server itself (for example around spawn) with the server-claim mode in the claims menu. Stop the
 server before editing configs.
 
+## Shops
+
+Players sell from chests while they're offline with *Universal Shops* (Patbox), priced in items: there is no
+currency, `/pay` or auction house. It runs on the server only, through Polymer (players see a Trade Shop as a
+player head and its menus as ordinary inventory screens), so the client pack doesn't change. Polymer pushes no
+resource pack (its auto-host is off). How players use shops: "Playing" in `docs/PLAYERS.md`; the rule: 43 in
+`docs/RULES.md`.
+
+- **What protects a shop.** The shop block holds the payments, and only its owner can break it; explosions
+  can't. Its stock sits in an ordinary chest or barrel behind or under it, which only the claim protects. In the
+  owner's claim nobody else can open, break or hopper that chest, raid or not. A shop in the wild can be robbed
+  (rule 35), and with the shop's own **Allow Hoppers** setting on, a hopper under the block empties its
+  payments. Tell players to build shops in their claim.
+- **Buying in a claim.** `forcedBlockProtectionExceptionList` in `server\config\openpartiesandclaims-server.toml`
+  holds `"hand$universal_shops:trade_block"`: anyone may right-click a Trade Shop in someone's claim, with an
+  empty hand. `hand$` matters: with an item in the hand the same click could place blocks inside the claim. A
+  shop can't be put on someone else's chest in a claim either: placing it means clicking the chest. The entry
+  applies after a restart. A server installed before shops shipped keeps its old file: add the entry with the
+  server stopped, or on the live VPS run `deploy/shops-claims.sh` (`docs/LIVE.md`, "Shops in claims"). Without
+  it, only the owner's party can buy from shops in a claim.
+- **No limits to set.** The mod has no setting for shops per player or for which containers count: any
+  container next to the block works. Claims (4 chunks a player) are the practical limit.
+- **Admin shops** sell without stock and swallow the payment: for event prizes or a spawn shop. With the
+  `universal_shops.admin` permission (the `admin` rank, or op level 3), `/universal_shops get true` gives you
+  one, `/universal_shops get false` a normal one. Anyone with that permission can change an admin shop.
+- **Scam reports** (rule 43). Universal Shops keeps no record of purchases. Ask for screenshots
+  (the sign or chat message, and the shop's menu, which shows the real item and price), and `ledger inspect` the
+  chest for who put in or took out what. Only the owner can change a shop's settings or break it. To remove one,
+  `setblock <x> <y> <z> air destroy`; the mod drops the payments inside when its block goes (untested here:
+  check the ground).
+
 ## Spawn protection
 
 Vanilla `spawn-protection=48` in `server\server.properties`: within 48 blocks of spawn only admins (ops)
@@ -400,10 +431,38 @@ A flag keeps its tag and number when it is placed and broken. Copies made in a c
 same number, so two flags with one number means a copy. Book names are the enchantment ids (`book/protection`,
 `book/efficiency`, ...); Fire Aspect, Flame, Breach, Density, Wind Burst and the curses have none.
 
+**Weekly standings and bounties.** The `realms-standings` data pack (made by `tools/standings.py`) counts
+the week's kills and holds the board; the VPS works the standings out and posts them on Sundays
+(`docs/SEASONS.md`, "Weekly standings"; `docs/LIVE.md`). `/function realms:standings/help` lists these:
+
+```
+/function realms:standings/place                                        # stand at spawn: puts the board there
+/function realms:standings/remove                                       # next to it: removes it (to move it)
+/function realms:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
+/function realms:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
+```
+
+- **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
+  (not a friend handing over a kill, B13). The hunter's faction gets +5 standings points that week, and
+  the hunter the Bounty Hunter title (a red `[Bounty Hunter]` before the name) if they show no other
+  title or supporter color; one they paid for is never replaced, and the command tells you so. The title
+  lasts the season. Nothing is sold and nothing else comes with it.
+- **The Cup column** matches `cup/faction` names to parties: give each faction's Cup entry the party's
+  name (`/openpac` shows it), or its owner's name, so the Cup points land on the right row. An entry
+  that matches no party shows on its own row, and the VPS logs a warning.
+- **Taking back fed kills (B13)** or a wrong claim, over RCON: `scoreboard players remove NAME st.kills 3`
+  or `scoreboard players remove NAME st.bounty 1`. Only what is above the week's starting snapshot
+  counts, so it can't go below zero for the week.
+- **The board** updates every hour with this week so far. It's an entity, so it only changes while
+  spawn is loaded; it catches up within a second of someone coming near. `/trigger standings` shows the
+  same in chat, anywhere.
+
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
 on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and
-the Plumed Helm at 10 (`docs/RETENTION.md`).
+the Plumed Helm at 10 (`docs/RETENTION.md`). An event begun this week also counts for the weekly challenge
+"Come to an event" when it is on, so always start events with `begin`. On the launch weekend, begin the
+Build Battle after `rules/launch`: the launch starts challenge progress from zero.
 
 **Holidays.** At Hallowtide, Midwinter and Midsummer (`docs/SEASONS.md`, "Holidays"), stand with the
 crowd near the end and give everyone there the holiday's skin, as well as running `attend`:
@@ -435,6 +494,76 @@ python tools/block_wheel.py "S1 week 3" --spins 5
 Announce the seed before the draw so anyone can check it. The output ends with a `tellraw` line to paste
 into the console. The pool (`tools/wheel_pool.txt`) is every survival-obtainable block; rebuild it after a
 Minecraft update with `--pool <data reports folder>`.
+
+## Weekly challenges
+
+Three challenges a week, from the pool in `tools/challenges.py`, with skins at 3, 9 and 18 done (players'
+side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `realms-wardrobe` data pack. A new week
+starts every Monday at 12 AM Pacific; week 1 is the week of Monday 23 November 2026, and the launch
+weekend before it is week 0.
+
+What runs when, on the maintainer's computer or the VPS:
+
+```
+python tools/challenges.py schedule                 # this week and the next 11
+python tools/challenges.py schedule --from 0 --weeks 13
+python tools/challenges.py commands                 # what realms-week.timer sends this hour
+```
+
+The server has no calendar: `realms-week.timer` sends the week every hour (`docs/LIVE.md`, step 7), and
+`sh /srv/realms/repo/deploy/realms-week.sh --check` on the VPS shows the commands and whether the timer runs.
+Over RCON (or in game with `/`):
+
+```
+scoreboard players get #week rc.week                # the week the server is on (-1: it was never told)
+function realms:challenges/sync {week:5}            # start week 5 unless it is already on (clears this week's progress)
+function realms:challenges/restart                  # clear everyone's progress this week; finished ones stay counted
+scoreboard players get NAME rw.challenges           # a player's challenges done, all seasons
+```
+
+The timer sends the real week every hour, so a `sync` to another week lasts until the next hour, and each
+switch clears the week's progress: use it on a test server, not the live one.
+
+**Editing the pool.** `POOL` in `tools/challenges.py` is the one place. Each entry has an `id` (short,
+lowercase; it names the challenge's scores), a `kind` (solo, faction or explore), a `name` (at most 30
+characters, so the menu line fits), a `goal`, an `about` (the hover text: what counts) and one way of
+counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statistic from the allowed list in
+`tests/test_challenges.py`), `kill` (mob types, never players), `loot`, `visit` (kinds of structure),
+`days` or `event`. Week N runs entry N mod (how many of that kind) of each kind, in the order listed, so:
+
+- Change the pool between weeks, and deploy before Monday 12 AM Pacific. Adding or removing an entry
+  shifts the rotation of every later week: check `schedule` before and after, and tell players if a week
+  you announced changes.
+- Don't rename or remove the challenge that is on this week (its progress is in scores named after its id).
+- Keep two or more of each kind, so no kind repeats two weeks running, and about one to three hours of play a
+  week in all.
+- Nothing that rewards PvP kills, forces griefing, or can be farmed with an alt, a water stream or a vehicle.
+  Distance and time online are out for that reason; the tests check the statistics and the kill lists.
+- Known limit: `mine` subtracts only the miner's own placing, so a friend who places blocks for someone to
+  mine farms it. That costs the friend the blocks (logs and ancient debris drop themselves; ores need Silk
+  Touch), so keep `mine` rewards small and look at anyone who finishes one in minutes.
+
+Then `python tools/wardrobe.py` (it writes the challenges into the wardrobe pack), run the checks, and
+release. Players need a new client pack only when skins change.
+
+**The launch weekend (Founder's Circlet).** `function realms:rules/launch` opens it, and it closes by itself
+at the end of Sunday 22 November, Pacific (31 hours of game time, kept to the wall clock by
+`realms-week.timer`). It works in Season I only. If something goes wrong:
+
+```
+function realms:wardrobe/founder/open               # open it as the launch does, if rules/launch didn't run
+function realms:wardrobe/founder/open_for {hours:6} # open it, or keep it open, for 6 hours of game time from now
+function realms:wardrobe/founder/close              # close it now
+scoreboard players get #founder.open rw.day         # 1 while it is open
+scoreboard players get NAME rw.launchtime           # seconds NAME was online while it was open (600 unlocks)
+```
+
+`open_for` is manual: the wall clock no longer moves its end, so close it yourself at the end of Sunday if
+it runs past. Game time stops while the server is empty, so a manual window can last longer than its hours.
+Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making good an outage during the
+window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
+`rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
+clears nothing.
 
 ## Telling players what changed
 

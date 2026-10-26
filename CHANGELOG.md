@@ -2,10 +2,56 @@
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-26
+
+Season I's date and launch kit, weekly faction standings, weekly challenges, item-priced shops and a lighter
+client install. Same Minecraft (26.3) and world as 2.5.0: hosts unzip over 2.5.0. Players update the client pack
+for the new skins' textures and the optional tick boxes; shops need nothing on the client. On the live VPS, once
+2.6.0 is live, run the one-time setup for each (docs/LIVE.md): `deploy/install-standings.sh`,
+`deploy/shops-claims.sh` and `deploy/realms-week.sh --install`.
+
 - Site: the pass wording follows `STORE_URL`. While it is empty (no store yet), the join steps, the Server
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+- Weekly faction standings: one rank a week from Cup points (40), claimed land (20), the members' Strength
+  (20) and their PvP kills this week outside the arena (20), each as a share of the column's leader, +5 a
+  claimed bounty. `tools/standings.py` reads the saved world; the new `realms-standings` data pack counts
+  the week's kills and holds the board at spawn (`/trigger standings`). On the VPS `realms-standings.timer`
+  closes the week on Sundays at 7 PM Pacific, keeps it in `STANDINGS_DIR` and posts it to
+  `STANDINGS_WEBHOOK_URL` (else `DISCORD_WEBHOOK_URL`), under the deploy lock; an hourly timer updates the
+  board. The bounty board now pays the Bounty Hunter title and +5 standings points instead of coins
+  (`realms:standings/bounty/post` and `/claim`). Set up once with `deploy/install-standings.sh`
+  (docs/LIVE.md).
+- New: **shops** and a **lighter client install**. Universal Shops (with Polymer, server only: the client pack
+  doesn't need it) lets players sell from a chest while offline, priced in items; the shop block holds the
+  payments and only its owner can break it. Open Parties and Claims' default
+  `forcedBlockProtectionExceptionList` gains `"hand$universal_shops:trade_block"`, so anyone may buy, empty-handed,
+  from a shop in someone's claim while its chest stays protected; on the live VPS run `deploy/shops-claims.sh`
+  once this release is live (docs/LIVE.md, "Shops in claims"). New rule 43 (`docs/RULES.md`, "Trading";
+  adopted by the owners 26 October): shops in a claim are protected, raids included, and lying listings are scams.
+  In the client pack, 126 client-side mods and every resource pack and shader pack are now `"client": "optional"`,
+  ticked by default, so players can untick them in Prism or switch them off in the Modrinth App; the other 50 mods
+  (those that add registry content, and the libraries they need) stay required. `tools/client_env.py` holds the list, `snapshot.py`
+  writes it, `validate.py` checks it, and `tests/test_client_env.py` checks it against facts recorded from every
+  jar (`tests/fixtures/record_client_mods.py`). `docs/PLAYERS.md` gets a "Low-end PC" section and the current
+  `/oclaims` and `/oparties` command names. The site's "16 GB of RAM" stays: nothing here measured a smaller
+  pack.
+- Season I launch kit: the launch time is `LAUNCH_AT` in `site/config.js` (Saturday 21 November 2026, 5 PM
+  Pacific). `tools/site_links.py` writes it into every `data-launch` element, Pacific and Eastern spelled out,
+  so crawlers and link previews see it; the front page adds the visitor's own time and a countdown, then says
+  the season is live. New `docs/LAUNCH.md` (the run sheet from now to a week after launch, the founding roster
+  and moderator recruitment), the dated Season I calendar in `docs/SEASONS.md`, and launch announcement drafts
+  in `docs/PROMOTION.md`.
+- New: **weekly challenges** and **Founder's Circlet**. Three challenges a week (solo, faction, explore) from a
+  rotating pool in `tools/challenges.py`, new every Monday at 12 AM Pacific, shown by `/trigger challenges` and
+  a third wardrobe page. Only this week's play counts; nothing counts player kills, distance or time online, and
+  blocks count mined minus placed. Challenges done (`rw.challenges`, carried to the next season) unlock
+  Trailblazer at 3, the Vanguard Helm at 9 and Pinnacle at 18. Founder's Circlet is for 10 minutes online on
+  Season I's launch weekend (Saturday 21 November 2026, 5 PM Pacific, to the end of Sunday): `rules/launch`
+  opens it and it closes by itself; never sold. All four skins are look-only. Players update the client pack
+  for the new textures. On the VPS, install the hourly week timer once this is live:
+  `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` (docs/LIVE.md).
 
 ## [2.5.0] - 2026-10-26
 

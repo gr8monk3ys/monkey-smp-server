@@ -5,6 +5,9 @@ its patches/ and a trimmed client modrinth.index.json), never whatever the repo 
   paper-1.1.0   the last Paper release (a 1.x manifest: no "mods" group), one patched datapack
   fabric-2.0.0  the first Fabric release: 112 mods, two of them patched
 Only test_validate.py::test_real_repo_is_valid looks at the real manifest, package and client.
+One exception to "frozen": each modrinth.index.json carries the "env" the current tools write (since 2.6.0,
+tools/client_env.py marks the client-only extras "optional"), not what those releases shipped, because the
+tests rebuild the index and compare.
 Neither frozen release had a client/fabric-profile.json or a player/ folder; frozen_repo adds a profile
 (derived from the recorded one) and tests that build the player zip add a fake player/ (fake_player).
 """

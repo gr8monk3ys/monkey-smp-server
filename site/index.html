@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monkey SMP</title>
-  <meta name="description" content="A modded Minecraft Java factions server: factions, alliances and territory, PvP, new terrain, dungeons and magic. One pass, same price for everyone.">
+  <meta name="description" content="A modded Minecraft Java factions server: factions, alliances and territory, PvP, new terrain, dungeons and magic. One pass, same price for everyone. Season I launch: Saturday 21 November 2026, 5 PM Pacific."
+    data-launch="A modded Minecraft Java factions server: factions, alliances and territory, PvP, new terrain, dungeons and magic. One pass, same price for everyone. Season I launch: {date}, {pacific}.">
   <meta property="og:title" content="Monkey SMP">
-  <meta property="og:description" content="A modded Minecraft Java factions server. Claim land, make allies, take what isn't nailed down.">
+  <meta property="og:description" content="A modded Minecraft Java factions server. Claim land, make allies, take what isn't nailed down. Season I launch: Saturday 21 November 2026, 5 PM Pacific."
+    data-launch="A modded Minecraft Java factions server. Claim land, make allies, take what isn't nailed down. Season I launch: {date}, {pacific}.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://monkeysmp.lscaturchio.xyz/">
   <meta property="og:image" content="https://monkeysmp.lscaturchio.xyz/img/og.jpg">
@@ -44,6 +46,11 @@
       <h1>Claim land. Make allies.<br>Keep what you can hold.</h1>
       <p class="lede">Monkey SMP is a modded factions server on Minecraft Java 26.3 (Fabric) for a small crowd that plays evenings, Pacific time.
         Factions of four, alliances, banner-marked territory, PvP outside your walls, reworked terrain, new dungeons, mobs and magic.</p>
+      <p class="launch">
+        <span class="label" id="launch-label">Season I launch</span>
+        <time data-launch="{date}, {pacific} ({eastern})" datetime="2026-11-22T01:00:00Z">Saturday 21 November 2026, 5 PM Pacific (8 PM Eastern)</time>
+        <span id="countdown" hidden></span>
+      </p>
       <div class="address">
         <span class="label">Server address</span>
         <code id="address">monkeysmp.lscaturchio.xyz</code>
@@ -142,8 +149,8 @@
         <li>
           <h3>Install the modpack</h3>
           <p>The server adds blocks, mobs and items, so you need the pack (about 520 MB). In the Modrinth App
-            or Prism Launcher, import <a data-link="MODPACK_URL" href="pack/TheRealms-Client-2.5.0.mrpack" download>the modpack</a>. For the
-            regular Minecraft Launcher on Windows, unzip <a data-link="INSTALLER_URL" href="pack/TheRealms-Player-2.5.0.zip" download>the
+            or Prism Launcher, import <a data-link="MODPACK_URL" href="pack/TheRealms-Client-2.6.0.mrpack" download>the modpack</a>. For the
+            regular Minecraft Launcher on Windows, unzip <a data-link="INSTALLER_URL" href="pack/TheRealms-Player-2.6.0.zip" download>the
             installer</a> and double-click <code>Install for Minecraft Launcher.bat</code>.</p>
         </li>
         <li>
@@ -158,7 +165,8 @@
       <h2>Pricing</h2>
       <p class="note">One price to play, the same for everyone. Supporter tiers are cosmetic only: nothing that helps
         you fight, build faster or earn more. Everyone earns wardrobe skins for swords and helmets just by playing:
-        days online, months on the pass and friends invited (<code>/trigger wardrobe</code> in game).</p>
+        days online, months on the pass, friends invited and the weekly challenges (<code>/trigger wardrobe</code>
+        in game). Founder's Circlet is only for playing on Season I's launch weekend.</p>
 
       <div class="grid two">
         <article class="plan main">
@@ -222,7 +230,7 @@
       <ol class="rules">
         <li>
           <h3>Season I launch</h3>
-          <p>For the first hour, PvP, the Nether and the End are closed; then PvP and only the Nether open, and the End opens when we announce it. No Netherite armor until we say so: the smithing table won't make it, and armor you find comes off at your feet (Netherite tools and weapons are fine). The world border is 2500 &times; 2500 around spawn and grows as the server does.</p>
+          <p>Launch: <time data-launch="{date} at {pacific} ({eastern})" datetime="2026-11-22T01:00:00Z">Saturday 21 November 2026 at 5 PM Pacific (8 PM Eastern)</time>, everyone let in at once. For the first hour, PvP, the Nether and the End are closed; then PvP and only the Nether open, and the End opens when we announce it. No Netherite armor until we say so: the smithing table won't make it, and armor you find comes off at your feet (Netherite tools and weapons are fine). The world border is 2500 &times; 2500 around spawn and grows as the server does.</p>
         </li>
         <li>
           <h3>Factions and territory</h3>
@@ -247,6 +255,10 @@
         <li>
           <h3>Spawn is sacred</h3>
           <p>Nobody tampers with spawn or the admin building, and no TNT traps there.</p>
+        </li>
+        <li>
+          <h3>Fair trades</h3>
+          <p>Shops trade items for items. A shop in its owner's claim is safe, raid or not; one outside every territory can be raided like anything else out there. A shop must sell what it says: no lying signs, bait-and-switch prices or renamed fakes. Scammers give back what they took.</p>
         </li>
         <li>
           <h3>Respect people</h3>
@@ -284,6 +296,21 @@
           <summary>I'm under 18.</summary>
           <p>Welcome. Ask a parent or guardian before buying anything. The server and the Discord are moderated
             all-ages spaces.</p>
+        </details>
+        <details>
+          <summary>Can I make the pack lighter for a slower computer?</summary>
+          <p>Yes. Shaders, Distant Horizons, the resource packs and most of the visual and sound mods are optional.
+            In Prism Launcher, untick them when you install the pack; in the Modrinth App, switch them off in the
+            instance's Content tab. Start with Distant Horizons, which draws land far past your render distance.
+            Keep Sodium and the other speed mods on. The mods that add blocks, mobs and items can't be left out,
+            and the installer for the regular launcher always installs everything.</p>
+        </details>
+        <details>
+          <summary>How does trading work?</summary>
+          <p>With items, not money: there's no currency, <code>/pay</code> or auction house. Put a Trade Shop on a chest,
+            set what it sells and the price in items, and it sells while you're offline; buyers right-click it with an
+            empty hand. Build it inside your claim, where nobody can break in or drain it, even in a raid. Or just
+            meet up and swap.</p>
         </details>
         <details>
           <summary>What happens when the server updates?</summary>

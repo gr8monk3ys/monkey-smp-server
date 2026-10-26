@@ -205,6 +205,22 @@ keys, and a re-pin that only differs in them leaves the file alone. `validate.py
 maven or Minecraft's/Maven Central with a sha1 or sha256 (except the loader itself, which meta lists
 without hashes); `--online` checks meta still serves the same profile.
 
+Each file in `client/modrinth.index.json` is `"client": "required"` or `"optional"`: an optional one gets a tick
+box in Prism and the Modrinth App, so a player on a slow computer can leave it out ("Low-end PC" in
+`docs/PLAYERS.md`). `tools/client_env.py` decides which (`OPTIONAL_MODS`, plus every resource pack and shader
+pack); `snapshot.py client` writes it and `validate.py` checks the index still matches. A mod that isn't on the
+list is required, so a new mod is safe until someone sorts it. A mod belongs on the list only when the player
+can join without it: it isn't on the server, or it is client-only, or Modrinth calls its client half optional,
+and never when it adds blocks, items, entities or other registry entries (Fabric refuses a join that lacks
+them). `tests/test_client_env.py` checks the list against facts recorded from every jar
+(`tests/fixtures/client_mods.json`). When the client pack gains or loses a mod, those tests fail until you
+re-record the facts, then sort the new mod:
+
+```bash
+python -I tests/fixtures/record_client_mods.py            # downloads the mod jars (about 340 MB)
+python -I tests/fixtures/record_client_mods.py --jars DIR # or reads them from a folder first
+```
+
 Plugins, mods and datapacks keep the file name they have on the server. On `check_updates.py --apply`,
 plugins and mods take the new upstream file name, but datapacks keep theirs, because the world refers
 to datapacks by file name (the rule is written down once, in `tools/entries.py`).

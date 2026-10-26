@@ -69,7 +69,11 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    in that file once and run `chunky continue`.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
    `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
-   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
+   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC. Then
+   `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
+   server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
+   (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
+   sends and whether it runs.
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
    address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
@@ -109,6 +113,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
 | Joins per join address | `python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs` (docs/PROMOTION.md) |
+| This week's standings so far | `sh /srv/realms/repo/deploy/realms-standings.sh show` (changes nothing); log: `journalctl -u realms-standings -u realms-standings-board -n 50` |
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
@@ -140,6 +145,21 @@ server again whatever happens. A setting it can't find (a mod renamed it) is lef
 It reads no secrets from `/etc/realms-deploy.env` and of `server.properties` only the `enable-code-of-conduct`
 line; its log is `/var/log/realms-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
 machine"): they need keys the owner makes.
+
+### The weekly challenges' timer (the release with the weekly challenges)
+
+Once that release is live, install `realms-week.timer` from the deployed checkout. It is safe to run again
+(it copies only units that changed), and `--check` says what it would send and changes nothing:
+
+```sh
+sh /srv/realms/repo/deploy/realms-week.sh --check
+sudo sh /srv/realms/repo/deploy/realms-week.sh --install
+```
+
+Do it before the launch (Saturday 21 November 2026, 5 PM Pacific): without the timer the challenge week never
+turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
+It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
+`LIVE_DIR` from `/etc/realms-deploy.env`.
 
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
@@ -203,6 +223,27 @@ twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 ch
 `~ ~` is the world spawn). The claim runs in the background for a few seconds, and it skips chunks a player
 already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
 the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
+
+### Shops in claims (the release with Universal Shops)
+
+Universal Shops arrives with the release like any mod, but buying from a shop in someone else's claim needs one
+more entry in the live `config/openpartiesandclaims-server.toml`, which a deploy doesn't touch:
+`"hand$universal_shops:trade_block"` in `forcedBlockProtectionExceptionList` (rule 43; "Shops" in
+docs/ADMIN.md). Until it's there, shops work for their owner's party and in the wild, and other players get
+Open Parties and Claims' "can't interact" message in a claim. `deploy/shops-claims.sh` adds it with one restart
+and skips it when it's already there. Run it as root once that release is live, `--check` first:
+
+```sh
+sudo sh /srv/realms/repo/deploy/shops-claims.sh --check
+sudo systemd-run --unit=realms-shops --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/shops-claims.sh
+journalctl -fu realms-shops
+```
+
+Like `upgrade-2.5.0.sh` it warns players online (`--now` skips that), takes the deploy lock, stops the server for
+about 3 minutes, keeps the old file as `openpartiesandclaims-server.toml.before-shops`, and starts the server
+again whatever happens; its log is `/var/log/realms-shops-claims.log`. It prints only the
+`forcedBlockProtectionExceptionList` line. If that list is missing or spread over several lines, it changes
+nothing and says so: add the entry by hand with the server stopped, as in the section above.
 
 ## Backups off the machine
 
@@ -407,6 +448,8 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | Uptime Kuma | the home PC (fleet repo, `services/uptime-kuma.md`) | every minute: a Minecraft status ping to `monkeysmp.lscaturchio.xyz` (through the SRV record, as players connect) and an HTTP check of the live map; alerts in a Discord channel; quiet 4-5 AM Pacific, when deploys and the daily restart happen |
 | `realms-restart.timer` | the VPS | restarts the server at 4:30 AM Pacific and posts a spark health link |
 | `realms-updates.timer` | the VPS | Mondays at 10 AM Pacific: lists newer builds of what the live release pins |
+| `realms-standings.timer` | the VPS | Sundays at 7 PM Pacific: closes the week's faction standings and posts them (below) |
+| `realms-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
 
 Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
 the time anyway. The update check runs on the VPS rather than the home PC: it uses the webhook that is already
@@ -437,6 +480,33 @@ check can't run in this private repo. It posts every Monday, with the report att
 newer, so a Monday without a post means the timer is broken. It changes nothing: taking an update is still
 `check_updates.py --apply` on a PC, the smoke test and a release (docs/MAINTAINING.md). Run it now with
 `sudo systemctl start realms-updates`; log: `journalctl -u realms-updates`.
+
+**The weekly standings** (docs/SEASONS.md, "Weekly standings") run `tools/standings.py` from the deployed
+checkout, through `deploy/realms-standings.sh`, as `realms`. They read the world's saved files (parties,
+claims, scoreboard) and send only the board's text to the game, over RCON through the container. Set them up
+once a release with them is live and the server has started on it, as root, `--check` first:
+
+```sh
+sudo sh /srv/realms/repo/deploy/install-standings.sh --check
+sudo sh /srv/realms/repo/deploy/install-standings.sh
+```
+
+It skips whatever is already done: python3 (3.11 or newer), a check that the `realms-standings` data pack is
+on, the folder the weeks are kept in (`STANDINGS_DIR`, default `/srv/realms/standings`), the first week's
+snapshot, and the two timers. Two things stay by hand:
+
+- The channel: `STANDINGS_WEBHOOK_URL` in `/etc/realms-deploy.env`, a public channel such as `#monkey-smp`.
+  Empty, the post goes to `DISCORD_WEBHOOK_URL`. The webhook is never printed or logged.
+- The board: an op stands at spawn and runs `/function realms:standings/place` (docs/ADMIN.md).
+
+On Sunday at 7 PM Pacific the timer closes the week: it keeps the final table in
+`STANDINGS_DIR/weeks/<date>.json`, starts the next week from a new snapshot, puts both on the board, announces
+it in chat and posts it to Discord. It waits up to 30 minutes for the deploy lock, so it never runs during a
+deploy, the daily restart or an off-site backup. If the board or Discord fails, the service fails and systemd
+tries again every 10 minutes for 2 hours; a retry finishes what is left and never closes the week twice (a
+week closes only when it is at least 3 days old). The hourly board update skips its turn when the lock is
+busy. To run the Sunday job now (it still closes only a week at least 3 days old):
+`sudo systemctl start realms-standings`; log: `journalctl -u realms-standings -n 50`.
 
 ## Load test
 

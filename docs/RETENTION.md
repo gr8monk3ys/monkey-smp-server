@@ -6,14 +6,16 @@ read retention from the server logs.
 
 ## The wardrobe
 
-`/trigger wardrobe` opens a clickable menu of skins for swords and helmets, on two pages: skins earned in
-game, and pass and supporter skins (a link at the bottom switches). A skin changes only how the
+`/trigger wardrobe` opens a clickable menu of skins for swords and helmets, on three pages: skins earned in
+game; pass and supporter skins; and this week's challenges with the challenge and founder skins (links at the
+bottom switch; `/trigger challenges` opens the third). A skin changes only how the
 item looks (its model, and on a helmet the worn look). Damage, armor, durability and enchantments
 never change, and `tests/test_wardrobe.py` fails the build if one ever does. This follows Mojang's
 rule that what players pay for must be cosmetic, and it keeps the server fair: the same pass price
 for everyone, no advantage for sale.
 
-Skins unlock by playing, by coming to events, by staying, by bringing friends, or by supporting:
+Skins unlock by playing, by coming to events, by doing the weekly challenges, by staying, by bringing
+friends, or by supporting:
 
 ![Every wardrobe skin: blades, helm icons and the helms as worn](img/wardrobe.png)
 
@@ -31,12 +33,16 @@ Skins unlock by playing, by coming to events, by staying, by bringing friends, o
 | Gravelight | blade | came to Hallowtide (late October) | `rw.hallowtide 1` |
 | Midwinter Cap | helm | came to Midwinter (late December) | `rw.midwinter 1` |
 | Solstice | blade | came to Midsummer (late June) | `rw.midsummer 1` |
+| Trailblazer | blade | 3 weekly challenges | `rw.challenges 3` |
+| Vanguard Helm | helm | 9 weekly challenges | `rw.challenges 9` |
+| Pinnacle | blade | 18 weekly challenges | `rw.challenges 18` |
 | Oathblade I | blade | 1 month of pass | `rw.months 1` |
 | Oathblade II | blade | 2 months of pass | `rw.months 2` |
 | Oathblade III | blade | 3 months of pass | `rw.months 3` |
 | Old Guard | blade | 6 months of pass | `rw.months 6` |
 | Wanderer's Hood | helm | 12 months of pass | `rw.months 12` |
 | Founder's Edge | blade | played in season 1 | `rw.founder 1` |
+| Founder's Circlet | helm | played 10 minutes on Season I's launch weekend | `rw.launch 1` |
 | Lantern | blade | Ember supporter | `rw.tier 1` |
 | Standard | blade | Banner supporter | `rw.tier 2` |
 | Regalia | blade | Crown supporter | `rw.tier 3` |
@@ -55,9 +61,16 @@ Why these counters:
 - **Holidays** (Gravelight, Midwinter Cap, Solstice) come only from being at that holiday's event
   (`docs/SEASONS.md`, "Holidays"). They are never sold: no store command sets these scores, and
   `tests/test_wardrobe.py` fails if one does. A skin missed this year comes back at next year's event.
+- **Weekly challenges** (`rw.challenges`): Trailblazer at 3 (one full week), the Vanguard Helm at 9 and
+  Pinnacle at 18 (six full weeks of a 12-week season, or more weeks with one or two done). The count
+  carries to the next season, so a player who missed some weeks keeps climbing. See "Weekly challenges"
+  below.
 - **Founder.** Everyone who plays while `#season` is 1 gets Founder's Edge for good. End season 1 when
   the first wave is in (see below) so that the edge stays rare. If nobody does, the next season's carry
   sets `#season` to 2 in the new world.
+- **Launch weekend.** Founder's Circlet is for being there at the start: 10 minutes online between the
+  launch (Saturday 21 November 2026, 5 PM Pacific) and the end of Sunday 22 November, Pacific. It is never
+  sold and never comes back. See "The launch weekend" below.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
@@ -65,13 +78,59 @@ Why these counters:
 count moves.
 
 When the store, staff or an event raises a player's months, events or a holiday score, they get an
-"Unlocked ..." line in chat within a second, or at their next login if they were offline. Days played
-announce themselves the same way.
+"Unlocked ..." line in chat within a second, or at their next login if they were offline. Days played,
+weekly challenges and the launch weekend announce themselves the same way.
 
 All these scores live in the world, so a new season's world would start them at zero. The season-end
 runbook carries them over, hours played included, along with the supporter, title and champion teams
 below (`docs/SEASONS.md`, "Ending a season"). The season champion's title is a team like the titles
 below, `champion_s1` and so on (`docs/SEASONS.md`, "The season champion").
+
+### Weekly challenges
+
+Three challenges a week, one of each kind: **solo** (mining, fishing, mobs, trading and the like),
+**faction** (an event, a village raid, Nether and trial-chamber fights, easier with friends but done by each
+player) and **explore** (loot chests and structures). Together they take about one to three hours of normal
+play. Players see them with `/trigger challenges` (or the third wardrobe page): each one with the player's
+progress, and a hover that says what counts. The first time a player is online in a new week, chat lists
+the three. Finishing one plays a sound and says so in chat, and every finished challenge adds one to
+`rw.challenges` for the skins above.
+
+A new week starts every **Monday at 12 AM Pacific** (Sunday night, after the Saturday event). The
+challenges rotate in a fixed order from a pool in `tools/challenges.py`, so anyone can see what is coming:
+`python tools/challenges.py schedule` (`docs/ADMIN.md`, "Weekly challenges", also covers editing the pool).
+The launch weekend is week 0 and runs the first of each kind; week 1 starts on Monday 23 November 2026.
+`rules/launch` starts the week's progress from zero, and in Season I challenges done before the launch (test
+play) don't count; later seasons keep the count they carried.
+
+Only this week's play counts, and nothing can be farmed with an alt or a friend:
+
+- **Blocks** count mined minus the same blocks placed, so placing and breaking again counts nothing, and
+  blocks a friend places only move progress between the two of them.
+- **Mobs** count only the listed mob types, never players, so the challenges never reward PvP.
+- **Loot chests** count when a structure chest's loot is made, which happens once per chest, for whoever
+  opens it first.
+- **Structures** count once per kind, by setting foot in one.
+- **Statistics** are only ones that take real play (fish caught, animals bred, trades, enchanting, raids
+  won). Distance travelled and time online are never used: a water stream or a minecart loop would farm them.
+- **Events** count any event begun this week (`docs/ADMIN.md`, "Attendance").
+
+None of them needs griefing: structures and loot are out in the world, and nothing asks for another
+faction's base.
+
+Minecraft has no calendar, so `realms-week.timer` tells the server the week every hour
+(`deploy/realms-week.sh`, `docs/LIVE.md`, step 7). The week is a score in the world, so the daily restart
+and deploys keep it. Without the timer the week never turns over.
+
+### The launch weekend
+
+Founder's Circlet is the one skin tied to a date. `function realms:rules/launch` (rule 23, the launch hour)
+opens the window, and it closes by itself at the end of Sunday, Pacific: 31 hours of game time from the
+launch, kept to the wall clock by `realms-week.timer` (game time stops while the server is empty). Every
+second a player is online while it is open counts, so players who join hours after the launch hour get it
+the same way; at 10 minutes in all it unlocks. Their seconds online (`rw.launchtime`) are not carried; the
+skin (`rw.launch`) is. It works in Season I only. Staff fallbacks are in `docs/ADMIN.md`, "Weekly
+challenges".
 
 ## Commands for the store and staff
 

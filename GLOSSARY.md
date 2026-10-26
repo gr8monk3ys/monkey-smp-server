@@ -37,8 +37,12 @@ The download every player gets: the client pack plus a one-click installer for t
 _Avoid_: client zip, installer (alone)
 
 **Client pack**:
-The optional set of mods, resource packs and shaders a player installs to get the intended look and feel.
+The mods, resource packs and shaders a player installs to join: the required files the server needs, plus optional files for the intended look and feel.
 _Avoid_: modpack (alone), client mods
+
+**Optional file**:
+A file of the client pack a player may leave out and still join (`"client": "optional"` in its index, from `tools/client_env.py`). Every other file is required.
+_Avoid_: client-only mod (some optional mods also run on the server)
 
 **Server listing**:
 The server's entry in Modrinth's server discovery: its address and tags, and which version of the client pack (published on Modrinth as the Monkey SMP modpack) players get.

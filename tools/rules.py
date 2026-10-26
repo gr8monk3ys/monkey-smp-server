@@ -313,6 +313,10 @@ def rules_files() -> dict[str, str]:
         f"schedule function {NS}:rules/launch_over {LAUNCH_SECONDS}s replace",
         announce(f"Welcome to Season I! PvP, the Nether and the End are closed for the first {minutes} minutes.",
                  "yellow"),
+        "# The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start",
+        "# from zero, so test play before the launch doesn't count (tools/challenges.py).",
+        f"function {NS}:wardrobe/founder/open",
+        f"function {NS}:challenges/launch",
     )
     f[f"{fn}/launch_over.mcfunction"] = mcfunction(
         "# The launch hour is up: PvP and only the Nether open (rule 23).",

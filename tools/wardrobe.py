@@ -20,7 +20,12 @@ Unlock scores (all per player name, so the store and staff can set them while th
   rw.founder  1 for everyone who played during the first season
   rw.events   events attended (the realms-events pack counts it, once per event)
   rw.<holiday>  1 for coming to that holiday's event (staff set it at the event; never sold)
+  rw.challenges  weekly challenges done, in all seasons together (tools/challenges.py; never sold)
+  rw.launch   1 for being online FOUNDER_MINUTES in Season I's launch weekend (never sold); rw.launchtime
+              counts their seconds online while that window is open (`function realms:wardrobe/founder/...`)
 `function realms:wardrobe/day` starts a new day; deploy/realms-day.timer runs it at midnight UTC.
+The weekly challenges (tools/challenges.py) go in the same data pack, and have a page of the menu:
+`/trigger challenges`, or page MENU_CHALLENGES of `/trigger wardrobe`.
 Every rw.* score lives in the world's scoreboard, so a new season's world starts without them:
 tools/season.py carries them over (docs/SEASONS.md, "Ending a season").
 """
@@ -33,6 +38,8 @@ import sys
 import zlib
 from pathlib import Path
 
+import challenges
+from challenges import FOUNDER_MINUTES, LAUNCH_SECONDS
 from repo import REPO, Repo
 
 MINECRAFT = "26.3"     # the formats below are this version's; tests fail when the manifest moves on
@@ -49,6 +56,7 @@ SCORES = {
     "rw.months": ("pass month", "pass months"),
     "rw.invites": ("friend invited", "friends invited"),
     "rw.events": ("event attended", "events attended"),
+    "rw.challenges": ("weekly challenge", "weekly challenges"),
 }
 TIERS = {1: "Ember", 2: "Banner", 3: "Crown"}
 # Holiday overlays (docs/SEASONS.md): objective -> (name, when). A skin is earned by coming to the event.
@@ -59,8 +67,9 @@ HOLIDAYS = {
 }
 # Scores that can jump while a player is online (the store, staff, an event): crossing a skin's threshold
 # says so in chat. Days say so in new_day; hours and tiers don't.
-NOTIFY = ["rw.months", "rw.events", *HOLIDAYS]
-# The scores the Tebex store sets (docs/RETENTION.md). Event and holiday skins must never use them.
+NOTIFY = ["rw.months", "rw.events", *HOLIDAYS, "rw.challenges", "rw.launch"]
+# The scores the Tebex store sets (docs/RETENTION.md). Event, holiday, challenge and launch skins must never
+# use them.
 SOLD = {"rw.months", "rw.tier"}
 
 # ---------------------------------------------------------------- the skins
@@ -100,6 +109,11 @@ BLADES = [
          pal="o0b1636 L9fb9ff M3d63d6 D22388a Ge7c14a ga8842a H7a1c1c h521212 Pe7c14a"),
     dict(id="regalia", name="Regalia", unlock=("rw.tier", 3), broad=True,
          pal="o3a2605 Lfff3b0 Mf1c232 Db88a12 Gfafafa gb8b8c8 H5a1a6e h3c1049 Pe0115f"),
+    # The weekly challenge ladder (tools/challenges.py): one week, three weeks and six weeks of all three.
+    dict(id="trailblazer", name="Trailblazer", unlock=("rw.challenges", 3), runes=(7, 10, 13),
+         pal="o0b2226 Lc9fbf2 M4fc9b8 D23887a Rfff1a8 Gc0612a g7d3b17 H6b4a2e h4a321f Pfff1a8"),
+    dict(id="pinnacle", name="Pinnacle", unlock=("rw.challenges", 18), broad=True, runes=(7, 10, 13),
+         pal="o1d0b26 Lffe3f6 Mf0a6d8 Dae4f9c Rfff7c2 Gfff7c2 gd1b05a H3b1d4f h26112f Pfff7c2"),
 ]
 
 # Helm icons are drawn as text; '.' is clear, and an outline is added around everything else.
@@ -196,6 +210,43 @@ HELMS = [
                "................",
                "................",
                "................"]),
+    dict(id="vanguard", name="Vanguard Helm", unlock=("rw.challenges", 9), sound="iron",
+         pal="o1a1a1e Ma7adb5 Ld9dee3 D5f656d d2c3036 Ge7c14a Wf4f4f4 wc9d1d9",
+         icon=["................",
+               "................",
+               ".W............W.",
+               ".WW..........WW.",
+               ".wWW.MMMMMM.WWw.",
+               "..wWMLLMMMMDWw..",
+               "...wMLMMMMMDw...",
+               "....GGGGGGGG....",
+               "....MMddddMD....",
+               "....MDdMMdMD....",
+               "....MDdMMdMD....",
+               "....DD.DD.DD....",
+               "................",
+               "................",
+               "................",
+               "................"]),
+    # Season I's launch weekend only, in the colors of Founder's Edge (tools/challenges.py has the dates).
+    dict(id="founders_circlet", name="Founder's Circlet", unlock=("rw.launch", 1), sound="gold",
+         pal="o1b1430 Se3e6ee s9aa3b5 Vb9a3e8 v7b62c0 Pff6fb1",
+         icon=["................",
+               "................",
+               "................",
+               "................",
+               ".....ssssss.....",
+               "...ss......ss...",
+               "..s....VV....s..",
+               "..S...VPPV...S..",
+               "..SS..vVVv..SS..",
+               "...SSSSvvSSSS...",
+               ".....SSSSSS.....",
+               "................",
+               "................",
+               "................",
+               "................",
+               "................"]),
 ]
 
 # Vanilla items a skin can go on, and what each looks like without one (used by "reset").
@@ -207,8 +258,10 @@ HELMETS = {  # item -> (equipment asset, equip sound)
     "netherite_helmet": ("netherite", "netherite"), "turtle_helmet": ("turtle_scute", "turtle"),
 }
 
-FIRST_BLADE, FIRST_HELM = 101, 201  # trigger values: 1 menu, 2 reset blade, 3 reset helm, 4 menu page two
+FIRST_BLADE, FIRST_HELM = 101, 201  # trigger values: 1 menu, 2 reset blade, 3 reset helm, 4 and 5 other pages
 MENU_SUPPORT = 4
+MENU_CHALLENGES = 5
+MENUS = (1, MENU_SUPPORT, MENU_CHALLENGES)
 
 
 def palette(spec: str) -> dict[str, tuple[int, int, int, int]]:
@@ -351,6 +404,28 @@ def equipment_pixels(skin: dict) -> list[list[str | None]]:
                 side(0, row, col, "W" if row == 1 and col % 4 == 2 else shade(col, row, "K", "k"))
             side(0, 3, col, "W")
             side(32, 3, col, "W" if col % 2 else "w")  # the brim, turned up on the outer layer
+    elif kind == "vanguard":
+        for x in range(8):
+            for y in range(8):
+                top(0, x, y, shade(x, y, "M", "D") if 0 < x < 7 and 0 < y < 7 else "D")
+        for col in range(32):
+            for row in range(3):
+                side(0, row, col, "L" if row == 0 else shade(col, row, "M", "D"))
+            side(0, 3, col, "G")  # a gold band where the helmet meets the face
+        for row in range(4, 7):
+            side(0, row, 11, "M")
+            side(0, row, 12, "D")
+        for face in (0, 16):  # wings swept back and up the right and left faces of the hat layer
+            for col, row, c in ((1, 3, "w"), (2, 2, "W"), (2, 3, "w"), (3, 1, "W"), (3, 2, "W"), (4, 0, "W"),
+                                (4, 1, "W"), (4, 2, "w"), (5, 0, "W"), (5, 1, "w"), (6, 0, "w")):
+                side(32, row, face + (col if face == 16 else 7 - col), c)
+    elif kind == "founders_circlet":
+        for col in range(32):  # a thin silver band on the hat layer, shaded underneath
+            side(32, 2, col, "S")
+            side(32, 3, col, "s")
+        for col, row, c in ((11, 0, "V"), (12, 0, "V"), (11, 1, "P"), (12, 1, "V"), (10, 2, "V"), (11, 2, "v"),
+                            (12, 2, "v"), (13, 2, "V")):  # the gem, at the front
+            side(32, row, col, c)
     elif kind == "wanderers_hood":
         for x in range(8):
             for y in range(8):
@@ -399,6 +474,8 @@ def how_to_unlock(unlock) -> str:
         return f"Supporters at {TIERS[n]} or above"
     if objective == "rw.founder":
         return "Played during the first season"
+    if objective == "rw.launch":
+        return "Played on Season I's launch weekend"
     if objective in HOLIDAYS:
         name, when = HOLIDAYS[objective]
         return f"From the {name} event ({when})"
@@ -410,13 +487,20 @@ def earned_for(unlock) -> str:
     objective, n = unlock
     if objective in HOLIDAYS:
         return f"coming to {HOLIDAYS[objective][0]}"
+    if objective == "rw.launch":
+        return "playing on launch weekend"
     one, many = SCORES[objective]
     return f"{n} {one if n == 1 else many}"
 
 
+# Skins on the challenges page: the challenge ladder and the founders' keepsakes.
+KEEPSAKES = {"rw.challenges", "rw.launch", "rw.founder"}
+
+
 def page(unlock) -> int:
-    """The menu page a skin is on: 1 for skins earned in game, MENU_SUPPORT for the pass and supporter tiers."""
-    return MENU_SUPPORT if unlock[0] in SOLD else 1
+    """The menu page a skin is on: 1 for skins earned in game, MENU_SUPPORT for the pass and supporter tiers,
+    MENU_CHALLENGES for the challenge ladder and the founders' skins."""
+    return MENU_SUPPORT if unlock[0] in SOLD else MENU_CHALLENGES if unlock[0] in KEEPSAKES else 1
 
 
 def skins():
@@ -442,34 +526,42 @@ def datapack_files() -> dict[str, str]:
     objectives = ["wardrobe trigger", "rw.play minecraft.custom:minecraft.play_time", "rw.hours dummy",
                   "rw.days dummy", "rw.lastday dummy", "rw.months dummy", "rw.invites dummy", "rw.tier dummy",
                   "rw.founder dummy", "rw.day dummy", "rw.const dummy", "rw.events dummy", "rw.playbase dummy",
+                  "rw.challenges dummy", "rw.launch dummy", "rw.launchtime dummy",
                   *(f"{o} dummy" for o in HOLIDAYS), *(f"{o}.seen dummy" for o in NOTIFY)]
     f[f"{fn}/load.mcfunction"] = "\n".join([
         "# Generated by tools/wardrobe.py. Scores are created once and kept across restarts.",
         *(f"scoreboard objectives add {o}" for o in objectives),
         "scoreboard players set #hour rw.const 72000",
+        "scoreboard players set #second rw.const 20",
         "scoreboard players add #today rw.day 0",
         "# The first season runs until staff set #season to 2; everyone who plays in it is a founder.",
         "execute unless score #season rw.day matches -2147483648.. run scoreboard players set #season rw.day 1",
+        f"function {NS}:challenges/load",
         f"schedule function {NS}:wardrobe/second 20t replace",
     ]) + "\n"
-    f[f"{fn}/tick.mcfunction"] = f"execute as @a[scores={{wardrobe=1..}}] run function {NS}:wardrobe/use\n"
+    f[f"{fn}/tick.mcfunction"] = (f"execute as @a[scores={{wardrobe=1..}}] run function {NS}:wardrobe/use\n"
+                                  f"execute as @a[scores={{challenges=1..}}] run function {NS}:challenges/use\n")
     f[f"{fn}/second.mcfunction"] = "\n".join([
-        "# Once a second: let everyone use the trigger, count days and hours, mark founders, announce unlocks.",
+        "# Once a second: let everyone use the trigger, count days and hours, mark founders, keep the launch",
+        "# weekend's window and the weekly challenges going, announce unlocks.",
         "scoreboard players enable @a wardrobe",
         *(f"scoreboard players add @a {o} 0" for o in (
-            "rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder", "rw.events", *HOLIDAYS, "rw.playbase")),
+            "rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder", "rw.events", *HOLIDAYS, "rw.playbase",
+            "rw.challenges", "rw.launch")),
         "execute as @a run scoreboard players operation @s rw.hours = @s rw.play",
         "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase",
         "scoreboard players operation @a rw.hours /= #hour rw.const",
         "execute if score #season rw.day matches 1 run scoreboard players set @a rw.founder 1",
         f"execute as @a unless score @s rw.lastday = #today rw.day run function {NS}:wardrobe/new_day",
+        f"function {NS}:wardrobe/founder/second",
+        f"function {NS}:challenges/second",
         *(f"execute as @a unless score @s {o}.seen = @s {o} run function {NS}:wardrobe/notice/{o[3:]}"
           for o in NOTIFY),
         f"schedule function {NS}:wardrobe/second 20t replace",
     ]) + "\n"
 
     def unlocked(s) -> str:
-        command = "/trigger wardrobe" if page(s["unlock"]) == 1 else f"/trigger wardrobe set {MENU_SUPPORT}"
+        command = "/trigger wardrobe" if page(s["unlock"]) == 1 else f"/trigger wardrobe set {page(s['unlock'])}"
         return "tellraw @s " + text(
             {"text": "Unlocked ", "color": "gold"}, {"text": s["name"], "color": "yellow"},
             {"text": f" for {earned_for(s['unlock'])}. ", "color": "gold"},
@@ -499,35 +591,42 @@ def datapack_files() -> dict[str, str]:
            f"execute if score @s wardrobe matches 1 run function {NS}:wardrobe/menu",
            f"execute if score @s wardrobe matches 2 run function {NS}:wardrobe/reset_blade",
            f"execute if score @s wardrobe matches 3 run function {NS}:wardrobe/reset_helm",
-           f"execute if score @s wardrobe matches {MENU_SUPPORT} run function {NS}:wardrobe/menu_support"]
+           f"execute if score @s wardrobe matches {MENU_SUPPORT} run function {NS}:wardrobe/menu_support",
+           f"execute if score @s wardrobe matches {MENU_CHALLENGES} run function {NS}:wardrobe/menu_challenges"]
     use += [f"execute if score @s wardrobe matches {value} run function {NS}:wardrobe/skin/{s['id']}"
             for value, _, s in skins()]
     use += ["scoreboard players set @s wardrobe 0", "scoreboard players enable @s wardrobe"]
     f[f"{fn}/use.mcfunction"] = "\n".join(use) + "\n"
 
-    # Two pages, so each fits the 20 lines of open chat: skins earned in game, and the pass and supporter skins.
-    pages = [(1, "menu", "skins earned in game", ["rw.days", "rw.hours", "rw.invites", "rw.events"],
-              MENU_SUPPORT, "[Pass & supporter]"),
-             (MENU_SUPPORT, "menu_support", "pass and supporter skins", ["rw.months"],
-              1, "[Earned in game]")]
+    # Three pages, so each fits the 20 lines of open chat: skins earned in game, the pass and supporter skins,
+    # and this week's challenges with the challenge and founders' skins. Each page links to the other two.
+    labels = {1: "[Earned in game]", MENU_SUPPORT: "[Pass & supporter]", MENU_CHALLENGES: "[Challenges]"}
+    pages = [(1, "menu", "skins earned in game", ("Wardrobe", "looks only, never stats"),
+              ["rw.days", "rw.hours", "rw.invites", "rw.events"]),
+             (MENU_SUPPORT, "menu_support", "pass and supporter skins", ("Wardrobe", "looks only, never stats"),
+              ["rw.months"]),
+             (MENU_CHALLENGES, "menu_challenges", "this week's challenges and their skins",
+              ("Weekly challenges", "new every Monday, 12 AM Pacific"), ["rw.challenges"])]
     counted = {"rw.days": "days", "rw.hours": "hours", "rw.invites": "friends invited", "rw.events": "events",
-               "rw.months": "pass months"}
-    for number, name, about, counts, other, other_label in pages:
+               "rw.months": "pass months", "rw.challenges": "challenges done in all seasons"}
+    for number, name, about, (title, subtitle), counts in pages:
         line: list = [{"text": "", "color": "gray"}]
         for i, o in enumerate(counts):
             line += [{"score": {"name": "@s", "objective": o}, "color": "white"},
                      f" {counted[o]}" + (", " if i < len(counts) - 1 else "")]
         menu = [f"# The wardrobe menu, {about}: owned skins are green and clickable, locked ones say how to get them.",
-                "tellraw @s " + text("", {"text": "\nWardrobe", "color": "gold", "bold": True},
-                                     {"text": "  looks only, never stats", "color": "gray"}),
+                "tellraw @s " + text("", {"text": f"\n{title}", "color": "gold", "bold": True},
+                                     {"text": f"  {subtitle}", "color": "gray"}),
                 "tellraw @s " + text(*line)]
+        if number == MENU_CHALLENGES:
+            menu.append(f"function {NS}:challenges/lines")
         last = None
         for value, kind, s in skins():
             if page(s["unlock"]) != number:
                 continue
             if kind != last:
-                title = "Blades (hold the sword)" if kind == "blade" else "Helms (wear the helmet)"
-                menu.append("tellraw @s " + text({"text": title, "color": "gold"}))
+                heading = "Blades (hold the sword)" if kind == "blade" else "Helms (wear the helmet)"
+                menu.append("tellraw @s " + text({"text": heading, "color": "gold"}))
                 last = kind
             how = how_to_unlock(s["unlock"])
             target = "the sword in your hand" if kind == "blade" else "the helmet you're wearing"
@@ -544,10 +643,18 @@ def datapack_files() -> dict[str, str]:
             " ", {"text": "[Reset blade]", "color": "aqua",
                   "click_event": {"action": "run_command", "command": "/trigger wardrobe set 2"}},
             "  ", {"text": "[Reset helm]", "color": "aqua",
-                   "click_event": {"action": "run_command", "command": "/trigger wardrobe set 3"}},
-            "  ", {"text": other_label, "color": "aqua",
-                   "click_event": {"action": "run_command", "command": f"/trigger wardrobe set {other}"}}))
+                   "click_event": {"action": "run_command", "command": "/trigger wardrobe set 3"}}))
+        links: list = []
+        for other in MENUS:
+            if other != number:
+                links += ["  " if links else " ", {"text": labels[other], "color": "aqua",
+                                                   "click_event": {"action": "run_command",
+                                                                   "command": f"/trigger wardrobe set {other}"}}]
+        menu.append("tellraw @s " + text(*links))
         f[f"{fn}/{name}.mcfunction"] = "\n".join(menu) + "\n"
+
+    f.update(founder_files())
+    f.update(challenges.datapack_files())
 
     def refuse(msg):
         return "return run tellraw @s " + text({"text": msg, "color": "red"})
@@ -592,6 +699,82 @@ def datapack_files() -> dict[str, str]:
                                          "equip_sound": f"minecraft:item.armor.equip_{sound}"}}}, indent=2)
     f[f"{fn}/reset_helm.mcfunction"] = "\n".join(reset_helm) + "\n"
     return {k: v if v.endswith("\n") else v + "\n" for k, v in f.items()}
+
+
+def founder_files() -> dict[str, str]:
+    """The launch weekend's window for Founder's Circlet (docs/RETENTION.md, "The launch weekend").
+
+    While it is open, everyone online counts seconds in rw.launchtime; FOUNDER_MINUTES of them set rw.launch.
+    It shuts when game time passes #founder.until. Game time stops while the server is empty, so
+    deploy/realms-week.sh sends `founder/sync` every hour with the seconds left on the wall clock (from
+    tools/challenges.py), and the window ends at the end of Sunday, Pacific, even after a quiet night. State is in
+    rw.day: #founder.open, #founder.auto (1 while the clock may move the end) and #founder.until.
+    """
+    fn = f"data/{NS}/function/wardrobe/founder"
+    ticks = LAUNCH_SECONDS * 20
+    season_one = ("execute unless score #season rw.day matches 1 run return run tellraw @s "
+                  + text({"text": "Founder's Circlet is only for Season I's launch weekend.", "color": "red"}))
+    gold = "gold"
+    return {
+        f"{fn}/open.mcfunction": "\n".join([
+            "# Opens the launch weekend: realms:rules/launch runs this (staff can too, if the launch didn't). Season I",
+            f"# only. It lasts {LAUNCH_SECONDS // 3600} hours of game time; deploy/realms-week.sh moves the end to "
+            "the end of Sunday,",
+            "# Pacific, on the wall clock.",
+            season_one,
+            "scoreboard players set #founder.open rw.day 1",
+            "scoreboard players set #founder.auto rw.day 1",
+            "execute store result score #founder.until rw.day run time query gametime",
+            f"scoreboard players add #founder.until rw.day {ticks}",
+            "tellraw @a " + text({"text": "Launch weekend: ", "color": gold},
+                                 {"text": f"play {FOUNDER_MINUTES} minutes before the end of Sunday (Pacific) to keep "
+                                          "Founder's Circlet, a helm skin, for good.", "color": "yellow"}),
+        ]) + "\n",
+        f"{fn}/open_for.mcfunction": "\n".join([
+            "# Macro {hours:N}, staff only: opens the window (or keeps it open) for N hours of game time from now.",
+            "# The wall clock no longer moves its end; founder/close shuts it early. Season I only.",
+            season_one,
+            "$scoreboard players set #founder.until rw.day $(hours)",
+            "scoreboard players operation #founder.until rw.day *= #hour rw.const",
+            "execute store result score #founder.now rw.day run time query gametime",
+            "scoreboard players operation #founder.until rw.day += #founder.now rw.day",
+            "scoreboard players set #founder.open rw.day 1",
+            "scoreboard players set #founder.auto rw.day 0",
+            "$tellraw @a " + text({"text": "Launch weekend: ", "color": gold},
+                                  {"text": f"Founder's Circlet is open for $(hours) more hours. Play {FOUNDER_MINUTES} "
+                                           "minutes to keep it.", "color": "yellow"}),
+        ]) + "\n",
+        f"{fn}/close.mcfunction": "\n".join([
+            "# Shuts the window: by itself when the time is up, from founder/sync at the end of Sunday, or staff.",
+            "scoreboard players set #founder.open rw.day 0",
+            "scoreboard players set #founder.auto rw.day 0",
+            "tellraw @a " + text({"text": "The launch weekend is over. ", "color": gold},
+                                 {"text": "Founder's Circlet stays with everyone who earned it.", "color": "yellow"}),
+        ]) + "\n",
+        f"{fn}/sync.mcfunction": "\n".join([
+            "# Macro {seconds:N}, from deploy/realms-week.sh every hour: N seconds of the launch weekend are left on",
+            "# the wall clock. An open window the launch opened ends then (0 shuts it now); otherwise nothing.",
+            "execute unless score #founder.auto rw.day matches 1 run return 0",
+            "$scoreboard players set #founder.left rw.day $(seconds)",
+            f"execute if score #founder.left rw.day matches ..0 run return run function {NS}:wardrobe/founder/close",
+            "scoreboard players operation #founder.left rw.day *= #second rw.const",
+            "execute store result score #founder.until rw.day run time query gametime",
+            "scoreboard players operation #founder.until rw.day += #founder.left rw.day",
+        ]) + "\n",
+        f"{fn}/second.mcfunction": "\n".join([
+            "# Once a second, from the wardrobe's: while the window is open, count everyone online.",
+            "execute unless score #founder.open rw.day matches 1 run return 0",
+            "execute store result score #founder.now rw.day run time query gametime",
+            "execute if score #founder.now rw.day >= #founder.until rw.day run return run "
+            f"function {NS}:wardrobe/founder/close",
+            "scoreboard players add @a rw.launchtime 1",
+            "tellraw @a[scores={rw.launchtime=1}] " + text(
+                {"text": "Launch weekend: ", "color": gold},
+                {"text": f"stay {FOUNDER_MINUTES} minutes in all to keep Founder's Circlet, a helm skin.",
+                 "color": "yellow"}),
+            f"scoreboard players set @a[scores={{rw.launchtime={FOUNDER_MINUTES * 60}..}}] rw.launch 1",
+        ]) + "\n",
+    }
 
 
 # ---------------------------------------------------------------- the resource pack

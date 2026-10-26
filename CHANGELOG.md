@@ -35,6 +35,16 @@
 - docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
   addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
   clips from real event nights.
+- Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
+  to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
+  also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,
+  logs, BlueMap tiles), keeps 48 hourly, 14 daily, 8 weekly and 6 monthly snapshots, and reads back 5% of the
+  stored data after each run (`restic check --read-data-subset=5%`). It posts to the Discord webhook when backups
+  fail and when they work again. The keys and the restic password go in a root-only `/etc/realms-backup.env`
+  (`deploy/realms-backup.env.example`), and the password is kept off the VPS too. docs/LIVE.md covers setup,
+  restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
+- Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
+  `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
 - New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
   each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
   address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with

@@ -15,6 +15,10 @@
   --without SLUG [SLUG ...] moves those mods (manifest slugs) out of server/mods for the run and puts them
   back afterwards, to measure what a mod costs.
 
+  --spark also runs spark's profiler on every thread over the measured minutes and puts its viewer link
+  (spark.lucko.me) in summary.json. profile.txt covers only the main thread; on a machine with few cores
+  the other threads (chunk workers, Distant Horizons, BlueMap, GC) compete with it for CPU.
+
 Use a throwaway copy: fake players leave player data behind, and walk/explore generate terrain, so later
 runs on the same world measure something different. Carpet is not part of the pack; download the Fabric
 build for the pack's Minecraft version from https://modrinth.com/mod/carpet.
@@ -43,6 +47,8 @@ FORMATTING = re.compile("\u00a7.")
 MIXIN = re.compile(r"\$[a-z]{3}\d{3}\$([A-Za-z0-9_.-]+)\$")
 VANILLA = ("net.minecraft.", "com.mojang.", "java.", "javax.", "jdk.", "sun.", "it.unimi.", "com.google.",
            "io.netty.", "org.slf4j.", "org.apache.", "net.fabricmc.loader.", "org.spongepowered.", "org.objectweb.")
+# A viewer link, not one of spark's pointers to its docs (https://spark.lucko.me/docs/...), which it also prints.
+SPARK_URL = re.compile(r"https://spark\.lucko\.me/(?!docs\b)[A-Za-z0-9]+(?![A-Za-z0-9/])")
 
 
 class Rcon:
@@ -192,6 +198,25 @@ def perf_report(profiling_txt: str, top: int = 25) -> str:
     return "\n".join(out) + "\n"
 
 
+def spark_url(text: str) -> str:
+    """The last spark viewer link in `text`, or "". spark answers RCON from its own thread after the reply has
+    gone, but it also prints the link to the console."""
+    links = SPARK_URL.findall(text)
+    return links[-1] if links else ""
+
+
+def wait_for_spark_url(log: Path, offset: int, timeout_s: int = 60) -> str:
+    """The spark link the server prints to `log` after byte `offset`, waiting up to timeout_s for the upload."""
+    deadline = time.time() + timeout_s
+    while True:
+        with open(log, "rb") as f:
+            f.seek(offset)
+            url = spark_url(f.read().decode(errors="replace"))
+        if url or time.time() >= deadline:
+            return url
+        time.sleep(2)
+
+
 def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
     for i, name in enumerate(names):
         angle = 2 * math.pi * i / len(names)
@@ -273,6 +298,8 @@ def main(argv=None):
     ap.add_argument("--without", nargs="*", default=[], metavar="SLUG", help="mods to leave out for this run")
     ap.add_argument("--keep-recording", action="store_true",
                     help="keep rec.jfr (the whole run, startup included) to dig into a stall with `jfr print`")
+    ap.add_argument("--spark", action="store_true",
+                    help="also profile every thread with spark while measuring; the link goes in summary.json")
     ap.add_argument("--name", help="results folder name (default: scenario-players[-without-...]-time)")
     args = ap.parse_args(argv)
 
@@ -319,6 +346,8 @@ def main(argv=None):
         time.sleep(args.warmup)
 
         start = datetime.now()
+        if args.spark:
+            rcon.cmd("spark profiler start --thread *")
         end_at = time.time() + args.minutes * 60
         perf_at = start.timestamp() + args.minutes * 30  # Minecraft's own 10 s profile, halfway through
         rows, last = [], 0.0
@@ -341,6 +370,15 @@ def main(argv=None):
                     print(time.strftime("%H:%M:%S"), row, flush=True)
                 time.sleep(5 if args.scenario == "explore" else 1)
         end = datetime.now()
+        # ServerCore lowers view and simulation distance while ticks run long, so a good tick time can come at
+        # the price of shorter distances: this says where they ended up.
+        servercore = rcon.cmd("servercore status").strip()
+        spark = ""
+        if args.spark:
+            seen = (out / "server.log").stat().st_size
+            rcon.cmd(f"spark profiler stop --comment {name}")  # uploads the profile
+            spark = wait_for_spark_url(out / "server.log", seen)
+            print(f"spark profile: {spark or 'no link (see server.log)'}", flush=True)
         for n in names:
             rcon.cmd(f"player {n} kill")
         with contextlib.suppress(ConnectionError):  # the server can close RCON before it replies
@@ -369,7 +407,10 @@ def main(argv=None):
                "memory_gb": args.memory_gb, "minutes": args.minutes, "warmup_s": args.warmup,
                **summarize(rows),
                "command_limit_hits": log_text.count("Command execution stopped due to limit"),
-               "cant_keep_up_warnings": log_text.count("Can't keep up!")}
+               "cant_keep_up_warnings": log_text.count("Can't keep up!"),
+               "servercore_status": servercore}
+    if args.spark:
+        summary["spark_profile"] = spark
     if recording.exists():
         with subprocess.Popen([str(jfr), "print", "--events", "jdk.ExecutionSample", "--stack-depth", "96",
                                str(recording)], stdout=subprocess.PIPE, text=True, encoding="utf-8",

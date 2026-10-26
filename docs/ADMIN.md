@@ -123,8 +123,8 @@ What keeps it there:
 |---|---|
 | `default` | normal play: parties and claims (Open Parties and Claims), voice chat |
 | `builder` | + switch game mode (`/gamemode`) |
-| `moderator` | + kick, ban, pardon, teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
-| `admin` | everything |
+| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), x-ray alerts (MinerTrack), teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
+| `admin` | everything, including editing other players' inventories and IP bans |
 
 ```
 lp user NAME parent set moderator
@@ -148,6 +148,135 @@ ledger restore source:NAME range:30 after:2h    # redo it if you rolled back too
 Claimed land (Open Parties and Claims) is already protected from outsiders, so most griefing happens
 in the wild.
 
+## Moderation
+
+**Punishments (BanHammer).** Every punishment takes a reason, which the player sees, and goes into a history kept
+in `server\banhammer-sqlite.db`, so the next admin can see what happened before. Durations are written like
+`30m`, `12h`, `3d` or `1d12h`.
+
+```
+warn NAME reason                  # step 1 of the rules' enforcement
+tempban NAME 3d reason            # step 2: the rules' temporary ban (1 to 7 days)
+ban NAME reason                   # step 3, or straight away for cheating, hate and doxxing
+tempmute NAME 1h reason           # no chat; also blocks me, msg, tell, w and teammsg
+mute NAME reason
+kick NAME reason
+unban NAME / unmute NAME / unwarn NAME
+```
+
+Start the reason with `-s` (`tempban NAME 3d -s reason`) to keep it out of public chat. Five warnings give an
+automatic temporary ban of 5 hours (`warnActions` in `server\config\banhammer\config.json`). A text mute
+doesn't cover voice chat; to mute someone's voice for a day:
+`lp user NAME permission settemp voicechat.speak false 1d`. IP bans (`ban-ip`) are admin only, because an IP is
+often a whole household.
+
+**Watching quietly.** `vanish` hides you from players, the tab list and the server list until you run it again.
+`view inv NAME` and `view echest NAME` (InvView) open a player's inventory or ender chest. Moderators can only
+look; admins can also take items out. Admins' own inventories can't be opened by others. Ledger (above) shows who
+broke or placed what, and who took what from a chest.
+
+**X-ray.** AntiXray hides ores and other valuables in what the server sends: a player can only see ores that touch
+air, water or lava, and x-ray mods, packs and F3+A see fake ores everywhere instead. The settings are in
+`server\config\antixray.toml`. Some x-ray gets past it (a cracked world seed; Distant Horizons' LODs if its
+server-side LODs are switched back on, below), so
+MinerTrack watches how people mine: someone who tunnels straight from one buried diamond or emerald vein to the
+next (or to ancient debris in the Nether) builds up a violation level (VL), and moderators get a chat alert at VL 2,
+4 and 5. It never kicks or bans; that's your call. `mtrack check NAME` shows a player's violations, `mtrack verbose`
+alerts you on every VL increase, `mtrack logs FILE.log` shows one of the daily logs (they're in
+`server\config\MinerTrack\logs`) and `mtrack reset NAME` clears a player you've cleared. Lucky players set it off
+too, so check before you act. Settings are in `server\config\MinerTrack\` (`config.yml`, plus one file per
+dimension in `Configuration\`). It only watches vanilla diamond, emerald and ancient debris; to watch a modded ore
+too, add its id (e.g. `sulfurcavesplus:sulfur_diamond_ore`) to `rare-ores` in that dimension's file and run
+`mtrack reload`.
+
+The saved query for diamonds: every diamond ore broken in the last day, newest first (add `source:NAME` for one
+player, or change `after:1d` to `after:7d`):
+
+```
+ledger search action:block-break object:#c:ores/diamond object:nether_ores_reborn:diamond_ore object:nether_ores_reborn:end_diamond_ore after:1d
+```
+
+`#c:ores/diamond` covers the vanilla diamond ores and Sulfur Caves Plus's; Nether Ores Reborn's aren't in that tag,
+so they're named.
+
+A player whose diamonds come one after another, with little stone broken in between, is worth a
+`ledger search source:NAME action:block-break range:100 after:1d` around where they were mining.
+
+**Existing servers.** Rank files are only copied when missing, so a server installed before these tools keeps its
+old ranks. If you never edited them, stop the server, delete `moderator.yml` and `admin.yml` in
+`server\mods\luckperms\yaml-storage\groups\` and start it again. Otherwise add the new nodes in the console:
+
+```
+lp group moderator permission set banhammer.punish.warn true
+lp group moderator permission set banhammer.punish.tempwarn true
+lp group moderator permission set banhammer.punish.mute true
+lp group moderator permission set banhammer.punish.tempmute true
+lp group moderator permission set banhammer.punish.kick true
+lp group moderator permission set banhammer.punish.tempban true
+lp group moderator permission set banhammer.punish.ban true
+lp group moderator permission set banhammer.unpunish.unwarn true
+lp group moderator permission set banhammer.unpunish.unmute true
+lp group moderator permission set banhammer.unpunish.unban true
+lp group moderator permission set banhammer.unpunish.pardon true
+lp group moderator permission set banhammer.commands.list true
+lp group moderator permission set vanish.command.vanish true
+lp group moderator permission set vanish.feature.view true
+lp group moderator permission set invview.command.root true
+lp group moderator permission set invview.command.inv true
+lp group moderator permission set invview.command.echest true
+lp group moderator permission set invview.can_modify false
+lp group admin permission set invview.can_modify true
+lp group moderator permission set minertrack.notify true
+lp group moderator permission set minertrack.check true
+lp group moderator permission set minertrack.verbose true
+lp group moderator permission set minertrack.logs true
+lp group moderator permission set minertrack.reset true
+lp group moderator permission set minertrack.help true
+lp group moderator permission unset minecraft.command.ban
+lp group moderator permission unset minecraft.command.kick
+lp group moderator permission unset minecraft.command.pardon
+```
+
+## Distant Horizons and x-ray
+
+Distant Horizons runs on the server too: it builds the far-away terrain (LODs) from the real world and sends it to
+players, who keep it in their own `DistantHorizons.sqlite`. AntiXray only changes chunks, not LODs, so out of the
+box the LODs carry every real ore, buried or not, and anyone can read them out of that file. This was tested on
+26.3 with the client pack (October 2026):
+
+- **Default settings: leaks.** Of 32 ores read from a player's LOD file 140 to 270 blocks away, 31 were the real
+  block at that spot, 21 of them buried with no air, water or lava next to them.
+- **`maxGenerationRequestDistance` doesn't help.** Its lowest value still sends the 64 x 64 area the player is
+  standing in, with real ores, so walking around collects them anyway.
+- **The settings below: no leak.** The player only had LODs of chunks they had loaded themselves, and every buried
+  ore in them was one of AntiXray's fakes.
+
+So the server ships with them on, in `server\config\DistantHorizons.toml` (`defaults/config/DistantHorizons.toml`
+in the package; Distant Horizons fills in the rest of the file on the first start):
+
+```toml
+[server]
+	synchronizeOnLoad = false
+	enableRealTimeUpdates = false
+
+[common.worldGenerator]
+	generatorPlan = "DISABLED"
+```
+
+The cost: players no longer get distant terrain from the server, only LODs of what they have walked past, so the
+far view fills in slowly on a fresh world. It also takes Distant Horizons' world generation off the server's CPU.
+A server set up before this default keeps its old file: change it as in "Distant Horizons stops sending its own
+LODs" in `docs/LIVE.md`.
+
+To send server-built LODs again (only if ores in them stop mattering, say on a creative or event server), stop
+the server and put back Distant Horizons' own values: `synchronizeOnLoad = true`, `enableRealTimeUpdates = true`
+and `generatorPlan = "SURFACE_THEN_CHUNKS"`.
+
+The other way is Voxy with LOD Server Support (LSS) instead of Distant Horizons, which can scramble ores in what it
+sends (`xrayObfuscation = "auto"` in `server\config\lss-server-config.yaml`; not tested here). Keep the Distant
+Horizons settings above either way: the LSS client can also pull LODs from a Distant Horizons server, so changing
+the client pack alone doesn't close anything.
+
 ## Claims and parties
 
 Open Parties and Claims settings are in `server\config\openpartiesandclaims-server.toml` (how many chunks
@@ -164,7 +293,11 @@ can build or break blocks. PvP is not blocked at spawn; make a server claim arou
 
 The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,
 Incendium, Nullscape and the structure mods. The seed is pinned in the manifest, so every copy of the
-server gets the same terrain.
+server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
+rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
+can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
+don't hand the server zip or a hosting bundle to players. A determined cheater can still work it out from the
+terrain with a seed cracker, which is one reason MinerTrack watches how people mine.
 
 ## The live map
 

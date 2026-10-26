@@ -17,7 +17,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `player/` | the player installer for the official Minecraft Launcher (shipped whole in the player zip) | by hand |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
 
-The command-line tools (`snapshot`, `check_updates`, `validate`, `build`) are thin; the knowledge
+The command-line tools (`snapshot`, `check_updates`, `validate`, `build`, `modrinth`) are thin; the knowledge
 lives in a few modules they share:
 
 | Module | Owns |
@@ -305,9 +305,41 @@ players") came from this harness on an i7-8700K.
    and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
 4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. Put the client pack on Modrinth: `python tools/modrinth.py` from a checkout of the tag, with the token in
+   `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
+   left `client/` alone, and moves the server listing to the newest version.
 
 The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
 `TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.
+
+### Releasing without Actions
+
+GitHub Actions doesn't start in this private repo right now (billing), so the tag push in step 4 publishes
+nothing. Do the workflow's job by hand, after step 4, in a fresh worktree of the tag so nothing uncommitted
+gets in:
+
+```bash
+git fetch origin --tags
+git worktree add --detach ../release-vX.Y.Z vX.Y.Z
+cd ../release-vX.Y.Z
+python -m pytest -q && python -m ruff check tools tests && python tools/validate.py
+pwsh -c 'Invoke-Pester tests/Realms.Tests.ps1, tests/Player.Tests.ps1'   # or powershell -c on Windows 5.1
+GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md
+gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
+python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)
+cd - && git worktree remove --force ../release-vX.Y.Z   # --force: notes.md is untracked
+```
+
+In PowerShell, set the tag with `$env:GITHUB_REF_NAME = 'vX.Y.Z'` before `python tools/build.py --notes notes.md`.
+`build.py` refuses a tag that doesn't match the manifest version, and `--notes` writes the release notes the
+workflow would: the version's CHANGELOG section, then what each download is for (it fails if the CHANGELOG has
+no section for the version). `--verify-tag` stops `gh` from making a tag that isn't on GitHub yet.
+
+What this skips is CI's boot tests (the server started natively on Windows, Linux and macOS, and in Docker).
+For a release that changes the manifest, the installer or the launchers, boot it first: unzip
+`dist/TheRealms-Server-X.Y.Z.zip` somewhere temporary and run `./tests/smoke.ps1 -Root <that folder>\TheRealms-Server -MemoryGB 4`.
+Do it right after pushing the tag: the live server deploys a new tag in its next deploy window (docs/LIVE.md)
+whether or not the release exists, and players need the new pack by then.
 
 ## Changing Minecraft version
 

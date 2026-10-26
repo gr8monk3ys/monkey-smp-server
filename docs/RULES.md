@@ -171,7 +171,7 @@ Open items from the owners' draft:
 - "The mods" section is still to be written.
 - B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack.
 
-What the server enforces by itself (two data packs from `tools/rules.py`, plus one config default).
+What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
 Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
 
 - **Rule 23, the launch hour.** At launch, run `function realms:rules/launch`. PvP and the Nether close
@@ -200,6 +200,15 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   "(disabled)", does nothing, and can't be put on an item at an anvil. This replaces vanilla's
   `#minecraft:non_treasure` enchantment tag; if a future mod adds its enchantments to that tag, add them to
   `VANILLA_NON_TREASURE` in `tools/rules.py` too.
+- **B15, B17 and B19, x-ray** (AntiXray, `defaults/config/antixray.toml`). The server never sends the real
+  block for an ore that touches no air, water or lava. In the Overworld every such spot shows a random ore, so
+  x-ray sees noise; in the Nether and the End hidden ores show as netherrack or end stone. X-ray clients and
+  packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
+  Distant Horizons' own server-side LODs would carry the real ores, so the server doesn't send them ("Distant
+  Horizons and x-ray" in `docs/ADMIN.md`). For x-ray that gets past all this (a cracked seed, say), MinerTrack alerts
+  moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
+  The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
+  Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
 
 Still on players and admins: everything else, including rule 33 (leaving a faction needs an admin's
 approval; the mod lets players leave a party freely).

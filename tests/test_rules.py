@@ -1,5 +1,6 @@
 import json
 import re
+import tomllib
 
 import rules
 from repo import REPO
@@ -195,3 +196,10 @@ def test_servercore_breeding_cap_and_villager_lobotomy_are_on():
 
     assert enabled_after("breeding-cap:") == "true"
     assert enabled_after("lobotomize-villagers:") == "true"
+
+
+def test_distant_horizons_sends_no_lods_it_built_itself():
+    # B15: server-built LODs come from the real world, so they would carry every buried ore past AntiXray.
+    config = tomllib.loads((REPO.defaults / "config" / "DistantHorizons.toml").read_text(encoding="utf-8"))
+    assert config["server"] == {"synchronizeOnLoad": False, "enableRealTimeUpdates": False}
+    assert config["common"]["worldGenerator"]["generatorPlan"] == "DISABLED"

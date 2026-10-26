@@ -2,8 +2,56 @@
 
 ## [Unreleased]
 
-Onboarding, faction rules and server config. Same Minecraft (26.3) and client pack; one server mod updated.
+X-ray protection, moderation tools, onboarding and faction rules. Server only: players need nothing new.
 
+- New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
+  players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
+  stone. It covers Skniro's Nether and End ores too, which aren't in the `c:ores` tag. This is what now enforces
+  B15 (x-ray), B17 and B19 (`docs/RULES.md`).
+- New: **MinerTrack**, alert only (`defaults/config/MinerTrack/config.yml`). It flags players who mine from one
+  buried diamond, emerald or ancient debris vein straight to the next, and alerts moderators at VL 2, 4 and 5
+  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, say). ADMIN.md also has the saved Ledger
+  query for diamond-ore breaks.
+- New: a test that the world seed never ends up in what players get (the client pack, the player zip, the site,
+  RULES.md). It isn't in any of them today; only the server zip has it.
+- New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
+  **InvView** (look into a player's inventory and ender chest). The rules' "temporary ban (1 to 7 days)" is now
+  `tempban NAME 3d reason`. See "Moderation" in `docs/ADMIN.md`.
+- New: **Vanilla Permissions**, so LuckPerms ranks can grant vanilla commands. Builders' `/gamemode` and
+  moderators' teleport and whitelist now work without op.
+- Ranks: moderators get the BanHammer, Vanish and InvView commands (InvView look only); admins can also move items
+  in other players' inventories. Rank files are only copied where missing, so an existing server keeps its old
+  ranks: see "Existing servers" under "Moderation" in `docs/ADMIN.md`.
+- Changed: Distant Horizons on the server no longer builds or sends LODs (`defaults/config/DistantHorizons.toml`:
+  `synchronizeOnLoad` and `enableRealTimeUpdates` off, `generatorPlan = "DISABLED"`). Its LODs came from the real
+  world, so they carried every real ore, buried or not, past AntiXray. Players still see LODs of land they have
+  walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
+  A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
+  `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
+- Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
+  the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
+  morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory
+  use can be compared from day to day.
+- Live server: a **weekly update check** on Mondays (`realms-updates.timer`): `tools/check_updates.py` against the
+  live release, posted to Discord with the report attached, while the GitHub Actions check can't run.
+- Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it
+  is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
+- Live server: **`deploy/realms-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
+  players on a throwaway copy of the live server (no Tebex, no published ports), with the live server stopped
+  and always started again. `tools/loadtest.py --spark` adds a spark profile of every thread, and `summary.json`
+  now records ServerCore's status. docs/LIVE.md has how to run it, the decision rule (about 40 ms at 25 players),
+  uptime monitoring from the home PC, and the DDoS plan (a question for Reizor first, TCPShield if needed).
+- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
+  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
+  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
+  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
+  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
+- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
+  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
+  approves the pack, Modrinth App players import the `.mrpack` as before.
+- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
+  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
+  without Actions") lists the steps.
 - New: players accept the **short rules** before they join (Minecraft's Code of Conduct screen,
   `codeofconduct/en_us.txt`, `enable-code-of-conduct=true`), and again whenever the text changes.
 - New: a **welcome screen** a few seconds after a first join. Its one button opens the Discord, where

@@ -1,6 +1,7 @@
 name: admin
 permissions:
 - '*'
+- invview.can_modify
 parents:
 - builder
 - moderator

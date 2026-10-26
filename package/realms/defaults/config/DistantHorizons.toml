@@ -1,0 +1,13 @@
+# Distant Horizons on the server: it sends players no LODs it built itself. Its server-side LODs come from the
+# real world, so they carry every real ore (AntiXray only changes chunks); with these three settings players
+# only get LODs of chunks they have loaded themselves, which AntiXray has already disguised. Distant Horizons
+# fills in every other setting with its defaults on the first start. To turn server-side LODs back on, see
+# "Distant Horizons and x-ray" in docs/ADMIN.md.
+_version = 5
+
+[server]
+	synchronizeOnLoad = false
+	enableRealTimeUpdates = false
+
+[common.worldGenerator]
+	generatorPlan = "DISABLED"

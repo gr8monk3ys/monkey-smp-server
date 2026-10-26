@@ -64,8 +64,8 @@ uses, and you can switch between the two (stop one before starting the other).
 | Back up | `docker compose down`, copy `server` somewhere safe, `docker compose up -d` |
 | Update to a new release | `docker compose down`, unzip the new release over the folder, `docker compose up -d --build` |
 
-Open 25565/tcp (game) and 24454/udp (voice chat) in the VPS firewall; 8100/tcp too if you want
-players to reach the live map.
+Open 25565/tcp (game) and 24454/udp (voice chat) in the VPS firewall. For a public live map, put it behind
+HTTPS as docs/LIVE.md does (step 9) rather than opening 8100/tcp.
 
 ## How many players
 
@@ -169,11 +169,32 @@ server gets the same terrain.
 ## The live map
 
 BlueMap serves a 3D web map on port **8100**: http://localhost:8100 on the host.
-Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel).
+Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel). The
+live server serves it over HTTPS at https://map.monkeysmp.lscaturchio.xyz (docs/LIVE.md, step 9).
 It shows the world, not the players: `live-player-markers: false` in `server\config\bluemap\plugin.conf`,
 because on a raiding server live positions would lead everyone to their targets. Builds still show, as on
 any map. Where BlueMap wrote `plugin.conf` itself (a server installed before this default shipped), markers
 are on: set it to `false` there and run `bluemap reload`.
+
+It also stops at the world border. Chunky generates out to the season's largest border (docs/LIVE.md, step
+6), so a map of everything generated would show the land the border acts haven't opened yet. The first
+`render-mask` layer of each map in `server\config\bluemap\maps\` is a box on its dimension's border: the
+shipped files fit Season I's start (2500 wide around spawn, 312.5 in the Nether), and the End has no border.
+After each border act, and once on a server whose map files BlueMap wrote itself, fit the masks to the
+border with `tools/map_border.py` from this repo (Python 3; on the live server the repo is at
+`/srv/realms/repo`) and render the maps again:
+
+```
+save-all                                    # console: the tool reads the border from the saved world
+python3 /srv/realms/repo/tools/map_border.py /srv/realms/TheRealms-Server/server
+bluemap reload                              # console
+bluemap purge world                         # console: deletes the map's tiles and renders it again (an hour or so)
+bluemap purge world_the_nether
+```
+
+The tool prints the `purge` lines for the maps it changed; `--check` changes nothing and exits 1 when a mask
+is off. A border still growing after `worldborder set` counts at its final size, so run it straight after.
+No need to fit it to the finale's shrinking border: the land outside was open all season.
 
 ## Moving an existing world in
 

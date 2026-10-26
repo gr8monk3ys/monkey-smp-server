@@ -81,16 +81,9 @@ function Get-PortHolder([string]$Protocol, [int]$Number) {
     } catch { return 'another program' }
 }
 
-# Simple Voice Chat stops the whole server when it can't bind its UDP port, and so does BlueMap with its
-# map port; on a taken RCON port this test would talk to (and stop) the other server.
-function Assert-PortsFree {
-    $ports = @(
-        @{ Protocol = 'tcp'; Number = $Port; What = 'game'; Parameter = '-Port' }
-        @{ Protocol = 'tcp'; Number = $RconPort; What = 'RCON'; Parameter = '-RconPort' }
-        @{ Protocol = 'tcp'; Number = $MapPort; What = 'BlueMap web map'; Parameter = '-MapPort' }
-        @{ Protocol = 'udp'; Number = $VoicePort; What = 'Simple Voice Chat'; Parameter = '-VoicePort' }
-    )
-    $busy = foreach ($p in $ports) {
+# Throws, naming each one, if any of $Ports (@{ Protocol; Number; What; Parameter }) is in use.
+function Assert-PortsFree([hashtable[]]$Ports) {
+    $busy = foreach ($p in $Ports) {
         $holder = Get-PortHolder $p.Protocol $p.Number
         if ($holder) { "  $($p.What) port $($p.Number)/$($p.Protocol) ($($p.Parameter)), held by $holder" }
     }
@@ -100,8 +93,32 @@ function Assert-PortsFree {
     }
 }
 
+# Sets the port in BlueMap's webserver.conf (HOCON), keeping the rest of the file; creates it if missing.
+function Set-MapPort([string]$Path, [int]$Number) {
+    $text = if (Test-Path -LiteralPath $Path) { [IO.File]::ReadAllText($Path) } else { '' }
+    $portLine = '(?m)^[ \t]*port[ \t]*[:=][^\r\n]*'
+    if ($text -match $portLine) { $text = $text -replace $portLine, "port: $Number" } else { $text += "`nport: $Number`n" }
+    New-Item -ItemType Directory -Force -Path (Split-Path $Path -Parent) | Out-Null
+    [IO.File]::WriteAllText($Path, $text)
+}
+
+# Whether this boot has logged "Done". A re-run in the same folder finds the last boot's latest.log, "Done"
+# line and all, until the new server rotates it, so a log last written before $Since doesn't count.
+function Test-BootDone([string]$Log, [datetime]$Since) {
+    $item = Get-Item -LiteralPath $Log -ErrorAction SilentlyContinue
+    return [bool]($item -and $item.LastWriteTime -gt $Since -and (Select-String -LiteralPath $Log -Pattern 'Done \(' -Quiet))
+}
+
+# Simple Voice Chat stops the whole server when it can't bind its UDP port, and so does BlueMap with its
+# map port; on a taken RCON port this test would talk to (and stop) the other server.
+$ports = @(
+    @{ Protocol = 'tcp'; Number = $Port; What = 'game'; Parameter = '-Port' }
+    @{ Protocol = 'tcp'; Number = $RconPort; What = 'RCON'; Parameter = '-RconPort' }
+    @{ Protocol = 'tcp'; Number = $MapPort; What = 'BlueMap web map'; Parameter = '-MapPort' }
+    @{ Protocol = 'udp'; Number = $VoicePort; What = 'Simple Voice Chat'; Parameter = '-VoicePort' }
+)
 Write-Host "--- ports free? game $Port, RCON $RconPort, map $MapPort (TCP), voice $VoicePort (UDP)"
-Assert-PortsFree
+Assert-PortsFree $ports
 
 Write-Host '--- install (non-interactive)'
 Invoke-Realms @('install', '-AcceptEula', '-NonInteractive', '-NoOwner')
@@ -121,31 +138,22 @@ Set-ServerProperty -Path $props -Name 'rcon.port' -Value $RconPort
 # (the package ships neither), so create them now; each mod uses its defaults for the settings left out.
 $configDir = if ($isPaper) { 'plugins' } else { 'config' }
 Set-ServerProperty -Path (Join-Path $server "$configDir/voicechat/voicechat-server.properties") -Name 'port' -Value $VoicePort
-$mapConf = Join-Path $server $(if ($isPaper) { 'plugins/BlueMap/webserver.conf' } else { 'config/bluemap/webserver.conf' })
-$mapText = if (Test-Path -LiteralPath $mapConf) { [IO.File]::ReadAllText($mapConf) } else { '' }
-$portLine = '(?m)^[ \t]*port[ \t]*[:=][^\r\n]*'
-if ($mapText -match $portLine) { $mapText = $mapText -replace $portLine, "port: $MapPort" }
-else { $mapText += "`nport: $MapPort`n" }
-New-Item -ItemType Directory -Force -Path (Split-Path $mapConf -Parent) | Out-Null
-[IO.File]::WriteAllText($mapConf, $mapText)
+Set-MapPort (Join-Path $server $(if ($isPaper) { 'plugins/BlueMap/webserver.conf' } else { 'config/bluemap/webserver.conf' })) $MapPort
 
 # Again: another boot may have taken one during the install.
-Assert-PortsFree
+Assert-PortsFree $ports
 Write-Host "--- start (port $Port)"
 $out = Join-Path $Root 'smoke-console.log'
 $startArgs = @{ FilePath = $shell; PassThru = $true; RedirectStandardOutput = $out; RedirectStandardError = "$out.err"
     ArgumentList = $shellArgs + @('-File', "`"$script`"", 'start', '-NonInteractive', '-MemoryGB', $MemoryGB) }
 if ($onWindows) { $startArgs.WindowStyle = 'Hidden' }   # not supported on Linux and macOS
 $log = Join-Path (Join-Path $server 'logs') 'latest.log'
-# A re-run in the same folder finds the last boot's latest.log, "Done" line and all, until this server
-# rotates it, so only a log written after this start counts.
 $startTime = Get-Date
 $proc = Start-Process @startArgs
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 $started = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
-    $item = Get-Item -LiteralPath $log -ErrorAction SilentlyContinue
-    if ($item -and $item.LastWriteTime -gt $startTime -and (Select-String -Path $log -Pattern 'Done \(' -Quiet)) { $started = $true; break }
+    if (Test-BootDone $log $startTime) { $started = $true; break }
     Start-Sleep -Seconds 5
 }
 if (-not $started) {

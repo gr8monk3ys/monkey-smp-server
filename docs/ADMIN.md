@@ -403,7 +403,9 @@ same number, so two flags with one number means a copy. Book names are the encha
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
 on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and
-the Plumed Helm at 10 (`docs/RETENTION.md`).
+the Plumed Helm at 10 (`docs/RETENTION.md`). An event begun this week also counts for the weekly challenge
+"Come to an event" when it is on, so always start events with `begin`. On the launch weekend, begin the
+Build Battle after `rules/launch`: the launch starts challenge progress from zero.
 
 **Holidays.** At Hallowtide, Midwinter and Midsummer (`docs/SEASONS.md`, "Holidays"), stand with the
 crowd near the end and give everyone there the holiday's skin, as well as running `attend`:
@@ -435,6 +437,72 @@ python tools/block_wheel.py "S1 week 3" --spins 5
 Announce the seed before the draw so anyone can check it. The output ends with a `tellraw` line to paste
 into the console. The pool (`tools/wheel_pool.txt`) is every survival-obtainable block; rebuild it after a
 Minecraft update with `--pool <data reports folder>`.
+
+## Weekly challenges
+
+Three challenges a week, from the pool in `tools/challenges.py`, with skins at 3, 9 and 18 done (players'
+side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `realms-wardrobe` data pack. A new week
+starts every Monday at 12 AM Pacific; week 1 is the week of Monday 23 November 2026, and the launch
+weekend before it is week 0.
+
+What runs when, on the maintainer's computer or the VPS:
+
+```
+python tools/challenges.py schedule                 # this week and the next 11
+python tools/challenges.py schedule --from 0 --weeks 13
+python tools/challenges.py commands                 # what realms-week.timer sends this hour
+```
+
+The server has no calendar: `realms-week.timer` sends the week every hour (`docs/LIVE.md`, step 7), and
+`sh /srv/realms/repo/deploy/realms-week.sh --check` on the VPS shows the commands and whether the timer runs.
+Over RCON (or in game with `/`):
+
+```
+scoreboard players get #week rc.week                # the week the server is on (-1: it was never told)
+function realms:challenges/sync {week:5}            # start week 5 unless it is already on (clears this week's progress)
+function realms:challenges/restart                  # clear everyone's progress this week; finished ones stay counted
+scoreboard players get NAME rw.challenges           # a player's challenges done, all seasons
+```
+
+The timer sends the real week every hour, so a `sync` to another week lasts until the next hour, and each
+switch clears the week's progress: use it on a test server, not the live one.
+
+**Editing the pool.** `POOL` in `tools/challenges.py` is the one place. Each entry has an `id` (short,
+lowercase; it names the challenge's scores), a `kind` (solo, faction or explore), a `name` (at most 30
+characters, so the menu line fits), a `goal`, an `about` (the hover text: what counts) and one way of
+counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statistic from the allowed list in
+`tests/test_challenges.py`), `kill` (mob types, never players), `loot`, `visit` (kinds of structure),
+`days` or `event`. Week N runs entry N mod (how many of that kind) of each kind, in the order listed, so:
+
+- Change the pool between weeks, and deploy before Monday 12 AM Pacific. Adding or removing an entry
+  shifts the rotation of every later week: check `schedule` before and after, and tell players if a week
+  you announced changes.
+- Don't rename or remove the challenge that is on this week (its progress is in scores named after its id).
+- Keep two or more of each kind, so no kind repeats two weeks running, and about one to three hours of play a
+  week in all.
+- Nothing that rewards PvP kills, forces griefing, or can be farmed with an alt, a friend, a water stream or
+  a vehicle. Distance and time online are out for that reason; the tests check the statistics and the kill
+  lists.
+
+Then `python tools/wardrobe.py` (it writes the challenges into the wardrobe pack), run the checks, and
+release. Players need a new client pack only when skins change.
+
+**The launch weekend (Founder's Circlet).** `function realms:rules/launch` opens it, and it closes by itself
+at the end of Sunday 22 November, Pacific (31 hours of game time, kept to the wall clock by
+`realms-week.timer`). It works in Season I only. If something goes wrong:
+
+```
+function realms:wardrobe/founder/open               # open it as the launch does, if rules/launch didn't run
+function realms:wardrobe/founder/open_for {hours:6} # open it, or keep it open, for 6 hours of game time from now
+function realms:wardrobe/founder/close              # close it now
+scoreboard players get #founder.open rw.day         # 1 while it is open
+scoreboard players get NAME rw.launchtime           # seconds NAME was online while it was open (600 unlocks)
+```
+
+`open_for` is manual: the wall clock no longer moves its end, so close it yourself at the end of Sunday if
+it runs past. Game time stops while the server is empty, so a manual window can last longer than its hours.
+Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making good an outage during the
+window.
 
 ## Telling players what changed
 

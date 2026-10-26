@@ -69,7 +69,11 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    in that file once and run `chunky continue`.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
    `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
-   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
+   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC. Then
+   `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
+   server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
+   (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
+   sends and whether it runs.
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
    address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
@@ -140,6 +144,21 @@ server again whatever happens. A setting it can't find (a mod renamed it) is lef
 It reads no secrets from `/etc/realms-deploy.env` and of `server.properties` only the `enable-code-of-conduct`
 line; its log is `/var/log/realms-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
 machine"): they need keys the owner makes.
+
+### The weekly challenges' timer (the release with the weekly challenges)
+
+Once that release is live, install `realms-week.timer` from the deployed checkout. It is safe to run again
+(it copies only units that changed), and `--check` says what it would send and changes nothing:
+
+```sh
+sh /srv/realms/repo/deploy/realms-week.sh --check
+sudo sh /srv/realms/repo/deploy/realms-week.sh --install
+```
+
+Do it before the launch (Saturday 21 November 2026, 5 PM Pacific): without the timer the challenge week never
+turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
+It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
+`LIVE_DIR` from `/etc/realms-deploy.env`.
 
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 

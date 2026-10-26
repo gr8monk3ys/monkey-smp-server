@@ -12,6 +12,9 @@ scoreboard objectives add rw.day dummy
 scoreboard objectives add rw.const dummy
 scoreboard objectives add rw.events dummy
 scoreboard objectives add rw.playbase dummy
+scoreboard objectives add rw.challenges dummy
+scoreboard objectives add rw.launch dummy
+scoreboard objectives add rw.launchtime dummy
 scoreboard objectives add rw.hallowtide dummy
 scoreboard objectives add rw.midwinter dummy
 scoreboard objectives add rw.midsummer dummy
@@ -20,8 +23,12 @@ scoreboard objectives add rw.events.seen dummy
 scoreboard objectives add rw.hallowtide.seen dummy
 scoreboard objectives add rw.midwinter.seen dummy
 scoreboard objectives add rw.midsummer.seen dummy
+scoreboard objectives add rw.challenges.seen dummy
+scoreboard objectives add rw.launch.seen dummy
 scoreboard players set #hour rw.const 72000
+scoreboard players set #second rw.const 20
 scoreboard players add #today rw.day 0
 # The first season runs until staff set #season to 2; everyone who plays in it is a founder.
 execute unless score #season rw.day matches -2147483648.. run scoreboard players set #season rw.day 1
+function realms:challenges/load
 schedule function realms:wardrobe/second 20t replace

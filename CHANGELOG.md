@@ -6,6 +6,15 @@
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+- New: **weekly challenges** and **Founder's Circlet**. Three challenges a week (solo, faction, explore) from a
+  rotating pool in `tools/challenges.py`, new every Monday at 12 AM Pacific, shown by `/trigger challenges` and
+  a third wardrobe page. Only this week's play counts; nothing counts player kills, distance or time online, and
+  blocks count mined minus placed. Challenges done (`rw.challenges`, carried to the next season) unlock
+  Trailblazer at 3, the Vanguard Helm at 9 and Pinnacle at 18. Founder's Circlet is for 10 minutes online on
+  Season I's launch weekend (Saturday 21 November 2026, 5 PM Pacific, to the end of Sunday): `rules/launch`
+  opens it and it closes by itself; never sold. All four skins are look-only. Players update the client pack
+  for the new textures. On the VPS, install the hourly week timer once this is live:
+  `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` (docs/LIVE.md).
 
 ## [2.5.0] - 2026-10-26
 

@@ -10,7 +10,8 @@ the world folder and never go in; inside it, the Ledger database (who did what, 
 config, scripts, player-activity times, Distant Horizons' cache and session.lock stay out too.
 
 carry reads the old world's scoreboard and writes a small data pack into the new world, realms-carry,
-that puts back every wardrobe score (rw.*: days, months, invites, tiers, founders, events, holidays),
+that puts back every wardrobe score (rw.*: days, months, invites, tiers, founders, events, holidays,
+weekly challenges done, the launch weekend),
 the supporter, title and champion teams, and hours played (as rw.playbase, because the new world's
 play-time statistic starts at zero). It runs once, by itself, when the new world first loads; see
 docs/SEASONS.md, "Ending a season".
@@ -36,8 +37,10 @@ CARRY = "realms-carry"
 KEEP = ["level.dat", "dimensions", "data", "players", "datapacks"]
 DROP = ["DistantHorizons*", "session.lock", "data/baguettelib", "data/mezz_config", f"datapacks/{CARRY}"]
 # Scores that are not carried: worked out again (rw.hours), the play-time statistic (rw.play, carried as
-# rw.playbase), constants (rw.const), and the day counter, set on its own (rw.day).
-NOT_CARRIED = {"rw.play", "rw.hours", "rw.const", "rw.day", "rw.playbase"}
+# rw.playbase), constants (rw.const), the day counter, set on its own (rw.day), and the seconds played in
+# Season I's launch weekend (rw.launchtime; rw.launch, the skin, carries). The weekly challenges' rc.* scores
+# are this week's only and never carried; the challenges done (rw.challenges) are.
+NOT_CARRIED = {"rw.play", "rw.hours", "rw.const", "rw.day", "rw.playbase", "rw.launchtime"}
 TEAMS = ("tier_", "title_", "champion")   # the teams docs/RETENTION.md and docs/SEASONS.md set up
 
 READ_ME = """Monkey SMP, Season {season}: the world download

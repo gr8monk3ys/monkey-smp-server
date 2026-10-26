@@ -1,0 +1,2 @@
+execute if score @s rc.enchant.done matches 1 run tellraw @s [" ",{"text":"Solo  ","color":"gray"},{"text":"Enchant 5 items","color":"green","hover_event":{"action":"show_text","value":"At an enchanting table."}},{"text":"  done","color":"green"}]
+execute unless score @s rc.enchant.done matches 1 run tellraw @s [" ",{"text":"Solo  ","color":"gray"},{"text":"Enchant 5 items","color":"white","hover_event":{"action":"show_text","value":"At an enchanting table."}},"  ",{"score":{"name":"@s","objective":"rc.solo"},"color":"yellow"},{"text":"/5","color":"gray"}]

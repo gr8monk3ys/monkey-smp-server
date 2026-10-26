@@ -58,7 +58,8 @@ Each season has:
   signs up (below).
 
 What carries over between seasons: wardrobe unlocks, days and hours played, tenure, invites, events
-attended, holiday skins, supporter tiers and titles, including the champion's (`tools/season.py carry`,
+attended, holiday skins, weekly challenges done, the launch weekend's skin, supporter tiers and titles,
+including the champion's (`tools/season.py carry`,
 "Ending a season" below). What resets: the world, items, Strength and territory. Factions can re-form.
 
 ### Registering a faction
@@ -85,7 +86,7 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 
 | Week | Act or event | What happens |
 | --- | --- | --- |
-| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone. |
+| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone, and Founder's Circlet for 10 minutes online before the end of Sunday (Pacific). Challenge week 0. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
 | 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
@@ -113,6 +114,13 @@ Most weeks it is the act or pillar event from the table above. When a week has o
 - The monthly Town Hall the bot already runs (first Saturday) is where players give feedback on the
   season.
 - Post the result and the screenshots in `#monkey-smp` the same night.
+
+Between events, three **weekly challenges** (one solo, one faction, one explore) give everyone something to
+do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
+the Saturday event, and each one done counts toward three wardrobe skins (`docs/RETENTION.md`, "Weekly
+challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
+launch weekend is challenge week 0, and week 1 starts on Monday 23 November 2026. See what runs when with
+`python tools/challenges.py schedule`.
 
 ### The pillar events
 
@@ -429,11 +437,14 @@ renewals keep counting: the store's commands still reach the old world, and the 
     ```
 
     It writes one small data pack, `realms-carry`, into the new world folder. It holds every player's
-    wardrobe scores (days, months, invites, events, holidays, tier, founder), their hours played, and the
+    wardrobe scores (days, months, invites, events, holidays, weekly challenges done, tier, founder and
+    the launch weekend), their hours played, and the
     supporter, title and champion teams. It runs by itself at the new world's first load, once, and sets
     the season to 2, so no one gets Founder's Edge in the new world.
 14. Start it: `docker compose up -d`. The world generates, the installer adds the Monkey SMP data packs, and
-    the console says "Carried N players' wardrobe scores and K teams into season 2."
+    the console says "Carried N players' wardrobe scores and K teams into season 2." Within the hour,
+    `realms-week.timer` tells the new world the challenge week (it keeps the rotation going; this week's
+    progress starts from zero).
 15. Check: `realms rcon "scoreboard players get #carried rw.day"` gives 1,
     `realms rcon "scoreboard players get #season rw.day"` gives 2, and one regular's
     `scoreboard players get NAME rw.days` matches the old world.
@@ -450,6 +461,11 @@ won't run twice). Delete its folder at the next restart to tidy up.
 
 Built:
 - The wardrobe and Founder's Edge.
+- Weekly challenges (`tools/challenges.py`, in the `realms-wardrobe` data pack): three a week from a pool
+  that rotates every Monday at 12 AM Pacific, `/trigger challenges`, and their skins at 3, 9 and 18
+  challenges done (Trailblazer, the Vanguard Helm, Pinnacle). `realms-week.timer` sends the week.
+- Founder's Circlet, for 10 minutes online on Season I's launch weekend: opened by `rules/launch`, closed
+  at the end of Sunday, Pacific.
 - The season counter (`#season rw.day`).
 - `/gamenight` and the Town Hall in Front Desk.
 - `tools/retention.py`.

@@ -209,7 +209,7 @@ Open items from the owners' draft:
   change. Rule 41 counts allies as outside the faction, as SaicoPvP does. If allies (rule 31) should be
   able to fight together, add "or its ally" to rule 41.
 - "The mods" section is still to be written.
-- Rule 43 (shops) is a proposed default, the owners' call to change. It protects shops only inside a claim,
+- Rule 43 (shops), adopted by the owners on 26 October 2026. It protects shops only inside a claim,
   where Open Parties and Claims already enforces it, rather than every shop anywhere: a rule that protected
   wilderness shops would let anyone turn a stash chest into an unraidable "shop" by putting a Trade Shop on it.
   The payments a shop collects sit in the shop block itself, which only its owner can break and no explosion

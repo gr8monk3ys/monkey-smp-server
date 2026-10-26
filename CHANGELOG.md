@@ -11,8 +11,8 @@
   payments and only its owner can break it. Open Parties and Claims' default
   `forcedBlockProtectionExceptionList` gains `"hand$universal_shops:trade_block"`, so anyone may buy, empty-handed,
   from a shop in someone's claim while its chest stays protected; on the live VPS run `deploy/shops-claims.sh`
-  once this release is live (docs/LIVE.md, "Shops in claims"). New rule 43 (`docs/RULES.md`, "Trading"; a
-  proposed default for the owners): shops in a claim are protected, raids included, and lying listings are scams.
+  once this release is live (docs/LIVE.md, "Shops in claims"). New rule 43 (`docs/RULES.md`, "Trading";
+  adopted by the owners 26 October): shops in a claim are protected, raids included, and lying listings are scams.
   In the client pack, 126 client-side mods and every resource pack and shader pack are now `"client": "optional"`,
   ticked by default, so players can untick them in Prism or switch them off in the Modrinth App; the other 50 mods
   (those that add registry content, and the libraries they need) stay required. `tools/client_env.py` holds the list, `snapshot.py`

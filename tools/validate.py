@@ -1,7 +1,7 @@
 """Check the manifest and package for mistakes that would break an install.
 
   python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack,
-                                        Fabric launcher profile, player installer files)
+                                        Fabric launcher profile, player installer files, the site's links and modpack)
   python tools/validate.py --online     also download every file (Java for every platform, the Paper jar
                                         or Fabric launcher, plugins, mods, datapacks, and the PowerShell
                                         builds in pwsh.lock), verify its size and hash, apply each
@@ -19,6 +19,7 @@ import entries
 import launcher_profile
 import patches
 import pwsh_lock
+import site_links
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
 
@@ -178,7 +179,8 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
     ap.add_argument("--online", action="store_true")
     a = ap.parse_args(argv)
     manifest = repo.load_manifest()
-    errors = validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
+    errors = (validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
+              + site_links.problems(repo))
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
         errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)

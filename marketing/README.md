@@ -34,7 +34,7 @@ The big renders live in `D:\DevData\monkey-smp-marketing\out\` (override with `M
 - `discord-invite-splash-1920x1080.png`, `youtube-header-2560x1440.png`, `twitter-header-1500x500.png`,
   `og-1200x630.png` (PNG master of `site/img/og.jpg`), plus copies of everything in the repo.
 
-The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketingootage\` (`build`,
+The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketing\footage\` (`build`,
 `raid`, `arena`, `cup`, `wardrobe`, each a 1080p30 mp4). It was filmed on the photo server with Carpet
 fake players acting out each event through the real `realms:events` functions, so the bossbar, titles,
 sidebar and wardrobe items are what players will see. It is staged, not a recording of a real event.

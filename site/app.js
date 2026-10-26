@@ -1,8 +1,10 @@
-// Fills links from config.js and wires the copy button. The page reads fine without it.
+// Fills links from config.js and wires the copy button. The pages read fine without it: tools/site_links.py
+// writes the same links into the HTML.
 (function () {
   var cfg = window.REALMS || {};
 
-  if (cfg.ADDRESS) document.getElementById("address").textContent = cfg.ADDRESS;
+  var address = document.getElementById("address");
+  if (cfg.ADDRESS && address) address.textContent = cfg.ADDRESS;
 
   // A link whose URL isn't set yet points at the Discord and says so.
   document.querySelectorAll("[data-link]").forEach(function (a) {
@@ -38,8 +40,8 @@
   }
 
   var copy = document.getElementById("copy");
-  copy.addEventListener("click", function () {
-    var text = document.getElementById("address").textContent;
+  if (copy) copy.addEventListener("click", function () {
+    var text = address.textContent;
     var done = function () {
       copy.textContent = "Copied";
       setTimeout(function () { copy.textContent = "Copy"; }, 1600);

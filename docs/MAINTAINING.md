@@ -279,7 +279,12 @@ players") came from this harness on an i7-8700K.
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
-3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. Put the new player files on the site, since the GitHub releases are private and players download the pack
+   from there: `python tools/build.py`, replace the files in `site/pack/` with `dist/TheRealms-Client-X.Y.Z.mrpack`
+   and `dist/TheRealms-Player-X.Y.Z.zip`, point `MODPACK_URL` and `INSTALLER_URL` in `site/config.js` at them
+   and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
+   (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
+4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
 `TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.

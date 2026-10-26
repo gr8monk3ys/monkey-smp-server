@@ -252,10 +252,11 @@ When the VPS or its provider is down for longer than a restart:
    into `server\mods` this time (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
-   With TTL 60, players reconnect to the same name within minutes.
+3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port,
+   and each join address's SRV record (`_minecraft._tcp.yt.monkeysmp` and the rest, docs/PROMOTION.md)
+   too. With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
-   record back, and start the VPS.
+   records back, and start the VPS.
 
 Only one copy may run the world at a time: two live copies split the world into two histories.
 
@@ -274,3 +275,35 @@ Only one copy may run the world at a time: two live copies split the world into 
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
+
+### The store (set up once, before the first sale)
+
+Tebex can't change the price of a subscription already sold, so set these before the store link goes on
+the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-sale.md):
+
+| Package | Price | Charged | Commands (docs/RETENTION.md) |
+| --- | --- | --- | --- |
+| Server Pass | $5 | monthly subscription | whitelist, `rw.months 1` on renewal |
+| Server Pass, 3 months | $14 | once; Remove After 90 days | whitelist, `rw.months 3` |
+| Ember, Banner, Crown | $3, $7, $15 | monthly subscription | `rw.tier`, `tier_*` team |
+
+- **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price
+  for access; a sale has to be open to everyone.
+- **Free trial on the monthly pass: 7 days.** Tebex added native trials for subscription packages (1, 3,
+  7, 10, 14 or 30 days; Packages > the package > Trials). It takes card details at checkout and charges
+  when the trial ends; a trial on the package is the same for every buyer, so it stays within the
+  one-price rule. Seven days always includes a Saturday event (docs/SEASONS.md). Tebex's docs don't say
+  which commands run when a trial starts or is cancelled, so test once with a real purchase before
+  switching it on for everyone: the whitelist command has to run when the trial starts, the removal when
+  it is cancelled, and `rw.months` mustn't count the trial's first charge twice. If the whitelist waits for
+  the first charge, leave trials off and run open-house evenings instead: the whitelist off for one
+  announced evening a month with staff online, listed in docs/SEASONS.md and on the site. Once trials are
+  on, add this to the site's FAQ (`site/index.html`), under "Refunds?":
+  "**Can I try it first?** Yes: the monthly pass starts with 7 free days. Tebex asks for a card and charges
+  the first month when the 7 days end, unless you cancel before then on its payment history page."
+- **Creator codes** (Creator Codes in the Tebex panel): a 20% revenue share, no customer discount, limited
+  to the 3-month pass if Tebex offers that. Tebex pays a code's share only on a subscription's first
+  payment, takes 1% more on payments made with a code, and settles the creator's Tebex Wallet after 30
+  working days. The public terms are `site/creators.html`; finding creators is in docs/PROMOTION.md.
+- **The site.** Put the webstore's address in `STORE_URL` in `site/config.js` and run
+  `python tools/site_links.py`, which writes it into the pages.

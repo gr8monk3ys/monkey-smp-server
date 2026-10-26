@@ -12,6 +12,19 @@
   restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
 - Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
   `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+- Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
+  the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
+  morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory
+  use can be compared from day to day.
+- Live server: a **weekly update check** on Mondays (`realms-updates.timer`): `tools/check_updates.py` against the
+  live release, posted to Discord with the report attached, while the GitHub Actions check can't run.
+- Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it
+  is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
+- Live server: **`deploy/realms-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
+  players on a throwaway copy of the live server (no Tebex, no published ports), with the live server stopped
+  and always started again. `tools/loadtest.py --spark` adds a spark profile of every thread, and `summary.json`
+  now records ServerCore's status. docs/LIVE.md has how to run it, the decision rule (about 40 ms at 25 players),
+  uptime monitoring from the home PC, and the DDoS plan (a question for Reizor first, TCPShield if needed).
 
 ## [2.4.1] - 2026-10-25
 

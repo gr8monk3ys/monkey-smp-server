@@ -233,3 +233,139 @@ Only one copy may run the world at a time: two live copies split the world into 
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
+
+## Monitoring, the daily restart and the update check
+
+| What | Runs on | Does |
+|---|---|---|
+| Uptime Kuma | the home PC (fleet repo, `services/uptime-kuma.md`) | every minute: a Minecraft status ping to `monkeysmp.lscaturchio.xyz` (through the SRV record, as players connect) and an HTTP check of the live map; alerts in a Discord channel; quiet 4-5 AM Pacific, when deploys and the daily restart happen |
+| `realms-restart.timer` | the VPS | restarts the server at 4:30 AM Pacific and posts a spark health link |
+| `realms-updates.timer` | the VPS | Mondays at 10 AM Pacific: lists newer builds of what the live release pins |
+
+Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
+the time anyway. The update check runs on the VPS rather than the home PC: it uses the webhook that is already
+in `/etc/realms-deploy.env` (no second copy of it), and it checks the release that is actually live.
+
+Install the two timers once the release after 2.4.1 is live (they run from the deployed checkout):
+
+```sh
+sudo apt-get install -y python3    # the update check runs tools/check_updates.py (3.10 or newer)
+sudo cp /srv/realms/repo/deploy/realms-{restart,updates}.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now realms-restart.timer realms-updates.timer
+```
+
+Both post to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it is set (a staff-only channel), and to
+`DISCORD_WEBHOOK_URL` otherwise.
+
+**The daily restart** keeps memory from creeping up over days of uptime (Distant Horizons, BlueMap and mod
+caches). It runs inside the deploy window but after the deploy check: when a release went live that morning,
+the server is younger than `RESTART_MIN_UPTIME` hours (6) and the restart skips. It waits up to 30 minutes for
+the deploy lock, so it never overlaps a deploy or an off-site backup. It warns anyone online 5 minutes and 1
+minute ahead, like a deploy, takes `spark health` just before stopping, and posts "back up (had been up N h)"
+with that link. If memory use in those reports keeps climbing from day to day, something leaks and the
+restart only hides it. Log: `journalctl -u realms-restart -n 50`. To restart now as the timer would, as
+`realms`: `RESTART_MIN_UPTIME=0 sh /srv/realms/repo/deploy/realms-deploy.sh --restart`.
+
+**The weekly update check** runs `tools/check_updates.py` against the live release, since the GitHub Actions
+check can't run in this private repo. It posts every Monday, with the report attached when there is anything
+newer, so a Monday without a post means the timer is broken. It changes nothing: taking an update is still
+`check_updates.py --apply` on a PC, the smoke test and a release (docs/MAINTAINING.md). Run it now with
+`sudo systemctl start realms-updates`; log: `journalctl -u realms-updates`.
+
+## Load test
+
+The player table in docs/ADMIN.md was measured on an i7-8700K with nothing else running. The VPS core is
+faster, but it has only two threads, shared by the game thread, C2ME's chunk workers, Distant Horizons'
+LOD builders, BlueMap's renderer and the garbage collector, so its number has to be measured on the VPS.
+`deploy/realms-loadtest.sh` runs `tools/loadtest.py` there: 25 Carpet fake players standing spread out in
+generated terrain (the same test as the table), 5 minutes measured, with a spark profile of every thread.
+
+Run it as root at a quiet time, after Chunky has finished pre-generating (it refuses before that; `FORCE=1`
+overrides) and not around midnight UTC (realms-day.timer). The server is offline for about 15 minutes: the
+script says so on Discord and warns anyone online. Started with `systemd-run`, it carries on if SSH drops:
+
+```sh
+systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/realms-loadtest.sh
+journalctl -fu realms-loadtest
+```
+
+Before a release ships the script, copy `deploy/realms-loadtest.sh` and `tools/loadtest.py` to `/root/` and
+run `systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/realms-loadtest.sh`.
+
+Why it is safe for the live world and for players:
+
+- It holds the deploy lock: no deploy, daily restart or off-site backup runs meanwhile.
+- It tests a copy. `rsync` copies the live folder while the server runs, then once more (only what changed)
+  after the server has stopped and saved. The live folder is only read.
+- Tebex is taken out of the copy, which would otherwise claim real purchases and run their commands there,
+  and Chunky won't resume pre-generating in it.
+- The copy runs in a one-off container that publishes no ports: nobody can join it, and its ports (25565,
+  RCON, BlueMap's 8100) can't clash with the live ones.
+- The live server is stopped meanwhile (the machine can't hold both heaps, and both would share the two
+  threads). It is started again whatever happens, including a failed test, and the copy is deleted.
+
+Results stay in `/root/loadtest-results/<time>/` (`summary.json` per scenario, with the spark link and
+ServerCore's status); the headline goes to the staff webhook.
+
+| Date | Release | Players | Median tick | Worst p95 | TPS | spark profile |
+|---|---|---|---|---|---|---|
+| not run yet | | 25 | | | | |
+
+**Decision rule.** Under about 40 ms median at 25 players, leave it: that leaves room for spikes. Above
+that, change one thing at a time, in this order, and run the test again after each:
+
+1. **Cap Distant Horizons** if its threads show up in the spark profile. In `server/config/DistantHorizons.toml`:
+   `numberOfThreads = 1` and `threadRunTimeRatio = "0.5"` under `[common.multiThreading]`, and a smaller
+   `maxGenerationRequestDistance` (4096 now) under `[server]`.
+2. **Pause BlueMap in the evening** if it shows up. It already renders on one thread
+   (`render-thread-count: 1`); `bluemap stop` over RCON pauses it and `bluemap start` resumes it.
+3. **Lower `simulation-distance`** in the live `server.properties` from 6 to 5, then 4. Players still see 8
+   chunks; mobs, crops and farms only run nearer. If `servercore_status` in `summary.json` shows lower
+   distances than these, ServerCore's dynamic mode was already cutting them during the test because ticks
+   were over 45 ms, so the real cost is higher than the number.
+4. **A plan with 4 or more threads** if it is still over 40 ms.
+
+## DDoS protection
+
+Today players connect straight to the VPS address (the `play.monkeysmp` A record), and that address is in
+public DNS history. Whether to do more depends on what Reizor filters, so the question below goes to Reizor
+support first. As of 2026-10-25 nothing has changed and DNS stays as it is.
+
+- **Always-on filtering at Reizor's edge** that covers the game ports (TCP 25565 and UDP 24454): nothing to add
+  beyond its panel firewall.
+- **Only a null-route when attacked**, or no filtering: put TCPShield in front, as below.
+
+The question for Reizor support (the owner sends it):
+
+> Does my VPS (Dallas) have DDoS filtering at your network edge? Is it always on, or does it null-route the
+> address when an attack is detected? Does it cover game traffic, TCP 25565 (Minecraft) and UDP 24454 (voice
+> chat)? Is there a firewall in your panel that filters before traffic reaches the VPS? Can I get a new or
+> additional IPv4 address, and at what cost? Do you notify customers when an attack is mitigated?
+
+**The TCPShield plan** (only if the answer is weak):
+
+1. **Tier.** Free ($0, 1 TB a month, sized for 20-30 players) covers the game only. Voice chat's UDP isn't
+   proxied on Free: voice either stops working, or `voice_host` points at the VPS and publishes the address
+   the proxy hides. Pro ($25 a month, 5 TB) adds Simple Voice Chat support. With Free, check the traffic after
+   the first month (`vnstat` on the VPS).
+2. **The real player addresses.** The Proxy Protocol Support mod (Fabric, server side only, 1.2.1 for 26.3,
+   added with `tools/add.py`) reads them from the proxy, so bans, LuckPerms and logs see players, not
+   TCPShield. In `server/config/proxy_protocol_support.json`: `"enableProxyProtocol": true`,
+   `"whitelistTCPShieldServers": true` (it fetches TCPShield's addresses itself) and
+   `"directAccessIPs": ["127.0.0.1"]` (drop the default `192.168.0.0/16`), so anything else is refused.
+3. **Lock the VPS to the proxy.** Docker publishes ports past ufw, so a ufw rule doesn't close 25565. Use
+   Reizor's panel firewall if it has one, or the `DOCKER-USER` chain (matched on the original port, since
+   Docker rewrites the destination), then save the rules with `netfilter-persistent save`:
+
+   ```sh
+   iptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 25565 -j DROP
+   for net in $(curl -fsS https://tcpshield.com/v4/); do
+       iptables -I DOCKER-USER -p tcp -s "$net" -m conntrack --ctorigdstport 25565 -j RETURN
+   done
+   ```
+
+4. **A new address.** The current one is already public, so the proxy only hides a new one. The map's
+   `A` record names the same machine and would leak the new address too, so the map moves behind an HTTP
+   proxy or off the VPS at the same time.
+5. **DNS last.** Point the `_minecraft._tcp.monkeysmp` SRV record at the TCPShield address, and check the
+   Uptime Kuma game monitor still answers through it.

@@ -161,6 +161,19 @@ turns over, and the launch weekend's window ends on game time alone, which stops
 It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
 `LIVE_DIR` from `/etc/realms-deploy.env`.
 
+### The supply drops' timer (the release with supply drops)
+
+Once that release is live, install `realms-drops.timer` the same way (`docs/ADMIN.md`, "Supply drops"):
+
+```sh
+sh /srv/realms/repo/deploy/realms-drops.sh --check
+sudo sh /srv/realms/repo/deploy/realms-drops.sh --install
+```
+
+It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 6 to 10 PM Pacific, and
+reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
+the world. Without it there are no automatic drops; staff can still start one by hand.
+
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
 The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,

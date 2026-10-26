@@ -167,6 +167,9 @@ server gets the same terrain.
 
 BlueMap serves a 3D web map on port **8100**: http://localhost:8100 on the host.
 Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel).
+It shows the world, not the players: `live-player-markers: false` in `server\config\bluemap\plugin.conf`,
+because on a raiding server a live map would show everyone where their targets are. A server installed
+before 2.4.2 keeps BlueMap's own file, where it is on: set it to `false` there and run `bluemap reload`.
 
 ## Moving an existing world in
 

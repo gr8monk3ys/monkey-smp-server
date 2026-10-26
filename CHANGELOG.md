@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
+  on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
+  after a restart (docs/LIVE.md).
+- The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
+  `live-player-markers: false`, since the map is public and raiding is allowed. An existing server keeps
+  BlueMap's own file; docs/ADMIN.md "The live map" says how to switch it off there.
+
 ## [2.4.1] - 2026-10-25
 
 Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and world as 2.4.0: hosts unzip over

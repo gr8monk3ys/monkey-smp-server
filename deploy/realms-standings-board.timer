@@ -1,0 +1,9 @@
+# Updates the in-game standings board every hour, at 20 past. Not Persistent: a missed update is not made up.
+[Unit]
+Description=Monkey SMP: hourly faction standings board
+
+[Timer]
+OnCalendar=*-*-* *:20:00
+
+[Install]
+WantedBy=timers.target

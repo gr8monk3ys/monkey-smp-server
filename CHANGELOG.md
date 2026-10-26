@@ -6,6 +6,15 @@
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+- Weekly faction standings: one rank a week from Cup points (40), claimed land (20), the members' Strength
+  (20) and their PvP kills this week outside the arena (20), each as a share of the column's leader, +5 a
+  claimed bounty. `tools/standings.py` reads the saved world; the new `realms-standings` data pack counts
+  the week's kills and holds the board at spawn (`/trigger standings`). On the VPS `realms-standings.timer`
+  closes the week on Sundays at 7 PM Pacific, keeps it in `STANDINGS_DIR` and posts it to
+  `STANDINGS_WEBHOOK_URL` (else `DISCORD_WEBHOOK_URL`), under the deploy lock; an hourly timer updates the
+  board. The bounty board now pays the Bounty Hunter title and +5 standings points instead of coins
+  (`realms:standings/bounty/post` and `/claim`). Set up once with `deploy/install-standings.sh`
+  (docs/LIVE.md).
 
 ## [2.5.0] - 2026-10-26
 

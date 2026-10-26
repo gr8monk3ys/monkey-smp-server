@@ -1,0 +1,6 @@
+# Lists the staff commands; click one to put it in the chat box.
+tellraw @s {"text":"Standings and bounty commands (docs/ADMIN.md):","color":"gold"}
+tellraw @s [{"text":" place","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:standings/place"}},{"text":"  stand where the board goes, at spawn","color":"dark_gray"}]
+tellraw @s [{"text":" remove","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:standings/remove"}},{"text":"  next to the board","color":"dark_gray"}]
+tellraw @s [{"text":" bounty/post {target:\"Alex\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:standings/bounty/post {target:\"Alex\"}"}},{"text":"  one of the top Strength holders","color":"dark_gray"}]
+tellraw @s [{"text":" bounty/claim {hunter:\"Steve\",target:\"Alex\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function realms:standings/bounty/claim {hunter:\"Steve\",target:\"Alex\"}"}},{"text":"  once staff have checked the kill","color":"dark_gray"}]

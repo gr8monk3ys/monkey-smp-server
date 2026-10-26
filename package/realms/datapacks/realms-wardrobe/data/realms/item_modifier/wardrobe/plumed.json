@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:set_components",
+  "components": {
+    "minecraft:item_model": "realms:plumed",
+    "minecraft:equippable": {
+      "slot": "head",
+      "asset_id": "realms:plumed",
+      "equip_sound": "minecraft:item.armor.equip_iron"
+    }
+  }
+}

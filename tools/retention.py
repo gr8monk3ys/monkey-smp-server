@@ -5,7 +5,8 @@
 Reads every `YYYY-MM-DD-N.log.gz` (and `latest.log`, dated by its modification time) for
 "NAME joined the game". Prints, for players new in each week, the share who came back at least 1, 7
 and 30 days after their first day (a player counts once the window has passed), and the number of
-different players each week. Stdlib only; nothing leaves the machine.
+different players each week. Stdlib only; nothing leaves the machine. tools/funnel.py follows pass
+buyers through the same logs.
 """
 import argparse
 import datetime as dt
@@ -13,26 +14,33 @@ import gzip
 import re
 import sys
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
 
-JOIN = re.compile(r"\]: ([A-Za-z0-9_]{1,16}) joined the game")
-DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})-\d+\.log\.gz$")
+# 26.3 logs joins as "System chat: NAME joined the game"; older servers left the prefix out. A renamed
+# player shows as "NAME (formerly known as OLD) joined the game".
+JOIN = re.compile(r"\]: (?:System chat: )?([A-Za-z0-9_]{1,16})"
+                  r"(?: \(formerly known as [A-Za-z0-9_]+\))? joined the game")
+DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})-(\d+)\.log\.gz$")
 WINDOWS = (1, 7, 30)
+
+
+def logs_by_day(logs: Path) -> Iterator[tuple[dt.date, str]]:
+    """Each log's day and text, oldest first; latest.log, dated by its modification time, comes last."""
+    dated = sorted(((dt.date.fromisoformat(m.group(1)), int(m.group(2))), path)
+                   for path in logs.iterdir() if (m := DATED.match(path.name)))
+    for (day, _), path in dated:
+        yield day, gzip.open(path, "rt", encoding="utf-8", errors="replace").read()
+    latest = logs / "latest.log"
+    if latest.is_file():
+        yield dt.date.fromtimestamp(latest.stat().st_mtime), latest.read_text(encoding="utf-8", errors="replace")
 
 
 def play_days(logs: Path) -> tuple[dict[str, set[dt.date]], dt.date | None]:
     """{player: days they joined}, and the last day the logs cover."""
     days: dict[str, set[dt.date]] = defaultdict(set)
     last = None
-    for path in sorted(logs.iterdir()):
-        if m := DATED.match(path.name):
-            day = dt.date.fromisoformat(m.group(1))
-            text = gzip.open(path, "rt", encoding="utf-8", errors="replace").read()
-        elif path.name == "latest.log":
-            day = dt.date.fromtimestamp(path.stat().st_mtime)
-            text = path.read_text(encoding="utf-8", errors="replace")
-        else:
-            continue
+    for day, text in logs_by_day(logs):
         last = max(last or day, day)
         for name in JOIN.findall(text):
             days[name].add(day)

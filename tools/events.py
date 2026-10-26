@@ -166,6 +166,8 @@ def datapack_files() -> dict[str, str]:
         f"schedule function {NS}:events/second 20t replace",
         "execute if score #arena ev.state matches 1 run scoreboard players enable @a arena",
         *(f"execute if score #{name} ev.state matches 1.. run function {NS}:events/{name}/second" for name in TIMERS),
+        "# A locked season world: whoever logs in can look around but not change it.",
+        "execute if score #season_locked ev.state matches 1 run gamemode adventure @a[gamemode=survival]",
     )
     f[f"{FN}/rejoined.mcfunction"] = lines(
         "# A player who logged out came back.",
@@ -186,6 +188,7 @@ def datapack_files() -> dict[str, str]:
     f.update(flag_files())
     f.update(book_files())
     f.update(cup_files())
+    f.update(season_files())
     f[f"{FN}/help.mcfunction"] = help_function(f)
     return {k: v if v.endswith("\n") else v + "\n" for k, v in f.items()}
 
@@ -515,6 +518,31 @@ def cup_files() -> dict[str, str]:
     return f
 
 
+def season_files() -> dict[str, str]:
+    """The season-end lock (docs/SEASONS.md, "Ending a season"): the world stays up to visit and screenshot,
+    but nobody can build, break or fight while it is backed up and published."""
+    f: dict[str, str] = {}
+    f[f"{FN}/season/lock.mcfunction"] = lines(
+        "# Locks the world at the end of a season. Undo with season/unlock.",
+        "scoreboard players set #season_locked ev.state 1",
+        "gamerule pvp false",
+        "difficulty peaceful",
+        "gamemode adventure @a[gamemode=survival]",
+        "tellraw @a " + text({"text": "The season is over and the world is locked for the archive. ", "color": "gold"},
+                             {"text": "Look around and take screenshots: building, breaking and fighting are off. "
+                                      "The download goes up in Discord soon.", "color": "yellow"}),
+    )
+    f[f"{FN}/season/unlock.mcfunction"] = lines(
+        "# Undoes season/lock: survival, PvP and normal difficulty, as in server.properties.",
+        "scoreboard players set #season_locked ev.state 0",
+        "gamerule pvp true",
+        "difficulty normal",
+        "gamemode survival @a[gamemode=adventure]",
+        "tellraw @a " + text({"text": "The world is unlocked.", "color": "green"}),
+    )
+    return f
+
+
 HELP = [
     ("arena/set_lobby", "stand at the entrance"), ("arena/set_pit", "stand in the waiting room"),
     ("arena/set_size {size:48}", "radius around the pit"), ("arena/open", ""), ("arena/round", "clear the floor"),
@@ -524,6 +552,7 @@ HELP = [
     ('book/sharpness {season:"I"}', "as the winner"),
     ('cup/faction {id:"red",name:"Red Monkeys"}', ""), ('cup/add {id:"red",points:30,why:"Build Battle"}', ""),
     ("cup/show", ""), ('begin {name:"Faction Raid"}', ""), ("attend", "as each player who came"),
+    ("season/lock", "season end: adventure, no PvP"), ("season/unlock", ""),
 ]
 
 

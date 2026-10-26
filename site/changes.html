@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What changed - Monkey SMP</title>
+  <meta name="description" content="Every change to Monkey SMP's rules, mods and wardrobe that players notice, newest first.">
+  <meta name="theme-color" content="#f9f8f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111317" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600..720&family=Instrument+Sans:wght@400..600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .changes h3 time { display: block; margin-bottom: 6px; }
+    .changes ul { margin: 0; padding-left: 1.1em; max-width: var(--narrow); }
+    .changes li { margin-bottom: 0.4em; }
+    .changes li:last-child { margin-bottom: 0; }
+    .changes .todo { color: var(--pen); font-weight: 600; }
+  </style>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="./"><img src="favicon.svg" alt="" width="32" height="32">Monkey SMP</a>
+    <nav aria-label="Site">
+      <a href="./#join">Join</a>
+      <a href="./#rules">Rules</a>
+      <a href="./#faq">FAQ</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <h1>What changed</h1>
+      <p class="lede">Every change to the rules, the mods and the wardrobe that you'd notice in game, newest first.
+        The same notes go in the Discord's #changelog channel the day they go live.</p>
+    </section>
+
+    <section id="updates">
+      <h2>Updates</h2>
+      <!-- New entries go on top (docs/ADMIN.md, "Telling players what changed"). Write for players: what
+           changed, from when, and what they have to do. Nothing that helps a cheater. -->
+      <div class="grid three changes">
+        <article>
+          <h3><time class="label">Next update</time>Grace for new players, the short rules, and more wardrobe skins</h3>
+          <ul>
+            <li>You accept the short rules before you join, and again whenever they change.</li>
+            <li>Rule 26: a new player gets 48 hours of PvP grace, and other players can't hurt them. Hitting a player
+              or <code>/trigger end_grace</code> ends it early, and it's off in the event arena. If you played here
+              before this update, you don't get it.</li>
+            <li>Rule 26: spawn is a no-PvP zone (the 7 by 7 chunks around it).</li>
+            <li>New rules 40 to 42: no insiding, no teaming (helping someone outside your faction in a fight; events
+              are exempt), and rollbacks (griefing a territory is rolled back, a legal raid isn't).</li>
+            <li>Rule 35: each player claims at most 4 chunks, so a faction's land is 2 by 2 chunks per member.</li>
+            <li>Villagers boxed into a 1 by 1 space update less often, to save the server work, and animals stop
+              breeding at 32 of a kind within 64 blocks.</li>
+            <li>A welcome screen on your first join, and a Monkey SMP button in the pause menu with the Discord, the
+              live map, the rules and the store.</li>
+            <li>Eight new skins. The Oathblades I, II and III unlock at 1, 2 and 3 months of pass. Rallier unlocks
+              at 3 events attended and the Plumed Helm at 10.</li>
+            <li>Holiday skins, earned only by being at that holiday's event: Gravelight at Hallowtide (late October),
+              the Midwinter Cap at Midwinter (late December) and Solstice at Midsummer (late June). They are never
+              sold. If you miss one, it comes back at next year's event.</li>
+            <li>The wardrobe (<code>/trigger wardrobe</code>) now has two pages: skins earned in game, and pass and
+              supporter skins.</li>
+            <li>You get an "Unlocked" message in chat when you earn a skin.</li>
+            <li>Your skins, days and hours played, supporter color and titles carry over into the next season's
+              world.</li>
+            <li class="todo">Update the modpack when this goes live. It has the new skins' textures.</li>
+          </ul>
+        </article>
+        <article>
+          <h3><time class="label" datetime="2026-10-25">25 October 2026</time>The live map</h3>
+          <ul>
+            <li>The live map has a new address: <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">map.monkeysmp.lscaturchio.xyz</a>.</li>
+            <li>It no longer shows where players are.</li>
+            <li>It stops at the world border, and the Nether map shows the caves instead of the bedrock roof.</li>
+            <li>Nothing to install.</li>
+          </ul>
+        </article>
+        <article>
+          <h3><time class="label" datetime="2026-10-25">25 October 2026</time>Monkey SMP and the Season I rules</h3>
+          <ul>
+            <li>The server is now called Monkey SMP (it was The Realms).</li>
+            <li>The server enforces the Season I rules it can. The world border is 2500 by 2500 around spawn, and
+              the Nether's is 1:8. There's no PvP and no Nether in the first hour after launch, and the End stays
+              closed until Dragon Night. Netherite armor is off until Netherite age, and Fire Aspect and Flame
+              are disabled. A faction holds at most four players.</li>
+            <li>The wardrobe: <code>/trigger wardrobe</code> puts a skin on your sword or helmet. It changes the
+              look only, never damage, armor or durability. Skins unlock with days played, months of pass,
+              friends invited, supporter tiers, and for playing in Season I.</li>
+            <li>Arena Glory: <code>/trigger arena set 1</code> to join when staff open it. You get a kit, everyone's
+              Strength is +3 inside, and nothing goes in or out with you.</li>
+            <li class="todo">Update the modpack. It adds the wardrobe's resource pack.</li>
+          </ul>
+        </article>
+        <article>
+          <h3><time class="label" datetime="2026-10-11">11 October 2026</time>New dungeons and structures</h3>
+          <ul>
+            <li>New: Epic Dungeons, Moog's Voyager Structures, Grand Capitals, Better Underwater Ruins, Slabs &amp;
+              Stairs, Copper Rails, More Villagers, More Mobs, Stormie's Spiders, Sulfur Caves Plus and about 20
+              smaller mods.</li>
+            <li>Gone: Dungeons and Taverns (its structure overhauls stay) and Epic Structures: Villages.</li>
+            <li>A full server runs smoother: mobs far from players update less often.</li>
+            <li class="todo">Reinstall the modpack (about 520 MB).</li>
+          </ul>
+        </article>
+        <article>
+          <h3><time class="label" datetime="2026-10-06">6 October 2026</time>An easier install, and a mod sync</h3>
+          <ul>
+            <li>A one-click installer for the normal Minecraft Launcher, so you don't need the Modrinth App or Prism.</li>
+            <li>New: Craftable Cobwebs, Players Drop Heads, Visible Traders. Gone: Dragonkind Evolved, the Dungeons
+              and Taverns mineshaft overhaul, Just Player Heads.</li>
+            <li>Room for 30 players (was 20).</li>
+          </ul>
+        </article>
+        <article>
+          <h3><time class="label" datetime="2026-10-05">5 October 2026</time>Fabric 26.3 and a new world</h3>
+          <ul>
+            <li>The server moved to Fabric on Minecraft 26.3, so the whole mod list runs, on a new world.</li>
+            <li>Factions are parties with allies and land claims (Open Parties and Claims).</li>
+            <li>Spawn is protected within 48 blocks, and staff can roll back griefing.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="./">Monkey SMP</a> &middot; <a data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Discord</a> &middot; <a href="./#rules">Rules</a> &middot; <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">Live map</a></p>
+    <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+  </footer>
+</body>
+</html>

@@ -19,8 +19,70 @@ def test_pack_formats_follow_the_server_minecraft_version():
 def test_trigger_values_are_unique_and_clear_of_the_menu_values():
     values = [v for v, _, _ in wardrobe.skins()]
     assert len(values) == len(set(values))
-    assert min(values) > 3
+    assert min(values) > wardrobe.MENU_SUPPORT
     assert len({s["id"] for _, _, s in wardrobe.skins()}) == len(values)
+
+
+def test_tenure_rewards_the_first_three_months():
+    """A new buyer should unlock something at each of the first renewals, not wait half a year."""
+    months = {s["unlock"][1] for _, _, s in wardrobe.skins() if s["unlock"][0] == "rw.months"}
+    assert {1, 2, 3} <= months
+
+
+def test_event_and_holiday_skins_are_never_sold():
+    """Attendance and holiday skins are earned by showing up. No store command may set their scores."""
+    earned = {s["unlock"][0] for _, _, s in wardrobe.skins()} - wardrobe.SOLD
+    assert "rw.events" in earned and set(wardrobe.HOLIDAYS) <= earned
+    events = sorted(s["unlock"][1] for _, _, s in wardrobe.skins() if s["unlock"][0] == "rw.events")
+    assert events == [3, 10]
+    store = [line for line in (REPO.root / "docs" / "RETENTION.md").read_text(encoding="utf-8").splitlines()
+             if "{username}" in line]
+    assert store
+    for line in store:
+        assert not any(objective in line for objective in earned), line
+
+
+def test_every_unlock_score_exists_and_announces_itself():
+    data = wardrobe.datapack_files()
+    load = data["data/realms/function/wardrobe/load.mcfunction"]
+    second = data["data/realms/function/wardrobe/second.mcfunction"]
+    for _, _, s in wardrobe.skins():
+        objective, n = s["unlock"]
+        assert f"scoreboard objectives add {objective} " in load
+        if objective in wardrobe.NOTIFY:
+            notice = data[f"data/realms/function/wardrobe/notice/{objective[3:]}.mcfunction"]
+            assert f"matches {n}.. unless score @s {objective}.seen matches {n}.. run tellraw" in notice
+            assert f"{objective}.seen" in load and f"function realms:wardrobe/notice/{objective[3:]}" in second
+
+
+def test_hours_include_play_carried_from_earlier_worlds():
+    second = wardrobe.datapack_files()["data/realms/function/wardrobe/second.mcfunction"].splitlines()
+    play = second.index("execute as @a run scoreboard players operation @s rw.hours = @s rw.play")
+    assert second[play + 1] == "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase"
+    assert second[play + 2] == "scoreboard players operation @a rw.hours /= #hour rw.const"
+
+
+def test_each_menu_page_fits_open_chat():
+    """Open chat shows 20 lines. Each page prints a header (two lines), the counts, one title per item kind,
+    one line per skin and the footer."""
+    data = wardrobe.datapack_files()
+    use = data["data/realms/function/wardrobe/use.mcfunction"]
+    for number, name in ((1, "menu"), (wardrobe.MENU_SUPPORT, "menu_support")):
+        assert f"matches {number} run function realms:wardrobe/{name}" in use
+        menu = data[f"data/realms/function/wardrobe/{name}.mcfunction"]
+        on_page = [(kind, s) for _, kind, s in wardrobe.skins() if wardrobe.page(s["unlock"]) == number]
+        for _, s in on_page:
+            assert f'"text":"[{s["name"]}]"' in menu
+        assert 2 + 1 + len({kind for kind, _ in on_page}) + len(on_page) + 1 <= 20
+    assert sum(1 for _ in wardrobe.skins()) == sum(
+        1 for _, _, s in wardrobe.skins() if wardrobe.page(s["unlock"]) in (1, wardrobe.MENU_SUPPORT))
+
+
+def test_the_docs_list_every_skin():
+    doc = (REPO.root / "docs" / "RETENTION.md").read_text(encoding="utf-8")
+    for _, kind, s in wardrobe.skins():
+        objective, n = s["unlock"]
+        assert f"| {s['name']} | {kind} |" in doc and f"`{objective} {n}`" in doc, s["name"]
 
 
 def test_every_skin_is_wired_end_to_end():
@@ -43,8 +105,14 @@ def test_every_skin_is_wired_end_to_end():
 def test_skins_change_the_look_and_nothing_else():
     """Mojang's usage guidelines: what supporters get must be cosmetic. A skin may only touch the model,
     and on a helmet the worn look; never damage, armor, durability or enchantments."""
-    for path, text in wardrobe.datapack_files().items():
-        if "/item_modifier/" not in path:
+    data = wardrobe.datapack_files()
+    modifiers = {path for path in data if "/item_modifier/" in path}
+    # Every skin, the new ones included, goes through this check: no skin may apply anything but a modifier.
+    assert {f"data/realms/item_modifier/wardrobe/{s['id']}.json" for _, _, s in wardrobe.skins()} <= modifiers
+    for path, text in data.items():
+        if "/function/" in path:
+            assert "item replace" not in text and "attribute" not in text and "enchant" not in text, path
+        if path not in modifiers:
             continue
         modifier = json.loads(text)
         assert modifier["type"] == "minecraft:set_components"

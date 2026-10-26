@@ -10,6 +10,16 @@ scoreboard objectives add rw.tier dummy
 scoreboard objectives add rw.founder dummy
 scoreboard objectives add rw.day dummy
 scoreboard objectives add rw.const dummy
+scoreboard objectives add rw.events dummy
+scoreboard objectives add rw.playbase dummy
+scoreboard objectives add rw.hallowtide dummy
+scoreboard objectives add rw.midwinter dummy
+scoreboard objectives add rw.midsummer dummy
+scoreboard objectives add rw.months.seen dummy
+scoreboard objectives add rw.events.seen dummy
+scoreboard objectives add rw.hallowtide.seen dummy
+scoreboard objectives add rw.midwinter.seen dummy
+scoreboard objectives add rw.midsummer.seen dummy
 scoreboard players set #hour rw.const 72000
 scoreboard players add #today rw.day 0
 # The first season runs until staff set #season to 2; everyone who plays in it is a founder.

@@ -402,7 +402,28 @@ same number, so two flags with one number means a copy. Book names are the encha
 
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
-on its own). Each player counts once per event, in the `rw.events` score.
+on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and
+the Plumed Helm at 10 (`docs/RETENTION.md`).
+
+**Holidays.** At Hallowtide, Midwinter and Midsummer (`docs/SEASONS.md`, "Holidays"), stand with the
+crowd near the end and give everyone there the holiday's skin, as well as running `attend`:
+
+```
+/scoreboard players set @a[distance=..48] rw.hallowtide 1     # or rw.midwinter, rw.midsummer
+scoreboard players set NAME rw.hallowtide 1                   # one player, over RCON
+```
+
+These are never sold or granted outside the event.
+
+**Ending a season.** `docs/SEASONS.md`, "Ending a season", is the full runbook. The world lock:
+
+```
+/function realms:events/season/lock     # survival players to adventure, PvP off, peaceful; kept across restarts
+/function realms:events/season/unlock   # back to survival, PvP on, normal difficulty
+```
+
+`tools/season.py download` zips the final backup's world for players, and `tools/season.py carry` puts
+the wardrobe scores, hours played and title teams into the next season's world.
 
 **Block wheel (Build Battle).** On the maintainer's computer:
 
@@ -414,6 +435,24 @@ python tools/block_wheel.py "S1 week 3" --spins 5
 Announce the seed before the draw so anyone can check it. The output ends with a `tellraw` line to paste
 into the console. The pool (`tools/wheel_pool.txt`) is every survival-obtainable block; rebuild it after a
 Minecraft update with `--pool <data reports folder>`.
+
+## Telling players what changed
+
+Players read changes in two places, with the same words in both:
+
+- **`site/changes.html`**, the "What changed" page on the site: newest first, one dated entry per update
+  that players notice. It is the record a player can link to in an argument about a rule.
+- **`#changelog` in Discord**, an announcement channel nobody else posts in, on the day the change goes
+  live, linking to the page.
+
+What goes in: rule changes (and the rule's number), mods added or removed, anything the client pack
+needs, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),
+and season dates. What stays out: server internals, fixes nobody could see, and anything that helps a
+cheater. Write it for players: what changed, from when, and what they have to do ("Update the modpack").
+
+When a release has a player-facing change, add its entry to `site/changes.html` in the same pull request
+(`docs/MAINTAINING.md`, "Releasing"). A change made by hand on the live server (a rule ruling, a config
+edit) gets an entry the same day. The site deploys from `main` (`site/README.md`).
 
 ## Troubleshooting
 

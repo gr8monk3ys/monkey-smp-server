@@ -152,3 +152,17 @@ def test_flags_survive_being_placed_and_broken():
 
 def test_help_lists_only_real_functions():
     assert fn("help").count("suggest_command") == len(events.HELP)
+
+
+def test_season_lock_freezes_the_world_and_unlock_undoes_it():
+    lock, unlock = fn("season/lock").splitlines(), fn("season/unlock").splitlines()
+    assert "scoreboard players set #season_locked ev.state 1" in lock
+    assert {"gamerule pvp false", "difficulty peaceful", "gamemode adventure @a[gamemode=survival]"} <= set(lock)
+    assert {"gamerule pvp true", "difficulty normal", "gamemode survival @a[gamemode=adventure]",
+            "scoreboard players set #season_locked ev.state 0"} <= set(unlock)
+    # Players who log in while it is locked are caught too.
+    assert ("execute if score #season_locked ev.state matches 1 run gamemode adventure @a[gamemode=survival]"
+            in fn("second").splitlines())
+    # Unlock puts back what server.properties sets.
+    props = (REPO.realms / "defaults" / "server.properties").read_text(encoding="utf-8").splitlines()
+    assert "pvp=true" in props and "difficulty=normal" in props

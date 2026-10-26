@@ -127,7 +127,9 @@ Worth checking monthly, next to the store's pass renewals:
 
 A $5 monthly pass brings in about $4.33 after Tebex's fees (a 5% platform fee plus card processing of
 about 2.49% + $0.30). The server costs about $50 a month (the $45 VPS in docs/LIVE.md, plus off-site
-backups and the fallback tunnel), so it breaks even at 12 paying players.
+backups and the fallback tunnel), so it breaks even at 12 paying players. The $12 three-month pass brings
+in about $10.80, or $3.60 a month: if every payer chose it, break-even would be 14. The table below assumes
+monthly passes.
 
 | Monthly pass churn | Months a payer stays | Lifetime value | New payers a month to hold 30 |
 | --- | --- | --- | --- |

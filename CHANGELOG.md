@@ -6,8 +6,13 @@
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).
 - The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
-  `live-player-markers: false`, since the map is public and raiding is allowed. An existing server keeps
-  BlueMap's own file; docs/ADMIN.md "The live map" says how to switch it off there.
+  `live-player-markers: false` (and `skin-download: false`, which only fed the markers), since the map is
+  public and raiding is allowed. An existing server keeps BlueMap's own file; docs/ADMIN.md "The live map"
+  says how to switch it off there.
+- Docs: pre-generation no longer widens the border. docs/ADMIN.md and docs/LIVE.md said to set it to
+  10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
+  centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
+  and generates out to the season's largest border plus the view distance.
 
 ## [2.4.1] - 2026-10-25
 

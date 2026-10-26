@@ -87,6 +87,17 @@ below say what to change on an existing one.
   `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
   Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
   pinned by hand"). Players need nothing new: it isn't in the client pack.
+- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
+  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
+  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
+  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
+  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
+- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
+  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
+  approves the pack, Modrinth App players import the `.mrpack` as before.
+- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
+  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
+  without Actions") lists the steps.
 
 ## [2.4.1] - 2026-10-25
 

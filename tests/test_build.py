@@ -86,6 +86,38 @@ def test_build_main_writes_all_three_files(tmp_path, fabric_repo, capsys, monkey
                                         "TheRealms-Player-2.0.0.zip"))
 
 
+CHANGELOG = ("# Changelog\n\n## [Unreleased]\n\n## [2.0.0] - 2026-10-01\n\nFabric.\n\n- New mods.\n\n"
+             "## [1.1.0]\n\nOld.\n")
+
+
+def test_changelog_section_is_one_versions_section():
+    assert build.changelog_section(CHANGELOG, "2.0.0") == "Fabric.\n\n- New mods."
+    assert build.changelog_section(CHANGELOG, "1.1.0") == "Old."
+    with pytest.raises(SystemExit, match=r"no '## \[9.9.9\]' section"):
+        build.changelog_section(CHANGELOG, "9.9.9")
+    with pytest.raises(SystemExit, match="no"):
+        build.changelog_section(CHANGELOG, "Unreleased")
+
+
+def test_build_main_writes_the_release_notes(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    (fabric_repo.root / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
+    build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
+    notes = (tmp_path / "notes.md").read_text(encoding="utf-8")
+    assert notes == "Fabric.\n\n- New mods.\n\n" + build.DOWNLOADS
+    assert notes.splitlines()[4] == "### Downloads" and notes.endswith(".mrpack.)\n")
+
+
+def test_build_main_needs_a_changelog_section_for_the_notes(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    (fabric_repo.root / "CHANGELOG.md").write_text("# Changelog\n\n## [1.1.0]\n\nOld.\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match=r"no '## \[2.0.0\]' section"):
+        build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
+    assert not (tmp_path / "dist").exists() and not (tmp_path / "notes.md").exists()
+
+
 def test_build_fails_clearly_without_player_folder(tmp_path, fabric_repo, monkeypatch):
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
     assert not fabric_repo.player.exists()

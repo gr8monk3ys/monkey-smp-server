@@ -35,7 +35,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
    `adduser --disabled-password realms`; `usermod -aG docker realms`; `mkdir -p /srv/realms && chown realms: /srv/realms`.
 2. **Firewall.** Open 25565/tcp (game) and 24454/udp (voice chat). Open 8100/tcp only if the live map
-   should be public. Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
+   should be public (on the live server it is, linked from the site). Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
 3. **Clone with a read-only deploy key.** As `realms`: `ssh-keygen -t ed25519 -f ~/.ssh/realms_deploy -N ''`,
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then
    ```sh

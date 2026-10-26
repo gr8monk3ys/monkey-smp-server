@@ -1,0 +1,12 @@
+# Tells the server which challenge week it is and when Season I's launch weekend ends (deploy/realms-week.sh,
+# tools/challenges.py). Started every hour by realms-week.timer; install with
+# `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: weekly challenges and launch weekend clock
+After=docker.service
+
+[Service]
+Type=oneshot
+User=realms
+Group=realms
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-week.sh

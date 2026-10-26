@@ -9,3 +9,7 @@ scoreboard players reset * end_grace
 scoreboard players set #launching realms.rules 1
 schedule function realms:rules/launch_over 3600s replace
 tellraw @a [{"text":"[Monkey SMP] ","color":"gold"},{"text":"Welcome to Season I! PvP, the Nether and the End are closed for the first 60 minutes.","color":"yellow"}]
+# The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start
+# from zero, so test play before the launch doesn't count (tools/challenges.py).
+function realms:wardrobe/founder/open
+function realms:challenges/launch

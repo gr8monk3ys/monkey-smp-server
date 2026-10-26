@@ -3,6 +3,7 @@ import re
 import tomllib
 
 import rules
+import wardrobe
 from repo import REPO
 
 
@@ -49,9 +50,13 @@ def test_launch_closes_pvp_and_the_nether_then_opens_them_but_not_the_end():
 
 
 def test_every_function_a_pack_calls_exists():
+    # The launch also opens the wardrobe's launch weekend and restarts the weekly challenges: the wardrobe pack
+    # always ships beside the rules.
+    shipped = {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
+               for p in wardrobe.datapack_files() if p.startswith("data/realms/function/")}
     for files in (rules.rules_files(), rules.netherite_files()):
-        defined = {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
-                   for p in files if p.startswith("data/realms/function/")}
+        defined = shipped | {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
+                             for p in files if p.startswith("data/realms/function/")}
         called = set()
         for path, body in files.items():
             if path.endswith(".mcfunction"):
@@ -144,6 +149,12 @@ def test_no_grace_from_the_launch_hour():
     assert f"scoreboard players set #launching {rules.OBJECTIVE} 0" in over
     assert f"unless score #launching {rules.OBJECTIVE} matches 1 run function realms:rules/grace_start" in first
     assert f"tag @s add {rules.JOINED}" in first
+
+
+def test_the_launch_opens_the_launch_weekend_and_restarts_the_weekly_challenges():
+    launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"].splitlines()
+    assert "function realms:wardrobe/founder/open" in launch
+    assert "function realms:challenges/launch" in launch
 
 
 def test_players_from_before_the_pack_get_no_welcome_or_grace():

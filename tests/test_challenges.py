@@ -7,6 +7,7 @@ import pytest
 import challenges
 import rules
 import season
+import site_links
 import wardrobe
 from repo import REPO
 
@@ -476,3 +477,10 @@ def test_the_week_script_sends_the_commands_hourly():
     assert re.search(r"^OnCalendar=\*-\*-\* \*:00:30$", timer, re.M)
     for unit in ("realms-week.service", "realms-week.timer"):
         assert b"\r" not in (REPO.root / "deploy" / unit).read_bytes()
+
+
+def test_the_launch_weekend_starts_at_the_sites_launch_time():
+    # Season I's launch time is in site/config.js (LAUNCH_AT, the countdown) and here (the Founder's Circlet
+    # window): moving one without the other would open the window at the wrong time.
+    config = (site_links.site() / "config.js").read_text(encoding="utf-8")
+    assert site_links.launch_time(site_links.load_links(config)["LAUNCH_AT"]) == challenges.LAUNCH

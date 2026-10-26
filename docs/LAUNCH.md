@@ -104,9 +104,9 @@ How:
   with `--now` at a quiet hour after a backup. Nothing else.
 - **Mon 23 Nov:** `sudo systemctl start realms-deploy.timer`. Tagging is open again.
 
-The work in flight (weekly faction standings and the bounty board in pull request #42, weekly challenges,
-the Founder skin, item-priced shop chests) makes launch only if it is merged and in the Friday 13 November
-release. Whatever misses it waits until Monday 23 November at the earliest, and its lines come out of the
+Weekly faction standings and the bounty board, weekly challenges, the Founder skin and item-priced shop
+chests all shipped in 2.6.0. Anything new after that makes launch only if it is in the Friday 13 November
+release; whatever misses it waits until Monday 23 November at the earliest, and its lines come out of the
 announcements ("Copy that depends on unmerged work", below).
 
 ### Ops readiness
@@ -392,8 +392,8 @@ The tools are documented once; this list points at them.
 
 ## Copy that depends on unmerged work
 
-These appear in the drafts. Each one stays only if its work is merged and in the release tagged by
-Friday 13 November; otherwise cut the line before posting.
+These appear in the drafts. All four shipped together in 2.6.0, so every line stays. The table is for a
+later release that takes one out again: then cut its line before posting.
 
 | Work | Where it is mentioned | If it misses the release |
 | --- | --- | --- |

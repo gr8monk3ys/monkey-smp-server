@@ -48,6 +48,12 @@
   restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
 - Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
   `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+- New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
+  each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
+  address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with
+  `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
+  Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
+  pinned by hand"). Players need nothing new: it isn't in the client pack.
 
 ## [2.4.1] - 2026-10-25
 

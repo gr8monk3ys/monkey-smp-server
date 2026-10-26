@@ -726,6 +726,18 @@
       }
     },
     {
+      "slug": "hostname-catcher",
+      "project_id": "S6kGmedO",
+      "version": "0.2",
+      "version_id": "F2wQVta4",
+      "file": "hostname-catcher-0.2.jar",
+      "url": "https://cdn.modrinth.com/data/S6kGmedO/versions/F2wQVta4/hostname-catcher-0.2.jar",
+      "size": 12046,
+      "hashes": {
+        "sha512": "f713d44a6f91b8fc2a119fc42f163115a378c9722c77acdc2a2c8ff4b0cd91eb02f16342f4022c74f0b159dc71b4c12e53da91790d2ac9fbfe7a383d00a0d75f"
+      }
+    },
+    {
       "slug": "iceberg",
       "project_id": "5faXoLqX",
       "version": "1.4.3.1",

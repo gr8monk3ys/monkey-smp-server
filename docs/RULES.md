@@ -238,7 +238,8 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   `opac server-claims-config set claims.protection.exceptions.playersByPlayers false`, then
   `oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48`. The pack can't do it: Open Parties and
   Claims doesn't let a datapack function claim. Build the event arena outside this square, or nobody can
-  fight in it.
+  fight in it. A chunk a player claimed there earlier stays theirs (the server claim skips it), so it isn't part
+  of the no-PvP zone until they unclaim it.
 - **Rule 29, 4-player factions.** Open Parties and Claims' `maxPartyMembers` is 4
   (`defaults/config/openpartiesandclaims-server.toml`). On a server installed before this setting
   shipped, the installer keeps your existing `config/openpartiesandclaims-server.toml`: set

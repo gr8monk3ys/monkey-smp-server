@@ -75,7 +75,8 @@ X-ray protection, moderation tools, onboarding and faction rules. Server only: p
   26.3", for Minecraft 26.1 to 26.3), and no other mod does the same job on 26.3.
 - These defaults are copied only where the server doesn't have the file yet. On an existing server, set
   `enable-code-of-conduct=true`, `maxPlayerClaims = 4` and the two ServerCore switches yourself (server
-  stopped).
+  stopped), then make the spawn claim: the commands are in `docs/LIVE.md` ("The short rules, ServerCore and
+  claims").
 
 ## [2.4.2] - 2026-10-25
 

@@ -181,8 +181,9 @@ exec 9>&-                                    # let deploys and backups run again
 
 The first `grep` must print `enable-code-of-conduct=true` and `maxPlayerClaims = 4`, the second `enabled: true`
 twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 chunks around spawn (the console's
-`~ ~` is the world spawn). Everything here is safe to run again; each run restarts the server once. To undo the
-file changes, copy the `.pre-onboarding` files back with the server stopped.
+`~ ~` is the world spawn). The claim runs in the background for a few seconds, and it skips chunks a player
+already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
+the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
 
 ## Backups off the machine
 

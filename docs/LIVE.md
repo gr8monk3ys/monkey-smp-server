@@ -72,35 +72,42 @@ central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 | Let a player in by hand | `docker compose exec realms realms add-player NAME` |
 | Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
-| Backup log (as root) | `journalctl -u realms-backup -n 50`; the monthly test: `journalctl -u realms-restore-test` |
+| Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
 If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previous release back, restarts
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
-before the update is the newest folder in `backups/` from the deploy's time (the deploy log names it;
-hourly backups land there too).
+before the update is the newest folder in `backups/`.
 
 ## Backups off the machine
 
 `backups/` is on the same disk as the world, so a dead disk or a lost VPS takes both. So every hour the VPS
-also sends the world, encrypted, to a Cloudflare R2 bucket with [restic](https://restic.net):
+also sends the live server folder, encrypted, to a Cloudflare R2 bucket with [restic](https://restic.net).
+`realms-backup.timer` runs `deploy/realms-backup.sh` on the hour:
 
-- **`realms-backup.timer`** runs `deploy/realms-backup.sh` on the hour. If the server answers, it runs
-  `realms backup` in the container, the same backup a deploy takes: `save-off`, `save-all flush`, a copy of the
-  world, configs and mod data to `backups/<time>` (no jars, logs, libraries, BlueMap tiles or `session.lock`),
-  `save-on`; the newest 14 stay. restic then sends that copy to R2, where only what changed since the last
-  hour is new. R2 keeps the last 48 hours, then one snapshot a day for 14 days, then one a week for 8 weeks
-  (`KEEP_*` in the settings); old data is pruned once a day. A backup waits for a running deploy; a deploy
-  check that comes during the minute of the local copy logs "another deploy is running" and goes ahead 5
-  minutes later. When backups fail, or the server hasn't answered for 3 hours, it posts to the Discord
-  webhook in `/etc/realms-deploy.env`, once, and again when they work.
-- **`realms-restore-test.timer`** restores the newest snapshot to a temporary folder on the 1st of each month
-  (3:30 AM Pacific), checks that `level.dat` and the region files are there and whole, and posts the result.
+1. It waits for a running deploy, and keeps deploys out until it is done with the world (a deploy check
+   that comes meanwhile logs "another deploy is running" and goes ahead 5 minutes later).
+2. If the server answers: `save-off` and `save-all flush`, so the world on disk is whole and stays still
+   while restic reads it. Players keep playing; the server just doesn't save until step 4.
+3. restic backs up `server/` itself, not `backups/` (which is only as new as the last deploy). It leaves out
+   what the installer downloads again or the server rebuilds: jars, logs, libraries, BlueMap tiles and
+   `session.lock`. Only what changed since the last hour is sent, usually within a minute or two.
+4. `save-on`, also when restic fails. A restic run that takes over 45 minutes is stopped, and if the backup
+   itself is killed, the unit turns saving back on after it.
+5. R2 keeps the last 48 hours, then one snapshot a day for 14 days, one a week for 8 weeks and one a month
+   for 6 months (`KEEP_*` in the settings). Data no snapshot needs is pruned once a day.
+6. `restic check --read-data-subset=5%` reads back a random 5% of the stored data and checks it, so damage in
+   the bucket shows up within days instead of at restore time.
+
+When backups fail, or the server hasn't answered for 3 hours, it posts to the Discord webhook in
+`/etc/realms-deploy.env`, once, and again when they work. A deploy still backs up into `backups/` before it
+updates, and keeps the newest 3 there (`KEEP_BACKUPS` in `/etc/realms-deploy.env`): R2 holds the history.
 
 **Cost.** R2's free tier (October 2026) is 10 GB-month of storage, 1 million writes and 10 million reads a
 month, with free downloads and no minimum storage time. restic keeps each piece of data once, so the bucket
-holds about one copy of the world plus 8 weeks of changes: free while that stays under 10 GB, then $0.015 per
-GB-month (20 GB is $0.15 a month). The hourly runs make far fewer writes than the free million.
+holds about one copy of the server folder plus six months of changes: free while that stays under 10 GB,
+then $0.015 per GB-month (20 GB is $0.15 a month). The hourly runs, the read-back included, come to tens of
+thousands of operations a month, far under the free amounts, and downloads cost nothing.
 `--restic stats --mode raw-data` (below) shows what the bucket holds.
 
 ### Set up the off-site copy (once)
@@ -109,7 +116,7 @@ GB-month (20 GB is $0.15 a month). The hourly runs make far fewer writes than th
    free tier): R2 > Create bucket, e.g. `monkey-smp-backups`. Its Settings page shows the S3 API address,
    `https://<ACCOUNT_ID>.r2.cloudflarestorage.com/monkey-smp-backups`. Then R2 > Manage API tokens > Create
    API token with **Object Read & Write** on that bucket only, and copy its Access Key ID and Secret Access
-   Key (shown once).
+   Key (shown once). Make a second token with **Object Read** only for the home PC (the restore drill below).
 2. **The restic password.** Make a long random one in your password manager and save it there with the keys
    and the address. **Keep it off the VPS**: it is the only way to read the backups, and a VPS that dies takes
    `/etc/realms-backup.env` with it, leaving the bucket unreadable. Lost R2 keys can be made again; a lost
@@ -125,74 +132,88 @@ GB-month (20 GB is $0.15 a month). The hourly runs make far fewer writes than th
    ```
    Type the address (as `s3:https://...`), the two keys and the password into the file. It stays root-only:
    never copy the values into the repo or a chat.
-4. **Units, the first backup and a first test restore:**
+4. **The unit, the first backup and the timer:**
    ```sh
-   cp /srv/realms/repo/deploy/realms-{backup,restore-test}.{service,timer} /etc/systemd/system/ && systemctl daemon-reload
+   cp /srv/realms/repo/deploy/realms-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload
    sh /srv/realms/repo/deploy/realms-backup.sh --init
    systemctl start realms-backup
-   systemctl start realms-restore-test
-   systemctl enable --now realms-backup.timer realms-restore-test.timer
+   systemctl enable --now realms-backup.timer
    ```
-   `--init` creates the repository in the bucket; the first backup sends the whole world, later ones only the
-   changes. `/srv/realms/repo` is checked out at the live release, so these files arrive with the first
-   release that has them (or `git checkout --detach origin/main` there as `realms`: the deploy script decides
-   what is live from its own record, not from that checkout).
+   `--init` creates the repository in the bucket. The first backup sends the whole server folder, so the
+   server doesn't save until it is done (players can keep playing); later ones send only the changes.
+   `/srv/realms/repo` is checked out at the live release, so these files arrive with the first release that
+   has them (or `git checkout --detach origin/main` there as `realms`: the deploy script decides what is
+   live from its own record, not from that checkout).
+5. **Put the monthly restore drill (below) in your calendar.**
 
 The VPS's token can delete (pruning needs to), so the bucket doesn't guard against someone who takes over the
-VPS; for that, also keep a copy at home now and then (the restore below, on the home PC).
+VPS. For that, now and then copy a drill's restored `server` folder (below) to a disk at home before
+deleting it.
 
 ### Restore
 
-Every snapshot holds the server folder at the same path, `/srv/realms/offsite/server` (the hourly copy is
-hard-linked there before it goes up). Restoring `latest:/srv/realms/offsite/server` gives the newest one;
-`--restic snapshots` lists the others by ID and time, and `<ID>:/srv/realms/offsite/server` restores one of
-them. The script reads the keys from the settings file, so none go on the command line.
+Every snapshot holds the server folder at its path on the VPS, `/srv/realms/TheRealms-Server/server`.
+Restoring `latest:/srv/realms/TheRealms-Server/server` gives the newest one; `--restic snapshots` lists the
+others by ID and time, and `<ID>:/srv/realms/TheRealms-Server/server` restores one of them. On the VPS the
+script reads the keys from the settings file, so none go on the command line.
 
 **On the VPS** (the world broke, or a mistake needs undoing), as root:
 
 ```sh
-sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/offsite/server --target /srv/realms/restore
+sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/TheRealms-Server/server --target /srv/realms/restore
 cd /srv/realms/TheRealms-Server/docker && docker compose stop
 mv ../server/world ../server/world.before-restore && mv /srv/realms/restore/world ../server/world
 chown -R realms: ../server/world && docker compose up -d
 ```
 
 Only the world goes back. The whitelist, bans, LuckPerms and the mods stay as they are, so nobody who paid
-since then loses access. The last 14 hours are also in `backups/`, with no download: move
+since then loses access. The last 3 deploys' backups are also in `backups/`, with no download: move
 `../backups/<time>/world` in instead. Delete `world.before-restore` and `/srv/realms/restore` once the server
 is fine.
 
 **On a new VPS**: set it up as in "Set up (once)" above. In step 5, before running the deploy script the
 second time, do steps 2 and 3 of the off-site setup with the values from your password manager, then
-`sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/offsite/server --target /srv/realms/TheRealms-Server/server`
+`sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/TheRealms-Server/server --target /srv/realms/TheRealms-Server/server`
 and `chown -R realms: /srv/realms/TheRealms-Server/server`. Then run the deploy script, download the Tebex
 jar into `server/mods` again (backups leave jars out; see "Payments and Discord"), and finish with step 4
 of the off-site setup. The new VPS carries on the same series of snapshots.
 
-**On the home PC** (Windows, for the fallback below): get `restic_0.19.1_windows_amd64.zip` from
-https://github.com/restic/restic/releases and put `restic.exe` in the unzipped release folder. A second R2
-token with Object Read only is enough here. In PowerShell, in that folder (the secret is typed hidden and
-stays out of the history):
+### Monthly restore drill (home PC)
 
-```powershell
-$env:RESTIC_REPOSITORY = 's3:https://<ACCOUNT_ID>.r2.cloudflarestorage.com/monkey-smp-backups'
-$env:AWS_DEFAULT_REGION = 'auto'
-$env:AWS_ACCESS_KEY_ID = '<Access Key ID>'
-$env:AWS_SECRET_ACCESS_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Secret Access Key')).Password
-.\restic.exe restore latest:/srv/realms/offsite/server --target server
-```
+Once a month, restore the newest snapshot onto the home PC and start it there. It proves the backups can be
+read and the world loads, and it rehearses the playit.gg fallback below, which starts the same way.
 
-restic asks for the password itself. The result is the `server` folder; put the Tebex jar back into
-`server\mods`.
+1. **Make room.** Stop any other Minecraft server on the PC first, test servers included: two servers fight
+   over BlueMap's port 8100, and the one that loses shuts down. Check that about 12 GB of memory is free.
+2. **The release.** Download the zip of the release that is live (`realms-deploy.sh --status` on the VPS)
+   from the repo's GitHub releases, and unzip it into a new, empty folder, e.g. `C:\MonkeySMP-drill`.
+3. **restic** (once): get `restic_0.19.1_windows_amd64.zip` from https://github.com/restic/restic/releases
+   and unzip `restic.exe` to `C:\Tools\restic`.
+4. **Restore**, in PowerShell in the release folder, with the read-only token (the secret is typed hidden
+   and stays out of the history; restic then asks for the password itself):
+   ```powershell
+   $env:RESTIC_REPOSITORY = 's3:https://<ACCOUNT_ID>.r2.cloudflarestorage.com/monkey-smp-backups'
+   $env:AWS_DEFAULT_REGION = 'auto'
+   $env:AWS_ACCESS_KEY_ID = '<read-only Access Key ID>'
+   $env:AWS_SECRET_ACCESS_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Secret Access Key')).Password
+   C:\Tools\restic\restic.exe snapshots --latest 1
+   C:\Tools\restic\restic.exe restore latest:/srv/realms/TheRealms-Server/server --target server
+   ```
+   The newest snapshot should be from the last hour or two.
+5. **Start it** with `Start Server.bat`. Backups leave the jars out, so the first start downloads Java,
+   Fabric and the mods (about 500 MB), then loads the restored world. Leave the Tebex jar out on a drill:
+   with it, this copy would carry out store purchases meant for the VPS.
+6. **Join it** through playit.gg: start the agent and join its tunnel address (not `monkeysmp.lscaturchio.xyz`:
+   DNS stays on the VPS during a drill). Your base should be there as it was at the snapshot's time.
+7. **Stop it and delete the folder.** It is a copy: nothing done on it counts. Note the date and what
+   failed, if anything; a failed drill is the cheap time to find out.
 
 ## Fallback: home PC on playit.gg
 
 When the VPS or its provider is down for longer than a restart:
 
-(The newest off-machine backup is the R2 copy: see "On the home PC" under "Restore" above.)
-
-1. On the home PC, unzip the same release, put the newest off-machine backup in as `server`, and start
-   it with `Start Server.bat`.
+1. On the home PC, do steps 1 to 5 of the restore drill above, in a folder you keep, and put the Tebex jar
+   into `server\mods` this time (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
 3. In Vercel DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.

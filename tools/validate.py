@@ -14,6 +14,7 @@ import re
 import sys
 
 import build
+import client_env
 import defaults
 import entries
 import launcher_profile
@@ -118,6 +119,7 @@ def validate_client(manifest: dict, repo=REPO) -> list[str]:
             by_project.setdefault(m.group(1), []).append(f["path"])
     errors += [f"client: {' and '.join(sorted(paths))} are the same Modrinth project (keep one version)"
                for paths in by_project.values() if len(paths) > 1]
+    errors += client_env.check(index)  # which files a player may untick (optional) and which they need
     return errors + validate_profile(index, repo)
 
 

@@ -300,6 +300,8 @@ def test_snapshot_client(tmp_path, fake_modrinth, request, release):
     index = snapshot.snapshot_client(instance, repo=repo, upstream=Upstream(fake_modrinth.http))
 
     assert [f["path"] for f in index["files"]] == ["mods/sodium.jar", "shaderpacks/shader.zip"]
+    # tools/client_env.py: a mod it doesn't list stays required; shaders are always optional
+    assert [f["env"]["client"] for f in index["files"]] == ["required", "optional"]
     assert index["dependencies"] == {"minecraft": mc, "fabric-loader": "0.99.0"}
     assert index["versionId"] == repo.load_manifest()["version"]
     overrides = repo.client / "overrides"

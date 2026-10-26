@@ -130,8 +130,11 @@ mid-range graphics card runs it well. Questions: [Discord](https://discord.gg/C2
   Animations, Continuity, 3D Skin Layers.
 - **Maps and info**: Xaero's Minimap and World Map (claim chunks from the map), JEI, Jade, AppleSkin.
 - **Sound**: Simple Voice Chat (press **V**), Sound Physics Remastered, AmbientSounds.
-- **The server's content**: Naturalist, More Mobs, Strength SMP and the other mods the server needs you to have.
+- **The server's content**: Naturalist, Variants and Ventures, Goat Expansion and the other mods that add
+  blocks, mobs and items. These are the files you can't leave out.
 - **Monkey SMP Wardrobe**: the resource pack for the server's sword and helmet skins, earned by playing.
+- **Slow computer?** Most of the rest is optional: switch off Distant Horizons, the shaders and the visual and
+  sound mods in the instance's Content tab. Keep Sodium and the other speed mods. The website's FAQ says more.
 
 Hosted by Diego and Lorenzo Scaturchio.
 ```

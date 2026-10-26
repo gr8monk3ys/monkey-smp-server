@@ -38,6 +38,7 @@ import zipfile
 from pathlib import Path
 from typing import NamedTuple
 
+import client_env
 import defaults
 import entries
 import launcher_profile
@@ -299,7 +300,7 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
         version, sha1, _ = found[p]
         f = next(x for x in version["files"] if x["hashes"]["sha1"] == sha1)
         files.append({"path": rel, "hashes": {"sha1": sha1, "sha512": f["hashes"]["sha512"]},
-                      "env": {"client": "required", "server": "unsupported"},
+                      "env": client_env.env({"path": rel, "downloads": [f["url"]]}),
                       "downloads": [f["url"]], "fileSize": f["size"]})
     manifest = repo.load_manifest()
     loader = fabric_loader(instance) or old.get("dependencies", {}).get("fabric-loader")

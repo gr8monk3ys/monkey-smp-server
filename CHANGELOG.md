@@ -6,6 +6,20 @@
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+- New: **shops** and a **lighter client install**. Universal Shops (with Polymer, server only: the client pack
+  doesn't need it) lets players sell from a chest while offline, priced in items; the shop block holds the
+  payments and only its owner can break it. Open Parties and Claims' default
+  `forcedBlockProtectionExceptionList` gains `"hand$universal_shops:trade_block"`, so anyone may buy, empty-handed,
+  from a shop in someone's claim while its chest stays protected; on the live VPS run `deploy/shops-claims.sh`
+  once this release is live (docs/LIVE.md, "Shops in claims"). New rule 43 (`docs/RULES.md`, "Trading"; a
+  proposed default for the owners): shops in a claim are protected, raids included, and lying listings are scams.
+  In the client pack, 126 client-side mods and every resource pack and shader pack are now `"client": "optional"`,
+  ticked by default, so players can untick them in Prism or switch them off in the Modrinth App; the other 50 mods
+  (those that add registry content, and the libraries they need) stay required. `tools/client_env.py` holds the list, `snapshot.py`
+  writes it, `validate.py` checks it, and `tests/test_client_env.py` checks it against facts recorded from every
+  jar (`tests/fixtures/record_client_mods.py`). `docs/PLAYERS.md` gets a "Low-end PC" section and the current
+  `/oclaims` and `/oparties` command names. The site's "16 GB of RAM" stays: nothing here measured a smaller
+  pack.
 
 ## [2.5.0] - 2026-10-26
 

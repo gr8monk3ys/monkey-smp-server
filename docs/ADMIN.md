@@ -284,6 +284,37 @@ each player may claim, whether claims are protected from explosions, and so on).
 for the server itself (for example around spawn) with the server-claim mode in the claims menu. Stop the
 server before editing configs.
 
+## Shops
+
+Players sell from chests while they're offline with *Universal Shops* (Patbox), priced in items: there is no
+currency, `/pay` or auction house. It runs on the server only, through Polymer (players see a Trade Shop as a
+player head and its menus as ordinary inventory screens), so the client pack doesn't change. Polymer pushes no
+resource pack (its auto-host is off). How players use shops: "Playing" in `docs/PLAYERS.md`; the rule: 43 in
+`docs/RULES.md`.
+
+- **What protects a shop.** The shop block holds the payments, and only its owner can break it; explosions
+  can't. Its stock sits in an ordinary chest or barrel behind or under it, which only the claim protects. In the
+  owner's claim nobody else can open, break or hopper that chest, raid or not. A shop in the wild can be robbed
+  (rule 35), and with the shop's own **Allow Hoppers** setting on, a hopper under the block empties its
+  payments. Tell players to build shops in their claim.
+- **Buying in a claim.** `forcedBlockProtectionExceptionList` in `server\config\openpartiesandclaims-server.toml`
+  holds `"hand$universal_shops:trade_block"`: anyone may right-click a Trade Shop in someone's claim, with an
+  empty hand. `hand$` matters: with an item in the hand the same click could place blocks inside the claim. A
+  shop can't be put on someone else's chest in a claim either: placing it means clicking the chest. The entry
+  applies after a restart. A server installed before shops shipped keeps its old file: add the entry with the
+  server stopped, or on the live VPS run `deploy/shops-claims.sh` (`docs/LIVE.md`, "Shops in claims"). Without
+  it, only the owner's party can buy from shops in a claim.
+- **No limits to set.** The mod has no setting for shops per player or for which containers count: any
+  container next to the block works. Claims (4 chunks a player) are the practical limit.
+- **Admin shops** sell without stock and swallow the payment: for event prizes or a spawn shop. With the
+  `universal_shops.admin` permission (the `admin` rank, or op level 3), `/universal_shops get true` gives you
+  one, `/universal_shops get false` a normal one. Anyone with that permission can change an admin shop.
+- **Scam reports** (rule 43). Universal Shops keeps no record of purchases. Ask for screenshots
+  (the sign or chat message, and the shop's menu, which shows the real item and price), and `ledger inspect` the
+  chest for who put in or took out what. Only the owner can change a shop's settings or break it. To remove one,
+  `setblock <x> <y> <z> air destroy`; the mod drops the payments inside when its block goes (untested here:
+  check the ground).
+
 ## Spawn protection
 
 Vanilla `spawn-protection=48` in `server\server.properties`: within 48 blocks of spawn only admins (ops)

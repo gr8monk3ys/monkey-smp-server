@@ -16,21 +16,19 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Monkey SMP logo over a Nether castle: Claim land. Make allies. Keep what you can hold.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#f9f8f5" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111317" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#1f6142">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="img/icon-256.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600..720&family=Instrument+Sans:wght@400..600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preload" href="fonts/pixelify-sans-monkey-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/atkinson-next-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script src="config.js"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <header class="top">
-    <a class="brand" href="#"><img src="favicon.svg" alt="" width="32" height="32">Monkey SMP</a>
+  <header class="canopy">
+    <a class="brand" href="#"><img src="kit/logo-1392w.png" alt="Monkey SMP" width="261" height="48"></a>
     <nav aria-label="Sections">
       <a href="#world">The world</a>
       <a href="#gallery">Gallery</a>
@@ -43,42 +41,66 @@
 
   <main id="main">
     <section class="hero">
-      <h1>Claim land. Make allies.<br>Keep what you can hold.</h1>
+      <img class="monkey" src="img/monkey.svg" alt="" width="224" height="224">
+      <h1>Claim land.<br>Make allies.<br>Keep what you can hold.</h1>
       <p class="lede">Monkey SMP is a modded factions server on Minecraft Java 26.3 (Fabric) for a small crowd that plays evenings, Pacific time.
         Factions of four, alliances, banner-marked territory, PvP outside your walls, reworked terrain, new dungeons, mobs and magic.</p>
-      <p class="launch">
-        <span class="label" id="launch-label">Season I launch</span>
-        <time data-launch="{date}, {pacific} ({eastern})" datetime="2026-11-22T01:00:00Z">Saturday 21 November 2026, 5 PM Pacific (8 PM Eastern)</time>
-        <span id="countdown" hidden></span>
-      </p>
-      <div class="address">
-        <span class="label">Server address</span>
-        <code id="address">monkeysmp.lscaturchio.xyz</code>
-        <button type="button" id="copy" class="ghost">Copy</button>
+      <div class="launch">
+        <p class="when">
+          <span id="launch-label">Season I launch</span>
+          <time data-launch="{date}, {pacific} ({eastern})" datetime="2026-11-22T01:00:00Z">Saturday 21 November 2026, 5 PM Pacific (8 PM Eastern)</time>
+        </p>
+        <p class="counter" id="counter" hidden>
+          <span class="cell"><b><i>00</i></b> <span class="unit">days</span></span>
+          <span class="cell"><b><i>00</i></b> <span class="unit">hours</span></span>
+          <span class="cell"><b><i>00</i></b> <span class="unit">minutes</span></span>
+        </p>
+        <p id="countdown" hidden></p>
       </div>
-      <div class="cta">
-        <a class="button" data-link="STORE_URL" href="https://discord.gg/C25hy9Ca9W" title="Coming soon: ask in the Discord">Get a pass</a>
-        <a class="button ghost" data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Join the Discord</a>
+      <div class="ways">
+        <div class="plaque">
+          <span>Server address</span>
+          <code id="address">monkeysmp.lscaturchio.xyz</code>
+          <button type="button" id="copy">Copy</button>
+        </div>
+        <div class="cta">
+          <a class="button" data-link="STORE_URL" href="https://discord.gg/C25hy9Ca9W" title="Coming soon: ask in the Discord">Get a pass</a>
+          <a class="button ghost" data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Join the Discord</a>
+        </div>
       </div>
       <figure class="trailer">
-        <video id="trailer" controls muted loop playsinline preload="none" width="1280" height="720"
-          poster="media/trailer-poster.webp" aria-label="Monkey SMP trailer">
-          <source src="media/trailer-720p.mp4" type="video/mp4">
-        </video>
+        <div class="shot">
+          <video id="trailer" controls muted loop playsinline preload="none" width="1280" height="720"
+            poster="media/trailer-poster.webp" aria-label="Monkey SMP trailer">
+            <source src="media/trailer-720p.mp4" type="video/mp4">
+          </video>
+        </div>
         <figcaption>The trailer, one minute. The event scenes are staged on a test server with stand-in players. It plays muted: turn the sound on in the player.</figcaption>
       </figure>
     </section>
 
-    <section id="world" class="band">
+    <section id="world">
       <h2>The world</h2>
-      <div class="grid three">
+      <div class="features">
         <article>
+          <p class="fig" aria-hidden="true">Up to 4</p>
           <h3>Factions, alliances, territory</h3>
           <p>Factions of up to four, each under its own banner. Your territory is 2 &times; 2 chunks a player and nobody may grief it; everything outside it is contested.</p>
         </article>
         <article>
+          <p class="fig" aria-hidden="true">y&nbsp;500</p>
           <h3>Land worth fighting over</h3>
-          <p>Tectonic and Terralith reshape the overworld, Incendium the Nether, Nullscape the End. Dungeons, taverns and capitals are scattered across it.</p>
+          <p>Tectonic and Terralith reshape the overworld and push its peaks past y&nbsp;500; Incendium remakes the Nether and Nullscape the End. Dungeons, taverns and capitals are scattered across it.</p>
+        </article>
+        <article>
+          <p class="fig" aria-hidden="true">3D</p>
+          <h3>A live map</h3>
+          <p>BlueMap renders the world in 3D in your browser, so you can plan the next expedition before logging in. It is open to everyone: <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">take a look</a>.</p>
+        </article>
+        <article>
+          <p class="fig" aria-hidden="true">20 TPS</p>
+          <h3>Runs smooth</h3>
+          <p>A fast dedicated CPU, a pre-generated world and tuned mob ticking keep it at 20 TPS for the crowd we let in.</p>
         </article>
         <article>
           <h3>Strength on the line</h3>
@@ -88,14 +110,6 @@
           <h3>Talk in the world</h3>
           <p>Proximity voice chat is built in. Negotiate at the border, or hear them coming.</p>
         </article>
-        <article>
-          <h3>A live map</h3>
-          <p>BlueMap renders the world in 3D in your browser, so you can plan the next expedition before logging in. It is open to everyone: <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">take a look</a>.</p>
-        </article>
-        <article>
-          <h3>Runs smooth</h3>
-          <p>A fast dedicated CPU, a pre-generated world and tuned mob ticking keep it at 20 TPS for the crowd we let in.</p>
-        </article>
       </div>
     </section>
 
@@ -104,34 +118,52 @@
       <p class="note">Screenshots from the server's own world, taken with the shaders that ship in the pack.</p>
       <div class="gallery">
         <figure>
-          <img src="img/mountains-1600.webp" srcset="img/mountains-800.webp 800w, img/mountains-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 66vw" width="1600" height="900" alt="A ridge of red, yellow and white painted stone rising above a sea of clouds">
-          <figcaption><span>Fig. 01</span> The Painted Mountains, above the clouds. Tectonic and Terralith push peaks past y&nbsp;500.</figcaption>
+          <div class="shot">
+            <span class="where">Overworld</span>
+            <img src="img/mountains-1600.webp" srcset="img/mountains-800.webp 800w, img/mountains-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 66vw" width="1600" height="900" alt="A ridge of red, yellow and white painted stone rising above a sea of clouds">
+          </div>
+          <figcaption>The Painted Mountains, above the clouds. Tectonic and Terralith push peaks past y&nbsp;500.</figcaption>
         </figure>
         <figure>
-          <img src="img/nether-castle-800.webp" srcset="img/nether-castle-800.webp 800w, img/nether-castle-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="Blackstone towers with red roofs under falling lava, a piglin brute on the battlements">
-          <figcaption><span>Fig. 02</span> A Forbidden Castle in the Nether. It is guarded.</figcaption>
+          <div class="shot">
+            <span class="where">The Nether</span>
+            <img src="img/nether-castle-800.webp" srcset="img/nether-castle-800.webp 800w, img/nether-castle-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="Blackstone towers with red roofs under falling lava, a piglin brute on the battlements">
+          </div>
+          <figcaption>A Forbidden Castle in the Nether. It is guarded.</figcaption>
         </figure>
         <figure>
-          <img src="img/end-citadel-800.webp" srcset="img/end-citadel-800.webp 800w, img/end-citadel-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A purpur citadel among spiked end-stone islands under a violet sky">
-          <figcaption><span>Fig. 03</span> The Phantom Citadel, out past the dragon's island.</figcaption>
+          <div class="shot">
+            <span class="where">The End</span>
+            <img src="img/end-citadel-800.webp" srcset="img/end-citadel-800.webp 800w, img/end-citadel-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A purpur citadel among spiked end-stone islands under a violet sky">
+          </div>
+          <figcaption>The Phantom Citadel, out past the dragon's island.</figcaption>
         </figure>
         <figure>
-          <img src="img/fortified-village-800.webp" srcset="img/fortified-village-800.webp 800w, img/fortified-village-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A walled village with a stone keep, built out over shallow water">
-          <figcaption><span>Fig. 04</span> A fortified village on the coast. Someone will claim it.</figcaption>
+          <div class="shot">
+            <span class="where">Overworld</span>
+            <img src="img/fortified-village-800.webp" srcset="img/fortified-village-800.webp 800w, img/fortified-village-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A walled village with a stone keep, built out over shallow water">
+          </div>
+          <figcaption>A fortified village on the coast. Someone will claim it.</figcaption>
         </figure>
         <figure>
-          <img src="img/floating-island-800.webp" srcset="img/floating-island-800.webp 800w, img/floating-island-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A cabin on a small floating island over the sea, snowy peaks behind">
-          <figcaption><span>Fig. 05</span> A cabin on a floating island, a long swim from anywhere.</figcaption>
+          <div class="shot">
+            <span class="where">Overworld</span>
+            <img src="img/floating-island-800.webp" srcset="img/floating-island-800.webp 800w, img/floating-island-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A cabin on a small floating island over the sea, snowy peaks behind">
+          </div>
+          <figcaption>A cabin on a floating island, a long swim from anywhere.</figcaption>
         </figure>
         <figure>
-          <img src="img/mage-tower-800.webp" srcset="img/mage-tower-800.webp 800w, img/mage-tower-1600.webp 1600w"
-            sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A tall stone mage tower with a green spire, standing in a shallow lake">
-          <figcaption><span>Fig. 06</span> A mage tower in the shallows.</figcaption>
+          <div class="shot">
+            <span class="where">Overworld</span>
+            <img src="img/mage-tower-800.webp" srcset="img/mage-tower-800.webp 800w, img/mage-tower-1600.webp 1600w"
+              sizes="(max-width: 760px) 100vw, 33vw" width="1600" height="900" loading="lazy" alt="A tall stone mage tower with a green spire, standing in a shallow lake">
+          </div>
+          <figcaption>A mage tower in the shallows.</figcaption>
         </figure>
       </div>
     </section>
@@ -161,15 +193,15 @@
       </ol>
     </section>
 
-    <section id="pricing" class="band">
+    <section id="pricing" class="crown">
       <h2>Pricing</h2>
       <p class="note">One price to play, the same for everyone. Supporter tiers are cosmetic only: nothing that helps
         you fight, build faster or earn more. Everyone earns wardrobe skins for swords and helmets just by playing:
         days online, months on the pass, friends invited and the weekly challenges (<code>/trigger wardrobe</code>
         in game). Founder's Circlet is only for playing on Season I's launch weekend.</p>
 
-      <div class="grid two">
-        <article class="plan main">
+      <div class="plans">
+        <article class="panel">
           <h3>Server Pass</h3>
           <p class="price">$5 <span>/ month</span></p>
           <p class="alt">or $14 for 3 months</p>
@@ -185,9 +217,9 @@
             add you to the whitelist by hand.</p>
           <a class="button" data-link="STORE_URL" href="https://discord.gg/C25hy9Ca9W" title="Coming soon: ask in the Discord">Get a pass</a>
         </article>
-        <article class="plan">
+        <article class="panel support">
           <h3>Supporter <span class="tag">optional</span></h3>
-          <table>
+          <table class="tiers">
             <tbody>
               <tr><th>Ember <span>$3 / mo</span></th><td>Chat name color, supporter tag in the Discord, the Lantern sword skin</td></tr>
               <tr><th>Banner <span>$7 / mo</span></th><td>Ember, plus a title of your choice, your faction's banner in the spawn hall and the Standard sword skin</td></tr>
@@ -198,7 +230,7 @@
         </article>
       </div>
 
-      <div class="grid two">
+      <div class="extras">
         <article>
           <h3>Bring your friends</h3>
           <p data-store="open" hidden>When a friend buys a pass and names you at checkout, you earn supporter time:</p>
@@ -237,6 +269,10 @@
           <p>Factions of up to four, public, each with a banner. Alliances yes, confederations no. Your territory is 2 &times; 2 chunks a player, marked with your banner, or the inside of your base or walls at least 3 blocks tall. Nobody griefs, robs or farms a territory; everything outside one is fair game. Every base needs one feature visible from the surface.</p>
         </li>
         <li>
+          <h3>Spawn is sacred</h3>
+          <p>Nobody tampers with spawn or the admin building, and no TNT traps there.</p>
+        </li>
+        <li>
           <h3>Fight fair</h3>
           <p>You're in combat once someone hits you. No combat logging, no killing naked or AFK players, no restocking mid-fight, and no rejoining a team fight for 10 minutes after you die. Land elytra 50 blocks out, no elytra or lava in combat, no Happy Ghast PvP, and stay within about 30 blocks of shore.</p>
         </li>
@@ -253,10 +289,6 @@
           <p>No hacked clients, x-ray of any kind (including the cushion glitch, F3+A and reloading shaders), duping, health indicators, CIT packs, or Replay Mod and Flashback for an edge. No exploits, no loopholes, no account sharing. Not sure? Ask an admin first.</p>
         </li>
         <li>
-          <h3>Spawn is sacred</h3>
-          <p>Nobody tampers with spawn or the admin building, and no TNT traps there.</p>
-        </li>
-        <li>
           <h3>Fair trades</h3>
           <p>Shops trade items for items. A shop in its owner's claim is safe, raid or not; one outside every territory can be raided like anything else out there. A shop must sell what it says: no lying signs, bait-and-switch prices or renamed fakes. Scammers give back what they took.</p>
         </li>
@@ -269,9 +301,9 @@
         a ban. A ban doesn't refund time already paid for.</p>
     </section>
 
-    <section id="faq" class="band">
+    <section id="faq">
       <h2>Questions</h2>
-      <div class="grid two">
+      <div class="faq">
         <details>
           <summary>Why does it cost money?</summary>
           <p>A modded server this size needs a fast dedicated CPU to stay smooth, and the pass keeps out players who
@@ -325,8 +357,8 @@
       <h2>Spread the word</h2>
       <p class="note">The logo and banners, free to use when you post about the server: videos, server lists, your own Discord.</p>
       <div class="kit">
-        <figure class="kit-logo">
-          <img src="kit/logo-1392w.png" width="348" height="64" alt="The Monkey SMP logo: a pixel-art monkey on a green tile beside the words MONKEY SMP">
+        <figure>
+          <img class="plate" src="kit/logo-1392w.png" width="348" height="64" loading="lazy" alt="The Monkey SMP logo: a pixel-art monkey on a green tile beside the words MONKEY SMP">
           <figcaption>Logo, for dark backgrounds. <a href="kit/logo-1392w.png" download>Wide</a> &middot;
             <a href="kit/logo-stacked-704w.png" download>Stacked</a> &middot; <a href="kit/mark-512.png" download>Monkey only</a></figcaption>
         </figure>
@@ -335,14 +367,14 @@
           <figcaption>Server-list banner, 468 &times; 60. <a href="kit/server-list-468x60.png" download>Download</a></figcaption>
         </figure>
         <figure>
-          <img src="kit/discord-banner-960x540.png" width="960" height="540" loading="lazy" alt="Monkey SMP Discord banner">
+          <div class="shot"><img class="wide" src="kit/discord-banner-960x540.png" width="960" height="540" loading="lazy" alt="Monkey SMP Discord banner"></div>
           <figcaption>Discord banner, 960 &times; 540. <a href="kit/discord-banner-960x540.png" download>Download</a></figcaption>
         </figure>
       </div>
     </section>
   </main>
 
-  <footer>
+  <footer class="crown">
     <p><a data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Discord</a> &middot; <a href="#rules">Rules</a> &middot; <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">Live map</a> &middot; <a href="#kit">Logo and banners</a> &middot; <a href="creators.html">Creator codes</a> &middot; <a href="changes.html">What changed</a></p>
     <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
   </footer>

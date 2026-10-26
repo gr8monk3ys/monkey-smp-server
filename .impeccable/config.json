@@ -4,16 +4,13 @@
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "overused-font",
-        "value": "fraunces",
-        "createdAt": "2026-10-23T23:50:09.785Z",
-        "reason": "Matches lscaturchio.xyz, per the owner's request"
-      },
-      {
-        "rule": "overused-font",
-        "value": "instrument sans",
-        "createdAt": "2026-10-23T23:50:10.124Z",
-        "reason": "Matches lscaturchio.xyz, per the owner's request"
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-10-26T19:51:50.835Z",
+        "reason": "Agent: static-scan false positives only. .shot is a 2px ink frame a photo fills edge to edge by design; .crown's side padding is var(--gutter) = max(16px, ...), which the static scan can't resolve. The rendered scan at 1280x800 and 390x844 measures real insets and reports 0."
       }
     ]
   }

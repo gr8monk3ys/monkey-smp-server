@@ -26,3 +26,7 @@ package/docker/.env
 # store exports for tools/funnel.py hold buyers' names and emails (only the synthetic fixture is committed)
 *.csv
 !tests/fixtures/*.csv
+
+# Impeccable's one-off direction roll and review screenshots (5 MB, retaken for each review)
+.impeccable/questions/
+.impeccable/review/

@@ -252,10 +252,11 @@ When the VPS or its provider is down for longer than a restart:
    into `server\mods` this time (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
-   With TTL 60, players reconnect to the same name within minutes.
+3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port,
+   and each join address's SRV record (`_minecraft._tcp.yt.monkeysmp` and the rest, docs/PROMOTION.md)
+   too. With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
-   record back, and start the VPS.
+   records back, and start the VPS.
 
 Only one copy may run the world at a time: two live copies split the world into two histories.
 

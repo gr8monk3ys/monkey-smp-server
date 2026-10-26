@@ -115,3 +115,8 @@ _Avoid_: export, import, scan
 **Spawn safe zone**:
 The protected area around the world spawn where players can't fight or blow things up.
 _Avoid_: spawn protection (Minecraft uses that for something else)
+
+**Spawn NPC**:
+The Guide or the Town Crier: an Easy NPC character at spawn that answers new players when no staff are on.
+Staff place each one once per world from the `realms-npcs` data pack.
+_Avoid_: bot, villager

@@ -1,7 +1,8 @@
 #!/bin/sh
 # The one-off steps for 2.5.0 on the live VPS (docs/LIVE.md, "One-off steps when upgrading" and "Monitoring,
 # the daily restart and the update check"). Run it as root once 2.5.0 is live, so the deployed checkout has the
-# timer files. Started with systemd-run it carries on if the SSH connection drops while the server is stopped:
+# timer files and the server has the short rules. Started with systemd-run it carries on if the SSH connection
+# drops while the server is stopped:
 #
 #   systemd-run --unit=realms-upgrade --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/upgrade-2.5.0.sh
 #   journalctl -fu realms-upgrade
@@ -11,16 +12,23 @@
 #
 # Each step is skipped when it is already done, so running it again is safe:
 #   1. installs python3 if it is missing (the weekly update check needs 3.10 or newer)
-#   2. turns off Distant Horizons' server-side LODs, which carry the real ores, in DistantHorizons.toml: under
-#      the deploy lock, with a warning in chat if players are online, the server stopped (Distant Horizons
-#      would write over the change), a copy of the file first (DistantHorizons.toml.before-2.5.0), and the
-#      server started again whatever happens. About 3 minutes offline.
-#   3. installs realms-restart.timer and realms-updates.timer from the deployed checkout and starts them
+#   2. changes the settings the live server's own copies of these files still have off, all with one stop:
+#        config/DistantHorizons.toml          no server-side LODs (they carry the real ores)
+#        server.properties                    enable-code-of-conduct=true (the short rules)
+#        config/servercore/config.yml         the breeding cap and villager lobotomization
+#        config/openpartiesandclaims-server.toml  maxPlayerClaims = 4
+#      Under the deploy lock, with a warning in chat if players are online, the server stopped (the mods would
+#      write over the change), a copy of each file first (DistantHorizons.toml.before-2.5.0, the others
+#      *.pre-onboarding as in docs/LIVE.md), and the server started again whatever happens. About 3 minutes
+#      offline.
+#   3. the no-PvP server claim over the 7 x 7 chunks around spawn, through RCON with the server up
+#   4. installs realms-restart.timer and realms-updates.timer from the deployed checkout and starts them
 # The off-site backups (realms-backup.sh) are not here: they need keys the owner makes (docs/LIVE.md).
 #
 # It reads only REPO_DIR, LIVE_DIR, LOCK_FILE, WARN_MINUTES and BOOT_TIMEOUT from /etc/realms-deploy.env (or
 # REALMS_DEPLOY_ENV), without sourcing it, so the webhooks are never read. RCON goes through the container's own
-# `realms rcon`, which finds the password itself. No secret is read, printed or asked for. What it prints also
+# `realms rcon`, which finds the password itself. Of server.properties it reads and prints only the
+# enable-code-of-conduct line, never rcon.password. No secret is read, printed or asked for. What it prints also
 # goes to /var/log/realms-upgrade-2.5.0.log (or UPGRADE_LOG), with the output of apt-get, systemctl and docker.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
@@ -52,13 +60,29 @@ BOOT_TIMEOUT=${BOOT_TIMEOUT:-$(setting BOOT_TIMEOUT 900)}
 case "$WARN_MINUTES" in '' | *[!0-9]*) WARN_MINUTES=5 ;; esac
 case "$BOOT_TIMEOUT" in '' | *[!0-9]*) BOOT_TIMEOUT=900 ;; esac
 
-DH_FILE=$LIVE_DIR/server/config/DistantHorizons.toml
-DH_BACKUP=$DH_FILE.before-2.5.0
-# The settings that send Distant Horizons' LODs (and the ores in them) to players, and the value each needs.
-DH_SETTINGS='synchronizeOnLoad=false enableRealTimeUpdates=false generatorPlan="DISABLED"'
+SERVER_DIR=$LIVE_DIR/server
+# The settings, one per line: FILE|KEY|VALUE, FILE in the server folder. KEY is NAME for a "NAME = value" line
+# (TOML, server.properties) or BLOCK.NAME for "NAME: value" directly inside the YAML block BLOCK.
+SETTINGS='config/DistantHorizons.toml|synchronizeOnLoad|false
+config/DistantHorizons.toml|enableRealTimeUpdates|false
+config/DistantHorizons.toml|generatorPlan|"DISABLED"
+server.properties|enable-code-of-conduct|true
+config/servercore/config.yml|lobotomize-villagers.enabled|true
+config/servercore/config.yml|breeding-cap.enabled|true
+config/openpartiesandclaims-server.toml|maxPlayerClaims|4'
+FILES='config/DistantHorizons.toml server.properties config/servercore/config.yml config/openpartiesandclaims-server.toml'
+CONDUCT=$SERVER_DIR/codeofconduct/en_us.txt  # what enable-code-of-conduct shows; 2.5.0 brings it
+# docs/LIVE.md, "The short rules, ServerCore and claims": PvP off in server claims, then the server claims the
+# 7 x 7 chunks around the world spawn (the console's ~ ~), skipping chunks a player already claimed.
+CLAIM_COMMANDS='opac server-claims-config set claims.protection.exceptions.playersByPlayers false
+oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48'
+# Written once the claim commands went through. The claim belongs to this world: a new world needs it again
+# (the admin notes in docs/RULES.md), and this file doesn't know about that.
+CLAIM_MARK=${CLAIM_MARK:-/var/lib/realms-upgrade/2.5.0-spawn-claim}
 UNITS='realms-restart.service realms-restart.timer realms-updates.service realms-updates.timer'
 TIMERS='realms-restart.timer realms-updates.timer'
 SERVICE_USER=realms  # User= in the two .service files
+TAB=$(printf '\t')
 
 umask 022
 log() {
@@ -72,7 +96,7 @@ logged() { "$@" >>"$LOG" 2>&1; }
 
 compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
 running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" 2>/dev/null; }
+rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 
 wait_for_live() {
     waited=0
@@ -90,7 +114,7 @@ warn_players() {
     online=$(rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1)
     [ "${online:-0}" -gt 0 ] || return 0
     log "$online player(s) online; warning them $WARN_MINUTES minutes ahead"
-    rcon "say Server restart in $WARN_MINUTES minutes (about 3 minutes offline)." >/dev/null || true
+    rcon "say Server restart in $WARN_MINUTES minutes for a settings update (about 3 minutes offline)." >/dev/null || true
     [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
     rcon 'say Server restart in 1 minute. Find a safe spot.' >/dev/null || true
     sleep 60
@@ -127,7 +151,7 @@ problems=0  # steps that need a look by hand
 
 # ---------------------------------------------------------------- checks (nothing changes yet)
 
-for tool in docker flock runuser systemctl apt-get install cmp stat sed grep; do
+for tool in docker flock runuser systemctl apt-get install awk cmp stat sed grep cut tail; do
     command -v "$tool" >/dev/null || die "$tool is missing"
 done
 cd /
@@ -143,6 +167,18 @@ if ! runuser -u "$SERVICE_USER" -- test -r "$ENV_FILE"; then
         "chown root:$SERVICE_USER $ENV_FILE && chmod 640 $ENV_FILE"
     problems=$((problems + 1))
 fi
+
+# The deploy lock: one at a time with deploys, the daily restart and off-site backups. Read-only: root may not
+# open another user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.
+locked=''
+take_lock() {
+    [ -z "$locked" ] || return 0
+    [ -e "$LOCK_FILE" ] || runuser -u "$SERVICE_USER" -- touch "$LOCK_FILE"
+    exec 9<"$LOCK_FILE"
+    log 'waiting for the deploy lock'
+    flock -w 1800 9 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
+    locked=1
+}
 
 # ---------------------------------------------------------------- 1. python3
 
@@ -162,96 +198,202 @@ else
     log "python3: installed ($(python3 --version 2>&1))"
 fi
 
-# ---------------------------------------------------------------- 2. Distant Horizons
+# ---------------------------------------------------------------- 2. the settings
 
-# "done" when every line that sets one of DH_SETTINGS has its value, "todo" when one doesn't, and "missing
-# NAME" when the file has no line for NAME (a newer Distant Horizons renamed it: set it by hand).
-dh_state() {
+# "locate FILE KEY": a "LINE<tab>VALUE" line for each line of FILE that sets KEY (see SETTINGS), nothing else.
+locate() {
+    awk -v key="$2" '
+        function indent(s) { match(s, /^[ \t]*/); return RLENGTH }
+        # The value after the match just made (RSTART, RLENGTH), without a trailing comment.
+        function value(s) { s = substr(s, RLENGTH + 1); sub(/^[ \t]*/, "", s); sub(/[ \t]*(#.*)?$/, "", s); return s }
+        BEGIN { dot = index(key, "."); parent = substr(key, 1, dot - 1); name = substr(key, dot + 1) }
+        !dot { if (match($0, "^[ \t]*" key "[ \t]*=")) print NR "\t" value($0); next }
+        /^[ \t]*(#.*)?$/ { next }
+        inside && indent($0) <= depth { inside = 0 }
+        inside && child < 0 { child = indent($0) }
+        inside && indent($0) == child && match($0, "^[ \t]*" name ":") { print NR "\t" value($0); next }
+        !inside && match($0, "^[ \t]*" parent ":[ \t]*(#.*)?$") { inside = 1; depth = indent($0); child = -1 }
+    ' "$1"
+}
+
+backup_of() {
+    case "$1" in
+        *DistantHorizons.toml) echo "$1.before-2.5.0" ;;
+        *) echo "$1.pre-onboarding" ;;  # the name docs/LIVE.md uses
+    esac
+}
+
+# "file_state FILE": 'done' when every setting in FILE has its value, todo when one doesn't, and "missing KEY"
+# when FILE has no line for KEY (a newer mod renamed it: set it by hand). server.properties may lack the line:
+# it is added.
+file_state() {
     state='done'
-    for kv in $DH_SETTINGS; do
-        key=${kv%%=*}
-        all=$(grep -cE "^[[:space:]]*${key}[[:space:]]*=" "$DH_FILE" || true)
-        good=$(grep -cE "^[[:space:]]*${key}[[:space:]]*=[[:space:]]*${kv#*=}[[:space:]]*(#.*)?\$" "$DH_FILE" || true)
-        if [ "$all" -eq 0 ]; then
-            echo "missing $key"
-            return 0
+    while IFS='|' read -r s_file key value; do
+        [ "$s_file" = "$1" ] || continue
+        found=$(locate "$SERVER_DIR/$1" "$key")
+        if [ -z "$found" ]; then
+            case "$1" in
+                *.properties) state=todo; continue ;;
+                *) echo "missing $key"; return 0 ;;
+            esac
         fi
-        [ "$good" = "$all" ] || state=todo
-    done
+        if printf '%s\n' "$found" | cut -f 2 | grep -qvxF -- "$value"; then state=todo; fi
+    done <<EOF
+$SETTINGS
+EOF
     echo "$state"
 }
 
-# The same edit as docs/LIVE.md, made by the file's owner so the file keeps its owner.
-dh_edit() {
-    set --
-    for kv in $DH_SETTINGS; do
-        set -- "$@" -e "s/^\([[:space:]]*${kv%%=*}[[:space:]]*=\).*/\1 ${kv#*=}/"
-    done
-    runuser -u "$owner" -- sed -i "$@" "$DH_FILE"
+# Logs what FILE's settings read. Only those lines: server.properties also holds the RCON password.
+file_lines() {
+    while IFS='|' read -r s_file key value; do
+        [ "$s_file" = "$1" ] || continue
+        locate "$SERVER_DIR/$1" "$key" | while IFS="$TAB" read -r n v; do log "  $1:$n: $key = $v"; done
+    done <<EOF
+$SETTINGS
+EOF
 }
 
-dh_lines() {
-    keys=$(for kv in $DH_SETTINGS; do printf '%s|' "${kv%%=*}"; done)
-    grep -nE "^[[:space:]]*(${keys%|})[[:space:]]*=" "$DH_FILE" | while IFS= read -r l; do log "  $l"; done
+# Sets FILE's settings, as the file's owner so the file keeps its owner.
+file_edit() {
+    path=$SERVER_DIR/$1
+    owner=$(stat -c %U "$path")
+    backup=$(backup_of "$path")
+    if [ -e "$backup" ]; then
+        log "  keeping the earlier copy $backup"
+    else
+        runuser -u "$owner" -- cp -p "$path" "$backup"
+        log "  copied $1 to $backup"
+    fi
+    while IFS='|' read -r s_file key value; do
+        [ "$s_file" = "$1" ] || continue
+        found=$(locate "$path" "$key")
+        if [ -z "$found" ]; then  # only server.properties gets here (file_state)
+            runuser -u "$owner" -- sh -c '[ -z "$(tail -c 1 "$2")" ] || echo >>"$2"; printf "%s\n" "$1" >>"$2"' \
+                sh "$key=$value" "$path"
+            continue
+        fi
+        case "$key" in
+            *.*) sep=':' ;;
+            *) sep='=' ;;
+        esac
+        for n in $(printf '%s\n' "$found" | cut -f 1); do
+            runuser -u "$owner" -- sed -i "${n}s/^\([[:space:]]*${key#*.}[[:space:]]*$sep[[:space:]]*\).*/\1$value/" "$path"
+        done
+    done <<EOF
+$SETTINGS
+EOF
 }
 
-if [ ! -f "$DH_FILE" ]; then
-    log "Distant Horizons: no $DH_FILE (has the server started once with Distant Horizons?): look by hand"
-    problems=$((problems + 1))
-else
-    state=$(dh_state)
+label() {
+    case "$1" in
+        *DistantHorizons.toml) echo 'Distant Horizons (no server-side LODs)' ;;
+        server.properties) echo 'the Code of Conduct' ;;
+        *servercore*) echo 'ServerCore (breeding cap, villager lobotomization)' ;;
+        *) echo 'Open Parties and Claims (4 chunks per player)' ;;
+    esac
+}
+
+pending=''  # the files to change
+for f in $FILES; do
+    if [ ! -f "$SERVER_DIR/$f" ]; then
+        log "$(label "$f"): no $SERVER_DIR/$f (has the server started once with this mod?): look by hand"
+        problems=$((problems + 1))
+        continue
+    fi
+    if [ "$f" = server.properties ] && [ ! -f "$CONDUCT" ]; then
+        log "$(label "$f"): not turned on, as there is no $CONDUCT to show: is 2.5.0 live?"
+        problems=$((problems + 1))
+        continue
+    fi
+    state=$(file_state "$f")
     case "$state" in
         'done')
-            log 'Distant Horizons: server-side LODs already off' ;;
+            log "$(label "$f"): already set" ;;
         missing*)
-            log "Distant Horizons: $DH_FILE has no ${state#missing } setting, so a newer Distant Horizons renamed" \
-                'it: set it by hand with the server stopped (docs/LIVE.md, "One-off steps when upgrading")'
+            log "$(label "$f"): $f has no ${state#missing } setting, so a newer mod renamed it: set it by hand" \
+                'with the server stopped (docs/LIVE.md, "One-off steps when upgrading")'
             problems=$((problems + 1)) ;;
         *)
-            if [ "$MODE" = check ]; then
-                log 'Distant Horizons: to do (server-side LODs are on; needs about 3 minutes offline):'
-                dh_lines
-                todo=$((todo + 1))
-            else
-                owner=$(stat -c %U "$DH_FILE")
-                # One at a time with deploys, the daily restart and off-site backups. Read-only: root may not
-                # open another user's file in /tmp for writing (fs.protected_regular), and flock works on any
-                # open file.
-                [ -e "$LOCK_FILE" ] || runuser -u "$owner" -- touch "$LOCK_FILE"
-                exec 9<"$LOCK_FILE"
-                log 'Distant Horizons: waiting for the deploy lock'
-                flock -w 1800 9 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
-                if running; then
-                    [ "$MODE" = now ] || warn_players
-                    stopped=1
-                    log 'stopping the server'
-                    logged compose stop realms
-                else
-                    log 'the server is not running: changing the file and leaving the server stopped'
-                fi
-                if [ -e "$DH_BACKUP" ]; then
-                    log "keeping the earlier copy $DH_BACKUP"
-                else
-                    runuser -u "$owner" -- cp -p "$DH_FILE" "$DH_BACKUP"
-                    log "copied the file to $DH_BACKUP"
-                fi
-                dh_edit
-                log 'Distant Horizons: the settings now read:'
-                dh_lines
-                state=$(dh_state)
-                if [ "$state" = 'done' ]; then
-                    log 'Distant Horizons: server-side LODs off'
-                else
-                    log "Distant Horizons: the change did not take ($state): set the settings by hand"
-                    problems=$((problems + 1))
-                fi
-                start_again
-                exec 9<&-  # deploys and backups may run again
-            fi ;;
+            log "$(label "$f"): to do; now:"
+            file_lines "$f"
+            pending="$pending $f" ;;
     esac
+done
+
+if [ -z "$pending" ]; then
+    :
+elif [ "$MODE" = check ]; then
+    log 'settings: to do (one restart, about 3 minutes offline)'
+    todo=$((todo + 1))
+else
+    take_lock
+    if running; then
+        [ "$MODE" = now ] || warn_players
+        stopped=1
+        log 'stopping the server'
+        logged compose stop realms
+    else
+        log 'the server is not running: changing the files and leaving the server stopped'
+    fi
+    for f in $pending; do
+        log "$(label "$f"): changing $f"
+        file_edit "$f"
+        file_lines "$f"
+    done
+    start_again
+    # Checked again with the server up, as the mods write their files on start.
+    for f in $pending; do
+        if [ "$(file_state "$f")" = 'done' ]; then
+            log "$(label "$f"): set"
+        else
+            log "$(label "$f"): the change did not take; set it by hand:"
+            file_lines "$f"
+            problems=$((problems + 1))
+        fi
+    done
 fi
 
-# ---------------------------------------------------------------- 3. the timers
+# ---------------------------------------------------------------- 3. the spawn claim
+
+if [ -e "$CLAIM_MARK" ]; then
+    log "spawn claim: already made ($CLAIM_MARK)"
+elif [ "$MODE" = check ]; then
+    log 'spawn claim: to do (two console commands with the server up; safe to repeat if it was made by hand)'
+    todo=$((todo + 1))
+elif ! running; then
+    log 'spawn claim: the server is not running; start it and run this again'
+    problems=$((problems + 1))
+else
+    take_lock
+    failed=''
+    while IFS= read -r cmd; do
+        log "spawn claim: $cmd"
+        if out=$(rcon "$cmd"); then
+            printf '%s\n' "$out" | while IFS= read -r l; do [ -z "$l" ] || log "  $l"; done
+            case "$out" in *'Unknown or incomplete command'* | *'Incorrect argument'* | *'<--[HERE]'*) failed=1 ;; esac
+        else
+            log '  RCON did not answer'
+            failed=1
+        fi
+    done <<EOF
+$CLAIM_COMMANDS
+EOF
+    if [ -n "$failed" ]; then
+        log 'spawn claim: a command failed (above); run them by hand (docs/LIVE.md)'
+        problems=$((problems + 1))
+    else
+        mkdir -p "$(dirname "$CLAIM_MARK")"
+        date '+%Y-%m-%d %H:%M:%S' >"$CLAIM_MARK"
+        log 'spawn claim: made (it fills in over a few seconds)'
+    fi
+fi
+if [ -n "$locked" ]; then
+    exec 9<&-  # deploys and backups may run again
+    locked=''
+fi
+
+# ---------------------------------------------------------------- 4. the timers
 
 changed=''
 for u in $UNITS; do

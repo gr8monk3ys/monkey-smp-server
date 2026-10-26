@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "minecraft": "26.3",
   "java": {
     "vendor": "Eclipse Temurin JRE",

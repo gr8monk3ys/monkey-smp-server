@@ -47,7 +47,8 @@ FORMATTING = re.compile("\u00a7.")
 MIXIN = re.compile(r"\$[a-z]{3}\d{3}\$([A-Za-z0-9_.-]+)\$")
 VANILLA = ("net.minecraft.", "com.mojang.", "java.", "javax.", "jdk.", "sun.", "it.unimi.", "com.google.",
            "io.netty.", "org.slf4j.", "org.apache.", "net.fabricmc.loader.", "org.spongepowered.", "org.objectweb.")
-SPARK_URL = re.compile(r"https://spark\.lucko\.me/[A-Za-z0-9]+")
+# A viewer link, not one of spark's pointers to its docs (https://spark.lucko.me/docs/...), which it also prints.
+SPARK_URL = re.compile(r"https://spark\.lucko\.me/(?!docs\b)[A-Za-z0-9]+(?![A-Za-z0-9/])")
 
 
 class Rcon:

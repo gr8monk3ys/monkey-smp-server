@@ -74,6 +74,11 @@ def test_spark_url():
     assert loadtest.spark_url("https://spark.lucko.me/old1 then https://spark.lucko.me/new2") == \
         "https://spark.lucko.me/new2"
     assert loadtest.spark_url("Done (12.3s)!") == ""
+    # spark also points at its docs; those are never the profile.
+    assert loadtest.spark_url("see https://spark.lucko.me/docs/misc/Using-async-profiler") == ""
+    assert loadtest.spark_url("https://spark.lucko.me/docs") == ""
+    assert loadtest.spark_url("https://spark.lucko.me/AbCdEf1234\nhttps://spark.lucko.me/docs") == \
+        "https://spark.lucko.me/AbCdEf1234"
 
 
 def test_wait_for_spark_url_reads_only_new_lines(tmp_path):
@@ -81,6 +86,9 @@ def test_wait_for_spark_url_reads_only_new_lines(tmp_path):
     log.write_text("https://spark.lucko.me/old1\n", encoding="utf-8")
     seen = log.stat().st_size
     assert loadtest.wait_for_spark_url(log, seen, timeout_s=0) == ""
+    with open(log, "a", encoding="utf-8") as f:
+        f.write("[spark] see https://spark.lucko.me/docs/misc/Using-async-profiler\n")
+    assert loadtest.wait_for_spark_url(log, seen, timeout_s=0) == ""  # keeps waiting for the upload
     with open(log, "a", encoding="utf-8") as f:
         f.write("[spark] https://spark.lucko.me/new2\n")
     assert loadtest.wait_for_spark_url(log, seen, timeout_s=0) == "https://spark.lucko.me/new2"

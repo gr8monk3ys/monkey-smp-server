@@ -75,8 +75,8 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
     - For 48 hours after your first join, other players can't hurt you. Attacking a player ends that early,
       and so does `/trigger end_grace`. Nobody gets it in the launch hour (rule 23): the whole server starts
       together.
-    - Grace is for settling in. Using it to scout, carry loot, block a fight or hold a spot for a faction is
-      a loophole (rule 7), and an admin will end it.
+    - Grace is for settling in. Using it to scout, carry loot, block a fight, hold a spot for a faction, or
+      fight by other means (pets, lava, fire, traps) is a loophole (rule 7), and an admin will end it.
     - Spawn is a no-PvP zone.
 
 ## Strength rules
@@ -221,7 +221,9 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
   and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
 - **Rule 26, PvP grace** (pack `realms-rules`). The first time the server sees a player, they get grace
-  (unless the launch hour is running) and, a few seconds later, the welcome screen. Grace is an invisible
+  (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
+  before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
+  minute) gets neither. Grace is an invisible
   item in the player's body slot whose enchantment blocks all damage a player causes; it comes back after
   a death and is off while the player is in the event arena. It ends after 48 hours of game time, which
   stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.

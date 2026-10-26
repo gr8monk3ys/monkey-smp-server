@@ -189,6 +189,8 @@ def rules_files() -> dict[str, str]:
     f[f"{fn}/first_join.mcfunction"] = mcfunction(
         "# Runs as a player the server hasn't seen before.",
         f"tag @s add {JOINED}",
+        "# Someone who played here before this pack tagged anyone gets neither the welcome nor grace.",
+        f"execute if predicate {NS}:rules/returning run return 0",
         f"scoreboard players set @s {WELCOME} {WELCOME_DELAY}",
         "# Rule 26: not in the launch hour, when the whole server starts together.",
         f"execute unless score #launching {OBJECTIVE} matches 1 run function {NS}:rules/grace_start",
@@ -233,6 +235,15 @@ def rules_files() -> dict[str, str]:
                        "predicate": {"minecraft:entity_type": "minecraft:player"}}}}},
         "rewards": {"function": f"{NS}:rules/grace_attack"},
     })
+    # A player the server has seen before has left the game at least once, or (after a crash, which may not
+    # count the leave) played for over a minute. Minecraft's own statistics go back before this pack.
+    def stat_at_least(stat: str, least: int) -> dict:
+        return {"type": "minecraft:entity_properties", "entity": "this", "predicate": {
+            "minecraft:type_specific/player": {"stats": [
+                {"type": "minecraft:custom", "stat": f"minecraft:{stat}", "value": {"min": least}}]}}}
+
+    f[f"data/{NS}/predicate/rules/returning.json"] = js({"type": "minecraft:any_of", "terms": [
+        stat_at_least("leave_game", 1), stat_at_least("play_time", 60 * 20)]})
     f[f"data/{NS}/enchantment/pvp_grace.json"] = js({
         "description": "PvP grace",
         "effects": {

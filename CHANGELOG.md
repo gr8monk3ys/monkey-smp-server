@@ -11,7 +11,8 @@ Onboarding, faction rules and server config. Same Minecraft (26.3) and client pa
   Discord, the live map, the rules and the store.
 - New rule 26: **48 hours of PvP grace** for a first join. Other players can't hurt a new player; attacking a
   player or `/trigger end_grace` ends it, and nobody gets it in the launch hour. Fights in the event arena don't
-  count, and grace is off there. Built into the `realms-rules` data pack (no new mod).
+  count, and grace is off there. Players who joined before this update get neither grace nor the welcome
+  (Minecraft's own statistics say they've played). Built into the `realms-rules` data pack (no new mod).
 - New rule 26: **spawn is a no-PvP zone**, an Open Parties and Claims server claim over the 7 x 7 chunks
   around spawn. An admin sets it up once per world with two console commands (admin notes in `docs/RULES.md`):
   the mod keeps that setting per world and doesn't let a data pack claim.

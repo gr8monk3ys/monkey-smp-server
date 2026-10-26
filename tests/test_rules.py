@@ -137,10 +137,23 @@ def test_no_grace_from_the_launch_hour():
     assert f"tag @s add {rules.JOINED}" in first
 
 
+def test_players_from_before_the_pack_get_no_welcome_or_grace():
+    # Nobody has the tag when the pack first reaches a running server; the game's own statistics tell who's new.
+    data = rules.rules_files()
+    first = data["data/realms/function/rules/first_join.mcfunction"].splitlines()
+    tag, returning = first.index(f"tag @s add {rules.JOINED}"), first.index(
+        "execute if predicate realms:rules/returning run return 0")
+    assert tag < returning < min(i for i, line in enumerate(first) if rules.WELCOME in line or "grace_start" in line)
+    predicate = json.loads(data["data/realms/predicate/rules/returning.json"])
+    assert predicate["type"] == "minecraft:any_of"
+    stats = {t["predicate"]["minecraft:type_specific/player"]["stats"][0]["stat"] for t in predicate["terms"]}
+    assert stats == {"minecraft:leave_game", "minecraft:play_time"}
+
+
 def test_welcome_points_at_the_discord_and_the_pause_menu_has_the_links():
     data = rules.rules_files()
     config = (REPO.root / "site" / "config.js").read_text(encoding="utf-8")
-    assert f'DISCORD_INVITE: "{rules.DISCORD}"' in config
+    assert f'DISCORD_INVITE: "{rules.DISCORD}"' in config and f'MAP_URL: "{rules.MAP}"' in config
     welcome = json.loads(data["data/realms/dialog/welcome.json"])
     assert welcome["type"] == "minecraft:notice"
     assert welcome["action"]["action"] == {"type": "minecraft:open_url", "url": rules.DISCORD}

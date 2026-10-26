@@ -186,7 +186,7 @@ def founder(name: str) -> list[str]:
 
 def test_the_launch_opens_the_window_for_season_one_only():
     launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"].splitlines()
-    assert "function realms:wardrobe/founder/open" in launch
+    assert "execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open" in launch
     opening = founder("open")
     guard = next(i for i, line in enumerate(opening) if not line.startswith("#"))
     assert opening[guard].startswith("execute unless score #season rw.day matches 1 run return run tellraw @s ")
@@ -292,8 +292,10 @@ def test_the_launch_clears_test_play():
                 f"scoreboard players reset * {objective}") in clear
     assert not [line for line in clear if "reset * rw." in line and "#season rw.day matches 1 " not in line]
     assert clear[-1] == "scoreboard players set #launched rw.day 1"
-    # rules/launch opens the window first, so the reset clears only the minutes from before it.
-    assert launch.index("function realms:wardrobe/founder/open") < launch.index("function realms:challenges/launch")
+    # rules/launch opens the window first, so the reset clears only the minutes from before it. It reads the same
+    # score before it opens Founder's Circlet's window, so only the first launch opens it.
+    opening = "execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open"
+    assert launch.index(opening) < launch.index("function realms:challenges/launch")
 
 
 # ---------------------------------------------------------------- no farming

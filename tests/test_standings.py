@@ -303,12 +303,16 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     assert body["allowed_mentions"] == {"parse": []}
     assert "Red Monkeys" in body["content"] and len(body["content"]) <= 2000
     assert "week of Sun 25 Oct to Sun 1 Nov" in body["content"]
+    first = capsys.readouterr()
+    assert "board updated and announced in chat" in first.out
     # run again (a retry, a re-run): nothing is closed or posted twice
     assert standings.close(world, state, rcon, SUNDAY + dt.timedelta(minutes=20), WEBHOOK, discord) == 0
     assert len(list((state / "weeks").iterdir())) == 1 and len(discord.posts) == 1
     assert rcon.sent.count("function realms:standings/announce") == 1
     out = capsys.readouterr()
-    assert "made-up-secret-token" not in out.out + out.err
+    # and it says so, not that it announced again
+    assert "already announced in chat" in out.out and "and announced in chat" not in out.out
+    assert "made-up-secret-token" not in first.out + first.err + out.out + out.err
 
 
 def test_a_failed_post_or_board_is_retried_without_closing_again(world, tmp_path, capsys):

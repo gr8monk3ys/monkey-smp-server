@@ -569,7 +569,9 @@ Built:
 - The weekly standings ("Weekly standings"): `tools/standings.py`, the `realms-standings` data pack (the
   week's kills, the board at spawn, `/trigger standings`, the bounty commands and the Bounty Hunter title)
   and the Sunday timer on the VPS (`deploy/realms-standings.sh`, set up with `deploy/install-standings.sh`).
-  Not yet seen in game on a test server.
+  Seen in game on a test server on 26 October 2026 (2.6.0, Carpet fake players): the four columns, the board
+  and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
+  run of `deploy/realms-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
 
 Not built:
 

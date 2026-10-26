@@ -62,6 +62,7 @@ GRACE_STACK = ('minecraft:paper[custom_data={realms_grace:{}},enchantments={"rea
                'equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"},'
                'item_name="PvP grace"]')
 ARENA = "ev.arena"  # tools/events.py tags the players in the event arena: an event, so no grace there
+LAUNCHED = "#launched rw.day"  # tools/challenges.py sets it when the first launch is done
 # The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
 CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
 
@@ -314,8 +315,10 @@ def rules_files() -> dict[str, str]:
         announce(f"Welcome to Season I! PvP, the Nether and the End are closed for the first {minutes} minutes.",
                  "yellow"),
         "# The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start",
-        "# from zero, so test play before the launch doesn't count (tools/challenges.py).",
-        f"function {NS}:wardrobe/founder/open",
+        "# from zero, so test play before the launch doesn't count (tools/challenges.py). Only the first launch",
+        "# opens it: challenges/launch sets #launched, and a launch run again by mistake after the weekend would",
+        "# open a window that no wall-clock sync closes any more.",
+        f"execute unless score {LAUNCHED} matches 1 run function {NS}:wardrobe/founder/open",
         f"function {NS}:challenges/launch",
     )
     f[f"{fn}/launch_over.mcfunction"] = mcfunction(

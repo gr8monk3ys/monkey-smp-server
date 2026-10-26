@@ -166,8 +166,9 @@ uptime_hours() {
 
 # The link to a fresh `spark health` report (TPS, tick times, CPU, memory, GC), or nothing. spark answers
 # from its own thread after the RCON reply has gone, but it also sends the link to the console, so the link
-# is read from the server log: only from a line that is nothing but the link, as spark writes it, so a link a
-# player types in chat (logged as "<name> ...") can't end up in the staff report, and never a link to
+# is read from the server log: only from a line that one of spark's own threads logged and that is nothing
+# but the link, as spark writes it (26.3 logs it as "System chat: <link>"), so a link a player types in chat
+# (logged by the server thread as "<name> ...") can't end up in the staff report, and never a link to
 # spark's docs, which it also prints.
 spark_health() {
     log_file="$LIVE_DIR/server/logs/latest.log"
@@ -177,7 +178,7 @@ spark_health() {
     while [ "$waited" -lt 30 ]; do
         sleep 3
         waited=$((waited + 3))
-        link=$(tail -n "+$((seen + 1))" "$log_file" 2>/dev/null | grep -E '^\[[0-9:]+\] \[[^]]+/INFO\]: https://spark\.lucko\.me/[A-Za-z0-9]+$' |
+        link=$(tail -n "+$((seen + 1))" "$log_file" 2>/dev/null | grep -E '^\[[0-9:]+\] \[spark-[^]]*/INFO\]: (System chat: )?https://spark\.lucko\.me/[A-Za-z0-9]+$' |
             grep -v '/docs$' | grep -o 'https://spark\.lucko\.me/[A-Za-z0-9]*' | tail -n 1)
         if [ -n "$link" ]; then
             echo "$link"

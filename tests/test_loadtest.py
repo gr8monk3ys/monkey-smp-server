@@ -79,6 +79,12 @@ def test_spark_url():
     assert loadtest.spark_url("https://spark.lucko.me/docs") == ""
     assert loadtest.spark_url("https://spark.lucko.me/AbCdEf1234\nhttps://spark.lucko.me/docs") == \
         "https://spark.lucko.me/AbCdEf1234"
+    # What spark 1.10.187 logged on 26.3 after `spark profiler stop` (the first VPS load test).
+    stop = ("[05:38:22] [spark-worker-pool-1-thread-3/INFO]: See here for more information: "
+            "https://spark.lucko.me/docs/misc/Java-agent-warning\n")
+    assert loadtest.spark_url(stop) == ""
+    stop += "[05:38:27] [spark-worker-pool-1-thread-3/INFO]: System chat: https://spark.lucko.me/fyE6dSvpV0\n"
+    assert loadtest.spark_url(stop) == "https://spark.lucko.me/fyE6dSvpV0"
 
 
 def test_wait_for_spark_url_reads_only_new_lines(tmp_path):

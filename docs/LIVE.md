@@ -384,15 +384,14 @@ ServerCore's status); the headline goes to the staff webhook.
 
 | Date | Release | Players | Median tick | Worst p95 | TPS | spark profile |
 |---|---|---|---|---|---|---|
-| 2026-10-25 | v2.4.1 | 24 of 25 | 23.6 ms | 74.3 ms | 20.0 | not caught (below) |
+| 2026-10-25 | v2.4.1 | 24 of 25 | 23.6 ms | 74.3 ms | 20.0 | https://spark.lucko.me/fyE6dSvpV0 |
 
 The first run, on 2026-10-25 at 22:30 Pacific. One fake player (Load08) didn't join, so it ran with 24. The
 median sample stayed at 13-31 ms: about 30 ms for a minute or two, then about 15 ms. No 10-second sample
 averaged over 50 ms. The worst p95 was 74 ms and the worst p99 105 ms, with two "can't keep up" warnings.
 ServerCore kept the full distances (simulation 6, view 8), so the numbers aren't flattered. **Decision:
-leave it.** The run read spark's docs link instead of the profile; `tools/loadtest.py` now skips it. If the
-profile uploaded, its link is in that run's log:
-`grep -o 'https://spark.lucko.me/[A-Za-z0-9]*' /root/loadtest-results/20261025-2230/still-25/server.log`.
+leave it.** The run's `summary.json` and staff post hold a docs link that spark printed while stopping;
+`tools/loadtest.py` now skips those. The profile link above came from the run's `server.log`.
 
 **Decision rule.** Under about 40 ms median at 25 players, leave it: that leaves room for spikes. Above
 that, change one thing at a time, in this order, and run the test again after each:

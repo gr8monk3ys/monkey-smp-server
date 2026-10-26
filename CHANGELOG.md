@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-26
+
+Season I's date and launch kit, weekly faction standings, weekly challenges, item-priced shops and a lighter
+client install. Same Minecraft (26.3) and world as 2.5.0: hosts unzip over 2.5.0. Players update the client pack
+for the new skins' textures and the optional tick boxes; shops need nothing on the client. On the live VPS, once
+2.6.0 is live, run the one-time setup for each (docs/LIVE.md): `deploy/install-standings.sh`,
+`deploy/shops-claims.sh` and `deploy/realms-week.sh --install`.
+
 - Site: the pass wording follows `STORE_URL`. While it is empty (no store yet), the join steps, the Server
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and

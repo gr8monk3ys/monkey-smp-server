@@ -56,9 +56,11 @@ WELCOME = "realms.welcome"           # seconds until the welcome shows (a first 
 WELCOME_DELAY = 3
 JOINED = "realms.joined"             # tag: seen before, so no welcome and no grace
 GRACE_ITEM = "*[custom_data~{realms_grace:{}}]"
-# A player's body slot only takes an item that is equippable there.
+# A player's body slot only takes an item that is equippable there. Only the pack puts it on: a stray copy
+# can't be put on by hand, by a dispenser or on a horse.
 GRACE_STACK = ('minecraft:paper[custom_data={realms_grace:{}},enchantments={"realms:pvp_grace":1},'
-               'equippable={slot:"body"},item_name="PvP grace"]')
+               'equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"},'
+               'item_name="PvP grace"]')
 ARENA = "ev.arena"  # tools/events.py tags the players in the event arena: an event, so no grace there
 # The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
 CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
@@ -175,7 +177,10 @@ def rules_files() -> dict[str, str]:
         f"execute as @a[scores={{{END_GRACE}=1..}}] run function {NS}:rules/grace_end",
         f"execute as @a if score @s {GRACE} <= #now {OBJECTIVE} run function {NS}:rules/grace_end",
         "# The item goes with the grace (the launch and an admin's grace_end take both), it's off in the arena,",
-        "# and it comes back after a death.",
+        "# and it comes back after a death. A copy anywhere else (looted from a corpse) is taken away; clear takes",
+        "# the body slot's too, so it only runs on someone who has one.",
+        *(f"execute as @a if items entity @s {slot} {GRACE_ITEM} run clear @s {GRACE_ITEM}"
+          for slot in ("container.*", "weapon.offhand", "player.cursor", "player.crafting.*")),
         f"execute as @a if items entity @s armor.body {GRACE_ITEM} unless score @s {GRACE} > #now {OBJECTIVE} "
         "run item replace entity @s armor.body with minecraft:air",
         f"execute as @a[tag={ARENA}] if items entity @s armor.body {GRACE_ITEM} "

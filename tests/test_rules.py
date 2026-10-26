@@ -99,8 +99,16 @@ def test_grace_is_immunity_to_players_only_from_the_body_slot():
     assert immunity["requirements"] == {"type": "minecraft:damage_source_properties",
                                         "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}
     assert '"realms:pvp_grace":1' in rules.GRACE_STACK and "realms_grace" in rules.GRACE_STACK
-    # a player's body slot refuses anything not equippable there
-    assert 'equippable={slot:"body"}' in rules.GRACE_STACK
+    # a player's body slot refuses anything not equippable there; only the pack may put it on, and only on players
+    assert ('equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"}'
+            in rules.GRACE_STACK)
+    # stray copies leave every inventory before the graced get theirs back; clear also empties the body slot,
+    # so it runs only on players holding a copy somewhere else
+    second = data["data/realms/function/rules/second.mcfunction"].splitlines()
+    clears = [i for i, line in enumerate(second) if f"run clear @s {rules.GRACE_ITEM}" in line]
+    assert len(clears) == 4 and not any(line.startswith("clear @a") for line in second)
+    assert "if items entity @s armor.body" not in "".join(second[i] for i in clears)
+    assert max(clears) < next(i for i, line in enumerate(second) if f"with {rules.GRACE_STACK}" in line)
 
 
 def test_grace_lasts_48_hours_and_ends_on_attack_or_trigger():

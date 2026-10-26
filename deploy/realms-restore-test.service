@@ -1,0 +1,21 @@
+# Restores the newest off-site snapshot to a temporary folder, checks the world in it and posts the result
+# to Discord (realms-backup.sh --restore-test). Started monthly by realms-restore-test.timer; run one now
+# with systemctl start realms-restore-test.
+[Unit]
+Description=Monkey SMP: test-restore the newest off-site backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Root, because only root may read /etc/realms-backup.env (the R2 keys and the restic password).
+User=root
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-backup.sh --restore-test
+CacheDirectory=realms-backup
+StateDirectory=realms-backup
+# The restore goes to a private /var/tmp that systemd deletes afterwards, even if the test is killed.
+PrivateTmp=true
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=2h

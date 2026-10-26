@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Live server: **off-site backups**. Every hour `realms-backup.timer` takes a world backup while the server runs
+  (`save-off`, `save-all flush`, as before a deploy) and sends it, encrypted, to a Cloudflare R2 bucket with
+  restic, keeping 48 hourly, 14 daily and 8 weekly snapshots. `realms-restore-test.timer` restores the newest
+  snapshot once a month and checks `level.dat` and the region files. Both post to the Discord webhook when
+  something fails. The keys and the restic password go in a root-only `/etc/realms-backup.env`
+  (`deploy/realms-backup.env.example`); docs/LIVE.md covers setup, restores, the playit fallback and the cost.
+
 ## [2.4.1] - 2026-10-25
 
 Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and world as 2.4.0: hosts unzip over

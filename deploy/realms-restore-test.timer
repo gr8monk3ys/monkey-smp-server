@@ -1,0 +1,11 @@
+# Runs realms-restore-test.service on the 1st of every month at 3:30 AM Pacific, before the 4 AM deploy
+# window (and after boot if that was missed).
+[Unit]
+Description=Monkey SMP: monthly test restore of the off-site backup
+
+[Timer]
+OnCalendar=*-*-01 03:30:00 America/Los_Angeles
+Persistent=true
+
+[Install]
+WantedBy=timers.target

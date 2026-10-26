@@ -135,6 +135,166 @@ The count shows which address a player typed, not who bought: some buy and then 
 address, and a player who joined on the free trial (docs/LIVE.md, "The store") counts before paying. Ask
 new players in the Discord where they heard of the server too, and compare.
 
+## Season I launch announcements
+
+Drafts for Season I's launch, Saturday 21 November 2026 at 5 PM Pacific. When each one goes out, and where,
+is in docs/LAUNCH.md, "Announcement schedule"; the founding roster post (T-14) and the moderator post are in
+docs/LAUNCH.md too. Like everything here, nothing is posted until an owner says yes.
+
+- **Lines marked [needs ...]** mention work that isn't merged yet. Each stays only if that work is in the
+  release tagged by Friday 13 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
+  marker before posting.
+- **Lines marked [store]** or **[by hand]**: keep the one that is true on the day. The store's link goes on the
+  site at 5 PM on launch day (docs/LAUNCH.md, "The store").
+- **Addresses.** The lists use their join addresses from the table above. Reddit and the Discord have none of
+  their own yet, so they use the main address. To count Reddit on its own, add `rd.monkeysmp` records (as in
+  "The DNS records") before 14 November and use `rd.monkeysmp.lscaturchio.xyz` in the Reddit post.
+- **Discord times** are written as Discord timestamps (`<t:1795309200:F>` is 21 November, 5 PM Pacific), so
+  every reader sees their own time. Each Discord draft is under Discord's 2,000-character limit.
+- **Line breaks.** The drafts are wrapped to fit this file. Reddit joins the lines of a paragraph by itself;
+  Discord doesn't, so join each paragraph and list item into one line before pasting it there.
+
+### The free lists
+
+From Saturday 7 November until launch, swap the short description and put this line at the top of the long
+one. Everything else in the listing kit stays.
+
+**Short description** (under 150 characters):
+
+> Modded factions on Java 26.3. Season I opens Sat 21 Nov, 5 PM PT. Factions of four, PvP, weekly events. Paid pass $5/mo.
+
+**First line of the long description:**
+
+> **Season I opens Saturday 21 November 2026 at 5 PM Pacific (8 PM Eastern).** Everyone gets in at the same
+> moment: the first hour is peaceful, then PvP and the Nether open. Sign up for the founding roster in the
+> Discord; it's free, and the order is first come, first served.
+
+From Sunday 22 November, 9 AM, swap them for:
+
+> Modded factions on Java 26.3. Season I is live until 6 Feb. Factions of four, PvP, weekly events. Paid pass $5/mo.
+
+> **Season I is live**, from 21 November 2026 to 6 February 2027, with an event every Saturday at 6 PM Pacific.
+
+### Reddit (r/mcservers)
+
+We couldn't read r/mcservers' rules from here (the page didn't load), so read them and the flair list before
+posting, and fit the title to the format they ask for. Server subreddits usually want the version and tags in
+the title, the price stated, and no more than one post every so often. One post, on Saturday 14 November;
+answer comments from the same account that day. Other subreddits only after reading their rules too.
+
+**Title:**
+
+> [Java 26.3] [Modded] [Factions] [Paid] Monkey SMP: Season I opens Saturday 21 November, 5 PM Pacific
+
+**Body:**
+
+> **Monkey SMP** is a small modded factions server on Minecraft Java 26.3 (Fabric), for people who play
+> evenings, Pacific time. **Season I opens Saturday 21 November at 5 PM Pacific / 8 PM Eastern**, with
+> everyone let in at the same moment, and runs to 6 February 2027.
+>
+> - Factions of up to four, alliances, and banner-marked territory nobody may grief. Everything outside it is
+>   contested.
+> - Strength SMP: win fights and your strength grows, lose them and it drains.
+> - Tectonic, Terralith, Incendium and Nullscape terrain, with dungeons, taverns and capitals to raid.
+> - An event every Saturday at 6 PM Pacific: faction raids, arena nights, Dragon Night. Launch weekend is a
+>   Build Battle.
+> - Weekly faction standings and a bounty board. [needs #42]
+> - Weekly challenges. [needs weekly challenges]
+> - Player shops in chests, priced in items. [needs shop chests]
+> - Proximity voice chat and a public live map.
+> - Up to 30 online, a pre-generated world, 20 TPS.
+>
+> **It's paid:** a server pass, $5 a month or $14 for 3 months, the same for everyone. Supporter tiers are
+> cosmetic only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a
+> PC with 16 GB of RAM; the modpack installs in one click from the website. If it won't run in your first 48
+> hours, you get your money back.
+>
+> **Founding roster:** the first 30 to sign up in the Discord are in on launch night, in the order they
+> signed up. Signing up is free. Play launch weekend and you keep the Founder skin for good; it's never
+> sold. [needs the Founder skin]
+>
+> - Website and modpack: https://monkeysmp.lscaturchio.xyz
+> - Discord: https://discord.gg/C25hy9Ca9W
+> - Address, from launch: `monkeysmp.lscaturchio.xyz`
+> - Live map: https://map.monkeysmp.lscaturchio.xyz
+
+### Discord
+
+**T-14, Saturday 7 November:** the founding roster post in docs/LAUNCH.md.
+
+**T-7, Saturday 14 November, 5 PM, `#announcements`:**
+
+> **One week: Monkey SMP Season I opens <t:1795309200:F>** (<t:1795309200:R>)
+>
+> **Register your faction** from today in #smp-forum: one post with the faction's name, its members'
+> Minecraft names (up to four), its banner, and a charter: a paragraph on who you are and what you're after
+> this season. Solo? Say so in #smp-forum and staff will find you a faction.
+>
+> **Install the modpack now**, not on launch night: https://monkeysmp.lscaturchio.xyz/#join
+> Start it once and get to the main menu. If it won't run, open a ticket and we'll sort it out this week.
+>
+> **Founding roster:** N of 30 places taken. Sign up in #founding-roster: free, first come, first served.
+>
+> **New this season**
+> - The Build Battle: the wheel spins at 5 PM on launch night, judging Sunday at 6 PM.
+> - Weekly faction standings and a bounty board. [needs #42]
+> - Weekly challenges. [needs weekly challenges]
+> - Shops in chests, priced in items. [needs shop chests]
+> - Play launch weekend and keep the Founder skin for good. Never sold. [needs the Founder skin]
+>
+> A pass is $5 a month, the same for everyone. [store] The store opens at 5 PM on launch day. [by hand]
+> Until the store opens, arrange yours in a ticket.
+
+**T-1, Friday 20 November, 5 PM, `#announcements` and `#monkey-smp`:**
+
+> **Tomorrow: Monkey SMP Season I opens <t:1795309200:F>** (<t:1795309200:R>)
+>
+> Tonight:
+> 1. **Update the modpack** from https://monkeysmp.lscaturchio.xyz/#join, start it and get to the main menu.
+>    Stuck? Open a ticket tonight, not at 5 tomorrow.
+> 2. **Sort out your pass.** [store] The store opens at 5 PM tomorrow, on the website. [by hand] Arrange it in
+>    a ticket by tonight.
+> 3. **Hit "Interested"** on the launch event for a reminder.
+>
+> How launch works:
+> - Everyone gets in at 5 PM. For the first hour there's no PvP and no Nether. PvP and the Nether open at
+>   6 PM; the End stays closed until we announce it.
+> - The Build Battle wheel spins at 5: three bonus blocks. Factions build on their plot next to spawn, and
+>   judging is Sunday at 6 PM (<t:1795399200:F>).
+> - No Netherite armor until we say so. The border starts at 2500 × 2500 and grows with the season.
+> - Play launch weekend and keep the Founder skin. [needs the Founder skin]
+> - New here? The monthly pass starts with 7 free days. [only if the trial is on]
+> - The rules: https://monkeysmp.lscaturchio.xyz/#rules (the full rulebook is in #smp-rules).
+>
+> Address: `monkeysmp.lscaturchio.xyz`
+
+**T-1h, Saturday 21 November, 4 PM, `#monkey-smp`:**
+
+> **One hour.** Season I opens <t:1795309200:t> (<t:1795309200:R>).
+>
+> Start the modpack now and let it load; the first start takes a few minutes.
+> Address: `monkeysmp.lscaturchio.xyz`
+>
+> The Build Battle wheel's seed is **S1 launch**, posted before the spin so nobody can pick the draw after
+> seeing it.
+>
+> We're recording tonight for the server's clips. Don't want to be in them? Say so here or in chat and
+> you'll be cut out. No voice chat is recorded.
+
+**Launch, Saturday 21 November, 5 PM, `#announcements` and `#monkey-smp`:**
+
+> @everyone **Season I is open.** `monkeysmp.lscaturchio.xyz`
+>
+> **The wheel:** BLOCK 1, BLOCK 2, BLOCK 3 (seed "S1 launch"). Each scores when at least 9 of it can be
+> seen from your plot's edge.
+>
+> - No PvP and no Nether until <t:1795312800:t>.
+> - Build Battle judging: <t:1795399200:F>.
+> - The Founder skin is yours if you play before Sunday midnight Pacific (<t:1795420800:F>).
+>   [needs the Founder skin]
+> - [store] Get a pass: https://monkeysmp.lscaturchio.xyz/#pricing
+> - Can't get in? Ask in #help or open a ticket.
+
 ## Creators
 
 Who to ask: small Minecraft creators (roughly 500 to 20,000 subscribers) who post factions, SMP or

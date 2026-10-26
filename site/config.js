@@ -15,4 +15,8 @@ window.REALMS = {
   INSTALLER_URL: "pack/TheRealms-Player-2.5.0.zip",
   // Live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone.
   MAP_URL: "https://map.monkeysmp.lscaturchio.xyz",
+  // When the season opens: ISO 8601 with its offset (this is Saturday 21 November 2026, 5 PM Pacific).
+  // site_links.py writes it into every data-launch element, Pacific and Eastern spelled out; app.js adds the
+  // visitor's own time and a countdown, then says the season is live once it has passed (docs/LAUNCH.md).
+  LAUNCH_AT: "2026-11-22T01:00:00Z",
 };

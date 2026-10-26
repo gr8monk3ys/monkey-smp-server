@@ -112,6 +112,11 @@ section > h2::before { content: "0" counter(sec); display: block; margin-bottom:
 .hero h1 { max-width: 16ch; }
 .lede { max-width: var(--narrow); font-size: 1.15rem; color: var(--muted); }
 
+/* Season launch: a wall label, the date in the display face, the countdown (app.js) under it. */
+.launch { display: grid; gap: 4px; max-width: var(--narrow); margin: 0; }
+.launch time { font: 620 1.3rem/1.25 var(--display); letter-spacing: -0.01em; color: var(--ink); }
+.launch #countdown { color: var(--muted); font-feature-settings: "tnum" 1; }
+
 .address {
   display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px 14px;
   margin: 16px 0 28px; padding: 10px 10px 10px 16px;

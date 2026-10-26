@@ -29,6 +29,12 @@
   jar (`tests/fixtures/record_client_mods.py`). `docs/PLAYERS.md` gets a "Low-end PC" section and the current
   `/oclaims` and `/oparties` command names. The site's "16 GB of RAM" stays: nothing here measured a smaller
   pack.
+- Season I launch kit: the launch time is `LAUNCH_AT` in `site/config.js` (Saturday 21 November 2026, 5 PM
+  Pacific). `tools/site_links.py` writes it into every `data-launch` element, Pacific and Eastern spelled out,
+  so crawlers and link previews see it; the front page adds the visitor's own time and a countdown, then says
+  the season is live. New `docs/LAUNCH.md` (the run sheet from now to a week after launch, the founding roster
+  and moderator recruitment), the dated Season I calendar in `docs/SEASONS.md`, and launch announcement drafts
+  in `docs/PROMOTION.md`.
 
 ## [2.5.0] - 2026-10-26
 

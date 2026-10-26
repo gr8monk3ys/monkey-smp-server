@@ -10,14 +10,23 @@ true once the store is open is marked data-store="open", and its stand-in for no
 one that doesn't apply while STORE_URL is empty (or once it is set) gets the hidden attribute. When the
 modpack is served from the site itself (site/pack/), the check also makes sure that file is there and is
 the pack of the version the manifest pins, since a player with another version's pack can't join.
+
+The season's launch time is LAUNCH_AT, an ISO 8601 time with its offset ("2026-11-22T01:00:00Z"). An element
+with data-launch="..." gets that attribute as a template for its text (for a <meta>, its content), with
+{date} the day in Pacific time ("Saturday 21 November 2026"), {pacific} the time there ("5 PM Pacific") and
+{eastern} the time in Eastern ("8 PM Eastern", with the weekday when it falls on the next day); a <time>
+also gets datetime="LAUNCH_AT". The element must hold only text. app.js adds the visitor's own time and the
+countdown on top.
 """
 import argparse
+import datetime as dt
 import html
 import json
 import re
 import sys
 import zipfile
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from repo import REPO
 
@@ -27,6 +36,14 @@ _ANCHOR = re.compile(r'<a\b[^>]*\bdata-link="([A-Z_]+)"[^>]*>')
 _STORE_TEXT = re.compile(r'<[a-z]+\b[^>]*\bdata-store="([^"]*)"[^>]*>')
 # A hidden attribute, or a quoted value (kept as it is, so "hidden" inside a title isn't touched).
 _HIDDEN = re.compile(r'("[^"]*")|\shidden(?:="[^"]*")?(?=[\s>])')
+# An element with a launch template, and its text when it holds nothing else (a <meta> holds nothing).
+_LAUNCH = re.compile(r'<([a-z]+)\b[^>]*\bdata-launch="([^"]*)"[^>]*>(?:([^<]*)</\1>)?')
+PACIFIC = ZoneInfo("America/Los_Angeles")
+EASTERN = ZoneInfo("America/New_York")
+# Written out here rather than with strftime, which follows the machine's locale.
+DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+          "November", "December"]
 
 
 def site(repo=REPO) -> Path:
@@ -46,12 +63,18 @@ def target(links: dict[str, str], key: str) -> tuple[str, str | None]:
     return "#", None
 
 
+def _escape(text: str, quote=True) -> str:
+    """html.escape, except apostrophes, which are fine in text and in double-quoted attributes."""
+    text = html.escape(text, quote=False)
+    return text.replace('"', "&quot;") if quote else text
+
+
 def _set_attr(tag: str, name: str, value: str | None) -> str:
     attr = re.compile(rf'\s{name}="([^"]*)"')
     if value is None:
         # Only drop a title this tool wrote; one written by hand stays.
         return attr.sub(lambda m: "" if html.unescape(m.group(1)) == SOON else m.group(0), tag)
-    new = f' {name}="{html.escape(value)}"'
+    new = f' {name}="{_escape(value)}"'
     if attr.search(tag):
         return attr.sub(lambda _: new, tag, count=1)
     return tag[:-1] + new + ">"
@@ -62,9 +85,64 @@ def _set_hidden(tag: str, hidden: bool) -> str:
     return tag[:-1] + " hidden>" if hidden else tag
 
 
+def launch_time(value: str) -> dt.datetime:
+    """LAUNCH_AT as a time; ValueError unless it is an ISO 8601 time with an offset."""
+    when = dt.datetime.fromisoformat(value)
+    if when.tzinfo is None:
+        raise ValueError("no time zone")
+    return when
+
+
+def _clock(when: dt.datetime) -> str:
+    hour = when.hour % 12 or 12
+    minutes = f":{when.minute:02}" if when.minute else ""
+    return f"{hour}{minutes} {'AM' if when.hour < 12 else 'PM'}"
+
+
+def launch_words(when: dt.datetime) -> dict[str, str]:
+    """What a data-launch template can say: {date}, {pacific} and {eastern}."""
+    west, east = when.astimezone(PACIFIC), when.astimezone(EASTERN)
+    eastern = f"{_clock(east)} Eastern"
+    if east.date() != west.date():
+        eastern = f"{DAYS[east.weekday()]} {eastern}"
+    return {"date": f"{DAYS[west.weekday()]} {west.day} {MONTHS[west.month - 1]} {west.year}",
+            "pacific": f"{_clock(west)} Pacific", "eastern": eastern}
+
+
+def _stamp_launch(page: str, value: str | None, errors: list[str]) -> str:
+    if not _LAUNCH.search(page):
+        return page
+    try:
+        when = launch_time(value or "")
+    except ValueError:
+        errors.append("data-launch needs LAUNCH_AT in config.js: an ISO 8601 time with its offset, "
+                      f'like "2026-11-22T01:00:00Z", not "{value or ""}"')
+        return page
+    words = launch_words(when)
+
+    def fill(m: re.Match) -> str:
+        whole, name, template, text = m.group(0), m.group(1), html.unescape(m.group(2)), m.group(3)
+        try:
+            said = template.format_map(words)
+        except (KeyError, ValueError, IndexError):
+            errors.append(f'data-launch="{m.group(2)}" can only use {{date}}, {{pacific}} and {{eastern}}')
+            return whole
+        tag = whole[:whole.index(">") + 1]
+        if name == "meta":
+            return _set_attr(tag, "content", said) + whole[len(tag):]
+        if text is None:
+            errors.append(f'<{name} data-launch="{m.group(2)}"> must hold only text')
+            return whole
+        if name == "time":
+            tag = _set_attr(tag, "datetime", value)
+        return f"{tag}{_escape(said, quote=False)}</{name}>"
+
+    return _LAUNCH.sub(fill, page)
+
+
 def stamp(page: str, links: dict[str, str]) -> tuple[str, list[str]]:
-    """The page with every data-link anchor pointing where config.js says and only the store text that
-    applies showing, plus any unknown keys."""
+    """The page with every data-link anchor pointing where config.js says, only the store text that
+    applies showing and the launch time written in, plus any unknown keys."""
     errors = []
 
     def fix(m: re.Match) -> str:
@@ -84,7 +162,8 @@ def stamp(page: str, links: dict[str, str]) -> tuple[str, list[str]]:
             return tag
         return _set_hidden(tag, (when == "open") != store_open)
 
-    return _STORE_TEXT.sub(show, _ANCHOR.sub(fix, page)), errors
+    page = _STORE_TEXT.sub(show, _ANCHOR.sub(fix, page))
+    return _stamp_launch(page, links.get("LAUNCH_AT"), errors), errors
 
 
 def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:

@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-26
+
 X-ray protection and moderation tools, more wardrobe skins and the season-end tools, onboarding and faction
-rules. Players update the client pack for the new skins' textures; everything else is server only.
+rules. Same Minecraft (26.3) and world as 2.4.2: hosts unzip over 2.4.2. Players update the client pack for the
+new skins' textures; everything else is server only. Default config changes reach only new servers: on the live
+VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
 
 - New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
   players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end

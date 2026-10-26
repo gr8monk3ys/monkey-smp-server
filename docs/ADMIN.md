@@ -64,8 +64,8 @@ uses, and you can switch between the two (stop one before starting the other).
 | Back up | `docker compose down`, copy `server` somewhere safe, `docker compose up -d` |
 | Update to a new release | `docker compose down`, unzip the new release over the folder, `docker compose up -d --build` |
 
-Open 25565/tcp (game) and 24454/udp (voice chat) in the VPS firewall; 8100/tcp too if you want
-players to reach the live map.
+Open 25565/tcp (game) and 24454/udp (voice chat) in the VPS firewall. For a public live map, put it behind
+HTTPS as docs/LIVE.md does (step 9) rather than opening 8100/tcp.
 
 ## How many players
 
@@ -101,11 +101,14 @@ What keeps it there:
 ## Before a big group joins
 
 - **Pre-generate the world.** Generating new terrain on the main thread is what drags the tick rate down when
-  many players explore at once, and Tectonic's tall terrain makes each chunk expensive. With nobody online, in the
-  server console: `chunky radius 5000`, `chunky start` (hours; `chunky progress` shows how far), then
-  `worldborder set 10000` (the border takes a diameter). For the Nether (1 block there is 8 in the Overworld):
-  `chunky world minecraft:the_nether` and `chunky radius 625` before `chunky start`, and
-  `execute in minecraft:the_nether run worldborder set 1250`.
+  many players explore at once, and Tectonic's tall terrain makes each chunk expensive. Generate out to the
+  season's largest border (6000 wide, docs/SEASONS.md) plus the view distance, without changing the border: the
+  `realms-rules` pack sets the starting one (Rule 25) and the border acts grow it. With nobody online, in the
+  server console: `chunky worldborder` (centres on the border, which is on spawn, not 0,0), `chunky radius 3200`
+  and `chunky start` (hours; `chunky progress` shows how far). For the Nether (1 block there is 8 in the
+  Overworld): `chunky world minecraft:the_nether`, `chunky worldborder`, `chunky radius 500` and `chunky start`.
+  Chunky picks up after a restart (`continueOnRestart` in `server\config\chunky\config.json`), so `chunky pause`
+  lasts only until the next restart; `chunky cancel` stops it for good.
 - **Watch it with spark.** `spark tps` shows TPS and tick time (MSPT; under 50 ms keeps 20 TPS), `spark health`
   memory and GC, and `spark profiler start` / `spark profiler stop` uploads a profile that shows which mod or
   area is slow.
@@ -166,7 +169,38 @@ server gets the same terrain.
 ## The live map
 
 BlueMap serves a 3D web map on port **8100**: http://localhost:8100 on the host.
-Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel).
+Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel). The
+live server serves it over HTTPS at https://map.monkeysmp.lscaturchio.xyz (docs/LIVE.md, step 9).
+It shows the world, not the players: `live-player-markers: false` in `server\config\bluemap\plugin.conf`,
+because on a raiding server live positions would lead everyone to their targets. Builds still show, as on
+any map. Where BlueMap wrote `plugin.conf` itself (a server installed before this default shipped), markers
+are on: set it to `false` there and run `bluemap reload`.
+
+It also stops at the world border. Chunky generates out to the season's largest border (docs/LIVE.md, step
+6), so a map of everything generated would show the land the border acts haven't opened yet. The first
+`render-mask` layer of each map in `server\config\bluemap\maps\` is a box on its dimension's border: the
+shipped files fit Season I's start (2500 wide around spawn, 312.5 in the Nether), and the End has no border.
+After each border act, and once on a server whose map files BlueMap wrote itself, fit the masks to the
+border with `tools/map_border.py` from this repo (Python 3; on the live server the repo is at
+`/srv/realms/repo`) and render the maps again:
+
+```
+save-all                                    # console: the tool reads the border from the saved world
+python3 /srv/realms/repo/tools/map_border.py /srv/realms/TheRealms-Server/server
+bluemap reload                              # console
+bluemap purge world                         # console: deletes the map's tiles and renders it again (an hour or so)
+bluemap purge world_the_nether
+```
+
+The tool prints the `purge` lines for the maps it changed; `--check` changes nothing and exits 1 when a mask
+is off. `bluemap reload` answers before BlueMap has finished loading: if a `purge` says "BlueMap is still
+loading", run it again a few seconds later. A border still growing after `worldborder set` counts at its final size, so run it straight after.
+No need to fit it to the finale's shrinking border: the land outside was open all season.
+
+The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. Incendium
+makes the Nether 192 tall, so BlueMap's own cut (y 90 to 127) left the bedrock roof covering the map. Where
+BlueMap wrote `world_the_nether.conf` itself, delete the `max-y: 127` line under `min-y: 90` in its second
+`render-mask` layer, then `bluemap reload` and `bluemap purge world_the_nether`.
 
 ## Moving an existing world in
 
@@ -297,5 +331,6 @@ edit) gets an entry the same day. The site deploys from `main` (`site/README.md`
 | Mac: `Start Server.command` "cannot be opened" / "could not be verified" | Right-click > Open, or System Settings > Privacy & Security > Open Anyway. Or run `sh start.sh` in Terminal, which always works. |
 | macOS/Linux: `permission denied` on a `.sh` file | The unzip tool dropped the permissions. Run it as `sh start.sh` (not `./start.sh`). |
 | Linux: `curl` / `wget` / `tar` not found | Install it (`sudo apt install curl`); the launchers need it to fetch PowerShell and Java. |
+| Players are kicked with `Connection Throttled.` | Hostname Catcher's allow-list isn't empty. Set `allowed-domains: []` in `server\config\hostname-catcher.yml` and restart (docs/PROMOTION.md, "Counting joins per address"). |
 
 Logs: `server\logs\latest.log`.

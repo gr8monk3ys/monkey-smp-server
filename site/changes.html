@@ -20,6 +20,7 @@
     .changes .todo { color: var(--pen); font-weight: 600; }
   </style>
   <script src="config.js"></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -37,6 +38,10 @@
       <h1>What changed</h1>
       <p class="lede">Every change to the rules, the mods and the wardrobe that you'd notice in game, newest first.
         The same notes go in the Discord's #changelog channel the day they go live.</p>
+    </section>
+
+    <section id="updates">
+      <h2>Updates</h2>
       <!-- New entries go on top (docs/ADMIN.md, "Telling players what changed"). Write for players: what
            changed, from when, and what they have to do. Nothing that helps a cheater. -->
       <div class="grid three changes">
@@ -105,15 +110,8 @@
   </main>
 
   <footer>
-    <p><a href="./">Monkey SMP</a> &middot; <a data-link="DISCORD_INVITE" href="#">Discord</a> &middot; <a href="./#rules">Rules</a></p>
+    <p><a href="./">Monkey SMP</a> &middot; <a data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Discord</a> &middot; <a href="./#rules">Rules</a> &middot; <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">Live map</a></p>
     <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
   </footer>
-  <script>
-    // Links come from config.js, as on the front page.
-    document.querySelectorAll("[data-link]").forEach(function (a) {
-      var url = (window.REALMS || {})[a.getAttribute("data-link")];
-      if (url) { a.href = url; a.rel = "noopener"; }
-    });
-  </script>
 </body>
 </html>

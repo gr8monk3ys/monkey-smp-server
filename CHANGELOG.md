@@ -2,14 +2,63 @@
 
 ## [Unreleased]
 
-Wardrobe skins for events, holidays and the first months of pass, the pass funnel, and the season-end
-tooling. Same Minecraft (26.3), mods and world: hosts unzip over 2.4.x. Players update the client pack (new
-skin textures).
-
+- Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
+  on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
+  after a restart (docs/LIVE.md).
+- The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
+  `live-player-markers: false` (and `skin-download: false`, which only fed the markers), since the map is
+  public and raiding is allowed. An existing server keeps BlueMap's own file; docs/ADMIN.md "The live map"
+  says how to switch it off there.
+- Docs: pre-generation no longer widens the border. docs/ADMIN.md and docs/LIVE.md said to set it to
+  10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
+  centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
+  and generates out to the season's largest border plus the view distance.
+- The live map stops at the world border instead of showing all the land Chunky generated for later border
+  acts. `config/bluemap/maps/` ships with each map's `render-mask` on Season I's starting border (2500 wide
+  around spawn, 312.5 in the Nether; the End has none), and the new `tools/map_border.py` fits the masks to
+  the border saved in the world after each border act. Then `bluemap reload` and `bluemap purge <map>`
+  (docs/ADMIN.md, "The live map"; docs/SEASONS.md's border acts now include it). Defaults only reach new
+  servers: on an existing one, run the tool once.
+- Fix: the Nether map shows the caves instead of the bedrock roof. Incendium makes the Nether 192 tall, and
+  BlueMap's own ceiling cut stopped at y 127; the shipped `world_the_nether.conf` cuts everything from y 90 up.
+  On an existing server, delete `max-y: 127` from that layer (docs/ADMIN.md, "The live map").
+- Live server: the public map moves to https://map.monkeysmp.lscaturchio.xyz, served by Caddy with a Let's
+  Encrypt certificate in front of BlueMap, which is now published on 127.0.0.1 only (`MAP_PORT`). The site
+  links there, and port 8100 is no longer opened (docs/LIVE.md, steps 2, 5, 8 and 9).
+- Store: the prices and perks are settled before the first sale (ADR-0008). The 3-month pass is $14 (was
+  $12), Crown's extra is a landmark it names each season instead of a vote (every pass holder votes on the
+  twist), and priority slots aren't sold. docs/LIVE.md "The store" lists the Tebex packages, a 7-day trial
+  on the monthly pass to test and switch on, and creator codes (20%, no buyer discount); docs/RETENTION.md's
+  budget uses Tebex's real fees.
+- Site: links work without JavaScript. `tools/site_links.py` writes `site/config.js`'s URLs into the pages,
+  and validate.py fails when they drift. The site serves the client pack and player zip from `site/pack/`,
+  since the GitHub releases are private, and validate.py checks they're the pinned version (a new release
+  step in docs/MAINTAINING.md). The pricing section says what a PC needs and the 48-hour refund, the FAQ
+  says 30 players, and the new `creators.html` has the creator code terms.
+- docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
+  addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
+  clips from real event nights.
+- Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
+  to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
+  also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,
+  logs, BlueMap tiles), keeps 48 hourly, 14 daily, 8 weekly and 6 monthly snapshots, and reads back 5% of the
+  stored data after each run (`restic check --read-data-subset=5%`). It posts to the Discord webhook when backups
+  fail and when they work again. The keys and the restic password go in a root-only `/etc/realms-backup.env`
+  (`deploy/realms-backup.env.example`), and the password is kept off the VPS too. docs/LIVE.md covers setup,
+  restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
+- Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
+  `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+- New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
+  each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
+  address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with
+  `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
+  Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
+  pinned by hand"). Players need nothing new: it isn't in the client pack.
 - New wardrobe skins: the Oathblades I, II and III at 1, 2 and 3 months of pass (the tenure ladder used to
   start at 6), Rallier at 3 events attended and the Plumed Helm at 10, and three holiday skins earned only
   by being at that holiday's event, never sold: Gravelight (Hallowtide), Midwinter Cap (Midwinter) and
-  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too.
+  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too. Players
+  update the client pack for the new textures.
 - The wardrobe menu has two pages (earned in game; pass and supporter), so it fits in open chat, and a player
   gets an "Unlocked ..." line in chat when the store, staff or an event raises their months, events or a
   holiday score (at their next login if they were offline).

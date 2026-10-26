@@ -12,7 +12,7 @@
 # What a deploy does:
 #   1. git fetch; pick the newest vX.Y.Z tag (TRACK=tags, the default) or the tip of TRACK=<branch>
 #   2. if players are online, warn them in chat 5 minutes and 1 minute ahead
-#   3. back up the world (realms backup, while the server runs)
+#   3. back up the world (realms backup, while the server runs), keeping the newest KEEP_BACKUPS
 #   4. copy package/ of that commit over the live release folder, keeping server/, backups/, java/,
 #      the downloads and docker/.env (the same as unzipping a new release over the old one)
 #   5. recreate the container: its entrypoint runs the idempotent install, then starts the server
@@ -38,6 +38,7 @@ DEPLOY_WINDOW=${DEPLOY_WINDOW:-}
 DEPLOY_TZ=${DEPLOY_TZ:-America/Los_Angeles}
 DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 LOCK_FILE=${LOCK_FILE:-/tmp/realms-deploy.lock}
+KEEP_BACKUPS=${KEEP_BACKUPS:-3}
 
 STATE="$LIVE_DIR/.deployed"
 FAILED="$LIVE_DIR/.deploy-failed"
@@ -45,6 +46,10 @@ COMPOSE="docker compose --project-directory $LIVE_DIR/docker -f $LIVE_DIR/docker
 
 log() { printf '%s [deploy] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
+
+case "$KEEP_BACKUPS" in
+    '' | *[!0-9]* | 0*) die "KEEP_BACKUPS must be a whole number of at least 1, not '$KEEP_BACKUPS'" ;;
+esac
 
 now=''
 status_only=''
@@ -208,6 +213,9 @@ if running; then
     fi
     log 'backing up the world'
     $COMPOSE exec -T realms realms backup || die 'backup failed; not deploying'
+    # realms backup keeps 14; the off-site copy holds the history, so keep only the newest few.
+    ls -1 "$LIVE_DIR/backups" | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort -r |
+        tail -n +$((KEEP_BACKUPS + 1)) | while read -r old; do rm -rf "${LIVE_DIR:?}/backups/$old"; done
 fi
 
 sync_package "$commit"

@@ -87,13 +87,13 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 | --- | --- | --- |
 | 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
-| 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. |
+| 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
 | 4 | **Arena Glory I** | Kit duels (1v1) for individuals, then the 4v4 faction bracket. |
 | 5 | **Netherite age** | Netherite armor is allowed (rule 24): `datapack disable "file/realms-no-netherite-armor"`. Announced a week ahead. |
 | 6 | **Faction Raid II** | Flags again, now with Netherite and bigger bases. |
 | 7 | **Build Battle II** | A shorter one: one evening, one spin, at spawn plots. |
-| 8 | **The border breaks again** | 4000 to 6000. |
+| 8 | **The border breaks again** | 4000 to 6000, and the live map with it. |
 | 9 | **Arena Glory II** | 2v2 and the 4v4 bracket. |
 | 10 | **Faction Raid III** | Last raid. Cup standings set the finale's spawn order. |
 | 11 | **The finale** | The border shrinks toward spawn over an evening, then a last fight. Worth the most Cup points. |
@@ -482,8 +482,7 @@ Not built:
 | --- | --- |
 | Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
-| Border acts | `worldborder set` over RCON on the date. The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
-| Attendance skins | Skins at 3 and 10 events in `tools/wardrobe.py`, unlocked by `rw.events` |
+| Border acts | `worldborder set` over RCON on the date, for the Overworld and the Nether (1:8), then fit the live map to it and render it again with `tools/map_border.py` (docs/ADMIN.md, "The live map"). The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
 | KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
 | Faction sign-up form | A form (Front Desk, in the Discord repo) for the name, members, banner and charter; a forum post works until then |
 | Base of the Month role | A Discord role, handed out by hand |

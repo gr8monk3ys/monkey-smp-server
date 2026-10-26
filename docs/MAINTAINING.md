@@ -218,6 +218,17 @@ Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K wit
 performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
 run to none.
 
+## Mods pinned by hand
+
+`add.py` and `check_updates.py` only see releases Modrinth lists for the manifest's Minecraft version. A mod
+that works on it but isn't listed for it is pinned by hand: the same entry `add.py` writes (`entries.added`,
+from the Modrinth version), after a smoke test and a test join. `check_updates.py` never reports its updates,
+so look at its Modrinth page when updating the pack, and when changing Minecraft version.
+
+| Mod | Listed for | Tested on 26.3 |
+|---|---|---|
+| `hostname-catcher` 0.2 | 26.1 to 26.2 | 2026-10-25: boots, lets a login through a join address in, logs a real client's join |
+
 ## Mods left out on purpose
 
 The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync.
@@ -281,7 +292,12 @@ players") came from this harness on an i7-8700K.
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
    pack, the wardrobe, events), date its entry at the top of `site/changes.html` too, in players' words
    (`docs/ADMIN.md`, "Telling players what changed").
-3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. Put the new player files on the site, since the GitHub releases are private and players download the pack
+   from there: `python tools/build.py`, replace the files in `site/pack/` with `dist/TheRealms-Client-X.Y.Z.mrpack`
+   and `dist/TheRealms-Player-X.Y.Z.zip`, point `MODPACK_URL` and `INSTALLER_URL` in `site/config.js` at them
+   and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
+   (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
+4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
 `TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.

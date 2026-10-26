@@ -176,7 +176,7 @@ spark_health() {
     while [ "$waited" -lt 30 ]; do
         sleep 3
         waited=$((waited + 3))
-        link=$(tail -n "+$((seen + 1))" "$log_file" 2>/dev/null | grep -E ']: https://spark\.lucko\.me/[A-Za-z0-9]+$' |
+        link=$(tail -n "+$((seen + 1))" "$log_file" 2>/dev/null | grep -E '^\[[0-9:]+\] \[[^]]+/INFO\]: https://spark\.lucko\.me/[A-Za-z0-9]+$' |
             grep -o 'https://spark\.lucko\.me/[A-Za-z0-9]*' | tail -n 1)
         if [ -n "$link" ]; then
             echo "$link"

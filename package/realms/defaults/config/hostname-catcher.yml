@@ -1,0 +1,6 @@
+# Hostname Catcher logs "Player NAME connected via: ADDRESS" for every join, so the joins per join address
+# can be counted (tools/join_addresses.py, docs/PROMOTION.md).
+# An empty list lets players in through any address. Listing domains here would turn away every other
+# address with "Connection Throttled.", and the mod's own default (localhost, 127.0.0.1, *.example.com)
+# would turn away every real player.
+allowed-domains: []

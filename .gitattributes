@@ -9,6 +9,7 @@ player/*.txt text eol=crlf
 package/docker/** text eol=lf
 *.png binary
 *.zip binary
+*.mrpack binary
 *.jar binary
 # Run by sh on Linux and macOS: always LF, whatever the checkout.
 *.sh text eol=lf

@@ -2,6 +2,42 @@
 
 ## [Unreleased]
 
+- Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
+  on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
+  after a restart (docs/LIVE.md).
+- The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
+  `live-player-markers: false` (and `skin-download: false`, which only fed the markers), since the map is
+  public and raiding is allowed. An existing server keeps BlueMap's own file; docs/ADMIN.md "The live map"
+  says how to switch it off there.
+- Docs: pre-generation no longer widens the border. docs/ADMIN.md and docs/LIVE.md said to set it to
+  10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
+  centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
+  and generates out to the season's largest border plus the view distance.
+- The live map stops at the world border instead of showing all the land Chunky generated for later border
+  acts. `config/bluemap/maps/` ships with each map's `render-mask` on Season I's starting border (2500 wide
+  around spawn, 312.5 in the Nether; the End has none), and the new `tools/map_border.py` fits the masks to
+  the border saved in the world after each border act. Then `bluemap reload` and `bluemap purge <map>`
+  (docs/ADMIN.md, "The live map"; docs/SEASONS.md's border acts now include it). Defaults only reach new
+  servers: on an existing one, run the tool once.
+- Fix: the Nether map shows the caves instead of the bedrock roof. Incendium makes the Nether 192 tall, and
+  BlueMap's own ceiling cut stopped at y 127; the shipped `world_the_nether.conf` cuts everything from y 90 up.
+  On an existing server, delete `max-y: 127` from that layer (docs/ADMIN.md, "The live map").
+- Live server: the public map moves to https://map.monkeysmp.lscaturchio.xyz, served by Caddy with a Let's
+  Encrypt certificate in front of BlueMap, which is now published on 127.0.0.1 only (`MAP_PORT`). The site
+  links there, and port 8100 is no longer opened (docs/LIVE.md, steps 2, 5, 8 and 9).
+- Store: the prices and perks are settled before the first sale (ADR-0008). The 3-month pass is $14 (was
+  $12), Crown's extra is a landmark it names each season instead of a vote (every pass holder votes on the
+  twist), and priority slots aren't sold. docs/LIVE.md "The store" lists the Tebex packages, a 7-day trial
+  on the monthly pass to test and switch on, and creator codes (20%, no buyer discount); docs/RETENTION.md's
+  budget uses Tebex's real fees.
+- Site: links work without JavaScript. `tools/site_links.py` writes `site/config.js`'s URLs into the pages,
+  and validate.py fails when they drift. The site serves the client pack and player zip from `site/pack/`,
+  since the GitHub releases are private, and validate.py checks they're the pinned version (a new release
+  step in docs/MAINTAINING.md). The pricing section says what a PC needs and the 48-hour refund, the FAQ
+  says 30 players, and the new `creators.html` has the creator code terms.
+- docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
+  addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
+  clips from real event nights.
 - Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
   to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
   also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,
@@ -12,6 +48,12 @@
   restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
 - Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
   `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+- New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
+  each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
+  address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with
+  `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
+  Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
+  pinned by hand"). Players need nothing new: it isn't in the client pack.
 - Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
   the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
   morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory

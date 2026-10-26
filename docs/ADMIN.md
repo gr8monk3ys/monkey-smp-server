@@ -101,11 +101,14 @@ What keeps it there:
 ## Before a big group joins
 
 - **Pre-generate the world.** Generating new terrain on the main thread is what drags the tick rate down when
-  many players explore at once, and Tectonic's tall terrain makes each chunk expensive. With nobody online, in the
-  server console: `chunky radius 5000`, `chunky start` (hours; `chunky progress` shows how far), then
-  `worldborder set 10000` (the border takes a diameter). For the Nether (1 block there is 8 in the Overworld):
-  `chunky world minecraft:the_nether` and `chunky radius 625` before `chunky start`, and
-  `execute in minecraft:the_nether run worldborder set 1250`.
+  many players explore at once, and Tectonic's tall terrain makes each chunk expensive. Generate out to the
+  season's largest border (6000 wide, docs/SEASONS.md) plus the view distance, without changing the border: the
+  `realms-rules` pack sets the starting one (Rule 25) and the border acts grow it. With nobody online, in the
+  server console: `chunky worldborder` (centres on the border, which is on spawn, not 0,0), `chunky radius 3200`
+  and `chunky start` (hours; `chunky progress` shows how far). For the Nether (1 block there is 8 in the
+  Overworld): `chunky world minecraft:the_nether`, `chunky worldborder`, `chunky radius 500` and `chunky start`.
+  Chunky picks up after a restart (`continueOnRestart` in `server\config\chunky\config.json`), so `chunky pause`
+  lasts only until the next restart; `chunky cancel` stops it for good.
 - **Watch it with spark.** `spark tps` shows TPS and tick time (MSPT; under 50 ms keeps 20 TPS), `spark health`
   memory and GC, and `spark profiler start` / `spark profiler stop` uploads a profile that shows which mod or
   area is slow.
@@ -292,6 +295,10 @@ terrain with a seed cracker, which is one reason MinerTrack watches how people m
 
 BlueMap serves a 3D web map on port **8100**: http://localhost:8100 on the host.
 Players outside your network can't reach it unless you tunnel that port too (playit.gg TCP tunnel).
+It shows the world, not the players: `live-player-markers: false` in `server\config\bluemap\plugin.conf`,
+because on a raiding server live positions would lead everyone to their targets. Builds still show, as on
+any map. Where BlueMap wrote `plugin.conf` itself (a server installed before this default shipped), markers
+are on: set it to `false` there and run `bluemap reload`.
 
 ## Moving an existing world in
 

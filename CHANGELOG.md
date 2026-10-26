@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-X-ray protection and moderation tools. Server only: players need nothing new.
+X-ray protection and moderation tools, plus live-server fixes. Server only: players need nothing new.
 
 - New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
   players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
@@ -25,6 +25,27 @@ X-ray protection and moderation tools. Server only: players need nothing new.
 - Known issue: Distant Horizons' server-side LODs still carry the real ores, which AntiXray doesn't touch. The tested
   fix (no server-sent distant terrain) is in "Distant Horizons and x-ray" in `docs/ADMIN.md`; it isn't on by
   default.
+- Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
+  on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
+  after a restart (docs/LIVE.md).
+- The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
+  `live-player-markers: false` (and `skin-download: false`, which only fed the markers), since the map is
+  public and raiding is allowed. An existing server keeps BlueMap's own file; docs/ADMIN.md "The live map"
+  says how to switch it off there.
+- Docs: pre-generation no longer widens the border. docs/ADMIN.md and docs/LIVE.md said to set it to
+  10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
+  centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
+  and generates out to the season's largest border plus the view distance.
+- Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
+  to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
+  also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,
+  logs, BlueMap tiles), keeps 48 hourly, 14 daily, 8 weekly and 6 monthly snapshots, and reads back 5% of the
+  stored data after each run (`restic check --read-data-subset=5%`). It posts to the Discord webhook when backups
+  fail and when they work again. The keys and the restic password go in a root-only `/etc/realms-backup.env`
+  (`deploy/realms-backup.env.example`), and the password is kept off the VPS too. docs/LIVE.md covers setup,
+  restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
+- Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
+  `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
 
 ## [2.4.1] - 2026-10-25
 

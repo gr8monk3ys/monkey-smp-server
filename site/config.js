@@ -7,6 +7,6 @@ window.REALMS = {
   STORE_URL: "",
   // Public page for the player modpack (e.g. its Modrinth project). The GitHub releases are private.
   MODPACK_URL: "",
-  // Live map (BlueMap on port 8100), if it is opened to the public.
-  MAP_URL: "",
+  // Live map (BlueMap on port 8100 of the VPS), open to everyone.
+  MAP_URL: "http://play.monkeysmp.lscaturchio.xyz:8100",
 };

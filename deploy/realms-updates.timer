@@ -1,0 +1,10 @@
+# Runs the update check every Monday at 10 AM Pacific (and after boot if one was missed).
+[Unit]
+Description=Monkey SMP: weekly update check on Mondays
+
+[Timer]
+OnCalendar=Mon *-*-* 10:00:00 America/Los_Angeles
+Persistent=true
+
+[Install]
+WantedBy=timers.target

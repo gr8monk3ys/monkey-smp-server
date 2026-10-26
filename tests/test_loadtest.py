@@ -67,6 +67,25 @@ def test_profile_report_without_samples():
     assert loadtest.profile_report([]) == "no main-thread samples in the measured window\n"
 
 
+def test_spark_url():
+    log = ("[04:30:01] [spark-worker-pool-1-thread-1/INFO]: [spark] Profiler stopped & upload complete!\n"
+           "[04:30:02] [spark-worker-pool-1-thread-1/INFO]: https://spark.lucko.me/AbCdEf1234\n")
+    assert loadtest.spark_url(log) == "https://spark.lucko.me/AbCdEf1234"
+    assert loadtest.spark_url("https://spark.lucko.me/old1 then https://spark.lucko.me/new2") == \
+        "https://spark.lucko.me/new2"
+    assert loadtest.spark_url("Done (12.3s)!") == ""
+
+
+def test_wait_for_spark_url_reads_only_new_lines(tmp_path):
+    log = tmp_path / "server.log"
+    log.write_text("https://spark.lucko.me/old1\n", encoding="utf-8")
+    seen = log.stat().st_size
+    assert loadtest.wait_for_spark_url(log, seen, timeout_s=0) == ""
+    with open(log, "a", encoding="utf-8") as f:
+        f.write("[spark] https://spark.lucko.me/new2\n")
+    assert loadtest.wait_for_spark_url(log, seen, timeout_s=0) == "https://spark.lucko.me/new2"
+
+
 def test_planned_parking(tmp_path):
     (tmp_path / "realms").mkdir()
     manifest = {"mods": [{"slug": "silvers_strength-smp-season-4", "file": "strength.jar"}]}

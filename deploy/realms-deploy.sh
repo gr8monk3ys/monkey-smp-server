@@ -5,6 +5,9 @@
 #   sh realms-deploy.sh            deploy the newest release tag (or TRACK branch) if it isn't live yet
 #   sh realms-deploy.sh --now      the same, right away: ignores DEPLOY_WINDOW and skips the warning
 #   sh realms-deploy.sh --status   print what is deployed and what would be
+#   sh realms-deploy.sh --restart  the daily restart (realms-restart.timer): warn, restart, post a spark
+#                                  health link; skipped when the server started less than
+#                                  RESTART_MIN_UPTIME hours ago (a deploy already restarted it)
 #
 # With DEPLOY_WINDOW set (e.g. 04:00-05:00, in DEPLOY_TZ), a new release waits for that window, so a
 # fix tagged in the afternoon goes live at 4 AM. The first deploy on a new machine doesn't wait.
@@ -37,6 +40,8 @@ BOOT_TIMEOUT=${BOOT_TIMEOUT:-900}
 DEPLOY_WINDOW=${DEPLOY_WINDOW:-}
 DEPLOY_TZ=${DEPLOY_TZ:-America/Los_Angeles}
 DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
+RESTART_MIN_UPTIME=${RESTART_MIN_UPTIME:-6}
 LOCK_FILE=${LOCK_FILE:-/tmp/realms-deploy.lock}
 
 STATE="$LIVE_DIR/.deployed"
@@ -48,17 +53,25 @@ die() { log "ERROR: $*"; exit 1; }
 
 now=''
 status_only=''
+restart=''
 for arg in "$@"; do
     case "$arg" in
         --now) now=1 ;;
         --status) status_only=1 ;;
-        *) die "unknown option '$arg' (use --now or --status)" ;;
+        --restart) restart=1 ;;
+        *) die "unknown option '$arg' (use --now, --status or --restart)" ;;
     esac
 done
 
-# One deploy at a time: the timer and a manual run must not overlap.
+# One deploy at a time: the timer and a manual run must not overlap. The daily restart takes the same
+# lock, so it never runs during a deploy (or an off-site backup, which waits for this lock too); it waits
+# for one to finish, and then usually finds the server freshly started and skips.
 exec 9>"$LOCK_FILE"
-flock -n 9 || { log 'another deploy is running; skipping'; exit 0; }
+if [ -n "$restart" ]; then
+    flock -w 1800 9 || { log 'the deploy lock was taken for 30 minutes; skipping the daily restart'; exit 0; }
+else
+    flock -n 9 || { log 'another deploy is running; skipping'; exit 0; }
+fi
 
 # DEPLOY_WINDOW "HH:MM-HH:MM" as two HHMM numbers; a window may cross midnight (23:00-01:00).
 window_start=''
@@ -90,6 +103,107 @@ in_window() {
 
 [ -d "$REPO_DIR/.git" ] || die "$REPO_DIR is not a git clone of the repo (docs/LIVE.md, step 3)"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || [ ! -e "$LIVE_DIR" ] || die "$LIVE_DIR has no docker/compose.yaml"
+
+# ---------------------------------------------------------------- helpers
+
+# Posts $1 to the webhook $2 (default DISCORD_WEBHOOK_URL).
+discord() {
+    url=${2:-$DISCORD_WEBHOOK_URL}
+    [ -n "$url" ] || return 0
+    # The message is ours (no quotes or backslashes in it), so plain printf makes valid JSON.
+    printf '{"content":"%s"}' "$1" |
+        curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$url" >/dev/null ||
+        log 'could not post to Discord'
+}
+
+running() { [ -n "$($COMPOSE ps -q --status running realms 2>/dev/null)" ]; }
+
+rcon() { $COMPOSE exec -T realms realms rcon "$1" 2>/dev/null; }
+
+players_online() {
+    # "There are 3 of a max of 20 players online: ..."
+    rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1
+}
+
+# If players are online, warns them in chat WARN_MINUTES and 1 minute ahead. $1 begins the first
+# message ("Server update to v2.4.1"), $2 the last ("Server update").
+warn_players() {
+    warn_online=$(players_online || true)
+    [ "${warn_online:-0}" -gt 0 ] || return 0
+    log "$warn_online player(s) online; warning them"
+    rcon "say $1 in $WARN_MINUTES minutes (about 3 minutes offline)." >/dev/null || true
+    [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
+    rcon "say $2 in 1 minute. Find a safe spot." >/dev/null || true
+    sleep 60
+}
+
+# Recreates the container (its entrypoint installs, then starts) and waits for RCON to answer.
+restart_and_wait() {
+    $COMPOSE up -d --build --force-recreate
+    waited=0
+    while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
+        sleep 15
+        waited=$((waited + 15))
+        running || return 1
+        if rcon list >/dev/null; then return 0; fi
+    done
+    return 1
+}
+
+# Whole hours since the container started (a deploy recreates it, and so does a crash); empty if unknown.
+uptime_hours() {
+    id=$($COMPOSE ps -q realms 2>/dev/null) || return 0
+    [ -n "$id" ] || return 0
+    started=$(docker inspect -f '{{.State.StartedAt}}' "$id" 2>/dev/null) || return 0
+    since=$(date -d "$started" +%s 2>/dev/null) || return 0
+    echo $((($(date +%s) - since) / 3600))
+}
+
+# The link to a fresh `spark health` report (TPS, tick times, CPU, memory, GC), or nothing. spark answers
+# from its own thread after the RCON reply has gone, but it also sends the link to the console, so the link
+# is read from the server log.
+spark_health() {
+    log_file="$LIVE_DIR/server/logs/latest.log"
+    seen=$(wc -l <"$log_file" 2>/dev/null || echo 0)
+    rcon 'spark health upload' >/dev/null || return 0
+    waited=0
+    while [ "$waited" -lt 30 ]; do
+        sleep 3
+        waited=$((waited + 3))
+        link=$(tail -n "+$((seen + 1))" "$log_file" 2>/dev/null | grep -o 'https://spark\.lucko\.me/[A-Za-z0-9]*' | tail -n 1)
+        if [ -n "$link" ]; then
+            echo "$link"
+            return 0
+        fi
+    done
+}
+
+# ---------------------------------------------------------------- daily restart (--restart)
+
+# Bounds memory creep: one restart a day, inside the deploy window but after the deploy, which already
+# restarts the server when there is a release. The health report from just before the restart shows
+# whether memory use keeps climbing from day to day (a leak a restart only hides).
+if [ -n "$restart" ]; then
+    running || { log 'the server is not running; nothing to restart'; exit 0; }
+    hours=$(uptime_hours)
+    if [ -n "$hours" ] && [ "$hours" -lt "$RESTART_MIN_UPTIME" ]; then
+        log "the server started ${hours}h ago (a deploy or a crash restarted it); skipping the daily restart"
+        exit 0
+    fi
+    online=$(players_online || true)
+    health=$(spark_health)
+    log "daily restart after ${hours:-?}h up; spark health: ${health:-no link}"
+    warn_players 'Daily restart' 'Daily restart'
+    if restart_and_wait; then
+        log 'back up after the daily restart'
+        msg="Daily restart: Monkey SMP is back up (it had been up ${hours:-?} h, ${online:-?} online)."
+        [ -z "$health" ] || msg="$msg spark health just before: $health"
+        discord "$msg" "$STAFF_WEBHOOK_URL"
+        exit 0
+    fi
+    discord "Daily restart: the server did not answer within ${BOOT_TIMEOUT}s and may be DOWN. Check: journalctl -u realms-restart" "$STAFF_WEBHOOK_URL"
+    die "the server did not answer within ${BOOT_TIMEOUT}s after the daily restart"
+fi
 
 # ---------------------------------------------------------------- what to deploy
 
@@ -131,24 +245,7 @@ if [ -z "$now" ] && [ -n "$deployed" ] && ! in_window; then
     exit 0
 fi
 
-# ---------------------------------------------------------------- helpers
-
-discord() {
-    [ -n "$DISCORD_WEBHOOK_URL" ] || return 0
-    # The message is ours (no quotes or backslashes in it), so plain printf makes valid JSON.
-    printf '{"content":"%s"}' "$1" |
-        curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL" >/dev/null ||
-        log 'could not post to Discord'
-}
-
-running() { [ -n "$($COMPOSE ps -q --status running realms 2>/dev/null)" ]; }
-
-rcon() { $COMPOSE exec -T realms realms rcon "$1" 2>/dev/null; }
-
-players_online() {
-    # "There are 3 of a max of 20 players online: ..."
-    rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1
-}
+# ---------------------------------------------------------------- deploy
 
 # Copies package/ of commit $1 over the live folder. The excluded paths are what the server and
 # installer create (the same list tools/build.py keeps out of a release) plus our state files;
@@ -165,21 +262,6 @@ sync_package() {
         "$tmp/package/" "$LIVE_DIR/"
     rm -rf "$tmp"
 }
-
-# Recreates the container (its entrypoint installs, then starts) and waits for RCON to answer.
-restart_and_wait() {
-    $COMPOSE up -d --build --force-recreate
-    waited=0
-    while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
-        sleep 15
-        waited=$((waited + 15))
-        running || return 1
-        if rcon list >/dev/null; then return 0; fi
-    done
-    return 1
-}
-
-# ---------------------------------------------------------------- deploy
 
 label=$ref
 [ "$TRACK" = tags ] || label="$TRACK@$(git -C "$REPO_DIR" rev-parse --short "$commit")"
@@ -198,14 +280,7 @@ if [ -z "$deployed" ] ||
 fi
 
 if running; then
-    online=$(players_online || true)
-    if [ -z "$now" ] && [ "${online:-0}" -gt 0 ]; then
-        log "$online player(s) online; warning them"
-        rcon "say Server update to $label in $WARN_MINUTES minutes (about 3 minutes offline)." >/dev/null || true
-        [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
-        rcon 'say Server update in 1 minute. Find a safe spot.' >/dev/null || true
-        sleep 60
-    fi
+    [ -n "$now" ] || warn_players "Server update to $label" 'Server update'
     log 'backing up the world'
     $COMPOSE exec -T realms realms backup || die 'backup failed; not deploying'
 fi

@@ -1,0 +1,10 @@
+# Restarts the server every day at 4:30 AM Pacific: inside the 4-5 AM deploy window, after a deploy's own
+# restart (which makes this run skip). Not Persistent: a missed restart is not made up at boot.
+[Unit]
+Description=Monkey SMP: daily restart at 4:30 AM Pacific
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 America/Los_Angeles
+
+[Install]
+WantedBy=timers.target

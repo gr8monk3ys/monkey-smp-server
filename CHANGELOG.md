@@ -78,6 +78,16 @@ rules. Players update the client pack for the new skins' textures; everything el
   and a roster title), faction charters at sign-up, and the season-end runbook. `docs/RETENTION.md` gains
   the pass funnel and DMs to passes that show Ending in Tebex; `docs/ADMIN.md` the season and holiday
   commands and how to tell players what changed.
+- Tests: `tests/smoke.ps1` checks its ports before it installs and again before it starts. If the game, RCON or
+  map TCP port or the voice chat UDP port is already in use, it stops and names the port and what holds it (the
+  process and PID, on Windows). Until now, a test server that already held UDP 24454 made the boot die a few
+  seconds after "Done" (Simple Voice Chat 2.6.24 stops the server when it can't bind its port), and the test
+  blamed RCON. If the server stops by itself after "Done", the test now says so and shows the end of its console
+  output.
+- Tests: new `-VoicePort` (default 24454) and `-MapPort` (default 8100) set the test copy's Simple Voice Chat
+  and BlueMap ports, so test boots can run side by side. Nothing in the release changes.
+- Fix: a smoke test re-run in the same folder no longer takes the previous boot's "Done" line for this one's:
+  it ignores `server/logs/latest.log` until the new server has written to it.
 - New: players accept the **short rules** before they join (Minecraft's Code of Conduct screen,
   `codeofconduct/en_us.txt`, `enable-code-of-conduct=true`), and again whenever the text changes.
 - New: a **welcome screen** a few seconds after a first join. Its one button opens the Discord, where

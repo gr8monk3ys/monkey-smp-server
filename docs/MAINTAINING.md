@@ -279,8 +279,13 @@ players") came from this harness on an i7-8700K.
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
-3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-4. Put the client pack on Modrinth: `python tools/modrinth.py` from a checkout of the tag, with the token in
+3. Put the new player files on the site, since the GitHub releases are private and players download the pack
+   from there: `python tools/build.py`, replace the files in `site/pack/` with `dist/TheRealms-Client-X.Y.Z.mrpack`
+   and `dist/TheRealms-Player-X.Y.Z.zip`, point `MODPACK_URL` and `INSTALLER_URL` in `site/config.js` at them
+   and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
+   (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
+4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. Put the client pack on Modrinth: `python tools/modrinth.py` from a checkout of the tag, with the token in
    `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
    left `client/` alone, and moves the server listing to the newest version.
 
@@ -289,8 +294,8 @@ The release workflow re-runs CI (including macOS), refuses to publish if the tag
 
 ### Releasing without Actions
 
-GitHub Actions doesn't start in this private repo right now (billing), so the tag push in step 3 publishes
-nothing. Do the workflow's job by hand, after step 3, in a fresh worktree of the tag so nothing uncommitted
+GitHub Actions doesn't start in this private repo right now (billing), so the tag push in step 4 publishes
+nothing. Do the workflow's job by hand, after step 4, in a fresh worktree of the tag so nothing uncommitted
 gets in:
 
 ```bash
@@ -301,7 +306,7 @@ python -m pytest -q && python -m ruff check tools tests && python tools/validate
 pwsh -c 'Invoke-Pester tests/Realms.Tests.ps1, tests/Player.Tests.ps1'   # or powershell -c on Windows 5.1
 GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md
 gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
-python tools/modrinth.py      # step 4, with MODRINTH_TOKEN set (MODRINTH.md)
+python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)
 cd - && git worktree remove --force ../release-vX.Y.Z   # --force: notes.md is untracked
 ```
 

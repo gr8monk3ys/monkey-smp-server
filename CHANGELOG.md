@@ -25,6 +25,19 @@
 - Live server: the public map moves to https://map.monkeysmp.lscaturchio.xyz, served by Caddy with a Let's
   Encrypt certificate in front of BlueMap, which is now published on 127.0.0.1 only (`MAP_PORT`). The site
   links there, and port 8100 is no longer opened (docs/LIVE.md, steps 2, 5, 8 and 9).
+- Store: the prices and perks are settled before the first sale (ADR-0008). The 3-month pass is $14 (was
+  $12), Crown's extra is a landmark it names each season instead of a vote (every pass holder votes on the
+  twist), and priority slots aren't sold. docs/LIVE.md "The store" lists the Tebex packages, a 7-day trial
+  on the monthly pass to test and switch on, and creator codes (20%, no buyer discount); docs/RETENTION.md's
+  budget uses Tebex's real fees.
+- Site: links work without JavaScript. `tools/site_links.py` writes `site/config.js`'s URLs into the pages,
+  and validate.py fails when they drift. The site serves the client pack and player zip from `site/pack/`,
+  since the GitHub releases are private, and validate.py checks they're the pinned version (a new release
+  step in docs/MAINTAINING.md). The pricing section says what a PC needs and the 48-hour refund, the FAQ
+  says 30 players, and the new `creators.html` has the creator code terms.
+- docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
+  addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
+  clips from real event nights.
 - Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
   to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
   also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,

@@ -90,6 +90,10 @@ _Avoid_: Docker image (alone), container
 The zip "Prepare for Hosting" makes from an installed server folder, for online Minecraft hosts that only accept a finished server.
 _Avoid_: export, server pack, server package
 
+**Join address**:
+A second hostname for the live server, one per place it's promoted (`yt.monkeysmp.lscaturchio.xyz`), with its own SRV and A records, so joins can be counted by where players found it (docs/PROMOTION.md).
+_Avoid_: vanity domain, referral link, alias
+
 ## Lifecycle
 
 **Install**:

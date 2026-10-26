@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Site: the pass wording follows `STORE_URL`. While it is empty (no store yet), the join steps, the Server
+  Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
+  you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
+  running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+
 ## [2.5.0] - 2026-10-26
 
 X-ray protection and moderation tools, more wardrobe skins and the season-end tools, onboarding and faction

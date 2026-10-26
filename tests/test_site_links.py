@@ -48,6 +48,34 @@ def test_stamping_twice_changes_nothing():
     assert site_links.stamp(once, links())[0] == once
 
 
+STORE_TEXT = '<p data-store="open">Buy it.</p><p class="small" data-store="soon">Ask in the Discord.</p>'
+
+
+def test_while_the_store_is_closed_only_the_soon_text_shows():
+    page, errors = site_links.stamp(STORE_TEXT, links())
+    assert page == '<p data-store="open" hidden>Buy it.</p><p class="small" data-store="soon">Ask in the Discord.</p>'
+    assert errors == []
+
+
+def test_once_the_store_url_is_set_the_open_text_shows():
+    filled = {**links(), "STORE_URL": "https://shop.example"}
+    closed, _ = site_links.stamp(STORE_TEXT, links())
+    page, _ = site_links.stamp(closed, filled)
+    assert page == '<p data-store="open">Buy it.</p><p class="small" data-store="soon" hidden>Ask in the Discord.</p>'
+    assert site_links.stamp(page, filled)[0] == page
+
+
+def test_hidden_inside_another_attribute_is_left_alone():
+    tag = '<p title="a hidden gem" data-store="soon" hidden="hidden">x</p>'
+    assert site_links.stamp(tag, links())[0] == '<p title="a hidden gem" data-store="soon">x</p>'
+
+
+def test_an_unknown_store_state_is_reported():
+    page, errors = site_links.stamp('<p data-store="later">x</p>', links())
+    assert page == '<p data-store="later">x</p>'
+    assert errors == ['data-store="later" should be "open" or "soon"']
+
+
 def test_an_unknown_key_is_reported():
     page, errors = site_links.stamp('<a data-link="NOPE" href="#">x</a>', links())
     assert page == '<a data-link="NOPE" href="#">x</a>'

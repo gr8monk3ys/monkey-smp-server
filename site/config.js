@@ -4,7 +4,9 @@
 window.REALMS = {
   ADDRESS: "monkeysmp.lscaturchio.xyz",
   DISCORD_INVITE: "https://discord.gg/C25hy9Ca9W",
-  // Tebex webstore (passes and supporter tiers). Owner: fill in its address once the packages exist.
+  // Tebex webstore (passes and supporter tiers). Fill it in only once the store can take payments and run
+  // its commands on the server (docs/LIVE.md, "The store"). While it is empty, the pages say passes are
+  // arranged in the Discord (data-store="soon"); once it is set, they say what the store does ("open").
   STORE_URL: "",
   // The player modpack. The GitHub releases are private, so until the Modrinth project is up the site serves
   // the release's own .mrpack and player zip from site/pack/ (docs/MAINTAINING.md, Releasing).

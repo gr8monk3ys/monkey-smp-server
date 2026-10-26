@@ -40,6 +40,10 @@ _Avoid_: client zip, installer (alone)
 The optional set of mods, resource packs and shaders a player installs to get the intended look and feel.
 _Avoid_: modpack (alone), client mods
 
+**Server listing**:
+The server's entry in Modrinth's server discovery: its address and tags, and which version of the client pack (published on Modrinth as the Monkey SMP modpack) players get.
+_Avoid_: server project, server page
+
 **Manifest**:
 The pinned list of every artifact a release's server needs, plus the world settings every copy shares.
 _Avoid_: lockfile, config, dependency list

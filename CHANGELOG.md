@@ -12,6 +12,17 @@
   restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
 - Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
   `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
+  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
+  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
+  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
+  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
+- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
+  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
+  approves the pack, Modrinth App players import the `.mrpack` as before.
+- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
+  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
+  without Actions") lists the steps.
 
 ## [2.4.1] - 2026-10-25
 

@@ -203,10 +203,12 @@ free_gb=$(awk '/^MemAvailable:/ { print int($2 / 1048576) }' /proc/meminfo)
 log 'copying what changed since (the world, now saved)'
 copy --checksum
 
-# Tebex would claim real purchases and run their commands on the copy.
-find "$COPY_DIR/server/mods" -maxdepth 1 -iname '*tebex*' -exec rm -f {} +
-find "$COPY_DIR/server/config" -maxdepth 1 -iname '*tebex*' -exec rm -rf {} +
-if find "$COPY_DIR/server/mods" -iname '*tebex*' | grep -q .; then die 'could not take Tebex out of the copy'; fi
+# Tebex would claim real purchases and run their commands on the copy. Its jar and its folder (mods/tebex
+# holds its config and secret key) both go.
+find "$COPY_DIR/server/mods" "$COPY_DIR/server/config" -maxdepth 1 -iname '*tebex*' -exec rm -rf {} +
+if find "$COPY_DIR/server/mods" "$COPY_DIR/server/config" -iname '*tebex*' | grep -q .; then
+    die 'could not take Tebex out of the copy'
+fi
 # A pre-generation task would resume in the copy and take the CPU the test measures.
 chunky="$COPY_DIR/server/config/chunky/config.json"
 [ ! -f "$chunky" ] || sed -i 's/"continueOnRestart": *true/"continueOnRestart": false/' "$chunky"

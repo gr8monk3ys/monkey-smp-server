@@ -8,6 +8,7 @@ public site is `site/`.
 ```
 players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchio.xyz (A) --> VPS :25565
                                                      \-> failover: SRV target swapped to the playit.gg address
+browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: realms-deploy.timer --> docker compose (the release's docker/)
 ```
 
@@ -34,11 +35,10 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
    `adduser --disabled-password realms`; `usermod -aG docker realms`; `mkdir -p /srv/realms && chown realms: /srv/realms`.
-2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat) and 8100/tcp (the live map: public on the
-   live server and linked from the site; it shows the world, not where players are, see docs/ADMIN.md "The
-   live map"). Ports Docker publishes skip ufw's rules, so closing 8100 there would not hide the map: for a
-   private map set `MAP_PORT=127.0.0.1:8100` in `docker/.env` instead. Keep SSH key-only. RCON (25575) stays
-   unpublished (compose.yaml).
+2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat), and 80/tcp, 443/tcp and 443/udp for Caddy,
+   which serves the live map over HTTPS (step 9). Don't open 8100: BlueMap is published on 127.0.0.1 only
+   (`MAP_PORT` in step 5), because ports Docker publishes skip ufw's rules, so ufw alone could not keep it
+   private. Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
 3. **Clone with a read-only deploy key.** As `realms`: `ssh-keygen -t ed25519 -f ~/.ssh/realms_deploy -N ''`,
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then trust GitHub's host
    key as GitHub publishes it (fingerprint `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` in its docs)
@@ -54,7 +54,8 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    service runs as `realms`, so it has to be able to read the file).
 5. **First deploy.** As `realms` (`sudo -iu realms`): `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
    `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
-   there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10` and `TZ=America/Los_Angeles`.
+   there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10`, `TZ=America/Los_Angeles` and
+   `MAP_PORT=127.0.0.1:8100` (the map is reached through Caddy, step 9).
    To keep an existing world, copy its `server` folder into `/srv/realms/TheRealms-Server/` now. Run the
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
@@ -72,8 +73,25 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
    address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
-   port, while the same name serves the website. Voice chat finds the server by itself.
-9. **Off-site backups**: see "Set up the off-site copy" under "Backups off the machine" below.
+   port, while the same name serves the website. Voice chat finds the server by itself. For the map, an `A`
+   record `map.monkeysmp` to the same address, also "DNS only": Caddy gets the certificate itself. The zone has
+   a wildcard record that sends any other name to Vercel, so without its own record the map name lands there.
+9. **The live map over HTTPS** (after step 8, so Let's Encrypt can reach the VPS by name). As root, install
+   Caddy from its apt repository (https://caddyserver.com/docs/install), put this in `/etc/caddy/Caddyfile`
+   and run `systemctl reload caddy`:
+   ```
+   map.monkeysmp.lscaturchio.xyz {
+   	encode zstd gzip
+   	reverse_proxy 127.0.0.1:8100
+   }
+   ```
+   Caddy gets and renews the certificate and redirects `http://` to `https://`. The site's `MAP_URL` links
+   there. Then fit the map to the border (docs/ADMIN.md, "The live map"): before the first fit the map
+   shows everything Chunky generated, which is land the border acts haven't opened yet.
+   Caddy rather than Cloudflare's proxy: the proxy would hide the address, but the game's own record shows
+   it anyway, and it would need an Origin Rule for port 8100 plus a firewall list of Cloudflare's address
+   ranges kept up to date by hand.
+10. **Off-site backups**: see "Set up the off-site copy" under "Backups off the machine" below.
 
 ## Day to day
 
@@ -87,8 +105,10 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/realms/TheRealms-Server/docker && docker compose attach realms` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec realms realms rcon "say hi"` |
 | Let a player in by hand | `docker compose exec realms realms add-player NAME` |
+| Grow the border (a border act) | `docker compose exec realms realms rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map" |
 | Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
+| Joins per join address | `python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs` (docs/PROMOTION.md) |
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
@@ -233,10 +253,11 @@ When the VPS or its provider is down for longer than a restart:
    into `server\mods` this time (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
-   With TTL 60, players reconnect to the same name within minutes.
+3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port,
+   and each join address's SRV record (`_minecraft._tcp.yt.monkeysmp` and the rest, docs/PROMOTION.md)
+   too. With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
-   record back, and start the VPS.
+   records back, and start the VPS.
 
 Only one copy may run the world at a time: two live copies split the world into two histories.
 
@@ -255,3 +276,35 @@ Only one copy may run the world at a time: two live copies split the world into 
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
+
+### The store (set up once, before the first sale)
+
+Tebex can't change the price of a subscription already sold, so set these before the store link goes on
+the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-sale.md):
+
+| Package | Price | Charged | Commands (docs/RETENTION.md) |
+| --- | --- | --- | --- |
+| Server Pass | $5 | monthly subscription | whitelist, `rw.months 1` on renewal |
+| Server Pass, 3 months | $14 | once; Remove After 90 days | whitelist, `rw.months 3` |
+| Ember, Banner, Crown | $3, $7, $15 | monthly subscription | `rw.tier`, `tier_*` team |
+
+- **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price
+  for access; a sale has to be open to everyone.
+- **Free trial on the monthly pass: 7 days.** Tebex added native trials for subscription packages (1, 3,
+  7, 10, 14 or 30 days; Packages > the package > Trials). It takes card details at checkout and charges
+  when the trial ends; a trial on the package is the same for every buyer, so it stays within the
+  one-price rule. Seven days always includes a Saturday event (docs/SEASONS.md). Tebex's docs don't say
+  which commands run when a trial starts or is cancelled, so test once with a real purchase before
+  switching it on for everyone: the whitelist command has to run when the trial starts, the removal when
+  it is cancelled, and `rw.months` mustn't count the trial's first charge twice. If the whitelist waits for
+  the first charge, leave trials off and run open-house evenings instead: the whitelist off for one
+  announced evening a month with staff online, listed in docs/SEASONS.md and on the site. Once trials are
+  on, add this to the site's FAQ (`site/index.html`), under "Refunds?":
+  "**Can I try it first?** Yes: the monthly pass starts with 7 free days. Tebex asks for a card and charges
+  the first month when the 7 days end, unless you cancel before then on its payment history page."
+- **Creator codes** (Creator Codes in the Tebex panel): a 20% revenue share, no customer discount, limited
+  to the 3-month pass if Tebex offers that. Tebex pays a code's share only on a subscription's first
+  payment, takes 1% more on payments made with a code, and settles the creator's Tebex Wallet after 30
+  working days. The public terms are `site/creators.html`; finding creators is in docs/PROMOTION.md.
+- **The site.** Put the webstore's address in `STORE_URL` in `site/config.js` and run
+  `python tools/site_links.py`, which writes it into the pages.

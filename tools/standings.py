@@ -511,7 +511,8 @@ def show(world: Path, state: Path | None, now: dt.datetime) -> int:
 def start(world: Path, state: Path, now: dt.datetime) -> int:
     week = read_json(week_file(state))
     if week:
-        print(f"a week is already running, since {clock(since(week))}: nothing to do")
+        begun = since(week)
+        print(f"a week is already running{', since ' + clock(begun) if begun else ''}: nothing to do")
         return 0
     write_json(week_file(state), snapshot(read_world(world), now))
     print(f"started the first week at {clock(now)} ({week_file(state)})")
@@ -552,9 +553,9 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
         print(f"this week began {clock(start_)}, under {MIN_WEEK_DAYS} days ago: not closing it (a re-run or a "
               "retry); finishing the last closed week, if anything is left")
     path = latest_week(state)
-    if path is None:
+    last = read_json(path) if path else None
+    if path is None or last is None:
         return 0
-    last = read_json(path)
     status = 0
     try:
         update_board(rcon, rows, week, last, now)

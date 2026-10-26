@@ -54,7 +54,8 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
    anything else. In the console: `worldborder set 12000`, then `chunky radius 6000` and `chunky start`
-   (hours; it carries on after a restart). The Nether is 1/8 the size:
+   (hours; it carries on after a restart because the default `config/chunky/config.json` sets
+   `continueOnRestart`; on a server set up before that, run `chunky continue` after a restart). The Nether is 1/8 the size:
    `execute in minecraft:the_nether run worldborder set 1500`, then `chunky world minecraft:the_nether`,
    `chunky radius 750` and `chunky start`.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
@@ -113,8 +114,9 @@ Only one copy may run the world at a time: two live copies split the world into 
   it ends), and the wardrobe scoreboard and team commands for supporter tiers (the full list, with the
   reverse on expiry, is in docs/RETENTION.md). The monthly pass renews until the buyer cancels it from
   Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Tebex's
-  Fabric mod (2.4.6) is built for 26.2 only; once there is a 26.3 build it goes into the manifest with
-  `tools/add.py`.
+  Fabric mod (2.4.6) is built for 26.2 but loads on 26.3 (checked on the live server, October 2026). It sits
+  in `server/mods` as an extra jar, which deploys and the installer leave alone; once there is a 26.3
+  build it can go into the manifest with `tools/add.py`.
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.

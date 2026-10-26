@@ -6,6 +6,12 @@
 		#The maximum number of chunks that a player can claim. Additional claims can be configured in the player config.
 		#This value can be overridden with a player permission.
 		maxPlayerClaims = 4
+		[serverConfig.claims.protection]
+			#Monkey SMP: anyone may open a Universal Shops trade shop in someone's claim, with an empty hand ("hand$"),
+			#so shops in claims can sell to everyone while their stock chests stay protected. An item in the hand
+			#would let the click place blocks inside the claim. "minecraft:crafting_table" is the mod's own default.
+			#Blocks to partially exclude from chunk protection. Supports block tags.
+			forcedBlockProtectionExceptionList = ["minecraft:crafting_table", "hand$universal_shops:trade_block"]
 	[serverConfig.parties]
 		#The maximum number of members in a party. Existing members are not removed if the limit is reduced.
 		maxPartyMembers = 4

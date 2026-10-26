@@ -205,6 +205,27 @@ twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 ch
 already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
 the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
 
+### Shops in claims (the release with Universal Shops)
+
+Universal Shops arrives with the release like any mod, but buying from a shop in someone else's claim needs one
+more entry in the live `config/openpartiesandclaims-server.toml`, which a deploy doesn't touch:
+`"hand$universal_shops:trade_block"` in `forcedBlockProtectionExceptionList` (rule 43; "Shops" in
+docs/ADMIN.md). Until it's there, shops work for their owner's party and in the wild, and other players get
+Open Parties and Claims' "can't interact" message in a claim. `deploy/shops-claims.sh` adds it with one restart
+and skips it when it's already there. Run it as root once that release is live, `--check` first:
+
+```sh
+sudo sh /srv/realms/repo/deploy/shops-claims.sh --check
+sudo systemd-run --unit=realms-shops --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/shops-claims.sh
+journalctl -fu realms-shops
+```
+
+Like `upgrade-2.5.0.sh` it warns players online (`--now` skips that), takes the deploy lock, stops the server for
+about 3 minutes, keeps the old file as `openpartiesandclaims-server.toml.before-shops`, and starts the server
+again whatever happens; its log is `/var/log/realms-shops-claims.log`. It prints only the
+`forcedBlockProtectionExceptionList` line. If that list is missing or spread over several lines, it changes
+nothing and says so: add the entry by hand with the server stopped, as in the section above.
+
 ## Backups off the machine
 
 `backups/` is on the same disk as the world, so a dead disk or a lost VPS takes both. So every hour the VPS

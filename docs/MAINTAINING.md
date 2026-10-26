@@ -101,13 +101,22 @@ folder, then snapshot the server as below; that re-makes the patch against the n
 
 All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files.
 
-Then boot it locally on spare ports (doesn't disturb a server already on 25565):
+Then boot it locally on spare ports (doesn't disturb a server already running on this machine):
 
 ```powershell
 python tools/build.py
 Expand-Archive dist\TheRealms-Server-*.zip $env:TEMP\realms-test -Force
-.\tests\smoke.ps1 -Root $env:TEMP\realms-test\TheRealms-Server -Port 25566 -RconPort 25576
+.\tests\smoke.ps1 -Root $env:TEMP\realms-test\TheRealms-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
 ```
+
+A server uses four ports: the game (`-Port`, TCP), RCON (`-RconPort`, TCP), Simple Voice Chat (`-VoicePort`,
+UDP, default 24454) and the BlueMap web map (`-MapPort`, TCP, default 8100). The smoke test writes the last
+two into the test copy's `config/voicechat/voicechat-server.properties` and `config/bluemap/webserver.conf`.
+Before it installs, and again before it starts, it stops with the port's name if one of the four is already in use
+on this machine. Voice chat and BlueMap shut the whole server down when they can't bind their port (seconds
+after "Done"), and on a taken RCON port the test would stop the other server. When another server or test boot
+is running, give each run its own four ports. Re-running in the same folder is fine: the test waits for this
+boot's "Done" line, not the one the last boot left in `server/logs/latest.log`.
 
 On macOS or Linux, unzip the same way and run `sh start.sh` in the folder: the first run exercises the
 PowerShell bootstrap too (uninstall or hide `pwsh` from the `PATH` to test the download).

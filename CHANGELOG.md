@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- Tests: `tests/smoke.ps1` checks its ports before it installs and again before it starts, and stops with
+  the port's name if the game, RCON or map TCP port or the voice chat UDP port is already in use. Until now, a
+  test server that already held UDP 24454 made the boot die a few seconds after "Done" (Simple Voice Chat stops
+  the server when it can't bind its port), and the test blamed RCON. If the server stops by itself after
+  "Done", the test now says so and shows the end of its console output.
+- Tests: new `-VoicePort` (default 24454) and `-MapPort` (default 8100) set the test copy's Simple Voice Chat
+  and BlueMap ports, so test boots can run side by side. Nothing in the release changes.
+- Fix: a smoke test re-run in the same folder no longer takes the previous boot's "Done" line for this one's:
+  it ignores `server/logs/latest.log` until the new server has written to it.
+
 ## [2.4.2] - 2026-10-25
 
 Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts

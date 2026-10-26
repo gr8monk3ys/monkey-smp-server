@@ -286,5 +286,6 @@ Minecraft update with `--pool <data reports folder>`.
 | Mac: `Start Server.command` "cannot be opened" / "could not be verified" | Right-click > Open, or System Settings > Privacy & Security > Open Anyway. Or run `sh start.sh` in Terminal, which always works. |
 | macOS/Linux: `permission denied` on a `.sh` file | The unzip tool dropped the permissions. Run it as `sh start.sh` (not `./start.sh`). |
 | Linux: `curl` / `wget` / `tar` not found | Install it (`sudo apt install curl`); the launchers need it to fetch PowerShell and Java. |
+| Players are kicked with `Connection Throttled.` | Hostname Catcher's allow-list isn't empty. Set `allowed-domains: []` in `server\config\hostname-catcher.yml` and restart (docs/PROMOTION.md, "Counting joins per address"). |
 
 Logs: `server\logs\latest.log`.

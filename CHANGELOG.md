@@ -35,6 +35,12 @@
 - docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
   addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
   clips from real event nights.
+- New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
+  each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
+  address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with
+  `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
+  Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
+  pinned by hand"). Players need nothing new: it isn't in the client pack.
 
 ## [2.4.1] - 2026-10-25
 

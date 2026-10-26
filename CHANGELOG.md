@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
+  on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
+  after a restart (docs/LIVE.md).
+- The live map no longer shows where players are: `config/bluemap/plugin.conf` ships with
+  `live-player-markers: false` (and `skin-download: false`, which only fed the markers), since the map is
+  public and raiding is allowed. An existing server keeps BlueMap's own file; docs/ADMIN.md "The live map"
+  says how to switch it off there.
+- Docs: pre-generation no longer widens the border. docs/ADMIN.md and docs/LIVE.md said to set it to
+  10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
+  centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
+  and generates out to the season's largest border plus the view distance.
 - Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
   to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
   also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,

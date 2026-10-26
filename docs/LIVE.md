@@ -27,33 +27,50 @@ One fast core matters more than anything else (docs/ADMIN.md, "How many players"
 desktop. Pick a VPS or dedicated server that names the CPU model, with 16 GB of RAM, NVMe and a US West or
 central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 
+Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in Dallas (2 dedicated threads,
+16 GB, 200 GB NVMe, $45 a month), Debian 12, set up with the steps below.
+
 ## Set up (once)
 
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
    `adduser --disabled-password realms`; `usermod -aG docker realms`; `mkdir -p /srv/realms && chown realms: /srv/realms`.
-2. **Firewall.** Open 25565/tcp (game) and 24454/udp (voice chat). Open 8100/tcp only if the live map
-   should be public. Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
+2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat) and 8100/tcp (the live map: public on the
+   live server and linked from the site; it shows the world, not where players are, see docs/ADMIN.md "The
+   live map"). Ports Docker publishes skip ufw's rules, so closing 8100 there would not hide the map: for a
+   private map set `MAP_PORT=127.0.0.1:8100` in `docker/.env` instead. Keep SSH key-only. RCON (25575) stays
+   unpublished (compose.yaml).
 3. **Clone with a read-only deploy key.** As `realms`: `ssh-keygen -t ed25519 -f ~/.ssh/realms_deploy -N ''`,
-   add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then
+   add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then trust GitHub's host
+   key as GitHub publishes it (fingerprint `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` in its docs)
+   rather than whatever key the network answers with, and clone:
    ```sh
    printf 'Host github.com\n  IdentityFile ~/.ssh/realms_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+   echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >> ~/.ssh/known_hosts
    git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/realms/repo
    ```
-4. **Settings.** `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
-   it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), `sudo chmod 600 /etc/realms-deploy.env`.
-5. **First deploy.** `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
+4. **Settings.** Back on your admin account (`realms` has no sudo): `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
+   it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), then
+   `sudo chown root:realms /etc/realms-deploy.env && sudo chmod 640 /etc/realms-deploy.env` (the deploy
+   service runs as `realms`, so it has to be able to read the file).
+5. **First deploy.** As `realms` (`sudo -iu realms`): `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
    `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
    there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10` and `TZ=America/Los_Angeles`.
    To keep an existing world, copy its `server` folder into `/srv/realms/TheRealms-Server/` now. Run the
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
-   anything else. In the console: `worldborder set 12000`, then `chunky radius 6000` and `chunky start`
-   (hours; it carries on after a restart). Do the Nether at a smaller radius the same way.
+   anything else. Leave the border alone: the `realms-rules` pack sets Season I's starting border (2500
+   wide, 312.5 in the Nether, centred on spawn) and the border acts in docs/SEASONS.md grow it by hand.
+   Generate out to the season's largest border (6000) plus the view distance. In the console:
+   `chunky worldborder` (centres Chunky on the border, not on 0,0), `chunky radius 3200` and `chunky start`
+   (hours). The Nether is 1/8 the size: `chunky world minecraft:the_nether`, `chunky worldborder`,
+   `chunky radius 500` and `chunky start`. It carries on after a restart because the default
+   `config/chunky/config.json` sets `continueOnRestart`; on a server set up before that, set it to `true`
+   in that file once and run `chunky continue`.
 7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
    `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
    The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC.
-8. **DNS** (Vercel, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
-   address, and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
+8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
+   address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
    port, while the same name serves the website. Voice chat finds the server by itself.
 9. **Off-site backups**: see "Set up the off-site copy" under "Backups off the machine" below.
@@ -216,7 +233,7 @@ When the VPS or its provider is down for longer than a restart:
    into `server\mods` this time (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
-3. In Vercel DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
+3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port.
    With TTL 60, players reconnect to the same name within minutes.
 4. When the VPS is back, stop the home server, copy its `server` folder back to the VPS, swap the SRV
    record back, and start the VPS.
@@ -226,10 +243,15 @@ Only one copy may run the world at a time: two live copies split the world into 
 ## Payments and Discord
 
 - **Tebex** sells the pass and the supporter tiers, collects sales tax as the merchant of record, and runs
-  commands on the server after a purchase: `whitelist add {username}` for the pass, and LuckPerms
-  `lp user {username} parent add <tier>` for supporter tiers (with the reverse on expiry). Its Fabric mod
-  goes into `server/mods` as an extra jar (the installer leaves jars it doesn't manage alone), or into the
-  manifest with `tools/add.py` once there is a build for this Minecraft version.
+  commands on the server after a purchase: `whitelist add {username}` for the pass (`whitelist remove` when
+  it ends), and the wardrobe scoreboard and team commands for supporter tiers (the full list, with the
+  reverse on expiry, is in docs/RETENTION.md). The monthly pass renews until the buyer cancels it from
+  Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Tebex's
+  Fabric mod (2.4.6) is built for 26.2 but loads on 26.3 (checked on the live server, October 2026). It sits
+  in `server/mods` as an extra jar, which deploys and the installer leave alone. Backups leave every jar
+  out, so after restoring one (or on the fallback below) download it again:
+  `https://cdn.modrinth.com/data/nRA0jiJt/versions/qg7SxggJ/tebex-fabric-26.2-2.4.6-0096441.jar`. Once
+  there is a 26.3 build it can go into the manifest with `tools/add.py`, and then it comes back by itself.
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.

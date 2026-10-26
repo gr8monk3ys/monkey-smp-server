@@ -24,34 +24,45 @@
   });
 
   // The season launch (LAUNCH_AT): site_links.py wrote it out in Pacific and Eastern; this adds the visitor's
-  // own time and how long is left, and once it has passed says the season is live.
+  // own time and counts down the days, hours and minutes left, and once it has passed says the season is live.
   var launch = cfg.LAUNCH_AT ? new Date(cfg.LAUNCH_AT) : null;
   var countdown = document.getElementById("countdown");
+  var counter = document.getElementById("counter");
   if (launch && !isNaN(launch) && countdown) {
     var launchLabel = document.getElementById("launch-label");
-    var yourTime = launch.toLocaleString(undefined, {
-      weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"
-    });
-    var plural = function (n, word) { return n + " " + word + (n === 1 ? "" : "s"); };
+    var cells = counter ? counter.querySelectorAll(".cell") : [];
+    var units = ["day", "hour", "minute"];
     var timer;
+    // A digit that changes drops into its block (the .drop animation in style.css).
+    var show = function (cell, n, unit) {
+      var digits = cell.querySelector("i"), text = (n < 10 ? "0" : "") + n;
+      cell.querySelector(".unit").textContent = unit + (n === 1 ? "" : "s");
+      if (digits.textContent === text) return;
+      digits.textContent = text;
+      digits.classList.remove("drop");
+      void digits.offsetWidth;
+      digits.classList.add("drop");
+    };
     var tick = function () {
       var left = launch - Date.now();
       if (left <= 0) {
         if (launchLabel) launchLabel.textContent = "Season I is live";
+        if (counter) counter.hidden = true;
         countdown.textContent = "The server is open: copy the address below and join.";
         clearInterval(timer);
         return;
       }
       var minutes = Math.ceil(left / 60000);
-      var days = Math.floor(minutes / 1440), hours = Math.floor((minutes % 1440) / 60), mins = minutes % 60;
-      // The two largest units, leaving out a zero ("3 days", not "3 days, 0 hours").
-      var parts = (days ? [[days, "day"], [hours, "hour"]] : [[hours, "hour"], [mins, "minute"]])
-        .filter(function (p, i) { return p[0] || (i === 1 && !days && !hours); })
-        .map(function (p) { return plural(p[0], p[1]); });
-      countdown.textContent = "Starts in " + parts.join(", ") + ". Your time: " + yourTime + ".";
+      [Math.floor(minutes / 1440), Math.floor((minutes % 1440) / 60), minutes % 60].forEach(function (n, i) {
+        if (cells[i]) show(cells[i], n, units[i]);
+      });
     };
+    countdown.textContent = "Your time: " + launch.toLocaleString(undefined, {
+      weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"
+    }) + ".";
     countdown.hidden = false;
-    timer = setInterval(tick, 30000);
+    if (counter) counter.hidden = false;
+    timer = setInterval(tick, 15000);
     tick();
   }
 
@@ -76,13 +87,26 @@
     }, { threshold: 0.5 }).observe(trailer);
   }
 
+  // Copy puts the address on the clipboard; where the browser won't allow that, it selects the address so
+  // the visitor can copy it themselves.
   var copy = document.getElementById("copy");
-  if (copy) copy.addEventListener("click", function () {
-    var text = address.textContent;
-    var done = function () {
-      copy.textContent = "Copied";
+  if (copy && address) copy.addEventListener("click", function () {
+    var say = function (word) {
+      copy.textContent = word;
       setTimeout(function () { copy.textContent = "Copy"; }, 1600);
     };
-    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+    var select = function () {
+      var range = document.createRange();
+      range.selectNodeContents(address);
+      var selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      say("Selected");
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(address.textContent).then(function () { say("Copied"); }, select);
+    } else {
+      select();
+    }
   });
 })();

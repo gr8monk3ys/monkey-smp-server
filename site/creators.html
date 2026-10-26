@@ -10,21 +10,19 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://monkeysmp.lscaturchio.xyz/creators.html">
   <meta property="og:image" content="https://monkeysmp.lscaturchio.xyz/img/og.jpg">
-  <meta name="theme-color" content="#f9f8f5" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111317" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#1f6142">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="img/icon-256.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600..720&family=Instrument+Sans:wght@400..600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preload" href="fonts/pixelify-sans-monkey-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/atkinson-next-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script src="config.js"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <header class="top">
-    <a class="brand" href="./"><img src="favicon.svg" alt="" width="32" height="32">Monkey SMP</a>
+  <header class="canopy">
+    <a class="brand" href="./"><img src="kit/logo-1392w.png" alt="Monkey SMP" width="261" height="48"></a>
     <nav aria-label="Pages">
       <a href="./">The server</a>
       <a href="./#pricing">Pricing</a>
@@ -42,9 +40,9 @@
         here than a big one who visits once.</p>
     </section>
 
-    <section id="terms" class="band">
+    <section id="terms">
       <h2>The terms</h2>
-      <ol class="rules">
+      <ol class="rules terms">
         <li>
           <h3>What you earn</h3>
           <p>20% of every 3-month pass bought with your code: $2.80 of the $14. Tebex, our store, pays it into
@@ -102,7 +100,7 @@
     </section>
   </main>
 
-  <footer>
+  <footer class="crown">
     <p><a href="./">Monkey SMP</a> &middot; <a data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Discord</a> &middot; <a href="./#rules">Rules</a> &middot; <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">Live map</a></p>
     <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
   </footer>

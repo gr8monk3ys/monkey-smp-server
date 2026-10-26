@@ -1,0 +1,531 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T20:12:34Z",
+  "title": "Design System: Monkey SMP",
+  "extensions": {
+    "colorMeta": {
+      "shade": {
+        "role": "neutral",
+        "displayName": "Shade",
+        "canonical": "#0e3122",
+        "tonalRamp": [
+          "#0e3122",
+          "#133f2b",
+          "#184e35",
+          "#1f6142",
+          "#2b7a4b"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "#133f2b",
+        "tonalRamp": [
+          "#0e3122",
+          "#133f2b",
+          "#184e35",
+          "#1f6142",
+          "#2b7a4b"
+        ]
+      },
+      "leaf": {
+        "role": "neutral",
+        "displayName": "Leaf",
+        "canonical": "#184e35",
+        "tonalRamp": [
+          "#0e3122",
+          "#133f2b",
+          "#184e35",
+          "#1f6142",
+          "#2b7a4b"
+        ]
+      },
+      "leaf-2": {
+        "role": "neutral",
+        "displayName": "Canopy Leaf",
+        "canonical": "#1f6142",
+        "tonalRamp": [
+          "#0e3122",
+          "#133f2b",
+          "#184e35",
+          "#1f6142",
+          "#2b7a4b"
+        ]
+      },
+      "leaf-3": {
+        "role": "neutral",
+        "displayName": "Light Leaf",
+        "canonical": "#2b7a4b",
+        "tonalRamp": [
+          "#0e3122",
+          "#133f2b",
+          "#184e35",
+          "#1f6142",
+          "#2b7a4b"
+        ]
+      },
+      "bone": {
+        "role": "neutral",
+        "displayName": "Bone",
+        "canonical": "#f9f8f5",
+        "tonalRamp": [
+          "oklch(15% 0.004 91)",
+          "oklch(26% 0.004 91)",
+          "oklch(37% 0.004 91)",
+          "oklch(48% 0.004 91)",
+          "oklch(59% 0.004 91)",
+          "oklch(70% 0.004 91)",
+          "oklch(82% 0.004 91)",
+          "oklch(95% 0.004 91)"
+        ]
+      },
+      "bone-2": {
+        "role": "neutral",
+        "displayName": "Warm Bone",
+        "canonical": "#e2dcce",
+        "tonalRamp": [
+          "oklch(15% 0.020 88)",
+          "oklch(26% 0.020 88)",
+          "oklch(37% 0.020 88)",
+          "oklch(48% 0.020 88)",
+          "oklch(59% 0.020 88)",
+          "oklch(70% 0.020 88)",
+          "oklch(82% 0.020 88)",
+          "oklch(95% 0.020 88)"
+        ]
+      },
+      "sage": {
+        "role": "neutral",
+        "displayName": "Sage",
+        "canonical": "#b3dcbf",
+        "tonalRamp": [
+          "oklch(15% 0.059 154)",
+          "oklch(26% 0.059 154)",
+          "oklch(37% 0.059 154)",
+          "oklch(48% 0.059 154)",
+          "oklch(59% 0.059 154)",
+          "oklch(70% 0.059 154)",
+          "oklch(82% 0.059 154)",
+          "oklch(95% 0.059 154)"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Wordmark Gold",
+        "canonical": "#e8b23a",
+        "tonalRamp": [
+          "oklch(15% 0.144 83)",
+          "oklch(26% 0.144 83)",
+          "oklch(37% 0.144 83)",
+          "oklch(48% 0.144 83)",
+          "oklch(59% 0.144 83)",
+          "oklch(70% 0.144 83)",
+          "oklch(82% 0.144 83)",
+          "oklch(95% 0.144 83)"
+        ]
+      },
+      "gold-hi": {
+        "role": "primary",
+        "displayName": "Lit Gold",
+        "canonical": "#f3cb6b",
+        "tonalRamp": [
+          "oklch(15% 0.123 87)",
+          "oklch(26% 0.123 87)",
+          "oklch(37% 0.123 87)",
+          "oklch(48% 0.123 87)",
+          "oklch(59% 0.123 87)",
+          "oklch(70% 0.123 87)",
+          "oklch(82% 0.123 87)",
+          "oklch(95% 0.123 87)"
+        ]
+      },
+      "gold-bevel": {
+        "role": "primary",
+        "displayName": "Gold Bevel",
+        "canonical": "#c98f1f",
+        "tonalRamp": [
+          "oklch(15% 0.136 78)",
+          "oklch(26% 0.136 78)",
+          "oklch(37% 0.136 78)",
+          "oklch(48% 0.136 78)",
+          "oklch(59% 0.136 78)",
+          "oklch(70% 0.136 78)",
+          "oklch(82% 0.136 78)",
+          "oklch(95% 0.136 78)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1a1f23",
+        "tonalRamp": [
+          "oklch(15% 0.011 242)",
+          "oklch(26% 0.011 242)",
+          "oklch(37% 0.011 242)",
+          "oklch(48% 0.011 242)",
+          "oklch(59% 0.011 242)",
+          "oklch(70% 0.011 242)",
+          "oklch(82% 0.011 242)",
+          "oklch(95% 0.011 242)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#2e3530",
+        "tonalRamp": [
+          "oklch(15% 0.013 155)",
+          "oklch(26% 0.013 155)",
+          "oklch(37% 0.013 155)",
+          "oklch(48% 0.013 155)",
+          "oklch(59% 0.013 155)",
+          "oklch(70% 0.013 155)",
+          "oklch(82% 0.013 155)",
+          "oklch(95% 0.013 155)"
+        ]
+      },
+      "stone": {
+        "role": "secondary",
+        "displayName": "Cobble Stone",
+        "canonical": "#b6bcad",
+        "tonalRamp": [
+          "oklch(15% 0.022 125)",
+          "oklch(26% 0.022 125)",
+          "oklch(37% 0.022 125)",
+          "oklch(48% 0.022 125)",
+          "oklch(59% 0.022 125)",
+          "oklch(70% 0.022 125)",
+          "oklch(82% 0.022 125)",
+          "oklch(95% 0.022 125)"
+        ]
+      },
+      "stone-hi": {
+        "role": "secondary",
+        "displayName": "Stone Light",
+        "canonical": "#c9cec1",
+        "tonalRamp": [
+          "oklch(15% 0.019 124)",
+          "oklch(26% 0.019 124)",
+          "oklch(37% 0.019 124)",
+          "oklch(48% 0.019 124)",
+          "oklch(59% 0.019 124)",
+          "oklch(70% 0.019 124)",
+          "oklch(82% 0.019 124)",
+          "oklch(95% 0.019 124)"
+        ]
+      },
+      "stone-bevel": {
+        "role": "secondary",
+        "displayName": "Stone Bevel",
+        "canonical": "#959b8e",
+        "tonalRamp": [
+          "oklch(15% 0.020 127)",
+          "oklch(26% 0.020 127)",
+          "oklch(37% 0.020 127)",
+          "oklch(48% 0.020 127)",
+          "oklch(59% 0.020 127)",
+          "oklch(70% 0.020 127)",
+          "oklch(82% 0.020 127)",
+          "oklch(95% 0.020 127)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The h1 hook on each page."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section h2s."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h3s for features, steps, rules and terms; 1.5rem in the changelog, 1.6rem in pricing panels and the launch label."
+      },
+      "numeral-price": {
+        "displayName": "Price",
+        "purpose": "The pass price."
+      },
+      "numeral-counter": {
+        "displayName": "Countdown digits",
+        "purpose": "Countdown blocks; 2.25rem under 760px. Step numbers use the same face at 2.5rem."
+      },
+      "numeral-figure": {
+        "displayName": "Feature figure",
+        "purpose": "The hard number run in above a feature heading."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The paragraph under the hook; 1.125rem on phones."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text, max 32em."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Sage captions and small print."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Where tags on screenshots, the optional tag; changelog date tags at 0.875rem."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Text on gold and ghost buttons."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "The server address (1.25rem, 600 on the plaque), commands and inline code."
+      }
+    },
+    "shadows": [],
+    "frames": [
+      {
+        "name": "frame-gold",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f3cb6b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\")",
+        "purpose": "Buttons and the skip link: ink outline, gold fill, light top row, dark bevel."
+      },
+      {
+        "name": "frame-gold-hover",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23f0bf52' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f8d98a' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\")",
+        "purpose": "Gold frame on hover."
+      },
+      {
+        "name": "frame-gold-down",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c98f1f' d='M4 10h6v2H4z'/%3E%3C/svg%3E\")",
+        "purpose": "Gold frame while pressed: one-row bevel."
+      },
+      {
+        "name": "frame-bone",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E\")",
+        "purpose": "Ghost button outline."
+      },
+      {
+        "name": "frame-bone-hover",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\")",
+        "purpose": "Ghost button on hover, filled with canopy leaf."
+      },
+      {
+        "name": "frame-stone",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23b6bcad' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c9cec1' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23959b8e' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\")",
+        "purpose": "Reference surfaces: address plaque, rule and term tablets, changelog date tags."
+      },
+      {
+        "name": "frame-leaf",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%232b7a4b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23184e35' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\")",
+        "purpose": "The Server Pass panel."
+      },
+      {
+        "name": "frame-shade",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%230e3122' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\")",
+        "purpose": "Countdown digit blocks and step numbers."
+      },
+      {
+        "name": "frame-ink",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231a1f23' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\")",
+        "purpose": "Where tags, the optional tag, the logo plate in the press kit."
+      },
+      {
+        "name": "frame-line",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E\")",
+        "purpose": "Outline only, light leaf: the optional Supporter panel."
+      },
+      {
+        "name": "moss",
+        "value": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M0 0h32v2H0zM0 2h6v2H0zM10 2h4v2h-4zM18 2h8v2h-8zM2 4h2v2H2zM20 4h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M6 2h2v2H6zM28 2h2v2h-2zM12 4h2v4h-2zM22 4h2v4h-2zM2 6h2v2H2z'/%3E%3C/svg%3E\")",
+        "purpose": "32 x 8 strip along the top of stone tablets."
+      },
+      {
+        "name": "stair",
+        "value": "polygon(0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 2px, calc(100% - 2px) 2px, calc(100% - 2px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 2px), 2px calc(100% - 2px), 2px calc(100% - 4px), 0 calc(100% - 4px))",
+        "purpose": "Two-step corner clip for picture frames."
+      },
+      {
+        "name": "stair-in",
+        "value": "polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px))",
+        "purpose": "Two-step corner clip for the picture inside its 2px outline."
+      }
+    ],
+    "motion": [
+      {
+        "name": "digit-drop",
+        "value": "320ms steps(4, end) backwards; translateY(-100%) to 0; delays 0 / 80ms / 160ms per cell",
+        "purpose": "A changed countdown digit drops into its block. Off under prefers-reduced-motion."
+      },
+      {
+        "name": "press",
+        "value": "transform: translateY(2px), no transition",
+        "purpose": "Buttons on :active. Off under prefers-reduced-motion."
+      },
+      {
+        "name": "scroll",
+        "value": "scroll-behavior: auto; scroll-padding-top: 24px",
+        "purpose": "No smooth scrolling; anchors land 24px below the top."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "960px"
+      },
+      {
+        "name": "phone",
+        "value": "760px"
+      },
+      {
+        "name": "narrow",
+        "value": "380px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Gold block for the one thing to press: Get a pass, Copy, the skip link. Presses down 2 px onto a shorter bevel.",
+      "html": "<a class=\"ds-btn\" href=\"#\">Get a pass</a>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 18px; font: 700 1.0625rem/1.1 'Atkinson Hyperlegible Next', sans-serif; color: #1a1f23; text-decoration: none; background: #e8b23a padding-box; cursor: pointer; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f3cb6b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-btn:hover { border-image-source: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23f0bf52' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f8d98a' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\"); } .ds-btn:active { border-image-source: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c98f1f' d='M4 10h6v2H4z'/%3E%3C/svg%3E\"); transform: translateY(2px); } .ds-btn:focus-visible { outline: 2px solid #f9f8f5; outline-offset: 3px; } @media (prefers-reduced-motion: reduce) { .ds-btn:active { transform: none; } }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Bone outline for the secondary action beside a gold button, or the Supporter tier's action.",
+      "html": "<a class=\"ds-btn-ghost\" href=\"#\">Join the Discord</a>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 18px; font: 700 1.0625rem/1.1 'Atkinson Hyperlegible Next', sans-serif; color: #f9f8f5; text-decoration: none; background: none; cursor: pointer; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-btn-ghost:hover { border-image-source: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\"); } .ds-btn-ghost:active { transform: translateY(2px); } .ds-btn-ghost:focus-visible { outline: 2px solid #f9f8f5; outline-offset: 3px; } @media (prefers-reduced-motion: reduce) { .ds-btn-ghost:active { transform: none; } }"
+    },
+    {
+      "name": "Address Plaque",
+      "kind": "custom",
+      "refersTo": "address-plaque",
+      "description": "Stone reference block: the server address in mono with the gold Copy button.",
+      "html": "<div class=\"ds-plaque\"><span>Server address</span><code>monkeysmp.lscaturchio.xyz</code><button type=\"button\">Copy</button></div>",
+      "css": ".ds-plaque { display: inline-grid; grid-template-columns: minmax(0, auto) auto; align-items: center; gap: 0 18px; max-width: 100%; padding: 6px 4px 8px 12px; color: #1a1f23; background: #b6bcad padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23b6bcad' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c9cec1' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23959b8e' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-plaque > span { font: 700 0.875rem 'Atkinson Hyperlegible Next', sans-serif; color: #2e3530; } .ds-plaque code { grid-column: 1; font: 600 1.25rem/1.3 'Atkinson Hyperlegible Mono', monospace; overflow-wrap: anywhere; } .ds-plaque button { grid-column: 2; grid-row: 1 / span 2; min-height: 48px; min-width: 96px; padding: 0 18px; font: 700 1.0625rem/1.1 'Atkinson Hyperlegible Next', sans-serif; color: #1a1f23; background: #e8b23a padding-box; cursor: pointer; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f3cb6b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-plaque button:hover { border-image-source: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23f0bf52' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f8d98a' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\"); } .ds-plaque button:active { border-image-source: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c98f1f' d='M4 10h6v2H4z'/%3E%3C/svg%3E\"); transform: translateY(2px); } .ds-plaque button:focus-visible { outline: 2px solid #1a1f23; outline-offset: 3px; }"
+    },
+    {
+      "name": "Countdown",
+      "kind": "custom",
+      "refersTo": "counter-block",
+      "description": "Gold digits in shade blocks; a changed digit drops in over four steps.",
+      "html": "<p class=\"ds-counter\"><span class=\"ds-cell\"><b><i class=\"ds-drop\">26</i></b><span>days</span></span><span class=\"ds-cell\"><b><i>04</i></b><span>hours</span></span><span class=\"ds-cell\"><b><i>52</i></b><span>minutes</span></span></p>",
+      "css": ".ds-counter { display: flex; flex-wrap: wrap; gap: 12px 14px; margin: 0; } .ds-cell { display: grid; justify-items: center; gap: 6px; } .ds-cell b { display: block; overflow: hidden; min-width: 84px; padding: 4px 8px 2px; font: 700 2.75rem/1 'Pixelify Sans Monkey', sans-serif; color: #e8b23a; text-align: center; font-variant-numeric: tabular-nums; background: #0e3122 padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%230e3122' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-cell i { display: block; font-style: normal; } .ds-cell > span { font: 700 0.9rem 'Atkinson Hyperlegible Next', sans-serif; color: #b3dcbf; } .ds-drop { animation: ds-drop 320ms steps(4, end) backwards; } @keyframes ds-drop { from { transform: translateY(-100%); } } @media (prefers-reduced-motion: reduce) { .ds-drop { animation: none; } }"
+    },
+    {
+      "name": "Rule Tablet",
+      "kind": "card",
+      "refersTo": "rule-tablet",
+      "description": "Stone tablet with a moss strip along the top, for rules and terms.",
+      "html": "<div class=\"ds-tablet\"><h3>Spawn is sacred</h3><p>Nobody tampers with spawn or the admin building, and no TNT traps there.</p></div>",
+      "css": ".ds-tablet { position: relative; max-width: 22rem; padding: 18px 20px 22px; color: #1a1f23; font: 400 1.0625rem/1.6 'Atkinson Hyperlegible Next', sans-serif; background: #b6bcad padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23b6bcad' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c9cec1' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23959b8e' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-tablet::before { content: ''; position: absolute; top: -4px; left: -2px; right: -2px; height: 8px; background: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M0 0h32v2H0zM0 2h6v2H0zM10 2h4v2h-4zM18 2h8v2h-8zM2 4h2v2H2zM20 4h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M6 2h2v2H6zM28 2h2v2h-2zM12 4h2v4h-2zM22 4h2v4h-2zM2 6h2v2H2z'/%3E%3C/svg%3E\") 0 0 / 32px 8px repeat-x; } .ds-tablet h3 { margin: 0 0 0.5em; font: 700 1.3rem/1.2 'Pixelify Sans Monkey', sans-serif; color: #1a1f23; } .ds-tablet p { margin: 0; }"
+    },
+    {
+      "name": "Pass Panel",
+      "kind": "card",
+      "refersTo": "panel-pass",
+      "description": "The one solid pricing block, in canopy leaf.",
+      "html": "<div class=\"ds-panel\"><h3>Server Pass</h3><p class=\"ds-price\">$5 <span>/ month</span></p><p>Full access to the server and every mod.</p></div>",
+      "css": ".ds-panel { max-width: 26rem; padding: 22px 26px 28px; color: #e2dcce; font: 400 1.0625rem/1.6 'Atkinson Hyperlegible Next', sans-serif; background: #1f6142 padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%232b7a4b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23184e35' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E\") 6 fill / 6px; } .ds-panel h3 { margin: 0 0 0.5em; font: 700 1.6rem/1.2 'Pixelify Sans Monkey', sans-serif; color: #f9f8f5; } .ds-price { margin: 8px 0 4px; font: 700 clamp(3.5rem, 7vw, 5rem)/1 'Pixelify Sans Monkey', sans-serif; color: #f9f8f5; } .ds-price span { font: 700 1.125rem 'Atkinson Hyperlegible Next', sans-serif; color: #b3dcbf; } .ds-panel p:last-child { margin: 0; }"
+    },
+    {
+      "name": "Supporter Panel",
+      "kind": "card",
+      "refersTo": "panel-supporter",
+      "description": "Optional tiers drawn as an outline only, beside the solid pass panel.",
+      "html": "<div class=\"ds-panel-line\"><h3>Supporter <span class=\"ds-tag\">optional</span></h3><p>Cosmetic only: nothing that helps you fight, build faster or earn more.</p></div>",
+      "css": ".ds-panel-line { max-width: 26rem; padding: 22px 26px 28px; color: #e2dcce; font: 400 1.0625rem/1.6 'Atkinson Hyperlegible Next', sans-serif; background: none; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E\") 6 / 6px; } .ds-panel-line h3 { margin: 0 0 0.5em; font: 700 1.6rem/1.2 'Pixelify Sans Monkey', sans-serif; color: #f9f8f5; } .ds-panel-line p { margin: 0; } .ds-tag { display: inline-block; margin-left: 8px; vertical-align: middle; padding: 0 6px; font: 700 0.8125rem/1.5 'Atkinson Hyperlegible Next', sans-serif; color: #f9f8f5; background: #1a1f23 padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231a1f23' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\") 6 fill / 6px; }"
+    },
+    {
+      "name": "Screenshot",
+      "kind": "custom",
+      "refersTo": "where-tag",
+      "description": "A picture in a 2 px ink outline clipped to the two-step stair, tagged with where it was taken.",
+      "html": "<div class=\"ds-shot\"><span class=\"ds-where\">The Nether</span><div class=\"ds-img\"></div></div>",
+      "css": ".ds-shot { position: relative; width: 22rem; padding: 2px; background: #1a1f23; clip-path: polygon(0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 2px, calc(100% - 2px) 2px, calc(100% - 2px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 2px), 2px calc(100% - 2px), 2px calc(100% - 4px), 0 calc(100% - 4px)); } .ds-img { aspect-ratio: 16 / 9; background: #0e3122; clip-path: polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px)); } .ds-where { position: absolute; z-index: 1; top: 12px; left: 12px; padding: 0 6px; font: 700 0.8125rem/1.5 'Atkinson Hyperlegible Next', sans-serif; color: #f9f8f5; background: #1a1f23 padding-box; border: 6px solid transparent; border-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231a1f23' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E\") 6 fill / 6px; }"
+    },
+    {
+      "name": "Canopy Navigation",
+      "kind": "nav",
+      "description": "Canopy-leaf header band with bone links; the leaf fringe image (img/canopy.svg) hangs from its lower edge.",
+      "html": "<nav class=\"ds-nav\"><strong>MONKEY SMP</strong><span><a href=\"#\">The world</a><a href=\"#\">Pricing</a><a href=\"#\">Rules</a></span></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 32px; padding: 14px 24px 10px; background: #1f6142; border-bottom: 8px solid #184e35; } .ds-nav strong { font: 700 1.5rem/1 'Pixelify Sans Monkey', sans-serif; color: #f9f8f5; } .ds-nav span { display: flex; gap: 2px; } .ds-nav a { padding: 10px; color: #f9f8f5; font: 700 1.0625rem 'Atkinson Hyperlegible Next', sans-serif; text-decoration: none; } .ds-nav a:hover { text-decoration: underline; text-underline-offset: 6px; } .ds-nav a:focus-visible { outline: 2px solid #f9f8f5; outline-offset: 3px; }"
+    },
+    {
+      "name": "FAQ Row",
+      "kind": "custom",
+      "description": "A details row under a 2 px leaf line with a drawn pixel plus in gold.",
+      "html": "<details class=\"ds-faq\"><summary>Refunds?</summary><p>If you can't get the pack to run in your first 48 hours, you get your money back.</p></details>",
+      "css": ".ds-faq { max-width: 32em; border-top: 2px solid #1f6142; color: #e2dcce; font: 400 1.0625rem/1.6 'Atkinson Hyperlegible Next', sans-serif; } .ds-faq summary { display: flex; justify-content: space-between; gap: 16px; padding: 18px 0; cursor: pointer; list-style: none; font: 700 1.125rem/1.35 'Atkinson Hyperlegible Next', sans-serif; color: #f9f8f5; } .ds-faq summary::-webkit-details-marker { display: none; } .ds-faq summary::after { content: ''; flex: none; width: 12px; height: 12px; margin-top: 6px; background: #e8b23a; -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M4 0h2v10H4zM0 4h10v2H0z'/%3E%3C/svg%3E\") center / 12px 12px no-repeat; mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M4 0h2v10H4zM0 4h10v2H0z'/%3E%3C/svg%3E\") center / 12px 12px no-repeat; } .ds-faq[open] summary::after { -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M0 4h10v2H0z'/%3E%3C/svg%3E\"); mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M0 4h10v2H0z'/%3E%3C/svg%3E\"); } .ds-faq summary:hover { color: #f3cb6b; } .ds-faq summary:focus-visible { outline: 2px solid #f9f8f5; outline-offset: 3px; } .ds-faq p { margin: -4px 0 20px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Canopy",
+    "overview": "The site sits under a pixel jungle canopy. The page is deep leaf green in stepped shades, a band of leaves hangs from the header, and the pixel monkey from the logo peers out of it on the front page. Everything else is drawn the way Minecraft and the logo draw things: blocks of flat colour with an outline, corners cut in two steps, motion that jumps in steps instead of easing. The server's hard numbers (the countdown, the prices, \"Up to 4\", \"y 500\", \"20 TPS\", the step numbers) are set large in the pixel display face and carry the structure of the page.\n\nThe colour code is strict and is the main way the page explains itself: leaf green is ground, bone is text, gold is action, stone is reference. A gold block is something to press. A stone block is something to read and keep (the server address, the rules, a changelog date). Density is moderate: generous section spacing (112 px), one idea per section, and body text held to a measure of about 70 characters.\n\nThe same world serves three pages. The front page (persuade) uses all of it: canopy, monkey, countdown, gallery, pricing band, rule tablets. The changelog (read) uses only the canopy, stone date tags and plain rows. The creator terms page reuses the rule tablets for its terms. Depth comes from frames, bevels and tonal steps of green, never from shadow.",
+    "keyCharacteristics": [
+      "Stepped green ground: five greens from shade to leaf-3, used as layers, never blended.",
+      "Pixel frames on every object: 14 × 14 SVG `border-image` frames sliced at 6 px, two-step corners, filled at the padding box.",
+      "Gold fill only on things you press; stone only on reference material.",
+      "Numbers as structure, set in the pixel display face.",
+      "Stepped motion only, and none under reduced motion.",
+      "No shadows, glows, blurs, gradients, rounded corners or pills."
+    ],
+    "rules": [
+      {
+        "name": "The Colour Code Rule",
+        "body": "Leaf is ground, bone is text, gold is action, stone is reference. A new element takes its colour from its job, not from what would look good.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gold Block Rule",
+        "body": "A gold-filled block is always pressable (buttons, the Copy button, the skip link). Gold may also mark numbers and links as text, but nothing that cannot be pressed gets a gold fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Solid Price Rule",
+        "body": "In pricing, the Server Pass is the one solid, filled panel. Optional tiers are drawn as an outline only (the line frame in light leaf), so they read as extras.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers Lead Rule",
+        "body": "Where a feature has a hard number, the number goes first, in the display face, as a run-in above its heading. Features without a number simply start with the heading; never invent a number to fill the slot.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Weight Rule",
+        "body": "The display face is only ever set at 700. No uppercase transforms and no added letter-spacing anywhere; the pixel face carries its own character.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Shadow Rule",
+        "body": "Nothing casts a shadow, glows or blurs: no `box-shadow`, no `text-shadow`, no `filter: blur`, no backdrop blur. A raised object is a framed block with a bevel; a pressed one moves down 2 px onto a shorter bevel.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Stepped Not Smooth Rule",
+        "body": "Colour changes in steps, never as a gradient: on surfaces, on text and in the art. The canopy, the moss and the frames are drawn pixel by pixel with crisp edges.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do frame every new object with one of the existing pixel frames at 6 px (`border-image: <frame> 6 fill / 6px` on a 6 px transparent border, background clipped to the padding box).",
+      "Do pick colour by job: gold fill for something pressable, stone for reference, leaf for ground, bone for text.",
+      "Do set hard numbers in the display face and let them lead their item.",
+      "Do tag every screenshot with where it was taken, and clip it to the stair shape inside a 2 px ink outline.",
+      "Do use `steps()` timing for any motion, and turn it off under `prefers-reduced-motion`.",
+      "Do keep body text at 32em or narrower, in Atkinson Hyperlegible Next.",
+      "Do render pixel art with `image-rendering: pixelated` at whole-number scales."
+    ],
+    "donts": [
+      "Don't add shadows of any kind, glows, blurs or backdrop blur.",
+      "Don't use gradients, on surfaces or on text.",
+      "Don't round corners or use pill shapes.",
+      "Don't give a gold fill to anything that isn't an action, or use the ghost button for the main action of a section.",
+      "Don't draw a second solid pricing block; optional tiers stay an outline.",
+      "Don't ease or glide: no smooth scrolling, no transitions on buttons, no fades.",
+      "Don't set the display face at any weight but 700, transform it to uppercase or add letter-spacing.",
+      "Don't put the moss strip or the canopy fringe on everything: moss tops stone tablets only; the fringe hangs from the header and from crowned sections only (pricing and the footer)."
+    ]
+  }
+}

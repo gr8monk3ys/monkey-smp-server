@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-X-ray protection and moderation tools. Server only: players need nothing new.
+X-ray protection and moderation tools, more wardrobe skins and the season-end tools. Players update the
+client pack for the new skins' textures; everything else is server only.
 
 - New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
   players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
@@ -52,6 +53,31 @@ X-ray protection and moderation tools. Server only: players need nothing new.
 - Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
   release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
   without Actions") lists the steps.
+- New wardrobe skins: the Oathblades I, II and III at 1, 2 and 3 months of pass (the tenure ladder used to
+  start at 6), Rallier at 3 events attended and the Plumed Helm at 10, and three holiday skins earned only
+  by being at that holiday's event, never sold: Gravelight (Hallowtide), Midwinter Cap (Midwinter) and
+  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too. Players
+  update the client pack for the new textures.
+- The wardrobe menu has two pages (earned in game; pass and supporter), so it fits in open chat, and a player
+  gets an "Unlocked ..." line in chat when the store, staff or an event raises their months, events or a
+  holiday score (at their next login if they were offline).
+- New: `tools/season.py`. `download` zips a season's final world for singleplayer and leaves out the Ledger
+  database, mod server config and session files. `carry` writes a one-shot data pack into the next season's
+  world that puts back every wardrobe score, hours played (as `rw.playbase`) and the supporter, title and
+  champion teams.
+- New: `function realms:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
+  with PvP off and peaceful difficulty, and holds across restarts.
+- New: `tools/funnel.py` matches a Tebex payments export to the server logs: purchase, first join, 30 minutes
+  played, D7 and renewal, with the month-2 renewal rate as the headline and a list of buyers who never
+  joined. Payment exports are ignored by git (`*.csv`); the test fixture is made up.
+- Fix: `tools/retention.py` reads 26.3's join lines (`System chat: NAME joined the game`), so it no longer
+  reports zero players, and reads rotated logs in order (`-10` after `-9`).
+- New: `site/changes.html`, the player changelog ("What changed"), seeded with the player-facing changes
+  since 2.0.0.
+- Docs: `docs/SEASONS.md` gains the holidays, Base of the Month, the season champion (a held faction name
+  and a roster title), faction charters at sign-up, and the season-end runbook. `docs/RETENTION.md` gains
+  the pass funnel and DMs to passes that show Ending in Tebex; `docs/ADMIN.md` the season and holiday
+  commands and how to tell players what changed.
 - Tests: `tests/smoke.ps1` checks its ports before it installs and again before it starts. If the game, RCON or
   map TCP port or the voice chat UDP port is already in use, it stops and names the port and what holds it (the
   process and PID, on Windows). Until now, a test server that already held UDP 24454 made the boot die a few

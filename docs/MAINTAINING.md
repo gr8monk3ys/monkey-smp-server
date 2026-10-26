@@ -298,7 +298,9 @@ players") came from this harness on an i7-8700K.
 
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
-2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
+2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
+   pack, the wardrobe, events), date its entry at the top of `site/changes.html` too, in players' words
+   (`docs/ADMIN.md`, "Telling players what changed").
 3. Put the new player files on the site, since the GitHub releases are private and players download the pack
    from there: `python tools/build.py`, replace the files in `site/pack/` with `dist/TheRealms-Client-X.Y.Z.mrpack`
    and `dist/TheRealms-Player-X.Y.Z.zip`, point `MODPACK_URL` and `INSTALLER_URL` in `site/config.js` at them

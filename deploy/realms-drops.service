@@ -1,0 +1,11 @@
+# Offers the weeknight supply drop its spots (deploy/realms-drops.sh, tools/drops.py). Started every 10 minutes
+# by realms-drops.timer; install with `sudo sh /srv/realms/repo/deploy/realms-drops.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: weeknight supply drops
+After=docker.service
+
+[Service]
+Type=oneshot
+User=realms
+Group=realms
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-drops.sh

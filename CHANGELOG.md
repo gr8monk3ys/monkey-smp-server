@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-10-25
+
+Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts
+unzip over 2.4.1; players need nothing new. Default config changes reach only new servers; the entries
+below say what to change on an existing one.
+
 - Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).

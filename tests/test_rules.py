@@ -1,4 +1,5 @@
 import json
+import tomllib
 
 import rules
 from repo import REPO
@@ -78,3 +79,10 @@ def test_only_netherite_armor_recipes_are_removed():
 def test_party_limit_default_is_four():
     text = (REPO.defaults / "config" / "openpartiesandclaims-server.toml").read_text(encoding="utf-8")
     assert "maxPartyMembers = 4" in text
+
+
+def test_distant_horizons_sends_no_lods_it_built_itself():
+    # B15: server-built LODs come from the real world, so they would carry every buried ore past AntiXray.
+    config = tomllib.loads((REPO.defaults / "config" / "DistantHorizons.toml").read_text(encoding="utf-8"))
+    assert config["server"] == {"synchronizeOnLoad": False, "enableRealTimeUpdates": False}
+    assert config["common"]["worldGenerator"]["generatorPlan"] == "DISABLED"

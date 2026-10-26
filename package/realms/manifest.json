@@ -90,6 +90,18 @@
       }
     },
     {
+      "slug": "anti-xray",
+      "project_id": "sml2FMaA",
+      "version": "fabric-1.4.17+26.3",
+      "version_id": "AU5FnTTj",
+      "file": "antixray-fabric-1.4.17+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/sml2FMaA/versions/AU5FnTTj/antixray-fabric-1.4.17%2B26.3.jar",
+      "size": 147542,
+      "hashes": {
+        "sha512": "09d4db1afefdc0db3936d8bd0e6a7a91733a2d6a05aa7c26c10cac666a824c50af82802c83abcf20e2211dc81bddf4b1f0858b4e747a3c1c3fb11bd79ac02c20"
+      }
+    },
+    {
       "slug": "anvil-restoration",
       "project_id": "bd8nwTGy",
       "version": "26.3.0-2.6-fabric+forge+neo",
@@ -159,6 +171,18 @@
       "size": 1213047,
       "hashes": {
         "sha512": "aaf07f5b94f7015c87df7b242f3f45f0729fb3f72d887745ad5c5ceb31eb071e425254009158774101676d6480f31c832dd60860d79da5b661cc10b84241c319"
+      }
+    },
+    {
+      "slug": "banhammer",
+      "project_id": "Wpqg0ciI",
+      "version": "0.19.0+26.3",
+      "version_id": "1BJyGiA7",
+      "file": "banhammer-0.19.0+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/Wpqg0ciI/versions/1BJyGiA7/banhammer-0.19.0%2B26.3.jar",
+      "size": 16031496,
+      "hashes": {
+        "sha512": "63f146aff7670909e8b87e1903e55ae91633938f754c485251934b34900cc5ec7079757391db98d0e0bd9b6523fa2162928b2d7a3e7d48d89ed18a676db62ea1"
       }
     },
     {
@@ -786,6 +810,18 @@
       }
     },
     {
+      "slug": "invview",
+      "project_id": "jrDKjZP7",
+      "version": "1.4.22",
+      "version_id": "uySsk7v8",
+      "file": "InvView-1.4.22-26.3+.jar",
+      "url": "https://cdn.modrinth.com/data/jrDKjZP7/versions/uySsk7v8/InvView-1.4.22-26.3%2B.jar",
+      "size": 169075,
+      "hashes": {
+        "sha512": "a7e21e1833b581cfdcd7b5096c3654ab5a3f7acb8e62dcaa91b0930009063abe407fb0de6031345c0f839e958f3a1f11f9984d8c3ed43aa2bf2542000429a09f"
+      }
+    },
+    {
       "slug": "items-displayed",
       "project_id": "Guh4HXen",
       "version": "1.3-26.3",
@@ -963,6 +999,18 @@
       "size": 60602,
       "hashes": {
         "sha512": "2b5c5ed195d44d97dd6fafdb8583d1d883f10303c0cde331da72c6004f88cf27207167aaf77f0c692113399db42f616d1174144671898a25dfa69e9525135b8b"
+      }
+    },
+    {
+      "slug": "minertrack",
+      "project_id": "O3VQnhG2",
+      "version": "2.1.2.0+fabric",
+      "version_id": "1cXUtMXL",
+      "file": "MinerTrack-2.1.2.0+fabric.jar",
+      "url": "https://cdn.modrinth.com/data/O3VQnhG2/versions/1cXUtMXL/MinerTrack-2.1.2.0%2Bfabric.jar",
+      "size": 2946244,
+      "hashes": {
+        "sha512": "61b3fe06981577408be18f37a1be5750d0de1722850c3db2b72322ae13137f9c593b745344163b674730f84865c9ee6e90328e605451ce8605409a7307f9f1f0"
       }
     },
     {
@@ -1667,6 +1715,30 @@
       "size": 308699,
       "hashes": {
         "sha512": "eb6851b8df08b53c2c78e6c80d0aa07fa1b739bf4c1825d63dce74f5304dd51ff2c8ef37d548aaa07ac5d95612a6ca05f7d5ba852e64f712d21a260e3fdb1b0b"
+      }
+    },
+    {
+      "slug": "vanilla-permissions",
+      "project_id": "fdZkP5Bb",
+      "version": "0.3.6+26.1.2",
+      "version_id": "bpq3ZDRl",
+      "file": "vanilla-permissions-0.3.6+26.1.2.jar",
+      "url": "https://cdn.modrinth.com/data/fdZkP5Bb/versions/bpq3ZDRl/vanilla-permissions-0.3.6%2B26.1.2.jar",
+      "size": 99126,
+      "hashes": {
+        "sha512": "f541fcb459e6b315c87b8de446a1c6bbb3ddf7b06317c5fe1e64a8bd26460dd7e206545beaeb565c5036fb321398c986462cd5913305068bdd9190ead367ce93"
+      }
+    },
+    {
+      "slug": "vanish",
+      "project_id": "UL4bJFDY",
+      "version": "1.6.16+26.3",
+      "version_id": "KgeCcJWw",
+      "file": "vanish-1.6.16+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/UL4bJFDY/versions/KgeCcJWw/vanish-1.6.16%2B26.3.jar",
+      "size": 1256413,
+      "hashes": {
+        "sha512": "ee60a0ca4551a99929b9e2c6b9b13206b8246d9a35289790acc637e36174b35fe615acb470845ab9ac5a3e283051e2e00cf56b24af124d10414aa6e8db8917e3"
       }
     },
     {

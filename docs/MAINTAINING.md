@@ -218,6 +218,17 @@ Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K wit
 performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
 run to none.
 
+## Mods pinned by hand
+
+`add.py` and `check_updates.py` only see releases Modrinth lists for the manifest's Minecraft version. A mod
+that works on it but isn't listed for it is pinned by hand: the same entry `add.py` writes (`entries.added`,
+from the Modrinth version), after a smoke test and a test join. `check_updates.py` never reports its updates,
+so look at its Modrinth page when updating the pack, and when changing Minecraft version.
+
+| Mod | Listed for | Tested on 26.3 |
+|---|---|---|
+| `hostname-catcher` 0.2 | 26.1 to 26.2 | 2026-10-25: boots, lets a login through a join address in, logs a real client's join |
+
 ## Mods left out on purpose
 
 The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync.

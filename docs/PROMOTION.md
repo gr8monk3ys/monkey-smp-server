@@ -108,15 +108,28 @@ one leaves its players on a dead address. Joins during a failover can't be count
 
 ### Counting joins per address
 
-Vanilla Minecraft doesn't log the address a player used. A small server-side mod does:
-[Hostname Catcher](https://modrinth.com/mod/hostname-catcher) (GPL-3.0) logs
-`Player NAME connected via: <address>`. It isn't in the pack yet: it was built for 26.2, so it needs a test
-on 26.3 first, and its default config blocks every address except its examples, so it must ship with an empty
-allow-list (`allowed-domains: []`). Once it's in, joins per address over a week are:
+Vanilla Minecraft doesn't log the address a player used, so the server runs a small server-side mod that
+does: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) (GPL-3.0). It's in the server pack, not
+the client pack. Every join adds a line like this to the log:
+
+```text
+[20:15:02] [Server thread/INFO]: [STDOUT]: Player NAME connected via: yt.monkeysmp.lscaturchio.xyz
+```
+
+Modrinth lists it for 26.2 only; it was tested on 26.3 (docs/MAINTAINING.md, "Mods pinned by hand"). The mod
+can also turn away players who come in through an address that isn't on its allow-list. The pack ships
+`config/hostname-catcher.yml` with an empty list (`allowed-domains: []`), which lets every address in; keep it
+that way. The mod's own default lists only `localhost`, `127.0.0.1` and `*.example.com`, so it would turn away
+every real player with "Connection Throttled.".
+
+Joins per address, on the VPS (`--since` counts from that day on, e.g. the start of a campaign):
 
 ```sh
-zgrep -h "connected via:" logs/*.log.gz logs/latest.log | sed 's/.*connected via: //' | sort | uniq -c
+python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs --since 2026-11-01
 ```
+
+It prints, for each address, the joins, the different players, and the **new** players: those whose first
+logged join came through it. The new column is the one that says which channel brought players in.
 
 The count shows which address a player typed, not who bought: some buy and then switch to the main
 address, and a player who joined on the free trial (docs/LIVE.md, "The store") counts before paying. Ask

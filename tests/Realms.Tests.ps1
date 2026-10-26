@@ -1292,3 +1292,80 @@ Describe 'Real manifest contract' {
         Join-Native $RepoRoot ('package/realms/' + $Entry.patch.path) | Should -Exist
     }
 }
+
+Describe 'tests/smoke.ps1 helpers' {
+    BeforeAll {
+        # The smoke test boots a server when it runs, so load only its functions.
+        $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Native $RepoRoot 'tests/smoke.ps1'), [ref]$null, [ref]$null)
+        foreach ($f in $ast.FindAll({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+            if ('Get-PortHolder', 'Assert-PortsFree', 'Set-MapPort', 'Test-BootDone' -contains $f.Name) { . ([scriptblock]::Create($f.Extent.Text)) }
+        }
+        # A port nothing holds: the OS picks a free one, which is released again.
+        function Get-FreePort([string]$Protocol) {
+            if ($Protocol -eq 'udp') { $u = New-Object Net.Sockets.UdpClient 0; $n = $u.Client.LocalEndPoint.Port; $u.Close(); return $n }
+            $l = New-Object Net.Sockets.TcpListener ([Net.IPAddress]::Any), 0; $l.Start(); $n = $l.LocalEndpoint.Port; $l.Stop(); return $n
+        }
+    }
+
+    It 'finds nobody on a free <Protocol> port' -ForEach @(@{ Protocol = 'tcp' }, @{ Protocol = 'udp' }) {
+        Get-PortHolder $Protocol (Get-FreePort $Protocol) | Should -BeNullOrEmpty
+    }
+
+    It 'names who holds a TCP port' {
+        $l = New-Object Net.Sockets.TcpListener ([Net.IPAddress]::Any), 0
+        $l.Start()
+        try { $holder = Get-PortHolder 'tcp' $l.LocalEndpoint.Port } finally { $l.Stop() }
+        $holder | Should -Not -BeNullOrEmpty
+        if ($script:OnWindows) { $holder | Should -BeLike "* pid $PID" }
+    }
+
+    It 'names who holds a UDP port' {
+        $u = New-Object Net.Sockets.UdpClient 0
+        try { $holder = Get-PortHolder 'udp' $u.Client.LocalEndPoint.Port } finally { $u.Close() }
+        $holder | Should -Not -BeNullOrEmpty
+        if ($script:OnWindows) { $holder | Should -BeLike "* pid $PID" }
+    }
+
+    It 'stops on a taken port, naming it and its parameter' {
+        $u = New-Object Net.Sockets.UdpClient 0
+        $voice = $u.Client.LocalEndPoint.Port
+        $ports = @(
+            @{ Protocol = 'tcp'; Number = (Get-FreePort 'tcp'); What = 'game'; Parameter = '-Port' }
+            @{ Protocol = 'udp'; Number = $voice; What = 'Simple Voice Chat'; Parameter = '-VoicePort' }
+        )
+        try { { Assert-PortsFree $ports } | Should -Throw "*Simple Voice Chat port $voice/udp (-VoicePort), held by *" }
+        finally { $u.Close() }
+        { Assert-PortsFree $ports } | Should -Not -Throw
+    }
+
+    It 'sets the port in an existing webserver.conf and keeps the rest' {
+        $conf = Join-Native $TestDrive 'map1/webserver.conf'
+        New-Item -ItemType Directory -Force -Path (Split-Path $conf -Parent) | Out-Null
+        $before = "# The port that the webserver listens to.`n# Default is 8100`nport: 8100`n`nlog: {`n  file: `"bluemap/logs/webserver.log`"`n}`n"
+        [IO.File]::WriteAllText($conf, $before)
+        Set-MapPort $conf 8108
+        [IO.File]::ReadAllText($conf) | Should -BeExactly $before.Replace('port: 8100', 'port: 8108')
+    }
+
+    It 'writes a webserver.conf with just the port when there is none' {
+        $conf = Join-Native $TestDrive 'map2/bluemap/webserver.conf'
+        Set-MapPort $conf 8108
+        [IO.File]::ReadAllText($conf).Trim() | Should -BeExactly 'port: 8108'
+    }
+
+    It 'ignores the last boot''s "Done" line until the log is written again' {
+        $log = Join-Native $TestDrive 'logs/latest.log'
+        Test-BootDone $log (Get-Date) | Should -BeFalse
+        New-Item -ItemType Directory -Force -Path (Split-Path $log -Parent) | Out-Null
+        [IO.File]::WriteAllText($log, "[23:11:00] [Server thread/INFO]: Done (36.259s)! For help, type `"help`"`n")
+        $start = Get-Date
+        (Get-Item -LiteralPath $log).LastWriteTime = $start.AddMinutes(-5)
+        Test-BootDone $log $start | Should -BeFalse
+        [IO.File]::WriteAllText($log, "[23:20:00] [main/INFO]: Loading 143 mods`n")
+        (Get-Item -LiteralPath $log).LastWriteTime = $start.AddSeconds(5)
+        Test-BootDone $log $start | Should -BeFalse
+        [IO.File]::AppendAllText($log, "[23:20:40] [Server thread/INFO]: Done (35.1s)! For help, type `"help`"`n")
+        (Get-Item -LiteralPath $log).LastWriteTime = $start.AddSeconds(45)
+        Test-BootDone $log $start | Should -BeTrue
+    }
+}

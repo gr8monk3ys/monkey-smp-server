@@ -8,9 +8,13 @@
     Runs realms.ps1 with the PowerShell that runs this script: Windows PowerShell 5.1 (powershell.exe)
     or PowerShell 7 (pwsh, on Windows, Linux or macOS).
 
+    Before it installs and again before it starts, it stops if any of its ports is already in use: the
+    game, RCON and map TCP ports and the voice chat UDP port. Another server on the same machine (a test
+    boot in another folder included) holding one would make this one shut down or answer for it.
+
 .EXAMPLE
     # From an unzipped release (or a copy of package/):
-    .\tests\smoke.ps1 -Root C:\temp\TheRealms-Server -Port 25566 -RconPort 25576
+    .\tests\smoke.ps1 -Root C:\temp\TheRealms-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
     pwsh tests/smoke.ps1 -Root /tmp/TheRealms-Server -MemoryGB 4
 #>
 [CmdletBinding()]
@@ -18,6 +22,9 @@ param(
     [Parameter(Mandatory)] [string]$Root,
     [int]$Port = 25565,
     [int]$RconPort = 25575,
+    # Simple Voice Chat (UDP) and the BlueMap web map; the defaults are the mods' own (and Realms.psm1's).
+    [int]$VoicePort = 24454,
+    [int]$MapPort = 8100,
     [int]$MemoryGB = 3,
     [int]$TimeoutMinutes = 20
 )
@@ -50,6 +57,69 @@ function Invoke-Realms([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "realms.ps1 $($Arguments -join ' ') failed ($LASTEXITCODE)" }
 }
 
+# Who holds a local port: '' if nobody, else a description ('java pid 1234' where the OS says).
+function Get-PortHolder([string]$Protocol, [int]$Number) {
+    if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
+        # Windows: ask the TCP/IP stack.
+        $found = @(if ($Protocol -eq 'udp') { Get-NetUDPEndpoint -LocalPort $Number -ErrorAction SilentlyContinue }
+            else { Get-NetTCPConnection -LocalPort $Number -State Listen, Bound -ErrorAction SilentlyContinue })
+        if (-not $found.Count) { return '' }
+        $id = $found[0].OwningProcess
+        $name = (Get-Process -Id $id -ErrorAction SilentlyContinue).ProcessName
+        return "$name pid $id".Trim()
+    }
+    # Linux and macOS (PowerShell 7): something answers on it, or it can't be bound.
+    if ($Protocol -eq 'tcp') {
+        $client = New-Object Net.Sockets.TcpClient
+        try { $answers = $client.ConnectAsync('127.0.0.1', $Number).Wait(1000) } catch { $answers = $false } finally { $client.Close() }
+        if ($answers) { return 'another program' }
+    }
+    try {
+        if ($Protocol -eq 'udp') { (New-Object Net.Sockets.UdpClient $Number).Close() }
+        else { $listener = New-Object Net.Sockets.TcpListener ([Net.IPAddress]::Any), $Number; $listener.Start(); $listener.Stop() }
+        return ''
+    } catch { return 'another program' }
+}
+
+# Throws, naming each one, if any of $Ports (@{ Protocol; Number; What; Parameter }) is in use.
+function Assert-PortsFree([hashtable[]]$Ports) {
+    $busy = foreach ($p in $Ports) {
+        $holder = Get-PortHolder $p.Protocol $p.Number
+        if ($holder) { "  $($p.What) port $($p.Number)/$($p.Protocol) ($($p.Parameter)), held by $holder" }
+    }
+    if ($busy) {
+        throw ("Port(s) already in use on this machine:`n$($busy -join "`n")`n" +
+            'Stop the server that holds them, or pick free ports, e.g. -Port 25568 -RconPort 25578 -VoicePort 24468 -MapPort 8108.')
+    }
+}
+
+# Sets the port in BlueMap's webserver.conf (HOCON), keeping the rest of the file; creates it if missing.
+function Set-MapPort([string]$Path, [int]$Number) {
+    $text = if (Test-Path -LiteralPath $Path) { [IO.File]::ReadAllText($Path) } else { '' }
+    $portLine = '(?m)^[ \t]*port[ \t]*[:=][^\r\n]*'
+    if ($text -match $portLine) { $text = $text -replace $portLine, "port: $Number" } else { $text += "`nport: $Number`n" }
+    New-Item -ItemType Directory -Force -Path (Split-Path $Path -Parent) | Out-Null
+    [IO.File]::WriteAllText($Path, $text)
+}
+
+# Whether this boot has logged "Done". A re-run in the same folder finds the last boot's latest.log, "Done"
+# line and all, until the new server rotates it, so a log last written before $Since doesn't count.
+function Test-BootDone([string]$Log, [datetime]$Since) {
+    $item = Get-Item -LiteralPath $Log -ErrorAction SilentlyContinue
+    return [bool]($item -and $item.LastWriteTime -gt $Since -and (Select-String -LiteralPath $Log -Pattern 'Done \(' -Quiet))
+}
+
+# Simple Voice Chat stops the whole server when it can't bind its UDP port, and so does BlueMap with its
+# map port; on a taken RCON port this test would talk to (and stop) the other server.
+$ports = @(
+    @{ Protocol = 'tcp'; Number = $Port; What = 'game'; Parameter = '-Port' }
+    @{ Protocol = 'tcp'; Number = $RconPort; What = 'RCON'; Parameter = '-RconPort' }
+    @{ Protocol = 'tcp'; Number = $MapPort; What = 'BlueMap web map'; Parameter = '-MapPort' }
+    @{ Protocol = 'udp'; Number = $VoicePort; What = 'Simple Voice Chat'; Parameter = '-VoicePort' }
+)
+Write-Host "--- ports free? game $Port, RCON $RconPort, map $MapPort (TCP), voice $VoicePort (UDP)"
+Assert-PortsFree $ports
+
 Write-Host '--- install (non-interactive)'
 Invoke-Realms @('install', '-AcceptEula', '-NonInteractive', '-NoOwner')
 
@@ -64,18 +134,26 @@ if ($values['level-seed'] -ne [string]$manifest.world.seed) { $failures.Add('see
 if ($values['level-name'] -ne $manifest.world.level_name) { $failures.Add('level name not applied') }
 Set-ServerProperty -Path $props -Name 'server-port' -Value $Port
 Set-ServerProperty -Path $props -Name 'rcon.port' -Value $RconPort
+# Voice chat and the map read their ports from their own config files, which the mods write on first boot
+# (the package ships neither), so create them now; each mod uses its defaults for the settings left out.
+$configDir = if ($isPaper) { 'plugins' } else { 'config' }
+Set-ServerProperty -Path (Join-Path $server "$configDir/voicechat/voicechat-server.properties") -Name 'port' -Value $VoicePort
+Set-MapPort (Join-Path $server $(if ($isPaper) { 'plugins/BlueMap/webserver.conf' } else { 'config/bluemap/webserver.conf' })) $MapPort
 
+# Again: another boot may have taken one during the install.
+Assert-PortsFree $ports
 Write-Host "--- start (port $Port)"
 $out = Join-Path $Root 'smoke-console.log'
 $startArgs = @{ FilePath = $shell; PassThru = $true; RedirectStandardOutput = $out; RedirectStandardError = "$out.err"
     ArgumentList = $shellArgs + @('-File', "`"$script`"", 'start', '-NonInteractive', '-MemoryGB', $MemoryGB) }
 if ($onWindows) { $startArgs.WindowStyle = 'Hidden' }   # not supported on Linux and macOS
-$proc = Start-Process @startArgs
 $log = Join-Path (Join-Path $server 'logs') 'latest.log'
+$startTime = Get-Date
+$proc = Start-Process @startArgs
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 $started = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
-    if ((Test-Path $log) -and (Select-String -Path $log -Pattern 'Done \(' -Quiet)) { $started = $true; break }
+    if (Test-BootDone $log $startTime) { $started = $true; break }
     Start-Sleep -Seconds 5
 }
 if (-not $started) {
@@ -95,7 +173,11 @@ while ($true) {
     try { & $shell @shellArgs -File $script rcon 'list' 2>&1 | Out-Null; $code = $LASTEXITCODE }
     finally { $ErrorActionPreference = 'Stop' }
     if ($code -eq 0) { break }
-    if ((Get-Date) -gt $rconDeadline -or $proc.HasExited) { throw 'RCON did not answer within 3 minutes of "Done"' }
+    if ($proc.HasExited) {
+        if (Test-Path $out) { Get-Content $out -Tail 30 }
+        throw "The server stopped by itself after `"Done`" (its console output is above and in $out)"
+    }
+    if ((Get-Date) -gt $rconDeadline) { throw 'RCON did not answer within 3 minutes of "Done"' }
     Write-Host '    RCON not answering yet, retrying in 10 s'
     Start-Sleep -Seconds 10
 }

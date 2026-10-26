@@ -48,6 +48,13 @@ die() { log "ERROR: $*" >&2; exit 1; }
 compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
 running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
 rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
+# RCON exits 0 whenever the server answers, "Unknown function" too (say, the pack is off): read the answer.
+refused() {
+    case "$1" in
+        *'Unknown function'* | *'Unknown or incomplete command'* | *'Incorrect argument'* | *'<--[HERE]'*) return 0 ;;
+    esac
+    return 1
+}
 
 # The commands for now, one per line: `function realms:challenges/sync {week:N}`, and during and just after
 # the launch weekend `function realms:wardrobe/founder/sync {seconds:N}`.
@@ -112,11 +119,14 @@ case $MODE in
 '
         for c in $out; do
             IFS=$old_ifs
-            if reply=$(rcon "$c"); then
-                log "$c: ${reply:-ok}"
-            else
+            if ! reply=$(rcon "$c"); then
                 log "RCON failed: $c"
                 failed=1
+            elif refused "$reply"; then
+                log "refused: $c: $reply"
+                failed=1
+            else
+                log "$c: ${reply:-ok}"
             fi
         done
         IFS=$old_ifs

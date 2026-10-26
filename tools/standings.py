@@ -276,18 +276,34 @@ def match_cup(world: World, warn) -> tuple[dict[str, int], list[Row]]:
     return matched, loose
 
 
+def gained(now: int, then: int) -> int:
+    """What a counter gained since the week began. One below its starting point was restarted (a new season's
+    world, or staff reset it), so all of it is new."""
+    return max(0, now - then if now >= then else now)
+
+
+def folded(scores: dict[str, int]) -> dict[str, int]:
+    """Scores by lower-case name: staff type a bounty hunter's name by hand, and the scoreboard keeps it as typed."""
+    out: dict[str, int] = {}
+    for name, value in scores.items():
+        out[name.lower()] = out.get(name.lower(), 0) + value
+    return out
+
+
 def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Row]:
     """This week's rows: Cup, land and Strength as they are now, kills and bounties since `baseline`."""
     base = baseline or {}
     scores = world.scores
+    kills, kills_then = scores.get(KILLS, {}), base.get("kills", {})
+    bounty, bounty_then = folded(scores.get(BOUNTY, {})), folded(base.get("bounty", {}))
     cup, rows = match_cup(world, warn)
     for p in world.parties:
         row = Row(p.name, list(p.members), cup=cup.get(p.id, 0), land=sum(world.claims.get(u, 0) for u in p.uuids))
         for name in p.members:
             arena = scores.get(ARENA_STRENGTH, {})
             row.strength += arena[name] if name in arena else scores.get(LEVEL, {}).get(name, 0)
-            row.kills += max(0, scores.get(KILLS, {}).get(name, 0) - base.get("kills", {}).get(name, 0))
-            row.bounties += max(0, scores.get(BOUNTY, {}).get(name, 0) - base.get("bounty", {}).get(name, 0))
+            row.kills += gained(kills.get(name, 0), kills_then.get(name, 0))
+            row.bounties += gained(bounty.get(name.lower(), 0), bounty_then.get(name.lower(), 0))
         rows.append(row)
     return rank(rows)
 
@@ -627,6 +643,8 @@ def datapack_files() -> dict[str, str]:
         f"team add {team}",
         f"team modify {team} color {color}",
         f"team modify {team} prefix " + text({"text": prefix, "color": color}),
+        "# Hunters are often rivals: the title must not let them see each other while invisible.",
+        f"team modify {team} seeFriendlyInvisibles false",
         f"execute unless data storage {STORE} week run data modify storage {STORE} week set value {snbt(EMPTY_WEEK)}",
         f'execute unless data storage {STORE} last run data modify storage {STORE} last set value {{text:""}}',
         f"function {NS}:standings/publish",

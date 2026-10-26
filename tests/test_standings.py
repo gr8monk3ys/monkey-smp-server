@@ -1,3 +1,4 @@
+import copy
 import datetime as dt
 import gzip
 import io
@@ -163,6 +164,24 @@ def test_the_formula(world, capsys):
 def test_no_baseline_counts_every_kill(world):
     rows = by_name(standings.table(standings.read_world(world), None))
     assert rows["Red Monkeys"].kills == 9 and rows["Blue Herons"].kills == 10
+
+
+def test_a_restarted_counter_counts_in_full(world):
+    # A new season's world starts st.kills at 0, under last season's baseline: the new kills still count.
+    old_season = {"start": "2026-10-25T19:00:00-07:00", "kills": {"AlexFake": 40, "SamFake": 30}, "bounty": {}}
+    rows = by_name(standings.table(standings.read_world(world), old_season))
+    assert rows["Red Monkeys"].kills == 7 + 2
+    assert standings.gained(5, 3) == 2 and standings.gained(3, 5) == 3 and standings.gained(-1, 0) == 0
+
+
+def test_a_bounty_counts_however_staff_cased_the_name(tmp_path):
+    board = copy.deepcopy(SCOREBOARD)
+    board["data"]["PlayerScores"].extend(scores(("st.bounty", "alexfake", 1)))
+    rows = by_name(standings.table(standings.read_world(make_world(tmp_path, board)), BASELINE))
+    assert rows["Red Monkeys"].bounties == 2   # SamFake's, and AlexFake's typed as "alexfake"
+    then = {**BASELINE, "bounty": {"ALEXFAKE": 1}}
+    assert by_name(standings.table(standings.read_world(make_world(tmp_path / "b", board)), then))[
+        "Red Monkeys"].bounties == 1
 
 
 def test_share_rounds_half_up_and_an_empty_column_scores_nothing():
@@ -391,6 +410,8 @@ def test_the_bounty_title_never_replaces_another_title():
     # cosmetic only: nothing given, nothing for combat
     assert not any(line.startswith(("give", "$give", "effect", "$effect", "attribute", "$attribute")) for line in claim)
     assert 'team modify bounty_hunter prefix {"text":"[Bounty Hunter] ","color":"red"}' in fn("load")
+    # hunters from rival factions share the team: it must not show them each other while invisible
+    assert "team modify bounty_hunter seeFriendlyInvisibles false" in fn("load")
 
 
 def test_the_board_follows_the_storage():

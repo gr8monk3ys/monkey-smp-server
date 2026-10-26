@@ -537,9 +537,11 @@ counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statisti
 - Don't rename or remove the challenge that is on this week (its progress is in scores named after its id).
 - Keep two or more of each kind, so no kind repeats two weeks running, and about one to three hours of play a
   week in all.
-- Nothing that rewards PvP kills, forces griefing, or can be farmed with an alt, a friend, a water stream or
-  a vehicle. Distance and time online are out for that reason; the tests check the statistics and the kill
-  lists.
+- Nothing that rewards PvP kills, forces griefing, or can be farmed with an alt, a water stream or a vehicle.
+  Distance and time online are out for that reason; the tests check the statistics and the kill lists.
+- Known limit: `mine` subtracts only the miner's own placing, so a friend who places blocks for someone to
+  mine farms it. That costs the friend the blocks (logs and ancient debris drop themselves; ores need Silk
+  Touch), so keep `mine` rewards small and look at anyone who finishes one in minutes.
 
 Then `python tools/wardrobe.py` (it writes the challenges into the wardrobe pack), run the checks, and
 release. Players need a new client pack only when skins change.
@@ -559,7 +561,9 @@ scoreboard players get NAME rw.launchtime           # seconds NAME was online wh
 `open_for` is manual: the wall clock no longer moves its end, so close it yourself at the end of Sunday if
 it runs past. Game time stops while the server is empty, so a manual window can last longer than its hours.
 Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making good an outage during the
-window.
+window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
+`rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
+clears nothing.
 
 ## Telling players what changed
 

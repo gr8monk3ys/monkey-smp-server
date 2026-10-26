@@ -8,6 +8,8 @@ scoreboard objectives add standings trigger
 team add bounty_hunter
 team modify bounty_hunter color red
 team modify bounty_hunter prefix {"text":"[Bounty Hunter] ","color":"red"}
+# Hunters are often rivals: the title must not let them see each other while invisible.
+team modify bounty_hunter seeFriendlyInvisibles false
 execute unless data storage realms:standings week run data modify storage realms:standings week set value {text:"",extra:[{text:"No standings yet: the first come out on Sunday evening.\n",color:"gray"}]}
 execute unless data storage realms:standings last run data modify storage realms:standings last set value {text:""}
 function realms:standings/publish

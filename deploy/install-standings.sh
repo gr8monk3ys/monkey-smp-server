@@ -118,17 +118,18 @@ if [ ! -f "$WORLD/datapacks/$PACK/pack.mcmeta" ]; then
 elif ! running; then
     log 'data pack: in the world, but the server is not running, so whether it is on is unknown; start it and run this again'
     problems=$((problems + 1))
-elif ! available=$(rcon 'datapack list available'); then
+elif ! enabled=$(rcon 'datapack list enabled'); then
     log 'data pack: RCON did not answer; run this again once the server is up'
     problems=$((problems + 1))
 else
-    case "$available" in
+    # Only a positive answer counts: an empty or error reply must not read as "on".
+    case "$enabled" in
         *"file/$PACK"*)
-            log "data pack: in the world but turned off; turn it on with: realms rcon 'datapack enable \"file/$PACK\"'"
-            problems=$((problems + 1)) ;;
-        *)
             log 'data pack: in the world and on'
             pack_ok=1 ;;
+        *)
+            log "data pack: in the world but not on; turn it on with: realms rcon 'datapack enable \"file/$PACK\"'"
+            problems=$((problems + 1)) ;;
     esac
 fi
 

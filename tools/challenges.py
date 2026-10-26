@@ -55,6 +55,8 @@ LAUNCH = dt.datetime(2026, 11, 22, 1, 0, tzinfo=UTC)       # Saturday 21 Novembe
 LAUNCH_END = dt.datetime(2026, 11, 23, 8, 0, tzinfo=UTC)   # Monday 23 November, 12 AM Pacific
 LAUNCH_SECONDS = int((LAUNCH_END - LAUNCH).total_seconds())   # 31 hours
 FOUNDER_MINUTES = 10   # online this long in the launch weekend earns Founder's Circlet
+# What test play before Season I's launch may have earned; the first realms:rules/launch clears it.
+TEST_PLAY = ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime")
 
 SOLO, FACTION, EXPLORE = "solo", "faction", "explore"
 KINDS = {SOLO: "Solo", FACTION: "Faction", EXPLORE: "Explore"}
@@ -304,13 +306,14 @@ def datapack_files() -> dict[str, str]:
         "scoreboard players add #firstevent rc.week 1",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
-        "# Run by realms:rules/launch: this week's progress starts from zero. In Season I's launch week, challenges",
-        "# done before the launch (test play) don't count either; later seasons keep the ones they carried.",
+        "# Run by realms:rules/launch: this week's progress starts from zero. At Season I's first launch, what test",
+        "# play earned goes too: challenges done, and Founder's Circlet from a window staff opened to try it.",
+        "# #launched makes that once only, so a launch run again by mistake wipes nothing earned since; later",
+        "# seasons keep the counts they carried.",
         f"function {NS}:challenges/restart",
-        "execute if score #season rw.day matches 1 if score #week rc.week matches ..0 run "
-        "scoreboard players reset * rw.challenges",
-        "execute if score #season rw.day matches 1 if score #week rc.week matches ..0 run "
-        "scoreboard players reset * rw.challenges.seen",
+        *(f"execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run "
+          f"scoreboard players reset * {o}" for o in TEST_PLAY),
+        "scoreboard players set #launched rw.day 1",
     )
     active = []
     for kind in KINDS:

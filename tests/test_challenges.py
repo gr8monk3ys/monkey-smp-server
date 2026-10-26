@@ -284,12 +284,16 @@ def test_the_launch_clears_test_play():
     assert "function realms:challenges/launch" in launch
     clear = datapack(f"{FN}/launch.mcfunction").splitlines()
     assert "function realms:challenges/restart" in clear
-    # Challenges done before Season I's launch were test play. A later season's launch keeps the carried count,
-    # and a launch run again by mistake after week 0 doesn't wipe it.
-    for objective in ("rw.challenges", "rw.challenges.seen"):
-        assert ("execute if score #season rw.day matches 1 if score #week rc.week matches ..0 run "
+    # Challenges done and Founder's Circlet earned before Season I's launch were test play, however many weeks
+    # the timer counted before it. A later season's launch keeps the carried count, and a launch run again by
+    # mistake wipes nothing: #launched is set after the first.
+    for objective in ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime"):
+        assert ("execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run "
                 f"scoreboard players reset * {objective}") in clear
     assert not [line for line in clear if "reset * rw." in line and "#season rw.day matches 1 " not in line]
+    assert clear[-1] == "scoreboard players set #launched rw.day 1"
+    # rules/launch opens the window first, so the reset clears only the minutes from before it.
+    assert launch.index("function realms:wardrobe/founder/open") < launch.index("function realms:challenges/launch")
 
 
 # ---------------------------------------------------------------- no farming

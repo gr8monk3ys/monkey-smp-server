@@ -177,7 +177,8 @@ broke or placed what, and who took what from a chest.
 
 **X-ray.** AntiXray hides ores and other valuables in what the server sends: a player can only see ores that touch
 air, water or lava, and x-ray mods, packs and F3+A see fake ores everywhere instead. The settings are in
-`server\config\antixray.toml`. Some x-ray gets past it (the world seed, Distant Horizons' LODs, below), so
+`server\config\antixray.toml`. Some x-ray gets past it (a cracked world seed; Distant Horizons' LODs if its
+server-side LODs are switched back on, below), so
 MinerTrack watches how people mine: someone who tunnels straight from one buried diamond or emerald vein to the
 next (or to ancient debris in the Nether) builds up a violation level (VL), and moderators get a chat alert at VL 2,
 4 and 5. It never kicks or bans; that's your call. `mtrack check NAME` shows a player's violations, `mtrack verbose`
@@ -247,10 +248,11 @@ box the LODs carry every real ore, buried or not, and anyone can read them out o
   block at that spot, 21 of them buried with no air, water or lava next to them.
 - **`maxGenerationRequestDistance` doesn't help.** Its lowest value still sends the 64 x 64 area the player is
   standing in, with real ores, so walking around collects them anyway.
-- **The fix below: no leak.** The player only had LODs of chunks they had loaded themselves, and every buried ore
-  in them was one of AntiXray's fakes.
+- **The settings below: no leak.** The player only had LODs of chunks they had loaded themselves, and every buried
+  ore in them was one of AntiXray's fakes.
 
-To close it, stop the server and set this in `server\config\DistantHorizons.toml`:
+So the server ships with them on, in `server\config\DistantHorizons.toml` (`defaults/config/DistantHorizons.toml`
+in the package; Distant Horizons fills in the rest of the file on the first start):
 
 ```toml
 [server]
@@ -262,7 +264,13 @@ To close it, stop the server and set this in `server\config\DistantHorizons.toml
 ```
 
 The cost: players no longer get distant terrain from the server, only LODs of what they have walked past, so the
-far view fills in slowly on a fresh world. It isn't on by default; that's the owners' call.
+far view fills in slowly on a fresh world. It also takes Distant Horizons' world generation off the server's CPU.
+A server set up before this default keeps its old file: change it as in "Distant Horizons stops sending its own
+LODs" in `docs/LIVE.md`.
+
+To send server-built LODs again (only if ores in them stop mattering, say on a creative or event server), stop
+the server and put back Distant Horizons' own values: `synchronizeOnLoad = true`, `enableRealTimeUpdates = true`
+and `generatorPlan = "SURFACE_THEN_CHUNKS"`.
 
 The other way is Voxy with LOD Server Support (LSS) instead of Distant Horizons, which can scramble ores in what it
 sends (`xrayObfuscation = "auto"` in `server\config\lss-server-config.yaml`; not tested here). Keep the Distant

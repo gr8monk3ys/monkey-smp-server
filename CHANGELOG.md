@@ -10,8 +10,8 @@ X-ray protection and moderation tools, plus live-server fixes. Server only: play
   B15 (x-ray), B17 and B19 (`docs/RULES.md`).
 - New: **MinerTrack**, alert only (`defaults/config/MinerTrack/config.yml`). It flags players who mine from one
   buried diamond, emerald or ancient debris vein straight to the next, and alerts moderators at VL 2, 4 and 5
-  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, Distant Horizons' LODs). ADMIN.md also has
-  the saved Ledger query for diamond-ore breaks.
+  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, say). ADMIN.md also has the saved Ledger
+  query for diamond-ore breaks.
 - New: a test that the world seed never ends up in what players get (the client pack, the player zip, the site,
   RULES.md). It isn't in any of them today; only the server zip has it.
 - New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
@@ -22,9 +22,12 @@ X-ray protection and moderation tools, plus live-server fixes. Server only: play
 - Ranks: moderators get the BanHammer, Vanish and InvView commands (InvView look only); admins can also move items
   in other players' inventories. Rank files are only copied where missing, so an existing server keeps its old
   ranks: see "Existing servers" under "Moderation" in `docs/ADMIN.md`.
-- Known issue: Distant Horizons' server-side LODs still carry the real ores, which AntiXray doesn't touch. The tested
-  fix (no server-sent distant terrain) is in "Distant Horizons and x-ray" in `docs/ADMIN.md`; it isn't on by
-  default.
+- Changed: Distant Horizons on the server no longer builds or sends LODs (`defaults/config/DistantHorizons.toml`:
+  `synchronizeOnLoad` and `enableRealTimeUpdates` off, `generatorPlan = "DISABLED"`). Its LODs came from the real
+  world, so they carried every real ore, buried or not, past AntiXray. Players still see LODs of land they have
+  walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
+  A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
+  `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
 - Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).

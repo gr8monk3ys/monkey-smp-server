@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+Onboarding, faction rules and server config. Same Minecraft (26.3) and client pack; one server mod updated.
+
+- New: players accept the **short rules** before they join (Minecraft's Code of Conduct screen,
+  `codeofconduct/en_us.txt`, `enable-code-of-conduct=true`), and again whenever the text changes.
+- New: a **welcome screen** a few seconds after a first join. Its one button opens the Discord, where
+  `#smp-forum` lists the factions that are recruiting. Every pause menu gets a **Monkey SMP** button with the
+  Discord, the live map, the rules and the store.
+- New rule 26: **48 hours of PvP grace** for a first join. Other players can't hurt a new player; attacking a
+  player or `/trigger end_grace` ends it, and nobody gets it in the launch hour. Fights in the event arena don't
+  count, and grace is off there. Built into the `realms-rules` data pack (no new mod).
+- New rule 26: **spawn is a no-PvP zone**, an Open Parties and Claims server claim over the 7 x 7 chunks
+  around spawn. An admin sets it up once per world with two console commands (admin notes in `docs/RULES.md`):
+  the mod keeps that setting per world and doesn't let a data pack claim.
+- New rules 40 to 42: **no insiding**, **no teaming** (helping anyone outside your faction in a fight;
+  events are exempt), and **rollbacks** (griefing of a territory is rolled back, a legal raid isn't).
+- Claims: a player claims at most 4 chunks (`maxPlayerClaims = 4`), so a faction's territory is 2 x 2 chunks
+  per member, as rule 35 says.
+- ServerCore: the **breeding cap** (32 of a kind within 64 blocks) and **villager lobotomization** (a villager
+  stuck in a 1x1 space ticks once a second) are on.
+- Updated: C2ME 0.4.2-alpha.0.89 to 0.4.2-alpha.0.106 (server only; the client pack keeps its copy).
+- Kept: the combat-log mod. Its file is named `+26.1.2`, but it is the author's 26.3 build ("fix: fabric
+  26.3", for Minecraft 26.1 to 26.3), and no other mod does the same job on 26.3.
+- These defaults are copied only where the server doesn't have the file yet. On an existing server, set
+  `enable-code-of-conduct=true`, `maxPlayerClaims = 4` and the two ServerCore switches yourself (server
+  stopped).
+
 ## [2.4.2] - 2026-10-25
 
 Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts

@@ -1,0 +1,29 @@
+Monkey SMP: the short rules
+
+The full rulebook is in #smp-rules on the Discord. Rule numbers match it.
+
+Fights
+- No combat logging: don't log out in a fight, or 3 minutes into a chase. (3)
+- No farming fresh-respawned players, no AFK killing, no killing players who are lagging out. (5, 13, 14)
+- No lava PvP, no elytra in fights, no Happy Ghast PvP. (16-18)
+- No pearls, totems, enchanted golden apples, crystals, bed bombs, Fire Aspect or Flame. (B3-B5, B7-B9)
+
+Factions and land
+- A faction holds at most 4 players, and you stay in yours for the season. (29, 33)
+- Your territory is 2 x 2 chunks per member, walled or inside a base, marked with your banner. (35, 36)
+- Nobody griefs a territory without permission. Admins roll that back; legal raids stay. (37, 42)
+- No insiding: never grief, raid or rob your own faction, or use what you had as a member after you
+  leave. (40)
+- No teaming: stay out of fights between other factions, except at events. (41)
+
+New players and spawn
+- Your first 48 hours come with PvP grace. Attacking a player ends it. (26)
+- Spawn is a no-PvP zone, and nobody touches it. (22, 26)
+
+Everyone
+- No hacked clients, x-ray, dupes or exploits. (B13-B17, B19)
+- Respect people: no slurs, harassment, threats or doxxing, anywhere.
+- No real-money trading, and no account sharing. (21)
+
+Breaking a rule means a warning, then a temporary ban, then a permanent ban. Cheating, hate and
+doxxing can go straight to a ban. Appeals go in a Discord ticket.

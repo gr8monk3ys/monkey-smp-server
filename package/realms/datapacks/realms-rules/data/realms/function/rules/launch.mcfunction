@@ -2,5 +2,10 @@
 gamerule pvp false
 gamerule allow_entering_nether_using_portals false
 scoreboard players set #end_open realms.rules 0
+# Rule 26: the season starts with nobody on grace (a test player's is gone), and nobody who first
+# joins in the launch hour gets one.
+scoreboard players reset * realms.grace
+scoreboard players reset * end_grace
+scoreboard players set #launching realms.rules 1
 schedule function realms:rules/launch_over 3600s replace
 tellraw @a [{"text":"[Monkey SMP] ","color":"gold"},{"text":"Welcome to Season I! PvP, the Nether and the End are closed for the first 60 minutes.","color":"yellow"}]

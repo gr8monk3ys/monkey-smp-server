@@ -158,7 +158,8 @@ server before editing configs.
 ## Spawn protection
 
 Vanilla `spawn-protection=48` in `server\server.properties`: within 48 blocks of spawn only admins (ops)
-can build or break blocks. PvP is not blocked at spawn; make a server claim around it if you want that.
+can build or break blocks. PvP is blocked by a server claim over spawn (rule 26), which an admin makes once
+per world: see the admin notes at the end of `docs/RULES.md`.
 
 ## World generation
 
@@ -213,8 +214,8 @@ The `realms-events` data pack (made by `tools/events.py`) has the staff side of 
 `docs/SEASONS.md`. Run `/function realms:events/help` in game for a clickable list. Commands below are
 typed in game as an op, or over RCON without the `/`.
 
-**Arena Glory.** Build the arena in the overworld: walls and a roof, and no chests, hoppers or other
-containers within the radius. Everything inside the radius is cleaned every tick (dropped items and XP
+**Arena Glory.** Build the arena in the overworld, outside the no-PvP spawn claim (the 7 x 7 chunks around
+spawn): walls and a roof, and no chests, hoppers or other containers within the radius. Everything inside the radius is cleaned every tick (dropped items and XP
 vanish), and players inside are held at Strength +3 and can't withdraw Strength.
 
 ```

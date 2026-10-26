@@ -4,6 +4,10 @@
 #     and simulation distance 6), and step back up when it recovers. See it with  /servercore status .
 #   activation-range.enabled: true. Mobs far from every player tick less often (as on Paper servers).
 #     Farms that rely on distant mobs' AI can be slower; set it to false to get vanilla behaviour back.
+#   lobotomize-villagers.enabled: true. A villager stuck in a 1x1 space (a trading hall) ticks once a second
+#     (tick-interval 20) instead of every tick.
+#   breeding-cap.enabled: true. No more than 32 villagers, 32 of one animal or 32 happy ghasts within 64
+#     blocks can breed. Bigger farms still work, but stop growing.
 # This file is only copied on a first install; edit your copy in server/config/servercore/.
 # The main configuration file for ServerCore.
 # Most of these settings can be reloaded without restarting using /servercore reload.
@@ -32,7 +36,7 @@ features:
   item-merge-radius: 0.5
   lobotomize-villagers:
     # Makes villagers tick less often if they are stuck in a 1x1 space.
-    enabled: false
+    enabled: true
     # Decides the interval in between villager ticks when lobotomized.
     tick-interval: 20
 
@@ -91,7 +95,7 @@ dynamic:
 # A special mobcap that only affects the breeding of animals and villagers.
 breeding-cap:
   # Enables breeding caps.
-  enabled: false
+  enabled: true
   # The breeding cap for happy ghasts.
   # Dried ghast blocks will wait until there is space in the breeding cap to hatch.
   happy-ghasts:

@@ -269,9 +269,9 @@ A Strength server gets harder to join every week, so catching up has to be built
 - Arena Glory and boss nights use kits and set Strength aside, so a day-one player can still win.
 - The Cup is a faction score, so a newcomer who joins a faction adds to its total from their first event.
 - Factions need members (rule 29 caps them at four, but most start smaller). Point newcomers at
-  `#smp-forum` recruitment on their first day.
-- An owner decision: a 48-hour PvP grace period for a first join. It would be a new rule, and it needs
-  a plugin or command to enforce. Not built.
+  `#smp-forum` recruitment on their first day. The welcome screen a first join gets does this.
+- A 48-hour PvP grace period for a first join (rule 26), built into the `realms-rules` data pack
+  (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
 
 ## What is built and what isn't
 
@@ -296,6 +296,9 @@ Built:
   - The attendance counter (`rw.events`, once per event). The skins at 3 and 10 events are not built.
 - The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
   block, built from the game's data reports) with a published seed, so anyone can check the draw.
+- The first-join welcome, the pause menu's links and the 48-hour PvP grace (rule 26), in the
+  `realms-rules` data pack (`tools/rules.py`). Grace is off in the arena, and fighting there doesn't end
+  it.
 
 Not built:
 

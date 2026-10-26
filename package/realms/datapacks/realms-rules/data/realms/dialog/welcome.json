@@ -1,0 +1,44 @@
+{
+  "type": "minecraft:notice",
+  "title": {
+    "text": "Welcome to Monkey SMP",
+    "color": "gold"
+  },
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "A factions SMP: team up with up to three friends, claim land, and raid or defend it. You agreed to the short rules on the way in; the full rulebook is in the Discord."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Factions need members, and most start small. The recruiting posts in #smp-forum say who's looking."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": [
+        {
+          "text": "Links to the Discord, the map, the rules and the store are in the pause menu, under "
+        },
+        {
+          "text": "Monkey SMP",
+          "color": "gold"
+        },
+        {
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "action": {
+    "label": "Join a faction: see who's recruiting",
+    "width": 240,
+    "tooltip": "Opens the Monkey SMP Discord",
+    "action": {
+      "type": "minecraft:open_url",
+      "url": "https://discord.gg/C25hy9Ca9W"
+    }
+  }
+}

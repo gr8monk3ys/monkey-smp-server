@@ -1,0 +1,57 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {
+    "text": "Monkey SMP",
+    "color": "gold"
+  },
+  "external_title": "Monkey SMP",
+  "body": {
+    "type": "minecraft:plain_message",
+    "contents": "These open in your browser."
+  },
+  "columns": 2,
+  "actions": [
+    {
+      "label": "Discord",
+      "tooltip": "Factions, events, tickets and the full rulebook",
+      "width": 140,
+      "action": {
+        "type": "minecraft:open_url",
+        "url": "https://discord.gg/C25hy9Ca9W"
+      }
+    },
+    {
+      "label": "Live map",
+      "tooltip": "The world as it is, in your browser",
+      "width": 140,
+      "action": {
+        "type": "minecraft:open_url",
+        "url": "https://map.monkeysmp.lscaturchio.xyz"
+      }
+    },
+    {
+      "label": "Rules",
+      "tooltip": "The short rules on the website",
+      "width": 140,
+      "action": {
+        "type": "minecraft:open_url",
+        "url": "https://monkeysmp.lscaturchio.xyz/#rules"
+      }
+    },
+    {
+      "label": "Store",
+      "tooltip": "The Server Pass and supporter tiers",
+      "width": 140,
+      "action": {
+        "type": "minecraft:open_url",
+        "url": "https://monkeysmp.lscaturchio.xyz/#pricing"
+      }
+    }
+  ],
+  "exit_action": {
+    "label": {
+      "translate": "gui.back"
+    },
+    "width": 200
+  }
+}

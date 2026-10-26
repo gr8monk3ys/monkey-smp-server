@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- New: **supply drops** (docs/SEASONS.md's event catalog; docs/ADMIN.md, "Supply drops"). Monday to Thursday,
+  6 to 10 PM Pacific, from Season I's first week, the first time 4 or more players are online in survival
+  (`function realms:drops/min {players:N}`) and no event is on: chat and a boss bar give the coordinates 10
+  minutes ahead, then 1 chest per 4 players online (at most 3) lands in the newest border ring, 6 or more
+  chunks from every claim, on dry natural ground. The chests despawn after 20 minutes. Modest loot (food,
+  iron, coal, arrows, torches, logs, XP bottles): nothing Strength, no netherite, diamonds or emeralds.
+  `tools/drops.py` picks the spots from the saved claims and border and generates the new `realms-drops`
+  data pack, which also has staff commands (`start`, `here`, `stop`, `status`, `on`, `off`). On the VPS,
+  `realms-drops.timer` offers the night's drop every 10 minutes; install it once with
+  `deploy/realms-drops.sh --install` (docs/LIVE.md).
+
 ## [2.6.0] - 2026-10-26
 
 Season I's date and launch kit, weekly faction standings, weekly challenges, item-priced shops and a lighter

@@ -1,0 +1,14 @@
+{
+  "values": [
+    "#minecraft:substrate_overworld",
+    "#minecraft:sand",
+    "#minecraft:terracotta",
+    "#minecraft:base_stone_overworld",
+    "minecraft:gravel",
+    "minecraft:clay",
+    "minecraft:snow_block",
+    "minecraft:sandstone",
+    "minecraft:red_sandstone",
+    "minecraft:calcite"
+  ]
+}

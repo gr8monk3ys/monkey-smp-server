@@ -13,6 +13,18 @@
   10000-12000 wide first, which undid Season I's 2500 start (Rule 25) and the border acts. Chunky now
   centres on the border (`chunky worldborder`; its own default is 0,0, while the border is centred on spawn)
   and generates out to the season's largest border plus the view distance.
+- The live map stops at the world border instead of showing all the land Chunky generated for later border
+  acts. `config/bluemap/maps/` ships with each map's `render-mask` on Season I's starting border (2500 wide
+  around spawn, 312.5 in the Nether; the End has none), and the new `tools/map_border.py` fits the masks to
+  the border saved in the world after each border act. Then `bluemap reload` and `bluemap purge <map>`
+  (docs/ADMIN.md, "The live map"; docs/SEASONS.md's border acts now include it). Defaults only reach new
+  servers: on an existing one, run the tool once.
+- Fix: the Nether map shows the caves instead of the bedrock roof. Incendium makes the Nether 192 tall, and
+  BlueMap's own ceiling cut stopped at y 127; the shipped `world_the_nether.conf` cuts everything from y 90 up.
+  On an existing server, delete `max-y: 127` from that layer (docs/ADMIN.md, "The live map").
+- Live server: the public map moves to https://map.monkeysmp.lscaturchio.xyz, served by Caddy with a Let's
+  Encrypt certificate in front of BlueMap, which is now published on 127.0.0.1 only (`MAP_PORT`). The site
+  links there, and port 8100 is no longer opened (docs/LIVE.md, steps 2, 5, 8 and 9).
 - Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
   to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
   also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,

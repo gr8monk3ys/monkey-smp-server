@@ -8,6 +8,7 @@ public site is `site/`.
 ```
 players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchio.xyz (A) --> VPS :25565
                                                      \-> failover: SRV target swapped to the playit.gg address
+browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: realms-deploy.timer --> docker compose (the release's docker/)
 ```
 
@@ -34,11 +35,10 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
    `adduser --disabled-password realms`; `usermod -aG docker realms`; `mkdir -p /srv/realms && chown realms: /srv/realms`.
-2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat) and 8100/tcp (the live map: public on the
-   live server and linked from the site; it shows the world, not where players are, see docs/ADMIN.md "The
-   live map"). Ports Docker publishes skip ufw's rules, so closing 8100 there would not hide the map: for a
-   private map set `MAP_PORT=127.0.0.1:8100` in `docker/.env` instead. Keep SSH key-only. RCON (25575) stays
-   unpublished (compose.yaml).
+2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat), and 80/tcp, 443/tcp and 443/udp for Caddy,
+   which serves the live map over HTTPS (step 9). Don't open 8100: BlueMap is published on 127.0.0.1 only
+   (`MAP_PORT` in step 5), because ports Docker publishes skip ufw's rules, so ufw alone could not keep it
+   private. Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
 3. **Clone with a read-only deploy key.** As `realms`: `ssh-keygen -t ed25519 -f ~/.ssh/realms_deploy -N ''`,
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then trust GitHub's host
    key as GitHub publishes it (fingerprint `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` in its docs)
@@ -54,7 +54,8 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    service runs as `realms`, so it has to be able to read the file).
 5. **First deploy.** As `realms` (`sudo -iu realms`): `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
    `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
-   there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10` and `TZ=America/Los_Angeles`.
+   there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10`, `TZ=America/Los_Angeles` and
+   `MAP_PORT=127.0.0.1:8100` (the map is reached through Caddy, step 9).
    To keep an existing world, copy its `server` folder into `/srv/realms/TheRealms-Server/` now. Run the
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
@@ -72,8 +73,25 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
    address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
-   port, while the same name serves the website. Voice chat finds the server by itself.
-9. **Off-site backups**: see "Set up the off-site copy" under "Backups off the machine" below.
+   port, while the same name serves the website. Voice chat finds the server by itself. For the map, an `A`
+   record `map.monkeysmp` to the same address, also "DNS only": Caddy gets the certificate itself. The zone has
+   a wildcard record that sends any other name to Vercel, so without its own record the map name lands there.
+9. **The live map over HTTPS** (after step 8, so Let's Encrypt can reach the VPS by name). As root, install
+   Caddy from its apt repository (https://caddyserver.com/docs/install), put this in `/etc/caddy/Caddyfile`
+   and run `systemctl reload caddy`:
+   ```
+   map.monkeysmp.lscaturchio.xyz {
+   	encode zstd gzip
+   	reverse_proxy 127.0.0.1:8100
+   }
+   ```
+   Caddy gets and renews the certificate and redirects `http://` to `https://`. The site's `MAP_URL` links
+   there. Then fit the map to the border (docs/ADMIN.md, "The live map"): before the first fit the map
+   shows everything Chunky generated, which is land the border acts haven't opened yet.
+   Caddy rather than Cloudflare's proxy: the proxy would hide the address, but the game's own record shows
+   it anyway, and it would need an Origin Rule for port 8100 plus a firewall list of Cloudflare's address
+   ranges kept up to date by hand.
+10. **Off-site backups**: see "Set up the off-site copy" under "Backups off the machine" below.
 
 ## Day to day
 
@@ -87,6 +105,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/realms/TheRealms-Server/docker && docker compose attach realms` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec realms realms rcon "say hi"` |
 | Let a player in by hand | `docker compose exec realms realms add-player NAME` |
+| Grow the border (a border act) | `docker compose exec realms realms rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map" |
 | Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |

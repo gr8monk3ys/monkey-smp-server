@@ -208,6 +208,7 @@ def main(argv=None) -> int:
         print("Then, in the server console: bluemap reload")
         for fit in changed:
             print(f"                            bluemap purge {fit.id}")
+        print("(A purge that says BlueMap is still loading: run it again in a few seconds.)")
     return 0
 
 

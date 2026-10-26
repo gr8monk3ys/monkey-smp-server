@@ -35,6 +35,11 @@ rules. Players update the client pack for the new skins' textures; everything el
   use can be compared from day to day.
 - Live server: a **weekly update check** on Mondays (`realms-updates.timer`): `tools/check_updates.py` against the
   live release, posted to Discord with the report attached, while the GitHub Actions check can't run.
+- Live server: **`deploy/upgrade-2.5.0.sh`** does this release's one-off VPS steps in one go. The Distant Horizons,
+  Code of Conduct, ServerCore and claims settings change with one restart (under the deploy lock, with warnings in
+  chat and a copy of each file), then it makes the spawn claim over RCON, installs python3 for the update check,
+  and installs the two timers. It skips steps already done, `--check` only reports, and it reads no secrets. See
+  "One-off steps when upgrading" in `docs/LIVE.md`.
 - Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it
   is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
 - Live server: **`deploy/realms-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake

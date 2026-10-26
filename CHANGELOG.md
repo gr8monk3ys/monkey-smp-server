@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+X-ray protection and moderation tools. Server only: players need nothing new.
+
+- New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
+  players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
+  stone. It covers Skniro's Nether and End ores too, which aren't in the `c:ores` tag. This is what now enforces
+  B15 (x-ray), B17 and B19 (`docs/RULES.md`).
+- New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
+  **InvView** (look into a player's inventory and ender chest). The rules' "temporary ban (1 to 7 days)" is now
+  `tempban NAME 3d reason`. See "Moderation" in `docs/ADMIN.md`.
+- New: **Vanilla Permissions**, so LuckPerms ranks can grant vanilla commands. Builders' `/gamemode` and
+  moderators' teleport and whitelist now work without op.
+- Ranks: moderators get the BanHammer, Vanish and InvView commands (InvView look only); admins can also move items
+  in other players' inventories. Rank files are only copied where missing, so an existing server keeps its old
+  ranks: see "Existing servers" under "Moderation" in `docs/ADMIN.md`.
+- Known issue: Distant Horizons' server-side LODs still carry the real ores, which AntiXray doesn't touch. The tested
+  fix (no server-sent distant terrain) is in "Distant Horizons and x-ray" in `docs/ADMIN.md`; it isn't on by
+  default.
+
 ## [2.4.1] - 2026-10-25
 
 Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and world as 2.4.0: hosts unzip over

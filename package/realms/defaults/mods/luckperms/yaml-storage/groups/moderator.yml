@@ -1,5 +1,22 @@
 name: moderator
 permissions:
+- banhammer.punish.ban
+- banhammer.punish.kick
+- banhammer.punish.mute
+- banhammer.punish.tempban
+- banhammer.punish.tempmute
+- banhammer.punish.tempwarn
+- banhammer.punish.warn
+- banhammer.unpunish.pardon
+- banhammer.unpunish.unban
+- banhammer.unpunish.unmute
+- banhammer.unpunish.unwarn
+- banhammer.commands.list
+- invview.can_modify:
+    value: false
+- invview.command.echest
+- invview.command.inv
+- invview.command.root
 - ledger.commands.inspect
 - ledger.commands.player
 - ledger.commands.preview
@@ -8,11 +25,10 @@ permissions:
 - ledger.commands.search
 - ledger.commands.status
 - ledger.commands.tp
-- minecraft.command.ban
-- minecraft.command.kick
-- minecraft.command.pardon
 - minecraft.command.teleport
 - minecraft.command.tp
 - minecraft.command.whitelist
+- vanish.command.vanish
+- vanish.feature.view
 parents:
 - default

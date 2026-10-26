@@ -27,6 +27,9 @@ One fast core matters more than anything else (docs/ADMIN.md, "How many players"
 desktop. Pick a VPS or dedicated server that names the CPU model, with 16 GB of RAM, NVMe and a US West or
 central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 
+Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in Dallas (2 dedicated threads,
+16 GB, 200 GB NVMe, $45 a month), Debian 12, set up with the steps below.
+
 ## Set up (once)
 
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
@@ -106,10 +109,12 @@ Only one copy may run the world at a time: two live copies split the world into 
 ## Payments and Discord
 
 - **Tebex** sells the pass and the supporter tiers, collects sales tax as the merchant of record, and runs
-  commands on the server after a purchase: `whitelist add {username}` for the pass, and LuckPerms
-  `lp user {username} parent add <tier>` for supporter tiers (with the reverse on expiry). Its Fabric mod
-  goes into `server/mods` as an extra jar (the installer leaves jars it doesn't manage alone), or into the
-  manifest with `tools/add.py` once there is a build for this Minecraft version.
+  commands on the server after a purchase: `whitelist add {username}` for the pass (`whitelist remove` when
+  it ends), and the wardrobe scoreboard and team commands for supporter tiers (the full list, with the
+  reverse on expiry, is in docs/RETENTION.md). The monthly pass renews until the buyer cancels it from
+  Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Tebex's
+  Fabric mod (2.4.6) is built for 26.2 only; once there is a 26.3 build it goes into the manifest with
+  `tools/add.py`.
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.

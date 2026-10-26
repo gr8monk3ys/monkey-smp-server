@@ -136,8 +136,9 @@ announcements ("Copy that depends on unmerged work", below).
 
 ### Passes and the whitelist by hand
 
-Until the store's link is live, a pass is arranged in a Discord ticket, as the site says. How it is paid
-for is the owners' call; record each one in the roster sheet (below). Nobody goes on the whitelist before
+Until the store's link is live, a pass is arranged in a Discord ticket, as the site says (decided 26
+October). Only an owner takes the payment, directly with the player and never in a public channel; record
+each one in the roster sheet (below). Nobody goes on the whitelist before
 launch: at 5 PM on launch day, staff add every founding-roster member with a pass in one go.
 
 ```sh
@@ -347,16 +348,18 @@ applies their way in by being first.
 > - Answers to tickets within a day, and knowing the rules well.
 > - Being 16 or older.
 >
-> **What you get:** it's a volunteer role. No pay, and no items, Strength or advantages in the game.
-> Moderators play under the same rules as everyone, and a moderator who breaks them loses the rank.
+> **What you get:** it's a volunteer role. No pay, and no items, Strength or advantages in the game, but your
+> server pass is free while you moderate. Moderators play under the same rules as everyone, and a moderator
+> who breaks them loses the rank.
 >
 > **How to apply:** open a ticket titled "Moderator application" by Sunday 8 November, with your Minecraft
 > name, your time zone and the evenings you're usually free, any moderating you've done before, and what
 > you'd do here: two players argue in chat over a kill and one starts calling the other names. We'll reply
 > to everyone by Thursday 12 November.
 
-Before posting, the owners decide whether a moderator's own pass is on the house while they moderate. The
-draft says no pay; a free pass is the owners' call, and the post should say so either way.
+Decided 26 October: moderators must be 16 or older, and a moderator's own pass is free for as long as they
+moderate (whitelisted by hand, like staff; it ends with the rank). It's the same pass everyone has, so no one
+gets anything in the game for it.
 
 ### Picking (by Thu 12 Nov)
 

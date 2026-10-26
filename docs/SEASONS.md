@@ -102,6 +102,37 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 If the server is full early, open things sooner. If it is quiet, hold the finale back a week. The acts
 are a plan, not a contract. What is promised is the end date.
 
+#### Season I calendar
+
+Season I opens on **Saturday 21 November 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
+`site/config.js`, and the run sheet in docs/LAUNCH.md). Week N's event is the Saturday N weeks later at
+6 PM Pacific, 9 PM Eastern. Daylight saving time ends on 1 November 2026 and starts again on 14 March 2027,
+so every Season I time is standard time.
+
+| Week | Saturday | The event | Also that week |
+| --- | --- | --- | --- |
+| 0 | 21 Nov 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 22 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 22 Nov |
+| 1 | 28 Nov | Faction Raid I | Thanksgiving is Thursday 26 Nov |
+| 2 | 5 Dec | The border breaks: 2500 to 4000 | Town Hall (first Saturday). Midwinter announced. |
+| 3 | 12 Dec | **Dragon Night**: the End opens, Anarchy for 90 minutes | Midwinter decorating at spawn starts |
+| 4 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | Netherite age announced |
+| 5 | 26 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter comes down. The day after Christmas: expect a thin crowd. |
+| 6 | 2 Jan 2027 | Faction Raid II | Town Hall. The first Base of the Month (entries by 25 Dec). |
+| 7 | 9 Jan | Build Battle II | |
+| 8 | 16 Jan | The border breaks again: 4000 to 6000 | |
+| 9 | 23 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
+| 10 | 30 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
+| 11 | 6 Feb | **The finale**. The world locks after it. | Town Hall. Base of the Month (entries by 25 Jan). |
+| 12 | 13 Feb | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 19 Feb |
+| | 20 Feb | Season II opens (proposed; owners confirm it by 23 Jan) | |
+
+- **The end date to announce on day one:** Season I ends with the finale on Saturday 6 February 2027. The
+  world stays up, locked, through the off-season week, and Season II is planned for Saturday 20 February.
+- **Holidays in the season:** only Midwinter (19 Dec). Hallowtide (31 Oct 2026) comes before launch, while
+  the world is still closed, so Gravelight waits for Hallowtide 2027 (30 Oct). Midsummer (19 Jun 2027) is
+  after Season I.
+- **No Base of the Month in December.** Bases are four days old on 25 November.
+
 ### A weekly rhythm
 
 One headline event a week, at a fixed time (Saturday, 6 pm Pacific, which is the group's evening).

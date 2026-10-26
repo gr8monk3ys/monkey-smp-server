@@ -23,6 +23,38 @@
     el.hidden = (el.getAttribute("data-store") === "open") !== Boolean(cfg.STORE_URL);
   });
 
+  // The season launch (LAUNCH_AT): site_links.py wrote it out in Pacific and Eastern; this adds the visitor's
+  // own time and how long is left, and once it has passed says the season is live.
+  var launch = cfg.LAUNCH_AT ? new Date(cfg.LAUNCH_AT) : null;
+  var countdown = document.getElementById("countdown");
+  if (launch && !isNaN(launch) && countdown) {
+    var launchLabel = document.getElementById("launch-label");
+    var yourTime = launch.toLocaleString(undefined, {
+      weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"
+    });
+    var plural = function (n, word) { return n + " " + word + (n === 1 ? "" : "s"); };
+    var timer;
+    var tick = function () {
+      var left = launch - Date.now();
+      if (left <= 0) {
+        if (launchLabel) launchLabel.textContent = "Season I is live";
+        countdown.textContent = "The server is open: copy the address below and join.";
+        clearInterval(timer);
+        return;
+      }
+      var minutes = Math.ceil(left / 60000);
+      var days = Math.floor(minutes / 1440), hours = Math.floor((minutes % 1440) / 60), mins = minutes % 60;
+      // The two largest units, leaving out a zero ("3 days", not "3 days, 0 hours").
+      var parts = (days ? [[days, "day"], [hours, "hour"]] : [[hours, "hour"], [mins, "minute"]])
+        .filter(function (p, i) { return p[0] || (i === 1 && !days && !hours); })
+        .map(function (p) { return plural(p[0], p[1]); });
+      countdown.textContent = "Starts in " + parts.join(", ") + ". Your time: " + yourTime + ".";
+    };
+    countdown.hidden = false;
+    timer = setInterval(tick, 30000);
+    tick();
+  }
+
   // The trailer plays muted while it's on screen, unless the visitor asked for less motion or less data.
   var trailer = document.getElementById("trailer");
   var calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;

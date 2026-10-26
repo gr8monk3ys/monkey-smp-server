@@ -6,6 +6,12 @@
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
   you by hand, instead of promising the store's whitelist "within a minute or two". Setting `STORE_URL` and
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
+- Season I launch kit: the launch time is `LAUNCH_AT` in `site/config.js` (Saturday 21 November 2026, 5 PM
+  Pacific). `tools/site_links.py` writes it into every `data-launch` element, Pacific and Eastern spelled out,
+  so crawlers and link previews see it; the front page adds the visitor's own time and a countdown, then says
+  the season is live. New `docs/LAUNCH.md` (the run sheet from now to a week after launch, the founding roster
+  and moderator recruitment), the dated Season I calendar in `docs/SEASONS.md`, and launch announcement drafts
+  in `docs/PROMOTION.md`.
 
 ## [2.5.0] - 2026-10-26
 

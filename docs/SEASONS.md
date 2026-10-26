@@ -113,6 +113,46 @@ Most weeks it is the act or pillar event from the table above. When a week has o
 - The monthly Town Hall the bot already runs (first Saturday) is where players give feedback on the
   season.
 - Post the result and the screenshots in `#monkey-smp` the same night.
+- On Sunday at 7 pm Pacific the week's faction standings close (below) and post themselves, the day
+  after the event, so the event's Cup points are in.
+
+### Weekly standings
+
+Every faction gets one rank a week, from four things: event wins, land, strength and fighting. The Cup
+alone decides the champion; the standings give the weeks between events something to play for, and a
+faction that never wins an event still has a column it can lead.
+
+| Column | What counts | Weight |
+| --- | --- | --- |
+| Cup | The faction's Season Cup points so far (`ev.cup`) | 40 |
+| Land | Chunks its members have claimed (Open Parties and Claims) | 20 |
+| Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
+| Kills | PvP kills by its members this week, outside the event arena | 20 |
+| Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
+
+Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
+the faction with the most land gets 20, one with half as much gets 10. Add the columns up and the bounties
+on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
+7 chunks (the most), Strength 7 (the most) and 4 kills to the Blue Herons' 6: 40 + 20 + 20 + 13 = 93, and
+98 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
+the factions share the rank. Strength below zero counts as zero.
+
+- **Who is a faction.** An Open Parties and Claims party; its name is the party name (`/openpac`), or
+  "NAME's faction" after its owner if it has none. Players outside a party aren't ranked.
+- **The Cup column** is matched on names: name a faction's Cup entry as the party is named (or after its
+  owner), ignoring case, spaces and symbols. An entry that matches no party shows on its own.
+- **Kills** count from a snapshot taken when the week starts, so only this week's count. Arena kills
+  don't (the arena's fights are for the Cup). Feeding kills to a friend is exploit B13: staff take them
+  back.
+- **Where it shows.** Sunday at 7 pm Pacific the week closes: the final table is posted in Discord
+  (`STANDINGS_WEBHOOK_URL`, else the main channel), announced in chat, and kept on the board. The board is
+  a text display at spawn, and `/trigger standings` shows it in chat anywhere. It has this week so far,
+  updated every hour, and last week's final top five.
+- Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
+  board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
+
+`tools/standings.py` works it out, the `realms-standings` data pack counts kills and holds the board, and
+`deploy/realms-standings.sh` runs it on the VPS (docs/LIVE.md); staff commands are in docs/ADMIN.md.
 
 ### The pillar events
 
@@ -130,7 +170,8 @@ that loses one fight is still in the race.
 | The finale | 50 | 30 | 15 | 5 |
 
 Keep the standings on a sidebar at spawn (`scoreboard objectives add ev.cup dummy`, one entry per
-faction) and post them in `#monkey-smp` after every event.
+faction) and post them in `#monkey-smp` after every event. The Cup is also the biggest column of the
+weekly standings (above).
 
 #### Build Battle (launch days 1 and 2)
 
@@ -290,7 +331,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | --- | --- | --- |
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. | Exploration, small fights, new players |
-| **Bounty board** | Staff post bounties on the top Strength holders. Claiming one pays coins and a title. | Keeping the top in check |
+| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
 | **Market day** | Trading at spawn with stalls; spawn rules apply. | The economy, meeting other factions |
@@ -478,6 +519,10 @@ Built:
 - The first-join welcome, the pause menu's links and the 48-hour PvP grace (rule 26), in the
   `realms-rules` data pack (`tools/rules.py`). Grace is off in the arena, and fighting there doesn't end
   it.
+- The weekly standings ("Weekly standings"): `tools/standings.py`, the `realms-standings` data pack (the
+  week's kills, the board at spawn, `/trigger standings`, the bounty commands and the Bounty Hunter title)
+  and the Sunday timer on the VPS (`deploy/realms-standings.sh`, set up with `deploy/install-standings.sh`).
+  Not yet seen in game on a test server.
 
 Not built:
 

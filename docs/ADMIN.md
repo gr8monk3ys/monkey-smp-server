@@ -400,6 +400,32 @@ A flag keeps its tag and number when it is placed and broken. Copies made in a c
 same number, so two flags with one number means a copy. Book names are the enchantment ids (`book/protection`,
 `book/efficiency`, ...); Fire Aspect, Flame, Breach, Density, Wind Burst and the curses have none.
 
+**Weekly standings and bounties.** The `realms-standings` data pack (made by `tools/standings.py`) counts
+the week's kills and holds the board; the VPS works the standings out and posts them on Sundays
+(`docs/SEASONS.md`, "Weekly standings"; `docs/LIVE.md`). `/function realms:standings/help` lists these:
+
+```
+/function realms:standings/place                                        # stand at spawn: puts the board there
+/function realms:standings/remove                                       # next to it: removes it (to move it)
+/function realms:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
+/function realms:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
+```
+
+- **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
+  (not a friend handing over a kill, B13). The hunter's faction gets +5 standings points that week, and
+  the hunter the Bounty Hunter title (a red `[Bounty Hunter]` before the name) if they show no other
+  title or supporter color; one they paid for is never replaced, and the command tells you so. The title
+  lasts the season. Nothing is sold and nothing else comes with it.
+- **The Cup column** matches `cup/faction` names to parties: give each faction's Cup entry the party's
+  name (`/openpac` shows it), or its owner's name, so the Cup points land on the right row. An entry
+  that matches no party shows on its own row, and the VPS logs a warning.
+- **Taking back fed kills (B13)** or a wrong claim, over RCON: `scoreboard players remove NAME st.kills 3`
+  or `scoreboard players remove NAME st.bounty 1`. Only what is above the week's starting snapshot
+  counts, so it can't go below zero for the week.
+- **The board** updates every hour with this week so far. It's an entity, so it only changes while
+  spawn is loaded; it catches up within a second of someone coming near. `/trigger standings` shows the
+  same in chat, anywhere.
+
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
 on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and

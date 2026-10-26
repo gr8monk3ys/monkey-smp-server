@@ -1,0 +1,10 @@
+# Closes the week of faction standings every Sunday at 7 PM Pacific (and after boot if one was missed).
+[Unit]
+Description=Monkey SMP: weekly faction standings on Sunday evenings
+
+[Timer]
+OnCalendar=Sun *-*-* 19:00:00 America/Los_Angeles
+Persistent=true
+
+[Install]
+WantedBy=timers.target

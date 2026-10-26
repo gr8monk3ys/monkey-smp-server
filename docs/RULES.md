@@ -71,6 +71,13 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
 25. A world border is set at 2500 x 2500.
     - Leaving or breaking the world border is prohibited.
     - The border is expected to grow as the server progresses or as more players join.
+26. New players and spawn are safe from PvP.
+    - For 48 hours after your first join, other players can't hurt you. Attacking a player ends that early,
+      and so does `/trigger end_grace`. Nobody gets it in the launch hour (rule 23): the whole server starts
+      together.
+    - Grace is for settling in. Using it to scout, carry loot, block a fight, hold a spot for a faction, or
+      fight by other means (pets, lava, fire, traps) is a loophole (rule 7), and an admin will end it.
+    - Spawn is a no-PvP zone.
 
 ## Strength rules
 
@@ -106,6 +113,23 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
 38. If you retreat into your own territory while engaged in combat, you still have to fight.
     - Blocks and builds there still fall under the anti-griefing and combat-rejoining rules.
 39. No territory can be griefed, robbed, sabotaged, abused or exploited, or farmed.
+40. No insiding: griefing, raiding or robbing your own faction, or helping someone else do it.
+    - Planning one counts too, when there's evidence it was going to happen.
+    - After you leave a faction or are removed from it, you can't use anything you had as a member against
+      it: access to its base, chests or claims, its coordinates, an alt left inside, or members who still
+      think you're on their side.
+    - Doing it through an alt or another player is punished as if you did it yourself.
+    - Fake-checking a faction's walls or traps (saying they're fine when they aren't) is insiding.
+    - First offense: a 14-day ban. Second: a permanent ban. A faction that took part or profited gives back
+      what it took, and its members can be punished too.
+41. No teaming: don't help anyone outside your faction in a fight.
+    - When other factions are fighting, or one is raiding another, stay out: don't attack either side,
+      block them, heal them or take the loot.
+    - Events are exempt. At KOTH, in the arena and at other staff events anyone can fight anyone; the rule
+      applies again once you leave the event area.
+    - First offense: a 2-day ban. Second: 5 days. Third: 14 days. Offenses count for the current season.
+42. Admins roll back griefing of a territory (rules 37 and 39) and an insider's damage (rule 40). A legal
+    raid, on anything outside a territory's perimeter, isn't rolled back.
 
 ## Bans
 
@@ -167,13 +191,19 @@ Enjoy!
 Open items from the owners' draft:
 
 - Rule 3: disengage rules are still to be discussed (when a fight counts as over).
-- Rule 26 was blank in the draft, so the numbering skips it.
+- Rule 26 was blank in the draft. It now holds the PvP grace and the no-PvP spawn.
+- Rules 40 and 41 follow SaicoPvP's insiding and PvP-interfering rules; the ban lengths are the owners' to
+  change. Rule 41 counts allies as outside the faction, as SaicoPvP does. If allies (rule 31) should be
+  able to fight together, add "or its ally" to rule 41.
 - "The mods" section is still to be written.
 - B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack.
 
 What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
 Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
 
+- **The short rules.** Players accept `codeofconduct/en_us.txt` (in the server folder) before they join,
+  and again whenever it changes (`enable-code-of-conduct=true` in `server.properties`). It quotes the rule
+  numbers in this file, so change it when a rule changes. A file edit takes effect at the next restart.
 - **Rule 23, the launch hour.** At launch, run `function realms:rules/launch`. PvP and the Nether close
   (the `pvp` and `allow_entering_nether_using_portals` gamerules), and after 3600 seconds of server time
   both open again by themselves. The timer is saved with the world, so a restart doesn't reset it.
@@ -190,11 +220,34 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
   alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
   and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
+- **Rule 26, PvP grace** (pack `realms-rules`). The first time the server sees a player, they get grace
+  (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
+  before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
+  minute) gets neither. Grace is an invisible
+  item in the player's body slot whose enchantment blocks all damage a player causes; it comes back after
+  a death and is off while the player is in the event arena. It ends after 48 hours of game time, which
+  stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.
+  `function realms:rules/launch` ends everyone's. One player: `execute as <player> run function
+  realms:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
+  `scoreboard players get <player> realms.grace`; `time query gametime` is now.
+- **Rule 26, the no-PvP spawn.** An Open Parties and Claims server claim over the 7 x 7 chunks around
+  spawn (the vanilla spawn protection and a bit more). With their `playersByPlayers` exception off, server
+  claims stop players hurting players, and they keep spawn's blocks safe too (rule 22). An admin sets it up
+  once per world from the server console, whose commands run at the world spawn (in Docker:
+  `realms rcon "<command>"`):
+  `opac server-claims-config set claims.protection.exceptions.playersByPlayers false`, then
+  `oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48`. The pack can't do it: Open Parties and
+  Claims doesn't let a datapack function claim. Build the event arena outside this square, or nobody can
+  fight in it. A chunk a player claimed there earlier stays theirs (the server claim skips it), so it isn't part
+  of the no-PvP zone until they unclaim it.
 - **Rule 29, 4-player factions.** Open Parties and Claims' `maxPartyMembers` is 4
   (`defaults/config/openpartiesandclaims-server.toml`). On a server installed before this setting
   shipped, the installer keeps your existing `config/openpartiesandclaims-server.toml`: set
   `maxPartyMembers = 4` there yourself (server stopped). Lowering it doesn't remove members already in a
   bigger party.
+- **Rule 35, 2 x 2 chunks per member.** Open Parties and Claims' `maxPlayerClaims` is 4 in the same file,
+  and claims belong to players, so a faction's claims add up to 2 x 2 chunks per member. On an older
+  server, set it there yourself.
 - **B9, Fire Aspect and Flame** (pack `realms-rules`). They're out of the enchanting table, loot, villager
   trades and mob gear. A copy that still turns up (a book in a mod's chest, a mob's weapon) shows as
   "(disabled)", does nothing, and can't be put on an item at an anvil. This replaces vanilla's
@@ -209,6 +262,11 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
+- **The welcome and the links** (pack `realms-rules`). A first join gets a welcome screen whose one button
+  opens the Discord, where `#smp-forum` has the factions that are recruiting. Every player's pause menu
+  has a Monkey SMP button with the Discord, the live map, the rules and the store. The addresses are in
+  `tools/rules.py` (`DISCORD`, `LINKS`). Show someone the welcome again:
+  `dialog show <player> realms:welcome`.
 
 Still on players and admins: everything else, including rule 33 (leaving a faction needs an admin's
 approval; the mod lets players leave a party freely).

@@ -267,9 +267,11 @@ def arena_files() -> dict[str, str]:
         "execute unless entity @s[gamemode=survival] run " + refuse("Only players in survival can join."),
         "$execute in minecraft:overworld unless entity @s[x=$(lx),y=$(ly),z=$(lz),distance=..8] run "
         + refuse("Come to the arena entrance to join."),
-        *(f"execute if items entity @s {slots} * run " + refuse(
+        "# armor.* takes in the body slot, where a new player's PvP grace item sits (tools/rules.py takes it",
+        "# off in the arena and gives it back outside).",
+        *(f"execute if items entity @s {slots} run " + refuse(
             "Empty your inventory, armor and offhand first: you fight with the round's kit, not your gear.")
-          for slots in ("container.*", "armor.*", "weapon.offhand")),
+          for slots in ("container.* *", "armor.* *[!custom_data~{realms_grace:{}}]", "weapon.offhand *")),
         "# Leaving strips kit gear from the ender chest's slots, but not from inside a bundle kept there.",
         "execute if items entity @s enderchest.* #minecraft:bundles run " + refuse(
             "Take the bundles out of your ender chest first."),

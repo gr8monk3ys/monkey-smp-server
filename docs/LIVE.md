@@ -147,6 +147,44 @@ Distant Horizons has renamed a key: find it in the file (its comments say what e
 by hand, with the server stopped again. LODs players already received before the change stay on their
 computers; from now on they only get LODs of land they walk past.
 
+### The short rules, ServerCore and claims (the release after 2.4.2)
+
+The release brings the short rules (`server/codeofconduct/en_us.txt`, a new file), but the live server keeps its
+own copies of three files, so four settings in them stay off: the Code of Conduct (`server.properties`), ServerCore's
+breeding cap and villager lobotomization (`config/servercore/config.yml`) and Open Parties and Claims' 4 chunks per
+player (`config/openpartiesandclaims-server.toml`). Spawn's no-PvP claim belongs to the world, so it's made from the
+console. Do this after the release is live: `ls /srv/realms/TheRealms-Server/server/codeofconduct/en_us.txt` must
+list the file. Then, as `realms` (`sudo -iu realms`):
+
+```sh
+cd /srv/realms/TheRealms-Server/docker
+exec 9>/tmp/realms-deploy.lock && flock 9    # the deploy lock, as above
+S=/srv/realms/TheRealms-Server/server
+P=$S/server.properties C=$S/config/servercore/config.yml O=$S/config/openpartiesandclaims-server.toml
+docker compose exec -T realms realms rcon "say The server restarts in 1 minute for a settings update." && sleep 60
+docker compose stop realms
+for f in "$P" "$C" "$O"; do [ -e "$f.pre-onboarding" ] || cp -p "$f" "$f.pre-onboarding"; done   # once
+grep -q '^enable-code-of-conduct=' "$P" || echo 'enable-code-of-conduct=true' >> "$P"
+sed -i 's/^enable-code-of-conduct=.*/enable-code-of-conduct=true/' "$P"
+awk '$1 == "lobotomize-villagers:" || $1 == "breeding-cap:" { f = 1; print; next }
+     f && $1 == "enabled:" { sub(/enabled:.*/, "enabled: true"); f = 0 } { print }' "$C" > "$C.new"
+cat "$C.new" > "$C" && rm "$C.new"
+sed -i 's/^\([[:space:]]*maxPlayerClaims[[:space:]]*=\).*/\1 4/' "$O"
+grep -h -E '^enable-code-of-conduct=|^[[:space:]]*maxPlayerClaims[[:space:]]*=' "$P" "$O"
+grep -A2 -E '^[[:space:]]*(lobotomize-villagers|breeding-cap):' "$C" | grep 'enabled:'
+docker compose start realms
+until docker compose exec -T realms realms rcon list >/dev/null 2>&1; do sleep 10; done
+docker compose exec -T realms realms rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"
+docker compose exec -T realms realms rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"
+exec 9>&-                                    # let deploys and backups run again
+```
+
+The first `grep` must print `enable-code-of-conduct=true` and `maxPlayerClaims = 4`, the second `enabled: true`
+twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 chunks around spawn (the console's
+`~ ~` is the world spawn). The claim runs in the background for a few seconds, and it skips chunks a player
+already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
+the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
+
 ## Backups off the machine
 
 `backups/` is on the same disk as the world, so a dead disk or a lost VPS takes both. So every hour the VPS

@@ -1,0 +1,28 @@
+{
+  "criteria": {
+    "hurt_a_player": {
+      "trigger": "minecraft:player_hurt_entity",
+      "conditions": {
+        "player": {
+          "type": "minecraft:entity_scores",
+          "entity": "this",
+          "scores": {
+            "realms.grace": {
+              "min": 1
+            }
+          }
+        },
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "minecraft:player"
+          }
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "realms:rules/grace_attack"
+  }
+}

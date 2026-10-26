@@ -42,8 +42,10 @@ def test_json_files_parse():
 
 def test_arena_keeps_strength_aside_and_lets_nothing_out():
     join, leave, tick = fn("arena/join"), fn("arena/leave"), fn("arena/tick")
-    for slots in ("container.*", "armor.*", "weapon.offhand"):
-        assert f"if items entity @s {slots} * run return" in join
+    for slots in ("container.* *", "weapon.offhand *"):
+        assert f"if items entity @s {slots} run return" in join
+    # armor.* includes the body slot, which holds a new player's PvP grace item (tools/rules.py)
+    assert "if items entity @s armor.* *[!custom_data~{realms_grace:{}}] run return" in join
     assert join.index("return") < join.index("tag @s add ev.arena")
     assert f"scoreboard players operation @s ev.strength = @s {events.LEVEL}" in join
     assert f"scoreboard players set @s {events.LEVEL} 3" in join

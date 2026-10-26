@@ -284,13 +284,13 @@
     {
       "slug": "c2me-fabric",
       "project_id": "VSNURh3q",
-      "version": "0.4.2-alpha.0.89+26.3",
-      "version_id": "FXjQDzq7",
-      "file": "c2me-fabric-mc26.3-0.4.2-alpha.0.89.jar",
-      "url": "https://cdn.modrinth.com/data/VSNURh3q/versions/FXjQDzq7/c2me-fabric-mc26.3-0.4.2-alpha.0.89.jar",
-      "size": 3950208,
+      "version": "0.4.2-alpha.0.106+26.3",
+      "version_id": "gKKkuSYc",
+      "file": "c2me-fabric-mc26.3-0.4.2-alpha.0.106.jar",
+      "url": "https://cdn.modrinth.com/data/VSNURh3q/versions/gKKkuSYc/c2me-fabric-mc26.3-0.4.2-alpha.0.106.jar",
+      "size": 4195982,
       "hashes": {
-        "sha512": "b4fcf82bbe15bfa253e3ab6df4d6b64e800a2ccdb45d4ca2b8040da87f72033fed34f4f94016aac507596c78fddb18dba28c6642790181642cae46fae28b3a85"
+        "sha512": "047ed3fe3869d0185c6d1e94fd1e725b2ad40047e4929f22692090570af28d0075849cb65335b602658859c7d437cce51c94082c0c798617314764cfdc0a1d71"
       }
     },
     {

@@ -18,6 +18,11 @@
     }
   });
 
+  // Text that is true only once the store is open (data-store="open"), and what it says until then ("soon").
+  document.querySelectorAll("[data-store]").forEach(function (el) {
+    el.hidden = (el.getAttribute("data-store") === "open") !== Boolean(cfg.STORE_URL);
+  });
+
   // The trailer plays muted while it's on screen, unless the visitor asked for less motion or less data.
   var trailer = document.getElementById("trailer");
   var calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -395,7 +395,10 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
   payment, takes 1% more on payments made with a code, and settles the creator's Tebex Wallet after 30
   working days. The public terms are `site/creators.html`; finding creators is in docs/PROMOTION.md.
 - **The site.** Put the webstore's address in `STORE_URL` in `site/config.js` and run
-  `python tools/site_links.py`, which writes it into the pages.
+  `python tools/site_links.py`, which writes it into the pages. Do it only once a test purchase has
+  whitelisted someone: while `STORE_URL` is empty the pages say passes are arranged in the Discord and
+  staff whitelist buyers by hand, and setting it switches them to the store's wording ("on the whitelist
+  within a minute or two"), marked `data-store="open"` and `"soon"` in the HTML.
 
 ## Monitoring, the daily restart and the update check
 

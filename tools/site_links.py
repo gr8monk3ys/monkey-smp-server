@@ -5,9 +5,11 @@
 
 config.js is the one place the links live, and app.js fills them in for visitors. Crawlers and link
 previews read the HTML as it is served, though, so the same URLs are written into the pages as well. A
-link whose URL is empty points at the Discord with a "coming soon" title, as app.js does. When the modpack
-is served from the site itself (site/pack/), the check also makes sure that file is there and is the pack
-of the version the manifest pins, since a player with another version's pack can't join.
+link whose URL is empty points at the Discord with a "coming soon" title, as app.js does. Text that is only
+true once the store is open is marked data-store="open", and its stand-in for now data-store="soon": the
+one that doesn't apply while STORE_URL is empty (or once it is set) gets the hidden attribute. When the
+modpack is served from the site itself (site/pack/), the check also makes sure that file is there and is
+the pack of the version the manifest pins, since a player with another version's pack can't join.
 """
 import argparse
 import html
@@ -22,6 +24,9 @@ from repo import REPO
 SOON = "Coming soon: ask in the Discord"
 _SETTING = re.compile(r'^\s*([A-Z_]+):\s*"([^"]*)"', re.M)
 _ANCHOR = re.compile(r'<a\b[^>]*\bdata-link="([A-Z_]+)"[^>]*>')
+_STORE_TEXT = re.compile(r'<[a-z]+\b[^>]*\bdata-store="([^"]*)"[^>]*>')
+# A hidden attribute, or a quoted value (kept as it is, so "hidden" inside a title isn't touched).
+_HIDDEN = re.compile(r'("[^"]*")|\shidden(?:="[^"]*")?(?=[\s>])')
 
 
 def site(repo=REPO) -> Path:
@@ -52,8 +57,14 @@ def _set_attr(tag: str, name: str, value: str | None) -> str:
     return tag[:-1] + new + ">"
 
 
+def _set_hidden(tag: str, hidden: bool) -> str:
+    tag = _HIDDEN.sub(lambda m: m.group(1) or "", tag)
+    return tag[:-1] + " hidden>" if hidden else tag
+
+
 def stamp(page: str, links: dict[str, str]) -> tuple[str, list[str]]:
-    """The page with every data-link anchor pointing where config.js says, plus any unknown keys."""
+    """The page with every data-link anchor pointing where config.js says and only the store text that
+    applies showing, plus any unknown keys."""
     errors = []
 
     def fix(m: re.Match) -> str:
@@ -64,7 +75,16 @@ def stamp(page: str, links: dict[str, str]) -> tuple[str, list[str]]:
         href, title = target(links, key)
         return _set_attr(_set_attr(tag, "href", href), "title", title)
 
-    return _ANCHOR.sub(fix, page), errors
+    store_open = bool(links.get("STORE_URL"))
+
+    def show(m: re.Match) -> str:
+        tag, when = m.group(0), m.group(1)
+        if when not in ("open", "soon"):
+            errors.append(f'data-store="{when}" should be "open" or "soon"')
+            return tag
+        return _set_hidden(tag, (when == "open") != store_open)
+
+    return _STORE_TEXT.sub(show, _ANCHOR.sub(fix, page)), errors
 
 
 def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:

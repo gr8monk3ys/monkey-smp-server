@@ -52,6 +52,8 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 
 | When | Command |
 | --- | --- |
+| A pass is bought | `whitelist add {username}` |
+| The pass ends (cancelled, expired or refunded) | `whitelist remove {username}` |
 | A supporter tier is bought (1 Ember, 2 Banner, 3 Crown) | `scoreboard players set {username} rw.tier 2` |
 | The same purchase: chat name color | `team join tier_banner {username}` (or `tier_ember`, `tier_crown`) |
 | It expires or is refunded | `scoreboard players set {username} rw.tier 0` and `team leave {username}` |
@@ -123,14 +125,17 @@ Worth checking monthly, next to the store's pass renewals:
 
 ## Churn and the budget
 
-From the plan's cost model: a paying player brings in about $4.94 a month after fees, the server costs
-$62.50 a month, and the server breaks even at 13 paying players.
+A $5 monthly pass brings in about $4.33 after Tebex's fees (a 5% platform fee plus card processing of
+about 2.49% + $0.30). The server costs about $50 a month (the $45 VPS in docs/LIVE.md, plus off-site
+backups and the fallback tunnel), so it breaks even at 12 paying players. The $12 three-month pass brings
+in about $10.80, or $3.60 a month: if every payer chose it, break-even would be 14. The table below assumes
+monthly passes.
 
 | Monthly pass churn | Months a payer stays | Lifetime value | New payers a month to hold 30 |
 | --- | --- | --- | --- |
-| 25% | 4 | $19.76 | 7.5 |
-| 15% | 6.7 | $32.93 | 4.5 |
-| 10% | 10 | $49.40 | 3 |
+| 25% | 4 | $17.32 | 7.5 |
+| 15% | 6.7 | $28.87 | 4.5 |
+| 10% | 10 | $43.30 | 3 |
 
 Cutting churn from 25% to 10% is worth as much as more than doubling the new players you find each
 month. That is why the wardrobe rewards days played and tenure, not purchases.

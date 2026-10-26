@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "game": "minecraft",
-  "versionId": "2.4.1",
+  "versionId": "2.4.2",
   "name": "Monkey SMP - Client",
   "summary": "Client pack for Monkey SMP factions server.",
   "files": [

@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-X-ray protection and moderation tools, plus live-server fixes. Server only: players need nothing new.
+X-ray protection and moderation tools. Server only: players need nothing new.
 
 - New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
   players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
@@ -28,6 +28,13 @@ X-ray protection and moderation tools, plus live-server fixes. Server only: play
   walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
   A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
   `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
+
+## [2.4.2] - 2026-10-25
+
+Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts
+unzip over 2.4.1; players need nothing new. Default config changes reach only new servers; the entries
+below say what to change on an existing one.
+
 - Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).

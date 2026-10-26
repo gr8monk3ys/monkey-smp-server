@@ -122,7 +122,7 @@ A deploy never overwrites files in `server/`, and a new default config only reac
 that file yet. When a release changes a default the live server already has, its steps are here. They work
 before or after the release goes live.
 
-### Distant Horizons stops sending its own LODs (the release after 2.4.1)
+### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
 The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,
 and those carry the real ores ("Distant Horizons and x-ray" in docs/ADMIN.md). Turn them off with the server

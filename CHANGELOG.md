@@ -19,6 +19,9 @@
   the border saved in the world after each border act. Then `bluemap reload` and `bluemap purge <map>`
   (docs/ADMIN.md, "The live map"; docs/SEASONS.md's border acts now include it). Defaults only reach new
   servers: on an existing one, run the tool once.
+- Fix: the Nether map shows the caves instead of the bedrock roof. Incendium makes the Nether 192 tall, and
+  BlueMap's own ceiling cut stopped at y 127; the shipped `world_the_nether.conf` cuts everything from y 90 up.
+  On an existing server, delete `max-y: 127` from that layer (docs/ADMIN.md, "The live map").
 - Live server: the public map moves to https://map.monkeysmp.lscaturchio.xyz, served by Caddy with a Let's
   Encrypt certificate in front of BlueMap, which is now published on 127.0.0.1 only (`MAP_PORT`). The site
   links there, and port 8100 is no longer opened (docs/LIVE.md, steps 2, 5, 8 and 9).

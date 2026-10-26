@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+X-ray protection and moderation tools. Server only: players need nothing new.
+
+- New: **AntiXray** (DrexHD) is on by default (`defaults/config/antixray.toml`). Buried ores are never sent to
+  players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
+  stone. It covers Skniro's Nether and End ores too, which aren't in the `c:ores` tag. This is what now enforces
+  B15 (x-ray), B17 and B19 (`docs/RULES.md`).
+- New: **MinerTrack**, alert only (`defaults/config/MinerTrack/config.yml`). It flags players who mine from one
+  buried diamond, emerald or ancient debris vein straight to the next, and alerts moderators at VL 2, 4 and 5
+  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, say). ADMIN.md also has the saved Ledger
+  query for diamond-ore breaks.
+- New: a test that the world seed never ends up in what players get (the client pack, the player zip, the site,
+  RULES.md). It isn't in any of them today; only the server zip has it.
+- New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
+  **InvView** (look into a player's inventory and ender chest). The rules' "temporary ban (1 to 7 days)" is now
+  `tempban NAME 3d reason`. See "Moderation" in `docs/ADMIN.md`.
+- New: **Vanilla Permissions**, so LuckPerms ranks can grant vanilla commands. Builders' `/gamemode` and
+  moderators' teleport and whitelist now work without op.
+- Ranks: moderators get the BanHammer, Vanish and InvView commands (InvView look only); admins can also move items
+  in other players' inventories. Rank files are only copied where missing, so an existing server keeps its old
+  ranks: see "Existing servers" under "Moderation" in `docs/ADMIN.md`.
+- Changed: Distant Horizons on the server no longer builds or sends LODs (`defaults/config/DistantHorizons.toml`:
+  `synchronizeOnLoad` and `enableRealTimeUpdates` off, `generatorPlan = "DISABLED"`). Its LODs came from the real
+  world, so they carried every real ore, buried or not, past AntiXray. Players still see LODs of land they have
+  walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
+  A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
+  `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
+
 ## [2.4.2] - 2026-10-25
 
 Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts

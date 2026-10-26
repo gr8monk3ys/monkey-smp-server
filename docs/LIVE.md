@@ -116,6 +116,37 @@ If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previ
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
 before the update is the newest folder in `backups/`.
 
+## One-off steps when upgrading
+
+A deploy never overwrites files in `server/`, and a new default config only reaches a server that doesn't have
+that file yet. When a release changes a default the live server already has, its steps are here. They work
+before or after the release goes live.
+
+### Distant Horizons stops sending its own LODs (the release after 2.4.2)
+
+The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,
+and those carry the real ores ("Distant Horizons and x-ray" in docs/ADMIN.md). Turn them off with the server
+stopped, so Distant Horizons can't write over the change. As `realms` (`sudo -iu realms`):
+
+```sh
+cd /srv/realms/TheRealms-Server/docker
+exec 9>/tmp/realms-deploy.lock && flock 9    # the deploy lock (LOCK_FILE in /etc/realms-deploy.env): no deploy or backup starts meanwhile
+docker compose stop realms
+f=/srv/realms/TheRealms-Server/server/config/DistantHorizons.toml
+cp "$f" "$f.bak"
+sed -i -e 's/^\([[:space:]]*synchronizeOnLoad[[:space:]]*=\).*/\1 false/' \
+       -e 's/^\([[:space:]]*enableRealTimeUpdates[[:space:]]*=\).*/\1 false/' \
+       -e 's/^\([[:space:]]*generatorPlan[[:space:]]*=\).*/\1 "DISABLED"/' "$f"
+grep -nE '^[[:space:]]*(synchronizeOnLoad|enableRealTimeUpdates|generatorPlan)[[:space:]]*=' "$f"
+docker compose start realms
+exec 9>&-                                    # let deploys and backups run again
+```
+
+The `grep` must print three lines ending in `false`, `false` and `"DISABLED"`. If it prints fewer, a newer
+Distant Horizons has renamed a key: find it in the file (its comments say what each setting does) and set it
+by hand, with the server stopped again. LODs players already received before the change stay on their
+computers; from now on they only get LODs of land they walk past.
+
 ## Backups off the machine
 
 `backups/` is on the same disk as the world, so a dead disk or a lost VPS takes both. So every hour the VPS

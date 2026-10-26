@@ -122,6 +122,22 @@ A deploy never overwrites files in `server/`, and a new default config only reac
 that file yet. When a release changes a default the live server already has, its steps are here. They work
 before or after the release goes live.
 
+For 2.5.0, `deploy/upgrade-2.5.0.sh` does the Distant Horizons step below, installs python3 and the two timers
+("Monitoring, the daily restart and the update check"), and skips whatever is already done, so it is safe to run
+again. Run it as root once 2.5.0 is live, `--check` first (it says what is left and changes nothing). Under
+`systemd-run` it carries on if SSH drops while the server is stopped:
+
+```sh
+sudo sh /srv/realms/repo/deploy/upgrade-2.5.0.sh --check
+sudo systemd-run --unit=realms-upgrade --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/upgrade-2.5.0.sh
+journalctl -fu realms-upgrade
+```
+
+It warns players online `WARN_MINUTES` (5) and 1 minute ahead (`--now` skips that), stops the server for about
+3 minutes, keeps the old file as `DistantHorizons.toml.before-2.5.0` and starts the server again whatever
+happens. It reads no secrets from `/etc/realms-deploy.env`; its log is `/var/log/realms-upgrade-2.5.0.log`. The
+off-site backups stay a manual step ("Backups off the machine"): they need keys the owner makes.
+
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
 The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,

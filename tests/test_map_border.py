@@ -75,6 +75,15 @@ def test_the_shipped_maps_are_the_worlds_bluemap_would_make():
     }
 
 
+def test_the_nether_map_cuts_everything_from_y_90_up():
+    # Incendium makes the Nether 192 tall: a ceiling cut that stops at 127 (BlueMap's own) leaves the bedrock
+    # roof covering the map, so the cut has no top.
+    nether = (DEFAULT_MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
+    ceiling = nether.split("subtract: true", 1)[1].split("}", 1)[0]
+    assert "min-y: 90" in ceiling
+    assert "max-y" not in ceiling
+
+
 def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, capsys):
     grown = {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 4000.0), "minecraft:the_nether": (*NETHER_CENTRE, 500.0)}
     server(tmp_path, grown)
@@ -87,7 +96,7 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
     assert "purge world_the_end" not in out
     assert masks(tmp_path)["world"] == {"min-x": -2080, "max-x": 1919, "min-z": -1584, "max-z": 2415}
     nether = (tmp_path / map_border.MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
-    assert "subtract: true\n    min-y: 90\n    max-y: 127" in nether
+    assert "subtract: true\n    min-y: 90\n  }" in nether
     assert nether.count(map_border.MARK) == 1
     assert (tmp_path / map_border.MAPS / "world_the_end.conf").read_bytes() == end_before
     assert map_border.main([str(tmp_path), "--check"]) == 0  # running it again changes nothing

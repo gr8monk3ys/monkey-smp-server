@@ -1,0 +1,26 @@
+# Backs up the live server folder to Cloudflare R2 (realms-backup.sh). Started every hour by
+# realms-backup.timer; install with docs/LIVE.md, "Backups off the machine". Run one now with
+# systemctl start realms-backup.
+[Unit]
+Description=Monkey SMP: back up the world to R2
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Root, because only root may read /etc/realms-backup.env (the R2 keys and the restic password).
+User=root
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-backup.sh
+# If the run was killed before it could turn saving back on, do it now. Does nothing otherwise.
+ExecStopPost=-/bin/sh /srv/realms/repo/deploy/realms-backup.sh --save-on
+# /var/cache/realms-backup (restic's cache) and /var/lib/realms-backup (the script's state).
+CacheDirectory=realms-backup
+StateDirectory=realms-backup
+# Behind the server for CPU and disk, and restic on one thread, so the VPS's other thread stays the
+# server's and the backup doesn't cost it ticks.
+Environment=GOMAXPROCS=1
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# A deploy can make it wait up to 45 minutes, and the first upload sends the whole world.
+TimeoutStartSec=2h

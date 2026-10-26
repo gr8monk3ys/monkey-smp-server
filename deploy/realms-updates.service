@@ -1,0 +1,15 @@
+# Looks for newer builds of what the live release pins (realms-updates.sh). Started by realms-updates.timer;
+# install with docs/LIVE.md. Read-only: it changes nothing on the server.
+[Unit]
+Description=Monkey SMP: weekly update check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=realms
+Group=realms
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-updates.sh
+# A minute of web requests; let the game thread go first.
+Nice=10
+TimeoutStartSec=30min

@@ -28,6 +28,30 @@ X-ray protection and moderation tools. Server only: players need nothing new.
   walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
   A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
   `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
+- Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
+  the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
+  morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory
+  use can be compared from day to day.
+- Live server: a **weekly update check** on Mondays (`realms-updates.timer`): `tools/check_updates.py` against the
+  live release, posted to Discord with the report attached, while the GitHub Actions check can't run.
+- Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it
+  is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
+- Live server: **`deploy/realms-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
+  players on a throwaway copy of the live server (no Tebex, no published ports), with the live server stopped
+  and always started again. `tools/loadtest.py --spark` adds a spark profile of every thread, and `summary.json`
+  now records ServerCore's status. docs/LIVE.md has how to run it, the decision rule (about 40 ms at 25 players),
+  uptime monitoring from the home PC, and the DDoS plan (a question for Reizor first, TCPShield if needed).
+- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
+  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
+  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
+  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
+  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
+- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
+  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
+  approves the pack, Modrinth App players import the `.mrpack` as before.
+- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
+  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
+  without Actions") lists the steps.
 
 ## [2.4.2] - 2026-10-25
 
@@ -87,17 +111,6 @@ below say what to change on an existing one.
   `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
   Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
   pinned by hand"). Players need nothing new: it isn't in the client pack.
-- New: the client pack can go on **Modrinth** as the Monkey SMP modpack, with a Modrinth server listing that
-  links to it (`docs/MODRINTH.md`: the listing text, the owner's one-time setup, review times, and Modrinth's
-  rule against listing paid-access servers). `tools/modrinth.py` uploads a release's `.mrpack` with the token
-  from `MODRINTH_TOKEN`, skips a release that left `client/` alone, and keeps the server listing on the newest
-  version. Every file in the pack is hosted on Modrinth, so nothing blocks publishing.
-- Players: the Modrinth App is now the recommended install on every OS (`docs/PLAYERS.md`), and it updates the
-  pack itself. The Windows installer for the normal Minecraft Launcher stays as the fallback. Until Modrinth
-  approves the pack, Modrinth App players import the `.mrpack` as before.
-- Releasing by hand while GitHub Actions doesn't run: `python tools/build.py --notes notes.md` writes the
-  release notes the workflow wrote (the workflow now uses it too), and `docs/MAINTAINING.md` ("Releasing
-  without Actions") lists the steps.
 
 ## [2.4.1] - 2026-10-25
 

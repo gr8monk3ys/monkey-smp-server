@@ -22,3 +22,7 @@ package/scheduled-backups.log
 
 # docker compose settings of a maintainer test run from package/docker (never ship them)
 package/docker/.env
+
+# store exports for tools/funnel.py hold buyers' names and emails (only the synthetic fixture is committed)
+*.csv
+!tests/fixtures/*.csv

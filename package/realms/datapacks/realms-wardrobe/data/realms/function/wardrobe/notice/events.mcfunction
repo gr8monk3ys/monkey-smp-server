@@ -1,0 +1,4 @@
+# rw.events moved (the store, staff or an event set it): say which skins it just unlocked.
+execute if score @s rw.events matches 3.. unless score @s rw.events.seen matches 3.. run tellraw @s [{"text":"Unlocked ","color":"gold"},{"text":"Rallier","color":"yellow"},{"text":" for 3 events attended. ","color":"gold"},{"text":"[Open the wardrobe]","color":"aqua","underlined":true,"click_event":{"action":"run_command","command":"/trigger wardrobe"}}]
+execute if score @s rw.events matches 10.. unless score @s rw.events.seen matches 10.. run tellraw @s [{"text":"Unlocked ","color":"gold"},{"text":"Plumed Helm","color":"yellow"},{"text":" for 10 events attended. ","color":"gold"},{"text":"[Open the wardrobe]","color":"aqua","underlined":true,"click_event":{"action":"run_command","command":"/trigger wardrobe"}}]
+scoreboard players operation @s rw.events.seen = @s rw.events

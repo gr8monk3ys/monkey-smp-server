@@ -2,19 +2,28 @@
 execute if score @s wardrobe matches 1 run function realms:wardrobe/menu
 execute if score @s wardrobe matches 2 run function realms:wardrobe/reset_blade
 execute if score @s wardrobe matches 3 run function realms:wardrobe/reset_helm
+execute if score @s wardrobe matches 4 run function realms:wardrobe/menu_support
 execute if score @s wardrobe matches 101 run function realms:wardrobe/skin/wayfarer
 execute if score @s wardrobe matches 102 run function realms:wardrobe/skin/emberfang
 execute if score @s wardrobe matches 103 run function realms:wardrobe/skin/frostbite
 execute if score @s wardrobe matches 104 run function realms:wardrobe/skin/verdant
 execute if score @s wardrobe matches 105 run function realms:wardrobe/skin/starfall
-execute if score @s wardrobe matches 106 run function realms:wardrobe/skin/old_guard
+execute if score @s wardrobe matches 106 run function realms:wardrobe/skin/rallier
 execute if score @s wardrobe matches 107 run function realms:wardrobe/skin/founders_edge
-execute if score @s wardrobe matches 108 run function realms:wardrobe/skin/lantern
-execute if score @s wardrobe matches 109 run function realms:wardrobe/skin/standard
-execute if score @s wardrobe matches 110 run function realms:wardrobe/skin/regalia
+execute if score @s wardrobe matches 108 run function realms:wardrobe/skin/gravelight
+execute if score @s wardrobe matches 109 run function realms:wardrobe/skin/solstice
+execute if score @s wardrobe matches 110 run function realms:wardrobe/skin/oath_i
+execute if score @s wardrobe matches 111 run function realms:wardrobe/skin/oath_ii
+execute if score @s wardrobe matches 112 run function realms:wardrobe/skin/oath_iii
+execute if score @s wardrobe matches 113 run function realms:wardrobe/skin/old_guard
+execute if score @s wardrobe matches 114 run function realms:wardrobe/skin/lantern
+execute if score @s wardrobe matches 115 run function realms:wardrobe/skin/standard
+execute if score @s wardrobe matches 116 run function realms:wardrobe/skin/regalia
 execute if score @s wardrobe matches 201 run function realms:wardrobe/skin/laurel
 execute if score @s wardrobe matches 202 run function realms:wardrobe/skin/horned
-execute if score @s wardrobe matches 203 run function realms:wardrobe/skin/wanderers_hood
-execute if score @s wardrobe matches 204 run function realms:wardrobe/skin/crown
+execute if score @s wardrobe matches 203 run function realms:wardrobe/skin/plumed
+execute if score @s wardrobe matches 204 run function realms:wardrobe/skin/midwinter_cap
+execute if score @s wardrobe matches 205 run function realms:wardrobe/skin/wanderers_hood
+execute if score @s wardrobe matches 206 run function realms:wardrobe/skin/crown
 scoreboard players set @s wardrobe 0
 scoreboard players enable @s wardrobe

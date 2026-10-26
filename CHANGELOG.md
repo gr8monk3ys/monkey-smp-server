@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+- New wardrobe skins: the Oathblades I, II and III at 1, 2 and 3 months of pass (the tenure ladder used to
+  start at 6), Rallier at 3 events attended and the Plumed Helm at 10, and three holiday skins earned only
+  by being at that holiday's event, never sold: Gravelight (Hallowtide), Midwinter Cap (Midwinter) and
+  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too. Players
+  update the client pack for the new textures.
+- The wardrobe menu has two pages (earned in game; pass and supporter), so it fits in open chat, and a player
+  gets an "Unlocked ..." line in chat when the store, staff or an event raises their months, events or a
+  holiday score (at their next login if they were offline).
+- New: `tools/season.py`. `download` zips a season's final world for singleplayer and leaves out the Ledger
+  database, mod server config and session files. `carry` writes a one-shot data pack into the next season's
+  world that puts back every wardrobe score, hours played (as `rw.playbase`) and the supporter, title and
+  champion teams.
+- New: `function realms:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
+  with PvP off and peaceful difficulty, and holds across restarts.
+- New: `tools/funnel.py` matches a Tebex payments export to the server logs: purchase, first join, 30 minutes
+  played, D7 and renewal, with the month-2 renewal rate as the headline and a list of buyers who never
+  joined. Payment exports are ignored by git (`*.csv`); the test fixture is made up.
+- Fix: `tools/retention.py` reads 26.3's join lines (`System chat: NAME joined the game`), so it no longer
+  reports zero players, and reads rotated logs in order (`-10` after `-9`).
+- New: `site/changes.html`, the player changelog ("What changed"), seeded with the player-facing changes
+  since 2.0.0.
+- Docs: `docs/SEASONS.md` gains the holidays, Base of the Month, the season champion (a held faction name
+  and a roster title), faction charters at sign-up, and the season-end runbook. `docs/RETENTION.md` gains
+  the pass funnel and DMs to passes that show Ending in Tebex; `docs/ADMIN.md` the season and holiday
+  commands and how to tell players what changed.
+
+## [2.4.2] - 2026-10-25
+
+Live-server tooling and one server-only mod. Same Minecraft (26.3), client pack and world as 2.4.1: hosts
+unzip over 2.4.1; players need nothing new. Default config changes reach only new servers; the entries
+below say what to change on an existing one.
+
 - Fix: Chunky pre-generation resumes after a restart. `config/chunky/config.json` ships with `continueOnRestart`
   on (Chunky's own default is off). Defaults only reach new servers: on an existing one, run `chunky continue`
   after a restart (docs/LIVE.md).
@@ -54,31 +86,6 @@
   `config/hostname-catcher.yml` letting every address in (the mod's own default turns away every real player).
   Modrinth lists it for 26.2 only, so it's pinned by hand after a test on 26.3 (docs/MAINTAINING.md, "Mods
   pinned by hand"). Players need nothing new: it isn't in the client pack.
-- New wardrobe skins: the Oathblades I, II and III at 1, 2 and 3 months of pass (the tenure ladder used to
-  start at 6), Rallier at 3 events attended and the Plumed Helm at 10, and three holiday skins earned only
-  by being at that holiday's event, never sold: Gravelight (Hallowtide), Midwinter Cap (Midwinter) and
-  Solstice (Midsummer). Look only, like every skin; `tests/test_wardrobe.py` checks the new ones too. Players
-  update the client pack for the new textures.
-- The wardrobe menu has two pages (earned in game; pass and supporter), so it fits in open chat, and a player
-  gets an "Unlocked ..." line in chat when the store, staff or an event raises their months, events or a
-  holiday score (at their next login if they were offline).
-- New: `tools/season.py`. `download` zips a season's final world for singleplayer and leaves out the Ledger
-  database, mod server config and session files. `carry` writes a one-shot data pack into the next season's
-  world that puts back every wardrobe score, hours played (as `rw.playbase`) and the supporter, title and
-  champion teams.
-- New: `function realms:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
-  with PvP off and peaceful difficulty, and holds across restarts.
-- New: `tools/funnel.py` matches a Tebex payments export to the server logs: purchase, first join, 30 minutes
-  played, D7 and renewal, with the month-2 renewal rate as the headline and a list of buyers who never
-  joined. Payment exports are ignored by git (`*.csv`); the test fixture is made up.
-- Fix: `tools/retention.py` reads 26.3's join lines (`System chat: NAME joined the game`), so it no longer
-  reports zero players, and reads rotated logs in order (`-10` after `-9`).
-- New: `site/changes.html`, the player changelog ("What changed"), seeded with the player-facing changes
-  since 2.0.0.
-- Docs: `docs/SEASONS.md` gains the holidays, Base of the Month, the season champion (a held faction name
-  and a roster title), faction charters at sign-up, and the season-end runbook. `docs/RETENTION.md` gains
-  the pass funnel and DMs to passes that show Ending in Tebex; `docs/ADMIN.md` the season and holiday
-  commands and how to tell players what changed.
 
 ## [2.4.1] - 2026-10-25
 

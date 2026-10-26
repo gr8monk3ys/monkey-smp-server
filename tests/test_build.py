@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import zipfile
 
@@ -6,6 +7,7 @@ import pytest
 from conftest import PLAYER_FILES, fake_player
 
 import build
+from repo import REPO
 
 RELEASES = ["paper_repo", "fabric_repo"]
 
@@ -137,3 +139,28 @@ def test_build_leaves_out_what_a_local_install_or_docker_left_in_package(tmp_pat
                 or n.startswith("smoke-console")}
     assert "docker/entrypoint.sh" in names
     assert (z.getinfo("TheRealms-Server/docker/entrypoint.sh").external_attr >> 16) & 0o777 == 0o755
+
+
+# --- the world seed --------------------------------------------------------------------------------
+
+def _members(z: zipfile.ZipFile):
+    """(name, bytes) of every file, including the files inside a zipped .mrpack."""
+    for name in z.namelist():
+        data = z.read(name)
+        if name.endswith(".mrpack"):
+            yield from ((f"{name}/{inner}", d) for inner, d in _members(zipfile.ZipFile(io.BytesIO(data))))
+        else:
+            yield name, data
+
+
+def test_nothing_players_get_contains_the_world_seed(tmp_path):
+    """The seed shows where every ore and structure is (seed-based x-ray), so only the server zip has it."""
+    seed = REPO.load_manifest()["world"]["seed"].lstrip("-").encode()
+    mrpack = build.build_client("0.0.0", REPO, tmp_path)
+    player = build.build_player("0.0.0", mrpack, REPO, tmp_path)
+    for out in (mrpack, player):
+        assert not [name for name, data in _members(zipfile.ZipFile(out)) if seed in data], out.name
+    server = zipfile.ZipFile(build.build_server("0.0.0", REPO, tmp_path))
+    assert seed in server.read("TheRealms-Server/realms/manifest.json")  # the check can see it where it is
+    public = [*REPO.root.joinpath("site").rglob("*"), REPO.root / "docs" / "RULES.md"]
+    assert not [p for p in public if p.is_file() and seed in p.read_bytes()]

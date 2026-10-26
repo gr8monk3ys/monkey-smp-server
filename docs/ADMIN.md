@@ -120,7 +120,7 @@ What keeps it there:
 |---|---|
 | `default` | normal play: parties and claims (Open Parties and Claims), voice chat |
 | `builder` | + switch game mode (`/gamemode`) |
-| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
+| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), x-ray alerts (MinerTrack), teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
 | `admin` | everything, including editing other players' inventories and IP bans |
 
 ```
@@ -174,8 +174,29 @@ broke or placed what, and who took what from a chest.
 
 **X-ray.** AntiXray hides ores and other valuables in what the server sends: a player can only see ores that touch
 air, water or lava, and x-ray mods, packs and F3+A see fake ores everywhere instead. The settings are in
-`server\config\antixray.toml`. With x-ray blocked at the source, a player who heads straight for buried diamonds
-is worth a `ledger search source:NAME action:block-break range:100 after:1d`.
+`server\config\antixray.toml`. Some x-ray gets past it (the world seed, Distant Horizons' LODs, below), so
+MinerTrack watches how people mine: someone who tunnels straight from one buried diamond or emerald vein to the
+next (or to ancient debris in the Nether) builds up a violation level (VL), and moderators get a chat alert at VL 2,
+4 and 5. It never kicks or bans; that's your call. `mtrack check NAME` shows a player's violations, `mtrack verbose`
+alerts you on every VL increase, `mtrack logs FILE.log` shows one of the daily logs (they're in
+`server\config\MinerTrack\logs`) and `mtrack reset NAME` clears a player you've cleared. Lucky players set it off
+too, so check before you act. Settings are in `server\config\MinerTrack\` (`config.yml`, plus one file per
+dimension in `Configuration\`). It only watches vanilla diamond, emerald and ancient debris; to watch a modded ore
+too, add its id (e.g. `sulfurcavesplus:sulfur_diamond_ore`) to `rare-ores` in that dimension's file and run
+`mtrack reload`.
+
+The saved query for diamonds: every diamond ore broken in the last day, newest first (add `source:NAME` for one
+player, or change `after:1d` to `after:7d`):
+
+```
+ledger search action:block-break object:#c:ores/diamond object:nether_ores_reborn:diamond_ore object:nether_ores_reborn:end_diamond_ore after:1d
+```
+
+`#c:ores/diamond` covers the vanilla diamond ores and Sulfur Caves Plus's; Nether Ores Reborn's aren't in that tag,
+so they're named.
+
+A player whose diamonds come one after another, with little stone broken in between, is worth a
+`ledger search source:NAME action:block-break range:100 after:1d` around where they were mining.
 
 **Existing servers.** Rank files are only copied when missing, so a server installed before these tools keeps its
 old ranks. If you never edited them, stop the server, delete `moderator.yml` and `admin.yml` in
@@ -201,6 +222,12 @@ lp group moderator permission set invview.command.inv true
 lp group moderator permission set invview.command.echest true
 lp group moderator permission set invview.can_modify false
 lp group admin permission set invview.can_modify true
+lp group moderator permission set minertrack.notify true
+lp group moderator permission set minertrack.check true
+lp group moderator permission set minertrack.verbose true
+lp group moderator permission set minertrack.logs true
+lp group moderator permission set minertrack.reset true
+lp group moderator permission set minertrack.help true
 lp group moderator permission unset minecraft.command.ban
 lp group moderator permission unset minecraft.command.kick
 lp group moderator permission unset minecraft.command.pardon
@@ -255,8 +282,11 @@ can build or break blocks. PvP is not blocked at spawn; make a server claim arou
 
 The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,
 Incendium, Nullscape and the structure mods. The seed is pinned in the manifest, so every copy of the
-server gets the same terrain. Players never get it: it isn't in the client pack, Minecraft only sends them a hash
-of it, and only admins can run `/seed`. Keep it that way, because the seed shows where every ore and structure is.
+server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
+rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
+can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
+don't hand the server zip or a hosting bundle to players. A determined cheater can still work it out from the
+terrain with a seed cracker, which is one reason MinerTrack watches how people mine.
 
 ## The live map
 

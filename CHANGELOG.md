@@ -8,6 +8,12 @@ X-ray protection and moderation tools. Server only: players need nothing new.
   players: in the Overworld they hide among fake ores, in the Nether and the End they show as netherrack or end
   stone. It covers Skniro's Nether and End ores too, which aren't in the `c:ores` tag. This is what now enforces
   B15 (x-ray), B17 and B19 (`docs/RULES.md`).
+- New: **MinerTrack**, alert only (`defaults/config/MinerTrack/config.yml`). It flags players who mine from one
+  buried diamond, emerald or ancient debris vein straight to the next, and alerts moderators at VL 2, 4 and 5
+  instead of kicking. For x-ray that gets past AntiXray (a cracked seed, Distant Horizons' LODs). ADMIN.md also has
+  the saved Ledger query for diamond-ore breaks.
+- New: a test that the world seed never ends up in what players get (the client pack, the player zip, the site,
+  RULES.md). It isn't in any of them today; only the server zip has it.
 - New: **BanHammer** (warn, mute, kick, timed and permanent bans, each with a reason and a history), **Vanish** and
   **InvView** (look into a player's inventory and ender chest). The rules' "temporary ban (1 to 7 days)" is now
   `tempban NAME 3d reason`. See "Moderation" in `docs/ADMIN.md`.

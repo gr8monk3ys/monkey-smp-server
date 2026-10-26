@@ -205,8 +205,10 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   x-ray sees noise; in the Nether and the End hidden ores show as netherrack or end stone. X-ray clients and
   packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
   One hole stays open until the owners close it: Distant Horizons' server-side LODs carry the real ores ("Distant
-  Horizons and x-ray" in `docs/ADMIN.md`). The rest of B15 (hacked clients, duping, CIT packs, health
-  indicators) is still on admins, with BanHammer, Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
+  Horizons and x-ray" in `docs/ADMIN.md`). For x-ray that gets past it (that, or a cracked seed), MinerTrack alerts
+  moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
+  The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
+  Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
 
 Still on players and admins: everything else, including rule 33 (leaving a faction needs an admin's
 approval; the mod lets players leave a party freely).

@@ -990,6 +990,18 @@
       }
     },
     {
+      "slug": "minertrack",
+      "project_id": "O3VQnhG2",
+      "version": "2.1.2.0+fabric",
+      "version_id": "1cXUtMXL",
+      "file": "MinerTrack-2.1.2.0+fabric.jar",
+      "url": "https://cdn.modrinth.com/data/O3VQnhG2/versions/1cXUtMXL/MinerTrack-2.1.2.0%2Bfabric.jar",
+      "size": 2946244,
+      "hashes": {
+        "sha512": "61b3fe06981577408be18f37a1be5750d0de1722850c3db2b72322ae13137f9c593b745344163b674730f84865c9ee6e90328e605451ce8605409a7307f9f1f0"
+      }
+    },
+    {
       "slug": "mmr-moogs-mineshafts-reimagined",
       "project_id": "z25hqseO",
       "version": "1.1.0",

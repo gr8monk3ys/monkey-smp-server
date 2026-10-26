@@ -1,0 +1,204 @@
+{
+  PresetMetadata:{
+    author:"Monkey SMP",
+    category:"Monkey SMP",
+    created:1L,
+    description:"Greets new players: the short rules, factions, challenges, standings and the wardrobe.",
+    entityTypeId:"easy_npc:humanoid",
+    modified:1L,
+    name:"Guide",
+    variantType:"NOOR",
+    version:"1.0.0"
+  },
+  data:{
+    ActionData:{
+      ActionEventSet:{
+        ON_DISTANCE_CLOSE:[
+          {
+            Msg:{
+              T:4b,
+              Texts:["Welcome to Monkey SMP! Right-click me if you're new here."]
+            },
+            Type:"MESSAGE"
+          }
+        ],
+        ON_INTERACTION:[
+          {
+            Type:"OPEN_DEFAULT_DIALOG"
+          }
+        ]
+      }
+    },
+    CustomName:{
+      color:"gold",
+      text:"Guide"
+    },
+    CustomNameVisible:1b,
+    DialogData:{
+      DialogDataSet:[
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Cmd:"rules",
+                  Type:"OPEN_NAMED_DIALOG"
+                }
+              ],
+              Label:"default_rules",
+              Name:"The short rules"
+            },
+            {
+              Actions:[
+                {
+                  Cmd:"factions",
+                  Type:"OPEN_NAMED_DIALOG"
+                }
+              ],
+              Label:"default_factions",
+              Name:"Find a faction"
+            },
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"default_challenges",
+              Name:"This week's challenges"
+            },
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:standings:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"default_standings",
+              Name:"Faction standings"
+            },
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:wardrobe:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"default_wardrobe",
+              Name:"Your wardrobe"
+            }
+          ],
+          Label:"default",
+          Name:"Welcome",
+          Priority:10,
+          Texts:[
+            {
+              Text:"Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open this week's challenges, the faction standings and your wardrobe."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"/dialog show @initiator realms:links",
+                  PermLevel:2,
+                  Type:"COMMAND"
+                }
+              ],
+              Label:"rules_links",
+              Name:"Discord and links"
+            },
+            {
+              Actions:[
+                {
+                  Cmd:"default",
+                  Type:"OPEN_NAMED_DIALOG"
+                }
+              ],
+              Label:"rules_back",
+              Name:"Back"
+            }
+          ],
+          Label:"rules",
+          Name:"The short rules",
+          Priority:-1,
+          Texts:[
+            {
+              Text:"The short rules:<br>- No combat logging, and no teaming in other factions' fights.<br>- A faction holds at most 4 players. No insiding.<br>- Nobody griefs a territory without permission.<br>- Your first 48 hours come with PvP grace. Attacking a player ends it.<br>- Spawn is a no-PvP zone, and nobody touches it.<br>- No hacked clients, x-ray, dupes or exploits. Respect people.<br><br>The full rulebook is in #smp-rules on the Discord."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"/dialog show @initiator realms:links",
+                  PermLevel:2,
+                  Type:"COMMAND"
+                }
+              ],
+              Label:"factions_links",
+              Name:"Open the Discord"
+            },
+            {
+              Actions:[
+                {
+                  Cmd:"default",
+                  Type:"OPEN_NAMED_DIALOG"
+                }
+              ],
+              Label:"factions_back",
+              Name:"Back"
+            }
+          ],
+          Label:"factions",
+          Name:"Find a faction",
+          Priority:-1,
+          Texts:[
+            {
+              Text:"A faction is up to 4 players who share land, and most start small. Factions that are recruiting post in #smp-forum on the Discord.<br><br>To start your own: /oparties create, then /oparties member invite and the player's name."
+            }
+          ]
+        }
+      ],
+      Type:"CUSTOM"
+    },
+    EasyNPCVersion:3,
+    Invulnerable:1b,
+    ObjectiveData:{
+      ObjectiveDataSet:[
+        {
+          Type:"LOOK_AT_PLAYER"
+        },
+        {
+          Type:"LOOK_AT_RESET"
+        }
+      ]
+    },
+    PersistenceRequired:1b,
+    SkinData:{
+      Type:"DEFAULT"
+    },
+    VariantType:"NOOR",
+    id:"easy_npc:humanoid"
+  }
+}

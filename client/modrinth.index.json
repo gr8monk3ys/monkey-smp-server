@@ -816,6 +816,51 @@
       "fileSize": 279437
     },
     {
+      "path": "mods/easy_npc-fabric-26.3-7.17.1.jar",
+      "hashes": {
+        "sha1": "38feaa5db7ad9fcc2602f0933fcbaba851187ae1",
+        "sha512": "c878b21810b7cf8c7a57b147e2471495630c3176eaa7edb15b1c971bcde4790f00dba1466fc3ef812d30b2343b0ed13589d681ec1ed1810e20013808a75e2dfc"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/Epm6R3P2/versions/FcOxLvGC/easy_npc-fabric-26.3-7.17.1.jar"
+      ],
+      "fileSize": 3152743
+    },
+    {
+      "path": "mods/easy_npc_bundle-fabric-26.3-7.17.1.jar",
+      "hashes": {
+        "sha1": "2252b9a9668a8dc8d544db7335bdec2cf1d9bc82",
+        "sha512": "be705f4fec7880bb432501595f97c3bd433285d4b1ec1ebd98a06a759e336b3655ceccf809c4e4955597ca799e113e7cd01e05be8a2e2daf369216bfddcf3c29"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/CgGEe1h3/versions/xiHI3wez/easy_npc_bundle-fabric-26.3-7.17.1.jar"
+      ],
+      "fileSize": 25254
+    },
+    {
+      "path": "mods/easy_npc_config_ui-fabric-26.3-7.17.1.jar",
+      "hashes": {
+        "sha1": "c282dfd5fd7533d70ac7957270315778b7c86a55",
+        "sha512": "adc4379cc3373fefdb9cabf50a498cbcf07a5335360b837c185fa06f852944d0f9d7b6fd2f8d69c2dbe374ecd9965c7381f7d589345dedff168c91236045f734"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/uTGjf7vA/versions/CSyUM7sU/easy_npc_config_ui-fabric-26.3-7.17.1.jar"
+      ],
+      "fileSize": 1142616
+    },
+    {
       "path": "mods/easymagic-v26.3.0-mc26.3.x+fabric.jar",
       "hashes": {
         "sha1": "619dfae70685c1d5e9acd5fa4a1fbd8114d3aaec",

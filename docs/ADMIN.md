@@ -321,6 +321,45 @@ Vanilla `spawn-protection=48` in `server\server.properties`: within 48 blocks of
 can build or break blocks. PvP is blocked by a server claim over spawn (rule 26), which an admin makes once
 per world: see the admin notes at the end of `docs/RULES.md`.
 
+## Spawn NPCs
+
+Two Easy NPC characters stand at spawn for whoever joins when no staff are on. The **Guide** (gold name) greets
+anyone who comes within 8 blocks with a speech bubble. Right-clicked, it offers the short rules, how to find a
+faction (`#smp-forum`), and buttons that open this week's challenges, the faction standings and the wardrobe
+(what `/trigger challenges`, `standings` and `wardrobe` do). The rules and faction pages have a button for the
+Monkey SMP links, the Discord first. The **Town Crier** (yellow) calls out every 5 minutes. Right-clicked, it
+shows this week's Saturday event and next week's, picked by the challenges' week number, so it turns over on
+Monday with them. Their text is in `tools/npcs.py`, which writes the `realms-npcs` data pack.
+
+Place them once per world. In game, as an op, stand where each one goes, facing the way it should face:
+
+```
+/function realms:npcs/guide/here
+/function realms:npcs/crier/here
+```
+
+It stands in the middle of your block. From the console or RCON (on the live VPS,
+`docker compose exec realms realms rcon "..."`), give the spot instead. Someone has to be near it so its chunk
+is loaded; otherwise nothing appears and the log says "Error importing preset".
+
+```
+function realms:npcs/guide/place {x:0.5,y:72,z:3.5,yaw:180}   # y: the block it stands on + 1; yaw: 0 south, 90 west, 180 north, 270 east
+function realms:npcs/crier/remove                              # near it
+```
+
+- **Placing again** moves it and resets it to this release's version: each has a fixed UUID, so there is only
+  ever one. Do it after a release that changes their text, for example when an event moves (the changelog says
+  so). If the old spot is far away and nobody is near it, run `remove` there first, or the old one can stay.
+- **Who can change them.** They have no owner. Easy NPC lets ops, and anyone in creative mode, edit, move or
+  delete any NPC, so the `builder` rank can too (it can switch to creative); moderators and players can't. That
+  creative override is built into Easy NPC and no setting removes it. `server\config\easy_npc\security.cfg`
+  (copied on first start) puts every editor feature that matters behind an op: in creative a builder can still
+  change an NPC's look or delete it, but can't give it commands, scores, dialogs or trades.
+- **Nobody can hurt them**: hits in survival or creative and arrows do nothing, and players can't push them.
+  `/kill` still removes them, like any entity.
+- **Cost**: none measurable. On a test server with a player standing next to them, the median tick was 3.3 ms
+  with no NPCs and 3.3 ms with these two; 50 of them added 0.4 ms (spark, one-minute figures).
+
 ## World generation
 
 The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,

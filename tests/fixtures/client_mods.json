@@ -800,6 +800,27 @@
   "items": 0,
   "entity_textures": 0
  },
+ "CgGEe1h3": {
+  "slug": "easy-npc",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "easy_npc_bundle",
+  "environment": "*",
+  "ids": [
+   "easy_npc_bundle"
+  ],
+  "depends": [
+   "easy_npc",
+   "easy_npc_config_ui",
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "Cw8IlnGM": {
   "slug": "serversleep",
   "modrinth": {
@@ -994,6 +1015,25 @@
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
+ },
+ "Epm6R3P2": {
+  "slug": "easy-npc-core",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "easy_npc",
+  "environment": "*",
+  "ids": [
+   "easy_npc"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 5,
+  "items": 56,
+  "entity_textures": 95
  },
  "EsAfCjCV": {
   "slug": "appleskin",
@@ -3369,6 +3409,26 @@
   "code": true,
   "blockstates": 0,
   "items": 0,
+  "entity_textures": 0
+ },
+ "uTGjf7vA": {
+  "slug": "easy-npc-config-ui",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "easy_npc_config_ui",
+  "environment": "*",
+  "ids": [
+   "easy_npc_config_ui"
+  ],
+  "depends": [
+   "easy_npc",
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 2,
   "entity_textures": 0
  },
  "uWsLN21d": {

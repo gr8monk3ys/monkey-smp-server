@@ -570,6 +570,42 @@
       }
     },
     {
+      "slug": "easy-npc",
+      "project_id": "CgGEe1h3",
+      "version": "7.17.1",
+      "version_id": "xiHI3wez",
+      "file": "easy_npc_bundle-fabric-26.3-7.17.1.jar",
+      "url": "https://cdn.modrinth.com/data/CgGEe1h3/versions/xiHI3wez/easy_npc_bundle-fabric-26.3-7.17.1.jar",
+      "size": 25254,
+      "hashes": {
+        "sha512": "be705f4fec7880bb432501595f97c3bd433285d4b1ec1ebd98a06a759e336b3655ceccf809c4e4955597ca799e113e7cd01e05be8a2e2daf369216bfddcf3c29"
+      }
+    },
+    {
+      "slug": "easy-npc-config-ui",
+      "project_id": "uTGjf7vA",
+      "version": "7.17.1",
+      "version_id": "CSyUM7sU",
+      "file": "easy_npc_config_ui-fabric-26.3-7.17.1.jar",
+      "url": "https://cdn.modrinth.com/data/uTGjf7vA/versions/CSyUM7sU/easy_npc_config_ui-fabric-26.3-7.17.1.jar",
+      "size": 1142616,
+      "hashes": {
+        "sha512": "adc4379cc3373fefdb9cabf50a498cbcf07a5335360b837c185fa06f852944d0f9d7b6fd2f8d69c2dbe374ecd9965c7381f7d589345dedff168c91236045f734"
+      }
+    },
+    {
+      "slug": "easy-npc-core",
+      "project_id": "Epm6R3P2",
+      "version": "7.17.1",
+      "version_id": "FcOxLvGC",
+      "file": "easy_npc-fabric-26.3-7.17.1.jar",
+      "url": "https://cdn.modrinth.com/data/Epm6R3P2/versions/FcOxLvGC/easy_npc-fabric-26.3-7.17.1.jar",
+      "size": 3152743,
+      "hashes": {
+        "sha512": "c878b21810b7cf8c7a57b147e2471495630c3176eaa7edb15b1c971bcde4790f00dba1466fc3ef812d30b2343b0ed13589d681ec1ed1810e20013808a75e2dfc"
+      }
+    },
+    {
       "slug": "elytra-trims",
       "project_id": "XpzGz7KD",
       "version": "4.9.1",

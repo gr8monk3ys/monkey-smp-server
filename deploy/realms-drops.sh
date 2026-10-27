@@ -49,8 +49,15 @@ TIMER=realms-drops.timer
 log() { printf '%s [realms-drops] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
 
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
+# "logged CMD...": runs CMD, logging each line it prints as it prints it; returns CMD's exit code.
+logged() {
+    exec 3>&1
+    rc=$( { "$@" 2>&1 && echo 'exit=0' || echo "exit=$?"; } | while IFS= read -r l; do
+        case $l in exit=*) printf '%s' "${l#exit=}" ;; *) log "$l" >&3 ;; esac
+    done )
+    exec 3>&-
+    return "${rc:-1}"
+}
 
 # The commands for now, one per line: the spots, then `function realms:drops/try {night:N}`. None outside
 # drop hours, or when no spot clear of every claim is left in the ring.
@@ -59,7 +66,6 @@ need_tool() {
     [ -r "$TOOL" ] || die "$TOOL is missing: is the release with supply drops deployed?"
 }
 commands() {
-    need_tool
     python3 -B "$TOOL" commands "$WORLD" || die 'tools/drops.py commands failed'
 }
 
@@ -84,7 +90,12 @@ case $MODE in
         changed=$(changed_units)
         if timer_running; then state=running; else state='not running'; fi
         log "timer: $TIMER $state; units to copy:${changed:- none}"
-        if running; then log 'server: running'; else log 'server: not running (nothing would be sent)'; fi
+        python3 -B "$REPO_DIR/tools/rcon.py" running --docker "$LIVE_DIR/docker" && up=0 || up=$?
+        case $up in
+            0) log 'server: running' ;;
+            1) log 'server: not running (nothing would be sent)' ;;
+            *) log "server: can't tell (docker failed; see above)" ;;
+        esac
         log 'check finished: nothing was changed'
         ;;
     install)
@@ -111,8 +122,7 @@ case $MODE in
     send)
         # Outside drop hours it prints nothing, so there is nothing worth a log line every 10 minutes.
         need_tool
-        if out=$(python3 -B "$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker" 2>&1); then rc=0; else rc=$?; fi
-        [ -z "$out" ] || printf '%s\n' "$out" | while IFS= read -r l; do log "$l"; done
-        [ "$rc" = 0 ] || die 'not every command went through (the timer tries again in 10 minutes)'
+        logged python3 -B -u "$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker" ||
+            die 'not every command went through (the timer tries again in 10 minutes)'
         ;;
 esac

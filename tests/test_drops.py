@@ -237,6 +237,17 @@ def test_send_fails_when_the_pack_is_missing(world):
     assert log[-1].startswith("refused or failed: function realms:drops/try")
 
 
+def test_the_try_is_not_sent_when_the_spots_do_not_arrive(world):
+    server, log = rcon.Recorder(fail=1), []
+    assert drops.send(server, world, pacific(2026, 11, 24, 19, 5), log.append) == 1
+    assert server.sent == [] and log[-1] == "not sent after it: 1 command(s)"
+
+
+def test_only_the_try_is_read_through_the_codes():
+    assert drops.meaning("function realms:drops/stop", "Function realms:drops/stop returned 1") == (
+        "function realms:drops/stop: Function realms:drops/stop returned 1")
+
+
 def test_no_commands_outside_drop_hours_or_without_spots(world, tmp_path):
     assert drops.commands(world, pacific(2026, 11, 24, 23, 0)) == []
     assert drops.commands(world, pacific(2026, 11, 28, 19, 0)) == []

@@ -612,22 +612,21 @@ def show_spots(world: Path, when: dt.datetime) -> int:
 
 def meaning(command: str, answer: str) -> str:
     """The timer's log line for one command's answer: the try's return code in words."""
-    if not command.startswith("function "):
-        return f"spots sent: {answer or 'ok'}"
+    if not command.startswith(f"function {NS}:drops/try"):
+        said = command[:60] if command.startswith("function ") else "spots sent"
+        return f"{said}: {answer or 'ok'}"
     m = re.search(r" returned (\d+)$", answer)
     return f"{command}: {TRY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
     """Sends commands(world, when). Outside drop hours there are none, and nothing is logged (it runs every 10
-    minutes); a server that isn't running is skipped."""
+    minutes); a server that isn't running is skipped. The try waits for the spots: if they don't arrive, it isn't
+    sent (it would try last night's)."""
     out = commands(world, when)
     if not out:
         return 0
-    if not rcon.running():
-        log("server not running: nothing sent")
-        return 0
-    return 0 if server.send(rcon, out, log, describe=meaning) else 1
+    return server.send_if_running(rcon, out, log, describe=meaning, stop=True)
 
 
 def main(argv=None) -> int:

@@ -204,10 +204,8 @@ def commands(when: dt.datetime) -> list[str]:
 def send(rcon, when: dt.datetime, log=print) -> int:
     """Sends commands(when). A server that isn't running is skipped: the week is a score in the world, so the
     next hour catches up."""
-    if not rcon.running():
-        log("server not running: nothing sent (the next hour catches up)")
-        return 0
-    return 0 if server.send(rcon, commands(when), log) else 1
+    return server.send_if_running(rcon, commands(when), log,
+                                  skipped="server not running: nothing sent (the next hour catches up)")
 
 
 # ---------------------------------------------------------------- scores

@@ -29,11 +29,11 @@ is left in them; an emptied chest goes at once, and the drop ends when every che
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py, and Python 3.10 or newer, so the VPS runs it straight from the checkout.
+Stdlib only plus tools/map_border.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs it straight
+from the checkout.
 """
 import argparse
 import datetime as dt
-import gzip
 import json
 import random
 import re
@@ -42,6 +42,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import map_border
+import nbt
 import rcon as server
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
@@ -163,24 +164,13 @@ def slot_of(when: dt.datetime) -> str:
 # ---------------------------------------------------------------- where
 
 
-def load_nbt(path: Path) -> dict:
-    data = path.read_bytes()
-    if data[:2] == b"\x1f\x8b":
-        data = gzip.decompress(data)
-    if not data or data[0] != 10:
-        raise ValueError(f"{path}: not an NBT compound")
-    _, pos = map_border._read(data, 1, 8)   # the root's name
-    root, _ = map_border._read(data, pos, 10)
-    return root
-
-
 def claimed_chunks(world: Path) -> set[tuple[int, int]]:
     """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server).
     Open Parties and Claims saves a player's claims as dimensions > claims > positions: [{x, z}] (chunks)."""
     out: set[tuple[int, int]] = set()
     folder = world / OPAC_CLAIMS
     for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        dim = load_nbt(path).get("dimensions", {}).get(OVERWORLD, {})
+        dim = nbt.read(path).get("dimensions", {}).get(OVERWORLD, {})
         for claim in dim.get("claims", []):
             out.update((int(p["x"]), int(p["z"])) for p in claim.get("positions", []))
     return out
@@ -192,7 +182,7 @@ def border_now(world: Path) -> map_border.Border | None:
     path = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
     if not path.is_file():
         return None
-    data = load_nbt(path)["data"]
+    data = nbt.read(path)["data"]
     size = min(data["size"], data.get("lerp_target", data["size"]))
     if size >= map_border.NO_BORDER:
         return None

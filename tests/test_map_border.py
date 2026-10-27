@@ -1,8 +1,7 @@
-import gzip
 import shutil
-import struct
 
 import pytest
+from nbt_writer import Long, nbt
 
 import map_border
 import rules
@@ -15,22 +14,12 @@ SPAWN = (-80.0, 416.0)
 NETHER_CENTRE = (-9.5, 52.5)
 
 
-def nbt_string(s: str) -> bytes:
-    raw = s.encode("utf-8")
-    return struct.pack(">H", len(raw)) + raw
-
-
 def border_dat(center_x: float, center_z: float, size: float, lerp_target: float | None = None) -> bytes:
     """A world_border.dat as 26.3 writes it (only the fields the tool reads, plus a few it skips)."""
-    data = b"".join(
-        b"\x06" + nbt_string(name) + struct.pack(">d", value)
-        for name, value in (("center_x", center_x), ("center_z", center_z), ("size", size),
-                            ("lerp_target", size if lerp_target is None else lerp_target))
-    )
-    data += b"\x04" + nbt_string("lerp_time") + struct.pack(">q", 0)
-    data += b"\x03" + nbt_string("warning_blocks") + struct.pack(">i", 5)
-    root = b"\x03" + nbt_string("DataVersion") + struct.pack(">i", 5023) + b"\x0a" + nbt_string("data") + data + b"\x00"
-    return gzip.compress(b"\x0a" + nbt_string("") + root + b"\x00")
+    data = {"center_x": center_x, "center_z": center_z, "size": size,
+            "lerp_target": size if lerp_target is None else lerp_target}
+    data = {k: float(v) for k, v in data.items()} | {"lerp_time": Long(0), "warning_blocks": 5}
+    return nbt({"DataVersion": 5023, "data": data}, gzipped=True)
 
 
 def server(tmp_path, borders: dict, maps=DEFAULT_MAPS):

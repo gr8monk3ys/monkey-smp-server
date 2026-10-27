@@ -3,10 +3,10 @@ import gzip
 import json
 import re
 import shutil
-import struct
 import subprocess
 
 import pytest
+from nbt_writer import Long, nbt
 
 import drops
 import events
@@ -31,29 +31,6 @@ def fn(path: str) -> str:
 # ---------------------------------------------------------------- a made-up world
 
 
-class Long(int):
-    pass
-
-
-def nbt(value, name="") -> bytes:
-    """A tiny NBT writer: dicts, lists, strings, ints (TAG_Int), floats (TAG_Double) and Long."""
-    def tag(v) -> int:
-        return (10 if isinstance(v, dict) else 9 if isinstance(v, list) else 8 if isinstance(v, str)
-                else 6 if isinstance(v, float) else 4 if isinstance(v, Long) else 3)
-
-    def payload(v) -> bytes:
-        if isinstance(v, dict):
-            return b"".join(bytes([tag(x)]) + string(k) + payload(x) for k, x in v.items()) + b"\x00"
-        if isinstance(v, list):
-            return bytes([tag(v[0]) if v else 0]) + struct.pack(">i", len(v)) + b"".join(payload(x) for x in v)
-        if isinstance(v, str):
-            return string(v)
-        return struct.pack(">d" if isinstance(v, float) else ">q" if isinstance(v, Long) else ">i", v)
-
-    def string(s: str) -> bytes:
-        raw = s.encode()
-        return struct.pack(">H", len(raw)) + raw
-    return bytes([10]) + string(name) + payload(value)
 
 
 def claim_file(chunks: dict[str, list[tuple[int, int]]]) -> dict:

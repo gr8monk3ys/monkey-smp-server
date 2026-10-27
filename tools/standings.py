@@ -41,7 +41,6 @@ kills outside the event arena (st.kills), holds claimed bounties (st.bounty), sh
 """
 import argparse
 import datetime as dt
-import gzip
 import json
 import os
 import struct
@@ -54,11 +53,11 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import nbt
 from datapacks import NS, function_tag, lines, mcmeta, text
 from events import ARENA_TAG, CUP, LEVEL, STRENGTH
 from rcon import LIMIT, Docker, RconError
 from repo import Repo
-from season import read_nbt
 
 DATAPACK = "realms-standings"
 FN = f"data/{NS}/function/standings"
@@ -79,11 +78,6 @@ OPAC = Path("data") / "openpartiesandclaims"
 
 
 # ---------------------------------------------------------------- reading the world
-
-
-def load_nbt(path: Path) -> dict:
-    data = path.read_bytes()
-    return read_nbt(gzip.decompress(data) if data[:2] == b"\x1f\x8b" else data)
 
 
 def uuid_text(value) -> str:
@@ -155,7 +149,7 @@ def read_parties(world: Path, names: dict[str, str]) -> list[Party]:
     if not folder.is_dir():
         warn(f"no {folder}: no factions (has a party been made with /openpac?)")
     for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        data = load_nbt(path)
+        data = nbt.read(path)
         if not isinstance(data.get("owner"), dict):
             warn(f"{path.name} has no owner: left out")
             continue
@@ -175,7 +169,7 @@ def read_claims(world: Path) -> dict[str, int]:
     claims = {}
     folder = world / OPAC / "player-claims"
     for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        data = load_nbt(path)
+        data = nbt.read(path)
         chunks = sum(len(c.get("positions", [])) for dim in data.get("dimensions", {}).values()
                      for c in dim.get("claims", []))
         try:
@@ -189,7 +183,7 @@ def read_scoreboard(world: Path) -> tuple[dict[str, dict[str, int]], dict[str, s
     path = world / "data" / "minecraft" / "scoreboard.dat"
     if not path.is_file():
         raise SystemExit(f"no scoreboard at {path}: give the world folder (server/world)")
-    data = load_nbt(path)
+    data = nbt.read(path)
     data = data.get("data", data)
     scores: dict[str, dict[str, int]] = {}
     labels = {}

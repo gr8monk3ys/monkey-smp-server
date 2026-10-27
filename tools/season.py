@@ -21,14 +21,13 @@ Stdlib only.
 import argparse
 import datetime as dt
 import fnmatch
-import gzip
 import json
 import shutil
-import struct
 import sys
 import zipfile
 from pathlib import Path
 
+import nbt
 from datapacks import NS, function_tag, mcmeta
 
 CARRY = "realms-carry"
@@ -57,51 +56,6 @@ left it: adventure mode, no PvP, peaceful. To build or fly around, press Esc, Op
 Cheats on, start it, then type /function realms:events/season/unlock (or /gamemode creative). Make a
 copy first if you want to keep the original.
 """
-
-
-# ---------------------------------------------------------------- NBT (just enough to read a scoreboard)
-
-
-def read_nbt(data: bytes) -> dict:
-    """The root compound of an uncompressed NBT file, as plain Python values."""
-    def value(pos: int, tag: int):
-        if tag in SIMPLE:
-            fmt = SIMPLE[tag]
-            return struct.unpack_from(fmt, data, pos)[0], pos + struct.calcsize(fmt)
-        if tag in ARRAYS:
-            n = struct.unpack_from(">i", data, pos)[0]
-            fmt = ARRAYS[tag]
-            return list(struct.unpack_from(f">{n}{fmt}", data, pos + 4)), pos + 4 + n * struct.calcsize(fmt)
-        if tag == 8:
-            n = struct.unpack_from(">H", data, pos)[0]
-            return data[pos + 2:pos + 2 + n].decode("utf-8", "replace"), pos + 2 + n
-        if tag == 9:
-            inner, n = struct.unpack_from(">bi", data, pos)
-            pos += 5
-            items = []
-            for _ in range(n):
-                item, pos = value(pos, inner)
-                items.append(item)
-            return items, pos
-        if tag == 10:
-            out = {}
-            while data[pos] != 0:
-                inner = data[pos]
-                n = struct.unpack_from(">H", data, pos + 1)[0]
-                name = data[pos + 3:pos + 3 + n].decode("utf-8", "replace")
-                out[name], pos = value(pos + 3 + n, inner)
-            return out, pos + 1
-        raise ValueError(f"unknown NBT tag {tag} at byte {pos}")
-    if data[0] != 10:
-        raise ValueError("not an NBT compound")
-    n = struct.unpack_from(">H", data, 1)[0]
-    root = value(3 + n, 10)[0]
-    assert isinstance(root, dict)
-    return root
-
-
-SIMPLE = {1: ">b", 2: ">h", 3: ">i", 4: ">q", 5: ">f", 6: ">d"}
-ARRAYS = {7: "b", 11: "i", 12: "q"}
 
 
 # ---------------------------------------------------------------- download
@@ -183,7 +137,7 @@ def carry(old: Path, new: Path, season: int) -> int:
     board = old / "data" / "minecraft" / "scoreboard.dat"
     if not board.is_file():
         raise SystemExit(f"no scoreboard at {board}: give the old world folder")
-    scoreboard = read_nbt(gzip.decompress(board.read_bytes()))
+    scoreboard = nbt.read(board)
     pack = new / "datapacks" / CARRY
     shutil.rmtree(pack, ignore_errors=True)
     files = {

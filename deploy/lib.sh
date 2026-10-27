@@ -30,9 +30,10 @@ log() {
     [ -z "${LOG_TO:-}" ] || printf '%s\n' "$lib_line" >>"$LOG_TO"
     printf '%s\n' "$lib_line"
 }
-# "die WORDS...": logs `ERROR: WORDS` and exits 1. DIED keeps WORDS for an EXIT trap (realms-backup.sh posts it).
+# "die WORDS...": logs `ERROR: WORDS` on stderr, so a die inside $(...) still shows, and exits 1. DIED keeps WORDS
+# for an EXIT trap (realms-backup.sh posts it).
 DIED=''
-die() { DIED=$*; log "ERROR: $*"; exit 1; }
+die() { DIED=$*; log "ERROR: $*" >&2; exit 1; }
 # "logged CMD...": runs CMD with its output going to LOG_TO only.
 logged() { "$@" >>"$LOG_TO" 2>&1; }
 # "log_each CMD...": runs CMD, logging each line it prints as it prints it (blank lines dropped); returns CMD's exit

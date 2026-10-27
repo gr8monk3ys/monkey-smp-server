@@ -352,6 +352,24 @@ def test_a_drop_ends_cleanly():
     assert "forceload remove $(x0) $(z0) $(x1) $(z1)" in fn("release")
 
 
+def test_the_loaded_chunks_are_always_the_overworlds():
+    # forceload acts in the dimension it runs in. Staff running start, here or stop from the Nether or the End
+    # loaded (or released) the chunks there, and the Overworld's stayed loaded for good (seen on a test server).
+    assert fn("hold") == "$execute in minecraft:overworld run forceload add $(x0) $(z0) $(x1) $(z1)\n"
+    assert fn("release") == "$execute in minecraft:overworld run forceload remove $(x0) $(z0) $(x1) $(z1)\n"
+    for path in FUNCTIONS:
+        for line in FILES[path].splitlines():
+            if "forceload" in line and not line.startswith("#"):
+                assert "in minecraft:overworld run forceload" in line, f"{path}: {line}"
+    # The ground check and the chests already run in the Overworld (in at the spot, at the markers).
+    assert "execute in minecraft:overworld positioned $(x) 0 $(z)" in fn("check_at")
+
+
+def test_here_refuses_outside_the_overworld():
+    first = [line for line in fn("here").splitlines() if not line.startswith("#")][0]
+    assert first.startswith("execute unless dimension minecraft:overworld run return run tellraw @s ")
+
+
 def test_timings():
     assert f"scoreboard players set #timer dr {drops.COUNTDOWN}" in fn("found")
     assert f"scoreboard players set #timer dr {drops.DESPAWN}" in fn("land")

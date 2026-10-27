@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+- Fixed: severe lag since 2.5.0. **Vanilla Permissions** (`vanilla-permissions` 0.3.6, new in 2.5.0) made every
+  tick 10 to 20 times slower with players online: it checks each entity selector a player's command uses against
+  the whole command tree (Brigadier's `CommandDispatcher.getPath`), and the pack runs advancement functions as
+  each player every tick. On a test server (i7-8700K, Carpet fake players standing on land in generated terrain,
+  the same world for every run) 10 players took 1,081 ms per tick (0.9 TPS) with it and 64 ms (15.6 TPS, about
+  50 ms by the last minute) without; 18 players took 986 ms (1.0 TPS) with it and 142 ms (7 TPS) without. 0.3.6
+  is its newest version, so it's gone: the installer removes the jar when a server updates. Its job, letting
+  LuckPerms ranks grant vanilla commands, goes back to ops (docs/ADMIN.md, "What needs op"):
+  - Moderators reach a spot with `ledger tp minecraft:overworld X Y Z`, or by clicking a position in Ledger's
+    inspect and search results (Ledger's own `ledger.commands.tp`, already in the rank). Teleporting to a player,
+    or moving one, is an op's job.
+  - Whitelisting is an owner's job again (console, RCON, `Add Player.bat`, or `realms add-player` on the VPS).
+  - An op switches a builder's game mode, so Easy NPC's editor is for ops and players an op puts in creative.
+  - The rank files drop the nodes that did nothing without the mod (builders' `minecraft.command.gamemode`;
+    moderators' `minecraft.command.teleport`, `tp` and `whitelist`). Existing servers keep their copies, which
+    now grant nothing; "Existing servers" under "Moderation" in docs/ADMIN.md has the `lp` lines that remove them.
 - New: **supply drops** (docs/SEASONS.md's event catalog; docs/ADMIN.md, "Supply drops"). Monday to Thursday,
   6 to 10 PM Pacific, from Season I's first week, the first time 4 or more players are online in survival
   (`function realms:drops/min {players:N}`) and no event is on: chat and a boss bar give the coordinates 10

@@ -389,6 +389,9 @@ The tools are documented once; this list points at them.
 - [ ] **Punishments, BanHammer:** `warn`, `tempmute`, `tempban`, `ban`, always with a reason, `-s` to keep it
   out of public chat (docs/ADMIN.md, "Moderation"). Check a player's history before acting.
 - [ ] **Vanish and InvView:** `vanish`, `view inv NAME`, `view echest NAME` (look only), same section.
+- [ ] **Getting somewhere, and what goes to an owner:** a moderator reaches a spot with `ledger tp` or a
+  clicked position in Ledger's results. Whitelisting, game modes and teleporting to a player need op, which
+  moderators don't get, so they ask an owner (docs/ADMIN.md, "What needs op" under "Ranks").
 - [ ] **X-ray alerts (MinerTrack) and Ledger:** alerts at VL 2, 4 and 5, `mtrack check NAME`, and the diamond
   query; a lucky miner sets it off too, so check before acting (docs/ADMIN.md, "Moderation" and
   "Griefing").

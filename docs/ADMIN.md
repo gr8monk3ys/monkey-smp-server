@@ -122,9 +122,9 @@ What keeps it there:
 | Rank | Can |
 |---|---|
 | `default` | normal play: parties and claims (Open Parties and Claims), voice chat |
-| `builder` | + switch game mode (`/gamemode`) |
-| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), x-ray alerts (MinerTrack), teleport, whitelist, Ledger inspect/search/rollback/restore (not purge) |
-| `admin` | everything, including editing other players' inventories and IP bans |
+| `builder` | the same as `default` for now: an op switches a builder's game mode (below) |
+| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), x-ray alerts (MinerTrack), teleport to a spot (`ledger tp`), Ledger inspect/search/rollback/restore (not purge) |
+| `admin` | every mod's commands, including editing other players' inventories and IP bans; vanilla commands need op as well (below) |
 
 ```
 lp user NAME parent set moderator
@@ -133,6 +133,21 @@ lp user NAME parent remove moderator
 
 Ranks live in `server\mods\luckperms\yaml-storage\` as plain text files (LuckPerms' settings are in
 `server\config\luckperms\luckperms.conf`).
+
+**What needs op.** A rank can only grant mods' commands. Vanilla commands (`/gamemode`, `/tp`, `/whitelist`,
+`/give` and the rest) follow op status, which the owner has from the install (`ops.json`). Don't op moderators
+to give them one of these: level 2 already includes `/give` and `/gamemode`. In 2.5.0 and 2.6.0 the Vanilla
+Permissions mod let ranks grant some vanilla commands, but it made every tick 10 to 20 times slower with
+players online (CHANGELOG), so it is gone. Who does what now:
+
+- **Teleport.** A moderator goes to a spot with Ledger: `ledger tp minecraft:overworld X Y Z` (the Nether is
+  `minecraft:the_nether`), or by clicking a position ("Click to teleport") in Ledger's inspect and search
+  results. It's Ledger's own `ledger.commands.tp` node, already in the rank. It can't take them to a player or
+  move someone else; that's an op's job (`tp NAME X Y Z`, `tp NAME OTHER`).
+- **Whitelist.** An owner, from the console or RCON: `whitelist add NAME`, `Add Player.bat`, or on the live VPS
+  `docker compose exec realms realms add-player NAME` (docs/LIVE.md).
+- **A builder's game mode.** An op, in the console: `gamemode creative NAME`, and `gamemode survival NAME`
+  when the job is done.
 
 ## Griefing
 
@@ -232,6 +247,17 @@ lp group moderator permission set minertrack.verbose true
 lp group moderator permission set minertrack.logs true
 lp group moderator permission set minertrack.reset true
 lp group moderator permission set minertrack.help true
+```
+
+Older rank files also hold `minecraft.command.*` nodes (builder's `gamemode`; moderator's `teleport`, `tp`,
+`whitelist`, and before 2.5.0 `ban`, `kick` and `pardon`). They do nothing without Vanilla Permissions. Take
+them out anyway, so a permissions mod added later can't quietly switch them back on:
+
+```
+lp group builder permission unset minecraft.command.gamemode
+lp group moderator permission unset minecraft.command.teleport
+lp group moderator permission unset minecraft.command.tp
+lp group moderator permission unset minecraft.command.whitelist
 lp group moderator permission unset minecraft.command.ban
 lp group moderator permission unset minecraft.command.kick
 lp group moderator permission unset minecraft.command.pardon
@@ -351,10 +377,11 @@ function realms:npcs/crier/remove                              # near it
   ever one. Do it after a release that changes their text, for example when an event moves (the changelog says
   so). If the old spot is far away and nobody is near it, run `remove` there first, or the old one can stay.
 - **Who can change them.** They have no owner. Easy NPC lets ops, and anyone in creative mode, edit, move or
-  delete any NPC, so the `builder` rank can too (it can switch to creative); moderators and players can't. That
-  creative override is built into Easy NPC and no setting removes it. `server\config\easy_npc\security.cfg`
-  (copied on first start) puts every editor feature that matters behind an op: in creative a builder can still
-  change an NPC's look or delete it, but can't give it commands, scores, dialogs or trades.
+  delete any NPC. No rank can switch to creative by itself, so that is ops plus anyone an op has put in creative
+  (a builder at work, say); moderators and players can't. That creative override is built into Easy NPC and no
+  setting removes it. `server\config\easy_npc\security.cfg` (copied on first start) puts every editor feature
+  that matters behind an op: someone in creative can still change an NPC's look or delete it, but can't give it
+  commands, scores, dialogs or trades.
 - **Nobody can hurt them**: hits in survival or creative and arrows do nothing, and players can't push them.
   `/kill` still removes them, like any entity.
 - **Cost**: none measurable. On a test server with a player standing next to them, the median tick was 3.3 ms

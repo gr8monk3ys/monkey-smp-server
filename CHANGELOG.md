@@ -19,6 +19,14 @@
   client pack. `tools/npcs.py` writes them into the new `realms-npcs` data pack, and
   `defaults/config/easy_npc/security.cfg` keeps Easy NPC's editor features to ops. Staff place them once per
   world, on the live VPS too, once the release is live (docs/ADMIN.md, "Spawn NPCs").
+- Fixed (supply drops, before release): a staff `start`, `here` or `stop` run from the Nether or the End
+  force-loaded or released chunks in that dimension instead of the Overworld, where drops land. Stopping a drop
+  from the Nether left its Overworld chunks loaded for good, and starting one from the Nether loaded Nether
+  chunks that stayed loaded while the drop gave up silently (both seen on a test server). The drop's chunks are
+  now always the Overworld's, and `here` outside the Overworld says to stand there or use `start {x,z}`.
+- docs: the one-time steps for the supply drops' timer and the spawn NPCs on the live VPS. docs/LIVE.md has a
+  "The spawn NPCs" upgrade step, and its set-up steps now install the drops timer. docs/LAUNCH.md checks by
+  Saturday 14 November that both are done once 2.7.0 is live: a release places no NPCs by itself.
 - Shelved: **shops**. Universal Shops and Polymer (2.6.0, never on the live server) are out of the pack; no other
   mod needed Polymer. Their pins and how to bring them back: docs/MAINTAINING.md, "Shelved mods".
   `deploy/shops-claims.sh` and the shop docs stay, marked shelved, and Open Parties and Claims' default keeps the

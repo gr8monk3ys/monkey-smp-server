@@ -134,6 +134,10 @@ below).
   `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
   docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
+- [ ] **By Sat 14 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/realms/repo/deploy/realms-drops.sh
+  --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
+  docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
+  a release places no NPCs by itself.
 - [ ] **Sun 15 Nov: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a

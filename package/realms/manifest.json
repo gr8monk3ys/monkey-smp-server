@@ -1754,18 +1754,6 @@
       }
     },
     {
-      "slug": "vanilla-permissions",
-      "project_id": "fdZkP5Bb",
-      "version": "0.3.6+26.1.2",
-      "version_id": "bpq3ZDRl",
-      "file": "vanilla-permissions-0.3.6+26.1.2.jar",
-      "url": "https://cdn.modrinth.com/data/fdZkP5Bb/versions/bpq3ZDRl/vanilla-permissions-0.3.6%2B26.1.2.jar",
-      "size": 99126,
-      "hashes": {
-        "sha512": "f541fcb459e6b315c87b8de446a1c6bbb3ddf7b06317c5fe1e64a8bd26460dd7e206545beaeb565c5036fb321398c986462cd5913305068bdd9190ead367ce93"
-      }
-    },
-    {
       "slug": "vanish",
       "project_id": "UL4bJFDY",
       "version": "1.6.16+26.3",

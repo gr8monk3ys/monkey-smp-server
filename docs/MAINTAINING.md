@@ -265,6 +265,7 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 | Amethyst Nether | Defines `minecraft:the_nether`, as Incendium does; only one can generate, and its Modrinth page lists Incendium as incompatible. |
 | Just Enough Professions, Improved Inventory Tabs, Villager News | Not on Modrinth, so they can't be pinned (ADR-0002). |
 | PrickleMC | The file in the folder is a NeoForge jar. |
+| Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |
 
 After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't
 start a game client, and a mod on one side only shows up as "registry entries that are unknown to this client".

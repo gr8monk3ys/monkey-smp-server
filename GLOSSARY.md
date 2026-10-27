@@ -72,6 +72,10 @@ _Avoid_: mirror, CDN, registry
 A small set of file replacements applied inside one downloaded mod or datapack, tied to the exact upstream file it was made from.
 _Avoid_: fix, override, mod
 
+**Generated pack**:
+A data pack (or the wardrobe's resource pack) written by `tools/datapacks.py` from the tables in a `tools/` generator; edit the generator, never the pack.
+_Avoid_: hand-written pack, build output
+
 **Defaults**:
 The configuration a server starts with on its first install; once a file exists, the host's version wins.
 _Avoid_: templates, config overrides

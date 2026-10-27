@@ -29,7 +29,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-from wardrobe import DATA_FORMAT
+from datapacks import DATA_FORMAT
 
 NS = "realms"
 CARRY = "realms-carry"

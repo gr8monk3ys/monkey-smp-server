@@ -3,6 +3,7 @@ import json
 import re
 
 import challenges
+import datapacks
 import npcs
 import rules
 import standings
@@ -28,19 +29,11 @@ def actions(name: str) -> list[dict]:
     return [a for d in walk(PRESETS[name]) for a in d.get("Actions", [])]
 
 
-def test_committed_files_match_the_generator():
-    assert npcs.differences(REPO) == [], "run python tools/npcs.py"
-
-
-def test_pack_format_follows_the_server_minecraft_version():
-    assert REPO.load_manifest()["minecraft"] == npcs.MINECRAFT
-
-
 def test_easy_npc_is_pinned_at_the_tested_version():
     mods = {m["slug"]: m for m in REPO.load_manifest()["mods"]}
     for slug in ("easy-npc", "easy-npc-core", "easy-npc-config-ui"):
         assert mods[slug]["version"].endswith(npcs.EASY_NPC), slug
-        assert f"-{npcs.MINECRAFT}-" in mods[slug]["file"], slug
+        assert f"-{datapacks.MINECRAFT}-" in mods[slug]["file"], slug
 
 
 def test_every_named_dialog_exists_and_labels_fit():
@@ -176,23 +169,6 @@ def test_preset_ids_point_at_the_preset_files():
     for name in npcs.NPCS:
         ns, path = npcs.preset_id(name).split(":", 1)
         assert f"data/{ns}/{path}" in FILES
-
-
-def test_macro_lines_are_marked_and_marked_lines_are_macros():
-    for path, body in FILES.items():
-        if not path.endswith(".mcfunction"):
-            continue
-        for line in body.splitlines():
-            if not line.startswith("#"):
-                assert ("$(" in line) == line.startswith("$"), f"{path}: {line}"
-
-
-def test_every_called_function_exists():
-    for path, body in FILES.items():
-        for called in re.findall(rf"function {npcs.NS}:([\w/$()]+)", body):
-            names = [called.replace("$(name)", n) for n in npcs.NPCS] if "$(name)" in called else [called]
-            for name in names:
-                assert f"data/{npcs.NS}/function/{name}.mcfunction" in FILES, f"{path} calls {name}"
 
 
 def test_security_defaults_need_an_admin_for_every_feature():

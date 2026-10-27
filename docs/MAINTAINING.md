@@ -11,6 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
+| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `drops.py`) | `python tools/datapacks.py` |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
@@ -28,6 +29,7 @@ lives in a few modules they share:
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
 | `tools/launcher_profile.py` | the Fabric launcher profile: its expected id, checks, and comparing profiles while ignoring their generation time |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
+| `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
 
 ## Server types: Paper or Fabric
 

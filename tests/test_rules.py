@@ -3,17 +3,7 @@ import re
 import tomllib
 
 import rules
-import wardrobe
 from repo import REPO
-
-
-def test_committed_packs_match_the_generator():
-    assert rules.differences(REPO) == [], "run python tools/rules.py"
-
-
-def test_formats_and_vanilla_lists_follow_the_server_minecraft_version():
-    # DATA_FORMAT and VANILLA_NON_TREASURE are 26.3's; a Minecraft update must re-check them.
-    assert REPO.load_manifest()["minecraft"] == rules.MINECRAFT
 
 
 def test_fire_aspect_and_flame_are_out_of_every_source():
@@ -47,25 +37,6 @@ def test_launch_closes_pvp_and_the_nether_then_opens_them_but_not_the_end():
     assert f"schedule function realms:rules/launch_over {rules.LAUNCH_SECONDS}s replace" in launch
     assert "gamerule pvp true" in over and "gamerule allow_entering_nether_using_portals true" in over
     assert "end_open" not in over
-
-
-def test_every_function_a_pack_calls_exists():
-    # The launch also opens the wardrobe's launch weekend and restarts the weekly challenges: the wardrobe pack
-    # always ships beside the rules.
-    shipped = {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
-               for p in wardrobe.datapack_files() if p.startswith("data/realms/function/")}
-    for files in (rules.rules_files(), rules.netherite_files()):
-        defined = shipped | {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
-                             for p in files if p.startswith("data/realms/function/")}
-        called = set()
-        for path, body in files.items():
-            if path.endswith(".mcfunction"):
-                words = body.split()
-                called |= {w.removeprefix("realms:") for prev, w in zip(words, words[1:], strict=False)
-                           if prev == "function" and w.startswith("realms:")}
-            elif path.endswith("tags/function/load.json"):
-                called |= {v.removeprefix("realms:") for v in json.loads(body)["values"]}
-        assert called <= defined, called - defined
 
 
 def test_only_netherite_armor_recipes_are_removed():

@@ -370,34 +370,6 @@ def fn(path: str) -> str:
     return FILES[f"{standings.FN}/{path}.mcfunction"]
 
 
-def test_committed_pack_matches_the_generator():
-    assert standings.differences(REPO) == [], "run python tools/standings.py pack"
-
-
-def test_pack_uses_the_events_pack_format():
-    pack = json.loads(FILES["pack.mcmeta"])["pack"]
-    assert pack["min_format"] == pack["max_format"] == events.DATA_FORMAT
-
-
-def test_every_called_function_exists():
-    for path, body in FILES.items():
-        for name in re.findall(rf"function {standings.NS}:([\w/]+)", body):
-            assert f"data/{standings.NS}/function/{name}.mcfunction" in FUNCTIONS, f"{path} calls {name}"
-
-
-def test_macro_lines_are_marked_and_marked_lines_are_macros():
-    for path in FUNCTIONS:
-        for line in FILES[path].splitlines():
-            if not line.startswith("#"):
-                assert ("$(" in line) == line.startswith("$"), f"{path}: {line}"
-
-
-def test_json_files_parse():
-    for path, body in FILES.items():
-        if path.endswith((".json", ".mcmeta")):
-            json.loads(body)
-
-
 def test_kills_count_outside_the_arena_only():
     tick = fn("tick")
     assert "scoreboard objectives add st.pk playerKillCount" in fn("load")

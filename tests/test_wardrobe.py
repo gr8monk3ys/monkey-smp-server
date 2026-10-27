@@ -8,15 +8,6 @@ import wardrobe
 from repo import REPO
 
 
-def test_committed_packs_match_the_generator():
-    assert wardrobe.differences(REPO) == [], "run python tools/wardrobe.py"
-
-
-def test_pack_formats_follow_the_server_minecraft_version():
-    # DATA_FORMAT and RESOURCE_FORMAT are 26.3's; a Minecraft update must bump them too.
-    assert REPO.load_manifest()["minecraft"] == wardrobe.MINECRAFT
-
-
 def test_trigger_values_are_unique_and_clear_of_the_menu_values():
     values = [v for v, _, _ in wardrobe.skins()]
     assert len(values) == len(set(values))

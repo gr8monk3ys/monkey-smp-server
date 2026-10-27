@@ -11,8 +11,6 @@ DEPLOY = REPO.root / "deploy"
 LIB = DEPLOY / "lib.sh"
 SOURCE = '. "$(dirname -- "$0")/lib.sh"'
 SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p != LIB)
-# Their errors still go to stderr (a separate commit moves them to stdout like every other script's).
-OWN = {"realms-week.sh": {"die"}, "realms-drops.sh": {"die"}}
 DASH = shutil.which("dash")
 needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
 
@@ -37,7 +35,7 @@ def test_every_deploy_script_loads_lib_once_and_keeps_no_copy_of_it(script):
     assert text.count(SOURCE) == 1
     head = text[:text.index(SOURCE)]
     assert "set -eu\n" in head and re.search(r"^LOG_NAME=[\w.-]+\n\Z", head, re.M)
-    assert not functions(text) & functions(LIB.read_text()) - OWN.get(script.name, set())
+    assert not functions(text) & functions(LIB.read_text())
     # The deploy lock is fd 9, opened only by deploy_lock (realms-backup.sh's own lock is fd 8).
     assert "$COMPOSE" not in text and not re.search(r'flock -[nw]( \d+)? 9|exec 9[<>]+ *"', text)
     if DASH:

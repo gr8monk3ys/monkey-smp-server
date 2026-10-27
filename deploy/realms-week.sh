@@ -32,7 +32,6 @@ esac
 
 LOG_NAME=realms-week
 . "$(dirname -- "$0")/lib.sh"
-die() { DIED=$*; log "ERROR: $*" >&2; exit 1; }
 
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}

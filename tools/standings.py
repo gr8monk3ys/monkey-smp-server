@@ -575,11 +575,13 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     status = 0
     try:
         update_board(rcon, rows, week, last, now)
-        if not last.get("announced"):
+        if last.get("announced"):
+            print("board updated (already announced in chat)")
+        else:
             rcon(f"function {NS}:standings/announce")
             last["announced"] = True
             write_json(path, last)
-        print("board updated and announced in chat")
+            print("board updated and announced in chat")
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         status = 1

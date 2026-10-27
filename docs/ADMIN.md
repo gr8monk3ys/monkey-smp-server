@@ -602,7 +602,7 @@ it runs past. Game time stops while the server is empty, so a manual window can 
 Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making good an outage during the
 window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
 `rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
-clears nothing.
+clears nothing and doesn't open the window again (use `founder/open` above if it has to).
 
 ## Supply drops
 

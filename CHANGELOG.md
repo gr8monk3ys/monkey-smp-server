@@ -20,6 +20,20 @@
   `defaults/config/easy_npc/security.cfg` keeps Easy NPC's editor features to ops. Staff place them once per
   world, on the live VPS too, once the release is live (docs/ADMIN.md, "Spawn NPCs").
 
+2.6.0 rehearsed on a test server (Carpet fake players): the standings and bounties, the weekly challenges,
+Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet (docs/LAUNCH.md). Fixes from it:
+
+- Fixed: `function realms:rules/launch` opens Founder's Circlet's window only the first time (`#launched
+  rw.day`, which the launch already set so a second run wipes nothing). Run again after the launch weekend, it
+  opened another 31-hour window that `realms-week.timer` no longer closes, so the Circlet could be earned
+  outside the weekend. `founder/open` by hand still opens it (docs/ADMIN.md).
+- Fixed: a re-run of `deploy/realms-standings.sh` on Sunday said "board updated and announced in chat" though
+  the week is announced only once; it now says it was already announced.
+- docs/LAUNCH.md: a check by Saturday 14 November that the three one-time 2.6.0 steps on the VPS are done
+  (`realms-week.sh --check`, `install-standings.sh --check`, `shops-claims.sh --check`), a warning that
+  `rules/launch` on the live world before launch starts Founder's Circlet's window early, and the check at
+  midnight on Sunday that the window has closed.
+
 ## [2.6.0] - 2026-10-26
 
 Season I's date and launch kit, weekly faction standings, weekly challenges, item-priced shops and a lighter

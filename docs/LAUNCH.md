@@ -128,9 +128,17 @@ announcements ("Copy that depends on unmerged work", below).
 - [ ] **Sun 15 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
   Over about 40 ms median at 25 players: follow the decision rule there before launch.
+- [ ] **By Sat 14 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
+  do: `sh /srv/realms/repo/deploy/realms-week.sh --check` (the week timer runs),
+  `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers) and
+  `sudo sh /srv/realms/repo/deploy/shops-claims.sh --check` (shops work in claims). Anything left: docs/LIVE.md,
+  "The weekly challenges' timer", "The weekly standings" and "Shops in claims". Without the week timer the
+  challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
 - [ ] **Sun 15 Nov: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
-  and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100).
+  and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
+  launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
+  test play's challenges, and the real launch wouldn't open the window again.
 - [ ] **Daily from Sat 14 Nov: the whitelist.** `realms rcon "whitelist list"`. Before launch it holds staff
   only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
 
@@ -212,7 +220,9 @@ with the world, so run it once.
   visible wheel block (docs/SEASONS.md). Players' Discord vote breaks ties. Then
   `/function realms:events/cup/add {id:"...",points:30,why:"Build Battle, 1st"}` and so on, `begin` and
   `attend` for everyone who built (docs/ADMIN.md, "Attendance"), and the result in `#monkey-smp`.
-- [ ] **Midnight:** launch weekend ends (the Founder skin's window, if that work shipped).
+- [ ] **Midnight:** launch weekend ends, and with it Founder's Circlet's window: `realms-week.timer` closes it
+  at 12:00:30 AM. Then `realms rcon "scoreboard players get #founder.open rw.day"` should say 0; if it says
+  1, `realms rcon "function realms:wardrobe/founder/close"`.
 - [ ] **Roster over 30:** merge the `STORE_URL` pull request in the morning, after the waitlist has had its
   message the night before (founding roster, below).
 

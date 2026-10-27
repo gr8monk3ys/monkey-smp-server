@@ -151,10 +151,17 @@ def test_no_grace_from_the_launch_hour():
     assert f"tag @s add {rules.JOINED}" in first
 
 
+OPEN_FOUNDER = "execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open"
+
+
 def test_the_launch_opens_the_launch_weekend_and_restarts_the_weekly_challenges():
     launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"].splitlines()
-    assert "function realms:wardrobe/founder/open" in launch
+    # Only the first launch opens the window: challenges/launch sets #launched, and a launch run again after the
+    # weekend would open one that the wall-clock sync no longer closes.
+    assert OPEN_FOUNDER in launch
     assert "function realms:challenges/launch" in launch
+    assert launch.index(OPEN_FOUNDER) < launch.index("function realms:challenges/launch")
+    assert not [line for line in launch if line.endswith("founder/open") and line != OPEN_FOUNDER]
 
 
 def test_players_from_before_the_pack_get_no_welcome_or_grace():

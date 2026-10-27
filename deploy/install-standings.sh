@@ -26,6 +26,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=install-standings
+. "$(dirname -- "$0")/lib.sh"
+
 case "${1:-}" in
     '') MODE=apply ;;
     --check) MODE=check ;;
@@ -34,15 +37,8 @@ esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it installs packages and timers' >&2; exit 1; }
 
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-LOG=${INSTALL_LOG:-/var/log/realms-install-standings.log}
+LOG_TO=${INSTALL_LOG:-/var/log/realms-install-standings.log}
 
-# "setting NAME DEFAULT": NAME's value in the env file (the last one, quotes dropped), else DEFAULT.
-setting() {
-    v=''
-    [ ! -r "$ENV_FILE" ] ||
-        v=$(sed -n "s/^[[:space:]]*$1=//p" "$ENV_FILE" | tail -n 1 | sed -e 's/[[:space:]]*$//' -e "s/^[\"']//" -e "s/[\"']\$//")
-    printf '%s' "${v:-$2}"
-}
 REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
 LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
 STANDINGS_DIR=${STANDINGS_DIR:-$(setting STANDINGS_DIR /srv/realms/standings)}
@@ -54,18 +50,6 @@ TIMERS='realms-standings.timer realms-standings-board.timer'
 SERVICE_USER=realms  # User= in the two .service files
 
 umask 022
-log() {
-    line="$(date '+%Y-%m-%d %H:%M:%S') [install-standings] $*"
-    printf '%s\n' "$line" >>"$LOG"
-    printf '%s\n' "$line"
-}
-die() { log "ERROR: $*"; exit 1; }
-# Runs a command with its output in the log file only.
-logged() { "$@" >>"$LOG" 2>&1; }
-
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 
 todo=0      # --check: steps still to do
 problems=0  # steps that need a look by hand
@@ -76,7 +60,7 @@ for tool in docker runuser systemctl apt-get install cmp stat sed tail; do
     command -v "$tool" >/dev/null || die "$tool is missing"
 done
 cd /
-log "started ($MODE); log: $LOG"
+log "started ($MODE); log: $LOG_TO"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || die "$LIVE_DIR has no docker/compose.yaml (LIVE_DIR in $ENV_FILE?)"
 for f in tools/standings.py deploy/realms-standings.sh; do
     [ -f "$REPO_DIR/$f" ] || die "$REPO_DIR has no $f: the deployed release has no standings yet; run this once it does"
@@ -92,8 +76,7 @@ fi
 
 # ---------------------------------------------------------------- 1. python3
 
-python_ok() { python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; }
-if python_ok; then
+if python_ok 11; then
     log "python3: already installed ($(python3 --version 2>&1))"
 elif [ "$MODE" = check ]; then
     log 'python3: to do (missing, or older than 3.11)'
@@ -103,8 +86,8 @@ else
     export DEBIAN_FRONTEND=noninteractive
     logged apt-get install -y --no-install-recommends python3 ||
         { logged apt-get update && logged apt-get install -y --no-install-recommends python3; } ||
-        die "apt-get could not install python3 (see $LOG)"
-    python_ok || die "python3 is installed but older than 3.11: $(python3 --version 2>&1). Debian 12 or newer has 3.11."
+        die "apt-get could not install python3 (see $LOG_TO)"
+    python_ok 11 || die "python3 is installed but older than 3.11: $(python3 --version 2>&1). Debian 12 or newer has 3.11."
     log "python3: installed ($(python3 --version 2>&1))"
 fi
 
@@ -159,10 +142,10 @@ elif [ -z "$pack_ok" ]; then
     log 'first week: waiting for the data pack (step 2), so the week counts its kills'
     problems=$((problems + 1))
 elif runuser -u "$SERVICE_USER" -- python3 -B "$REPO_DIR/tools/standings.py" start "$WORLD" --state "$STANDINGS_DIR" \
-        >>"$LOG" 2>&1; then
+        >>"$LOG_TO" 2>&1; then
     log 'first week: started'
 else
-    log "first week: tools/standings.py start failed (see $LOG)"
+    log "first week: tools/standings.py start failed (see $LOG_TO)"
     problems=$((problems + 1))
 fi
 

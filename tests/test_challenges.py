@@ -5,6 +5,7 @@ import re
 import pytest
 
 import challenges
+import rcon
 import rules
 import season
 import site_links
@@ -166,6 +167,18 @@ def test_seconds_left_in_the_launch_weekend():
     assert challenges.founder_left(at("2026-11-23T07:59:59.5Z")) == 1   # rounds up: never ends early
     assert challenges.founder_left(at("2026-11-23T08:00:00Z")) == 0
     assert challenges.founder_left(at("2026-12-01T00:00:00Z")) == 0
+
+
+def test_send_skips_a_stopped_server_and_reports_a_refusal():
+    when = at("2026-11-23T08:00:30Z")
+    log = []
+    assert challenges.send(rcon.Recorder(running=False), when, log.append) == 0
+    assert log == ["server not running: nothing sent (the next hour catches up)"]
+    server = rcon.Recorder()
+    assert challenges.send(server, when, log.append) == 0 and server.sent == challenges.commands(when)
+    refusing = rcon.Recorder({"function realms:challenges/": "Unknown function realms:challenges/sync"})
+    assert challenges.send(refusing, when, log.append) == 1
+    assert refusing.sent == challenges.commands(when)[1:]   # the refused one is logged; the rest still go
 
 
 def test_the_hourly_commands():
@@ -471,7 +484,9 @@ def test_the_week_script_sends_the_commands_hourly():
     assert b"\r" not in script and script.isascii()
     text = script.decode()
     assert text.startswith("#!/bin/sh\n")
-    assert "tools/challenges.py\" commands" in text
+    assert 'python3 -B "$TOOL" commands' in text and 'TOOL=$REPO_DIR/tools/challenges.py' in text
+    # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals.
+    assert '"$TOOL" send --docker "$LIVE_DIR/docker"' in text and "Unknown function" not in text
     assert "--check" in text and "--install" in text
     # It reads its two settings without sourcing the env file (which holds the webhooks), and never a password.
     assert "realms-deploy.env" in text and not re.search(r"^\s*(\.|source)\s", text, re.M)

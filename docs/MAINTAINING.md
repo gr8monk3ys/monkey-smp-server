@@ -29,6 +29,7 @@ lives in a few modules they share:
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
 | `tools/launcher_profile.py` | the Fabric launcher profile: its expected id, checks, and comparing profiles while ignoring their generation time |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
+| `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, and the one list of answers that mean the server refused |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
 
 ## Server types: Paper or Fabric

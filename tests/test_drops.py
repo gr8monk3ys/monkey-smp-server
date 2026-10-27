@@ -11,6 +11,7 @@ import pytest
 import drops
 import events
 import map_border
+import rcon
 from repo import REPO
 
 UTC = dt.timezone.utc  # noqa: UP017 (the module under test keeps to 3.10)
@@ -200,7 +201,40 @@ def test_commands_send_the_spots_then_try_tonight(world):
     assert out[0] == f"data modify storage realms:drops spots set value [{listed}]"
     assert out[1] == "function realms:drops/try {night:20261124}"
     for c in out:
-        assert c.isascii() and "\n" not in c and len(c.encode()) <= drops.RCON_LIMIT
+        assert c.isascii() and "\n" not in c and len(c.encode()) <= rcon.LIMIT
+
+
+def test_send_logs_what_the_try_returned(world):
+    server = rcon.Recorder({"function realms:drops/try": "Function realms:drops/try returned 13"})
+    log = []
+    assert drops.send(server, world, pacific(2026, 11, 24, 19, 5), log.append) == 0
+    assert server.sent == drops.commands(world, pacific(2026, 11, 24, 19, 5))
+    assert log == ["spots sent: ok", f"function realms:drops/try {{night:20261124}}: {drops.TRY_CODES[13]}"]
+
+
+@pytest.mark.parametrize(("answer", "said"), [
+    ("Function realms:drops/try returned 1", drops.TRY_CODES[1]),
+    ("Function realms:drops/try returned 99", "Function realms:drops/try returned 99"),
+    ("", "ok"),
+])
+def test_every_try_answer_reads_as_words(answer, said):
+    try_ = "function realms:drops/try {night:1}"
+    assert drops.meaning(try_, answer) == f"{try_}: {said}"
+
+
+def test_send_is_silent_outside_drop_hours_and_skips_a_stopped_server(world):
+    log = []
+    assert drops.send(rcon.Recorder(), world, pacific(2026, 11, 24, 23, 0), log.append) == 0
+    stopped = rcon.Recorder(running=False)
+    assert drops.send(stopped, world, pacific(2026, 11, 24, 19, 5), log.append) == 0
+    assert stopped.sent == [] and log == ["server not running: nothing sent"]
+
+
+def test_send_fails_when_the_pack_is_missing(world):
+    server = rcon.Recorder({"function realms:drops/try": "Unknown function realms:drops/try"})
+    log = []
+    assert drops.send(server, world, pacific(2026, 11, 24, 19, 5), log.append) == 1
+    assert log[-1].startswith("refused or failed: function realms:drops/try")
 
 
 def test_no_commands_outside_drop_hours_or_without_spots(world, tmp_path):
@@ -261,9 +295,6 @@ def test_try_returns_every_code_and_checks_the_events():
     for cond in drops.EVENTS_ON:
         holder = cond.split()[0]
         assert f"scoreboard players set {holder} ev.state 1" in events_text, holder
-    script = (REPO.root / "deploy" / "realms-drops.sh").read_text()
-    for code, about in drops.TRY_CODES.items():
-        assert f"*' returned {code}') echo " in script and about in script, code
 
 
 def test_the_order_of_the_checks():
@@ -414,6 +445,9 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
     assert ". \"$ENV_FILE\"" not in text and "rcon.password" not in text and "WEBHOOK" not in text
     assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR"}
     assert 'python3 -B "$TOOL" commands "$WORLD"' in text and "WORLD=$LIVE_DIR/server/world" in text
+    # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals or codes.
+    assert '"$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker"' in text
+    assert "returned" not in text and "Unknown function" not in text
     for unit in UNITS:
         assert unit in text
     shell = shutil.which("dash")

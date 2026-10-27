@@ -36,11 +36,13 @@ import datetime as dt
 import gzip
 import json
 import random
+import re
 import sys
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import map_border
+import rcon as server
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -74,8 +76,6 @@ SPOTS = 6                   # spots offered each time; the pack tries them in or
 DRAWS = 5000                # random chunks looked at to find them
 OVERWORLD = "minecraft:overworld"
 OPAC_CLAIMS = Path("data") / "openpartiesandclaims" / "player-claims"
-# The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
-RCON_LIMIT = 1400
 
 # Chest offsets from the drop's middle (x, z), one per chest. Never side by side, so they never join.
 CHEST_AT = ((0, 0), (3, 2), (-3, 2))
@@ -116,7 +116,7 @@ OPEN = ["minecraft:air", "minecraft:cave_air", "minecraft:short_grass", "minecra
         "minecraft:short_dry_grass", "minecraft:snow", "#minecraft:small_flowers"]
 OPTIONAL = {"minecraft:short_dry_grass"}   # newer blocks: the tag still loads on a Minecraft without them
 
-# What `function realms:drops/try` returns, for the timer's log.
+# What `function realms:drops/try` returns, for the timer's log (meaning()).
 TRY_CODES = {
     1: "started: checking the ground at the spots",
     10: "automatic drops are off (function realms:drops/on)",
@@ -610,18 +610,43 @@ def show_spots(world: Path, when: dt.datetime) -> int:
     return 0 if found else 1
 
 
+def meaning(command: str, answer: str) -> str:
+    """The timer's log line for one command's answer: the try's return code in words."""
+    if not command.startswith("function "):
+        return f"spots sent: {answer or 'ok'}"
+    m = re.search(r" returned (\d+)$", answer)
+    return f"{command}: {TRY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
+
+
+def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
+    """Sends commands(world, when). Outside drop hours there are none, and nothing is logged (it runs every 10
+    minutes); a server that isn't running is skipped."""
+    out = commands(world, when)
+    if not out:
+        return 0
+    if not rcon.running():
+        log("server not running: nothing sent")
+        return 0
+    return 0 if server.send(rcon, out, log, describe=meaning) else 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Supply drops: the spots, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
     for name, about in (("spots", "the spots a drop would try now, and why"),
-                        ("commands", "the RCON commands deploy/realms-drops.sh sends now")):
+                        ("commands", "the RCON commands for now (changes nothing)"),
+                        ("send", "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)")):
         p = sub.add_parser(name, help=about)
         p.add_argument("world", type=Path, help="the world folder (server/world)")
         p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
+        if name == "send":
+            p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
     args = ap.parse_args(argv)
     now = args.at or dt.datetime.now(UTC)
     if args.command == "spots":
         return show_spots(args.world, now)
+    if args.command == "send":
+        return send(server.Docker(args.docker), args.world, now)
     out = commands(args.world, now)
     if out:
         print("\n".join(out))

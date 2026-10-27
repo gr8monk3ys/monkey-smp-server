@@ -118,6 +118,11 @@ def test_root_makes_a_missing_lock_as_the_service_user_or_itself_before_there_is
     lock.unlink()
     code, _, calls = sh("deploy_lock 0", FAKE_ID="0", LIVE_DIR=(tmp_path / "not-yet").as_posix())
     assert code == 0 and lock.exists() and calls == ["flock -n 9"]
+    lock.unlink()
+    lock.mkdir()   # something that isn't a plain file at the lock's name: root never opens it
+    code, out, calls = sh("deploy_lock 0", FAKE_ID="0")
+    assert code == 1 and out[-1].endswith(f"ERROR: the deploy lock {lock.as_posix()} is not a plain file")
+    assert calls == []
 
 
 @pytest.mark.parametrize(("seconds", "flag"), [("0", "-n 9"), ("1800", "-w 1800 9")])

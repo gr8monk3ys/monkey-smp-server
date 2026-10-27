@@ -151,13 +151,12 @@ fi
 
 # ---------------------------------------------------------------- 5. the timers
 
-changed=''
-for u in $UNITS; do
-    cmp -s "$REPO_DIR/deploy/$u" "/etc/systemd/system/$u" || changed="$changed $u"
-done
+# $UNITS is a list of unit names.
+# shellcheck disable=SC2086
+changed=$(changed_units $UNITS)
 idle=''
 for t in $TIMERS; do
-    { systemctl is-enabled --quiet "$t" && systemctl is-active --quiet "$t"; } 2>/dev/null || idle="$idle $t"
+    timer_running "$t" || idle="$idle $t"
 done
 if [ -z "$changed$idle" ]; then
     log 'timers: already installed and running'

@@ -62,11 +62,13 @@ def sh(tmp_path):
         (bin_dir / name).write_text(
             f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n'
             f'[ -z "${{FAKE_OUT_{name}:-}}" ] || printf "$FAKE_OUT_{name}"\n'
+            f'case " $* " in *" send "*) exit "${{FAKE_RC_send:-0}}" ;; esac\n'
             f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
+    (bin_dir / "id").write_text("#!/bin/sh\necho 1000\n", newline="\n")  # not root, whoever runs the tests
 
     def run(snippet, *args, **env):
-        environ = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ["PATH"], FAKE_CALLS=calls.as_posix(),
-                       LOCK_FILE=(tmp_path / "lock").as_posix(), LIVE_DIR="/srv/live", **env)
+        environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
+                   "LOCK_FILE": (tmp_path / "lock").as_posix(), "LIVE_DIR": "/srv/live", **env}
         done = subprocess.run([DASH, "-c", f'set -eu; LOG_NAME=t; . "$0"; {snippet}', LIB.as_posix(), *args],
                               env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         said = calls.read_text().splitlines() if calls.exists() else []
@@ -86,16 +88,22 @@ def test_setting_reads_the_last_value_as_written(sh, tmp_path):
 
 def test_log_tags_each_line_and_copies_it_to_log_to(sh, tmp_path):
     copy = tmp_path / "copy.log"
-    code, out, _ = sh('log one; logged echo quiet; die "it broke"', LOG_TO=copy.as_posix())
+    code, out, _ = sh('log one; logged echo quiet; die "it broke" 2>&1', LOG_TO=copy.as_posix())
     assert code == 1 and out == ["[t] one", "[t] ERROR: it broke"]
     lines = copy.read_text().splitlines()
     assert [re.sub(r"^\S+ \S+ ", "", line) for line in lines] == ["[t] one", "quiet", "[t] ERROR: it broke"]
 
 
 def test_log_each_logs_every_line_and_keeps_the_exit_code(sh):
-    assert sh("log_each python3 send || log rc=$?", FAKE_OUT_python3=r"a\nb\n", FAKE_RC_python3="3")[1] == [
+    assert sh("log_each python3 send || log rc=$?", FAKE_OUT_python3=r"a\n\nb\n", FAKE_RC_send="3")[1] == [
         "[t] a", "[t] b", "[t] rc=3"]
     assert sh("log_each python3 send && log ok")[1] == ["[t] ok"]
+    assert sh("log_each python3 send && log ok", FAKE_OUT_python3="no newline")[1] == ["[t] no newline", "[t] ok"]
+
+
+def test_a_lock_that_cannot_be_opened_is_a_failure_the_caller_logs(sh, tmp_path):
+    assert sh("deploy_lock 60 || log 'no lock'", LOCK_FILE=(tmp_path / "missing" / "lock").as_posix())[1][-1] == (
+        "[t] no lock")
 
 
 @pytest.mark.parametrize(("seconds", "flag"), [("0", "-n 9"), ("1800", "-w 1800 9")])
@@ -127,10 +135,18 @@ def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, s
     env = {"REPO_DIR": (tmp_path / "repo").as_posix(), "REALMS_DEPLOY_ENV": "/nonexistent"}
     code, out, calls = sh(run, FAKE_OUT_python3=r"function realms:x: ok\n", **env)
     assert code == 0 and [line.split("] ", 1)[1] for line in out] == ["function realms:x: ok"]
-    assert calls[0] == "flock -w 1800 9" and calls[1].startswith("python3 -B -u ") and calls[1].endswith(
-        f"{sent} /srv/live/docker")
-    code, out, calls = sh(run, FAKE_RC_flock="1", **env)
+    send = calls.index("flock -w 1800 9") + 1
+    assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(f"{sent} /srv/live/docker")
+    code, out, calls = sh(run, FAKE_OUT_python3="x", FAKE_RC_flock="1", **env)
     assert code == 1 and out[-1].endswith(f"ERROR: the deploy lock was taken for 30 minutes ({retry})")
-    assert calls == ["flock -w 1800 9"]
-    code, out, _ = sh(run, FAKE_RC_python3="1", **env)
+    assert calls[-1] == "flock -w 1800 9"
+    code, out, _ = sh(run, FAKE_OUT_python3="x", FAKE_RC_send="1", **env)
     assert code == 1 and out[-1].endswith(f"ERROR: not every command went through ({retry})")
+
+
+def test_drops_outside_drop_hours_takes_no_lock(sh, tmp_path):
+    (tmp_path / "repo" / "tools").mkdir(parents=True)
+    (tmp_path / "repo" / "tools" / "drops.py").write_text("")
+    code, out, calls = sh(f'sh "{(DEPLOY / "realms-drops.sh").as_posix()}"', REPO_DIR=(tmp_path / "repo").as_posix(),
+                          REALMS_DEPLOY_ENV="/nonexistent")
+    assert code == 0 and out == [] and len(calls) == 1 and " commands " in calls[0]

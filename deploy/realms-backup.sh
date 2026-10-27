@@ -36,7 +36,7 @@ LOG_NAME=backup
 ENV_FILE=${REALMS_BACKUP_ENV:-/etc/realms-backup.env}
 DEPLOY_ENV=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 STATE_DIR=/var/lib/realms-backup
-LOCK_FILE=/run/realms-backup.lock
+BACKUP_LOCK=/run/realms-backup.lock
 # The longest the server may go without saving while restic reads the world. The first backup sends
 # the whole world; later ones only what changed, usually in a minute or two.
 BACKUP_TIMEOUT=45m
@@ -101,7 +101,7 @@ command -v restic >/dev/null || die 'restic is not installed (docs/LIVE.md, "Bac
 [ "$mode" != restic ] || exec restic "$@"
 
 # One backup at a time.
-exec 8>"$LOCK_FILE"
+exec 8>"$BACKUP_LOCK"
 flock -w 3600 8 || die 'another backup has been running for an hour'
 mkdir -p "$STATE_DIR"
 

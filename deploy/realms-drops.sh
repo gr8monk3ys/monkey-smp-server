@@ -79,8 +79,10 @@ case $MODE in
         install_timer "$TIMER" $UNITS
         ;;
     send)
-        # Outside drop hours it prints nothing, so there is nothing worth a log line every 10 minutes.
+        # Outside drop hours there is nothing to send: no log line every 10 minutes, and no deploy lock taken.
         need_tool
+        out=$(commands)
+        [ -n "$out" ] || exit 0
         deploy_lock 1800 || die "the deploy lock was taken for 30 minutes (the timer tries again in 10 minutes)"
         log_each python3 -B -u "$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker" ||
             die 'not every command went through (the timer tries again in 10 minutes)'

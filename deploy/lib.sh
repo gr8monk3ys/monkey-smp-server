@@ -26,20 +26,21 @@ setting() { setting_in "$ENV_FILE" "$@"; }
 
 # "log WORDS...": one line, `YYYY-MM-DD HH:MM:SS [LOG_NAME] WORDS`, on stdout and, with LOG_TO set, in that file.
 log() {
-    logline="$(date '+%Y-%m-%d %H:%M:%S') [$LOG_NAME] $*"
-    [ -z "${LOG_TO:-}" ] || printf '%s\n' "$logline" >>"$LOG_TO"
-    printf '%s\n' "$logline"
+    lib_line="$(date '+%Y-%m-%d %H:%M:%S') [$LOG_NAME] $*"
+    [ -z "${LOG_TO:-}" ] || printf '%s\n' "$lib_line" >>"$LOG_TO"
+    printf '%s\n' "$lib_line"
 }
 # "die WORDS...": logs `ERROR: WORDS` and exits 1. DIED keeps WORDS for an EXIT trap (realms-backup.sh posts it).
 DIED=''
 die() { DIED=$*; log "ERROR: $*"; exit 1; }
 # "logged CMD...": runs CMD with its output going to LOG_TO only.
 logged() { "$@" >>"$LOG_TO" 2>&1; }
-# "log_each CMD...": runs CMD, logging each line it prints as it prints it; returns CMD's exit code.
+# "log_each CMD...": runs CMD, logging each line it prints as it prints it (blank lines dropped); returns CMD's exit
+# code. The code comes after a newline of its own, so output without a final newline can't swallow it.
 log_each() {
     exec 3>&1
-    lib_rc=$( { "$@" 2>&1 && echo 'exit=0' || echo "exit=$?"; } | while IFS= read -r l; do
-        case $l in exit=*) printf '%s' "${l#exit=}" ;; *) log "$l" >&3 ;; esac
+    lib_rc=$( { "$@" 2>&1 && printf '\nexit=0\n' || printf '\nexit=%s\n' "$?"; } | while IFS= read -r lib_l; do
+        case $lib_l in exit=*) printf '%s' "${lib_l#exit=}" ;; '') ;; *) log "$lib_l" >&3 ;; esac
     done )
     exec 3>&-
     return "${lib_rc:-1}"
@@ -63,22 +64,24 @@ rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 # (fs.protected_regular), and flock works on any open file.
 deploy_lock() {
     lib_lock=${2:-${LOCK_FILE:-/tmp/realms-deploy.lock}}
+    # `command exec`: a failed redirection returns here, so the caller's `|| die` says why, rather than ending the
+    # script on the shell's own error.
     if [ "$(id -u)" = 0 ]; then
-        [ -e "$lib_lock" ] || runuser -u "${SERVICE_USER:-$(stat -c %U "$LIVE_DIR")}" -- touch "$lib_lock"
-        exec 9<"$lib_lock"
+        [ -e "$lib_lock" ] || runuser -u "${SERVICE_USER:-$(stat -c %U "$LIVE_DIR")}" -- touch "$lib_lock" || return 1
+        command exec 9<"$lib_lock" || return 1
     else
-        exec 9>>"$lib_lock"
+        command exec 9>>"$lib_lock" || return 1
     fi
     if [ "$1" = 0 ]; then flock -n 9; else flock -w "$1" 9; fi
 }
 
 # "changed_units UNIT...": the units whose copy in /etc/systemd/system differs from the deployed checkout's.
 changed_units() {
-    changed=''
-    for u in "$@"; do
-        cmp -s "$REPO_DIR/deploy/$u" "/etc/systemd/system/$u" || changed="$changed $u"
+    lib_changed=''
+    for lib_u in "$@"; do
+        cmp -s "$REPO_DIR/deploy/$lib_u" "/etc/systemd/system/$lib_u" || lib_changed="$lib_changed $lib_u"
     done
-    printf '%s' "$changed"
+    printf '%s' "$lib_changed"
 }
 # "timer_running TIMER": enabled and active.
 timer_running() { systemctl is-enabled --quiet "$1" 2>/dev/null && systemctl is-active --quiet "$1" 2>/dev/null; }
@@ -86,27 +89,27 @@ timer_running() { systemctl is-enabled --quiet "$1" 2>/dev/null && systemctl is-
 timer_state() {
     lib_timer=$1
     shift
-    changed=$(changed_units "$@")
+    lib_changed=$(changed_units "$@")
     if timer_running "$lib_timer"; then lib_state=running; else lib_state='not running'; fi
-    log "timer: $lib_timer $lib_state; units to copy:${changed:- none}"
+    log "timer: $lib_timer $lib_state; units to copy:${lib_changed:- none}"
 }
 # "install_timer TIMER UNIT...": copies the units that changed to /etc/systemd/system and starts TIMER, as root.
 install_timer() {
     lib_timer=$1
     shift
-    changed=$(changed_units "$@")
-    if [ -z "$changed" ] && timer_running "$lib_timer"; then
+    lib_changed=$(changed_units "$@")
+    if [ -z "$lib_changed" ] && timer_running "$lib_timer"; then
         log "already installed and running: $lib_timer"
     else
-        for u in $changed; do
-            install -m 644 -o root -g root "$REPO_DIR/deploy/$u" "/etc/systemd/system/$u"
-            log "installed /etc/systemd/system/$u"
+        for lib_u in $lib_changed; do
+            install -m 644 -o root -g root "$REPO_DIR/deploy/$lib_u" "/etc/systemd/system/$lib_u"
+            log "installed /etc/systemd/system/$lib_u"
         done
-        [ -z "$changed" ] || systemctl daemon-reload
+        [ -z "$lib_changed" ] || systemctl daemon-reload
         systemctl enable --now "$lib_timer"
         # A timer that was already running picks up a changed schedule on restart; this doesn't run its service.
-        [ -z "$changed" ] || systemctl restart "$lib_timer"
+        [ -z "$lib_changed" ] || systemctl restart "$lib_timer"
         log "running: $lib_timer"
     fi
-    systemctl list-timers --all --no-pager "$lib_timer" 2>&1 | while IFS= read -r l; do log "  $l"; done
+    systemctl list-timers --all --no-pager "$lib_timer" 2>&1 | while IFS= read -r lib_l; do log "  $lib_l"; done
 }

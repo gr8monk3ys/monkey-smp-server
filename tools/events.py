@@ -25,7 +25,9 @@ from repo import Repo
 DATAPACK = "realms-events"
 FN = f"data/{NS}/function/events"
 STORE = f"{NS}:events"   # the command storage that holds the arena's points and the flag being made
-# Read by other packs (tools/rules.py, standings.py, drops.py): import these, don't copy the strings.
+# Read by other packs (tools/rules.py, standings.py, drops.py, challenges.py): import these, don't copy the
+# strings. datapacks.problems() fails when a pack reads an objective no pack creates, so a rename here that
+# misses this pack's own commands is caught.
 ARENA_TAG = "ev.arena"   # the players in the event arena
 STATE = "ev.state"       # #arena, #raid, #anarchy, #season_locked: what is running
 STRENGTH = "ev.strength" # a player's real Strength level while they are in the arena

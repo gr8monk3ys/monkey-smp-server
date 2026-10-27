@@ -171,6 +171,14 @@ def test_preset_ids_point_at_the_preset_files():
         assert f"data/{ns}/{path}" in FILES
 
 
+def test_every_npc_has_the_functions_its_macro_calls_name():
+    # datapacks.problems() only knows $(name) is some function; the names are npcs.NPCS.
+    for path, body in FILES.items():
+        for called in re.findall(rf"function {npcs.NS}:([\w/]*\$\(name\)[\w/]*)", body):
+            for name in npcs.NPCS:
+                assert f"data/{npcs.NS}/function/{called.replace('$(name)', name)}.mcfunction" in FILES, path
+
+
 def test_security_defaults_need_an_admin_for_every_feature():
     cfg = npcs.security_cfg()
     values = dict(line.split("=", 1) for line in cfg.splitlines() if "=" in line and not line.startswith("#"))

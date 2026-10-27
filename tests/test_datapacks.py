@@ -54,6 +54,15 @@ def test_a_clean_pack_has_no_problems():
     ("p/data/realms/x.json", "{\n", "p/data/realms/x.json"),
     ("p/pack.mcmeta", datapacks.mcmeta("old", fmt=1), "format isn't"),
     ("p/data/minecraft/tags/function/tick.json", datapacks.function_tag("realms:gone"), "lists realms:gone"),
+    ("p/pack.mcmeta", '{"description": "no pack key"}\n', "format isn't"),
+    ("p/data/realms/function/x.mcfunction", "execute if score #a t.a > #b t.missing run say hi\n",
+     "objective t.missing"),
+    ("p/data/realms/function/x.mcfunction", "execute as @a[scores={t.a=1.., t.missing=2}] run say hi\n",
+     "objective t.missing"),
+    ("p/data/realms/function/x.mcfunction", "execute store result score #a t.missing run time query day\n",
+     "objective t.missing"),
+    ("p/data/realms/dialog/x.json", '{"action": {"command": "/function realms:nowhere"}}\n', "calls realms:nowhere"),
+    ("p/data/realms/dialog/x.json", '{"score": {"name": "@s", "objective": "t.missing"}}\n', "objective t.missing"),
 ])
 def test_problems_catches(path, body, problem):
     found = datapacks.problems({**PACK, path: body})
@@ -61,6 +70,17 @@ def test_problems_catches(path, body, problem):
         assert found == []
     else:
         assert found and all(problem in p for p in found), found
+
+
+def test_a_commented_out_objective_is_not_created():
+    load = "# scoreboard objectives add t.b dummy\nscoreboard players set #a t.b 1\n"
+    assert datapacks.problems({**PACK, "p/data/realms/function/x.mcfunction": load}) == [
+        "p/data/realms/function/x.mcfunction reads objective t.b, which no pack creates"]
+
+
+def test_a_resource_pack_keeps_its_own_format():
+    rp = {"rp/pack.mcmeta": datapacks.mcmeta("skins", fmt=97), "rp/assets/realms/items/x.json": "{}\n"}
+    assert datapacks.problems({**PACK, **rp}) == []
 
 
 def test_objectives_made_by_other_mods_count_as_created():

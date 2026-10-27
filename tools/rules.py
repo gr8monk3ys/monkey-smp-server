@@ -57,7 +57,6 @@ GRACE_ITEM = "*[custom_data~{realms_grace:{}}]"
 GRACE_STACK = ('minecraft:paper[custom_data={realms_grace:{}},enchantments={"realms:pvp_grace":1},'
                'equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"},'
                'item_name="PvP grace"]')
-ARENA = ARENA_TAG  # the event arena is an event, so no grace there
 # The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
 CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
 
@@ -175,9 +174,9 @@ def rules_files() -> dict[str, str]:
           for slot in ("container.*", "weapon.offhand", "player.cursor", "player.crafting.*")),
         f"execute as @a if items entity @s armor.body {GRACE_ITEM} unless score @s {GRACE} > #now {OBJECTIVE} "
         "run item replace entity @s armor.body with minecraft:air",
-        f"execute as @a[tag={ARENA}] if items entity @s armor.body {GRACE_ITEM} "
+        f"execute as @a[tag={ARENA_TAG}] if items entity @s armor.body {GRACE_ITEM} "
         "run item replace entity @s armor.body with minecraft:air",
-        f"execute as @a[tag=!{ARENA}] if score @s {GRACE} > #now {OBJECTIVE} unless items entity @s armor.body * "
+        f"execute as @a[tag=!{ARENA_TAG}] if score @s {GRACE} > #now {OBJECTIVE} unless items entity @s armor.body * "
         f"run item replace entity @s armor.body with {GRACE_STACK}",
         f"execute as @e[{CORPSE}] if items entity @s armor.body {GRACE_ITEM} "
         "run item replace entity @s armor.body with minecraft:air",
@@ -221,7 +220,7 @@ def rules_files() -> dict[str, str]:
         "# A player with grace hurt a player (advancement realms:rules/grace_attack). Fights in the event",
         "# arena don't count.",
         f"advancement revoke @s only {NS}:rules/grace_attack",
-        f"execute unless entity @s[tag={ARENA}] run function {NS}:rules/grace_end",
+        f"execute unless entity @s[tag={ARENA_TAG}] run function {NS}:rules/grace_end",
     )
     # 26.x conditions name their kind with "type" and entity predicates are components
     # ("minecraft:entity_type"); the pre-26 "condition" key fails the whole datapack load.

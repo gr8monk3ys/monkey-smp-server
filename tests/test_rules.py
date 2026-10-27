@@ -106,9 +106,9 @@ def test_grace_lasts_48_hours_and_ends_on_attack_or_trigger():
     forfeit = data[f"{fn}grace_attack.mcfunction"]
     assert "advancement revoke @s only realms:rules/grace_attack" in forfeit
     # fights in the event arena don't end it, and the item is off there
-    assert f"unless entity @s[tag={rules.ARENA}] run function realms:rules/grace_end" in forfeit
-    assert f"as @a[tag=!{rules.ARENA}] if score @s {rules.GRACE} > #now" in second
-    assert f"as @a[tag={rules.ARENA}] if items entity @s armor.body {rules.GRACE_ITEM}" in second
+    assert f"unless entity @s[tag={rules.ARENA_TAG}] run function realms:rules/grace_end" in forfeit
+    assert f"as @a[tag=!{rules.ARENA_TAG}] if score @s {rules.GRACE} > #now" in second
+    assert f"as @a[tag={rules.ARENA_TAG}] if items entity @s armor.body {rules.GRACE_ITEM}" in second
 
 
 def test_no_grace_from_the_launch_hour():

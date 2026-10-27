@@ -66,7 +66,6 @@ STORE = f"{NS}:standings"   # command storage: week, last (written by this tool)
 
 WEIGHTS = (("cup", 40), ("land", 20), ("strength", 20), ("kills", 20))
 BOUNTY_POINTS = 5
-ARENA_STRENGTH = STRENGTH   # a player's real Strength while they are in the event arena
 KILLS = "st.kills"
 BOUNTY = "st.bounty"
 TZ = "America/Los_Angeles"
@@ -299,7 +298,7 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
     for p in world.parties:
         row = Row(p.name, list(p.members), cup=cup.get(p.id, 0), land=sum(world.claims.get(u, 0) for u in p.uuids))
         for name in p.members:
-            arena = scores.get(ARENA_STRENGTH, {})
+            arena = scores.get(STRENGTH, {})
             row.strength += arena[name] if name in arena else scores.get(LEVEL, {}).get(name, 0)
             row.kills += gained(kills.get(name, 0), kills_then.get(name, 0))
             row.bounties += gained(bounty.get(name.lower(), 0), bounty_then.get(name.lower(), 0))

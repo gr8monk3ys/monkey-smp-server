@@ -73,7 +73,7 @@ def outputs(gen, repo: Repo) -> dict[Path, bytes]:
     def data(v: str | bytes) -> bytes:
         if isinstance(v, bytes):
             return v
-        return (v if v.endswith("\n") else v + "\n").encode()
+        return v.encode()
     out = {root / k: data(v) for root, files in gen.packs(repo).items() for k, v in files.items()}
     if hasattr(gen, "files"):
         out.update({p: data(v) for p, v in gen.files(repo).items()})
@@ -115,10 +115,13 @@ CALL = re.compile(r"\bfunction ([\w.-]+):([\w/$()]+)")
 ADD_OBJECTIVE = re.compile(r"scoreboard objectives add (\S+)")
 READS = (
     re.compile(r"\bscore (?:\S+) ([\w.+-]+) (?:matches|[<>=]{1,2})"),
+    re.compile(r"\bscore \S+ [\w.+-]+ [<>=]{1,2} \S+ ([\w.+-]+)"),
+    re.compile(r"\bstore (?:result|success) score \S+ ([\w.+-]+)"),
     re.compile(r"\bscoreboard players (?:set|add|remove|get|reset|enable|display \w+) (?:\S+) ([\w.+-]+)"),
     re.compile(r"\bscoreboard players operation \S+ ([\w.+-]+) \S+ \S+ ([\w.+-]+)"),
-    re.compile(r'"objective":"([\w.+-]+)"'),
+    re.compile(r'"objective": ?"([\w.+-]+)"'),
 )
+SCORES = re.compile(r"scores=\{([^}]*)\}")
 
 
 def all_files(repo: Repo = REPO) -> dict[str, str]:
@@ -139,9 +142,12 @@ def problems(files: dict[str, str]) -> list[str]:
     defined = {f"{m[1]}:{m[2]}" for k in files if (m := FUNCTION_FILE.search(k))}
     created = set(EXTERNAL_OBJECTIVES)
     for body in files.values():
-        created |= set(ADD_OBJECTIVE.findall(body))
+        for line in body.splitlines():
+            if not line.lstrip().startswith("#"):
+                created |= set(ADD_OBJECTIVE.findall(line))
+    data_packs = {k.split("/", 1)[0] for k in files if k.split("/", 1)[1].startswith("data/")}
     for path, body in files.items():
-        name = path.split("/", 1)[1]
+        pack, name = path.split("/", 1)
         if "\r" in body or not body.endswith("\n"):
             errors.append(f"{path}: not LF line endings with a final newline")
         if name.endswith((".json", ".mcmeta")):
@@ -150,21 +156,21 @@ def problems(files: dict[str, str]) -> list[str]:
             except ValueError as e:
                 errors.append(f"{path}: {e}")
                 continue
-            if name == "pack.mcmeta" and "/assets" not in path:
-                fmt = data["pack"]
-                if not (fmt.get("min_format") == fmt.get("max_format") == DATA_FORMAT) and "resourcepacks" not in path:
+            if name == "pack.mcmeta" and pack in data_packs:
+                fmt = data.get("pack", {}) if isinstance(data, dict) else {}
+                if not fmt.get("min_format") == fmt.get("max_format") == DATA_FORMAT:
                     errors.append(f"{path}: format isn't {DATA_FORMAT}")
             if "tags/function/" in name:
                 for v in data.get("values", []):
                     if v not in defined and not v.startswith("minecraft:"):
                         errors.append(f"{path} lists {v}, which no pack defines")
+        elif not name.endswith(".mcfunction"):
             continue
-        if not name.endswith(".mcfunction"):
-            continue
+        # .json files are scanned too: dialogs and text components run commands and show scores.
         for line in body.splitlines():
             if line.startswith("#"):
                 continue
-            if ("$(" in line) != line.startswith("$"):
+            if name.endswith(".mcfunction") and ("$(" in line) != line.startswith("$"):
                 errors.append(f"{path}: macro marker: {line}")
             for ns, fn in CALL.findall(line):
                 pattern = re.escape(f"{ns}:{fn}").replace(r"\$", "$")
@@ -176,6 +182,10 @@ def problems(files: dict[str, str]) -> list[str]:
                     for obj in m.groups():
                         if "$(" not in obj and obj not in created:
                             errors.append(f"{path} reads objective {obj}, which no pack creates")
+            for selector in SCORES.findall(line):
+                for obj in (part.split("=", 1)[0].strip() for part in selector.split(",") if part.strip()):
+                    if "$(" not in obj and obj not in created:
+                        errors.append(f"{path} reads objective {obj}, which no pack creates")
     return sorted(set(errors))
 
 

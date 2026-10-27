@@ -45,6 +45,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 from datapacks import NS, lines, text
+from events import STATE
 
 FN = f"data/{NS}/function/challenges"
 LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules.py reads it)
@@ -294,7 +295,7 @@ def datapack_files() -> dict[str, str]:
         "# realms:rules/launch). Completed challenges stay counted in rw.challenges.",
         *(f"scoreboard players reset * {o}" for o in weekly()),
         "# Events begun from now on count for the event challenge.",
-        "scoreboard players operation #firstevent rc.week = #event ev.state",
+        f"scoreboard players operation #firstevent rc.week = #event {STATE}",
         "scoreboard players add #firstevent rc.week 1",
     )
     f[f"{FN}/launch.mcfunction"] = lines(

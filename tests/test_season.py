@@ -1,4 +1,3 @@
-import gzip
 import json
 import zipfile
 
@@ -35,7 +34,7 @@ SCOREBOARD = {"DataVersion": 5023, "data": {
 def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
     old, new = tmp_path / "old" / "world", tmp_path / "new" / "world"
     (old / "data" / "minecraft").mkdir(parents=True)
-    (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(gzip.compress(nbt(SCOREBOARD)))
+    (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(SCOREBOARD, gzipped=True))
     assert season.main(["carry", str(old), "--into", str(new), "--season", "2"]) == 0
     pack = new / "datapacks" / "realms-carry"
     assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == datapacks.DATA_FORMAT

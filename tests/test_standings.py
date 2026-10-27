@@ -1,6 +1,5 @@
 import copy
 import datetime as dt
-import gzip
 import io
 import json
 import re
@@ -76,7 +75,7 @@ def make_world(root, scoreboard=SCOREBOARD):
     for folder in ("parties", "player-claims", "player-configs"):
         (opac / folder).mkdir(parents=True)
     (world / "data" / "minecraft").mkdir(parents=True)
-    (world / "data" / "minecraft" / "scoreboard.dat").write_bytes(gzip.compress(nbt(scoreboard)))
+    (world / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(scoreboard, gzipped=True))
     parties = {"p-red": ("AlexFake", ["SamFake"]), "p-blue": ("RiaFake", ["TomFake"]), "p-lone": ("LoneFake", [])}
     for pid, (owner, members) in parties.items():
         data = {"owner": person(owner), "confirmedActivity": Long(1), "invites": [], "allies": [],

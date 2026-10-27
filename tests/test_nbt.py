@@ -1,4 +1,5 @@
 import gzip
+import re
 import struct
 
 import pytest
@@ -13,10 +14,10 @@ WORLD = {"DataVersion": 5023, "data": {
 
 
 def test_reads_what_the_writer_writes_from_a_path_or_bytes_gzipped_or_not(tmp_path):
+    path = tmp_path / "level.dat"
     for data in (write(WORLD), write(WORLD, gzipped=True)):
-        assert nbt.read(data) == WORLD
-        (tmp_path / "level.dat").write_bytes(data)
-        assert nbt.read(tmp_path / "level.dat") == WORLD
+        path.write_bytes(data)
+        assert nbt.read(data) == nbt.read(path) == nbt.read(str(path)) == WORLD
 
 
 def test_reads_every_number_and_array_tag():
@@ -40,12 +41,17 @@ def test_a_string_that_is_not_utf8_still_reads():
     (b"\x09\x00\x00", "not an NBT compound"),
     (gzip.compress(b"\x08\x00\x00"), "not an NBT compound"),
     (b"\x0a\x00\x00\x0d\x00\x01x\x00", "unknown NBT tag 13 at byte 7"),
-    (b"\x0a\x00\x00\x03\x00\x01x\x00", "cut short"),
+    (b"\x0a\x00\x00\x03\x00\x01x\x00", "cut short or damaged"),
+    (gzip.compress(write(WORLD))[:-9], "cut short or damaged"),
+    (b"\x1f\x8bnot gzip", "cut short or damaged"),
+    (b"\x0a\x00\x00\x09\x00\x01x\x03\xff\xff\xff\xff\x00", "bad length -1 at byte 8"),
+    (b"\x0a\x00\x00\x07\x00\x01x\x7f\xff\xff\xff\x00", "bad length 2147483647 at byte 7"),
+    (b"\x0a\x00\x00\x08\x00\x01x\x00\x09ab\x00", "bad length 9 at byte 7"),
 ])
 def test_what_is_not_an_nbt_compound_is_a_value_error_naming_the_file(tmp_path, data, said):
     with pytest.raises(ValueError, match=said):
         nbt.read(data)
     path = tmp_path / "bad.dat"
     path.write_bytes(data)
-    with pytest.raises(ValueError, match=f"^{repr(str(path))[1:-1]}: {said}"):
+    with pytest.raises(ValueError, match=f"^{re.escape(str(path))}: {said}"):
         nbt.read(path)

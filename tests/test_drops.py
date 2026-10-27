@@ -1,5 +1,4 @@
 import datetime as dt
-import gzip
 import json
 import re
 import shutil
@@ -45,9 +44,9 @@ def make_world(root, size=2500.0, target=None, claims=None):
     world = root / "world"
     border = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
     border.parent.mkdir(parents=True)
-    border.write_bytes(gzip.compress(nbt({"DataVersion": 5023, "data": {
+    border.write_bytes(nbt({"DataVersion": 5023, "data": {
         "center_x": SPAWN[0], "center_z": SPAWN[1], "size": size, "lerp_target": size if target is None else target,
-        "lerp_time": Long(0), "warning_blocks": 5}})))
+        "lerp_time": Long(0), "warning_blocks": 5}}, gzipped=True))
     folder = world / drops.OPAC_CLAIMS
     folder.mkdir(parents=True)
     for i, chunks in enumerate(claims or []):

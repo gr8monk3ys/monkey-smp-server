@@ -36,6 +36,7 @@ FN = f"data/{NS}/function/npcs"
 MODEL = "humanoid"
 PRESETS = f"data/{NS}/easy_npc/preset/{MODEL}"
 STORE = f"{NS}:npcs"
+IGNORE_TAG = "global.ignore"  # data packs that follow the Smithed convention (Random Mob Sizes) leave these alone
 EASY_NPC = "7.17.1"    # the Easy NPC version the presets were written and tested against (manifest: easy-npc*)
 
 LINKS_DIALOG = f"{NS}:links"   # the pause menu's Monkey SMP links (tools/rules.py)
@@ -335,6 +336,9 @@ def datapack_files() -> dict[str, str]:
             # Turns the entity. (`easy_npc rotate` turns the model on top of it, so the NPC would look at players
             # over its shoulder.)
             f"$rotate {npc} $(yaw) 0",
+            # Random Mob Sizes resizes every new mob with a brain once a second; this tag (the Smithed
+            # convention it honours) keeps the NPC at its normal size.
+            f"tag {npc} add {IGNORE_TAG}",
         )
         f[f"{fn}/remove.mcfunction"] = lines(
             f"# Removes the {title}. Run near it (its chunk has to be loaded).",

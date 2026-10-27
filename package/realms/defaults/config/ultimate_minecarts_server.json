@@ -1,0 +1,13 @@
+{
+  "linkingEnabled": true,
+  "minecartDamageEnabled": false,
+  "furnaceMaxBurnTime": 72000,
+  "furnaceMinecartSpeed": 32.0,
+  "otherMinecartSpeed": 16.0,
+  "chainResistance": 4.0,
+  "ironChainDistance": 1.2,
+  "copperChainDistance": 1.6,
+  "exposedCopperChainDistance": 2.0,
+  "weatheredCopperChainDistance": 2.6,
+  "oxidizedCopperChainDistance": 3.2
+}

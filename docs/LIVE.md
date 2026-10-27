@@ -148,6 +148,98 @@ It reads no secrets from `/etc/realms-deploy.env` and of `server.properties` onl
 line; its log is `/var/log/realms-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
 machine"): they need keys the owner makes.
 
+### A new world for Season I (2.8.0)
+
+2.8.0's structures and its new End (Dungeons and Taverns, Crazy Chambers, Endercon, Qrafty's End Villages) only
+appear in land generated after it, and the live world is already pre-generated, so Season I needs a new world.
+The old world also holds blocks and mobs from mods 2.8.0 drops (CHANGELOG). Do this once 2.8.0 is live, well
+before launch: the pre-generation takes hours (docs/LAUNCH.md checks it), and before the deploy freeze. Avoid
+midnight UTC (the day timer) and weeknights 6 to 10 PM Pacific (the drops timer). The old world plus a backup
+copy need about twice the world's size free: `du -sh ../server/world` and `df -h /srv` first.
+
+What stays by itself, because it lives outside `server/world`: the whitelist, ops and bans, BanHammer's records,
+ranks (LuckPerms), every config (including the new 2.8.0 ones), the map's settings and the timers.
+
+What lives only in the old world and stays with it: every build, inventory, ender chest and stat
+(`world/players`); claims and parties (`world/data/openpartiesandclaims`); the spawn claim and its no-PvP setting
+(`world/serverconfig/openpartiesandclaims-server-claim-config.toml`); Ledger's history (`world/ledger.sqlite`);
+Strength levels (`world/data/strength_smp`, `strength_restrictions`); the scoreboard (`world/data/minecraft/
+scoreboard.dat`: the wardrobe, store and staff grants, challenges, standings, event points); the spawn NPCs and
+the standings board; gamerules, the border and the launch-hour timer; Loot Restock's chest list
+(`world/chest_reset_data.json`). The carry in step 5 brings the wardrobe scores (tiers and grants included) and
+the supporter, title and champion teams over; claims, parties and Strength start again, as they would at launch.
+`keep_inventory` was on in the old world (the corpse mod 2.8.0 drops turned it on); the new world starts with it
+off, so deaths drop items. If the owners ever keep the old world instead, run `gamerule keep_inventory false`
+there.
+
+As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`realms rcon` is short for
+`docker compose exec realms realms rcon`), and the two `systemctl` lines on your admin account:
+
+1. Let 2.8.0 deploy as usual. The deploy backs the world up first, so the newest folder in `../backups/` from
+   before the update is the old world as 2.7.0 left it. Keep it out of the rotation:
+   `mkdir -p /srv/realms/seasons/pre-season && cp -a ../backups/<that folder> /srv/realms/seasons/pre-season/backup-2.7`.
+   The off-site backups copy `backups/` only, so add `/srv/realms/seasons` to that job or keep a copy by hand.
+2. Pause deploys: `sudo systemctl stop realms-deploy.timer`.
+3. Warn and stop: `realms rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
+   `docker compose stop`.
+4. Move the old world aside (keep it): `mv ../server/world /srv/realms/seasons/pre-season/world`. Then put
+   2.8.0's short rules in place (they quote rules 44 to 46, and the server keeps its own copy, so an update
+   doesn't replace it): `cp ../realms/defaults/codeofconduct/en_us.txt ../server/codeofconduct/en_us.txt`.
+   Everyone accepts them on their first join.
+5. Carry the wardrobe over, before the first start:
+
+   ```sh
+   python3 /srv/realms/repo/tools/season.py carry /srv/realms/seasons/pre-season/world \
+       --into /srv/realms/TheRealms-Server/server/world --season 1
+   ```
+
+   `--season 1`: it's still Season I, so everyone who plays stays a founder and Founder's Circlet still opens
+   at launch.
+6. Keep the seed: `level-seed` in `../server/server.properties` stays, so the land is the same, now with the
+   new structures. A new seed is the owners' call; it stays as secret as the old one (docs/ADMIN.md, "World
+   generation").
+7. Start: `docker compose up -d`. The installer adds the data packs, the rules pack sets the starting border
+   (2500 wide, 312.5 in the Nether) and keeps the End closed, and the console says "Carried N players' wardrobe
+   scores and K teams into season 1."
+8. Check:
+
+   ```sh
+   realms rcon "scoreboard players get #carried rw.day"     # 1
+   realms rcon "scoreboard players get #season rw.day"      # 1
+   realms rcon "scoreboard players get NAME rw.tier"        # a supporter: the same as in the old world
+   realms rcon "gamerule keep_inventory"                    # false
+   realms rcon "worldborder get"                            # 2500
+   grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l   # 17 (rule B18)
+   grep -E '^(reset_time_value|reset_time_unit|only_reset_when_empty)=' ../server/lootrestock.properties   # 7, days, true
+   ```
+
+   The last two are the new 2.8.0 configs, copied because the live server didn't have them (docs/ADMIN.md,
+   "Mod settings").
+9. The no-PvP spawn claim, as in docs/RULES.md (rule 26):
+   `realms rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"`, then
+   `realms rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"`.
+10. Pre-generate as on the first setup (step 6 above): `realms rcon "chunky worldborder"`,
+    `realms rcon "chunky radius 3200"`, `realms rcon "chunky start"`; the Nether with
+    `realms rcon "chunky world minecraft:the_nether"`, `"chunky worldborder"`, `"chunky radius 500"`,
+    `"chunky start"`. The End has no border, so give it a centre:
+    `realms rcon "chunky world minecraft:the_end"`, `"chunky center 0 0"`, `"chunky radius 2000"`,
+    `"chunky start"` (on a test server, End cities and Qrafty's villages were 400 to 2000 blocks out).
+    `realms rcon "chunky progress"` shows how far it is.
+11. Clear the old world off the live map: `realms rcon "bluemap purge world"`, and the same for
+    `world_the_nether` and `world_the_end` (if one says "BlueMap is still loading", run it again a few
+    seconds later). The map's border masks are config, not world: they still fit Season I's start.
+12. In game, as an op at spawn: `/function realms:npcs/guide/here` and `/function realms:npcs/crier/here` where
+    each should stand, and `/function realms:standings/place` for the board (docs/ADMIN.md, "Spawn NPCs" and
+    "Weekly standings and bounties").
+13. Turn deploys back on: `sudo systemctl start realms-deploy.timer` (unless the launch freeze has started:
+    docs/LAUNCH.md).
+
+The week, day, drops and standings timers need nothing: they find the world by its path and talk over RCON,
+so a run during the switch just fails and the next one works. Within the hour `realms-week.timer` tells the new
+world the challenge week. The launch itself is unchanged: `function realms:rules/launch` at 5 PM on the day.
+The old world stays in `/srv/realms/seasons/pre-season/`: to go back to it, stop the server, move the new
+`world` aside and move the old one back (`backup-2.7` is the same world before 2.8.0 touched it).
+
 ### The weekly challenges' timer (the release with the weekly challenges)
 
 Once that release is live, install `realms-week.timer` from the deployed checkout. It is safe to run again

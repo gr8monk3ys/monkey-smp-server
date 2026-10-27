@@ -139,6 +139,15 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       something they aren't. A scammer gives back what they took, and repeat scams are bannable.
     - Items only. Buying or selling for real money is still banned ("No real-money trading" below).
 
+## Bedrock
+
+A netherite pickaxe breaks bedrock, slowly (about 5 seconds with Efficiency V), and the bedrock doesn't drop.
+
+44. No holes into the void. Don't break the bottom layer of bedrock in any dimension, and no traps that drop
+    players or their things out of the world.
+45. No breaking the bedrock of the End's exit portal or of an End gateway.
+46. No going above the Nether roof: no building, travelling or hiding on top of it.
+
 ## Bans
 
 These are banned on the server.
@@ -170,7 +179,15 @@ These are banned on the server.
 
 ## The mods
 
-Coming soon: the mods every player should know about.
+Coming soon: the mods every player should know about. New in 2.8.0, and worth knowing now:
+
+- **Carry On.** Sneak and right-click with both hands empty to pick up a passive animal, a beehive with its bees
+  or a block like an enchanting table, and right-click to put it down. Not anything that stores items (chests,
+  barrels, shulker boxes, furnaces, hoppers and the like), spawners, banners, beds, doors, players or the NPCs at
+  spawn, and nothing in someone else's territory.
+- **Loot chests refill.** A structure's loot chest that you empty fills again a week later. Once one has been
+  opened, only staff can break it.
+- **Bedrock breaks** with a netherite pickaxe (rules 44 to 46).
 
 ## Community and payments
 
@@ -214,7 +231,22 @@ Open items from the owners' draft:
   26 October 2026: the owners shelved shops before they reached the live server, so rule 43 now covers trading
   by hand (items for items, no scams, no real-money trading). If shops come back, so does the rule's shop
   wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
-- B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack.
+- B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack. Since 2.8.0
+  (Dungeons and Taverns, whose enchantments are Nova Structures') the server does it: see B18 below.
+- Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
+  griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
+  the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
+  B12). The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
+- Friends & Foes (2.8.0) adds the Totem of Freezing (from Iceologers) and the Totem of Illusion (from
+  Illusioners). They aren't Totems of Undying, so B4 doesn't cover them as written; both are panic buttons
+  when you're hurt (one freezes whoever is close, the other turns you invisible and spawns copies of you).
+  The owners decided on 27 October 2026 that B4 stays as written, so both are allowed. Restrictions 1.5
+  already stops evokers dropping Totems of Undying.
+- Better Craftables (2.8.0) changes some vanilla recipes. The one that touches the rules: copying a
+  netherite upgrade template takes 3 diamonds instead of 7, so netherite tools come sooner; the owners kept it
+  on 27 October 2026. Netherite armor is still blocked (rule 24). It also adds a TNT minecart recipe without a
+  minecart (the same TNT); B10 still bans using one. Craft Tridents makes tridents craftable, and Fair
+  Fletching turns any potion, splash ones too, into tipped arrows; B1 and B6 still apply to them.
 
 What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
 Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
@@ -280,6 +312,11 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
+- **B18, Nova Structures' books** (Enchantment Disabler, `defaults/config/enchantmentdisabler/config.toml`,
+  since 2.8.0). All 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the
+  enchanting table, loot and villager trades, so nobody finds them; staff make event rewards with `/give` or
+  `enchant`, which still work. On a server installed before 2.8.0 the file is new, so the installer copies
+  it. If Dungeons and Taverns adds an enchantment, add it to the file (and to `tests/test_mod_defaults.py`).
 - **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
   enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
   `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may
@@ -288,6 +325,9 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   a shop on someone else's chest in a claim: placing one means clicking the chest, which the claim refuses.
   On a server installed before shops shipped, run `deploy/shops-claims.sh` (live VPS) or add the entry
   yourself, server stopped ("Shops" in `docs/ADMIN.md`).
+- **Rules 44 to 46, bedrock** (Breaking Bedrock, no config). Nothing stops a player with a netherite pickaxe
+  outside claims and spawn protection, so these are on admins, with Ledger's block log ("Mod settings" in
+  `docs/ADMIN.md` has what was tested).
 - **The welcome and the links** (pack `realms-rules`). A first join gets a welcome screen whose one button
   opens the Discord, where `#smp-forum` has the factions that are recruiting. Every player's pause menu
   has a Monkey SMP button with the Discord, the live map, the rules and the store. The addresses are in

@@ -95,7 +95,7 @@ SECTIONS = [
         ],
         "04  ·  MODDED TERRAIN AND DUNGEONS",
         "Land worth fighting over.",
-        "Tectonic, Terralith, Incendium and Nullscape. Castles, citadels and deep dark cities.",
+        "Tectonic, Terralith, Incendium and Endercon. Castles, citadels and deep dark cities.",
     ),
     Section(
         [],

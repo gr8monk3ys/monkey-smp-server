@@ -12,7 +12,7 @@ OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
   1. Start the Minecraft Launcher once, sign in, then CLOSE it.
   2. Double-click  "Install for Minecraft Launcher.bat"  in this folder.
      - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
-     - It downloads the mods, resource packs and shaders (about 520 MB) from their official
+     - It downloads the mods, resource packs and shaders (about 560 MB) from their official
        websites and checks every file. This takes a few minutes.
      - When it says it's finished, press a key to close the window.
   3. Open the Minecraft Launcher. Next to the green Play button, click the box that says

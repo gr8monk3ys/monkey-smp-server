@@ -336,7 +336,18 @@ def test_only_drop_chests_are_removed():
                 assert line.startswith("execute as @e[type=minecraft:marker,tag=dr.chest] at @s if block ~ ~ ~ "
                                        "minecraft:chest if data block ~ ~ ~ {CustomName:\"Supply drop\"}"), line
     assert fn("emptied").splitlines()[1] == "setblock ~ ~ ~ minecraft:air"
-    assert "unless data block ~ ~ ~ LootTable unless data block ~ ~ ~ Items[0]" in fn("landed")
+    # A drop that landed before 2.8.0 still holds its loot table and no items until it's opened.
+    assert ("at @s unless data block ~ ~ ~ LootTable unless data block ~ ~ ~ Items[0] "
+            "run function realms:drops/emptied") in fn("landed")
+
+
+def test_drop_chests_are_filled_when_placed_so_loot_restock_never_refills_them():
+    # Loot Restock refills, a week later, any chest that is opened while it still has a loot table. A drop chest
+    # never has one: it is filled when it lands.
+    body = [line for line in fn("place").splitlines() if not line.startswith("#")]
+    assert body[0] == 'setblock ~ ~ ~ minecraft:chest{CustomName:"Supply drop"}'
+    assert body[1] == "loot insert ~ ~ ~ loot realms:drops/supply"
+    assert "LootTable" not in "".join(body)
 
 
 def test_a_drop_ends_cleanly():

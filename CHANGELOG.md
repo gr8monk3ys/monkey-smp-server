@@ -2,6 +2,107 @@
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-10-27
+
+A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable
+bedrock, loot chests that refill, and the mods the folder dropped taken out. Same Minecraft (26.3). Server mods
+151 -> 166 (about 278 MB of downloads, was 213 MB); client pack 179 -> 197 mods, 216 -> 234 files, about 542 MB
+(was 502 MB). Players must update the client pack: several new mods are needed on both sides, so an old pack
+can't join. The new structures only generate in new land, so Season I needs a new world: on the live VPS follow
+docs/LIVE.md, "A new world for Season I (2.8.0)", once this is live. A host who keeps an old world gets the
+new mods, but the new structures and End only in land nobody has visited, should run
+`gamerule keep_inventory false` (the dropped corpse mod had turned it on), and should place the spawn NPCs again
+(docs/ADMIN.md, "Spawn NPCs"): only a newly placed one has the tag that keeps Random Mob Sizes off it.
+
+- New, from the shared folder (needed on the client too): **Carry On**, **Breaking Bedrock**, **Emotecraft**
+  (with Player Animation Library), **Friends & Foes**, **Fair Fletching**, **Polymorph+**, **Rechiseled** (with
+  Fusion and SuperMartijn642's Core Lib; SuperMartijn642's Config Lib becomes required), **Ultimate
+  Minecarts**, and the libraries Fzzy Config and Mixson.
+- New, server side (optional on the client): **Dungeons and Taverns**, **Crazy Chambers**, **Endercon** (the
+  End) and **Qrafty's End Villages**, **Better Craftables**, **Craft Tridents**, **Trident All-Weather
+  Channeling** (patched, below), **Random Mob Sizes**, **Sulfur Cube Expansion**, **Enchantment Disabler**;
+  server only: **Loot Restock** (patched, below), **Planting Dispensers** and **WorldEdit** (staff only:
+  docs/ADMIN.md, "Ranks").
+- New, optional client mods: Essential, Better Capes, MinecraftCapes, Cirrus, Windy, Real Arrow Tip, Third
+  Person Death, Diorama, Bind Commands, Command Keys, Reactions, Scribble, Smooth Camera, VisualKeys (with
+  WalksyLib) and WorldEdit CUI.
+- Updated: Strength SMP Season 4 1.7 -> 1.8 (the tick patch re-made per ADR-0004; 1.8 adds an `overlay_26.3`
+  copy of the patched function, which is the one 26.3 runs, so both are patched), Strength Restrictions 1.4 ->
+  1.5 (evokers no longer drop Totems of Undying), Craftable Cobwebs (a new build of 1.0.1). The folder's Entity
+  Model Features (3.3.10), Punchy (2.8d), Puzzles Lib and JEI are older than the pack's pins, so those stay.
+- Removed, because the brother took them out of the shared folder after his testing showed they didn't get on
+  with the rest (each came from the folder in an earlier sync):
+  - server and client: Better Tridents, CreativeCore, Illager Blabber, Jade, More Babies, Realistic Bees,
+    Sound Physics Remastered (2.0.0), More Mobs (the 11 October sync), player-death-corpses (1.1.0);
+  - server only: Moog's Ocean Structures (2.0.0) and Nullscape (the first package; Endercon now makes the End,
+    and with both a test End had no outer-island highlands, so no End cities: docs/MAINTAINING.md);
+  - client only, optional: Accurate Block Placement Reborn, AmbientSounds, BadOptimizations, BetterGrassify,
+    Camera Utils, Dynamic FPS, Entity Culling, More Culling, Not Enough Animations, Reese's Sodium Options,
+    Sodium Extra and Visuality (the first package), with their configs in `client/overrides/config/`.
+  None of them carried a shipped feature. The arena's corpse clean-up (`tools/events.py`) and the grace item's
+  corpse check (`tools/rules.py`) now match nothing and do no harm: deaths drop items, which the arena already
+  removes. The repo's own additions (claims, ranks, logging, anti-cheat, map, performance, worldgen, Easy NPC) stay.
+  A retired optional mod moves to `RETIRED_OPTIONAL` in `tools/client_env.py`, so older releases' indexes still
+  validate.
+- Left out on purpose (docs/MAINTAINING.md, "Mods left out on purpose"): Slabbed and Amethyst Nether (as
+  before), Koh's Death Effects (not on Modrinth), the folder's NeoForge builds of PrickleMC and Crops Love Rain
+  (the pack has the Fabric ones), and Deimos (nothing needs it). Universal Shops and Polymer stay shelved, and
+  Vanilla Permissions stays out.
+- Patched (docs/MAINTAINING.md, "Patches this pack carries"): **Loot Restock** checks whether a chest is empty by
+  rolling its loot with no player, so the "Open 8 loot chests" challenge never counted with it; the patched class
+  lets the opening player roll it (`tools/lootrestock_patch.py` rebuilds it; GPL-3.0-or-later like the mod).
+  **Trident All-Weather Channeling** struck every old Channeling trident in the area on each hit (a pig next to
+  one became a zombified piglin on a test server); the patch strikes only the attacker's own trident in flight.
+  Its lightning isn't damage a player causes, so PvP grace and the spawn claim didn't stop it: the patch strikes
+  nothing within 64 blocks of spawn or within 6 blocks of a player in grace.
+- Configs in `package/realms/defaults/` (copied on start where missing, so they reach the live server too;
+  docs/ADMIN.md, "Mod settings"; `tests/test_mod_defaults.py`):
+  - Carry On: nothing that stores items (chests of every kind, barrels, shulker boxes, furnaces, hoppers,
+    dispensers, droppers, crafters, brewing stands, pots, shelves, lecterns, jukeboxes), no spawners or trial
+    spawners, vaults, banners, beds, doors, players, Easy NPCs, text displays, markers, interactions, armor
+    stands, item frames, chest or hopper minecarts or chest boats. Claims apply: a non-member couldn't pick up
+    blocks in someone's claim, also during a Faction Raid.
+  - Loot Restock: a structure chest refills 7 days after it was emptied, only when empty; barrels, item frames
+    and trial vaults are left alone; only ops can break a tracked chest.
+  - Enchantment Disabler: all 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the
+    table, loot and trades, so rule B18 (event rewards only) holds by itself.
+  - Ultimate Minecarts: minecarts don't damage what they hit.
+- Supply drops are filled when they land instead of carrying a loot table, so Loot Restock never tracks them
+  and a drop spot can't become a weekly refill (`tools/drops.py`); a drop that landed before the update still
+  counts as full until it's opened. The spawn NPCs get the `global.ignore` tag,
+  so Random Mob Sizes leaves them at normal size (`tools/npcs.py`).
+- Rules: new rules 44 to 46 under "Bedrock" (no holes into the void, no breaking End exit portals or gateways,
+  nothing on the Nether roof), adopted by the owners on 27 October 2026. The short rules
+  (`codeofconduct/en_us.txt`) quote them now; a live server keeps its own copy of that file, so the Season I
+  switch copies the new one (docs/LIVE.md). "The mods" in docs/RULES.md has a first three entries. Admin notes
+  cover Friends & Foes' Totems of Freezing and Illusion (B4 doesn't cover them), Better Craftables' cheaper
+  netherite template copy (3 diamonds, not 7; it stays) and its TNT minecart recipe (B10), Craft Tridents and
+  Fair Fletching (B1, B6).
+- Balance: the data files of the twelve gameplay mods on the brief's list were checked against the Strength SMP
+  progression, the weekly challenges, the drop loot and rule 43. None replaces a Strength SMP, Monkey SMP
+  (`realms`) or drop file. Better Craftables replaces 66 vanilla recipes (the template copy above, stone tools,
+  trim templates, redstone parts and more), Friends & Foes brings its own loot tables and a beehive recipe, Ultimate
+  Minecarts the furnace minecart recipe; the rest only add their own. Defaults are kept except the configs above.
+  The owners' calls are in the admin notes.
+- Tested on a test server (i7-8700K, Carpet fake players, RCON): Carry On against claims and the raid rules;
+  Breaking Bedrock (4.6 s with a netherite pickaxe and Efficiency V, a diamond pickaxe can't, no drop, a void hole
+  is possible, a claim protects, pistons push bedrock, TNT doesn't break it); Loot Restock with a 1-minute
+  interval (a refill works, the challenge counts once, drops and player chests are never tracked); 0 Dungeons
+  and Taverns enchantments in new structures' chests; the trident patch; the End with Endercon alone (End
+  cities and Qrafty's villages within 2000 blocks). Load test (`tools/loadtest.py`, 25 players standing still,
+  5 minutes after a 2-minute warm-up, same PC and seed): this branch 87.2 ms mean tick (84.8 median, 11.5 TPS)
+  against main's 98.6 ms (95.8, 10.1 TPS). That run-to-run gap is bigger than 15 mods should make, so it rules
+  out a large slowdown, not a small one; it was measured before Nullscape came out, with players standing still,
+  and both are far over the 50 ms budget on this 2017 PC. The live VPS gets a 30-player test before launch
+  (docs/LAUNCH.md). A real client
+  with the new pack joined a test server with exactly the manifest's mods and stayed on, voice chat connected.
+  Not tested in game: WorldEdit (fake players couldn't run it), Carry On with animals, the enchanting table and
+  trades with Enchantment Disabler.
+- docs: docs/LIVE.md, "A new world for Season I (2.8.0)" (the switch, the carry with `--season 1`, the checks,
+  the spawn claim, pre-generation with the End, the map, NPCs and the board, and what lives only in the world);
+  docs/LAUNCH.md points to it; docs/ADMIN.md has WorldEdit, "Mod settings" and Endercon; docs/PLAYERS.md the
+  new size, low-end list and what's new; README, the site and the Modrinth text say Endercon and about 560 MB.
+
 ## [2.7.0] - 2026-10-26
 
 A fix for the severe lag since 2.5.0, supply drops and spawn NPCs; shops are shelved. Same Minecraft (26.3) and

@@ -14,10 +14,10 @@ SERVER = {e["project_id"] for e in REPO.load_manifest()["mods"]}
 REQUIRED = sorted(pid for pid in MODS if pid not in client_env.OPTIONAL_MODS)
 RECORD = "re-record tests/fixtures/client_mods.json with `python -I tests/fixtures/record_client_mods.py`"
 
-# Client-side although Modrinth calls its client half "required" (Modrinth's way of saying "a client mod"):
-AUDITED = {
-    "qyVF9oeo": "Sound Physics Remastered: client audio; its server half only sends settings to clients that have it",
-}
+# Client-side although Modrinth calls its client half "required" (Modrinth's way of saying "a client mod").
+# Empty since 2.8.0 dropped Sound Physics Remastered; a server mod that is really client-side goes here,
+# project id -> why.
+AUDITED: dict[str, str] = {}
 
 
 def providers(mod_id: str) -> set[str]:
@@ -38,6 +38,12 @@ def test_every_optional_mod_is_in_the_pack_with_a_known_kind():
     assert {kind for _, kind in client_env.OPTIONAL_MODS.values()} <= set(client_env.KINDS)
     assert {pid: slug for pid, (slug, _) in client_env.OPTIONAL_MODS.items()} == {
         pid: FACTS[pid]["slug"] for pid in client_env.OPTIONAL_MODS}
+
+
+def test_retired_optional_mods_are_out_of_the_pack():
+    """A retired mod back in the pack must be sorted again (into OPTIONAL_MODS or left required)."""
+    assert not set(client_env.RETIRED_OPTIONAL) & set(MODS)
+    assert not set(client_env.RETIRED_OPTIONAL) & set(client_env.OPTIONAL_MODS)
 
 
 def test_resource_packs_and_shaders_are_optional():

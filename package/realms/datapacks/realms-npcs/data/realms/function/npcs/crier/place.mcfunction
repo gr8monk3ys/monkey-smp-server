@@ -5,3 +5,4 @@
 easy_npc delete 91d80ba8-ad23-547d-9658-def753c77a93
 $easy_npc preset import data realms:easy_npc/preset/humanoid/crier.npc.snbt $(x) $(y) $(z) 91d80ba8-ad23-547d-9658-def753c77a93
 $rotate 91d80ba8-ad23-547d-9658-def753c77a93 $(yaw) 0
+tag 91d80ba8-ad23-547d-9658-def753c77a93 add global.ignore

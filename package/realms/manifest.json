@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "minecraft": "26.3",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -222,15 +222,15 @@
       }
     },
     {
-      "slug": "better-tridents",
-      "project_id": "KNUSlHiU",
-      "version": "26.3.1",
-      "version_id": "Opngvnij",
-      "file": "bettertridents-v26.3.1-mc26.3.x+fabric.jar",
-      "url": "https://cdn.modrinth.com/data/KNUSlHiU/versions/Opngvnij/bettertridents-v26.3.1-mc26.3.x%2Bfabric.jar",
-      "size": 68555,
+      "slug": "better-craftables",
+      "project_id": "BLG002oq",
+      "version": "v8.0.0+mod",
+      "version_id": "2UkGDTXL",
+      "file": "BetterCraftables_v8.0.0+mod_mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/BLG002oq/versions/2UkGDTXL/BetterCraftables_v8.0.0%2Bmod_mc26.3.jar",
+      "size": 233322,
       "hashes": {
-        "sha512": "69f620d6a1f8c8000500bdc02751b8e0d2241111be852c02cc8ea98d521ef7b859dfcb3db1a51aa5f011e2144eb84aa99ca02590b2055c819d44f5d9d0a06433"
+        "sha512": "769bac21b68d746afd75bbd93f26e0cefc3758e2a7bcc2f8c1059dccd29691bb1ef9165915810b16a65c5097ea017e3e3fb8be935da72de9a895264bf619a6c2"
       }
     },
     {
@@ -282,6 +282,18 @@
       }
     },
     {
+      "slug": "breakingbedrock",
+      "project_id": "s0tNTkDN",
+      "version": "1.3.1+26.2",
+      "version_id": "TCEdWheX",
+      "file": "breakingbedrock-universal-1.3.1+26.2.jar",
+      "url": "https://cdn.modrinth.com/data/s0tNTkDN/versions/TCEdWheX/breakingbedrock-universal-1.3.1%2B26.2.jar",
+      "size": 19360,
+      "hashes": {
+        "sha512": "ecbba8ffe260759c0d87cdaba2dbe906e92770054aa3d9b0a7463d5bd21ebdc0bcc301ea703582ecbff396dd786d8d35de1b0de8577a336d33517b61f9c72662"
+      }
+    },
+    {
       "slug": "c2me-fabric",
       "project_id": "VSNURh3q",
       "version": "0.4.2-alpha.0.106+26.3",
@@ -291,6 +303,18 @@
       "size": 4195982,
       "hashes": {
         "sha512": "047ed3fe3869d0185c6d1e94fd1e725b2ad40047e4929f22692090570af28d0075849cb65335b602658859c7d437cce51c94082c0c798617314764cfdc0a1d71"
+      }
+    },
+    {
+      "slug": "carry-on",
+      "project_id": "joEfVgkn",
+      "version": "2.12.0",
+      "version_id": "6kJQXHUF",
+      "file": "carryon-fabric-26.3-2.12.0.jar",
+      "url": "https://cdn.modrinth.com/data/joEfVgkn/versions/6kJQXHUF/carryon-fabric-26.3-2.12.0.jar",
+      "size": 380137,
+      "hashes": {
+        "sha512": "92302e1815fe8b4d41517f001f667a348d4f1e5d0a07d9495b263076cd7a9a30183a0174d4f1a4d6b447161d9d68b08a649f48633583b5955dacd7736d5decc9"
       }
     },
     {
@@ -402,15 +426,27 @@
       }
     },
     {
+      "slug": "craft-tridents",
+      "project_id": "j6oNCsqx",
+      "version": "1.1.0+mod",
+      "version_id": "Oxlxkm27",
+      "file": "craft-tridents-1.1.0.jar",
+      "url": "https://cdn.modrinth.com/data/j6oNCsqx/versions/Oxlxkm27/craft-tridents-1.1.0.jar",
+      "size": 29900,
+      "hashes": {
+        "sha512": "a487d4b153220b104d9482dca12f845ff559d875d32f0e9b6f5e55e8c7df8ed6968f2d72d2d4978411c5315f10bd61fbc7c38fe130781133431cf7084cffbbf5"
+      }
+    },
+    {
       "slug": "craftablecobwebs",
       "project_id": "VNMEUT3N",
-      "version": "1.0.1-26.3+mod",
-      "version_id": "g9SIwtWt",
-      "file": "craftablecobwebs-1.0.1-26.3.jar",
-      "url": "https://cdn.modrinth.com/data/VNMEUT3N/versions/g9SIwtWt/craftablecobwebs-1.0.1-26.3.jar",
-      "size": 14010,
+      "version": "1.0.1-1.21.9-26.3+mod",
+      "version_id": "Pskrq4XJ",
+      "file": "craftablecobwebs-1.0.1-1.21.9-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/VNMEUT3N/versions/Pskrq4XJ/craftablecobwebs-1.0.1-1.21.9-26.3.jar",
+      "size": 14119,
       "hashes": {
-        "sha512": "d71dfdd6e4a19c43cb99de75f2b327d944a377a33146a939312262c70e99af7ea1b5320d5f0a8614ac3c9c61179392d4fcab6bf6061d471a8f7880a4a9e4f081"
+        "sha512": "b6b5775526ca5511d38346e8207edf80c781710d3eb60120069c12b1724a4ca560efb18e58614a9660774ff9311e724bd4a2d44d4a929d15db902aacabacbf0c"
       }
     },
     {
@@ -426,15 +462,15 @@
       }
     },
     {
-      "slug": "creativecore",
-      "project_id": "OsZiaDHq",
-      "version": "2.14.19",
-      "version_id": "GO707F1h",
-      "file": "CreativeCore_FABRIC_v2.14.19_mc26.3.jar",
-      "url": "https://cdn.modrinth.com/data/OsZiaDHq/versions/GO707F1h/CreativeCore_FABRIC_v2.14.19_mc26.3.jar",
-      "size": 1387788,
+      "slug": "crazy-chambers",
+      "project_id": "FapP9XhG",
+      "version": "1.3.0",
+      "version_id": "y7neFzGz",
+      "file": "crazy-chambers-v1.3.0-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/FapP9XhG/versions/y7neFzGz/crazy-chambers-v1.3.0-mc26.3.jar",
+      "size": 1544566,
       "hashes": {
-        "sha512": "bcf7b1dae14801206b4a9d6c399741090ad5e278d18240fef1208564415f86b1564c92726ed83f6e2397ed3781cf57f8a61700c4ca0dd9af347b0a4de7e44662"
+        "sha512": "9c3e0bb527d3b7b6755aed5121405a48e80a6adc0d4f7ac83a766d089ee84889c5e4ba854ac32950f3b86e47a20dc23832c4a504b798e6088eedece7d9e6f166"
       }
     },
     {
@@ -483,6 +519,18 @@
       "size": 31226,
       "hashes": {
         "sha512": "ebc104b12f177b02d40c53151008d203c251e4c6f5c35992d183632f417859185cf72b7243196bf96f1839cfec1d150e1c6c6247781710bb952d3ee068da0758"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns",
+      "project_id": "tpehi7ww",
+      "version": "6.0.2+mod",
+      "version_id": "WilF7nqU",
+      "file": "dungeons-and-taverns-6.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/tpehi7ww/versions/WilF7nqU/dungeons-and-taverns-6.0.2.jar",
+      "size": 42195203,
+      "hashes": {
+        "sha512": "b0ccf52512560a8115b356c5a3e585c71966af10729f2d43641af268258272bb9f9c68c53c49eb79a5d5f645ba9e0dff6e4ae2b654eaf6a6d146977de435c025"
       }
     },
     {
@@ -618,6 +666,42 @@
       }
     },
     {
+      "slug": "emotecraft",
+      "project_id": "pZ2wrerK",
+      "version": "3.5.0-a.build.171",
+      "version_id": "M17ZQBUj",
+      "file": "emotecraft-for-MC26.3-3.5.0-a.build.171.jar",
+      "url": "https://cdn.modrinth.com/data/pZ2wrerK/versions/M17ZQBUj/emotecraft-for-MC26.3-3.5.0-a.build.171.jar",
+      "size": 2198618,
+      "hashes": {
+        "sha512": "e4642e12d3e3eb6e8f60bfc1fd122f093794382c621a30f7d07fb74156699ef640d2a9f9ad63df890f7a832c5865e0a30a123fe141eddb663f2b0b3adcca3f67"
+      }
+    },
+    {
+      "slug": "enchantment-disabler",
+      "project_id": "Kd03i2oU",
+      "version": "3.4.9+26.3",
+      "version_id": "V3NIVkpR",
+      "file": "enchantmentdisabler-fabric-3.4.9+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/Kd03i2oU/versions/V3NIVkpR/enchantmentdisabler-fabric-3.4.9%2B26.3.jar",
+      "size": 62437,
+      "hashes": {
+        "sha512": "89eed6c13390df9a3a52b4f5ae3608e9006fddc4239ae76a952a68852ff363ee1faa447fa6060475953dd24fc608dcb4ace2c103b20f2369d2ecc38679745aa2"
+      }
+    },
+    {
+      "slug": "endercon",
+      "project_id": "wr1BCv8H",
+      "version": "4.1+mod",
+      "version_id": "Fj5WqyGY",
+      "file": "endercon-4.1.jar",
+      "url": "https://cdn.modrinth.com/data/wr1BCv8H/versions/Fj5WqyGY/endercon-4.1.jar",
+      "size": 641699,
+      "hashes": {
+        "sha512": "588657f5e7b8d66cdf37210d18fc2b8322d62f8e8fd3f6eb18c0b837a572db40bf18b8a3852ee2a96897fac28275101b8dd29a8fa323013cf76d8d107c9f2df7"
+      }
+    },
+    {
       "slug": "epic-structures-dungeons",
       "project_id": "t0YT91nL",
       "version": "1.2.6",
@@ -651,6 +735,18 @@
       "size": 8142858,
       "hashes": {
         "sha512": "91404f87774466ce8604aafea791d8cc97b603bc310dce17c8188f94f7783cca6dc14fc726ce871ca317bfe9033c199d8d858d51284106a00754e952147703b8"
+      }
+    },
+    {
+      "slug": "fair-fletching",
+      "project_id": "yIerZIBi",
+      "version": "1.0.2+mc26.3",
+      "version_id": "MtNj3mMB",
+      "file": "fair-fletching-1.0.2+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/yIerZIBi/versions/MtNj3mMB/fair-fletching-1.0.2%2Bmc26.3.jar",
+      "size": 40424,
+      "hashes": {
+        "sha512": "c9ca82a85bd0be59f4a204d08b30f96d31aedd964c50246aa5beba4a5a22abf960344d8b031f2cbf9f2e8d852faff60cbd537f23e45f8731d3b6c73505597399"
       }
     },
     {
@@ -690,6 +786,18 @@
       }
     },
     {
+      "slug": "friends-and-foes",
+      "project_id": "POQ2i9zu",
+      "version": "fabric-5.0.2+mc26.3",
+      "version_id": "pGDRqzPf",
+      "file": "friendsandfoes-fabric-5.0.2+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/POQ2i9zu/versions/pGDRqzPf/friendsandfoes-fabric-5.0.2%2Bmc26.3.jar",
+      "size": 4405531,
+      "hashes": {
+        "sha512": "a38e0e6d2efe1263a5dc4366b34e7701c60cfcb4be84bb837e0f5a76d61112601d6c70b67d0eba27340002e208bda125b00a3d82cfab642e87085c53c2454265"
+      }
+    },
+    {
       "slug": "frostbytes-slabs-stairs",
       "project_id": "WWL04tjR",
       "version": "1.15.3-26.3",
@@ -699,6 +807,30 @@
       "size": 1997420,
       "hashes": {
         "sha512": "4eceb13bd6accfe9e2195afcf325884dc4f24402e128ccc0c39b0ca252f257d87c6b628b5c7c5dca5cb62157c4285ec6669373f5aa1a4100630cba0973f5d6af"
+      }
+    },
+    {
+      "slug": "fusion-connected-textures",
+      "project_id": "p19vrgc2",
+      "version": "1.3.16-fabric-mc26.3",
+      "version_id": "wRjdAbXf",
+      "file": "fusion-1.3.16-fabric-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/p19vrgc2/versions/wRjdAbXf/fusion-1.3.16-fabric-mc26.3.jar",
+      "size": 953730,
+      "hashes": {
+        "sha512": "0b1d3e06f9f53fcaa661ae223fa8eb175dd5cbde58bb849c25ac0febbfbe59474d45a957a500f8b0e03f0934afb41c7b570acfdb6c914914db913478f4880518"
+      }
+    },
+    {
+      "slug": "fzzy-config",
+      "project_id": "hYykXjDp",
+      "version": "0.7.7+fix3+26.3",
+      "version_id": "YkOumqzV",
+      "file": "fzzy_config-0.7.7+fix3+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/hYykXjDp/versions/YkOumqzV/fzzy_config-0.7.7%2Bfix3%2B26.3.jar",
+      "size": 2375413,
+      "hashes": {
+        "sha512": "bbf47ab921fec1215d6e59ab0d875b565c22bbf039ae985b6e64313412b66835c443006c428ac9b8ef7ba396a4e0aa2bb0d65126c95a595bc56376655cb1c9ee"
       }
     },
     {
@@ -810,18 +942,6 @@
       }
     },
     {
-      "slug": "illagerblabber",
-      "project_id": "WS4FswTq",
-      "version": "1.1.0",
-      "version_id": "jCAOfys0",
-      "file": "illagerblabber-26.3-Fabric-1.1.0.jar",
-      "url": "https://cdn.modrinth.com/data/WS4FswTq/versions/jCAOfys0/illagerblabber-26.3-Fabric-1.1.0.jar",
-      "size": 6424669,
-      "hashes": {
-        "sha512": "da121fdf35120e7e3c4462ca1e7cfd85fd9ff94c59bcbb5d78c0dc3fe7d58640017987e97777448a3bac11b7650abb57a3e57616365ebfe634bc2b78c5bcc214"
-      }
-    },
-    {
       "slug": "incendium",
       "project_id": "ZVzW5oNS",
       "version": "5.5.3+26.3",
@@ -867,18 +987,6 @@
       "size": 517894,
       "hashes": {
         "sha512": "5a5349314b89d701a5ca49bf45735cb169e0e95a04520dd3bdd6e9fc403886a02d4f0014e5c3c34393e1a3eb776dbffb6f56191cc1c551f092c432235203eab6"
-      }
-    },
-    {
-      "slug": "jade",
-      "project_id": "nvQzSEkH",
-      "version": "26.3.5+fabric",
-      "version_id": "71CTWqdE",
-      "file": "Jade-mc26.3-Fabric-26.3.5.jar",
-      "url": "https://cdn.modrinth.com/data/nvQzSEkH/versions/71CTWqdE/Jade-mc26.3-Fabric-26.3.5.jar",
-      "size": 1092685,
-      "hashes": {
-        "sha512": "2e7331e62eb6658268ae92dc42de8b469f50dd6c6a9d2546a6f649bae97c2cdfd8d4c1560948cf46269175d2c79c6c47a36a02685e39d476768d18fbb2a28703"
       }
     },
     {
@@ -978,6 +1086,22 @@
       }
     },
     {
+      "slug": "lootrestock",
+      "project_id": "ddaWpjKK",
+      "version": "1.0.3",
+      "version_id": "M5kTZo9M",
+      "file": "LootRestock-1.0.3-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/ddaWpjKK/versions/M5kTZo9M/LootRestock-1.0.3-26.3.jar",
+      "size": 1375681,
+      "hashes": {
+        "sha512": "fe5aadec226ece26c26e1fcbb0ef30785b174eed3df22ba0f77e4700e37e75b80e9426fe923cf720e821e59158620b62d2cafcafe3a85e877b0c22d76859d651"
+      },
+      "patch": {
+        "path": "patches/lootrestock",
+        "base_sha512": "fe5aadec226ece26c26e1fcbb0ef30785b174eed3df22ba0f77e4700e37e75b80e9426fe923cf720e821e59158620b62d2cafcafe3a85e877b0c22d76859d651"
+      }
+    },
+    {
       "slug": "luckperms",
       "project_id": "Vebnzrzj",
       "version": "v5.5.85-fabric",
@@ -1047,6 +1171,18 @@
       "size": 2946244,
       "hashes": {
         "sha512": "61b3fe06981577408be18f37a1be5750d0de1722850c3db2b72322ae13137f9c593b745344163b674730f84865c9ee6e90328e605451ce8605409a7307f9f1f0"
+      }
+    },
+    {
+      "slug": "mixson",
+      "project_id": "EgugIDm8",
+      "version": "2.2.1",
+      "version_id": "yWpBBcpq",
+      "file": "mixson-2.2.1-multiloader.jar",
+      "url": "https://cdn.modrinth.com/data/EgugIDm8/versions/yWpBBcpq/mixson-2.2.1-multiloader.jar",
+      "size": 61287,
+      "hashes": {
+        "sha512": "653497a63372d41b7ec4801b0f6b7b4042020779977ac233ab655bb72ee46ad68f00719c8718655ff63cbd26b35c09bfe9056a94dade689e4a967d9f833b4cf2"
       }
     },
     {
@@ -1134,30 +1270,6 @@
       }
     },
     {
-      "slug": "more-babies",
-      "project_id": "ZK4bBM3B",
-      "version": "26.3+3.1.2-fabric",
-      "version_id": "J10h9uWE",
-      "file": "more-babies-26.3+3.1.2-fabric.jar",
-      "url": "https://cdn.modrinth.com/data/ZK4bBM3B/versions/J10h9uWE/more-babies-26.3%2B3.1.2-fabric.jar",
-      "size": 1047867,
-      "hashes": {
-        "sha512": "bcd604f5f05253839100ac3099e6e9f920055e76e0c043d86d8813630f9008194b9b503032b3119095e75d51b7013e2f46f987a9fbce71c8c2f97d12ac88eb1e"
-      }
-    },
-    {
-      "slug": "more-mobs",
-      "project_id": "HJR6V0I2",
-      "version": "1.5.11+mod",
-      "version_id": "edz35rwg",
-      "file": "more_mobs-v1.5.11-mc1.14-26.3.9-mod.jar",
-      "url": "https://cdn.modrinth.com/data/HJR6V0I2/versions/edz35rwg/more_mobs-v1.5.11-mc1.14-26.3.9-mod.jar",
-      "size": 379474,
-      "hashes": {
-        "sha512": "8eac707a245ef4ec5678c4288d7eea19d0286c8ff3a2c5a08ac9ce69b3bd4c74786d0a3cf216ef9c052798ba720b0b659ac03011b0741d79d292d3a34f775247"
-      }
-    },
-    {
       "slug": "more-villagers-re-employed",
       "project_id": "1fOqTPRO",
       "version": "1.26.9.4",
@@ -1179,18 +1291,6 @@
       "size": 25860,
       "hashes": {
         "sha512": "1abfe55e5cb9eeb8e331cf81e0dfd2a6f73fb2e1b62f7cd2c46184c8f2a60e29a85f3d09ade718fea684d871929e40cf941765baa63f6999ba3ee41c8a1bae45"
-      }
-    },
-    {
-      "slug": "mos-moogs-ocean-structures",
-      "project_id": "ZKBkklMv",
-      "version": "1.1.1",
-      "version_id": "QfMITqh9",
-      "file": "MoogsOceanStructures-universal-1.21-1.1.1.jar",
-      "url": "https://cdn.modrinth.com/data/ZKBkklMv/versions/QfMITqh9/MoogsOceanStructures-universal-1.21-1.1.1.jar",
-      "size": 1590700,
-      "hashes": {
-        "sha512": "62c209637f8fad6588caf39ce2357672b3fffdd0d12afdbf75e2ab77654073f773d386e8271666774d08134e6ae617d65581df7fa1695c298c91eb8831bda961"
       }
     },
     {
@@ -1254,18 +1354,6 @@
       }
     },
     {
-      "slug": "nullscape",
-      "project_id": "LPjGiSO4",
-      "version": "2.0.1+26.3",
-      "version_id": "79OyFQtd",
-      "file": "Nullscape_26.3_v2.0.1+26.3.jar",
-      "url": "https://cdn.modrinth.com/data/LPjGiSO4/versions/79OyFQtd/Nullscape_26.3_v2.0.1%2B26.3.jar",
-      "size": 259205,
-      "hashes": {
-        "sha512": "ae84946fd6a62ea0863cbc9fd2766ad08635a856d2e15af861af7d00807c98e606d1a2a06eb176ea6275031b66b6a186b245c7a4097797d3c12244ca9a4fe968"
-      }
-    },
-    {
       "slug": "open-parties-and-claims",
       "project_id": "gF3BGWvG",
       "version": "fabric-26.3-0.32.8",
@@ -1290,15 +1378,27 @@
       }
     },
     {
-      "slug": "player-death-corpses",
-      "project_id": "jzoouHnf",
-      "version": "3.7+mod",
-      "version_id": "bEAcbslS",
-      "file": "player-death-corpses-3.7.jar",
-      "url": "https://cdn.modrinth.com/data/jzoouHnf/versions/bEAcbslS/player-death-corpses-3.7.jar",
-      "size": 581106,
+      "slug": "planting-dispensers",
+      "project_id": "x8NqQymT",
+      "version": "1.0.0+mc26.1.2",
+      "version_id": "FSieX6kb",
+      "file": "planting-dispensers-1.0.0+mc26.1.2.jar",
+      "url": "https://cdn.modrinth.com/data/x8NqQymT/versions/FSieX6kb/planting-dispensers-1.0.0%2Bmc26.1.2.jar",
+      "size": 12614,
       "hashes": {
-        "sha512": "11db7986316e4b60bfdcb3a51642240b856caa6660ca18e48ca761544ad99b96bb91ea3545152e824a56103b7e568db383a6433702c1519f4ae41b327eec82a3"
+        "sha512": "dd8be930f8161a3475af6de0d013bbbc7d59ce8be7a078da73e0e6ce9bd515c00fa0f2bacf2182a3cbe2265735b312ebbba1177e2edda9e625d2048539b92a5b"
+      }
+    },
+    {
+      "slug": "player-animation-library",
+      "project_id": "ha1mEyJS",
+      "version": "1.2.8",
+      "version_id": "xJ30QmpE",
+      "file": "PlayerAnimationLibMerged-1.2.8+mc.26.3.jar",
+      "url": "https://cdn.modrinth.com/data/ha1mEyJS/versions/xJ30QmpE/PlayerAnimationLibMerged-1.2.8%2Bmc.26.3.jar",
+      "size": 406793,
+      "hashes": {
+        "sha512": "d6870759e2f5f83c6a74b2d02aeabab937d6d8da8c46245566646bc6e8efaeeb06c978edc43a50b57a0de2d015b341c284382bc5d4ae2e450d1b6aa5f8e2e97e"
       }
     },
     {
@@ -1311,6 +1411,18 @@
       "size": 40231,
       "hashes": {
         "sha512": "cbe88303c7fd36b2e0f242535f8f2cccc3dfed11052b8baf6345cc6e8605303f0faca5cb8554a9200d2b264e57ec9aabf3634c91a380eba070eea67d5f56cce7"
+      }
+    },
+    {
+      "slug": "polymorph_plus",
+      "project_id": "3uT4J18I",
+      "version": "1.4.0+26.3.0-fabric",
+      "version_id": "o3Gm7y5y",
+      "file": "polymorph_plus-fabric-1.4.0+26.3.0.jar",
+      "url": "https://cdn.modrinth.com/data/3uT4J18I/versions/o3Gm7y5y/polymorph_plus-fabric-1.4.0%2B26.3.0.jar",
+      "size": 355011,
+      "hashes": {
+        "sha512": "25d54e8aec68c775e173d39c8fac7573fe4123c7c85d42751ce601f3528352913aa6a0b73f3311abb4dee3c77efb70304adcf4ca0fa78eab7399851ec3b33f0e"
       }
     },
     {
@@ -1350,6 +1462,30 @@
       }
     },
     {
+      "slug": "qraftys-end-villages",
+      "project_id": "NFlNaUBA",
+      "version": "5.0-26.3+mod",
+      "version_id": "MCJ1neKJ",
+      "file": "qraftys-end-villages-5.0-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/NFlNaUBA/versions/MCJ1neKJ/qraftys-end-villages-5.0-26.3.jar",
+      "size": 572620,
+      "hashes": {
+        "sha512": "d2ab439622ea5d4f814c36089b087e5f22015e459122395b61861f8b66c7dbb6f47905ec2189a59bb9628f323d83831133b545ef1bc379dd553bbb599b85848b"
+      }
+    },
+    {
+      "slug": "random-mob-sizes-dp",
+      "project_id": "aKeMRgHX",
+      "version": "1.3.7+fabric",
+      "version_id": "3ZjvjsHC",
+      "file": "RandomMobSizes_fabric_mod.jar",
+      "url": "https://cdn.modrinth.com/data/aKeMRgHX/versions/3ZjvjsHC/RandomMobSizes_fabric_mod.jar",
+      "size": 30716,
+      "hashes": {
+        "sha512": "8b960aefb10bf699cc0cc6acd7d56c3f22a487fd2d9e0d3dabe63381440d3e7ad1d5e84076362a1fe3d7d7f0601d7e47e32c9e19023aa8034e4e07ef6ade675f"
+      }
+    },
+    {
       "slug": "reach-behind",
       "project_id": "MDljZreW",
       "version": "26.3.0",
@@ -1362,15 +1498,15 @@
       }
     },
     {
-      "slug": "realistic-bees",
-      "project_id": "tG6HkcWx",
-      "version": "26.3.0-4.4-fabric+forge+neo",
-      "version_id": "N514bTMR",
-      "file": "realisticbees-26.3.0-4.4.jar",
-      "url": "https://cdn.modrinth.com/data/tG6HkcWx/versions/N514bTMR/realisticbees-26.3.0-4.4.jar",
-      "size": 64440,
+      "slug": "rechiseled",
+      "project_id": "B0g2vT6l",
+      "version": "1.2.6a-fabric-mc26.3",
+      "version_id": "iYQqkBMI",
+      "file": "rechiseled-1.2.6a-fabric-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/B0g2vT6l/versions/iYQqkBMI/rechiseled-1.2.6a-fabric-mc26.3.jar",
+      "size": 12611776,
       "hashes": {
-        "sha512": "c08661d817da1b011d872d061824831999ff15ae01fcb60a3474310040abd16dcd91a820c13be7ff233b06c9a3c83ad3c2a815b0cce26a8d59aa66130ecbae41"
+        "sha512": "4cc2b42c5d066ec3b513318a1d1fcc2b58425ce0d114a75fc92a6d19e8a1bd683adcadd0a7576a4043f42b6675e376b24dde0f32dbc5d44decc77a5fff7fb47d"
       }
     },
     {
@@ -1512,29 +1648,29 @@
     {
       "slug": "silvers_strength-restrictions-season-4",
       "project_id": "M15Gwx1o",
-      "version": "1.4+mod",
-      "version_id": "W5YtwEYe",
-      "file": "silvers_strength-restrictions-1.4.jar",
-      "url": "https://cdn.modrinth.com/data/M15Gwx1o/versions/W5YtwEYe/silvers_strength-restrictions-1.4.jar",
-      "size": 74858,
+      "version": "1.5+mod",
+      "version_id": "cKVm0y8f",
+      "file": "silvers_strength-restrictions-season-4-1.5.jar",
+      "url": "https://cdn.modrinth.com/data/M15Gwx1o/versions/cKVm0y8f/silvers_strength-restrictions-season-4-1.5.jar",
+      "size": 213591,
       "hashes": {
-        "sha512": "40f42d3641ffcef8d431b41c50f22c9725d4055d8910389a8fefc465b6ae540cf54047bcbf0601a03c7677a1f83d9b9bf2e14167a08a906c9f4bbbd44f18ee32"
+        "sha512": "5db9d65873f85dad398bc6e38b3d76f472ca432e8a833d69e004dd356626bb08b6e22391197b9b8fca480f10dffbc978e3478f65ca7cf371df0dae21d94934a2"
       }
     },
     {
       "slug": "silvers_strength-smp-season-4",
       "project_id": "DEvdqUh9",
-      "version": "1.7+mod",
-      "version_id": "9KtZaozU",
-      "file": "silvers_strength-smp-season-4-1.7.jar",
-      "url": "https://cdn.modrinth.com/data/DEvdqUh9/versions/9KtZaozU/silvers_strength-smp-season-4-1.7.jar",
-      "size": 527780,
+      "version": "1.8+mod",
+      "version_id": "bwBcWXZQ",
+      "file": "silvers_strength-smp-season-4-1.8.jar",
+      "url": "https://cdn.modrinth.com/data/DEvdqUh9/versions/bwBcWXZQ/silvers_strength-smp-season-4-1.8.jar",
+      "size": 2066487,
       "hashes": {
-        "sha512": "0fc1a07eee8bebaa03c1098f2d8eb8e5daee6a17a1d4c7407b54a83a3db177926ccc00b186d6d83425e7cb07e29fcfa05395020382faad81fbd0e998e8c95d91"
+        "sha512": "4edb5f0dbfa8d941bd4352d15a40074d765023243a1a160f23ce2c91ae8c67bd64ba59b6d86aca290cc05c2435be7a9f80e0b3dfa99a35e7c0cb24f54faaf8a7"
       },
       "patch": {
         "path": "patches/silvers_strength-smp-season-4",
-        "base_sha512": "0fc1a07eee8bebaa03c1098f2d8eb8e5daee6a17a1d4c7407b54a83a3db177926ccc00b186d6d83425e7cb07e29fcfa05395020382faad81fbd0e998e8c95d91"
+        "base_sha512": "4edb5f0dbfa8d941bd4352d15a40074d765023243a1a160f23ce2c91ae8c67bd64ba59b6d86aca290cc05c2435be7a9f80e0b3dfa99a35e7c0cb24f54faaf8a7"
       }
     },
     {
@@ -1598,18 +1734,6 @@
       }
     },
     {
-      "slug": "sound-physics-remastered",
-      "project_id": "qyVF9oeo",
-      "version": "fabric-1.5.1+26.3",
-      "version_id": "9loJgQlO",
-      "file": "sound-physics-remastered-fabric-1.5.1+26.3.jar",
-      "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/9loJgQlO/sound-physics-remastered-fabric-1.5.1%2B26.3.jar",
-      "size": 201641,
-      "hashes": {
-        "sha512": "c6bbe6e2018a19fa98e9590f17feeac17ccea4eb2327f23915a4c112f4a7ed99220f99b9d2a9ee3c9a9919a847a8965d9d82aaee67371d4d8d675b3fcf4b46a5"
-      }
-    },
-    {
       "slug": "spark",
       "project_id": "l6YH9Als",
       "version": "1.10.187-fabric",
@@ -1670,6 +1794,18 @@
       }
     },
     {
+      "slug": "sulfur-cube-expansion",
+      "project_id": "7F1sQUtH",
+      "version": "1.0",
+      "version_id": "KLg9xSLo",
+      "file": "SulfurCubeExpansion-1.0-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/7F1sQUtH/versions/KLg9xSLo/SulfurCubeExpansion-1.0-26.3.jar",
+      "size": 95515,
+      "hashes": {
+        "sha512": "60bdc3f7c8b41b10083b2a9ec30b0724f38b5f91d3cacbe66547faf8faa1fdeb360b69a6cbd8152d360429d16a3721244d42c5311b7dcf0bde08c96371661a98"
+      }
+    },
+    {
       "slug": "supermartijn642s-config-lib",
       "project_id": "LN9BxssP",
       "version": "1.1.8a-fabric-mc26.3",
@@ -1679,6 +1815,18 @@
       "size": 206151,
       "hashes": {
         "sha512": "bb60c29d409ed2749f7a4a08b2c6b95c110191914828a54aed7ed4be779362b5a8ba13f871b72b6dbb21059ae397ab1561db8e83aa988173eb63ae00d369bf03"
+      }
+    },
+    {
+      "slug": "supermartijn642s-core-lib",
+      "project_id": "rOUBggPv",
+      "version": "1.1.25-fabric-mc26.3",
+      "version_id": "alB9Au3G",
+      "file": "supermartijn642corelib-1.1.25-fabric-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/rOUBggPv/versions/alB9Au3G/supermartijn642corelib-1.1.25-fabric-mc26.3.jar",
+      "size": 690048,
+      "hashes": {
+        "sha512": "195aad8e737a34d6c95d654226f3585117b0224f14418b08693b3e880a03a7e99ee74dd29fc130651efdbe3769e73bcadc33446f19eae2b5f281ff4a9c3afc33"
       }
     },
     {
@@ -1727,6 +1875,34 @@
       "size": 554921,
       "hashes": {
         "sha512": "454dfd7f0c89155dac0ddc2b1bd69486c439d27a21480d8ff6dac46c1e3b7809e0ae28101bd31fb869999ac2afa58c2b8f153046b85f9545cee432ae396b2cac"
+      }
+    },
+    {
+      "slug": "trident-all-weather-channeling",
+      "project_id": "B7il7E9H",
+      "version": "v2.2.1+mod",
+      "version_id": "9FwRnAPJ",
+      "file": "trident-all-weather-channeling-v2.2.1.jar",
+      "url": "https://cdn.modrinth.com/data/B7il7E9H/versions/9FwRnAPJ/trident-all-weather-channeling-v2.2.1.jar",
+      "size": 46754,
+      "hashes": {
+        "sha512": "558d5e4a8cc43be68f21985f23eabc650875cb7a66d328fcf69060cf3c8c3e86f47a56d0c0940b484ecae55f840a6ae41de479df2eaf211db50f48d07fe2cb6a"
+      },
+      "patch": {
+        "path": "patches/trident-all-weather-channeling",
+        "base_sha512": "558d5e4a8cc43be68f21985f23eabc650875cb7a66d328fcf69060cf3c8c3e86f47a56d0c0940b484ecae55f840a6ae41de479df2eaf211db50f48d07fe2cb6a"
+      }
+    },
+    {
+      "slug": "ultimate_minecarts",
+      "project_id": "N6HQR33B",
+      "version": "Outdated",
+      "version_id": "nYdTMXNE",
+      "file": "ultimate_minecarts-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/N6HQR33B/versions/nYdTMXNE/ultimate_minecarts-26.3.jar",
+      "size": 243022,
+      "hashes": {
+        "sha512": "d369357d2e9a239c40f7457af6151f8d20af7aa875a4af0f2ded30c1a40620dcb2ba7077c7b53f7e1f156ee07153c50ef96b145ea4e72ae6ce5e5189d0718064"
       }
     },
     {
@@ -1871,6 +2047,18 @@
       "size": 196522,
       "hashes": {
         "sha512": "a09ba13b9ed0123d62aa9e9df93dabfcd6e6e510fb5c09dc0c9c7615a40e5bef0928ea1b3b9ab5b1c1c0665020c883adfa7c6a697d6f46e74b557f0dd6f4c3eb"
+      }
+    },
+    {
+      "slug": "worldedit",
+      "project_id": "1u6JkXh5",
+      "version": "7.4.6",
+      "version_id": "ByRNkO83",
+      "file": "worldedit-mod-7.4.6.jar",
+      "url": "https://cdn.modrinth.com/data/1u6JkXh5/versions/ByRNkO83/worldedit-mod-7.4.6.jar",
+      "size": 5166790,
+      "hashes": {
+        "sha512": "3bc4fbf2ee36746f54dc036283b3ded3f17fd91991eaa1ead76b0861aa902cd7ffbc0962db0065d8690e46d1c4890847ebe97ee0b4e36a979b41168c30586ee4"
       }
     },
     {

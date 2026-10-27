@@ -112,6 +112,9 @@ below).
 
 ### Ops readiness
 
+- [ ] **The 2.8.0 world, if 2.8.0 ships before launch.** Its new structures and End need a new world:
+  docs/LIVE.md, "A new world for Season I (2.8.0)". That restarts the pre-generation, so check Chunky (next
+  item) a day or two after it, and do the load test and the rehearsal on the new world.
 - [ ] **Mon 2 Nov: Chunky.** `realms rcon "chunky progress"` (as `realms`, in
   `/srv/realms/TheRealms-Server/docker`; `realms rcon` is short for `docker compose exec realms realms rcon`).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:

@@ -16,7 +16,7 @@
 1. Install the [Modrinth App](https://modrinth.com/app) (free) and sign in with the Microsoft account you
    play Minecraft with. You don't buy Minecraft again.
 2. Open the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp) and press **Install** (or search
-   for "Monkey SMP" in the app's Discover). It downloads about 520 MB: the mods, resource packs and shaders.
+   for "Monkey SMP" in the app's Discover). It downloads about 560 MB: the mods, resource packs and shaders.
 3. Give the game enough memory: the instance's settings > **Java and memory**, 6 GB (8 GB if the computer has more
    than 16 GB of RAM).
    Too little memory makes the game stutter or crash.
@@ -35,7 +35,7 @@ If you'd rather keep the normal launcher, get **`TheRealms-Player-<version>.zip`
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
-   It downloads about 520 MB (mods, resource packs, shaders) from their official websites and checks
+   It downloads about 560 MB (mods, resource packs, shaders) from their official websites and checks
    every file, and sets the game's memory from your computer's RAM. When it's done, press a key to close
    the window.
 3. Open the launcher, click the version box next to the green **Play** button, choose **Monkey SMP**,
@@ -71,7 +71,7 @@ heavy extras: see [Low-end PC](#low-end-pc).
 ## Low-end PC
 
 Most of the pack is there to look and sound good, not because the server needs it. Those files are
-**optional**: the shaders, the resource packs and about 120 of the mods. Leave them out and you still join and
+**optional**: the shaders, the resource packs and about 135 of the mods. Leave them out and you still join and
 play. The rest are **required**: the mods that add blocks, mobs and items, and the libraries they need. Without
 one of them the server turns you away ("This server requires ... installed on your client").
 
@@ -94,30 +94,29 @@ What to leave out:
    saves download and disk space.
 3. **Resource packs:** Patrix 32x (73 MB, not switched on by default) and Enhanced Audio (19 MB) are the big
    ones. Fresh Animations needs Entity Model Features and Entity Texture Features to move.
-4. **Animations and effects:** Entity Model Features, Entity Texture Features, Not Enough Animations,
-   3D Skin Layers, Visuality, Particle Effects, Falling Leaves, Wakes, Explosive Enhancement, Interactive
-   Foliage, Cosy Critters and the like.
-5. **Sound:** Sound Physics Remastered (echo and muffling: it works out the path of every sound) and
-   AmbientSounds. Leave out Simple Voice Chat only if you don't want proximity voice: without it you can't hear
-   or talk to anyone.
+4. **Animations and effects:** Entity Model Features, Entity Texture Features, 3D Skin Layers, Particle
+   Effects, Falling Leaves, Wakes, Explosive Enhancement, Interactive Foliage, Cosy Critters, Windy and the
+   like.
+5. **Extras:** Essential (cosmetics, friends and screenshots) and the cape mods. Leave out Simple Voice Chat
+   only if you don't want proximity voice: without it you can't hear or talk to anyone.
 6. **Maps:** Xaero's Minimap and Xaero's World Map. Without them, claim land by standing in the chunk and typing
    `/oclaims claim`.
 
-Keep the **speed mods** on: Sodium, Lithium, FerriteCore, ImmediatelyFast, Entity Culling, More Culling,
-Dynamic FPS, BadOptimizations and Better Block Entities make the game faster and lighter, not slower.
+Keep the **speed mods** on: Sodium, Lithium, FerriteCore, ImmediatelyFast and Better Block Entities make the
+game faster and lighter, not slower.
 
 Some optional mods need another optional one. If you keep the first, keep the second too, or the game won't
 start:
 
 | Keep | Needs |
 | --- | --- |
-| Iris, Sodium Extra, Reese's Sodium Options, Better Block Entities | Sodium |
+| Iris, Better Block Entities | Sodium |
 | Entity Model Features | Entity Texture Features |
-| More Culling, Status Effect Bars, Visuality | Cloth Config |
+| Status Effect Bars | Cloth Config |
 | Controlling | Searchables |
 | Inventory Essentials | Balm |
 | Better Stats | TCDCommons |
-| Durability Tooltip | SuperMartijn642's Config Lib |
+| Bind Commands | Mod Menu |
 | Light Overlay | OverlayLib |
 | MAS Effects | ukulib |
 | Interactive Foliage | Sway |
@@ -144,4 +143,18 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
   agree on the deal, then swap. Lying about what you're trading is a scam and breaks the rules: see
   [Trading](RULES.md#trading).
 - **PvP is on** outside the spawn area. Spawn itself can't be built in.
+- **Dying** drops your things where you died, as in plain Minecraft (there are no corpses since 2.8.0).
+- **Carry On:** sneak and right-click with both hands empty to pick up a passive animal, a beehive with its bees
+  or a block like an enchanting table; right-click to put it down. Anything that stores items (chests, barrels,
+  shulker boxes, furnaces, hoppers and the like), spawners, banners, beds, doors, players and the NPCs at spawn
+  can't be carried, and nothing in someone else's claim can.
+- **Loot chests refill:** a structure's loot chest that you empty fills again a week later. Once it has been
+  opened, only staff can break it.
+- **Bedrock** breaks with a netherite pickaxe, slowly. No holes into the void, no breaking the End's exit
+  portal or gateways, and nothing on top of the Nether roof: rules 44 to 46 in [the rules](RULES.md#bedrock).
+- **New in 2.8.0** as well: a new End (Endercon, with Qrafty's End Villages), Dungeons and Taverns and Crazy
+  Chambers structures, Friends & Foes mobs, mobs of random sizes, emotes (Emotecraft), chained minecarts
+  (Ultimate Minecarts), and more recipes (Better Craftables, craftable tridents, tipped arrows from any potion).
+  If two recipes clash, Polymorph+ lets you pick the result. Dungeons and Taverns' own enchantments are event
+  rewards only (B18), so you won't find them in chests.
 - There are no wars or land capture in 2.x (that was Towns & Nations on the 1.x Paper server).

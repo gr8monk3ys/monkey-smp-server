@@ -118,18 +118,18 @@ mid-range graphics card runs it well. Questions: [Discord](https://discord.gg/C2
   outside spawn.
 - **Strength SMP**: win fights and your strength grows, lose them and it drains away.
 - **New terrain and structures**: Tectonic and Terralith push mountains past y 500, plus Incendium's Nether,
-  Nullscape's End and the Dungeons and Taverns overhauls.
+  Endercon's End and Dungeons and Taverns.
 - **Proximity voice** with Simple Voice Chat, and a live BlueMap of the world on the website.
 - **Seasons and events**: Build Battle, Faction Raid and Arena Glory every season, for a faction Season Cup.
 
 ## In the pack
 
-- **Speed**: Sodium, Lithium, FerriteCore, ImmediatelyFast, Entity Culling, Dynamic FPS, and Distant Horizons
+- **Speed**: Sodium, Lithium, FerriteCore, ImmediatelyFast and Distant Horizons
   for far views.
 - **Looks**: Iris with Complementary, BSL and Photon shaders (press **O** to switch or turn them off), Fresh
   Animations, Continuity, 3D Skin Layers.
-- **Maps and info**: Xaero's Minimap and World Map (claim chunks from the map), JEI, Jade, AppleSkin.
-- **Sound**: Simple Voice Chat (press **V**), Sound Physics Remastered, AmbientSounds.
+- **Maps and info**: Xaero's Minimap and World Map (claim chunks from the map), JEI, AppleSkin.
+- **Sound**: Simple Voice Chat (press **V**) and the Enhanced Audio resource pack.
 - **The server's content**: Naturalist, Variants and Ventures, Goat Expansion and the other mods that add
   blocks, mobs and items. These are the files you can't leave out.
 - **Monkey SMP Wardrobe**: the resource pack for the server's sword and helmet skins, earned by playing.

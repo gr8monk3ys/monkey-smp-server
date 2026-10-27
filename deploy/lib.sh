@@ -58,20 +58,24 @@ running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
 rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 
 # "deploy_lock SECONDS [FILE]": waits up to SECONDS (0: not at all) for the deploy lock, FILE (default LOCK_FILE,
-# else /tmp/realms-deploy.lock), and holds it on fd 9 until the script exits; fails when it wasn't free in time.
+# else /tmp/realms-deploy.lock), and holds it on fd 9 until the script exits; returns 1 only when it wasn't free in
+# time. A lock file it can't create or open is a die, so a caller's "busy, skipping" never hides it.
 # Deploys, the daily restart, off-site backups, the standings and the week and drops timers take it, so none of
 # them runs while another restarts or saves the server. Root opens it read-only, after creating it as the live
-# folder's owner (SERVICE_USER when set): root may not open another user's file in /tmp for writing
-# (fs.protected_regular), and flock works on any open file.
+# folder's owner (SERVICE_USER when set; root itself before there is a live folder): root may not open another
+# user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.
 deploy_lock() {
     lib_lock=${2:-${LOCK_FILE:-/tmp/realms-deploy.lock}}
-    # `command exec`: a failed redirection returns here, so the caller's `|| die` says why, rather than ending the
-    # script on the shell's own error.
+    # `command exec`: a failed redirection returns here instead of ending the script on the shell's own error.
     if [ "$(id -u)" = 0 ]; then
-        [ -e "$lib_lock" ] || runuser -u "${SERVICE_USER:-$(stat -c %U "$LIVE_DIR")}" -- touch "$lib_lock" || return 1
-        command exec 9<"$lib_lock" || return 1
+        if [ ! -e "$lib_lock" ]; then
+            lib_owner=${SERVICE_USER:-$(stat -c %U "$LIVE_DIR" 2>/dev/null || :)}
+            if [ -n "$lib_owner" ]; then runuser -u "$lib_owner" -- touch "$lib_lock"; else touch "$lib_lock"; fi ||
+                die "could not create the deploy lock $lib_lock"
+        fi
+        command exec 9<"$lib_lock" || die "could not open the deploy lock $lib_lock"
     else
-        command exec 9>>"$lib_lock" || return 1
+        command exec 9>>"$lib_lock" || die "could not open the deploy lock $lib_lock"
     fi
     if [ "$1" = 0 ]; then flock -n 9; else flock -w "$1" 9; fi
 }

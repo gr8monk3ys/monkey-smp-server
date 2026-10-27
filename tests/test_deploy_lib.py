@@ -64,7 +64,9 @@ def sh(tmp_path):
             f'[ -z "${{FAKE_OUT_{name}:-}}" ] || printf "$FAKE_OUT_{name}"\n'
             f'case " $* " in *" send "*) exit "${{FAKE_RC_send:-0}}" ;; esac\n'
             f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
-    (bin_dir / "id").write_text("#!/bin/sh\necho 1000\n", newline="\n")  # not root, whoever runs the tests
+    (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")  # root only when asked
+    (bin_dir / "runuser").write_text('#!/bin/sh\necho "runuser $*" >>"$FAKE_CALLS"\n'
+                                     'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n', newline="\n")
 
     def run(snippet, *args, **env):
         environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
@@ -101,9 +103,21 @@ def test_log_each_logs_every_line_and_keeps_the_exit_code(sh):
     assert sh("log_each python3 send && log ok", FAKE_OUT_python3="no newline")[1] == ["[t] no newline", "[t] ok"]
 
 
-def test_a_lock_that_cannot_be_opened_is_a_failure_the_caller_logs(sh, tmp_path):
-    assert sh("deploy_lock 60 || log 'no lock'", LOCK_FILE=(tmp_path / "missing" / "lock").as_posix())[1][-1] == (
-        "[t] no lock")
+def test_a_lock_that_cannot_be_opened_is_an_error_not_busy(sh, tmp_path):
+    lock = (tmp_path / "missing" / "lock").as_posix()
+    for root in ("0", "1000"):
+        code, out, calls = sh("deploy_lock 60 || log busy", LOCK_FILE=lock, FAKE_ID=root)
+        assert code == 1 and out[-1].startswith("[t] ERROR: could not ") and out[-1].endswith(lock)
+        assert "busy" not in "".join(out) and not any(c.startswith("flock") for c in calls)
+
+
+def test_root_makes_a_missing_lock_as_the_service_user_or_itself_before_there_is_one(sh, tmp_path):
+    lock = tmp_path / "lock"
+    code, _, calls = sh("deploy_lock 0", FAKE_ID="0", SERVICE_USER="realms")
+    assert code == 0 and lock.exists() and calls == [f"runuser -u realms -- touch {lock.as_posix()}", "flock -n 9"]
+    lock.unlink()
+    code, _, calls = sh("deploy_lock 0", FAKE_ID="0", LIVE_DIR=(tmp_path / "not-yet").as_posix())
+    assert code == 0 and lock.exists() and calls == ["flock -n 9"]
 
 
 @pytest.mark.parametrize(("seconds", "flag"), [("0", "-n 9"), ("1800", "-w 1800 9")])

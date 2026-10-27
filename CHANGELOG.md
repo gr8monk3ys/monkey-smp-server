@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-26
+
+A fix for the severe lag since 2.5.0, supply drops and spawn NPCs; shops are shelved. Same Minecraft (26.3) and
+world as 2.6.0: hosts unzip over 2.6.0 or 2.5.0. Players must update the client pack: Easy NPC is needed on the
+client too, so an old pack can't join. On the live VPS, once 2.7.0 is live (docs/LIVE.md): the 2.6.0 one-time
+steps if they aren't done yet (`deploy/install-standings.sh`, `deploy/realms-week.sh --install`), then
+`deploy/realms-drops.sh --install`, place the spawn NPCs (docs/ADMIN.md, "Spawn NPCs"), and run the `lp` lines
+under "Existing servers" in docs/ADMIN.md that remove the rank nodes Vanilla Permissions used. Skip
+`deploy/shops-claims.sh`: shops are shelved.
+
 - Fixed: severe lag since 2.5.0. **Vanilla Permissions** (`vanilla-permissions` 0.3.6, new in 2.5.0) made every
   tick 10 to 20 times slower with players online: it checks each entity selector a player's command uses against
   the whole command tree (Brigadier's `CommandDispatcher.getPath`), and the pack runs advancement functions as

@@ -27,6 +27,13 @@
 - docs: the one-time steps for the supply drops' timer and the spawn NPCs on the live VPS. docs/LIVE.md has a
   "The spawn NPCs" upgrade step, and its set-up steps now install the drops timer. docs/LAUNCH.md checks by
   Saturday 14 November that both are done once 2.7.0 is live: a release places no NPCs by itself.
+- Shelved: **shops**. Universal Shops and Polymer (2.6.0, never on the live server) are out of the pack; no other
+  mod needed Polymer. Their pins and how to bring them back: docs/MAINTAINING.md, "Shelved mods".
+  `deploy/shops-claims.sh` and the shop docs stay, marked shelved, and Open Parties and Claims' default keeps the
+  `universal_shops:trade_block` exception, dormant (a test boot with it is clean). Rule 43 now covers trading by
+  hand: items for items, no scams, no real-money trading (docs/RULES.md; the site, docs/PLAYERS.md and the launch
+  drafts follow). The paid whitelist is unchanged. Nothing to do on the VPS (skip `shops-claims.sh`), and players
+  need nothing new.
 
 2.6.0 rehearsed on a test server (Carpet fake players): the standings and bounties, the weekly challenges,
 Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet (docs/LAUNCH.md). Fixes from it:
@@ -37,8 +44,8 @@ Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet
   outside the weekend. `founder/open` by hand still opens it (docs/ADMIN.md).
 - Fixed: a re-run of `deploy/realms-standings.sh` on Sunday said "board updated and announced in chat" though
   the week is announced only once; it now says it was already announced.
-- docs/LAUNCH.md: a check by Saturday 14 November that the three one-time 2.6.0 steps on the VPS are done
-  (`realms-week.sh --check`, `install-standings.sh --check`, `shops-claims.sh --check`), a warning that
+- docs/LAUNCH.md: a check by Saturday 14 November that the two one-time 2.6.0 steps on the VPS are done
+  (`realms-week.sh --check`, `install-standings.sh --check`), a warning that
   `rules/launch` on the live world before launch starts Founder's Circlet's window early, and the check at
   midnight on Sunday that the window has closed.
 

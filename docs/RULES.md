@@ -133,16 +133,11 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
 
 ## Trading
 
-43. Shops trade items for items: there is no money on the server.
-    - A shop in its owner's claim, and the stock in its chest, are protected like the rest of the territory,
-      during a raid too. Breaking in, draining it with hoppers or exploiting it to rob it is griefing (rules 37
-      and 39).
-    - A shop outside every territory is like anything else out there (rule 35): its chest can be raided.
-    - No scams. A shop must sell what it says it sells: no signs, ads or deals in chat that lie about the item,
-      the amount or the price, no changing a price after a buyer agreed to it, and no items renamed to look
-      like something they aren't. A scammer gives back what they took, and repeat scams are bannable.
-    - Shops are for items only. Buying or selling for real money is still banned ("No real-money trading"
-      below).
+43. Trade by hand, items for items: there is no money on the server.
+    - No scams. Give what you said you'd give: no ads or deals in chat that lie about the item, the amount or
+      the price, no changing a deal after the other player agreed to it, and no items renamed to look like
+      something they aren't. A scammer gives back what they took, and repeat scams are bannable.
+    - Items only. Buying or selling for real money is still banned ("No real-money trading" below).
 
 ## Bans
 
@@ -216,6 +211,9 @@ Open items from the owners' draft:
   can, so a raid on a wilderness shop takes the stock, never the takings (unless its owner turned on the
   shop's Allow Hoppers setting, which lets a hopper under it empty them). The short rules
   (`codeofconduct/en_us.txt`) don't quote rule 43 yet: adding it makes every player accept them again.
+  26 October 2026: the owners shelved shops before they reached the live server, so rule 43 now covers trading
+  by hand (items for items, no scams, no real-money trading). If shops come back, so does the rule's shop
+  wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
 - B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack.
 
 What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
@@ -282,13 +280,14 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
   moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
-- **Rule 43, shops** (Universal Shops). Anyone may click a Trade Shop to buy from it, even in someone else's
-  claim: `forcedBlockProtectionExceptionList` in `defaults/config/openpartiesandclaims-server.toml` lets an
+- **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
+  enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
+  `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may
+  click a Trade Shop to buy from it, even in someone else's claim: `forcedBlockProtectionExceptionList` lets an
   empty hand use `universal_shops:trade_block` there. The chest behind it stays protected, and nobody can put
   a shop on someone else's chest in a claim: placing one means clicking the chest, which the claim refuses.
-  On a server installed before shops shipped, run
-  `deploy/shops-claims.sh` (live VPS) or add the entry yourself, server stopped ("Shops" in `docs/ADMIN.md`).
-  Scams (the rest of rule 43) are on admins.
+  On a server installed before shops shipped, run `deploy/shops-claims.sh` (live VPS) or add the entry
+  yourself, server stopped ("Shops" in `docs/ADMIN.md`).
 - **The welcome and the links** (pack `realms-rules`). A first join gets a welcome screen whose one button
   opens the Discord, where `#smp-forum` has the factions that are recruiting. Every player's pause menu
   has a Monkey SMP button with the Discord, the live map, the rules and the store. The addresses are in

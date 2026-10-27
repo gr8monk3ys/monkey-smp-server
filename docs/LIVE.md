@@ -246,7 +246,11 @@ twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 ch
 already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
 the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
 
-### Shops in claims (the release with Universal Shops)
+## Shops in claims (shelved)
+
+**Not a step for now.** The owners shelved shops on 26 October 2026, so no release ships Universal Shops and there
+is nothing to run: skip `deploy/shops-claims.sh` when upgrading (it refuses to run without the mod's jar anyway).
+This stays for when shops come back ("Shelved mods" in docs/MAINTAINING.md).
 
 Universal Shops arrives with the release like any mod, but buying from a shop in someone else's claim needs one
 more entry in the live `config/openpartiesandclaims-server.toml`, which a deploy doesn't touch:

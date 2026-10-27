@@ -24,7 +24,7 @@ dry, natural one (grass, dirt, sand, stone: not water, not anyone's build).
 What players see: a chat announcement with the coordinates and a boss bar counting down COUNTDOWN seconds,
 then 1 chest for every MIN_PLAYERS online (at most MAX_CHESTS) with modest supplies (LOOT: food, iron,
 arrows, wood; nothing Strength, no netherite, diamonds or emeralds, nothing the bans cover, so the drop
-never beats progression or the item-priced shops). The chests despawn after DESPAWN seconds with whatever
+never beats progression or what players trade). The chests despawn after DESPAWN seconds with whatever
 is left in them; an emptied chest goes at once, and the drop ends when every chest is empty or broken.
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
@@ -84,8 +84,8 @@ REACH = 4                   # blocks around the middle kept loaded while a drop 
 # ---------------------------------------------------------------- the loot: edit here
 #
 # (pool, item, weight, min, max). Each chest rolls every pool: food 3 or 4 times, supplies 2 or 3 times and
-# one extra. Modest on purpose: no Strength items, no netherite, diamonds or emeralds (what the item-priced
-# shops trade in), no golden apples, potions, enchantments or anything the bans cover.
+# one extra. Modest on purpose: no Strength items, no netherite, diamonds or emeralds (what players
+# trade with), no golden apples, potions, enchantments or anything the bans cover.
 LOOT = [
     ("food", "bread", 3, 4, 8),
     ("food", "cooked_beef", 3, 3, 6),

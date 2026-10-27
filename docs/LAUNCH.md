@@ -104,10 +104,11 @@ How:
   with `--now` at a quiet hour after a backup. Nothing else.
 - **Mon 23 Nov:** `sudo systemctl start realms-deploy.timer`. Tagging is open again.
 
-Weekly faction standings and the bounty board, weekly challenges, the Founder skin and item-priced shop
-chests all shipped in 2.6.0. Anything new after that makes launch only if it is in the Friday 13 November
-release; whatever misses it waits until Monday 23 November at the earliest, and its lines come out of the
-announcements ("Copy that depends on unmerged work", below).
+Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
+(item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
+after that makes launch only if it is in the Friday 13 November release; whatever misses it waits until Monday
+23 November at the earliest, and its lines come out of the announcements ("Copy that depends on unmerged work",
+below).
 
 ### Ops readiness
 
@@ -129,11 +130,14 @@ announcements ("Copy that depends on unmerged work", below).
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
   Over about 40 ms median at 25 players: follow the decision rule there before launch.
 - [ ] **By Sat 14 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
-  do: `sh /srv/realms/repo/deploy/realms-week.sh --check` (the week timer runs),
-  `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers) and
-  `sudo sh /srv/realms/repo/deploy/shops-claims.sh --check` (shops work in claims). Anything left: docs/LIVE.md,
-  "The weekly challenges' timer", "The weekly standings" and "Shops in claims". Without the week timer the
+  do: `sh /srv/realms/repo/deploy/realms-week.sh --check` (the week timer runs) and
+  `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
+  docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
+- [ ] **By Sat 14 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/realms/repo/deploy/realms-drops.sh
+  --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
+  docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
+  a release places no NPCs by itself.
 - [ ] **Sun 15 Nov: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
@@ -405,12 +409,13 @@ The tools are documented once; this list points at them.
 
 ## Copy that depends on unmerged work
 
-These appear in the drafts. All four shipped together in 2.6.0, so every line stays. The table is for a
-later release that takes one out again: then cut its line before posting.
+These appear in the drafts. The first three shipped together in 2.6.0, so their lines stay; the shop chests'
+lines are already cut. The table is for a later release that takes one out again: then cut its line before
+posting.
 
 | Work | Where it is mentioned | If it misses the release |
 | --- | --- | --- |
 | Founder skin for playing launch weekend (Sat 21 Nov 5 PM to Sun 22 Nov midnight Pacific) | the roster post, T-7, T-1, launch, Reddit | Cut the line. (Founder's Edge, for anyone who plays in Season I, is already in the wardrobe.) |
 | Weekly faction standings and the bounty board (pull request #42) | T-7, Reddit, the long list description | Cut "weekly standings" and "bounty board" |
 | Weekly challenges | T-7, Reddit | Cut the line |
-| Item-priced shop chests | T-7, Reddit | Cut the line |
+| Item-priced shop chests | T-7, Reddit | Cut: shelved on 26 October 2026 |

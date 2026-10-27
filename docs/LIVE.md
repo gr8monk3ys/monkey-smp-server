@@ -73,7 +73,9 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
    server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
    (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
-   sends and whether it runs.
+   sends and whether it runs. Then `sudo sh /srv/realms/repo/deploy/realms-drops.sh --install` for the
+   weeknight supply drops (docs/ADMIN.md, "Supply drops"), and place the spawn NPCs once the server is up
+   (docs/ADMIN.md, "Spawn NPCs").
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
    address with the proxy off ("DNS only": Cloudflare's proxy carries only web traffic), and an `SRV` record `_minecraft._tcp.monkeysmp` with priority 0, weight 5, port 25565, target
    `play.monkeysmp.lscaturchio.xyz`, TTL 60. Players then type `monkeysmp.lscaturchio.xyz` with no
@@ -174,6 +176,13 @@ It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 
 reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
 
+### The spawn NPCs (the release with spawn NPCs)
+
+The release adds the `realms-npcs` data pack but places no one. Once it is live, an op places the Guide and
+the Town Crier at spawn once, in game: `/function realms:npcs/guide/here` and `/function realms:npcs/crier/here`
+where each should stand (docs/ADMIN.md, "Spawn NPCs"). Until then there are no NPCs at spawn. Place them again
+after a release that changes their text.
+
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
 The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,
@@ -237,7 +246,11 @@ twice. The two `rcon` lines turn off PvP in server claims and claim the 7 x 7 ch
 already claimed (those stay out of the no-PvP zone). Everything here is safe to run again; each run restarts
 the server once. To undo the file changes, copy the `.pre-onboarding` files back with the server stopped.
 
-### Shops in claims (the release with Universal Shops)
+## Shops in claims (shelved)
+
+**Not a step for now.** The owners shelved shops on 26 October 2026, so no release ships Universal Shops and there
+is nothing to run: skip `deploy/shops-claims.sh` when upgrading (it refuses to run without the mod's jar anyway).
+This stays for when shops come back ("Shelved mods" in docs/MAINTAINING.md).
 
 Universal Shops arrives with the release like any mod, but buying from a shop in someone else's claim needs one
 more entry in the live `config/openpartiesandclaims-server.toml`, which a deploy doesn't touch:

@@ -200,7 +200,6 @@ answer comments from the same account that day. Other subreddits only after read
 >   Build Battle.
 > - Weekly faction standings and a bounty board. [needs #42]
 > - Weekly challenges. [needs weekly challenges]
-> - Player shops in chests, priced in items. [needs shop chests]
 > - Proximity voice chat and a public live map.
 > - Up to 30 online, a pre-generated world, 20 TPS.
 >
@@ -239,7 +238,6 @@ answer comments from the same account that day. Other subreddits only after read
 > - The Build Battle: the wheel spins at 5 PM on launch night, judging Sunday at 6 PM.
 > - Weekly faction standings and a bounty board. [needs #42]
 > - Weekly challenges. [needs weekly challenges]
-> - Shops in chests, priced in items. [needs shop chests]
 > - Play launch weekend and keep the Founder skin for good. Never sold. [needs the Founder skin]
 >
 > A pass is $5 a month, the same for everyone. [store] The store opens at 5 PM on launch day. [by hand]

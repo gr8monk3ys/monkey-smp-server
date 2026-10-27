@@ -24,7 +24,7 @@ dry, natural one (grass, dirt, sand, stone: not water, not anyone's build).
 What players see: a chat announcement with the coordinates and a boss bar counting down COUNTDOWN seconds,
 then 1 chest for every MIN_PLAYERS online (at most MAX_CHESTS) with modest supplies (LOOT: food, iron,
 arrows, wood; nothing Strength, no netherite, diamonds or emeralds, nothing the bans cover, so the drop
-never beats progression or the item-priced shops). The chests despawn after DESPAWN seconds with whatever
+never beats progression or what players trade). The chests despawn after DESPAWN seconds with whatever
 is left in them; an emptied chest goes at once, and the drop ends when every chest is empty or broken.
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
@@ -84,8 +84,8 @@ REACH = 4                   # blocks around the middle kept loaded while a drop 
 # ---------------------------------------------------------------- the loot: edit here
 #
 # (pool, item, weight, min, max). Each chest rolls every pool: food 3 or 4 times, supplies 2 or 3 times and
-# one extra. Modest on purpose: no Strength items, no netherite, diamonds or emeralds (what the item-priced
-# shops trade in), no golden apples, potions, enchantments or anything the bans cover.
+# one extra. Modest on purpose: no Strength items, no netherite, diamonds or emeralds (what players
+# trade with), no golden apples, potions, enchantments or anything the bans cover.
 LOOT = [
     ("food", "bread", 3, 4, 8),
     ("food", "cooked_beef", 3, 3, 6),
@@ -362,7 +362,9 @@ def datapack_files() -> dict[str, str]:
         say({"text": "Checking the ground there; the announcement follows if it's dry land.", "color": "gray"}),
     )
     f[f"{FN}/here.mcfunction"] = lines(
-        "# Staff: a drop where you stand.",
+        "# Staff: a drop where you stand (in the Overworld: Nether or End coordinates would put it elsewhere).",
+        f"execute unless dimension {OVERWORLD} run " + refuse(
+            f"Supply drops land in the Overworld: stand there, or use /function {NS}:drops/start {{x:0,z:0}}."),
         f"execute store result storage {STORE} here.x int 1 run data get entity @s Pos[0]",
         f"execute store result storage {STORE} here.z int 1 run data get entity @s Pos[2]",
         f"function {NS}:drops/start with storage {STORE} here",
@@ -384,8 +386,10 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:drops/hold with storage {STORE} spot",
         f"schedule function {NS}:drops/check 20t replace",
     )
-    f[f"{FN}/hold.mcfunction"] = lines("$forceload add $(x0) $(z0) $(x1) $(z1)")
-    f[f"{FN}/release.mcfunction"] = lines("$forceload remove $(x0) $(z0) $(x1) $(z1)")
+    # forceload works in the dimension it runs in, and staff may start or stop a drop from the Nether or the
+    # End: pinned to the Overworld, where the drop is, so the chunks loaded are the ones released.
+    f[f"{FN}/hold.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload add $(x0) $(z0) $(x1) $(z1)")
+    f[f"{FN}/release.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload remove $(x0) $(z0) $(x1) $(z1)")
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #state {OBJ} matches 1 run return 0",
         f"function {NS}:drops/check_at with storage {STORE} spot",

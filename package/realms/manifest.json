@@ -1314,18 +1314,6 @@
       }
     },
     {
-      "slug": "polymer",
-      "project_id": "xGdtZczs",
-      "version": "0.18.5+26.3",
-      "version_id": "3fDXSiRx",
-      "file": "polymer-bundled-0.18.5+26.3.jar",
-      "url": "https://cdn.modrinth.com/data/xGdtZczs/versions/3fDXSiRx/polymer-bundled-0.18.5%2B26.3.jar",
-      "size": 1438885,
-      "hashes": {
-        "sha512": "9a8c31e505048571b8679d3406794ba1b75bb072758aaff5ee956fb2ff33db00a12b420fb8953a390cab4ea9c93e43e5eff37e7f3ae2e07bbecffa5a58193a47"
-      }
-    },
-    {
       "slug": "potion-cauldron",
       "project_id": "yTSyrZpM",
       "version": "1.0.2+mc26.3",
@@ -1763,18 +1751,6 @@
       "size": 308699,
       "hashes": {
         "sha512": "eb6851b8df08b53c2c78e6c80d0aa07fa1b739bf4c1825d63dce74f5304dd51ff2c8ef37d548aaa07ac5d95612a6ca05f7d5ba852e64f712d21a260e3fdb1b0b"
-      }
-    },
-    {
-      "slug": "universal-shops",
-      "project_id": "cnIatHrN",
-      "version": "1.16.0+26.3",
-      "version_id": "nQOUyX9T",
-      "file": "universal_shops-1.16.0+26.3.jar",
-      "url": "https://cdn.modrinth.com/data/cnIatHrN/versions/nQOUyX9T/universal_shops-1.16.0%2B26.3.jar",
-      "size": 619888,
-      "hashes": {
-        "sha512": "5617c900118ab3fdc9bcc63efc1da54d6c1481b5d3393ee0112b61c2256d8d7f03c7b28bbb995dae7bf37de25efb38ecec2963def6c3bd64e6376234741d165f"
       }
     },
     {

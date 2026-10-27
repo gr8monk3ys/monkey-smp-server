@@ -140,17 +140,8 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
     members share claims.
   - Type `/oclaims`, `/oparties` or `/opac` and press **Tab** to see every command; the claims screen shows how
     many chunks you can still claim.
-- **Shops** (trading while you're offline) come from *Universal Shops*. Prices are in items: there is no money
-  on the server.
-  - Craft a **Trade Shop**: top row plank, wool, plank; bottom row plank, iron ingot, plank. Place it on top of
-    or against a chest or barrel. Its settings open: set what it sells and the price, then fill the chest.
-  - To buy, right-click the shop **with an empty hand** (in someone else's claim, a full hand is turned away)
-    and take the item; the price comes out of your inventory. The payment waits inside the shop block until
-    the owner collects it (it holds 27 stacks; a full shop stops selling).
-  - Build shops **inside your claim**. There nobody else can open the chest, break it or drain it with hoppers,
-    not even in a raid. A shop outside every claim can be robbed like anything else out there (rule 35).
-  - Leave the shop's **Allow Hoppers** setting off unless it stands in your claim: it lets a hopper under the
-    shop take out the payments.
-  - A shop that lies is a scam and breaks the rules: see [Trading](RULES.md#trading).
+- **Trading** is by hand, items for items: there is no money, shop or auction house on the server. Meet up,
+  agree on the deal, then swap. Lying about what you're trading is a scam and breaks the rules: see
+  [Trading](RULES.md#trading).
 - **PvP is on** outside the spawn area. Spawn itself can't be built in.
 - There are no wars or land capture in 2.x (that was Towns & Nations on the 1.x Paper server).

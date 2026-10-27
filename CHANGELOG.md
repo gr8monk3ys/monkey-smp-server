@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-A sync with the updated shared mod folder (planned as 2.8.0): a new End, new structures, Carry On, breakable
+## [2.8.0] - 2026-10-27
+
+A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable
 bedrock, loot chests that refill, and the mods the folder dropped taken out. Same Minecraft (26.3). Server mods
 151 -> 166 (about 278 MB of downloads, was 213 MB); client pack 179 -> 197 mods, 216 -> 234 files, about 542 MB
 (was 502 MB). Players must update the client pack: several new mods are needed on both sides, so an old pack
@@ -64,10 +66,12 @@ new mods, but the new structures and End only in land nobody has visited, and sh
   and a drop spot can't become a weekly refill (`tools/drops.py`). The spawn NPCs get the `global.ignore` tag,
   so Random Mob Sizes leaves them at normal size (`tools/npcs.py`).
 - Rules: new rules 44 to 46 under "Bedrock" (no holes into the void, no breaking End exit portals or gateways,
-  nothing on the Nether roof). They are proposals for the owners, and the short rules (`codeofconduct/en_us.txt`)
-  don't quote them yet. "The mods" in docs/RULES.md has a first three entries. Admin notes cover Friends & Foes'
-  Totems of Freezing and Illusion (not covered by B4 as written), Better Craftables' cheaper netherite template
-  copy (3 diamonds, not 7) and its TNT minecart recipe (B10), Craft Tridents and Fair Fletching (B1, B6).
+  nothing on the Nether roof), adopted by the owners on 27 October 2026. The short rules
+  (`codeofconduct/en_us.txt`) quote them now; a live server keeps its own copy of that file, so the Season I
+  switch copies the new one (docs/LIVE.md). "The mods" in docs/RULES.md has a first three entries. Admin notes
+  cover Friends & Foes' Totems of Freezing and Illusion (B4 doesn't cover them), Better Craftables' cheaper
+  netherite template copy (3 diamonds, not 7; it stays) and its TNT minecart recipe (B10), Craft Tridents and
+  Fair Fletching (B1, B6).
 - Balance: the data files of the twelve gameplay mods on the brief's list were checked against the Strength SMP
   progression, the weekly challenges, the drop loot and rule 43. None replaces a Strength SMP, Monkey SMP
   (`realms`) or drop file. Better Craftables replaces 66 vanilla recipes (the template copy above, stone tools,

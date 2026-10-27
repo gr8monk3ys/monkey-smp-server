@@ -232,21 +232,20 @@ Open items from the owners' draft:
   wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
 - B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack. Since 2.8.0
   (Dungeons and Taverns, whose enchantments are Nova Structures') the server does it: see B18 below.
-- Rules 44 to 46 (2.8.0, Breaking Bedrock) are proposals for the owners. 44 and 45 stop griefing nobody can
-  undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because the roof is a flat,
-  empty, mob-free road over the whole Nether and the easiest escape route there is (compare B12). Drop 46 if
-  the owners want roof travel. The short rules (`codeofconduct/en_us.txt`) don't quote them yet: adding them
-  makes every player accept the rules again.
+- Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
+  griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
+  the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
+  B12). The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
 - Friends & Foes (2.8.0) adds the Totem of Freezing (from Iceologers) and the Totem of Illusion (from
   Illusioners). They aren't Totems of Undying, so B4 doesn't cover them as written; both are panic buttons
   when you're hurt (one freezes whoever is close, the other turns you invisible and spawns copies of you).
-  The owners decide whether B4 should cover them. Restrictions 1.5 already stops evokers dropping Totems of
-  Undying.
+  The owners decided on 27 October 2026 that B4 stays as written, so both are allowed. Restrictions 1.5
+  already stops evokers dropping Totems of Undying.
 - Better Craftables (2.8.0) changes some vanilla recipes. The one that touches the rules: copying a
-  netherite upgrade template takes 3 diamonds instead of 7, so netherite tools come sooner. Netherite armor is
-  still blocked (rule 24). It also adds a TNT minecart recipe without a minecart (the same TNT); B10 still
-  bans using one. Craft Tridents makes tridents craftable, and Fair Fletching turns any potion, splash ones
-  too, into tipped arrows; B1 and B6 still apply to them.
+  netherite upgrade template takes 3 diamonds instead of 7, so netherite tools come sooner; the owners kept it
+  on 27 October 2026. Netherite armor is still blocked (rule 24). It also adds a TNT minecart recipe without a
+  minecart (the same TNT); B10 still bans using one. Craft Tridents makes tridents craftable, and Fair
+  Fletching turns any potion, splash ones too, into tipped arrows; B1 and B6 still apply to them.
 
 What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
 Run the commands from the server console or with `realms.ps1 rcon "<command>"`:

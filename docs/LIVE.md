@@ -182,7 +182,10 @@ As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`real
 2. Pause deploys: `sudo systemctl stop realms-deploy.timer`.
 3. Warn and stop: `realms rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
    `docker compose stop`.
-4. Move the old world aside (keep it): `mv ../server/world /srv/realms/seasons/pre-season/world`.
+4. Move the old world aside (keep it): `mv ../server/world /srv/realms/seasons/pre-season/world`. Then put
+   2.8.0's short rules in place (they quote rules 44 to 46, and the server keeps its own copy, so an update
+   doesn't replace it): `cp ../realms/defaults/codeofconduct/en_us.txt ../server/codeofconduct/en_us.txt`.
+   Everyone accepts them on their first join.
 5. Carry the wardrobe over, before the first start:
 
    ```sh

@@ -19,6 +19,14 @@
   client pack. `tools/npcs.py` writes them into the new `realms-npcs` data pack, and
   `defaults/config/easy_npc/security.cfg` keeps Easy NPC's editor features to ops. Staff place them once per
   world, on the live VPS too, once the release is live (docs/ADMIN.md, "Spawn NPCs").
+- Fixed (supply drops, before release): a staff `start`, `here` or `stop` run from the Nether or the End
+  force-loaded or released chunks in that dimension instead of the Overworld, where drops land. Stopping a drop
+  from the Nether left its Overworld chunks loaded for good, and starting one from the Nether loaded Nether
+  chunks that stayed loaded while the drop gave up silently (both seen on a test server). The drop's chunks are
+  now always the Overworld's, and `here` outside the Overworld says to stand there or use `start {x,z}`.
+- docs: the one-time steps for the supply drops' timer and the spawn NPCs on the live VPS. docs/LIVE.md has a
+  "The spawn NPCs" upgrade step, and its set-up steps now install the drops timer. docs/LAUNCH.md checks by
+  Saturday 14 November that both are done once 2.7.0 is live: a release places no NPCs by itself.
 
 2.6.0 rehearsed on a test server (Carpet fake players): the standings and bounties, the weekly challenges,
 Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet (docs/LAUNCH.md). Fixes from it:

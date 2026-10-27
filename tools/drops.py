@@ -362,7 +362,9 @@ def datapack_files() -> dict[str, str]:
         say({"text": "Checking the ground there; the announcement follows if it's dry land.", "color": "gray"}),
     )
     f[f"{FN}/here.mcfunction"] = lines(
-        "# Staff: a drop where you stand.",
+        "# Staff: a drop where you stand (in the Overworld: Nether or End coordinates would put it elsewhere).",
+        f"execute unless dimension {OVERWORLD} run " + refuse(
+            f"Supply drops land in the Overworld: stand there, or use /function {NS}:drops/start {{x:0,z:0}}."),
         f"execute store result storage {STORE} here.x int 1 run data get entity @s Pos[0]",
         f"execute store result storage {STORE} here.z int 1 run data get entity @s Pos[2]",
         f"function {NS}:drops/start with storage {STORE} here",
@@ -384,8 +386,10 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:drops/hold with storage {STORE} spot",
         f"schedule function {NS}:drops/check 20t replace",
     )
-    f[f"{FN}/hold.mcfunction"] = lines("$forceload add $(x0) $(z0) $(x1) $(z1)")
-    f[f"{FN}/release.mcfunction"] = lines("$forceload remove $(x0) $(z0) $(x1) $(z1)")
+    # forceload works in the dimension it runs in, and staff may start or stop a drop from the Nether or the
+    # End: pinned to the Overworld, where the drop is, so the chunks loaded are the ones released.
+    f[f"{FN}/hold.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload add $(x0) $(z0) $(x1) $(z1)")
+    f[f"{FN}/release.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload remove $(x0) $(z0) $(x1) $(z1)")
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #state {OBJ} matches 1 run return 0",
         f"function {NS}:drops/check_at with storage {STORE} spot",

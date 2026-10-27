@@ -63,16 +63,21 @@ rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 # Deploys, the daily restart, off-site backups, the standings and the week and drops timers take it, so none of
 # them runs while another restarts or saves the server. Root opens it read-only, after creating it as the live
 # folder's owner (SERVICE_USER when set; root itself before there is a live folder): root may not open another
-# user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.
+# user's file in /tmp for writing (fs.protected_regular), and flock works on any open file. Root creates it with
+# noclobber (O_EXCL: never through a link someone else left at that name) and opens only a plain file.
 deploy_lock() {
     lib_lock=${2:-${LOCK_FILE:-/tmp/realms-deploy.lock}}
     # `command exec`: a failed redirection returns here instead of ending the script on the shell's own error.
     if [ "$(id -u)" = 0 ]; then
-        if [ ! -e "$lib_lock" ]; then
+        if [ ! -e "$lib_lock" ] && [ ! -L "$lib_lock" ]; then
             lib_owner=${SERVICE_USER:-$(stat -c %U "$LIVE_DIR" 2>/dev/null || :)}
-            if [ -n "$lib_owner" ]; then runuser -u "$lib_owner" -- touch "$lib_lock"; else touch "$lib_lock"; fi ||
-                die "could not create the deploy lock $lib_lock"
+            if [ -n "$lib_owner" ]; then
+                runuser -u "$lib_owner" -- touch "$lib_lock"
+            else
+                (set -C; : >"$lib_lock")
+            fi || die "could not create the deploy lock $lib_lock"
         fi
+        [ -f "$lib_lock" ] && [ ! -L "$lib_lock" ] || die "the deploy lock $lib_lock is not a plain file"
         command exec 9<"$lib_lock" || die "could not open the deploy lock $lib_lock"
     else
         command exec 9>>"$lib_lock" || die "could not open the deploy lock $lib_lock"

@@ -7,7 +7,8 @@ bossbar set realms:drop players @a
 bossbar set realms:drop name [{"text":"Supply drop at ","color":"red"},{"nbt":"spot.x","storage":"realms:drops","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"spot.z","storage":"realms:drops","color":"aqua"},{"text":": despawns in ","color":"red"},{"score":{"name":"#mins","objective":"dr"},"color":"white"},{"text":" min","color":"red"}]
 # A broken chest is done; an emptied one goes at once.
 execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless block ~ ~ ~ minecraft:chest run kill @s
-execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ Items[0] run function realms:drops/emptied
+# (A drop that landed before 2.8.0 keeps its loot table, and no items, until someone opens it.)
+execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ LootTable unless data block ~ ~ ~ Items[0] run function realms:drops/emptied
 execute unless entity @e[type=minecraft:marker,tag=dr.chest] run return run function realms:drops/looted
 execute if score #timer dr matches 300 run tellraw @a ["",{"text":"Supply drop: ","color":"gold","bold":true},{"text":"5 minutes until the chests at ","color":"yellow"},{"nbt":"spot.x","storage":"realms:drops","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"spot.z","storage":"realms:drops","color":"aqua"},{"text":" despawn.","color":"yellow"}]
 execute if score #timer dr matches ..0 run function realms:drops/expire

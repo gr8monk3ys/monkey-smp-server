@@ -181,9 +181,10 @@ These are banned on the server.
 
 Coming soon: the mods every player should know about. New in 2.8.0, and worth knowing now:
 
-- **Carry On.** Sneak and right-click with both hands empty to pick up a furnace, barrel or spawner with what's
-  in it, or a passive animal, and right-click to put it down. Not chests, banners, beds, doors, players or the
-  NPCs at spawn, and nothing in someone else's territory.
+- **Carry On.** Sneak and right-click with both hands empty to pick up a passive animal, a beehive with its bees
+  or a block like an enchanting table, and right-click to put it down. Not anything that stores items (chests,
+  barrels, shulker boxes, furnaces, hoppers and the like), spawners, banners, beds, doors, players or the NPCs at
+  spawn, and nothing in someone else's territory.
 - **Loot chests refill.** A structure's loot chest that you empty fills again a week later. Once one has been
   opened, only staff can break it.
 - **Bedrock breaks** with a netherite pickaxe (rules 44 to 46).

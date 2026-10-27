@@ -497,8 +497,9 @@ def datapack_files() -> dict[str, str]:
         bar_name("despawns in", "red", AT_XZ),
         "# A broken chest is done; an emptied one goes at once.",
         f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless block ~ ~ ~ {CHEST} run kill @s",
-        f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ Items[0] run function "
-        f"{NS}:drops/emptied",
+        "# (A drop that landed before 2.8.0 keeps its loot table, and no items, until someone opens it.)",
+        f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ LootTable unless data "
+        f"block ~ ~ ~ Items[0] run function {NS}:drops/emptied",
         f"execute unless entity @e[type=minecraft:marker,tag=dr.chest] run return run function {NS}:drops/looted",
         f"execute if score #timer {OBJ} matches 300 run tellraw @a " + text(
             "", HEAD, {"text": "5 minutes until the chests at ", "color": "yellow"}, *AT_XZ,

@@ -48,8 +48,9 @@ Then follow [`READ ME FIRST.txt`](package/READ%20ME%20FIRST.txt). The other laun
 `Add Player.bat` / `sh add-player.sh NAME`, `Backup World.bat` / `sh backup.sh`,
 `Prepare for Hosting.bat` / `sh prepare-for-hosting.sh`.
 
-The first start downloads about 600 MB (Java for your system, the Fabric launcher, 166 mods) straight
-from their official sources and checks every file's SHA-256/512 hash before using it. It then asks you
+The first start downloads about 400 MB (Java for your system, the Fabric launcher and the Minecraft
+server, 166 mods) straight from their official sources and checks every file's SHA-256/512 hash before
+using it. It then asks you
 to agree to the Minecraft EULA and for your Minecraft name, which becomes the admin. Friends join through
 [playit.gg](https://playit.gg) (steps in the READ ME).
 

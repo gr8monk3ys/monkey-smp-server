@@ -10,8 +10,9 @@ bedrock, loot chests that refill, and the mods the folder dropped taken out. Sam
 (was 502 MB). Players must update the client pack: several new mods are needed on both sides, so an old pack
 can't join. The new structures only generate in new land, so Season I needs a new world: on the live VPS follow
 docs/LIVE.md, "A new world for Season I (2.8.0)", once this is live. A host who keeps an old world gets the
-new mods, but the new structures and End only in land nobody has visited, and should run
-`gamerule keep_inventory false` (the dropped corpse mod had turned it on).
+new mods, but the new structures and End only in land nobody has visited, should run
+`gamerule keep_inventory false` (the dropped corpse mod had turned it on), and should place the spawn NPCs again
+(docs/ADMIN.md, "Spawn NPCs"): only a newly placed one has the tag that keeps Random Mob Sizes off it.
 
 - New, from the shared folder (needed on the client too): **Carry On**, **Breaking Bedrock**, **Emotecraft**
   (with Player Animation Library), **Friends & Foes**, **Fair Fletching**, **Polymorph+**, **Rechiseled** (with
@@ -51,19 +52,24 @@ new mods, but the new structures and End only in land nobody has visited, and sh
   rolling its loot with no player, so the "Open 8 loot chests" challenge never counted with it; the patched class
   lets the opening player roll it (`tools/lootrestock_patch.py` rebuilds it; GPL-3.0-or-later like the mod).
   **Trident All-Weather Channeling** struck every old Channeling trident in the area on each hit (a pig next to
-  one became a zombified piglin on a test server); the patch strikes only the nearest trident in flight.
+  one became a zombified piglin on a test server); the patch strikes only the attacker's own trident in flight.
+  Its lightning isn't damage a player causes, so PvP grace and the spawn claim didn't stop it: the patch strikes
+  nothing within 64 blocks of spawn or within 6 blocks of a player in grace.
 - Configs in `package/realms/defaults/` (copied on start where missing, so they reach the live server too;
   docs/ADMIN.md, "Mod settings"; `tests/test_mod_defaults.py`):
-  - Carry On: no chests, trapped chests, banners, beds, doors, trial spawners, vaults, players, Easy NPCs, text
-    displays, markers, interactions, armor stands, item frames or chest minecarts. Spawners can be carried.
-    Claims apply: a non-member couldn't pick up blocks in someone's claim, also during a Faction Raid.
+  - Carry On: nothing that stores items (chests of every kind, barrels, shulker boxes, furnaces, hoppers,
+    dispensers, droppers, crafters, brewing stands, pots, shelves, lecterns, jukeboxes), no spawners or trial
+    spawners, vaults, banners, beds, doors, players, Easy NPCs, text displays, markers, interactions, armor
+    stands, item frames, chest or hopper minecarts or chest boats. Claims apply: a non-member couldn't pick up
+    blocks in someone's claim, also during a Faction Raid.
   - Loot Restock: a structure chest refills 7 days after it was emptied, only when empty; barrels, item frames
     and trial vaults are left alone; only ops can break a tracked chest.
   - Enchantment Disabler: all 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the
     table, loot and trades, so rule B18 (event rewards only) holds by itself.
   - Ultimate Minecarts: minecarts don't damage what they hit.
 - Supply drops are filled when they land instead of carrying a loot table, so Loot Restock never tracks them
-  and a drop spot can't become a weekly refill (`tools/drops.py`). The spawn NPCs get the `global.ignore` tag,
+  and a drop spot can't become a weekly refill (`tools/drops.py`); a drop that landed before the update still
+  counts as full until it's opened. The spawn NPCs get the `global.ignore` tag,
   so Random Mob Sizes leaves them at normal size (`tools/npcs.py`).
 - Rules: new rules 44 to 46 under "Bedrock" (no holes into the void, no breaking End exit portals or gateways,
   nothing on the Nether roof), adopted by the owners on 27 October 2026. The short rules
@@ -85,7 +91,10 @@ new mods, but the new structures and End only in land nobody has visited, and sh
   and Taverns enchantments in new structures' chests; the trident patch; the End with Endercon alone (End
   cities and Qrafty's villages within 2000 blocks). Load test (`tools/loadtest.py`, 25 players standing still,
   5 minutes after a 2-minute warm-up, same PC and seed): this branch 87.2 ms mean tick (84.8 median, 11.5 TPS)
-  against main's 98.6 ms (95.8, 10.1 TPS), so no slowdown (measured before Nullscape came out). A real client
+  against main's 98.6 ms (95.8, 10.1 TPS). That run-to-run gap is bigger than 15 mods should make, so it rules
+  out a large slowdown, not a small one; it was measured before Nullscape came out, with players standing still,
+  and both are far over the 50 ms budget on this 2017 PC. The live VPS gets a 30-player test before launch
+  (docs/LAUNCH.md). A real client
   with the new pack joined a test server with exactly the manifest's mods and stayed on, voice chat connected.
   Not tested in game: WorldEdit (fake players couldn't run it), Carry On with animals, the enchanting table and
   trades with Enchantment Disabler.

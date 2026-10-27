@@ -413,14 +413,18 @@ edit on the server sticks. Stop the server before editing one. `tests/test_mod_d
 values.
 
 - **Carry On** (`server\config\carryon-common.json`). Sneak + right-click with empty hands picks up a block
-  entity (furnace, barrel, spawner, shulker box and so on, with its contents) or a passive mob. On top of Carry
-  On's own blacklist it can't lift chests and trapped chests (supply drops are chests, and a carried chest would
-  skip the raid rules' container checks), banners, beds, doors, trial spawners, vaults, players, Easy NPCs (the
-  Guide and the Town Crier), text displays, markers and interactions (the standings board), armor stands, item
-  frames or chest minecarts. Open Parties and Claims applies to it like any other use: on a test server a
-  non-member couldn't pick up a spawner or a barrel inside someone else's claim, also during a Faction Raid,
-  and could pick up a furnace or a spawner outside claims. (Picking up animals couldn't be driven with the test
-  players, so that wasn't checked.) Spawners can be carried on purpose.
+  entity (an enchanting table, a beehive with its bees, a sign and so on) or a passive mob. On top of Carry On's
+  own blacklist it can't lift anything that stores items: chests, trapped chests, copper chests, barrels,
+  shulker boxes, furnaces, smokers, blast furnaces, hoppers, dispensers, droppers, crafters, brewing stands,
+  decorated pots, shelves, chiseled bookshelves, lecterns and jukeboxes. Supply drops are chests; a carried
+  container would skip the raid rules' container checks and the arena's empty-inventory check; and Ledger
+  probably doesn't log a carried block (untested), so a container moved outside a claim could leave no trail.
+  Nor spawners (the owners decided on 27 October 2026 that they stay put, as in vanilla), trial spawners,
+  vaults, banners, beds, doors, players, Easy NPCs (the Guide and the Town Crier), text displays, markers and
+  interactions (the standings board), armor stands, item frames, chest and hopper minecarts or chest boats.
+  Open Parties and Claims applies to it like any other use: on a test server a non-member couldn't pick up a
+  spawner or a barrel inside someone else's claim, also during a Faction Raid. (Picking up animals couldn't be
+  driven with the test players, so that wasn't checked.)
 - **Loot Restock** (`server\lootrestock.properties`). A structure loot chest refills from its loot table 7 days
   after it was emptied, and only when it is completely empty. Barrels, item frames and trial vaults are left
   alone. Only ops can break a tracked loot chest. It tracks only chests opened while they still have a loot

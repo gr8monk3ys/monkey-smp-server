@@ -144,9 +144,10 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
   [Trading](RULES.md#trading).
 - **PvP is on** outside the spawn area. Spawn itself can't be built in.
 - **Dying** drops your things where you died, as in plain Minecraft (there are no corpses since 2.8.0).
-- **Carry On:** sneak and right-click with both hands empty to pick up a furnace, barrel or spawner with what's
-  in it, or a passive animal; right-click to put it down. Chests, banners, beds, doors, players and the NPCs at
-  spawn can't be carried, and nothing in someone else's claim can.
+- **Carry On:** sneak and right-click with both hands empty to pick up a passive animal, a beehive with its bees
+  or a block like an enchanting table; right-click to put it down. Anything that stores items (chests, barrels,
+  shulker boxes, furnaces, hoppers and the like), spawners, banners, beds, doors, players and the NPCs at spawn
+  can't be carried, and nothing in someone else's claim can.
 - **Loot chests refill:** a structure's loot chest that you empty fills again a week later. Once it has been
   opened, only staff can break it.
 - **Bedrock** breaks with a netherite pickaxe, slowly. No holes into the void, no breaking the End's exit

@@ -30,7 +30,7 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 > - Factions of up to four, alliances, banner-marked territory nobody may grief. Everything outside it is
 >   contested.
 > - Strength SMP: win fights and your strength grows, lose them and it drains.
-> - Tectonic, Terralith, Incendium and Nullscape terrain, with dungeons, taverns and capitals to raid.
+> - Tectonic, Terralith, Incendium and Endercon terrain, with dungeons, taverns and capitals to raid.
 > - Proximity voice chat, and a public 3D live map.
 > - One event a week (Saturday, 6 pm Pacific): faction raids, arena nights, Dragon Night.
 > - Up to 30 online, a pre-generated world on a dedicated CPU, 20 TPS.
@@ -195,7 +195,7 @@ answer comments from the same account that day. Other subreddits only after read
 > - Factions of up to four, alliances, and banner-marked territory nobody may grief. Everything outside it is
 >   contested.
 > - Strength SMP: win fights and your strength grows, lose them and it drains.
-> - Tectonic, Terralith, Incendium and Nullscape terrain, with dungeons, taverns and capitals to raid.
+> - Tectonic, Terralith, Incendium and Endercon terrain, with dungeons, taverns and capitals to raid.
 > - An event every Saturday at 6 PM Pacific: faction raids, arena nights, Dragon Night. Launch weekend is a
 >   Build Battle.
 > - Weekly faction standings and a bounty board. [needs #42]

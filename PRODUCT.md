@@ -34,7 +34,7 @@ connects without needing help.
 - Factions of up to four under their own banners, alliances, protected territory (2 x 2 chunks a player) and
   contested land everywhere else, with Strength SMP (win fights and your strength grows, lose and it drains)
   as the centerpiece.
-- Reworked terrain and new dungeons, mobs and magic (Tectonic, Terralith, Incendium, Nullscape and others),
+- Reworked terrain and new dungeons, mobs and magic (Tectonic, Terralith, Incendium, Endercon and others),
   proximity voice chat and a public live 3D map.
 - Seasons: each season is a new world with its own rules and a twist players vote on. Season I opens
   Saturday 21 November 2026, 5 PM Pacific, everyone let in at once.
@@ -51,7 +51,7 @@ connects without needing help.
   on the ids `address`, `copy`, `countdown`, `launch-label` and `trailer`.
 - While `STORE_URL` is empty, every buy button points at the Discord and the pages say passes are arranged
   there by hand; once the Tebex store opens the "open" copy shows instead.
-- The modpack (`.mrpack`, about 520 MB) and the Windows installer zip are served from `site/pack/`, versioned
+- The modpack (`.mrpack`, about 560 MB) and the Windows installer zip are served from `site/pack/`, versioned
   with each release. `site/changes.html` gets a players' entry with each release (tests check its shape).
 - Pages: `index.html` (the server), `changes.html` (what changed), `creators.html` (creator codes).
 

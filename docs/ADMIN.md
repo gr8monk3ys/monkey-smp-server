@@ -149,6 +149,21 @@ players online (CHANGELOG), so it is gone. Who does what now:
 - **A builder's game mode.** An op, in the console: `gamemode creative NAME`, and `gamemode survival NAME`
   when the job is done.
 
+**WorldEdit (since 2.8.0).** WorldEdit is on the server only, for staff. Only `admin` has it, through `*`;
+`default`, `builder` and `moderator` have no `worldedit.*` node, so players can't use it. To lend it to a
+builder for a job, and take it back after:
+
+```
+lp user NAME permission set worldedit.* true
+lp user NAME permission unset worldedit.*
+```
+
+The wand is `//wand`; WorldEdit CUI is an optional client mod that draws the selection. Undo a WorldEdit job
+with `//undo`; don't count on Ledger seeing WorldEdit's changes (not tested). WorldEdit was only checked to load
+on a test server, and the ranks above come from the rank files. The test players (Carpet bots) couldn't run
+`//set` even as ops, so nothing was tried in game: with a real client, try `//pos1`, `//pos2`, `//set stone` and
+`//undo` as an admin, and the same as a plain player (it should refuse), before the first real job.
+
 ## Griefing
 
 Ledger logs every block change. Common commands:
@@ -391,10 +406,47 @@ function realms:npcs/crier/remove                              # near it
 - **Cost**: none measurable. On a test server with a player standing next to them, the median tick was 3.3 ms
   with no NPCs and 3.3 ms with these two; 50 of them added 0.4 ms (spark, one-minute figures).
 
+## Mod settings (since 2.8.0)
+
+These configs ship in `package/realms/defaults/` and are copied on start only when the file is missing, so an
+edit on the server sticks. Stop the server before editing one. `tests/test_mod_defaults.py` keeps the shipped
+values.
+
+- **Carry On** (`server\config\carryon-common.json`). Sneak + right-click with empty hands picks up a block
+  entity (furnace, barrel, spawner, shulker box and so on, with its contents) or a passive mob. On top of Carry
+  On's own blacklist it can't lift chests and trapped chests (supply drops are chests, and a carried chest would
+  skip the raid rules' container checks), banners, beds, doors, trial spawners, vaults, players, Easy NPCs (the
+  Guide and the Town Crier), text displays, markers and interactions (the standings board), armor stands, item
+  frames or chest minecarts. Open Parties and Claims applies to it like any other use: on a test server a
+  non-member couldn't pick up a spawner or a barrel inside someone else's claim, also during a Faction Raid,
+  and could pick up a furnace or a spawner outside claims. (Picking up animals couldn't be driven with the test
+  players, so that wasn't checked.) Spawners can be carried on purpose.
+- **Loot Restock** (`server\lootrestock.properties`). A structure loot chest refills from its loot table 7 days
+  after it was emptied, and only when it is completely empty. Barrels, item frames and trial vaults are left
+  alone. Only ops can break a tracked loot chest. It tracks only chests opened while they still have a loot
+  table, so player chests are never refilled, and since 2.8.0 supply drops are filled when they land instead of
+  carrying a loot table, so a drop spot doesn't turn into a weekly drop. Its record of chests is
+  `world\chest_reset_data.json`, which goes with the world. The jar is patched so that opening a loot chest
+  still counts for the "Open 8 loot chests" challenge (docs/MAINTAINING.md, "Patches this pack carries"); a
+  refilled chest doesn't count again, so it can't be farmed. All of this was checked on a test server with a
+  1-minute interval.
+- **Breaking Bedrock** has no config. A netherite pickaxe breaks bedrock in about 5 seconds with Efficiency V
+  (4.6 s measured); a diamond one can't; bedrock never drops, and breaking the bottom layer leaves a hole into
+  the void. TNT can't break it, but pistons can push bedrock. A claim protects its bedrock from non-members like
+  any block, and spawn protection covers spawn. The mod changes the bedrock block itself, so the Nether roof and
+  the End's exit portal break the same way (only the Overworld floor was tried). Rules 44 to 46 cover the rest.
+- **Enchantment Disabler** (`server\config\enchantmentdisabler\config.toml`). It turns off all 17 of Dungeons and
+  Taverns' own enchantments (`nova_structures:*`) at the enchanting table, in loot and in villager trades, so
+  they come only from events (rule B18). Event books made with `/give` or the staff kits still work. On a test
+  server 0 of these enchantments turned up in the new structures' chests; the table and trades are off in the
+  config but weren't checked in game.
+- **Ultimate Minecarts** (`server\config\ultimate_minecarts_server.json`): linking carts with chains is on, and
+  minecarts don't hurt players or mobs they hit.
+
 ## World generation
 
 The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,
-Incendium, Nullscape and the structure mods. The seed is pinned in the manifest, so every copy of the
+Incendium, Endercon (the End) and the structure mods. The seed is pinned in the manifest, so every copy of the
 server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
 rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
 can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
@@ -470,9 +522,10 @@ entrance. Logging out, or being teleported out of the radius, takes them out the
 Kit gear is marked, so it can't be smuggled out:
 - Players in the arena hold kit gear and nothing else; anything else is cleared every tick.
 - While the arena is open, everything inside the radius that holds items is removed every tick with
-  its contents: chest and hopper minecarts, chest boats, donkeys, mules and llamas. So is the corpse a
-  death leaves (player-death-corpses), which would otherwise hold the dead player's kit for anyone to
-  loot. Keep the size inside the arena's walls so nobody else's things, or corpses, are in that radius.
+  its contents: chest and hopper minecarts, chest boats, donkeys, mules and llamas. A death drops the
+  kit as items, which the tick clean removes. (Until 2.8.0 a death left a corpse, from player-death-corpses,
+  and the arena removed that too; the pack-side lines stay, harmless, for an older world.) Keep the size
+  inside the arena's walls so nobody else's things are in that radius.
 - Players can't join with a bundle in their ender chest (gear in a bundle would be missed), and leaving
   strips kit gear and any bundle from the ender chest.
 - Kit gear that still gets out (a hopper under the floor) is cleared from any player outside

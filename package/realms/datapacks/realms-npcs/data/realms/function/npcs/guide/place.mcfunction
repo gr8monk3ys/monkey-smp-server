@@ -5,3 +5,4 @@
 easy_npc delete d20849a4-bcc2-5970-bca9-f3aae3bdbd04
 $easy_npc preset import data realms:easy_npc/preset/humanoid/guide.npc.snbt $(x) $(y) $(z) d20849a4-bcc2-5970-bca9-f3aae3bdbd04
 $rotate d20849a4-bcc2-5970-bca9-f3aae3bdbd04 $(yaw) 0
+tag d20849a4-bcc2-5970-bca9-f3aae3bdbd04 add global.ignore

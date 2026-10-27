@@ -214,7 +214,8 @@ can join without it: it isn't on the server, or it is client-only, or Modrinth c
 and never when it adds blocks, items, entities or other registry entries (Fabric refuses a join that lacks
 them). `tests/test_client_env.py` checks the list against facts recorded from every jar
 (`tests/fixtures/client_mods.json`). When the client pack gains or loses a mod, those tests fail until you
-re-record the facts, then sort the new mod:
+re-record the facts, then sort the new mod. An optional mod that leaves the pack moves from `OPTIONAL_MODS` to
+`RETIRED_OPTIONAL`, so the indexes of earlier releases under `tests/fixtures/manifests` still validate:
 
 ```bash
 python -I tests/fixtures/record_client_mods.py            # downloads the mod jars (about 340 MB)
@@ -237,7 +238,9 @@ patch against the new upstream file: carry the change below over, then check it 
 |---|---|---|
 | `silvers_effects-library` | `pack.mcmeta` | Raises the highest supported pack format so the pack loads on Minecraft 26.3. |
 | `silvers_effects-library` | `overlay_26.3/.../technical/effects.mcfunction` | One command at the top returns early for a non-player entity with none of the 19 `*_duration` scores. Upstream runs the function's 97 commands for every loaded mob on every tick; none can match a mob without a score, and with about 1,900 mobs loaded that went past Minecraft's 65,536-commands-per-tick limit, cutting the function off before it reached every mob. Players must never be skipped: the last line re-arms their tick advancement. |
-| `silvers_strength-smp-season-4` | `.../main/enchant/check.mcfunction` | A per-player counter at the top makes the 968 block checks below it (markers on enchanting tables, anvils and grindstones near the player) run every 10 ticks instead of every tick. It was 26% of the server tick with 25 players. The markers persist, so the only change is that a newly placed block is noticed within half a second. |
+| `silvers_strength-smp-season-4` | `.../main/enchant/check.mcfunction`, and its copy in `overlay_26.3/` | A per-player counter at the top makes the 968 block checks below it (markers on enchanting tables, anvils and grindstones near the player) run every 10 ticks instead of every tick. It was 26% of the server tick with 25 players. The markers persist, so the only change is that a newly placed block is noticed within half a second. Version 1.8 added the `overlay_26.3` copy, which is the one 26.3 runs, so both carry the change. |
+| `lootrestock` | `org/oldskooler/lootrestock/handler/ChestInteractionHandler.class` | A Java class, not a data file. Loot Restock checks whether a structure chest is empty the first time a player opens it, and that check rolls the chest's loot with no player, so vanilla's "a player opened a loot chest" advancement never fired and the weekly "Open 8 loot chests" challenge never counted. The patch answers "not empty" there without rolling (the code only runs for a chest that still has its loot table). Make it again with `python tools/lootrestock_patch.py LootRestock-<version>.jar OUT.jar`, put `OUT.jar` in the test server's `mods`, and snapshot; the script's docstring has the details. Loot Restock is GPL-3.0-or-later and its source is public, so shipping a changed class is fine as long as the change stays published: it is, in this repo. |
+| `trident-all-weather-channeling` | `.../function/app/trident_hit_entity.mcfunction` | Upstream calls lightning on every Channeling trident that has ever hit something, including ones left in the ground, so one hit struck every old trident nearby (on a test server, a pig next to an old trident turned into a zombified piglin). The patch strikes only the nearest trident still in flight; tested the same way, only the pig by the trident that hit was struck. |
 
 Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the two
 performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
@@ -261,10 +264,12 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 | Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
 |---|---|
 | Slabbed (0.6.2-alpha) | About 140 ms more per tick, and an open report of 0 TPS deadlocks on 26.3 ([slabbed#102](https://github.com/peetsamods/slabbed/issues/102)). |
-| The Sift | About 90 ms more per tick: it adds an ichor fluid state to block-state definitions and hooks the fluid lookup. It also replaces the same ancient-city centres as the Dungeons and Taverns ancient-city overhaul. |
+| The Sift | About 90 ms more per tick: it adds an ichor fluid state to block-state definitions and hooks the fluid lookup. It also replaces the same ancient-city centres as the Dungeons and Taverns ancient-city overhaul. (Gone from the folder by 2.8.0.) |
 | Amethyst Nether | Defines `minecraft:the_nether`, as Incendium does; only one can generate, and its Modrinth page lists Incendium as incompatible. |
-| Just Enough Professions, Improved Inventory Tabs, Villager News | Not on Modrinth, so they can't be pinned (ADR-0002). |
-| PrickleMC | The file in the folder is a NeoForge jar. |
+| Just Enough Professions, Improved Inventory Tabs, Villager News, Koh's Death Effects | Not on Modrinth, so they can't be pinned (ADR-0002). |
+| PrickleMC, Crops Love Rain (NeoForge files) | The folder's `cropsloverain-3.2.1.jar` is the NeoForge build, and PrickleMC's NeoForge jar sits next to its Fabric one. The pack has the Fabric build of each. |
+| Deimos (2.7.1) | A library, and nothing in the pack or the folder needs it (every jar's `fabric.mod.json`, checked 2026-10-26). |
+| Nullscape | In the pack until 2.8.0, then gone from the folder. Don't bring it back next to Endercon: with both, a test server's End had no outer-island highlands or midlands, so no End cities and none of Qrafty's End Villages. Endercon alone generates both. |
 | Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |
 
 After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't

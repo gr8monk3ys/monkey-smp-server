@@ -156,6 +156,10 @@ def test_placing_replaces_the_npc_and_turns_the_entity():
         assert place[1] == f"$easy_npc preset import data {npcs.preset_id(name)} $(x) $(y) $(z) {npc}"
         # The vanilla rotate turns the entity; Easy NPC's turns only the model, on top of where it looks.
         assert place[2] == f"$rotate {npc} $(yaw) 0"
+        # Random Mob Sizes (in the pack since 2.8.0) skips mobs tagged global.ignore; untagged, the NPCs would
+        # come out anywhere from 0.75 to 1.25 times their size.
+        assert place[3] == f"tag {npc} add global.ignore"
+        assert len(place) == 4
 
 
 def test_here_places_through_a_marker_so_the_npc_has_no_owner():

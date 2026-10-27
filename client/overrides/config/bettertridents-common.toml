@@ -1,7 +1,0 @@
-#Makes the impaling enchantment apply to any creature in contact with rain or water.
-#Default Value: true
-#Requires Restart: World
-boost_impaling = true
-#Tridents can be repaired in an anvil using prismarine shards.
-#Default Value: true
-repair_tridents = true

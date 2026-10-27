@@ -483,7 +483,11 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/chests.mcfunction"] = lines("# Run at the drop's middle.", *place)
     f[f"{FN}/place.mcfunction"] = lines(
-        f"setblock ~ ~ ~ {CHEST}{{LootTable:\"{LOOT_TABLE}\",CustomName:\"{CHEST_NAME}\"}}",
+        "# Filled now rather than given a loot table to roll when opened: Loot Restock (2.8.0) remembers every",
+        "# chest that is opened with a loot table and refills it a week later, which would make a drop's spot",
+        "# a weekly supply drop.",
+        f"setblock ~ ~ ~ {CHEST}{{CustomName:\"{CHEST_NAME}\"}}",
+        f"loot insert ~ ~ ~ loot {LOOT_TABLE}",
         "summon minecraft:marker ~ ~ ~ {Tags:[\"dr.chest\"]}",
         "particle minecraft:end_rod ~ ~1 ~ 0.3 1.5 0.3 0.05 40 force",
     )
@@ -493,8 +497,8 @@ def datapack_files() -> dict[str, str]:
         bar_name("despawns in", "red", AT_XZ),
         "# A broken chest is done; an emptied one goes at once.",
         f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless block ~ ~ ~ {CHEST} run kill @s",
-        f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ LootTable unless data "
-        f"block ~ ~ ~ Items[0] run function {NS}:drops/emptied",
+        f"execute as @e[type=minecraft:marker,tag=dr.chest] at @s unless data block ~ ~ ~ Items[0] run function "
+        f"{NS}:drops/emptied",
         f"execute unless entity @e[type=minecraft:marker,tag=dr.chest] run return run function {NS}:drops/looted",
         f"execute if score #timer {OBJ} matches 300 run tellraw @a " + text(
             "", HEAD, {"text": "5 minutes until the chests at ", "color": "yellow"}, *AT_XZ,

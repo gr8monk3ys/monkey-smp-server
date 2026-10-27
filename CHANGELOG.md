@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+- New: **supply drops** (docs/SEASONS.md's event catalog; docs/ADMIN.md, "Supply drops"). Monday to Thursday,
+  6 to 10 PM Pacific, from Season I's first week, the first time 4 or more players are online in survival
+  (`function realms:drops/min {players:N}`) and no event is on: chat and a boss bar give the coordinates 10
+  minutes ahead, then 1 chest per 4 players online (at most 3) lands in the newest border ring, 6 or more
+  chunks from every claim, on dry natural ground. The chests despawn after 20 minutes. Modest loot (food,
+  iron, coal, arrows, torches, logs, XP bottles): nothing Strength, no netherite, diamonds or emeralds.
+  `tools/drops.py` picks the spots from the saved claims and border and generates the new `realms-drops`
+  data pack, which also has staff commands (`start`, `here`, `stop`, `status`, `on`, `off`). On the VPS,
+  `realms-drops.timer` offers the night's drop every 10 minutes; install it once with
+  `deploy/realms-drops.sh --install` (docs/LIVE.md).
+- New: **spawn NPCs**, so a player who joins when no staff are on is met at spawn. The Guide greets new
+  players and offers the short rules, how to find a faction, and buttons for this week's challenges, the faction
+  standings and the wardrobe; the Town Crier shows this week's Saturday event and the next. They are Easy NPC
+  7.17.1 (`easy-npc`, `easy-npc-core`, `easy-npc-config-ui`), needed on the client too: players update the
+  client pack. `tools/npcs.py` writes them into the new `realms-npcs` data pack, and
+  `defaults/config/easy_npc/security.cfg` keeps Easy NPC's editor features to ops. Staff place them once per
+  world, on the live VPS too, once the release is live (docs/ADMIN.md, "Spawn NPCs").
+
 2.6.0 rehearsed on a test server (Carpet fake players): the standings and bounties, the weekly challenges,
 Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet (docs/LAUNCH.md). Fixes from it:
 

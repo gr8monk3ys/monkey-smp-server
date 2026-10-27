@@ -369,7 +369,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | Event | How it works | Good for |
 | --- | --- | --- |
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
-| **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. | Exploration, small fights, new players |
+| **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. Built: one comes by itself on weeknight evenings once 4 or more are on, and staff can start one any time (docs/ADMIN.md, "Supply drops"). | Exploration, small fights, new players |
 | **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
@@ -572,6 +572,13 @@ Built:
   Seen in game on a test server on 26 October 2026 (2.6.0, Carpet fake players): the four columns, the board
   and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
   run of `deploy/realms-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
+- Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
+  `realms-drops` data pack and `deploy/realms-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
+  10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat
+  give the coordinates 10 minutes ahead, then 1 chest per 4 players online (at most 3) lands in the newest
+  border ring, 6 or more chunks from every claim, and despawns after 20 minutes. Modest loot (food, iron,
+  arrows, wood): nothing Strength, no netherite, diamonds or emeralds. Tried on a test server: the pack
+  loads, the chests land, scale and despawn, and a drop survives a restart.
 
 Not built:
 
@@ -580,7 +587,7 @@ Not built:
 | Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
 | Border acts | `worldborder set` over RCON on the date, for the Overworld and the Nether (1:8), then fit the live map to it and render it again with `tools/map_border.py` (docs/ADMIN.md, "The live map"). The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
-| KOTH and supply drops | Run by staff by hand at first. Automate only if events are weekly and well attended |
+| KOTH | Run by staff by hand at first. Automate only if events are weekly and well attended (supply drops are built: above) |
 | Faction sign-up form | A form (Front Desk, in the Discord repo) for the name, members, banner and charter; a forum post works until then |
 | Base of the Month role | A Discord role, handed out by hand |
 

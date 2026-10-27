@@ -1,0 +1,515 @@
+{
+  PresetMetadata:{
+    author:"Monkey SMP",
+    category:"Monkey SMP",
+    created:1L,
+    description:"Announces this week's Saturday event and the next one.",
+    entityTypeId:"easy_npc:humanoid",
+    modified:1L,
+    name:"Town Crier",
+    variantType:"PROFESSOR_01",
+    version:"1.0.0"
+  },
+  data:{
+    ActionData:{
+      ActionEventSet:{
+        ON_INTERACTION:[
+          {
+            Type:"OPEN_DEFAULT_DIALOG"
+          }
+        ],
+        ON_INTERVAL_LONG:[
+          {
+            Msg:{
+              T:4b,
+              Texts:["Hear ye! An event every Saturday, new challenges every Monday. Right-click me for this week's."]
+            },
+            Type:"MESSAGE"
+          }
+        ]
+      }
+    },
+    CustomName:{
+      color:"yellow",
+      text:"Town Crier"
+    },
+    CustomNameVisible:1b,
+    DialogData:{
+      DialogDataSet:[
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week0_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:0
+            }
+          ],
+          Label:"week0",
+          Name:"Week 0",
+          Priority:10,
+          Texts:[
+            {
+              Text:"Season I opens Saturday 21 November at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP and the Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is Sunday 22 November at 6 PM.<br><br>Next week: Faction Raid I, Saturday 28 November.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week1_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:1
+            }
+          ],
+          Label:"week1",
+          Name:"Week 1",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Faction Raid I, Saturday 28 November, 6 PM Pacific (9 PM Eastern).<br><br>Next week: the border breaks, from 2500 to 4000 blocks, Saturday 5 December.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week2_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:2
+            }
+          ],
+          Label:"week2",
+          Name:"Week 2",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: the border breaks, from 2500 to 4000 blocks, Saturday 5 December, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Dragon Night: the End opens, then 90 minutes of Anarchy, Saturday 12 December.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week3_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:3
+            }
+          ],
+          Label:"week3",
+          Name:"Week 3",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Dragon Night: the End opens, then 90 minutes of Anarchy, Saturday 12 December, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Arena Glory I, for Midwinter, Saturday 19 December.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week4_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:4
+            }
+          ],
+          Label:"week4",
+          Name:"Week 4",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Arena Glory I, for Midwinter, Saturday 19 December, 6 PM Pacific (9 PM Eastern).<br><br>Next week: the Netherite age begins, with a small event, Saturday 26 December.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week5_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:5
+            }
+          ],
+          Label:"week5",
+          Name:"Week 5",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: the Netherite age begins, with a small event, Saturday 26 December, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Faction Raid II, Saturday 2 January.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week6_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:6
+            }
+          ],
+          Label:"week6",
+          Name:"Week 6",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Faction Raid II, Saturday 2 January, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Build Battle II, Saturday 9 January.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week7_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:7
+            }
+          ],
+          Label:"week7",
+          Name:"Week 7",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Build Battle II, Saturday 9 January, 6 PM Pacific (9 PM Eastern).<br><br>Next week: the border breaks again, from 4000 to 6000 blocks, Saturday 16 January.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week8_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:8
+            }
+          ],
+          Label:"week8",
+          Name:"Week 8",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: the border breaks again, from 4000 to 6000 blocks, Saturday 16 January, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Arena Glory II, Saturday 23 January.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week9_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:9
+            }
+          ],
+          Label:"week9",
+          Name:"Week 9",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Arena Glory II, Saturday 23 January, 6 PM Pacific (9 PM Eastern).<br><br>Next week: Faction Raid III, Saturday 30 January.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week10_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:10
+            }
+          ],
+          Label:"week10",
+          Name:"Week 10",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: Faction Raid III, Saturday 30 January, 6 PM Pacific (9 PM Eastern).<br><br>Next week: the finale (the world locks after it), Saturday 6 February.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week11_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:11
+            }
+          ],
+          Label:"week11",
+          Name:"Week 11",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: the finale (the world locks after it), Saturday 6 February, 6 PM Pacific (9 PM Eastern).<br><br>Next week: the off-season weekend in the locked world, Saturday 13 February.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"week12_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Conditions:[
+            {
+              Name:"rc.seen",
+              Operation:"EQUALS",
+              Type:"SCOREBOARD",
+              Value:12
+            }
+          ],
+          Label:"week12",
+          Name:"Week 12",
+          Priority:10,
+          Texts:[
+            {
+              Text:"This week: the off-season weekend in the locked world, Saturday 13 February, 6 PM Pacific (9 PM Eastern).<br><br>Season II is planned for Saturday 20 February.<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        },
+        {
+          Buttons:[
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:challenges:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"other_challenges",
+              Name:"This week's challenges"
+            }
+          ],
+          Label:"other",
+          Name:"Any week",
+          Priority:1,
+          Texts:[
+            {
+              Text:"There's an event every Saturday at 6 PM Pacific (9 PM Eastern).<br><br>Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+            }
+          ]
+        }
+      ],
+      Type:"CUSTOM"
+    },
+    EasyNPCVersion:3,
+    Invulnerable:1b,
+    ObjectiveData:{
+      ObjectiveDataSet:[
+        {
+          Type:"LOOK_AT_PLAYER"
+        },
+        {
+          Type:"LOOK_AT_RESET"
+        }
+      ]
+    },
+    PersistenceRequired:1b,
+    SkinData:{
+      Type:"DEFAULT"
+    },
+    VariantType:"PROFESSOR_01",
+    id:"easy_npc:humanoid"
+  }
+}

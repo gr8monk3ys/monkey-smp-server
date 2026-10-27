@@ -10,9 +10,9 @@ window.REALMS = {
   STORE_URL: "",
   // The player modpack. The GitHub releases are private, so until the Modrinth project is up the site serves
   // the release's own .mrpack and player zip from site/pack/ (docs/MAINTAINING.md, Releasing).
-  MODPACK_URL: "pack/TheRealms-Client-2.6.0.mrpack",
+  MODPACK_URL: "pack/TheRealms-Client-2.7.0.mrpack",
   // The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same .mrpack.
-  INSTALLER_URL: "pack/TheRealms-Player-2.6.0.zip",
+  INSTALLER_URL: "pack/TheRealms-Player-2.7.0.zip",
   // Live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone.
   MAP_URL: "https://map.monkeysmp.lscaturchio.xyz",
   // When the season opens: ISO 8601 with its offset (this is Saturday 21 November 2026, 5 PM Pacific).

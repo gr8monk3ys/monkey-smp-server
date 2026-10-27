@@ -284,7 +284,11 @@ each player may claim, whether claims are protected from explosions, and so on).
 for the server itself (for example around spawn) with the server-claim mode in the claims menu. Stop the
 server before editing configs.
 
-## Shops
+## Shops (shelved)
+
+**Shelved on 26 October 2026, not in the current release.** The owners took shops out for now: Universal Shops
+and Polymer aren't in the pack, and players trade by hand (rule 43). Their pins, and the steps to bring shops back,
+are in `docs/MAINTAINING.md`, "Shelved mods". The rest of this section is how shops worked in 2.6.0.
 
 Players sell from chests while they're offline with *Universal Shops* (Patbox), priced in items: there is no
 currency, `/pay` or auction house. It runs on the server only, through Polymer (players see a Trade Shop as a
@@ -630,7 +634,7 @@ and `realms-drops.timer` on the VPS starts them (`docs/LIVE.md`, "The supply dro
 - **Loot** (`LOOT` in `tools/drops.py`): food (bread, beef, baked potatoes, a few golden carrots), iron
   ingots, coal, arrows, torches, logs, string, leather, redstone, bottles o' enchanting, lapis, the odd name
   tag or saddle. Nothing Strength, no netherite, diamonds, emeralds, golden apples, potions or enchanted gear:
-  a drop must never beat progression or the item-priced shops. The tests reject those.
+  a drop must never beat progression or what players trade. The tests reject those.
 
 Over RCON (or in game with `/`; `function realms:drops/help` lists them, clickable):
 

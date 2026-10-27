@@ -269,6 +269,58 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't
 start a game client, and a mod on one side only shows up as "registry entries that are unknown to this client".
 
+## Shelved mods
+
+Mods that were in a release and that the owners took out for now. Each keeps its exact manifest entry here, so
+bringing it back is a copy: paste the entries into `mods` in `package/realms/manifest.json` (it's sorted by slug),
+then run `python tools/validate.py --online`. `check_updates.py` doesn't see them, so look on Modrinth for a newer
+build for the manifest's Minecraft version first.
+
+### Shops: Universal Shops and Polymer (shelved 26 October 2026)
+
+Item-priced player shops from 2.6.0, never on the live server. The owners don't want an economy system for now:
+players trade by hand (rule 43), and the paid whitelist is unchanged. Polymer was only there for Universal Shops:
+no other mod in the pack needs it, on Modrinth or in its `fabric.mod.json` (checked 26 October 2026).
+
+```json
+  {
+    "slug": "polymer",
+    "project_id": "xGdtZczs",
+    "version": "0.18.5+26.3",
+    "version_id": "3fDXSiRx",
+    "file": "polymer-bundled-0.18.5+26.3.jar",
+    "url": "https://cdn.modrinth.com/data/xGdtZczs/versions/3fDXSiRx/polymer-bundled-0.18.5%2B26.3.jar",
+    "size": 1438885,
+    "hashes": {
+      "sha512": "9a8c31e505048571b8679d3406794ba1b75bb072758aaff5ee956fb2ff33db00a12b420fb8953a390cab4ea9c93e43e5eff37e7f3ae2e07bbecffa5a58193a47"
+    }
+  },
+  {
+    "slug": "universal-shops",
+    "project_id": "cnIatHrN",
+    "version": "1.16.0+26.3",
+    "version_id": "nQOUyX9T",
+    "file": "universal_shops-1.16.0+26.3.jar",
+    "url": "https://cdn.modrinth.com/data/cnIatHrN/versions/nQOUyX9T/universal_shops-1.16.0%2B26.3.jar",
+    "size": 619888,
+    "hashes": {
+      "sha512": "5617c900118ab3fdc9bcc63efc1da54d6c1481b5d3393ee0112b61c2256d8d7f03c7b28bbb995dae7bf37de25efb38ecec2963def6c3bd64e6376234741d165f"
+    }
+  }
+```
+
+To bring shops back:
+
+1. Paste both entries into the manifest's `mods` and run `python tools/validate.py --online`.
+2. Nothing to do for claims in the package: `defaults/config/openpartiesandclaims-server.toml` kept
+   `"hand$universal_shops:trade_block"` (dormant without the mod; a test boot with it on 26 October 2026 was clean).
+3. Put the shop wording back, as it was before they were shelved (`git show aa9a7a5:<file>`): rule 43 in
+   `docs/RULES.md` (the owners adopt it again), "Shops" under "Playing" in `docs/PLAYERS.md`, the "Fair trades" rule
+   and "How does trading work?" in `site/index.html`, and the shop lines in `docs/PROMOTION.md`'s drafts. Drop the
+   "shelved" notes in `docs/ADMIN.md` ("Shops") and `docs/LIVE.md` ("Shops in claims").
+4. Add a `site/changes.html` entry for players, and once that release is live, run `deploy/shops-claims.sh` on the
+   VPS (`docs/LIVE.md`, "Shops in claims").
+
 ## Tests
 
 ```bash

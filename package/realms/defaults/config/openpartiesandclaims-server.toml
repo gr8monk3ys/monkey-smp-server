@@ -7,9 +7,11 @@
 		#This value can be overridden with a player permission.
 		maxPlayerClaims = 4
 		[serverConfig.claims.protection]
-			#Monkey SMP: anyone may open a Universal Shops trade shop in someone's claim, with an empty hand ("hand$"),
-			#so shops in claims can sell to everyone while their stock chests stay protected. An item in the hand
-			#would let the click place blocks inside the claim. "minecraft:crafting_table" is the mod's own default.
+			#Monkey SMP: the universal_shops entry is dormant while shops are shelved (26 October 2026): Universal Shops
+			#isn't in the pack, and Open Parties and Claims starts clean with an id for a block that isn't there.
+			#With shops back, anyone may open a trade shop in someone's claim, with an empty hand ("hand$"), so shops
+			#in claims can sell to everyone while their stock chests stay protected. An item in the hand would let
+			#the click place blocks inside the claim. "minecraft:crafting_table" is the mod's own default.
 			#Blocks to partially exclude from chunk protection. Supports block tags.
 			forcedBlockProtectionExceptionList = ["minecraft:crafting_table", "hand$universal_shops:trade_block"]
 	[serverConfig.parties]

@@ -1,5 +1,10 @@
-# Nightfall: Hard until dawn (the difficulty it was on comes back then).
+# Nightfall: Hard until dawn (the difficulty it was on comes back then). Staff set Peaceful since it
+# was announced: no mobs, so it fades.
 execute store result score #diff om run difficulty
+execute if score #diff om matches 0 run return run function realms:omens/blood_moon/fade
+# This moon's number: a mob roused tonight carries it (om.blood), so one roused at an earlier moon and
+# never calmed (its chunk was unloaded) pays nothing.
+scoreboard players add #moon om 1
 difficulty hard
 scoreboard players set #phase om 1
 scoreboard players set #timer om 900

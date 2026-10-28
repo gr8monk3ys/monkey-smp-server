@@ -71,8 +71,10 @@ LATEST_START = 20 * 60 + 50  # an evening's start is a 10-minute slot from 6:00 
 SLOT_MINUTES = 10
 MIN_PLAYERS = 4
 
-BLOOD_WAIT = 12 * 60         # seconds a Blood Moon waits for nightfall (a Minecraft day is 20 minutes)
+BLOOD_WAIT = 21 * 60         # seconds a Blood Moon waits for nightfall: a Minecraft day is 20 minutes
 BLOOD_MAX = 15 * 60          # and lasts at most, though a night is shorter (about 8 minutes)
+RISE = (13000, 14000)        # it rises only at the start of a night (`time query daytime`), never just before dawn
+BLOOD_BUFF = 3               # seconds of Speed and Resistance, given again each second while the moon is up
 BLOOD_REACH = 48             # blocks around a survival player in the Overworld where mobs are roused
 BLOOD_CAP = 20               # bonus drops per player in one Blood Moon
 NIGHT = (13000, 22999)       # `time query daytime` from dusk to dawn
@@ -80,6 +82,9 @@ TRUCE_MINUTES = 60
 HUNT_MIN = 3                 # kills without dying to be hunted
 HUNT_MINUTES = 30
 HUNT_CHOICES = 5             # the longest streaks sent; the pack takes the first one online
+# A Meteor holds the drop for up to its countdown and despawn time, and the drops' timer asks every 10 minutes:
+# on a drop night, a Meteor this close to 10 PM only comes once the night's own drop has happened.
+METEOR_LATE = dt.timedelta(seconds=drops.METEOR_COUNTDOWN + drops.DESPAWN, minutes=drops.SLOT_MINUTES)
 PLAYER = re.compile(r"[A-Za-z0-9_]{1,16}")
 
 # Mobs a Blood Moon rouses: the ones that come out at night in the Overworld. Not the Warden, ravagers or
@@ -190,7 +195,12 @@ def hunt_choices(scores: dict[str, dict[str, int]]) -> list[str]:
 def commands(world: Path, when: dt.datetime) -> list[str]:
     """What deploy/realms-omens.sh sends: nothing outside an evening's omen hours, else the evening's order, what
     the omens in it need (the meteor's spots, the hunt's names), and the try. An omen with nothing to work with
-    (no spots, no streak) is left out of the order."""
+    (no spots, no streak) is left out of the order. `late` tells the pack a Meteor now would keep the night's
+    supply drop from coming before 10 PM (METEOR_LATE)."""
+    local = when.astimezone(season_calendar.PACIFIC)
+    if (local.weekday() not in EVENINGS or not HOURS[0] <= local.hour < HOURS[1]
+            or season_calendar.week_at(when) < 1):
+        return []   # most of the 144 runs a day: not an evening's hours, so the saved world isn't read
     board = saved_world.scoreboard(world)
     scores = board.scores if board else {}
     secret = key(scores)
@@ -214,7 +224,9 @@ def commands(world: Path, when: dt.datetime) -> list[str]:
         else:
             order.remove("hunted")
     out.insert(0, f"data modify storage {STORE} order set value [" + ",".join(f'"{o}"' for o in order) + "]")
-    out.append(f"function {NS}:omens/try {{night:{evening.night}}}")
+    late = int(drops.night_of(when) is not None and local + METEOR_LATE >= local.replace(hour=HOURS[1], minute=0,
+                                                                                            second=0, microsecond=0))
+    out.append(f"function {NS}:omens/try {{night:{evening.night},late:{late}}}")
     return out
 
 
@@ -292,6 +304,10 @@ def kill_advancement(name: str, entity: dict) -> str:
                        "rewards": {"function": f"{NS}:omens/{name}"}}, indent=2)
 
 
+# The Blood Moon on now (#moon om), as an advancement's number: a kill pays only for a mob roused at this one.
+MOON = {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": "#moon"}, "score": OBJ}
+
+
 def has_score(objective: str) -> dict:
     return {"type": "minecraft:entity_scores", "entity": "this", "scores": {objective: {"min": 1}}}
 
@@ -305,7 +321,8 @@ def datapack_files() -> dict[str, str]:
     f[f"data/{NS}/tags/entity_type/omens/blood_moon.json"] = json.dumps({"values": [
         *(f"minecraft:{m}" for m in BLOOD_MOBS),
         *({"id": f"minecraft:{m}", "required": False} for m in BLOOD_MOBS_OPTIONAL)]}, indent=2)
-    f[f"data/{NS}/advancement/omens/blood_kill.json"] = kill_advancement("blood_moon/kill", has_score("om.blood"))
+    f[f"data/{NS}/advancement/omens/blood_kill.json"] = kill_advancement("blood_moon/kill", {
+        "type": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": MOON, "max": MOON}}})
     f[f"data/{NS}/advancement/omens/hunted_kill.json"] = kill_advancement("hunted/kill", {
         "type": "minecraft:all_of", "terms": [
             {"type": "minecraft:entity_properties", "entity": "this",
@@ -326,6 +343,7 @@ def datapack_files() -> dict[str, str]:
         f"execute unless score #min {OBJ} matches 1.. run scoreboard players set #min {OBJ} {MIN_PLAYERS}",
         f"execute unless score #auto {OBJ} matches 0.. run scoreboard players set #auto {OBJ} 1",
         f"execute unless score #state {OBJ} matches 0.. run scoreboard players set #state {OBJ} 0",
+        f"execute unless score #moon {OBJ} matches 0.. run scoreboard players set #moon {OBJ} 0",
         "# The secret tools/omens.py plans the weeks with: drawn once, never shown, never changed.",
         f"execute unless score #key1 {OBJ} matches 1.. store result score #key1 {OBJ} run random value 1..1000000000",
         f"execute unless score #key2 {OBJ} matches 1.. store result score #key2 {OBJ} run random value 1..1000000000",
@@ -349,8 +367,13 @@ def datapack_files() -> dict[str, str]:
         f"execute if score #state {OBJ} matches 0 run return 0",
         *(f"execute if score {cond} run return run function {NS}:omens/interrupted" for cond in EVENTS_ON),
         f"execute if score #state {OBJ} matches {STATES['blood_moon']} run function {NS}:omens/blood_moon/second",
-        f"execute if score #state {OBJ} matches {STATES['meteor']} unless score #state {drops.OBJ} matches 1.. run "
-        f"function {NS}:omens/end",
+        "# A Meteor: announced once the drop counts down (#phase 1); no dry ground at any spot, and it never came.",
+        f"execute if score #state {OBJ} matches {STATES['meteor']} if score #state {drops.OBJ} matches 2.. run "
+        f"scoreboard players set #phase {OBJ} 1",
+        f"execute if score #state {OBJ} matches {STATES['meteor']} if score #phase {OBJ} matches 0 unless score "
+        f"#state {drops.OBJ} matches 1.. run function {NS}:omens/meteor/failed",
+        f"execute if score #state {OBJ} matches {STATES['meteor']} if score #phase {OBJ} matches 1 unless score "
+        f"#state {drops.OBJ} matches 1.. run function {NS}:omens/end",
         f"execute if score #state {OBJ} matches {STATES['truce']} run function {NS}:omens/truce/second",
         f"execute if score #state {OBJ} matches {STATES['hunted']} run function {NS}:omens/hunted/second",
     )
@@ -368,12 +391,21 @@ def datapack_files() -> dict[str, str]:
         f"execute if score #state {drops.OBJ} matches 1.. run return 24",
         f"execute store result score #online {OBJ} if entity @a[gamemode=survival]",
         f"execute if score #online {OBJ} < #min {OBJ} run return 25",
+        f"$data modify storage {STORE} tonight set value {{night:$(night)}}",
+        f"$scoreboard players set #tonight {OBJ} $(night)",
+        f"$scoreboard players set #late {OBJ} $(late)",
         f"execute store result score #r {OBJ} run function {NS}:omens/pick",
         f"execute unless score #r {OBJ} matches 1 run return 27",
-        f"$scoreboard players set #night {OBJ} $(night)",
-        f"$scoreboard players operation #on.$(night) {OBJ} = #state {OBJ}",
+        f"scoreboard players operation #prev {OBJ} = #night {OBJ}",
+        f"scoreboard players operation #night {OBJ} = #tonight {OBJ}",
+        f"function {NS}:omens/record with storage {STORE} tonight",
         "return 1",
     )
+    f[f"{FN}/record.mcfunction"] = lines(
+        "# Macro {night:20261124}: the evening's omen, for the weekly recap (tools/omens.py ran()).",
+        f"$scoreboard players operation #on.$(night) {OBJ} = #state {OBJ}",
+    )
+    f[f"{FN}/unrecord.mcfunction"] = lines(f"$scoreboard players reset #on.$(night) {OBJ}")
     f[f"{FN}/pick.mcfunction"] = lines(
         "# Tries the omens in the order sent, first to last; returns 1 for the first that starts.",
         f"execute unless data storage {STORE} order[0] run return 0",
@@ -389,6 +421,8 @@ def datapack_files() -> dict[str, str]:
     # ---- Blood Moon
     bm = f"{FN}/blood_moon"
     night = f"{NIGHT[0]}..{NIGHT[1]}"
+    rise = f"{RISE[0]}..{RISE[1]}"
+    blood = f"@e[type=#{NS}:omens/blood_moon"
     f[f"{bm}/begin.mcfunction"] = lines(
         "# Returns 1 when it starts: it waits for nightfall, then rises. Not on Peaceful (no mobs).",
         f"execute store result score #diff {OBJ} run difficulty",
@@ -402,7 +436,8 @@ def datapack_files() -> dict[str, str]:
     f[f"{bm}/second.mcfunction"] = lines(
         f"scoreboard players remove #timer {OBJ} 1",
         f"execute store result score #now {OBJ} run time query daytime",
-        f"execute if score #phase {OBJ} matches 0 if score #now {OBJ} matches {night} run return run "
+        "# It rises at nightfall only, so it never comes up just before dawn.",
+        f"execute if score #phase {OBJ} matches 0 if score #now {OBJ} matches {rise} run return run "
         f"function {NS}:omens/blood_moon/rise",
         f"execute if score #phase {OBJ} matches 0 if score #timer {OBJ} matches ..0 run return run "
         f"function {NS}:omens/blood_moon/fade",
@@ -411,12 +446,16 @@ def datapack_files() -> dict[str, str]:
         f"execute if score #timer {OBJ} matches ..0 run return run function {NS}:omens/blood_moon/dawn",
         *bar_tick([{"text": "Blood Moon: ", "bold": True}, {"text": "until dawn, at most "}], "red"),
         f"execute as @a[gamemode=survival,tag=!{ARENA_TAG}] at @s if dimension {saved_world.OVERWORLD} as "
-        f"@e[type=#{NS}:omens/blood_moon,distance=..{BLOOD_REACH},tag=!om.roused] run function "
-        f"{NS}:omens/blood_moon/rouse",
+        f"{blood},distance=..{BLOOD_REACH}] run function {NS}:omens/blood_moon/rouse",
     )
     f[f"{bm}/rise.mcfunction"] = lines(
-        "# Nightfall: Hard until dawn (the difficulty it was on comes back then).",
+        "# Nightfall: Hard until dawn (the difficulty it was on comes back then). Staff set Peaceful since it",
+        "# was announced: no mobs, so it fades.",
         f"execute store result score #diff {OBJ} run difficulty",
+        f"execute if score #diff {OBJ} matches 0 run return run function {NS}:omens/blood_moon/fade",
+        "# This moon's number: a mob roused tonight carries it (om.blood), so one roused at an earlier moon and",
+        "# never calmed (its chunk was unloaded) pays nothing.",
+        f"scoreboard players add #moon {OBJ} 1",
         "difficulty hard",
         f"scoreboard players set #phase {OBJ} 1",
         f"scoreboard players set #timer {OBJ} {BLOOD_MAX}",
@@ -432,11 +471,11 @@ def datapack_files() -> dict[str, str]:
         TO_ALL + "playsound minecraft:entity.wither.spawn master @s ~ ~ ~ 0.4 0.6",
     )
     f[f"{bm}/rouse.mcfunction"] = lines(
-        "# As a hostile mob near a player: faster and tougher for the night, and counted for the bonus drop.",
-        "tag @s add om.roused",
-        "scoreboard players set @s om.blood 1",
-        "effect give @s minecraft:speed 900 0 true",
-        "effect give @s minecraft:resistance 900 0 true",
+        f"# Each second, as a hostile mob near a player: faster and tougher for {BLOOD_BUFF} seconds (so it wears",
+        "# off soon after dawn, loaded or not), and marked with this moon's number for the bonus drop.",
+        f"scoreboard players operation @s om.blood = #moon {OBJ}",
+        f"effect give @s minecraft:speed {BLOOD_BUFF} 0 true",
+        f"effect give @s minecraft:resistance {BLOOD_BUFF} 0 true",
     )
     f[f"{bm}/kill.mcfunction"] = lines(
         "# A player killed a roused mob (advancement realms:omens/blood_kill): the bonus drop, at their feet.",
@@ -458,30 +497,41 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:omens/end",
     )
     f[f"{bm}/calm.mcfunction"] = lines(
-        "# The end of a Blood Moon: the mobs still loaded calm down, and the difficulty comes back, unless staff",
-        "# changed it meanwhile or the season was locked (it sets Peaceful).",
-        "effect clear @e[tag=om.roused] minecraft:speed",
-        "effect clear @e[tag=om.roused] minecraft:resistance",
-        "scoreboard players reset @e[tag=om.roused] om.blood",
-        "tag @e[tag=om.roused] remove om.roused",
+        "# The end of a Blood Moon: the mobs' effects wear off in seconds, and the difficulty comes back, unless",
+        "# staff changed it meanwhile or the season was locked (it sets Peaceful).",
+        f"scoreboard players reset {blood},scores={{om.blood=1..}}] om.blood",
         f"execute unless score #phase {OBJ} matches 1 run return 0",
         f"execute store result score #now {OBJ} run difficulty",
         f"execute unless score #now {OBJ} matches 3 run return 0",
         f"execute if score #season_locked {STATE} matches 1 run return 0",
+        f"execute if score #diff {OBJ} matches 0 run difficulty peaceful",
         f"execute if score #diff {OBJ} matches 1 run difficulty easy",
         f"execute if score #diff {OBJ} matches 2 run difficulty normal",
     )
 
     # ---- Meteor (tools/drops.py does the drop; the omen only starts it)
     f[f"{FN}/meteor/begin.mcfunction"] = lines(
-        "# Returns 1 when the Meteor starts: the drop checks the ground at the spots sent and counts down.",
+        "# Returns 1 when the Meteor starts: the drop checks the ground at the spots sent and counts down. Close",
+        "# to 10 PM on a drop night (#late) it waits for the night's own supply drop: it would keep that one away.",
         f"execute unless data storage {STORE} spots[0] run return 0",
+        f"execute if score #late {OBJ} matches 1 unless score #night {drops.OBJ} = #tonight {OBJ} run return 0",
         f"data modify storage {drops.STORE} spots set from storage {STORE} spots",
         f"data remove storage {STORE} spots",
         f"execute store result score #r {OBJ} run function {NS}:drops/meteor",
         f"execute unless score #r {OBJ} matches 1 run return 0",
         f"scoreboard players set #state {OBJ} {STATES['meteor']}",
         "return 1",
+    )
+
+    f[f"{FN}/meteor/failed.mcfunction"] = lines(
+        "# The drop found no dry ground at any spot, so the Meteor never came: tonight's omen isn't used up, and",
+        "# the next omen in the order is tried now.",
+        f"scoreboard players set #state {OBJ} 0",
+        f"scoreboard players set #phase {OBJ} 0",
+        f"execute store result score #r {OBJ} run function {NS}:omens/pick",
+        f"execute if score #r {OBJ} matches 1 run return run function {NS}:omens/record with storage {STORE} tonight",
+        f"function {NS}:omens/unrecord with storage {STORE} tonight",
+        f"scoreboard players operation #night {OBJ} = #prev {OBJ}",
     )
 
     # ---- Truce Hour
@@ -526,6 +576,7 @@ def datapack_files() -> dict[str, str]:
     # ---- Hunted
     hu = f"{FN}/hunted"
     hunted_bar = [f"scoreboard players set #state {OBJ} {STATES['hunted']}",
+                  f"scoreboard players set #phase {OBJ} 0",   # 1 once they are killed (hunted/over)
                   f"scoreboard players set #timer {OBJ} {HUNT_MINUTES * 60}",
                   *bar_add("hunted", "red", HUNT_MINUTES * 60)]
     f[f"{hu}/begin.mcfunction"] = lines(
@@ -556,8 +607,8 @@ def datapack_files() -> dict[str, str]:
         "$tellraw @a " + text(head("hunted", "red"), {"text": "$(name)", "color": "white"},
                               {"text": " is hunted (kills in a row without dying: ", "color": "yellow"},
                               {"score": {"name": "$(name)", "objective": "om.streak"}, "color": "aqua"},
-                              {"text": f"). For the next {HUNT_MINUTES} minutes there is a bounty on them. "
-                                       "$(name): stay alive.", "color": "yellow"}),
+                              {"text": f"). For the next {HUNT_MINUTES} minutes there is a bounty on them; it ends "
+                                       "with the hunt. $(name): stay alive.", "color": "yellow"}),
         f"$function {NS}:standings/bounty/post {{target:\"$(name)\"}}",
         TO_ALL + "playsound minecraft:entity.wolf.howl master @s ~ ~ ~ 0.6 0.9",
     )
@@ -566,6 +617,12 @@ def datapack_files() -> dict[str, str]:
         *bar_tick([{"text": "Hunted: ", "bold": True}, TARGET, {"text": " for "}], "red"),
         f"execute unless entity @a[scores={{om.hunt=1..}}] run return run function {NS}:omens/hunted/left",
         f"execute if score #timer {OBJ} matches ..0 run function {NS}:omens/hunted/survived",
+    )
+    f[f"{hu}/over.mcfunction"] = lines(
+        "# From end: the hunt's bounty is over (a kill during it sets #phase 1 first, and stays claimable).",
+        f"execute if score #phase {OBJ} matches 1 run return 0",
+        "tellraw @a " + text(head("hunted", "red"), {"text": "the bounty on ", "color": "gray"}, TARGET,
+                             {"text": " is withdrawn: a kill from now on doesn't claim it.", "color": "gray"}),
     )
     f[f"{hu}/kill.mcfunction"] = lines(
         "# A player killed the hunted player (advancement realms:omens/hunted_kill). Staff check the kill as for",
@@ -576,6 +633,7 @@ def datapack_files() -> dict[str, str]:
         "tellraw @a " + text(head("hunted", "red"), {"selector": "@s", "color": "white"},
                              {"text": " killed ", "color": "yellow"}, TARGET,
                              {"text": ". Staff check the kill, then the bounty is theirs.", "color": "yellow"}),
+        f"scoreboard players set #phase {OBJ} 1",
         f"function {NS}:omens/end",
     )
     f[f"{hu}/died.mcfunction"] = lines(
@@ -606,6 +664,7 @@ def datapack_files() -> dict[str, str]:
         "# Ends whatever omen is on, putting back what it changed.",
         f"execute if score #state {OBJ} matches {STATES['blood_moon']} run function {NS}:omens/blood_moon/calm",
         f"execute if score #state {OBJ} matches {STATES['truce']} run function {NS}:omens/truce/restore",
+        f"execute if score #state {OBJ} matches {STATES['hunted']} run function {NS}:omens/hunted/over",
         "scoreboard players reset * om.hunt",
         f"bossbar remove {BAR}",
         f"scoreboard players set #state {OBJ} 0",
@@ -721,13 +780,7 @@ def show_plan(world: Path, when: dt.datetime) -> int:
     return 0
 
 
-def meaning(command: str, answer: str) -> str:
-    """The timer's log line for one command's answer: the try's return code in words."""
-    if not command.startswith(f"function {NS}:omens/try"):
-        m = re.match(r"data modify storage \S+ (\w+) set value", command)
-        return f"{m[1] + ' sent' if m else command[:60]}: {answer or 'ok'}"
-    m = re.search(r" returned (\d+)$", answer)
-    return f"{command}: {TRY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
+meaning = server.coded(f"function {NS}:omens/try", TRY_CODES)   # the timer's log line: the try's code in words
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:

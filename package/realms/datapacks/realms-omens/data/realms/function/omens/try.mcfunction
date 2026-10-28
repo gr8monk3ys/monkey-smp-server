@@ -12,8 +12,12 @@ execute if score #season_locked ev.state matches 1 run return 23
 execute if score #state dr matches 1.. run return 24
 execute store result score #online om if entity @a[gamemode=survival]
 execute if score #online om < #min om run return 25
+$data modify storage realms:omens tonight set value {night:$(night)}
+$scoreboard players set #tonight om $(night)
+$scoreboard players set #late om $(late)
 execute store result score #r om run function realms:omens/pick
 execute unless score #r om matches 1 run return 27
-$scoreboard players set #night om $(night)
-$scoreboard players operation #on.$(night) om = #state om
+scoreboard players operation #prev om = #night om
+scoreboard players operation #night om = #tonight om
+function realms:omens/record with storage realms:omens tonight
 return 1

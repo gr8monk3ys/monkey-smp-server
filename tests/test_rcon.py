@@ -105,6 +105,18 @@ def test_a_required_job_fails_when_the_server_is_not_running():
     assert rcon.send_if_running(rcon.Recorder(), ["a"], log.append, required=True) == 0
 
 
+def test_coded_reads_the_call_through_its_codes_and_storage_by_key():
+    describe = rcon.coded("function realms:x/try", {1: "started", 5: "off"})
+    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 5") == (
+        "function realms:x/try {n:1}: off")
+    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 9") == (
+        "function realms:x/try {n:1}: Function realms:x/try returned 9")
+    assert describe("function realms:x/try {n:1}", "") == "function realms:x/try {n:1}: ok"
+    assert describe("data modify storage realms:x spots set value [{x:1,z:2}]", "") == "spots sent: ok"
+    assert describe("function realms:x/stop", "Function realms:x/stop returned 1") == (
+        "function realms:x/stop: Function realms:x/stop returned 1")
+
+
 def test_send_carries_on_past_a_failure_and_says_so():
     server, log = rcon.Recorder(fail=1), []
     assert rcon.send(server, ["a", "b"], log.append) is False

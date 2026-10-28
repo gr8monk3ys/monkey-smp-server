@@ -42,7 +42,6 @@ import argparse
 import datetime as dt
 import json
 import random
-import re
 import sys
 from pathlib import Path
 
@@ -418,8 +417,10 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/next.mcfunction"] = lines(
         f"function {NS}:drops/release with storage {STORE} spot",
         f"execute if data storage {STORE} spots[0] run return run function {NS}:drops/locate",
-        "# None was dry land: no drop this time (the timer sends new spots in 10 minutes).",
+        "# None was dry land: no drop this time (the timer sends new spots in 10 minutes). A Meteor that found",
+        "# none ends here too (tools/omens.py then tries the evening's next omen).",
         f"scoreboard players set #state {OBJ} 0",
+        f"scoreboard players set #meteor {OBJ} 0",
         f"data remove storage {STORE} spot",
     )
     f[f"{FN}/found.mcfunction"] = lines(
@@ -661,13 +662,7 @@ def show_spots(world: Path, when: dt.datetime) -> int:
     return 0 if found else 1
 
 
-def meaning(command: str, answer: str) -> str:
-    """The timer's log line for one command's answer: the try's return code in words."""
-    if not command.startswith(f"function {NS}:drops/try"):
-        said = command[:60] if command.startswith("function ") else "spots sent"
-        return f"{said}: {answer or 'ok'}"
-    m = re.search(r" returned (\d+)$", answer)
-    return f"{command}: {TRY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
+meaning = server.coded(f"function {NS}:drops/try", TRY_CODES)   # the timer's log line: the try's code in words
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:

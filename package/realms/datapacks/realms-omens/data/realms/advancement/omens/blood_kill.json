@@ -8,7 +8,22 @@
           "entity": "this",
           "scores": {
             "om.blood": {
-              "min": 1
+              "min": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#moon"
+                },
+                "score": "om"
+              },
+              "max": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#moon"
+                },
+                "score": "om"
+              }
             }
           }
         }

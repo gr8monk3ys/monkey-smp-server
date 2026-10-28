@@ -485,5 +485,8 @@ def test_a_meteor_is_one_chest_with_more_in_it_announced_5_minutes_ahead():
     for path in ("try", "start"):
         assert "scoreboard players set #meteor dr 0" in fn(path)
     assert "scoreboard players set #meteor dr 0" in fn("cleanup")
+    # No dry ground at any spot ends it too, so status and the next staff drop don't read a stale Meteor.
+    nxt = fn("next")
+    assert nxt.index("scoreboard players set #state dr 0") < nxt.index("scoreboard players set #meteor dr 0")
     # The chest keeps its name either way: it is how the pack knows its own chests.
     assert 'CustomName:"Supply drop"' in fn("place")

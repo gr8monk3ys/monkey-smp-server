@@ -100,8 +100,8 @@ def test_send_if_running_gives_the_timers_exit_code(server, code, line):
 
 def test_a_required_job_fails_when_the_server_is_not_running():
     log = []
-    assert rcon.send_if_running(rcon.Recorder(running=False), ["a"], log.append, required=True) == 1
-    assert log == ["server not running: nothing sent"]
+    assert rcon.send_if_running(rcon.Recorder(running=False), ["a"], log.append, required=True) == rcon.NOT_RUNNING
+    assert log == ["server not running: nothing sent"] and rcon.NOT_RUNNING not in (0, 1, rcon.GAVE_UP)
     assert rcon.send_if_running(rcon.Recorder(), ["a"], log.append, required=True) == 0
 
 
@@ -144,8 +144,10 @@ def test_job_commands_prints_one_per_line_and_nothing_when_there_are_none(capsys
 def test_job_send_gets_the_docker_folder_and_the_time():
     code, [(folder, when, _)] = job(["send", "--docker", "/srv/d", "--at", "2026-11-23T08:00:00"])
     assert code == 7 and folder == Path("/srv/d") and when == dt.datetime(2026, 11, 23, 8, tzinfo=rcon.UTC)
-    code, [(_, when, _)] = job(["send", "--docker", "/srv/d"])
+    code, [(_, when, args)] = job(["send", "--docker", "/srv/d"])
     assert abs(dt.datetime.now(rcon.UTC) - when) < dt.timedelta(minutes=1)   # no --at: now
+    assert abs(rcon.job_time(args) - when) < dt.timedelta(minutes=1)   # the time a tool's other commands get too
+    assert rcon.job_time(argparse.Namespace()) - when < dt.timedelta(minutes=1)   # a job without --at
 
 
 def test_job_subcommands_take_the_world_first_and_at_only_when_asked(capsys):

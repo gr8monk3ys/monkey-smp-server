@@ -621,7 +621,7 @@ def main(argv=None) -> int:
                            world=True, others=[("spots", "the spots a drop would try now, and why")])
     args = ap.parse_args(argv)
     if args.command == "spots":
-        return show_spots(args.world, args.at or dt.datetime.now(UTC))
+        return show_spots(args.world, server.job_time(args))
     return server.run_job(args, lambda when: commands(args.world, when),
                           lambda rcon, when: send(rcon, args.world, when))
 

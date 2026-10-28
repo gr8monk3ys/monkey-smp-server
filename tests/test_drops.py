@@ -429,7 +429,10 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
     assert "JOB_TOOL=drops.py\n" in text and "JOB_WORLD=1\n" in text and text.endswith('\ntimed_job "$@"\n')
     lib = (DEPLOY / "lib.sh").read_text()
     job = lib[lib.index("timed_job() {"):]
-    assert set(re.findall(r"\$\(setting (\w+)", job)) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
+    # The webhooks only for a job that gave up (the day; drops never does).
+    gave_up = job[job.index("            4) ;;"):]
+    assert set(re.findall(r"\$\(setting (\w+)", job[:len(job) - len(gave_up)])) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
+    assert set(re.findall(r"\$\(setting (\w+)", gave_up)) == {"STAFF_WEBHOOK_URL", "DISCORD_WEBHOOK_URL"}
     assert 'set -- "$LIVE_DIR/server/world"' in job and 'python3 -B "$lib_tool" commands "$@"' in job
     # Python sends and reads the answers (tools/rcon.py); the shell keeps no copy of the refusals or codes.
     assert '"$lib_tool" send "$@" --docker "$LIVE_DIR/docker"' in job

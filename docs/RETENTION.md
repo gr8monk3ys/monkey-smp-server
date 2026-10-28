@@ -74,8 +74,8 @@ Why these counters:
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
-`realms-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7). Without it, nobody's day
-count moves.
+`realms-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
+retries. Without it, nobody's day count moves.
 
 When the store, staff or an event raises a player's months, events or a holiday score, they get an
 "Unlocked ..." line in chat within a second, or at their next login if they were offline. Days played,

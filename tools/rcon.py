@@ -20,7 +20,9 @@ over several commands) stops at its first failure too, in tools/standings.py's u
 
 A timed job's tool (tools/challenges.py, drops.py, wardrobe.py; deploy/lib.sh's timed_job runs them) has the
 same two subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
-(changes nothing), and `send --docker DIR`, which sends them and exits 1 when one wasn't accepted.
+(changes nothing), and `send --docker DIR`, which sends them. send's exit code: 0 sent (or, for most jobs,
+the server isn't running), 1 a command wasn't accepted, NOT_RUNNING the server isn't running and the job must
+run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
 import datetime as dt
@@ -30,6 +32,9 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
+# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart).
+NOT_RUNNING = 3
+GAVE_UP = 4
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -116,8 +121,8 @@ def send(rcon, commands: Iterable[str], log: Callable[[str], None] = print,
 def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = print, skipped: str = "",
                     required: bool = False, **how) -> int:
     """The timers' exit code: 0 when every command went through or the server isn't running (logging
-    `skipped`), 1 when one failed or docker did. With required, a server that isn't running is 1 too, for a
-    job that systemd tries again until the server answers (the day)."""
+    `skipped`), 1 when one failed or docker did. With required, a server that isn't running is NOT_RUNNING, for
+    a job that systemd tries again until the server answers (the day)."""
     try:
         up = rcon.running()
     except RconError as e:
@@ -125,7 +130,7 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
         return 1
     if not up:
         log(skipped or "server not running: nothing sent")
-        return 1 if required else 0
+        return NOT_RUNNING if required else 0
     return 0 if send(rcon, commands, log, **how) else 1
 
 
@@ -152,10 +157,15 @@ def job_subcommands(sub, send_about: str, world: bool = False, at: bool = True,
             p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
 
 
+def job_time(args) -> dt.datetime:
+    """The time a job_subcommands command runs for: --at, else now."""
+    return getattr(args, "at", None) or dt.datetime.now(UTC)
+
+
 def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int]) -> int:
     """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none) or `send`
-    (send(the server, when)), for --at or now."""
-    when = getattr(args, "at", None) or dt.datetime.now(UTC)
+    (send(the server, when)), for job_time(args)."""
+    when = job_time(args)
     if args.command == "send":
         return send(Docker(args.docker), when)
     out = commands(when)

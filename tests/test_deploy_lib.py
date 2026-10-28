@@ -154,29 +154,42 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
     ("realms-day.sh", "send --docker", "realms-day.service tries again in 10 minutes"),
 ])
 def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, script, sent, retry):
-    tool = tmp_path / "repo" / "tools"
-    tool.mkdir(parents=True)
-    for name in ("challenges.py", "drops.py", "wardrobe.py"):
-        (tool / name).write_text("")
-    run = f'sh "{(DEPLOY / script).as_posix()}"'
-    env = {"REPO_DIR": (tmp_path / "repo").as_posix(), "REALMS_DEPLOY_ENV": "/nonexistent"}
-    code, out, calls = sh(run, FAKE_OUT_python3=r"function realms:x: ok\n", **env)
-    assert code == 0 and [line.split("] ", 1)[1] for line in out] == ["function realms:x: ok"]
+    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function realms:x: ok\n")
+    assert code == 0 and logged == ["function realms:x: ok"]
     send = calls.index("flock -w 1800 9") + 1
     assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(f"{sent} /srv/live/docker")
-    code, out, calls = sh(run, FAKE_OUT_python3="x", FAKE_RC_flock="1", **env)
-    assert code == 1 and out[-1].endswith(f"ERROR: the deploy lock was taken for 30 minutes ({retry})")
+    # Only drops (JOB_NONE: often nothing to send) asks for the commands first; the others start one python3.
+    assert len([c for c in calls if c.startswith("python3")]) == (2 if script == "realms-drops.sh" else 1)
+    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_flock="1")
+    assert code == 1 and logged[-1] == f"ERROR: the deploy lock was taken for 30 minutes ({retry})"
     assert calls[-1] == "flock -w 1800 9"
-    code, out, _ = sh(run, FAKE_OUT_python3="x", FAKE_RC_send="1", **env)
-    assert code == 1 and out[-1].endswith(f"ERROR: not every command went through ({retry})")
+    code, logged, _ = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_send="1")
+    assert code == 1 and logged[-1] == f"ERROR: not every command went through ({retry})"
+    code, logged, _ = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_send="3")   # rcon.NOT_RUNNING
+    assert code == 1 and logged[-1] == f"ERROR: the server isn't running ({retry})"
+
+
+@needs_dash
+def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(sh, tmp_path):
+    env = tmp_path / "env"
+    env.write_text("DISCORD_WEBHOOK_URL=https://hook/public\nSTAFF_WEBHOOK_URL=https://hook/staff\n")
+    code, logged, calls = job(sh, tmp_path, "realms-day.sh", FAKE_OUT_python3=r"gave up: the day for 20261028\n",
+                              FAKE_RC_send="4", REALMS_DEPLOY_ENV=env.as_posix())
+    assert code == 4 and logged == ["gave up: the day for 20261028", "gave up; the timer's next run starts afresh"]
+    assert calls[-2:] == ["curl -fsS -m 15 -H Content-Type: application/json -d @- https://hook/staff",
+                          '{"content":"Monkey SMP: realms-day gave up on the wardrobe\'s day job after retrying. '
+                          'Check: journalctl -u realms-day"}']
+    env.write_text("DISCORD_WEBHOOK_URL=https://hook/public\n")   # no staff channel: the public webhook
+    assert job(sh, tmp_path, "realms-day.sh", FAKE_RC_send="4", REALMS_DEPLOY_ENV=env.as_posix())[2][-2].endswith(
+        " https://hook/public")
+    code, logged, calls = job(sh, tmp_path, "realms-day.sh", FAKE_RC_send="4")
+    assert code == 4 and "no webhook in the settings; not posting" in logged
+    assert not any(c.startswith("curl") for c in calls)
 
 
 def test_drops_outside_drop_hours_takes_no_lock(sh, tmp_path):
-    (tmp_path / "repo" / "tools").mkdir(parents=True)
-    (tmp_path / "repo" / "tools" / "drops.py").write_text("")
-    code, out, calls = sh(f'sh "{(DEPLOY / "realms-drops.sh").as_posix()}"', REPO_DIR=(tmp_path / "repo").as_posix(),
-                          REALMS_DEPLOY_ENV="/nonexistent")
-    assert code == 0 and out == [] and len(calls) == 1 and " commands " in calls[0]
+    code, logged, calls = job(sh, tmp_path, "realms-drops.sh")
+    assert code == 0 and logged == [] and len(calls) == 1 and " commands " in calls[0]
 
 
 def job(sh, tmp_path, script, *args, **env):
@@ -185,7 +198,7 @@ def job(sh, tmp_path, script, *args, **env):
     for name in ("challenges.py", "drops.py", "wardrobe.py"):
         (tmp_path / "repo" / "tools" / name).write_text("")
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
-                          REALMS_DEPLOY_ENV="/nonexistent", **env)
+                          **{"REALMS_DEPLOY_ENV": "/nonexistent", **env})
     tag = f"[{script[:-3]}] "
     return code, [line[len(tag):] for line in out if line.startswith(tag)], calls
 
@@ -228,10 +241,11 @@ JOB_FOR = {"realms-week.sh": "the weekly challenges", "realms-drops.sh": "supply
            "realms-day.sh": "the wardrobe's day job"}
 
 
-def test_the_day_runs_its_job_and_systemd_retries_it():
+def test_the_day_runs_its_job_and_systemd_retries_it_until_it_gives_up():
     unit = (DEPLOY / "realms-day.service").read_text()
     assert "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-day.sh\n" in unit
-    assert "Restart=on-failure\nRestartSec=10min\n" in unit and "docker compose" not in unit
+    assert "Restart=on-failure\nRestartSec=10min\nRestartPreventExitStatus=4\n" in unit
+    assert "StateDirectory=realms-day\n" in unit and "docker compose" not in unit   # wardrobe.py's --pending
 
 
 LIST = r"There are 2 of a max of 20 players online: a, b\n"

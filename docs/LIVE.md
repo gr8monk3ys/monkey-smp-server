@@ -273,17 +273,22 @@ the world. Without it there are no automatic drops; staff can still start one by
 
 The week, drops and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
 lock and reads each answer for a refusal. Before this release `realms-day.service` ran `docker compose ... rcon`
-itself, without either. Once the release is live, replace it from the deployed checkout (it copies only the
-units that changed, and restarting the timer doesn't start a new day):
+itself, without either. It now sends `function realms:wardrobe/day_once {stamp:YYYYMMDD}`, the UTC date, and the
+wardrobe pack starts one day per date, so a retry after a run that reached the server never counts a second day.
+Once the release is live (its wardrobe pack has `day_once`), replace the unit from the deployed checkout (it
+copies only the units that changed, and restarting the timer doesn't start a new day):
 
 ```sh
 sh /srv/realms/repo/deploy/realms-day.sh --check
 sudo sh /srv/realms/repo/deploy/realms-day.sh --install
 ```
 
-Until then the old unit keeps working. Like the old one, the new one tries again every 10 minutes while the
-server is down; it now also does when the server turns the command down (say, the wardrobe pack is off), until
-it is accepted: `journalctl -u realms-day` shows each try.
+Until then the old unit keeps working: it runs `function realms:wardrobe/day`, which the release keeps (staff can
+run it for an extra day). Like the old one, the new one tries again every 10 minutes while the server is down; it
+now also does when the server turns the command down (say, the wardrobe pack is off). It gives up after 6 hours
+of tries: it posts to the staff channel and stops, and the next midnight's run starts afresh. `journalctl -u
+realms-day` shows each try; to start the given-up day later, run `sh /srv/realms/repo/deploy/realms-day.sh` as
+`realms` (by hand it has no limit, and a date already started is left alone).
 
 ### The spawn NPCs (the release with spawn NPCs)
 

@@ -193,22 +193,27 @@ install_timer() {
 # "timed_job [--check | --install]": a timed job's whole script, run as its last line. The job is named by
 # LOG_NAME: its units are LOG_NAME.service and LOG_NAME.timer. Before it, the script sets
 #   JOB_TOOL    its tool in tools/ (challenges.py): `commands [WORLD]` prints the RCON commands for now, one per
-#               line, and `send [WORLD] --docker DIR` sends them through tools/rcon.py, exiting non-zero when one
-#               wasn't accepted (or, for a job that must run, when the server isn't running)
+#               line, and `send [WORLD] --docker DIR` sends them through tools/rcon.py, exiting 1 when one wasn't
+#               accepted, 3 when the server isn't running and the job must run (rcon.NOT_RUNNING), and 4 when it
+#               gave up (rcon.GAVE_UP)
 #   JOB_FOR     what the release brought it, for "is the release with JOB_FOR deployed?"
 #   JOB_RETRY   when it runs again after a failure, for the errors ("the next hour tries again")
 #   JOB_DOWN    what a stopped server means, for --check's "server: not running (JOB_DOWN)"
 # and optionally JOB_WORLD=1 (the tool takes the saved world first), JOB_SHOW (a tool subcommand whose output
-# --check logs first: drops' spots) and JOB_NONE (why there may be no commands, for --check).
+# --check logs first: drops' spots) and JOB_NONE (why there may be no commands, for --check; with it, sending
+# asks for the commands first, and none means nothing is logged and no lock is taken).
 #
-# With no option it sends: no commands means nothing is logged and no lock is taken; otherwise it waits up to 30
-# minutes for the deploy lock, so it never lands while a deploy, the daily restart or an off-site backup has the
-# server stopped or not saving, and logs each line the tool prints. --check prints the commands for now, the
-# timer's state and whether the server is running, and changes nothing. --install (root) copies the units from
-# the deployed checkout to /etc/systemd/system (only those that changed) and starts the timer.
+# With no option it waits up to 30 minutes for the deploy lock, so it never lands while a deploy, the daily
+# restart or an off-site backup has the server stopped or not saving, sends, and logs each line the tool prints;
+# any failure is an error, so systemd's retry or the next run tries again. A tool that gave up posts a staff
+# alert and returns 4 (realms-day.service's RestartPreventExitStatus), so the next timer run starts afresh.
+# --check prints the commands for now, the timer's state and whether the server is running, and changes
+# nothing. --install (root) copies the units from the deployed checkout to /etc/systemd/system (only those that
+# changed) and starts the timer.
 #
 # It reads only REPO_DIR, LIVE_DIR and LOCK_FILE from /etc/realms-deploy.env (or REALMS_DEPLOY_ENV), without
-# sourcing it, so the webhooks are never read. No secret is read, printed or asked for.
+# sourcing it; the staff webhook (STAFF_WEBHOOK_URL, else DISCORD_WEBHOOK_URL) only to post that a job gave up.
+# No secret is printed or asked for.
 timed_job() {
     case "${1:-}" in
         '') lib_mode=send ;;
@@ -238,14 +243,27 @@ timed_job() {
     if [ "$lib_mode" = check ] && [ -n "${JOB_SHOW:-}" ]; then
         python3 -B "$lib_tool" "$JOB_SHOW" "$@" 2>&1 | while IFS= read -r lib_l; do log "$lib_l"; done
     fi
-    lib_out=$(python3 -B "$lib_tool" commands "$@") || die "tools/$JOB_TOOL commands failed"
+    if [ "$lib_mode" = check ] || [ -n "${JOB_NONE:-}" ]; then
+        lib_out=$(python3 -B "$lib_tool" commands "$@") || die "tools/$JOB_TOOL commands failed"
+    fi
 
     if [ "$lib_mode" = send ]; then
-        [ -n "$lib_out" ] || return 0
+        [ -z "${JOB_NONE:-}" ] || [ -n "$lib_out" ] || return 0
         deploy_lock 1800 || die "the deploy lock was taken for 30 minutes ($JOB_RETRY)"
-        log_each python3 -B -u "$lib_tool" send "$@" --docker "$LIVE_DIR/docker" ||
-            die "not every command went through ($JOB_RETRY)"
-        return 0
+        lib_sent=0
+        log_each python3 -B -u "$lib_tool" send "$@" --docker "$LIVE_DIR/docker" || lib_sent=$?
+        case $lib_sent in
+            0) return 0 ;;
+            3) die "the server isn't running ($JOB_RETRY)" ;;
+            4) ;;
+            *) die "not every command went through ($JOB_RETRY)" ;;
+        esac
+        lib_staff=${STAFF_WEBHOOK_URL:-$(setting STAFF_WEBHOOK_URL)}
+        lib_staff=${lib_staff:-${DISCORD_WEBHOOK_URL:-$(setting DISCORD_WEBHOOK_URL)}}
+        [ -n "$lib_staff" ] || log 'no webhook in the settings; not posting'
+        discord "Monkey SMP: $LOG_NAME gave up on $JOB_FOR after retrying. Check: journalctl -u $LOG_NAME" "$lib_staff"
+        log "gave up; the timer's next run starts afresh"
+        return 4
     fi
     log 'commands for now:'
     [ -n "$lib_out" ] || log "  none${JOB_NONE:+ ($JOB_NONE)}"

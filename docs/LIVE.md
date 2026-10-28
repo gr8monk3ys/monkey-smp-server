@@ -269,6 +269,21 @@ It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 
 reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
 
+### The outposts' timer (the release with outposts)
+
+Once that release is live, install `realms-outposts.timer` the same way (`docs/ADMIN.md`, "Outposts"):
+
+```sh
+sh /srv/realms/repo/deploy/realms-outposts.sh --check
+sudo sh /srv/realms/repo/deploy/realms-outposts.sh --install
+```
+
+It runs every hour at 45 past as `realms`, sends nothing before the launch or when every outpost has its
+spot, and reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims, border,
+scores and storage from the world. It also writes the "Outposts" marker set into the Overworld map's config
+under `server/config/bluemap/maps/` and sends `bluemap reload` when that changed. Without the timer there
+are no outposts: the pack waits for spots.
+
 ### The day timer as a job (the release with `deploy/realms-day.sh`)
 
 The week, drops and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy

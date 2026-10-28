@@ -11,7 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`) | `python tools/datapacks.py` |
+| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `outposts.py`) | `python tools/datapacks.py` |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
@@ -36,12 +36,13 @@ lives in a few modules they share:
 | `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, the one list of answers that mean the server refused, and a timed job's command line (`job_subcommands`, `run_job`, `job_time`, `parse_time`, the exit codes `NOT_RUNNING` and `GAVE_UP`: `commands [--at]` and `send --docker` in challenges, drops and wardrobe) |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
 | `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the realms namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `realms-standings` pack, and the week's lines for the Sunday post (`report`) |
+| `tools/outposts.py` | outposts (`docs/SEASONS.md`): their spots in the newest border ring from the saved world (as drops picks its spots), the `realms-outposts` pack that checks the ground and runs the captures by faction number, the live map's marker set, and what standings asks of it: a week's `baseline`, `hours` held and their `points`. `recap_lines` is an "outposts this week" section for a Sunday recap. Run hourly by `deploy/realms-outposts.sh`; Python 3.10, no tomllib |
 
 ### The faction number in game
 
 Data packs can't see Open Parties and Claims' parties, so `tools/diplomacy.py` gives each party a number and
-writes it in game. Anything in a pack that needs "which faction is this player in" (war and pacts now,
-outposts next) reads it here rather than asking the parties:
+writes it in game. Anything in a pack that needs "which faction is this player in" (war and pacts and
+outposts) reads it here rather than asking the parties:
 
 | Where | What |
 |---|---|

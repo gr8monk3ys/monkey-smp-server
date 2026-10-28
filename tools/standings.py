@@ -53,6 +53,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import diplomacy
+import outposts
 import saved_world
 import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, text
@@ -74,7 +75,7 @@ LAST_TOP = 5          # factions in last week's table on the board
 NAME_LIMIT = 20       # characters of a faction's name on the board
 DISCORD_LIMIT = 2000
 FORMULA = ("Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the "
-           "leader; +5 a bounty.")
+           "leader; +5 a bounty; +1 an hour holding an outpost (at most 20).")
 
 
 # ---------------------------------------------------------------- reading the world
@@ -100,6 +101,7 @@ class World:
     claims: dict[str, int]                # player UUID -> chunks claimed
     scores: dict[str, dict[str, int]]     # objective -> holder -> score
     labels: dict[str, str]                # Cup holder -> the name staff gave it (cup/faction)
+    numbers: dict[str, int] = field(default_factory=dict)   # party id -> faction number (tools/diplomacy.py)
 
 
 def usernames(world: Path) -> dict[str, str]:
@@ -152,7 +154,8 @@ def read_world(world: Path) -> World:
     if not world.is_dir():
         raise SystemExit(f"{world} is not a folder: give the world folder (server/world)")
     scores, labels = read_scoreboard(world)
-    return World(read_parties(world, usernames(world)), read_claims(world), scores, labels)
+    return World(read_parties(world, usernames(world)), read_claims(world), scores, labels,
+                 diplomacy.numbers(world))
 
 
 # ---------------------------------------------------------------- the table
@@ -167,6 +170,7 @@ class Row:
     strength: int = 0
     kills: int = 0
     bounties: int = 0
+    outposts: int = 0     # whole hours an outpost was held this week (tools/outposts.py)
     points: int = 0
     rank: int = 0
 
@@ -183,6 +187,7 @@ def rank(rows: list[Row]) -> list[Row]:
     leaders = {col: max((max(getattr(r, col), 0) for r in rows), default=0) for col, _ in WEIGHTS}
     for r in rows:
         r.points = sum(share(getattr(r, col), leaders[col], w) for col, w in WEIGHTS) + BOUNTY_POINTS * r.bounties
+        r.points += outposts.points(r.outposts)
 
     def key(r: Row) -> tuple[int, int, int]:
         return (r.points, r.cup, r.kills)
@@ -247,6 +252,7 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
             row.kills += gained(kills.get(name, 0), kills_then.get(name, 0))
             row.kills += gained(war.get(name, 0), war_then.get(name, 0))   # a war enemy's kill counts twice
             row.bounties += gained(bounty.get(name.lower(), 0), bounty_then.get(name.lower(), 0))
+        row.outposts = outposts.hours(scores, base.get("outposts"), world.numbers.get(p.id))
         rows.append(row)
     return rank(rows)
 
@@ -255,13 +261,14 @@ def table_text(rows: list[Row], limit: int | None = None) -> list[str]:
     """The table in fixed-width columns (for a terminal and a Discord code block)."""
     shown = rows if limit is None else rows[:limit]
     bounty = any(r.bounties for r in shown)
+    held = any(r.outposts for r in shown)
     head = f"{'#':>2}  {'Faction':<18} {'Points':>6} {'Cup':>5} {'Land':>5} {'Str':>4} {'Kills':>5}"
-    out = [head + (f" {'Bounty':>6}" if bounty else "")]
+    out = [head + (f" {'Bounty':>6}" if bounty else "") + (f" {'Hold':>4}" if held else "")]
     for r in shown:
         name = r.name.replace("`", "'")
         name = name if len(name) <= 18 else name[:17] + "~"
         line = f"{r.rank:>2}  {name:<18} {r.points:>6} {r.cup:>5} {r.land:>5} {r.strength:>4} {r.kills:>5}"
-        out.append(line + (f" {r.bounties:>6}" if bounty else ""))
+        out.append(line + (f" {r.bounties:>6}" if bounty else "") + (f" {r.outposts:>4}" if held else ""))
     if not rows:
         out.append("    no factions yet")
     elif limit is not None and len(rows) > limit:
@@ -300,7 +307,8 @@ def snapshot(world: World, now: dt.datetime) -> dict:
     return {"start": now.isoformat(timespec="seconds"),
             "kills": dict(sorted(world.scores.get(KILLS, {}).items())),
             "warkills": dict(sorted(world.scores.get(diplomacy.WARKILLS, {}).items())),
-            "bounty": dict(sorted(world.scores.get(BOUNTY, {}).items()))}
+            "bounty": dict(sorted(world.scores.get(BOUNTY, {}).items())),
+            "outposts": outposts.baseline(world.scores)}
 
 
 def week_file(state: Path) -> Path:
@@ -335,7 +343,8 @@ def board_name(name: str) -> str:
 def board_line(r: Row) -> str:
     name = board_name(r.name) or board_name(r.members[0] if r.members else "") or "?"
     line = f"{r.rank}. {name}: {r.points}  [Cup {r.cup}, land {r.land}, Str {r.strength}, kills {r.kills}"
-    return line + (f", bounties {r.bounties}]\n" if r.bounties else "]\n")
+    line += f", bounties {r.bounties}" if r.bounties else ""
+    return line + (f", outposts {r.outposts}h]\n" if r.outposts else "]\n")
 
 
 def section(head: str, rows: list[Row], top: int) -> dict:

@@ -48,6 +48,8 @@ STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 RESTART_MIN_UPTIME=${RESTART_MIN_UPTIME:-6}
 LOCK_FILE=${LOCK_FILE:-/tmp/realms-deploy.lock}
 KEEP_BACKUPS=${KEEP_BACKUPS:-3}
+whole_number WARN_MINUTES "$WARN_MINUTES" minutes
+whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 STATE="$LIVE_DIR/.deployed"
 FAILED="$LIVE_DIR/.deploy-failed"
@@ -160,10 +162,10 @@ if [ -n "$restart" ]; then
         log "the server started ${hours}h ago (a deploy or a crash restarted it); skipping the daily restart"
         exit 0
     fi
-    online=$(players_online || true)
     health=$(spark_health)
     log "daily restart after ${hours:-?}h up; spark health: ${health:-no link}"
     warn_players 'Daily restart'
+    online=$PLAYERS_ONLINE   # counted by warn_players, before the warning
     if restart_and_wait; then
         log 'back up after the daily restart'
         msg="Daily restart: Monkey SMP is back up (it had been up ${hours:-?} h, ${online:-?} online)."

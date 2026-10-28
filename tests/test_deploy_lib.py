@@ -246,6 +246,14 @@ def test_discord_escapes_quotes_and_backslashes_into_valid_json(sh):
     assert json.loads(calls[1]) == {"content": message}
 
 
+def test_discord_turns_newlines_tabs_and_control_characters_into_valid_json(sh):
+    # (The CR is mid-line: Git for Windows' sed, which these tests may run on, drops one right before a newline.)
+    message = 'line one\n\tline "two"\rthree\nbell\x07 and\x1b escape\\'
+    calls = sh('discord "$1" https://hook/a', message)[2]
+    assert calls[1] == r'{"content":"line one\n\tline \"two\"\rthree\nbell and escape\\"}'
+    assert json.loads(calls[1]) == {"content": 'line one\n\tline "two"\rthree\nbell and escape\\'}
+
+
 def test_discord_posts_to_the_url_given_or_none_and_logs_a_failure(sh):
     assert sh("discord hi https://hook/b")[2][0].endswith(" https://hook/b")
     assert sh("discord hi ''", DISCORD_WEBHOOK_URL="https://hook/a")[2] == []   # empty: no post, no fallback
@@ -280,7 +288,32 @@ def test_warn_players_warns_nobody_when_no_one_is_on_or_warn_minutes_is_0(sh):
     nobody = r"There are 0 of a max of 20 players online:\n"
     assert sh("warn_players x", FAKE_OUT_docker=nobody)[1:] == ([], [f"{RCON} list"])
     assert sh("warn_players x", FAKE_RC_docker="1")[1] == []
-    assert sh("warn_players x", FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1:] == ([], [])
+    assert sh("warn_players x", FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1:] == ([], [f"{RCON} list"])
+
+
+def test_warn_players_keeps_the_count_so_the_caller_needs_no_second_list(sh):
+    assert sh('warn_players x; log "$PLAYERS_ONLINE online"', FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1] == [
+        "[t] 2 online"]
+    assert sh('warn_players x; log "[$PLAYERS_ONLINE] online"', FAKE_RC_docker="1")[1] == ["[t] [] online"]
+
+
+@pytest.mark.parametrize("value", ["5m", "-1", "05", " 5", "five"])
+def test_a_setting_that_is_not_a_whole_number_stops_before_anything_happens(sh, value):
+    code, out, calls = sh("warn_players x; log warned", FAKE_OUT_docker=LIST, WARN_MINUTES=value)
+    assert code == 1 and out == [f"[t] ERROR: WARN_MINUTES must be a whole number of minutes, not '{value}'"]
+    assert calls == []
+    code, out, calls = sh("wait_for_live; log up", BOOT_TIMEOUT=value)
+    assert code == 1 and out == [f"[t] ERROR: BOOT_TIMEOUT must be a whole number of seconds, not '{value}'"]
+    assert calls == []
+
+
+@needs_dash
+@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh"])
+def test_the_restarting_scripts_check_their_minutes_before_they_do_anything(sh, tmp_path, script):
+    code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}"', WARN_MINUTES="5m", FAKE_ID="0",
+                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix())
+    assert code == 1 and out[-1].endswith("ERROR: WARN_MINUTES must be a whole number of minutes, not '5m'")
+    assert not [c for c in calls if c.split()[0] in ("docker", "flock", "curl", "sleep")]
 
 
 def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):

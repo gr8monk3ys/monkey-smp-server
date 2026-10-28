@@ -62,15 +62,23 @@ rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 # nothing when the server didn't answer.
 players_online() { rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1; }
 
+# "whole_number NAME VALUE [UNIT]": dies unless VALUE is a whole number (0, 5, 900: no sign, no leading 0), naming
+# the setting NAME, so a typo in a setting stops a script before it stops anything instead of skipping a step.
+whole_number() {
+    case $2 in '' | *[!0-9]* | 0?*) die "$1 must be a whole number${3:+ of $3}, not '$2'" ;; esac
+}
+
 # "warn_players FIRST [LAST [DETAIL]]": when players are online, says `FIRST in WARN_MINUTES minutes DETAIL.` in
 # chat, then a minute ahead `LAST in 1 minute. Find a safe spot.`, and returns a minute after that. LAST empty or
-# left out is FIRST; DETAIL is "(about 3 minutes offline)". WARN_MINUTES is 5 when unset, and 0 warns nobody.
+# left out is FIRST; DETAIL is "(about 3 minutes offline)". WARN_MINUTES is 5 when unset, 0 warns nobody, and
+# anything but a whole number is a die. PLAYERS_ONLINE keeps how many were online (empty when the server didn't
+# answer), so a caller needs no second `list`.
 warn_players() {
     lib_minutes=${WARN_MINUTES:-5}
-    [ "$lib_minutes" -gt 0 ] || return 0
-    lib_online=$(players_online || true)
-    [ "${lib_online:-0}" -gt 0 ] || return 0
-    log "$lib_online player(s) online; warning them $lib_minutes minutes ahead"
+    whole_number WARN_MINUTES "$lib_minutes" minutes
+    PLAYERS_ONLINE=$(players_online || true)
+    [ "$lib_minutes" -gt 0 ] && [ "${PLAYERS_ONLINE:-0}" -gt 0 ] || return 0
+    log "$PLAYERS_ONLINE player(s) online; warning them $lib_minutes minutes ahead"
     rcon "say $1 in $lib_minutes minutes ${3:-(about 3 minutes offline)}." >/dev/null || true
     [ "$lib_minutes" -le 1 ] || sleep $(((lib_minutes - 1) * 60))
     rcon "say ${2:-$1} in 1 minute. Find a safe spot." >/dev/null || true
@@ -80,8 +88,9 @@ warn_players() {
 # "wait_for_live [--while-running]": waits up to BOOT_TIMEOUT seconds (default 900) for the server to answer RCON,
 # asking every 15 seconds; returns 1 when it didn't. --while-running gives up as soon as the container isn't
 # running (a deploy's failed boot rolls back sooner); without it a container that crashed gets the whole time to
-# come back (compose restarts it).
+# come back (compose restarts it). A BOOT_TIMEOUT that isn't a whole number is a die.
 wait_for_live() {
+    whole_number BOOT_TIMEOUT "${BOOT_TIMEOUT:-900}" seconds
     lib_waited=0
     while [ "$lib_waited" -lt "${BOOT_TIMEOUT:-900}" ]; do
         sleep 15
@@ -93,12 +102,17 @@ wait_for_live() {
 }
 
 # "discord MSG [URL [FILE]]": posts MSG to the Discord webhook URL (left out: DISCORD_WEBHOOK_URL; empty: no post),
-# with FILE attached as Markdown when given. A post that fails is logged, never an error. MSG's backslashes and
-# double quotes are escaped, so any one-line text makes valid JSON.
+# with FILE attached as Markdown when given. A post that fails is logged, never an error. MSG becomes a JSON string
+# here: backslashes and double quotes are escaped, newlines, tabs and carriage returns become \n, \t and \r, and
+# any other control character is dropped, so any text makes valid JSON.
 discord() {
     if [ $# -gt 1 ]; then lib_url=$2; else lib_url=${DISCORD_WEBHOOK_URL:-}; fi
     [ -n "$lib_url" ] || return 0
-    lib_json=$(printf '%s' "$1" | sed 's/[\\"]/\\&/g')
+    lib_tab=$(printf '\t')
+    lib_cr=$(printf '\r')
+    lib_json=$(printf '%s' "$1" | tr -d '\001-\010\013\014\016-\037\177' |
+        sed -e 's/[\\"]/\\&/g' -e "s/$lib_tab/\\\\t/g" -e "s/$lib_cr/\\\\r/g" |
+        awk 'NR > 1 { printf "%s", "\\n" } { printf "%s", $0 }')
     if [ $# -gt 2 ]; then
         curl -fsS -m 30 --form-string "payload_json={\"content\":\"$lib_json\"}" -F "files[0]=@$3;type=text/markdown" \
             "$lib_url" >/dev/null

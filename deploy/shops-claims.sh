@@ -45,8 +45,8 @@ LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
 LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
 WARN_MINUTES=${WARN_MINUTES:-$(setting WARN_MINUTES 5)}
 BOOT_TIMEOUT=${BOOT_TIMEOUT:-$(setting BOOT_TIMEOUT 900)}
-case "$WARN_MINUTES" in '' | *[!0-9]*) WARN_MINUTES=5 ;; esac
-case "$BOOT_TIMEOUT" in '' | *[!0-9]*) BOOT_TIMEOUT=900 ;; esac
+whole_number WARN_MINUTES "$WARN_MINUTES" minutes
+whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 SERVER_DIR=$LIVE_DIR/server
 FILE=$SERVER_DIR/config/openpartiesandclaims-server.toml

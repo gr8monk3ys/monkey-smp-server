@@ -1,9 +1,15 @@
+import importlib.util
+import json
 import shutil
+from pathlib import Path
 
 import pytest
 from conftest import make_zip, patched_entry, zip_contents
 
+import entries
 import patches
+
+GOLDEN_DIR = Path(__file__).resolve().parent / "fixtures" / "patch-golden"
 
 ORIGINAL = {"pack.mcmeta": b'{"pack": {"pack_format": 55}}', "data/x/function/a.mcfunction": b"say a",
             "data/x/function/b.mcfunction": b"say b"}
@@ -106,3 +112,42 @@ def test_check_catches_broken_references(release, break_it, message):
     break_it(repo, entry)
     errors = patches.check(manifest, repo)
     assert any(message in e for e in errors), errors
+
+
+# --- the golden fixture: the same input, patch and answers as Realms.Tests.ps1 checks the installer against ---
+
+def _recorder():
+    spec = importlib.util.spec_from_file_location("patch_golden_record", GOLDEN_DIR / "record.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+record = _recorder()
+GOLDEN = json.loads((GOLDEN_DIR / "expected.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("key", sorted(GOLDEN))
+def test_python_rules_give_the_golden_answers(key):
+    # On a failure: if the rule changed on purpose, re-record (record.py) and make Pester pass too.
+    assert record.golden()[key] == GOLDEN[key]
+
+
+def test_golden_patch_replaces_files_in_place():
+    data = (GOLDEN_DIR / "input.zip").read_bytes()
+    patch = patches.read(GOLDEN_DIR / "patches" / "golden")
+    out = zip_contents(patches.apply(data, patch))
+    assert out == {**zip_contents(data), **patch}
+    assert sorted(out) == sorted(zip_contents(data))
+
+
+def test_golden_refused_patch_names_the_missing_file():
+    data = (GOLDEN_DIR / "input.zip").read_bytes()
+    with pytest.raises(patches.PatchError, match="notes/new.txt"):
+        patches.apply(data, patches.read(GOLDEN_DIR / "patches" / "adds-a-file"))
+
+
+def test_golden_entry_is_a_consistent_patched_entry():
+    entry = GOLDEN["entry"]
+    assert entries.matches(entry, (GOLDEN_DIR / "input.zip").read_bytes())
+    assert entry["patch"]["base_sha512"] == entry["hashes"]["sha512"]

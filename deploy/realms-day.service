@@ -1,5 +1,6 @@
-# Starts a new day for the wardrobe's "days played" count (tools/wardrobe.py). Started by realms-day.timer;
-# install with docs/LIVE.md. If the server is down, it retries every 10 minutes until it answers.
+# Starts a new day for the wardrobe's "days played" count (deploy/realms-day.sh, tools/wardrobe.py). Started by
+# realms-day.timer; install with `sudo sh /srv/realms/repo/deploy/realms-day.sh --install` (docs/LIVE.md). If the
+# server is down or the command isn't accepted, it tries again every 10 minutes until it is.
 [Unit]
 Description=Monkey SMP: start a new wardrobe day
 After=docker.service
@@ -8,6 +9,6 @@ After=docker.service
 Type=oneshot
 User=realms
 Group=realms
-ExecStart=/usr/bin/docker compose --project-directory /srv/realms/TheRealms-Server/docker -f /srv/realms/TheRealms-Server/docker/compose.yaml exec -T realms realms rcon "function realms:wardrobe/day"
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-day.sh
 Restart=on-failure
 RestartSec=10min

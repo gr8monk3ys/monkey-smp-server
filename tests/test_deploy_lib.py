@@ -151,11 +151,12 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
 @pytest.mark.parametrize(("script", "sent", "retry"), [
     ("realms-week.sh", "send --docker", "the next hour tries again"),
     ("realms-drops.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
+    ("realms-day.sh", "send --docker", "realms-day.service tries again in 10 minutes"),
 ])
 def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, script, sent, retry):
     tool = tmp_path / "repo" / "tools"
     tool.mkdir(parents=True)
-    for name in ("challenges.py", "drops.py"):
+    for name in ("challenges.py", "drops.py", "wardrobe.py"):
         (tool / name).write_text("")
     run = f'sh "{(DEPLOY / script).as_posix()}"'
     env = {"REPO_DIR": (tmp_path / "repo").as_posix(), "REALMS_DEPLOY_ENV": "/nonexistent"}
@@ -176,6 +177,61 @@ def test_drops_outside_drop_hours_takes_no_lock(sh, tmp_path):
     code, out, calls = sh(f'sh "{(DEPLOY / "realms-drops.sh").as_posix()}"', REPO_DIR=(tmp_path / "repo").as_posix(),
                           REALMS_DEPLOY_ENV="/nonexistent")
     assert code == 0 and out == [] and len(calls) == 1 and " commands " in calls[0]
+
+
+def job(sh, tmp_path, script, *args, **env):
+    """Runs a timed job's script against a made-up checkout; returns (exit code, its logged lines, calls)."""
+    (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
+    for name in ("challenges.py", "drops.py", "wardrobe.py"):
+        (tmp_path / "repo" / "tools" / name).write_text("")
+    code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
+                          REALMS_DEPLOY_ENV="/nonexistent", **env)
+    tag = f"[{script[:-3]}] "
+    return code, [line[len(tag):] for line in out if line.startswith(tag)], calls
+
+
+@needs_dash
+@pytest.mark.parametrize(("script", "first"), [("realms-week.sh", []), ("realms-day.sh", []),
+                                               ("realms-drops.sh", ["function realms:x"])])   # drops' spots
+def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh, tmp_path, script, first):
+    code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function realms:x\n")
+    assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function realms:x"]
+    assert logged[-3].startswith(f"timer: {script[:-3]}.timer ") and logged[-2:] == [
+        "server: running", "check finished: nothing was changed"]
+    assert not any(c.startswith("flock") for c in calls)
+    assert calls[-1].endswith(" running --docker /srv/live/docker")
+
+
+@needs_dash
+def test_check_says_why_there_may_be_no_commands_and_what_a_stopped_server_means(sh, tmp_path):
+    code, logged, _ = job(sh, tmp_path, "realms-drops.sh", "--check", FAKE_RC_python3="1")
+    assert code == 1 and logged == ["ERROR: tools/drops.py commands failed"]
+    _, logged, _ = job(sh, tmp_path, "realms-drops.sh", "--check")
+    assert logged[:2] == ["commands for now:", "  none (outside drop hours, or no spot)"]
+    _, logged, _ = job(sh, tmp_path, "realms-day.sh", "--check", FAKE_OUT_python3=r"function realms:x\n")
+    assert logged[-2] == "server: running"
+
+
+@needs_dash
+@pytest.mark.parametrize("script", ["realms-week.sh", "realms-drops.sh", "realms-day.sh"])
+def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp_path, script):
+    code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" --now')
+    assert code == 2 and out == [f"usage: sh {(DEPLOY / script).as_posix()} [--check | --install]"] and calls == []
+    code, logged, _ = job(sh, tmp_path, script, "--install")
+    assert code == 1 and logged == ["ERROR: run as root: it installs systemd units"]
+    code, logged, _ = job(sh, tmp_path, script, "--install", FAKE_ID="0")
+    assert code == 1 and logged[-1].endswith(f"/repo/deploy/{script[:-3]}.service is missing: is the release with "
+                                             f"{JOB_FOR[script]} deployed?")
+
+
+JOB_FOR = {"realms-week.sh": "the weekly challenges", "realms-drops.sh": "supply drops",
+           "realms-day.sh": "the wardrobe's day job"}
+
+
+def test_the_day_runs_its_job_and_systemd_retries_it():
+    unit = (DEPLOY / "realms-day.service").read_text()
+    assert "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-day.sh\n" in unit
+    assert "Restart=on-failure\nRestartSec=10min\n" in unit and "docker compose" not in unit
 
 
 LIST = r"There are 2 of a max of 20 players online: a, b\n"

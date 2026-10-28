@@ -832,7 +832,8 @@ DAY = [f"function {NS}:wardrobe/day"]
 def send_day(rcon, log=print) -> int:
     """Starts a new day. Unlike the week, a server that isn't running is a failure: a missed day is never caught
     up, so realms-day.service tries again every 10 minutes until the server answers."""
-    return server.send_if_running(rcon, DAY, log, required=True)
+    return server.send_if_running(rcon, DAY, log, required=True,
+                                  skipped="server not running: the day isn't started yet (it tries again)")
 
 
 def main(argv=None) -> int:

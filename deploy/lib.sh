@@ -1,5 +1,5 @@
 # What every deploy script shares: settings, the log, the server's container, warning players and waiting for a
-# restart, Discord posts, the deploy lock and the timers.
+# restart, Discord posts, the deploy lock, the timers and the timed jobs.
 # Sourced, never run: after `set -eu`, a script sets LOG_NAME (the tag on its log lines) and
 #
 #   . "$(dirname -- "$0")/lib.sh"
@@ -110,7 +110,7 @@ discord() {
 # "deploy_lock SECONDS [FILE]": waits up to SECONDS (0: not at all) for the deploy lock, FILE (default LOCK_FILE,
 # else /tmp/realms-deploy.lock), and holds it on fd 9 until the script exits; returns 1 only when it wasn't free in
 # time. A lock file it can't create or open is a die, so a caller's "busy, skipping" never hides it.
-# Deploys, the daily restart, off-site backups, the standings and the week and drops timers take it, so none of
+# Deploys, the daily restart, off-site backups, the standings and the timed jobs take it, so none of
 # them runs while another restarts or saves the server. Root opens it read-only, after creating it as the live
 # folder's owner (SERVICE_USER when set; root itself before there is a live folder): root may not open another
 # user's file in /tmp for writing (fs.protected_regular), and flock works on any open file. Root creates it with
@@ -172,4 +172,76 @@ install_timer() {
         log "running: $lib_timer"
     fi
     systemctl list-timers --all --no-pager "$lib_timer" 2>&1 | while IFS= read -r lib_l; do log "  $lib_l"; done
+}
+
+# ---------------------------------------------------------------- timed jobs (GLOSSARY.md, "Timed job")
+
+# "timed_job [--check | --install]": a timed job's whole script, run as its last line. The job is named by
+# LOG_NAME: its units are LOG_NAME.service and LOG_NAME.timer. Before it, the script sets
+#   JOB_TOOL    its tool in tools/ (challenges.py): `commands [WORLD]` prints the RCON commands for now, one per
+#               line, and `send [WORLD] --docker DIR` sends them through tools/rcon.py, exiting non-zero when one
+#               wasn't accepted (or, for a job that must run, when the server isn't running)
+#   JOB_FOR     what the release brought it, for "is the release with JOB_FOR deployed?"
+#   JOB_RETRY   when it runs again after a failure, for the errors ("the next hour tries again")
+#   JOB_DOWN    what a stopped server means, for --check's "server: not running (JOB_DOWN)"
+# and optionally JOB_WORLD=1 (the tool takes the saved world first), JOB_SHOW (a tool subcommand whose output
+# --check logs first: drops' spots) and JOB_NONE (why there may be no commands, for --check).
+#
+# With no option it sends: no commands means nothing is logged and no lock is taken; otherwise it waits up to 30
+# minutes for the deploy lock, so it never lands while a deploy, the daily restart or an off-site backup has the
+# server stopped or not saving, and logs each line the tool prints. --check prints the commands for now, the
+# timer's state and whether the server is running, and changes nothing. --install (root) copies the units from
+# the deployed checkout to /etc/systemd/system (only those that changed) and starts the timer.
+#
+# It reads only REPO_DIR, LIVE_DIR and LOCK_FILE from /etc/realms-deploy.env (or REALMS_DEPLOY_ENV), without
+# sourcing it, so the webhooks are never read. No secret is read, printed or asked for.
+timed_job() {
+    case "${1:-}" in
+        '') lib_mode=send ;;
+        --check) lib_mode=check ;;
+        --install) lib_mode=install ;;
+        *) echo "usage: sh $0 [--check | --install]" >&2; return 2 ;;
+    esac
+    ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
+    REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
+    LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
+    LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
+    lib_units="$LOG_NAME.service $LOG_NAME.timer"
+    if [ "$lib_mode" = install ]; then
+        [ "$(id -u)" = 0 ] || die 'run as root: it installs systemd units'
+        for lib_u in $lib_units; do
+            [ -r "$REPO_DIR/deploy/$lib_u" ] || die "$REPO_DIR/deploy/$lib_u is missing: is the release with $JOB_FOR deployed?"
+        done
+        install_timer "$LOG_NAME.timer" $lib_units
+        return 0
+    fi
+
+    lib_tool=$REPO_DIR/tools/$JOB_TOOL
+    command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+    [ -r "$lib_tool" ] || die "$lib_tool is missing: is the release with $JOB_FOR deployed?"
+    # The tool's arguments before its options: the world, for a job that reads it.
+    if [ -n "${JOB_WORLD:-}" ]; then set -- "$LIVE_DIR/server/world"; else set --; fi
+    if [ "$lib_mode" = check ] && [ -n "${JOB_SHOW:-}" ]; then
+        python3 -B "$lib_tool" "$JOB_SHOW" "$@" 2>&1 | while IFS= read -r lib_l; do log "$lib_l"; done
+    fi
+    lib_out=$(python3 -B "$lib_tool" commands "$@") || die "tools/$JOB_TOOL commands failed"
+
+    if [ "$lib_mode" = send ]; then
+        [ -n "$lib_out" ] || return 0
+        deploy_lock 1800 || die "the deploy lock was taken for 30 minutes ($JOB_RETRY)"
+        log_each python3 -B -u "$lib_tool" send "$@" --docker "$LIVE_DIR/docker" ||
+            die "not every command went through ($JOB_RETRY)"
+        return 0
+    fi
+    log 'commands for now:'
+    [ -n "$lib_out" ] || log "  none${JOB_NONE:+ ($JOB_NONE)}"
+    printf '%s\n' "$lib_out" | while IFS= read -r lib_l; do [ -z "$lib_l" ] || log "  $lib_l"; done
+    timer_state "$LOG_NAME.timer" $lib_units
+    python3 -B "$REPO_DIR/tools/rcon.py" running --docker "$LIVE_DIR/docker" && lib_up=0 || lib_up=$?
+    case $lib_up in
+        0) log 'server: running' ;;
+        1) log "server: not running ($JOB_DOWN)" ;;
+        *) log "server: can't tell (docker failed; see above)" ;;
+    esac
+    log 'check finished: nothing was changed'
 }

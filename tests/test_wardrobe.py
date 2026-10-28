@@ -239,6 +239,7 @@ def test_the_day_is_one_command_and_a_stopped_server_fails_it(capsys):
         wardrobe.datapack_files())
     log = []
     assert wardrobe.send_day(rcon.Recorder(running=False), log.append) == 1   # realms-day.service retries
+    assert log == ["server not running: the day isn't started yet (it tries again)"]
     server = rcon.Recorder()
     assert wardrobe.send_day(server, log.append) == 0 and server.sent == wardrobe.DAY
     refusing = rcon.Recorder({"function realms:wardrobe/day": "Unknown function realms:wardrobe/day"})

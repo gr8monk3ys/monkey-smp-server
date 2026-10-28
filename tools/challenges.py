@@ -42,7 +42,6 @@ import datetime as dt
 import json
 import math
 import sys
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import rcon as server
@@ -436,11 +435,6 @@ def visit_advancement(c: dict, group: str, structures: list[str]) -> dict:
 # ---------------------------------------------------------------- the command line
 
 
-def parse_time(value: str) -> dt.datetime:
-    when = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return when if when.tzinfo else when.replace(tzinfo=UTC)
-
-
 def schedule(first: int, weeks: int) -> str:
     out = []
     for week in range(first, first + weeks):
@@ -456,21 +450,12 @@ def main(argv=None) -> int:
     s = sub.add_parser("schedule", help="which challenges run in the coming weeks")
     s.add_argument("--from", dest="first", type=int, help="the first week to show (default: this week)")
     s.add_argument("--weeks", type=int, default=12)
-    for name, about in (("commands", "the RCON commands for now (changes nothing)"),
-                        ("send", "sends them to the running server (deploy/realms-week.sh, hourly)")):
-        c = sub.add_parser(name, help=about)
-        c.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
-        if name == "send":
-            c.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+    server.job_subcommands(sub, "sends them to the running server (deploy/realms-week.sh, hourly)")
     args = ap.parse_args(argv)
-    now = dt.datetime.now(UTC)
     if args.command == "schedule":
-        print(schedule(week_at(now) if args.first is None else args.first, args.weeks))
+        print(schedule(week_at(dt.datetime.now(UTC)) if args.first is None else args.first, args.weeks))
         return 0
-    if args.command == "send":
-        return send(server.Docker(args.docker), args.at or now)
-    print("\n".join(commands(args.at or now)))
-    return 0
+    return server.run_job(args, commands, send)
 
 
 if __name__ == "__main__":

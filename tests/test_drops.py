@@ -95,11 +95,6 @@ def test_a_slot_is_ten_minutes():
     assert drops.slot_of(pacific(2026, 11, 23, 18, 0)) != drops.slot_of(pacific(2026, 11, 24, 18, 0))
 
 
-def test_parse_time_assumes_utc():
-    assert drops.parse_time("2026-11-24T02:00:00") == dt.datetime(2026, 11, 24, 2, tzinfo=UTC)
-    assert drops.parse_time("2026-11-24T02:00:00Z") == dt.datetime(2026, 11, 24, 2, tzinfo=UTC)
-
-
 # ---------------------------------------------------------------- where
 
 

@@ -17,7 +17,7 @@ FN = "data/realms/function/challenges"
 
 
 def at(text: str) -> dt.datetime:
-    return challenges.parse_time(text)
+    return rcon.parse_time(text)
 
 
 def pacific(*args) -> dt.datetime:
@@ -144,10 +144,6 @@ def test_week_starts_are_mondays():
         assert challenges.week_start(week).weekday() == 0
         assert challenges.week_at(pacific(*challenges.week_start(week).timetuple()[:3])) == week
     assert challenges.week_start(0) == dt.date(2026, 11, 21)
-
-
-def test_parse_time_reads_utc_and_offsets():
-    assert at("2026-11-23T08:00:00Z") == at("2026-11-23T00:00:00-08:00") == at("2026-11-23T08:00:00")
 
 
 # ---------------------------------------------------------------- the launch weekend

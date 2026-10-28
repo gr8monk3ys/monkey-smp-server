@@ -17,13 +17,19 @@ over several commands) stops at its first failure too, in tools/standings.py's u
 
     python3 tools/rcon.py running --docker DIR   exit 0 when the server is running, 1 when not, 2 when docker
                                                  failed (the timers' --check)
+
+A timed job's tool (tools/challenges.py, drops.py, wardrobe.py; deploy/lib.sh's timed_job runs them) has the
+same two subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
+(changes nothing), and `send --docker DIR`, which sends them and exits 1 when one wasn't accepted.
 """
 import argparse
+import datetime as dt
 import subprocess
 import sys
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
+UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -108,9 +114,10 @@ def send(rcon, commands: Iterable[str], log: Callable[[str], None] = print,
 
 
 def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = print, skipped: str = "",
-                    **how) -> int:
+                    required: bool = False, **how) -> int:
     """The timers' exit code: 0 when every command went through or the server isn't running (logging
-    `skipped`), 1 when one failed or docker did."""
+    `skipped`), 1 when one failed or docker did. With required, a server that isn't running is 1 too, for a
+    job that systemd tries again until the server answers (the day)."""
     try:
         up = rcon.running()
     except RconError as e:
@@ -118,8 +125,43 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
         return 1
     if not up:
         log(skipped or "server not running: nothing sent")
-        return 0
+        return 1 if required else 0
     return 0 if send(rcon, commands, log, **how) else 1
+
+
+# ---------------------------------------------------------------- a timed job's command line
+
+
+def parse_time(value: str) -> dt.datetime:
+    """--at's time: ISO 8601, UTC when it has no offset."""
+    when = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return when if when.tzinfo else when.replace(tzinfo=UTC)
+
+
+def job_subcommands(sub, send_about: str, world: bool = False, at: bool = True,
+                    others: Iterable[tuple[str, str]] = ()) -> None:
+    """Adds a timed job's `commands` and `send` to the subparsers `sub`, after `others` (name, help), which take
+    the same arguments: the world folder first when `world`, and --at TIME when `at`. send also takes --docker."""
+    for name, about in (*others, ("commands", "the RCON commands for now (changes nothing)"), ("send", send_about)):
+        p = sub.add_parser(name, help=about)
+        if world:
+            p.add_argument("world", type=Path, help="the world folder (server/world)")
+        if at:
+            p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
+        if name == "send":
+            p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+
+
+def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int]) -> int:
+    """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none) or `send`
+    (send(the server, when)), for --at or now."""
+    when = getattr(args, "at", None) or dt.datetime.now(UTC)
+    if args.command == "send":
+        return send(Docker(args.docker), when)
+    out = commands(when)
+    if out:
+        print("\n".join(out))
+    return 0
 
 
 def main(argv=None) -> int:

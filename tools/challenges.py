@@ -52,7 +52,6 @@ FN = f"data/{NS}/function/challenges"
 LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules.py reads it)
 ADVANCEMENT = f"data/{NS}/advancement/challenges"
 
-UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 FOUNDER_MINUTES = 10   # online this long in the launch weekend earns Founder's Circlet
 # What test play before Season I's launch may have earned; the first realms:rules/launch clears it.
 TEST_PLAY = ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime")
@@ -437,7 +436,8 @@ def main(argv=None) -> int:
     server.job_subcommands(sub, "sends them to the running server (deploy/realms-week.sh, hourly)")
     args = ap.parse_args(argv)
     if args.command == "schedule":
-        print(schedule(season_calendar.week_at(dt.datetime.now(UTC)) if args.first is None else args.first, args.weeks))
+        first = season_calendar.week_at(dt.datetime.now(server.UTC)) if args.first is None else args.first
+        print(schedule(first, args.weeks))
         return 0
     return server.run_job(args, commands, send)
 

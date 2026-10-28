@@ -56,7 +56,6 @@ LOOT_TABLE = f"{NS}:drops/supply"
 BAR = f"{NS}:drop"
 OBJ = "dr"
 
-UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
 SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
 

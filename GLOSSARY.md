@@ -112,6 +112,10 @@ _Avoid_: setup, sync, deploy
 A file an install placed in the server folder and may later replace or remove; every other file belongs to the host.
 _Avoid_: installed file, tracked file
 
+**Saved world**:
+What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/world.py` reads it.
+_Avoid_: live world, world state, save (alone)
+
 **Snapshot**:
 Capturing what a running server or player instance actually uses back into the manifest or client pack.
 _Avoid_: export, import, scan

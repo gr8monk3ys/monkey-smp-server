@@ -23,5 +23,5 @@ LOG_NAME=realms-day
 JOB_TOOL=wardrobe.py
 JOB_FOR="the wardrobe's day job"
 JOB_RETRY='realms-day.service tries again in 10 minutes'
-JOB_DOWN='a run would fail, and realms-day.service try again every 10 minutes until it answers'
+JOB_DOWN='a run would fail, and realms-day.service would try again every 10 minutes until it answers'
 timed_job "$@"

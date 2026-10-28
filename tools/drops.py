@@ -4,7 +4,8 @@
     python tools/drops.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-drops.sh)
     python tools/datapacks.py                          regenerates the realms-drops data pack (with the others)
 
-When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (NIGHTS, HOURS, FIRST_NIGHT).
+When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (HOURS here; the nights are
+tools/season_calendar.py's drop_night).
 deploy/realms-drops.sh sends `commands` every 10 minutes; outside those hours there are none. The pack starts
 the night's drop the first time it is asked while MIN_PLAYERS or more are online in survival (staff change it
 in game: `function realms:drops/min {players:N}`), no drop ran that night, and no event is on (the arena, a
@@ -29,8 +30,8 @@ is left in them; an emptied chest goes at once, and the drop ends when every che
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs it straight
-from the checkout.
+Stdlib only plus tools/map_border.py, tools/saved_world.py, tools/nbt.py and tools/season_calendar.py, and
+Python 3.10 or newer, so the VPS runs it straight from the checkout.
 """
 import argparse
 import datetime as dt
@@ -39,11 +40,11 @@ import random
 import re
 import sys
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import map_border
-import nbt
 import rcon as server
+import saved_world
+import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -56,10 +57,7 @@ BAR = f"{NS}:drop"
 OBJ = "dr"
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-PACIFIC = ZoneInfo("America/Los_Angeles")
-NIGHTS = (0, 1, 2, 3)       # Monday to Thursday (Saturday is event night)
-HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific
-FIRST_NIGHT = dt.date(2026, 11, 23)   # Monday of Season I's week 1 (tools/challenges.py WEEK_ONE)
+HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
 SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
 
 MIN_PLAYERS = 4             # survival players online for the weeknight drop, and for each further chest
@@ -75,8 +73,6 @@ CLAIM_GAP = 6               # chunks between a drop's chunk and the nearest clai
 SPOT_GAP = 8                # chunks between two spots offered the same night
 SPOTS = 6                   # spots offered each time; the pack tries them in order
 DRAWS = 5000                # random chunks looked at to find them
-OVERWORLD = "minecraft:overworld"
-OPAC_CLAIMS = Path("data") / "openpartiesandclaims" / "player-claims"
 
 # Chest offsets from the drop's middle (x, z), one per chest. Never side by side, so they never join.
 CHEST_AT = ((0, 0), (3, 2), (-3, 2))
@@ -144,15 +140,15 @@ HELP = [
 
 def night_of(when: dt.datetime) -> int | None:
     """The drop night `when` falls in, as YYYYMMDD (its Pacific date), or None outside drop hours."""
-    local = when.astimezone(PACIFIC)
-    if local.date() < FIRST_NIGHT or local.weekday() not in NIGHTS or not HOURS[0] <= local.hour < HOURS[1]:
+    local = when.astimezone(season_calendar.PACIFIC)
+    if not season_calendar.drop_night(local.date()) or not HOURS[0] <= local.hour < HOURS[1]:
         return None
     return int(local.strftime("%Y%m%d"))
 
 
 def slot_of(when: dt.datetime) -> str:
     """The 10-minute slot, which seeds the draw: the same slot draws the same spots."""
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     return f"{local:%Y%m%d-%H}{local.minute // SLOT_MINUTES}"
 
 
@@ -160,28 +156,21 @@ def slot_of(when: dt.datetime) -> str:
 
 
 def claimed_chunks(world: Path) -> set[tuple[int, int]]:
-    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server).
-    Open Parties and Claims saves a player's claims as dimensions > claims > positions: [{x, z}] (chunks)."""
-    out: set[tuple[int, int]] = set()
-    folder = world / OPAC_CLAIMS
-    for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        dim = nbt.read(path).get("dimensions", {}).get(OVERWORLD, {})
-        for claim in dim.get("claims", []):
-            out.update((int(p["x"]), int(p["z"])) for p in claim.get("positions", []))
-    return out
+    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server)."""
+    return {chunk for chunks in saved_world.claims(world, saved_world.OVERWORLD).values() for chunk in chunks}
 
 
 def border_now(world: Path) -> map_border.Border | None:
     """The Overworld border as it is now (a growing border counts at its current size, a shrinking one at its
     target), or None when the world has none saved."""
-    path = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
-    if not path.is_file():
+    found = saved_world.border(world, saved_world.OVERWORLD)
+    if found is None:
         return None
-    data = nbt.read(path)["data"]
-    size = min(data["size"], data.get("lerp_target", data["size"]))
+    # The smaller of now and where it is heading: a drop must land inside the border whichever way it moves.
+    size = min(found.size, found.target)
     if size >= map_border.NO_BORDER:
         return None
-    return map_border.Border(data["center_x"], data["center_z"], size)
+    return map_border.Border(found.center_x, found.center_z, size)
 
 
 def ring(border: map_border.Border) -> tuple[float, float]:
@@ -329,7 +318,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/here.mcfunction"] = lines(
         "# Staff: a drop where you stand (in the Overworld: Nether or End coordinates would put it elsewhere).",
-        f"execute unless dimension {OVERWORLD} run " + refuse(
+        f"execute unless dimension {saved_world.OVERWORLD} run " + refuse(
             f"Supply drops land in the Overworld: stand there, or use /function {NS}:drops/start {{x:0,z:0}}."),
         f"execute store result storage {STORE} here.x int 1 run data get entity @s Pos[0]",
         f"execute store result storage {STORE} here.z int 1 run data get entity @s Pos[2]",
@@ -354,8 +343,9 @@ def datapack_files() -> dict[str, str]:
     )
     # forceload works in the dimension it runs in, and staff may start or stop a drop from the Nether or the
     # End: pinned to the Overworld, where the drop is, so the chunks loaded are the ones released.
-    f[f"{FN}/hold.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload add $(x0) $(z0) $(x1) $(z1)")
-    f[f"{FN}/release.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload remove $(x0) $(z0) $(x1) $(z1)")
+    overworld = f"$execute in {saved_world.OVERWORLD} run"
+    f[f"{FN}/hold.mcfunction"] = lines(f"{overworld} forceload add $(x0) $(z0) $(x1) $(z1)")
+    f[f"{FN}/release.mcfunction"] = lines(f"{overworld} forceload remove $(x0) $(z0) $(x1) $(z1)")
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #state {OBJ} matches 1 run return 0",
         f"function {NS}:drops/check_at with storage {STORE} spot",
@@ -577,7 +567,7 @@ def packs(repo: Repo) -> dict[Path, dict[str, str]]:
 
 def show_spots(world: Path, when: dt.datetime) -> int:
     night = night_of(when)
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     print(f"{local:%a %d %b %Y %H:%M} Pacific: " + (f"drop night {night}" if night else
           "outside drop hours (Monday to Thursday, 6 to 10 PM Pacific, from Season I week 1)"))
     border = border_now(world)

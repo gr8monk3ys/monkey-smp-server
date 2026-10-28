@@ -101,7 +101,7 @@ def test_a_busy_week(season):
         "**Biggest mover:** Blue Herons, up 1 place to 2nd.",
         "**Top fighter:** RiaFake (Blue Herons), 3 PvP kills.",
         "**Bounties claimed:** 1, by RiaFake.",
-        "**Land:** 5 new chunks claimed, the most by Blue Herons (+5).",
+        "**Land:** 5 chunks claimed, the most by Blue Herons (+5).",
         "**Challenges:** 3 done, by 2 players.",
         "**Event turnout:** 2 players came.",
         "**Next Saturday:** The border breaks, from 2500 to 4000 blocks, Saturday 5 December, 6 PM Pacific "
@@ -125,6 +125,7 @@ def test_a_quiet_week(tmp_path):
 def test_no_factions_yet(tmp_path):
     world = FakeWorld(tmp_path / "server" / "world").scores(LAUNCHED).path
     state, discord = tmp_path / "state", FakeDiscord()
+    standings.start(world, state, LAUNCH_SUNDAY)
     assert standings.close(world, state, rcon.Recorder(), WEEK_ONE, WEBHOOK, discord) == 0
     [post] = discord.posts
     assert "no factions yet" in post and recap.QUIET in post and len(post) <= 2000
@@ -259,16 +260,110 @@ def test_next_saturday_after_the_last_week():
     assert recap.next_saturday(week) == ["**Next:** Season II is planned for Saturday 20 February."]
 
 
-def test_gained_is_the_standings_rule():
-    for now, then in ((5, 3), (3, 5), (-1, 0), (0, 0)):
-        assert recap.gained(now, then) == standings.gained(now, then)
-
-
 def test_ordinals_and_lists():
     assert [recap.ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101)] == \
         ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]
     assert recap.listed(["A"]) == "A" and recap.listed(["A", "B", "C"]) == "A, B and C"
     assert recap.listed([str(i) for i in range(8)]) == "0, 1, 2, 3, 4 and 3 more"
+
+
+# ---------------------------------------------------------------- the review of #66
+
+
+def empty_world(**claims):
+    return standings.World([], claims, {}, {})
+
+
+def test_a_week_begun_in_test_play_before_the_recap_is_still_test_play(tmp_path):
+    # week.json from before the recap (no "recap" baseline), started before the launch: its kills may be test
+    # play's, so they aren't told, and the post opens the season.
+    state, discord = tmp_path / "state", FakeDiscord()
+    world = make_world(tmp_path, LAUNCHED, ("st.kills", "AlexFake", 4))
+    state.mkdir()
+    (state / "week.json").write_text(json.dumps({"start": BEFORE.isoformat(), "kills": {}, "bounty": {}}))
+    assert standings.close(world, state, rcon.Recorder(), LAUNCH_SUNDAY, WEBHOOK, discord) == 0
+    [post] = discord.posts
+    assert recap.LAUNCH in post and "Top fighter" not in post and recap.QUIET not in post
+
+
+def test_an_old_closed_week_from_test_play_is_no_last_week(tmp_path):
+    state = tmp_path / "state"
+    weeks = state / "weeks"
+    weeks.mkdir(parents=True)
+    old = {"start": None, "end": BEFORE.isoformat(), "rows": []}   # closed by the old code: no "launched"
+    (weeks / "2026-11-15.json").write_text(json.dumps(old))
+    assert standings.last_launched(state) is None
+    (weeks / "2026-11-22.json").write_text(json.dumps({**old, "end": LAUNCH_SUNDAY.isoformat()}))
+    assert standings.last_launched(state)["end"] == LAUNCH_SUNDAY.isoformat()
+    (weeks / "2026-11-29.json").write_text(json.dumps({**old, "end": WEEK_ONE.isoformat(), "launched": False}))
+    assert standings.last_launched(state) is None
+
+
+def test_a_quiet_week_is_only_one_the_recap_could_count(monkeypatch):
+    def broken(week):
+        raise KeyError("oops")
+    week = recap.Week([], empty_world(), {"start": LAUNCH_SUNDAY.isoformat()}, None, WEEK_ONE)
+    for sections, quiet in (([lambda w: [], lambda w: []], True), ([lambda w: [], lambda w: None], False),
+                            ([lambda w: [], broken], False)):
+        monkeypatch.setattr(recap, "SECTIONS", sections)
+        assert ([recap.QUIET] in recap.blocks(week, lambda msg: None)) is quiet
+    # A week without a baseline can't count land, challenges or turnout: no "quiet week" for it.
+    monkeypatch.undo()
+    assert [recap.QUIET] not in recap.blocks(week, lambda msg: None)
+
+
+def test_next_saturday_and_the_launch_check_cannot_stop_the_close(monkeypatch):
+    def broken(week):
+        raise ValueError("no calendar")
+    monkeypatch.setattr(recap, "next_saturday", broken)
+    logged = []
+    week = recap.Week([], empty_world(), {"start": "not a date"}, None, WEEK_ONE)
+    assert recap.blocks(week, logged.append) == []
+    assert any("launch check failed" in m for m in logged) and any("next Saturday failed" in m for m in logged)
+
+
+def test_the_biggest_mover_is_matched_by_party_id():
+    # Blue renamed itself to what Red was called, and Red took a new name: matched by id, Blue climbed 2.
+    previous = {"rows": [{"id": "p-red", "name": "Monkeys", "rank": 1}, {"id": "p-x", "name": "X", "rank": 2},
+                         {"id": "p-blue", "name": "Herons", "rank": 3}]}
+    rows = [{"id": "p-blue", "name": "Monkeys", "rank": 1}, {"id": "p-x", "name": "X", "rank": 2},
+            {"id": "p-red", "name": "Herons", "rank": 3}]
+    week = recap.Week(rows, empty_world(), {}, previous, WEEK_ONE)
+    assert recap.mover(week) == ["**Biggest mover:** Monkeys, up 2 places to 1st."]
+    # A file from before the ids matches by name, and only a name that was unique.
+    week.previous = {"rows": [{"name": "Herons", "rank": 3}, {"name": "X", "rank": 2}, {"name": "X", "rank": 1}]}
+    week.rows = [{"id": "p-blue", "name": "Herons", "rank": 1}, {"id": "p-x", "name": "X", "rank": 2}]
+    assert recap.mover(week) == ["**Biggest mover:** Herons, up 2 places to 1st."]
+
+
+def test_land_counts_chunks_claimed_not_the_net_change(tmp_path):
+    then = {PLAYERS["AlexFake"]: 4, PLAYERS["RiaFake"]: 1}
+    world = standings.read_world(make_world(tmp_path, LAUNCHED, land={"AlexFake": 1, "RiaFake": 4}))
+    week = recap.Week([], world, {"recap": {"launched": True, "claims": then}}, None, WEEK_ONE)
+    assert recap.land(week) == ["**Land:** 3 chunks claimed, the most by Blue Herons (+3)."]
+
+
+def test_a_late_close_names_the_week_that_closed():
+    late = dt.datetime(2026, 11, 30, 1, 30, tzinfo=PACIFIC)   # week 1's close, run after Monday 12 AM
+    week = recap.Week([], empty_world(), {"start": LAUNCH_SUNDAY.isoformat()}, None, late)
+    assert week.number == 1 and recap.next_saturday(week)[0].endswith(
+        "Saturday 5 December, 6 PM Pacific (9 PM Eastern).")
+    closed = {"start": LAUNCH_SUNDAY.isoformat(), "end": late.isoformat()}
+    assert recap.heading(closed) == "**Monkey SMP Weekly**, week 1: Sun 22 Nov to Mon 30 Nov"
+    assert recap.heading({"start": None, "end": late.isoformat()}).startswith("**Monkey SMP Weekly**, week 1:")
+
+
+def test_long_lists_drop_whole_names():
+    rows = [{"name": "[" * 40, "members": [f"Player{i}_" + "*" * 20]} for i in range(8)]
+    world = standings.World([], {}, {"st.kills": {f"Player{i}_" + "*" * 20: 2 for i in range(8)}}, {})
+    week = recap.Week(rows, world, {"start": LAUNCH_SUNDAY.isoformat(), "kills": {}}, None, WEEK_ONE)
+    [line] = recap.fighter(week)
+    assert len(line) <= recap.LINE_LIMIT and line.endswith(" more, 2 PvP kills each.")
+    assert "\\[" in line and "Player7" not in line
+    # a line cut short never ends on half an escape
+    for n in range(recap.LINE_LIMIT - 5, recap.LINE_LIMIT + 5):
+        cut = recap.clip("x" * n + "\\*" * 50)
+        assert len(cut) <= recap.LINE_LIMIT and (len(cut[:-1]) - len(cut[:-1].rstrip("\\"))) % 2 == 0
 
 
 # ---------------------------------------------------------------- preview

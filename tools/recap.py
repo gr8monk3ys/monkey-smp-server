@@ -4,33 +4,38 @@
     recap.launched(world)        whether the season has launched (#launched rw.day, set by realms:rules/launch)
     recap.baseline(world)        what a new week starts from, for the sections (kept in STATE/week.json)
     recap.blocks(week)           every section's lines for a closing Week, worked out once, at the close
-    recap.message(head, table, blocks, footer)
+    recap.message(head, table, blocks, footer, limit)
                                  the Discord post, kept under Discord's 2000 characters
 
 tools/standings.py close is the only caller: it works the sections out when the week closes and keeps their
 lines in the closed week's file (STATE/weeks/<date>.json, "recap"), so a retry posts the same words even
 though the world has moved on. Before the launch it keeps no recap and posts nothing. The week the launch
-falls in began in test play (Week.test_play): realms:rules/launch clears test play's challenges, so those
-count from the launch, but not its kills, bounties, claims or events, so those sections wait a week.
+falls in began in test play (Week.test_play: it began before season_calendar.LAUNCH): realms:rules/launch
+clears test play's challenges, so those count from the launch, but not its kills, bounties, claims or events,
+so those sections wait a week.
 
-A section is a function in SECTIONS that takes the closing Week and returns its lines, or [] when it has
-nothing to say. To add one (server firsts, wars, outposts):
+A section is a function in SECTIONS that takes the closing Week and returns its lines: [] when nothing
+happened, None when it can't tell (no starting point for it, say). "A quiet week" shows only when every
+section returned [], so it never claims a quiet week the recap couldn't count. To add one (server firsts,
+wars, outposts):
 
-    def firsts(week: Week) -> list[str]:
+    def firsts(week: Week) -> list[str] | None:
         ...
         return [f"**Server firsts:** {md(name)} ..."]
 
 and put it in SECTIONS where it should show. The order there is the order in the post, and the order lines
 are dropped in when the post is too long (the last first). A section reads what it needs from the Week: the
-final rows, the saved world at the close (`week.world`, `week.folder` for another tool's reader), the week's
-starting point (`week.start`) and last week's closed file (`week.previous`). One that needs a starting point
-for a scoreboard score adds the objective to COUNTERS; for anything else, to baseline(). A section that
-fails is logged and left out: it never stops the standings.
+final rows (with each faction's party id), the saved world at the close (`week.world`, `week.folder` for
+another tool's reader), the week's starting point (`week.start`) and last week's closed file (`week.previous`).
+One that needs a starting point for a scoreboard score adds the objective to COUNTERS; for anything else, to
+baseline(). A section that fails is logged and left out: it never stops the standings. A list of names goes
+through fit(), which shows fewer names ("and 3 more") rather than cutting a line short.
 
 Names come from players (party names, player names), so every name goes through md() before it is written
 outside the table's code block, and the post pings nobody (standings.post_discord).
 
-Stdlib only, no imports from standings.py (it imports this), and Python 3.10 or newer.
+The week's counters (KILLS, BOUNTY, gained, folded) live here and standings.py imports them, so both count a
+week the same way. Stdlib only, no imports from standings.py (it imports this), and Python 3.10 or newer.
 """
 import datetime as dt
 import sys
@@ -47,13 +52,27 @@ TABLE_ROWS = (10, 8, 5, 3)   # factions in the post's table, fewer when the post
 LINE_LIMIT = 300             # characters of one section line, at most
 NAME_LIMIT = 32              # characters of one name in a section line
 LISTED = 5                   # names in a list (bounty hunters) before "and N more"
-KILLS, BOUNTY = "st.kills", "st.bounty"   # standings.py's, with their starting points in week.json
+KILLS, BOUNTY = "st.kills", "st.bounty"   # the standings' kills and bounties, with their starting points in week.json
 CHALLENGES, SEEN = "rw.challenges", "ev.seen"
 COUNTERS = (CHALLENGES,)           # scores whose starting point baseline() keeps
 EVENT = "#event"                    # events begun so far, in ev.state (realms:events/begin)
 
 
-# ---------------------------------------------------------------- the week
+# ---------------------------------------------------------------- counting a week
+
+
+def gained(now: int, then: int) -> int:
+    """What a counter gained since the week began. One below its starting point was restarted (a new season's
+    world, or staff reset it), so all of it is new."""
+    return max(0, now - then if now >= then else now)
+
+
+def folded(scores: dict[str, int]) -> dict[str, int]:
+    """Scores by lower-case name: staff type a bounty hunter's name by hand, and the scoreboard keeps it as typed."""
+    out: dict[str, int] = {}
+    for name, value in scores.items():
+        out[name.lower()] = out.get(name.lower(), 0) + value
+    return out
 
 
 def launched(world) -> bool:
@@ -70,31 +89,42 @@ def baseline(world) -> dict:
             "claims": dict(sorted(world.claims.items()))}
 
 
-def gained(now: int, then: int) -> int:
-    """standings.gained: one below its starting point was restarted (a new world, a reset), so all of it is new."""
-    return max(0, now - then if now >= then else now)
+def season_week(start: str | None, end: dt.datetime) -> int:
+    """The season week a closed week was (0 is the launch weekend), from its middle: a close that runs late,
+    past Monday 12 AM Pacific, still names the week it closed. Without a start, from the day before the end."""
+    begun = dt.datetime.fromisoformat(start) if start else end - dt.timedelta(days=2)
+    return season_calendar.week_at(begun + (end - begun) / 2)
+
+
+# ---------------------------------------------------------------- the week
 
 
 @dataclass
 class Week:
-    rows: list[dict]           # the final table, best first: name, members, cup, land, strength, kills, bounties, ...
+    rows: list[dict]           # the final table, best first: id (the party's), name, members, cup, land, kills, ...
     world: object              # standings.World at the close: parties, claims (UUID -> chunks), scores
-    start: dict                # the week's starting point (STATE/week.json): kills, bounty, and "recap" (baseline())
+    start: dict                # the week's starting point (STATE/week.json): start, kills, bounty, "recap" (baseline())
     previous: dict | None      # last week's closed file, if it closed after the launch
     end: dt.datetime           # when the week closed
     folder: Path | None = None  # the world folder, for sections that read it with another tool
+    assume_launched: bool = False   # standings preview: read the week as if it began after the launch
 
     @property
     def test_play(self) -> bool:
-        """Whether the week began before the launch (usually the launch weekend's): the launch clears test play's
-        challenges, but not its kills, bounties, claims or events, so those sections say nothing this week."""
+        """Whether the week began before the launch (the launch weekend's week): the launch clears test play's
+        challenges, but not its kills, bounties, claims or events, so those sections say nothing this week. Its
+        start against season_calendar.LAUNCH, or its baseline's launch flag, if either says so."""
+        if self.assume_launched:
+            return False
         base = self.start.get("recap")
-        return bool(base) and not base.get("launched")
+        begun = self.start.get("start")
+        return (bool(begun) and dt.datetime.fromisoformat(begun) < season_calendar.LAUNCH) or \
+            (bool(base) and not base.get("launched"))
 
     @property
     def number(self) -> int:
         """The season week that is ending: 0 is the launch weekend (season_calendar)."""
-        return season_calendar.week_at(self.end)
+        return season_week(self.start.get("start"), self.end)
 
     def scores(self, objective: str) -> dict[str, int]:
         return self.world.scores.get(objective, {})
@@ -112,7 +142,7 @@ class Week:
             then = base["scores"].get(objective) if base else None
             # A week that began in Season I's test play: the launch cleared these, so all of them came after it.
             # (Later seasons keep what they carried: challenges/launch clears only in season 1.)
-            if base and not base.get("launched") and objective in TEST_PLAY and \
+            if then is not None and objective in TEST_PLAY and self.test_play and \
                     self.scores("rw.day").get("#season", 0) == 1:
                 then = {}
         if then is None:
@@ -139,17 +169,11 @@ class Week:
         return name
 
 
-def folded(scores: dict[str, int]) -> dict[str, int]:
-    out: dict[str, int] = {}
-    for name, value in scores.items():
-        out[name.lower()] = out.get(name.lower(), 0) + value
-    return out
-
-
 # ---------------------------------------------------------------- words
 
 
 MARKDOWN = set("\\*_~`|>#[]()<:-")
+ELLIPSIS = "…"   # not "~", which is markdown
 
 
 def md(name: str) -> str:
@@ -157,7 +181,7 @@ def md(name: str) -> str:
     markdown escaped, so a faction can't be a link, a heading or a mention."""
     text = " ".join(str(name).split())
     if len(text) > NAME_LIMIT:
-        text = text[:NAME_LIMIT - 1].rstrip() + "…"   # an ellipsis: "~" is markdown
+        text = text[:NAME_LIMIT - 1].rstrip() + ELLIPSIS
     return "".join("\\" + c if c in MARKDOWN else c for c in text) or "?"
 
 
@@ -170,12 +194,31 @@ def count(n: int, thing: str) -> str:
     return f"{n} {thing}" + ("" if n == 1 else "s")
 
 
-def listed(items: list[str]) -> str:
-    """'A', 'A and B', 'A, B and C', with 'and N more' past LISTED."""
-    shown, rest = items[:LISTED], len(items) - LISTED
+def listed(items: list[str], shown: int = LISTED) -> str:
+    """'A', 'A and B', 'A, B and C', with 'and N more' past the first `shown`."""
+    first, rest = items[:max(1, shown)], len(items) - max(1, shown)
     if rest > 0:
-        return ", ".join(shown) + f" and {rest} more"
-    return shown[0] if len(shown) == 1 else ", ".join(shown[:-1]) + " and " + shown[-1]
+        return ", ".join(first) + f" and {rest} more"
+    return first[0] if len(first) == 1 else ", ".join(first[:-1]) + " and " + first[-1]
+
+
+def clip(line: str) -> str:
+    """A line cut to LINE_LIMIT, if it must be, ending in an ellipsis and never on half a markdown escape."""
+    if len(line) <= LINE_LIMIT:
+        return line
+    cut = line[:LINE_LIMIT - 1]
+    if (len(cut) - len(cut.rstrip("\\"))) % 2:   # an odd run of backslashes at the end: one escapes the ellipsis
+        cut = cut[:-1]
+    return cut + ELLIPSIS
+
+
+def fit(line, items: list[str]) -> str:
+    """line(names) with as many of `items` as fit in LINE_LIMIT, the rest as 'and N more'."""
+    for shown in range(min(LISTED, len(items)), 1, -1):
+        text = line(listed(items, shown))
+        if len(text) <= LINE_LIMIT:
+            return text
+    return clip(line(listed(items, 1)))
 
 
 def who(week: Week, name: str) -> str:
@@ -183,100 +226,101 @@ def who(week: Week, name: str) -> str:
     return md(name) + (f" ({md(faction)})" if faction else "")
 
 
-def short_day(when: dt.datetime) -> str:
-    """'Sun 29 Nov', the same in any locale."""
-    local = when.astimezone(season_calendar.PACIFIC)
-    return f"{season_calendar.DAYS[local.weekday()][:3]} {local.day} {season_calendar.MONTHS[local.month - 1][:3]}"
-
-
 def heading(closed: dict) -> str:
     """'**Monkey SMP Weekly**, week 3: Sun 6 Dec to Sun 13 Dec'."""
     end = dt.datetime.fromisoformat(closed["end"])
-    week = season_calendar.week_at(end)
+    week = season_week(closed.get("start"), end)
     name = "the launch weekend" if week == 0 else f"week {week}"
-    dates = short_day(end) if not closed.get("start") else \
-        f"{short_day(dt.datetime.fromisoformat(closed['start']))} to {short_day(end)}"
+    day = season_calendar.short_day
+    dates = day(end) if not closed.get("start") else f"{day(dt.datetime.fromisoformat(closed['start']))} to {day(end)}"
     return f"**Monkey SMP Weekly**, {name}: {dates}"
 
 
 # ---------------------------------------------------------------- the sections
 
 
-def mover(week: Week) -> list[str]:
-    """The faction that climbed the most places since last week's final table."""
+def mover(week: Week) -> list[str] | None:
+    """The faction that climbed the most places since last week's final table, matched by party id (names
+    change, and two factions can share one). A file from before the ids matches by name, where it is unique."""
     if not week.previous:
-        return []
-    before = {r["name"]: r["rank"] for r in week.previous.get("rows", [])}
+        return []   # nothing to move up from (week 0): no mover, and nothing "A quiet week" claims
+    rows = week.previous.get("rows", [])
+    by_id = {r["id"]: r["rank"] for r in rows if r.get("id")}
+    names = [r["name"] for r in rows if not r.get("id")]
+    by_name = {r["name"]: r["rank"] for r in rows if not r.get("id") and names.count(r["name"]) == 1}
     best = None
     for r in week.rows:   # best first, so a tie goes to the higher rank
-        up = before.get(r["name"], 0) - r["rank"]
-        if r["name"] in before and up > 0 and (best is None or up > best[0]):
-            best = (up, r)
+        then = by_id.get(r["id"]) if r.get("id") and by_id else by_name.get(r["name"])
+        if then is not None and then - r["rank"] > 0 and (best is None or then - r["rank"] > best[0]):
+            best = (then - r["rank"], r)
     if best is None:
         return []
     up, r = best
     return [f"**Biggest mover:** {md(r['name'])}, up {count(up, 'place')} to {ordinal(r['rank'])}."]
 
 
-def fighter(week: Week) -> list[str]:
+def fighter(week: Week) -> list[str] | None:
     """Whoever got the most PvP kills this week, outside the arena (st.kills: the standings' kills)."""
-    kills = {} if week.test_play else week.gains(KILLS) or {}
+    kills = None if week.test_play else week.gains(KILLS)
     if not kills:
-        return []
+        return None if kills is None else []
     top = max(kills.values())
     names = sorted((n for n, k in kills.items() if k == top), key=str.casefold)
     each = " each" if len(names) > 1 else ""
-    return [f"**Top fighter:** {listed([who(week, n) for n in names])}, {count(top, 'PvP kill')}{each}."]
+    return [fit(lambda them: f"**Top fighter:** {them}, {count(top, 'PvP kill')}{each}.",
+                [who(week, n) for n in names])]
 
 
-def bounties(week: Week) -> list[str]:
-    claimed = {} if week.test_play else week.gains(BOUNTY, fold=True) or {}
+def bounties(week: Week) -> list[str] | None:
+    claimed = None if week.test_play else week.gains(BOUNTY, fold=True)
     if not claimed:
-        return []
+        return None if claimed is None else []
     hunters = sorted(claimed.items(), key=lambda item: (-item[1], item[0]))
     names = [md(week.player(name)) + (f" ({n})" if n > 1 else "") for name, n in hunters]
     total = sum(claimed.values())
-    return [f"**Bounties claimed:** {total}, by {listed(names)}."]
+    return [fit(lambda them: f"**Bounties claimed:** {total}, by {them}.", names)]
 
 
-def land(week: Week) -> list[str]:
-    """Chunks claimed this week, all told, and the faction that claimed the most."""
+def land(week: Week) -> list[str] | None:
+    """Chunks claimed this week, all told, and the faction that claimed the most: each player's claims that
+    grew, so land a player gave up doesn't hide land another claimed."""
     base = week.start.get("recap")
     if not base or week.test_play:
-        return []
+        return None
     then, now = base.get("claims", {}), week.world.claims
-    total = sum(now.get(u, 0) - then.get(u, 0) for u in set(now) | set(then))
+    grew = {u: n - then.get(u, 0) for u, n in now.items() if n > then.get(u, 0)}
+    total = sum(grew.values())
     if total <= 0:
         return []
     best = None
     for party in week.world.parties:
-        grew = sum(now.get(u, 0) - then.get(u, 0) for u in party.uuids)
-        if grew > 0 and (best is None or grew > best[0] or (grew == best[0] and party.name < best[1])):
-            best = (grew, party.name)
+        claimed = sum(grew.get(u, 0) for u in party.uuids)
+        if claimed > 0 and (best is None or claimed > best[0] or (claimed == best[0] and party.name < best[1])):
+            best = (claimed, party.name)
     most = f", the most by {md(best[1])} (+{best[0]})" if best else ""
-    return [f"**Land:** {count(total, 'new chunk')} claimed{most}."]
+    return [f"**Land:** {count(total, 'chunk')} claimed{most}."]
 
 
-def challenges(week: Week) -> list[str]:
+def challenges(week: Week) -> list[str] | None:
     done = week.gains(CHALLENGES)
     if not done:
-        return []
+        return None if done is None else []
     return [f"**Challenges:** {sum(done.values())} done, by {count(len(done), 'player')}."]
 
 
-def turnout(week: Week) -> list[str]:
+def turnout(week: Week) -> list[str] | None:
     """Events begun this week (realms:events/begin), and how many came to the last one (ev.seen holds the last
     event each player came to)."""
     base = week.start.get("recap")
     if not base or week.test_play:
-        return []
+        return None
     now = week.scores(STATE).get(EVENT, 0)
     begun = gained(now, base.get("event", 0))
     if begun <= 0:
         return []
     came = sum(1 for name, seen in week.scores(SEEN).items() if not name.startswith("#") and seen == now)
     if came == 0:   # nobody marked as there (events/attend not run): no turnout to tell
-        return []
+        return None
     if begun == 1:
         return [f"**Event turnout:** {count(came, 'player')} came."]
     return [f"**Event turnout:** {begun} events, and {count(came, 'player')} came to the last one."]
@@ -300,24 +344,31 @@ QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 
 
+def guarded(what: str, log, work, *args):
+    """work(*args), or None (logged) when it fails: nothing in the recap may stop the Sunday close."""
+    try:
+        return work(*args)
+    except Exception as e:
+        log(f"the recap's {what} failed ({type(e).__name__}: {e}): left out")
+        return None
+
+
 def blocks(week: Week, log=lambda msg: print(f"warning: {msg}", file=sys.stderr)) -> list[list[str]]:
     """Every section's lines, then next Saturday. A section that fails is logged and left out."""
-    out = []
+    out, unsure = [], False
     for section in SECTIONS:
-        try:
-            got = section(week)
-        except Exception as e:   # one broken section must never stop the Sunday close
-            log(f"the recap's {section.__name__} section failed ({type(e).__name__}: {e}): left out")
-            continue
+        got = guarded(f"{section.__name__} section", log, section, week)
+        unsure = unsure or got is None
         if got:
-            out.append([line[:LINE_LIMIT] for line in got])
-    if week.test_play:
+            out.append([clip(line) for line in got])
+    play = guarded("launch check", log, getattr, week, "test_play")
+    if play:
         out.insert(0, [LAUNCH])
-    elif not out:
+    elif play is False and not out and not unsure:
         out.append([QUIET])
-    upcoming = next_saturday(week)
+    upcoming = guarded("next Saturday", log, next_saturday, week)
     if upcoming:
-        out.append(upcoming)
+        out.append([clip(line) for line in upcoming])
     return out
 
 

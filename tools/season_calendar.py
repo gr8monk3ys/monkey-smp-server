@@ -114,6 +114,12 @@ def day_words(day: dt.date) -> str:
     return f"{DAYS[day.weekday()]} {day.day} {MONTHS[day.month - 1]}"
 
 
+def short_day(when: dt.datetime) -> str:
+    """'Sun 29 Nov', the Pacific day of a moment."""
+    local = when.astimezone(PACIFIC)
+    return f"{DAYS[local.weekday()][:3]} {local.day} {MONTHS[local.month - 1][:3]}"
+
+
 def clock(local: dt.datetime) -> str:
     """A time of day as players read it: '5 PM', '8:30 PM', '12 AM'."""
     hour = local.hour % 12 or 12

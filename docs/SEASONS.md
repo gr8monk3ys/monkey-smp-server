@@ -184,11 +184,14 @@ the factions share the rank. Strength below zero counts as zero.
   updated every hour, and last week's final top five.
 - **The Sunday recap.** The Discord post is "Monkey SMP Weekly": the final table, then a line each for
   what happened that week, when anything did: the biggest mover (places climbed since last week's final
-  table), the top fighter (most PvP kills outside the arena), bounties claimed, land claimed, challenges
-  done, event turnout (players at the week's last event), and next Saturday's event. A week with none of it
-  says it was a quiet one. Nothing posts before the launch: a week that closes during test play is kept,
-  never posted, and is no "last week" to move up from. The week the launch falls in (the launch weekend's,
-  week 0) began in test play, and the launch clears test play's challenges but not its kills, claims or
+  table, matched by party, so a renamed faction still counts), the top fighter (most PvP kills outside the
+  arena), bounties claimed, land claimed (chunks players claimed that week; land given up doesn't subtract
+  from it), challenges done, event turnout (players at the week's last event), and next Saturday's event. A
+  week the recap could count in full, with none of it, says it was a quiet one. The week is named by the
+  days it ran, so a close that runs late, after midnight on Monday, still names its own week. Nothing posts
+  before the launch: a week that closes during test play is kept, never posted, and is no "last week" to
+  move up from. The week the launch falls in (the launch weekend's, week 0: it began before the launch
+  time) began in test play, and the launch clears test play's challenges but not its kills, claims or
   events, so that recap has the table, the challenges done since the launch, a line saying the season is
   open, and next Saturday; the rest start the week after.
 - Everything is read from the world's own saved files, which the server writes every 5 minutes, so the

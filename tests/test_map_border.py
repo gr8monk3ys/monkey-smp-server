@@ -1,7 +1,7 @@
 import shutil
 
 import pytest
-from nbt_writer import Long, nbt
+from fake_world import FakeWorld
 
 import map_border
 import rules
@@ -14,21 +14,12 @@ SPAWN = (-80.0, 416.0)
 NETHER_CENTRE = (-9.5, 52.5)
 
 
-def border_dat(center_x: float, center_z: float, size: float, lerp_target: float | None = None) -> bytes:
-    """A world_border.dat as 26.3 writes it (only the fields the tool reads, plus a few it skips)."""
-    data = {"center_x": center_x, "center_z": center_z, "size": size,
-            "lerp_target": size if lerp_target is None else lerp_target}
-    data = {k: float(v) for k, v in data.items()} | {"lerp_time": Long(0), "warning_blocks": 5}
-    return nbt({"DataVersion": 5023, "data": data}, gzipped=True)
-
-
 def server(tmp_path, borders: dict, maps=DEFAULT_MAPS):
     """A server folder with the given map configs and a saved border per dimension."""
     shutil.copytree(maps, tmp_path / map_border.MAPS)
+    fake = FakeWorld(tmp_path / "world")
     for dimension, values in borders.items():
-        path = map_border.border_file(tmp_path, "world", dimension)
-        path.parent.mkdir(parents=True)
-        path.write_bytes(border_dat(*values))
+        fake.border(dimension, *values)
     return tmp_path
 
 
@@ -94,6 +85,12 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
 def test_a_growing_border_counts_at_its_final_size(tmp_path):
     server(tmp_path, {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 2600.0, 6000.0)})
     assert masks(tmp_path)["world"] == {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415}
+    # A shrinking one at its target too (tools/drops.py takes the smaller of the two instead).
+    server(tmp_path / "b", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 6000.0, 2500.0)})
+    assert masks(tmp_path / "b")["world"] == {"min-x": -1330, "max-x": 1169, "min-z": -834, "max-z": 1665}
+    # Heading past the vanilla maximum: no border, the map left as it is.
+    server(tmp_path / "c", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 2500.0, map_border.NO_BORDER)})
+    assert masks(tmp_path / "c")["world"] is None
 
 
 GENERATED_NETHER = """world: "world"

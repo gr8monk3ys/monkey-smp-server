@@ -12,7 +12,7 @@ final size. A dimension without a border (the End) keeps its map as it is.
 The mask is the first layer of `render-mask` in each config/bluemap/maps/<map>.conf; later layers (the
 Nether's ceiling) are kept. BlueMap only sees the change after `bluemap reload`, and `bluemap purge <map>`
 then deletes the map's tiles and renders it again inside the new mask; the tool prints both.
-Stdlib only (plus tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
+Stdlib only (plus tools/world.py and tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
 """
 import argparse
 import math
@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import nbt
+import world as saved  # the saved world (its border files)
 
 MAPS = Path("config") / "bluemap" / "maps"
 NO_BORDER = 59_999_968  # the vanilla maximum: the dimension has no border to speak of
@@ -48,18 +48,13 @@ class Border:
         return f"border {self.size:g} wide at {self.center_x:g}, {self.center_z:g}"
 
 
-def border_file(server: Path, world: str, dimension: str) -> Path:
-    namespace, _, name = dimension.partition(":")
-    return server / world / "dimensions" / namespace / name / "data" / "minecraft" / "world_border.dat"
-
-
-def read_border(path: Path) -> Border | None:
-    """The border saved in a world_border.dat, or None when the dimension has none."""
-    data = nbt.read(path)["data"]
-    size = data.get("lerp_target", data["size"])  # where a growing border is heading
+def fit_border(found: saved.SavedBorder) -> Border | None:
+    """The border a map is fitted to, or None when the dimension has none to speak of."""
+    # Where it is heading: staff run this straight after `worldborder set`, while it grows (docs/ADMIN.md).
+    size = found.target
     if size >= NO_BORDER:
         return None
-    return Border(data["center_x"], data["center_z"], size)
+    return Border(found.center_x, found.center_z, size)
 
 
 # --- the map configs -------------------------------------------------------------------------------------------
@@ -124,10 +119,11 @@ def fit_maps(server: Path) -> list[MapFit]:
         world, dimension = found.get("world"), found.get("dimension")
         if not world or not dimension:
             raise ValueError(f"{conf}: no world or dimension setting")
-        path = border_file(server, world, dimension)
-        if not path.is_file():
-            raise ValueError(f"{conf}: no border saved at {path} (a 26.3 world that has been saved?)")
-        border = read_border(path)
+        saved_border = saved.border(server / world, dimension)
+        if saved_border is None:
+            raise ValueError(f"{conf}: no border saved at {saved.border_path(server / world, dimension)} "
+                             "(a 26.3 world that has been saved?)")
+        border = fit_border(saved_border)
         try:
             fitted = with_mask(text, border.mask()) if border else text
         except ValueError as e:

@@ -19,7 +19,9 @@ more kills; still tied, they share the rank. docs/SEASONS.md, "Weekly standings"
     python tools/standings.py close WORLD --state DIR --docker DIR
                                                          ends the week: keeps its final table, starts the
                                                          next, updates the board, says so in chat and
-                                                         posts the table to Discord
+                                                         posts the Sunday recap to Discord (after the launch)
+    python tools/standings.py preview WORLD --state DIR  the Sunday recap as it would post if the week closed
+                                                         now (changes nothing)
     python tools/datapacks.py                            regenerates the realms-standings data pack (with the others)
 
 WORLD is the live world folder (server/world). Everything is read from the files the server saves (every 5
@@ -32,7 +34,9 @@ minutes, and when it stops), never from RCON, which can't list parties or scores
 Kills and bounties count from a snapshot the week starts with (STATE/week.json); each closed week is kept
 in STATE/weeks/. RCON is used only to write the board, through the container's own `realms rcon` (it finds
 the password itself) in DIR, the release's docker folder. The Discord webhook is STANDINGS_WEBHOOK_URL in the
-environment, else DISCORD_WEBHOOK_URL; it is never printed. deploy/realms-standings.sh runs this on the VPS.
+environment, else DISCORD_WEBHOOK_URL; it is never printed. The post is the Sunday recap, "Monkey SMP Weekly":
+the table, then a few lines on the week (tools/recap.py). A week that closes before the launch (no
+#launched rw.day yet: test play) is kept but never posted. deploy/realms-standings.sh runs this on the VPS.
 
 The data pack (package/realms/datapacks/realms-standings/, generated: edit this file, not it) counts PvP
 kills outside the event arena (st.kills), holds claimed bounties (st.bounty), shows the board in chat with
@@ -50,6 +54,7 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import recap
 import saved_world
 import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, text
@@ -290,10 +295,11 @@ def write_json(path: Path, data: dict) -> None:
 
 
 def snapshot(world: World, now: dt.datetime) -> dict:
-    """A new week's starting point: every player's kills and bounties so far."""
+    """A new week's starting point: every player's kills and bounties so far, and what the recap counts from."""
     return {"start": now.isoformat(timespec="seconds"),
             "kills": dict(sorted(world.scores.get(KILLS, {}).items())),
-            "bounty": dict(sorted(world.scores.get(BOUNTY, {}).items()))}
+            "bounty": dict(sorted(world.scores.get(BOUNTY, {}).items())),
+            "recap": recap.baseline(world)}
 
 
 def week_file(state: Path) -> Path:
@@ -387,11 +393,11 @@ def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, no
 
 
 def discord_message(week: dict) -> str:
+    """The Sunday recap (tools/recap.py): a closed week's table, then the lines its close kept. A week closed
+    before the recap existed has none, so it posts the table alone."""
     rows = [Row(**r) for r in week["rows"]]
-    lines = [f"**Faction standings, {span(week)}**", "```", *table_text(rows, TOP), "```",
-             f"Scored as {FORMULA} `/trigger standings` shows the board in game."]
-    message = "\n".join(lines)
-    return message if len(message) <= DISCORD_LIMIT else message[:DISCORD_LIMIT - 4] + "\n```"
+    return recap.message(recap.heading(week), lambda n: table_text(rows, n), week.get("recap", []),
+                         f"Scored as {FORMULA} `/trigger standings` shows the board in game.", DISCORD_LIMIT)
 
 
 def webhook() -> str:
@@ -457,16 +463,51 @@ def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
     return 0
 
 
+def closing(world: Path, data: World, rows: list[Row], week: dict | None, state: Path, now: dt.datetime) -> dict:
+    """The closed week's file: its final table and, after the launch, the recap's lines (worked out now, from
+    the world as it is, so a retry posts the same). Before the launch it is marked so and never posted."""
+    closed = {"start": week.get("start") if week else None, "end": now.isoformat(timespec="seconds"),
+              "formula": FORMULA, "rows": [asdict(r) for r in rows], "announced": False, "posted": False,
+              "launched": recap.launched(data)}
+    if closed["launched"]:
+        closed["recap"] = recap.blocks(recap.Week(closed["rows"], data, week or {}, last_launched(state), now, world),
+                                       warn)
+    return closed
+
+
+def last_launched(state: Path) -> dict | None:
+    """The newest closed week, unless it closed before the launch: test play's table is no "last week"."""
+    path = latest_week(state)
+    previous = read_json(path) if path else None
+    return None if previous is None or previous.get("launched") is False else previous
+
+
+def preview(world: Path, state: Path, now: dt.datetime) -> int:
+    week = read_json(week_file(state))
+    data = read_world(world)
+    closed = closing(world, data, table(data, week, warn), week, state, now)
+    if not closed["launched"]:
+        print("(Before the launch: a close now would keep this table and post nothing. Below is what it would say "
+              "for a week begun after the launch.)\n")
+        start_ = dict(week or {})
+        if start_.get("recap"):
+            start_["recap"] = {**start_["recap"], "launched": True}
+        closed["recap"] = recap.blocks(recap.Week(closed["rows"], data, start_, last_launched(state), now, world),
+                                       warn)
+    print(discord_message(closed))
+    return 0
+
+
 def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=urllib.request.urlopen) -> int:
     """Ends the week (unless it began under MIN_WEEK_DAYS ago, so a re-run or a retry closes nothing twice), then
-    does whatever the newest closed week still lacks: the board, the chat announcement, the Discord post."""
+    does whatever the newest closed week still lacks: the board, the chat announcement, the Discord post (only
+    for a week that closed after the launch)."""
     week = read_json(week_file(state))
     start_ = since(week)
     data = read_world(world)
     rows = table(data, week, warn)
     if start_ is None or now - start_ >= dt.timedelta(days=MIN_WEEK_DAYS):
-        closed = {"start": week.get("start") if week else None, "end": now.isoformat(timespec="seconds"),
-                  "formula": FORMULA, "rows": [asdict(r) for r in rows], "announced": False, "posted": False}
+        closed = closing(world, data, rows, week, state, now)
         path = state / "weeks" / f"{now:%Y-%m-%d}.json"
         write_json(path, closed)
         week = snapshot(data, now)
@@ -496,6 +537,8 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
         status = 1
     if last.get("posted"):
         print("already posted to Discord")
+    elif last.get("launched") is False:
+        print("this week closed before the launch (test play): not posting to Discord")
     elif not url:
         print("no STANDINGS_WEBHOOK_URL or DISCORD_WEBHOOK_URL set: not posting to Discord")
     else:
@@ -669,7 +712,8 @@ def main(argv=None) -> int:
     for name, about in (("show", "print this week so far (changes nothing)"),
                         ("start", "start the first week, if none is running"),
                         ("board", "put this week so far and last week's table on the in-game board"),
-                        ("close", "end the week: keep its table, start the next, board, chat and Discord")):
+                        ("close", "end the week: keep its table, start the next, board, chat and Discord"),
+                        ("preview", "print the Sunday recap as it would post if the week closed now")):
         p = sub.add_parser(name, help=about)
         p.add_argument("world", type=Path, help="the world folder (server/world)")
         p.add_argument("--state", type=Path, required=name != "show",
@@ -682,6 +726,8 @@ def main(argv=None) -> int:
         return show(args.world, args.state, now)
     if args.command == "start":
         return start(args.world, args.state, now)
+    if args.command == "preview":
+        return preview(args.world, args.state, now)
     rcon = Docker(args.docker)
     if args.command == "board":
         return board(args.world, args.state, rcon, now)

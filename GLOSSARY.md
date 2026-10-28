@@ -136,3 +136,7 @@ _Avoid_: spawn protection (Minecraft uses that for something else)
 The Guide or the Town Crier: an Easy NPC character at spawn that answers new players when no staff are on.
 Staff place each one once per world from the `realms-npcs` data pack.
 _Avoid_: bot, villager
+
+**Sunday recap**:
+"Monkey SMP Weekly", the Discord post the weekly standings close makes on Sunday evening: the final table, then one line per section (biggest mover, top fighter, bounties, land, challenges, event turnout, next Saturday). `tools/recap.py` keeps the sections; nothing posts before the launch.
+_Avoid_: newsletter, digest, weekly report

@@ -583,6 +583,10 @@ the week's kills and holds the board; the VPS works the standings out and posts 
 - **The board** updates every hour with this week so far. It's an entity, so it only changes while
   spawn is loaded; it catches up within a second of someone coming near. `/trigger standings` shows the
   same in chat, anywhere.
+- **The Sunday recap** ("Monkey SMP Weekly", docs/SEASONS.md) is worked out when the week closes. To see what
+  it would say now, on the VPS: `sudo -u realms sh /srv/realms/repo/deploy/realms-standings.sh preview`
+  (changes nothing). Kills or a bounty you take back after the close stay in that week's recap; take them back
+  before Sunday 7 PM Pacific. Events count in its turnout line only when begun with `events/begin`.
 
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts

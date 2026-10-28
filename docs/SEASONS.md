@@ -182,6 +182,15 @@ the factions share the rank. Strength below zero counts as zero.
   (`STANDINGS_WEBHOOK_URL`, else the main channel), announced in chat, and kept on the board. The board is
   a text display at spawn, and `/trigger standings` shows it in chat anywhere. It has this week so far,
   updated every hour, and last week's final top five.
+- **The Sunday recap.** The Discord post is "Monkey SMP Weekly": the final table, then a line each for
+  what happened that week, when anything did: the biggest mover (places climbed since last week's final
+  table), the top fighter (most PvP kills outside the arena), bounties claimed, land claimed, challenges
+  done, event turnout (players at the week's last event), and next Saturday's event. A week with none of it
+  says it was a quiet one. Nothing posts before the launch: a week that closes during test play is kept,
+  never posted, and is no "last week" to move up from. The week the launch falls in (the launch weekend's,
+  week 0) began in test play, and the launch clears test play's challenges but not its kills, claims or
+  events, so that recap has the table, the challenges done since the launch, a line saying the season is
+  open, and next Saturday; the rest start the week after.
 - Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
   board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
 
@@ -574,6 +583,9 @@ Built:
   Seen in game on a test server on 26 October 2026 (2.6.0, Carpet fake players): the four columns, the board
   and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
   run of `deploy/realms-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
+- The Sunday recap ("Where it shows", above): `tools/recap.py`, posted by the same Sunday close to the same
+  webhook. `realms-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
+  not yet seen in Discord or run on the VPS.
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `realms-drops` data pack and `deploy/realms-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat

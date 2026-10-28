@@ -51,6 +51,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import saved_world
+import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, text
 from events import ARENA_TAG, CUP, LEVEL, STRENGTH
 from rcon import LIMIT, Docker, RconError
@@ -64,7 +65,6 @@ WEIGHTS = (("cup", 40), ("land", 20), ("strength", 20), ("kills", 20))
 BOUNTY_POINTS = 5
 KILLS = "st.kills"
 BOUNTY = "st.bounty"
-TZ = "America/Los_Angeles"
 MIN_WEEK_DAYS = 3     # close leaves a week younger than this alone: it was closed already (a retry, or a re-run)
 TOP = 10              # factions on the board and in the Discord post
 LAST_TOP = 5          # factions in last week's table on the board
@@ -264,14 +264,6 @@ def table_text(rows: list[Row], limit: int | None = None) -> list[str]:
 
 
 # ---------------------------------------------------------------- the week
-
-
-def pacific_now() -> dt.datetime:
-    try:
-        from zoneinfo import ZoneInfo
-        return dt.datetime.now(ZoneInfo(TZ))
-    except (ImportError, KeyError, ValueError, OSError):   # no time zone database: the machine's own time
-        return dt.datetime.now().astimezone()
 
 
 def day(when: dt.datetime) -> str:
@@ -685,7 +677,7 @@ def main(argv=None) -> int:
         if name in ("board", "close"):
             p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
     args = ap.parse_args(argv)
-    now = pacific_now()
+    now = season_calendar.now()
     if args.command == "show":
         return show(args.world, args.state, now)
     if args.command == "start":

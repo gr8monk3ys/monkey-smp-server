@@ -4,7 +4,8 @@
     python tools/drops.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-drops.sh)
     python tools/datapacks.py                          regenerates the realms-drops data pack (with the others)
 
-When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (NIGHTS, HOURS, FIRST_NIGHT).
+When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (HOURS here; the nights are
+tools/season_calendar.py's drop_night).
 deploy/realms-drops.sh sends `commands` every 10 minutes; outside those hours there are none. The pack starts
 the night's drop the first time it is asked while MIN_PLAYERS or more are online in survival (staff change it
 in game: `function realms:drops/min {players:N}`), no drop ran that night, and no event is on (the arena, a
@@ -29,8 +30,8 @@ is left in them; an emptied chest goes at once, and the drop ends when every che
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py, tools/saved_world.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs
-it straight from the checkout.
+Stdlib only plus tools/map_border.py, tools/saved_world.py, tools/nbt.py and tools/season_calendar.py, and
+Python 3.10 or newer, so the VPS runs it straight from the checkout.
 """
 import argparse
 import datetime as dt
@@ -39,11 +40,11 @@ import random
 import re
 import sys
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import map_border
 import rcon as server
 import saved_world
+import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -56,10 +57,7 @@ BAR = f"{NS}:drop"
 OBJ = "dr"
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-PACIFIC = ZoneInfo("America/Los_Angeles")
-NIGHTS = (0, 1, 2, 3)       # Monday to Thursday (Saturday is event night)
-HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific
-FIRST_NIGHT = dt.date(2026, 11, 23)   # Monday of Season I's week 1 (tools/challenges.py WEEK_ONE)
+HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
 SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
 
 MIN_PLAYERS = 4             # survival players online for the weeknight drop, and for each further chest
@@ -147,15 +145,15 @@ def parse_time(value: str) -> dt.datetime:
 
 def night_of(when: dt.datetime) -> int | None:
     """The drop night `when` falls in, as YYYYMMDD (its Pacific date), or None outside drop hours."""
-    local = when.astimezone(PACIFIC)
-    if local.date() < FIRST_NIGHT or local.weekday() not in NIGHTS or not HOURS[0] <= local.hour < HOURS[1]:
+    local = when.astimezone(season_calendar.PACIFIC)
+    if not season_calendar.drop_night(local.date()) or not HOURS[0] <= local.hour < HOURS[1]:
         return None
     return int(local.strftime("%Y%m%d"))
 
 
 def slot_of(when: dt.datetime) -> str:
     """The 10-minute slot, which seeds the draw: the same slot draws the same spots."""
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     return f"{local:%Y%m%d-%H}{local.minute // SLOT_MINUTES}"
 
 
@@ -574,7 +572,7 @@ def packs(repo: Repo) -> dict[Path, dict[str, str]]:
 
 def show_spots(world: Path, when: dt.datetime) -> int:
     night = night_of(when)
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     print(f"{local:%a %d %b %Y %H:%M} Pacific: " + (f"drop night {night}" if night else
           "outside drop hours (Monday to Thursday, 6 to 10 PM Pacific, from Season I week 1)"))
     border = border_now(world)

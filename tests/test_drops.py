@@ -13,6 +13,7 @@ import events
 import map_border
 import rcon
 import saved_world
+import season_calendar
 from repo import REPO
 
 UTC = dt.timezone.utc  # noqa: UP017 (the module under test keeps to 3.10)
@@ -22,7 +23,7 @@ SPAWN = (-80.0, 416.0)   # where the pinned seed puts spawn, and so the border's
 
 
 def pacific(*args) -> dt.datetime:
-    return dt.datetime(*args, tzinfo=drops.PACIFIC)
+    return dt.datetime(*args, tzinfo=season_calendar.PACIFIC)
 
 
 def fn(path: str) -> str:
@@ -70,7 +71,7 @@ def test_drop_nights_are_monday_to_thursday_evenings_pacific_from_season_one():
     for day in (27, 28, 29):                                                 # Friday, Saturday (events), Sunday
         assert drops.night_of(pacific(2026, 11, day, 19, 0)) is None
     assert drops.night_of(pacific(2026, 11, 16, 19, 0)) is None              # before Season I's first week
-    assert drops.FIRST_NIGHT.weekday() == 0
+    # (that the first night is week 1's Monday: tests/test_season_calendar.py)
     # UTC in, the Pacific date out: 2 AM UTC Tuesday is 6 PM Monday (PST), 1 AM UTC is 6 PM in summer time.
     assert drops.night_of(dt.datetime(2026, 11, 24, 2, 0, tzinfo=UTC)) == 20261123
     assert drops.night_of(dt.datetime(2027, 3, 16, 1, 0, tzinfo=UTC)) == 20270315

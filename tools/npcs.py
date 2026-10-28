@@ -20,7 +20,7 @@ import re
 import uuid
 from pathlib import Path
 
-from challenges import WEEK_ONE
+import season_calendar
 from datapacks import NS, lines, mcmeta
 from repo import Repo
 
@@ -52,7 +52,7 @@ SECURITY = {
 # ---------------------------------------------------------------- what they say
 
 # The Season I calendar (docs/SEASONS.md, "Season I calendar"): week -> that Saturday's event, in players'
-# words. Week N's Saturday is worked out from challenges.WEEK_ONE; tests check it against SEASONS.md. If an
+# words. Week N's Saturday is tools/season_calendar.py's; tests check it against SEASONS.md. If an
 # event moves, change it here, regenerate, release, and place the Crier again (docs/ADMIN.md, "Spawn NPCs").
 EVENTS = {
     1: "Faction Raid I",
@@ -69,7 +69,6 @@ EVENTS = {
     12: "the off-season weekend in the locked world",
 }
 LAST_WEEK = max(EVENTS)
-SEASON_TWO = dt.date(2027, 2, 20)   # proposed (SEASONS.md); the owners confirm it by 23 January
 TIME = "6 PM Pacific (9 PM Eastern)"
 EVERY_WEEK = ("Every event is in the Discord's events list: press Interested there for a reminder. "
               "New challenges every Monday.")
@@ -103,26 +102,22 @@ CRIER_OTHER = "<br>".join((
 ))
 
 
-def saturday(week: int) -> dt.date:
-    """Week N's Saturday: week 1 starts on Monday WEEK_ONE, and week 0 is the launch weekend before it."""
-    return WEEK_ONE + dt.timedelta(weeks=week - 1, days=5)
-
-
 def day(d: dt.date) -> str:
-    return f"Saturday {d.day} {d:%B}"
+    return f"{d:%A} {d.day} {d:%B}"
 
 
 def crier_text(week: int) -> str:
     if week == 0:
-        this = (f"Season I opens {day(saturday(0))} at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP "
-                "and the Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is Sunday 22 "
-                "November at 6 PM.")
+        launch = season_calendar.saturday(0)
+        this = (f"Season I opens {day(launch)} at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP "
+                "and the Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is "
+                f"{day(launch + dt.timedelta(days=1))} at 6 PM.")
     else:
-        this = f"This week: {EVENTS[week]}, {day(saturday(week))}, {TIME}."
+        this = f"This week: {EVENTS[week]}, {day(season_calendar.saturday(week))}, {TIME}."
     if week < LAST_WEEK:
-        then = f"Next week: {EVENTS[week + 1]}, {day(saturday(week + 1))}."
+        then = f"Next week: {EVENTS[week + 1]}, {day(season_calendar.saturday(week + 1))}."
     else:
-        then = f"Season II is planned for {day(SEASON_TWO)}."
+        then = f"Season II is planned for {day(season_calendar.SEASON_TWO)}."
     return "<br>".join((this, "", then, "", EVERY_WEEK))
 
 

@@ -116,6 +116,10 @@ _Avoid_: installed file, tracked file
 What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/saved_world.py` reads it.
 _Avoid_: live world, world state, save (alone)
 
+**Season calendar**:
+When a season happens, in Pacific time: its launch, the launch weekend (week 0), each week from its Monday at 12 AM, each week's Saturday (event night) and the weeknight drop nights. `tools/season_calendar.py` keeps it and every tool asks it; the website's launch time (`LAUNCH_AT` in `site/config.js`) must match it.
+_Avoid_: schedule (that is the challenge rotation), season dates
+
 **Snapshot**:
 Capturing what a running server or player instance actually uses back into the manifest or client pack.
 _Avoid_: export, import, scan

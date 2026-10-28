@@ -26,8 +26,8 @@ import re
 import sys
 import zipfile
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
+import season_calendar
 from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
@@ -38,8 +38,7 @@ _STORE_TEXT = re.compile(r'<[a-z]+\b[^>]*\bdata-store="([^"]*)"[^>]*>')
 _HIDDEN = re.compile(r'("[^"]*")|\shidden(?:="[^"]*")?(?=[\s>])')
 # An element with a launch template, and its text when it holds nothing else (a <meta> holds nothing).
 _LAUNCH = re.compile(r'<([a-z]+)\b[^>]*\bdata-launch="([^"]*)"[^>]*>(?:([^<]*)</\1>)?')
-PACIFIC = ZoneInfo("America/Los_Angeles")
-EASTERN = ZoneInfo("America/New_York")
+EASTERN = season_calendar.zone("America/New_York")   # shown next to Pacific, for the East Coast
 # Written out here rather than with strftime, which follows the machine's locale.
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
@@ -101,7 +100,7 @@ def _clock(when: dt.datetime) -> str:
 
 def launch_words(when: dt.datetime) -> dict[str, str]:
     """What a data-launch template can say: {date}, {pacific} and {eastern}."""
-    west, east = when.astimezone(PACIFIC), when.astimezone(EASTERN)
+    west, east = when.astimezone(season_calendar.PACIFIC), when.astimezone(EASTERN)
     eastern = f"{_clock(east)} Eastern"
     if east.date() != west.date():
         eastern = f"{DAYS[east.weekday()]} {eastern}"

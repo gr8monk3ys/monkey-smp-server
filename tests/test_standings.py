@@ -257,8 +257,9 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # the next week starts from everyone's kills now
     assert json.loads((state / "week.json").read_text())["kills"]["RiaFake"] == 10
     # the board shows the new week (no kills yet) and the closed one, then it is announced
-    assert rcon.sent[-1] == "function realms:standings/announce"
-    assert rcon.sent[-2] == "function realms:standings/publish"
+    assert rcon.sent[-2] == "function realms:standings/announce"
+    assert rcon.sent[-3] == "function realms:standings/publish"
+    assert rcon.sent[-1] == "function realms:diplomacy/week_over"   # then the week's wars end
     assert "kills 0" in rcon.sent[0] and "kills 4" in rcon.sent[1]
     [(url, kind, body)] = discord.posts
     assert url == WEBHOOK and kind == "application/json"

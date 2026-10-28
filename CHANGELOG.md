@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- **War and pacts** (docs/SEASONS.md, "War and pacts"): a faction's leader declares war or makes a pact with
+  `/trigger diplomacy`, from the launch on. A kill between two factions at war counts twice in the weekly
+  Kills column until Sunday's close, when every war ends. A pact stands until either side breaks it, at most 2
+  each, and every declaration is announced in chat and listed in Sunday's Discord post. Claims and the rules
+  don't change. In the `realms-standings` data pack (`tools/diplomacy.py`).
+- Each faction now has a number in game (`st.faction`, `st.leader`, storage `realms:factions`), written by
+  the standings' hourly board run, for packs that need to tell factions apart (docs/MAINTAINING.md, "The
+  faction number in game").
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

@@ -11,7 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `drops.py`) | `python tools/datapacks.py` |
+| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`) | `python tools/datapacks.py` |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
@@ -35,6 +35,30 @@ lives in a few modules they share:
 | `tools/saved_world.py` | the saved world: where each file sits in a world folder and how it is saved, so standings, season, drops and map_border ask it rather than walk the files. `scoreboard(folder)` gives scores by objective and holder (26.3 leaves a score of 0 out), display names and teams; `parties`, `claims(folder, dimension)` (claim file, then that dimension's chunks) and `claim_counts` (chunks per claim file, every dimension) read Open Parties and Claims; `border(folder, dimension)` gives a border's centre, size now and target size. Callers keep their own rules (which border size counts, ranking). None for a file not saved yet, and each caller decides what that means; a file not shaped as the server saves it is a ValueError naming it; `tests/fake_world.py` builds the tests' made-up worlds |
 | `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, the one list of answers that mean the server refused, and a timed job's command line (`job_subcommands`, `run_job`, `job_time`, `parse_time`, the exit codes `NOT_RUNNING` and `GAVE_UP`: `commands [--at]` and `send --docker` in challenges, drops and wardrobe) |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
+| `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the realms namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `realms-standings` pack, and the week's lines for the Sunday post (`report`) |
+
+### The faction number in game
+
+Data packs can't see Open Parties and Claims' parties, so `tools/diplomacy.py` gives each party a number and
+writes it in game. Anything in a pack that needs "which faction is this player in" (war and pacts now,
+outposts next) reads it here rather than asking the parties:
+
+| Where | What |
+|---|---|
+| `st.faction` score, by player name | the number (1 to 99) of the player's faction, offline players too. No score: in no faction, or in one made since the last board run |
+| `st.leader` score | 1 for each party's owner, the faction's leader |
+| storage `realms:factions` `names.f<N>` | faction N's name as the board shows it, as a text component: `{text:"Red Monkeys"}` (plain ASCII, no quotes). Show it with `{"nbt":"names.f<N>","storage":"realms:factions","interpret":true}`. Removed when the party is gone |
+| storage `realms:factions` `ids.f<N>` | the party id behind number N. Kept after the party is gone, so the number is never given again |
+
+- A number belongs to one party for the life of the world. A new season's world numbers again from 1.
+- It is only as fresh as the last board run (`deploy/realms-standings.sh board`, hourly), plus the up to
+  5 minutes the saved world can be behind. Nothing else writes these, and staff shouldn't by hand.
+- Same faction: `execute if score @s st.faction = <other> st.faction run ...` (no score never matches).
+- From Python, `diplomacy.numbers(world)` (party id to number) and `diplomacy.names(world)` (number to name)
+  read it back from the saved world.
+- A pack that keeps a score per faction holds it as `#f<N>` and should end what it holds for a faction whose
+  `names.f<N>` is gone (the sync sends `realms:diplomacy/dissolve` for war and pacts before it removes one).
+- None of it starts with `rw.`, so `tools/season.py` carries none of it into a new world.
 
 ## Server types: Paper or Fabric
 

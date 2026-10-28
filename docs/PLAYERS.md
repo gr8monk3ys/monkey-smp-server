@@ -139,6 +139,9 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
     members share claims.
   - Type `/oclaims`, `/oparties` or `/opac` and press **Tab** to see every command; the claims screen shows how
     many chunks you can still claim.
+- **War and pacts:** `/trigger diplomacy` shows how your faction stands with the others. Your party's owner can
+  declare war (kills between the two count double in the weekly standings until Sunday's close) or offer a pact
+  (no war between you until one side breaks it). Claims and the rules stay the same.
 - **Trading** is by hand, items for items: there is no money, shop or auction house on the server. Meet up,
   agree on the deal, then swap. Lying about what you're trading is a scam and breaks the rules: see
   [Trading](RULES.md#trading).

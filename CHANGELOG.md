@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-10-28
+
+Maintainer work only, ahead of Season I. Players see nothing new, and the client pack is the same as 2.8.0's
+apart from its version number, so players don't need to update it (`tools/modrinth.py` uploads nothing, and
+the live server's Discord message asks nothing of them). The generated data packs are byte-identical. Four
+rounds of restructuring each give one shared job a single home:
+
+- **`tools/datapacks.py`** holds every generated pack (PR #57). `python tools/datapacks.py` regenerates
+  them all and `--check` only compares, in place of each generator's own `--check` and `pack` commands
+  (docs/ADMIN.md). Generators now only define `packs(repo)`. `validate.py` reports any pack that's out of date
+  and runs the checks across all packs, which now include a scoreboard objective that one pack reads and no
+  pack creates. The shared objective names (`events.ARENA_TAG`, `STATE`, `STRENGTH`, `CUP`,
+  `challenges.LAUNCHED`) live in the pack that owns them.
+- **`tools/rcon.py`** sends every VPS job's RCON commands and decides when the server refused one (PR #58).
+  `realms-week.sh`, `realms-drops.sh` and `tools/standings.py` go through it; the tests use its `Recorder` fake.
+- **`deploy/lib.sh`** holds the helpers every VPS script had copied (PR #59): reading `/etc/realms-deploy.env`
+  (one parser: the last value as written wins), logging, the compose command, RCON, the deploy lock and timer
+  installs. Two behaviour changes on the VPS:
+  - The week and drops timers now wait up to 30 minutes for the deploy lock before sending, so they no longer
+    land while a deploy, the daily restart or an off-site backup has the server stopped.
+  - A script's `ERROR:` line now goes to stderr, not stdout. Under systemd both reach the journal unchanged;
+    a hand run that pipes stdout sees the error on the terminal instead.
+  - A deploy lock the script can't open is an error, not "busy", and root never creates or opens the lock
+    through a link someone left in `/tmp`.
+- **`tools/nbt.py`** reads every world file (PR #60): `season`, `standings`, `drops` and `map_border` used to
+  decode NBT four different ways. A damaged file is now one `ValueError` that names the file (`map_border`
+  prints `error: …` and exits 2) instead of a traceback, `season` and `map_border` accept files that aren't
+  gzipped, and a damaged claims file with a negative list count is an error instead of reading as "no claims".
+
+Before Season I (Saturday 21 November), run the week, drops and standings jobs once on the VPS after this
+deploys (`--check` first; docs/LIVE.md), so the new lock and RCON paths have run once against the live world.
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

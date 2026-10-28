@@ -526,6 +526,14 @@ Only one copy may run the world at a time: two live copies split the world into 
 
 ### The store (set up once, before the first sale)
 
+Status (2026-10-28): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
+(`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
+storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
+Until it is approved, checkout takes only test payments and the public store address isn't known.
+`monkeysmp.tebex.io` belongs to another server, so read the address off the Tebex panel once the store is live.
+Then make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
+only after that fill in `STORE_URL` (below).
+
 Tebex can't change the price of a subscription already sold, so set these before the store link goes on
 the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-sale.md):
 

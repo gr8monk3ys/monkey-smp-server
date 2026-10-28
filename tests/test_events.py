@@ -1,5 +1,4 @@
 import json
-import re
 
 import events
 from repo import REPO
@@ -10,34 +9,6 @@ FUNCTIONS = {k for k in FILES if k.endswith(".mcfunction")}
 
 def fn(path: str) -> str:
     return FILES[f"{events.FN}/{path}.mcfunction"]
-
-
-def test_committed_pack_matches_the_generator():
-    assert events.differences(REPO) == [], "run python tools/events.py"
-
-
-def test_pack_format_follows_the_server_minecraft_version():
-    assert REPO.load_manifest()["minecraft"] == events.MINECRAFT
-
-
-def test_every_called_function_exists():
-    for path, body in FILES.items():
-        for name in re.findall(rf"function {events.NS}:([\w/]+)", body):
-            assert f"data/{events.NS}/function/{name}.mcfunction" in FUNCTIONS, f"{path} calls {name}"
-
-
-def test_macro_lines_are_marked_and_marked_lines_are_macros():
-    for path in FUNCTIONS:
-        for line in FILES[path].splitlines():
-            if line.startswith("#"):
-                continue
-            assert ("$(" in line) == line.startswith("$"), f"{path}: {line}"
-
-
-def test_json_files_parse():
-    for path, body in FILES.items():
-        if path.endswith((".json", ".mcmeta")):
-            json.loads(body)
 
 
 def test_arena_keeps_strength_aside_and_lets_nothing_out():

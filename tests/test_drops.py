@@ -251,35 +251,6 @@ def test_the_loot_table_is_26_3s_form():
 # ---------------------------------------------------------------- the data pack
 
 
-def test_committed_pack_matches_the_generator():
-    assert drops.differences(REPO) == [], "run python tools/drops.py pack"
-
-
-def test_pack_uses_the_events_pack_format():
-    pack = json.loads(FILES["pack.mcmeta"])["pack"]
-    assert pack["min_format"] == pack["max_format"] == drops.DATA_FORMAT == events.DATA_FORMAT
-
-
-def test_every_called_function_exists():
-    for path, body in FILES.items():
-        for name in re.findall(rf"function {drops.NS}:([\w/]+)", body):
-            assert f"data/{drops.NS}/function/{name}.mcfunction" in FUNCTIONS, f"{path} calls {name}"
-
-
-def test_macro_lines_are_marked_and_marked_lines_are_macros():
-    for path in FUNCTIONS:
-        for line in FILES[path].splitlines():
-            if not line.startswith("#"):
-                assert ("$(" in line) == line.startswith("$"), f"{path}: {line}"
-
-
-def test_json_files_parse_and_text_is_ascii_safe():
-    for path, body in FILES.items():
-        if path.endswith((".json", ".mcmeta")):
-            json.loads(body)
-        assert body.endswith("\n") and "\r" not in body, path
-
-
 def test_try_returns_every_code_and_checks_the_events():
     body = fn("try")
     assert set(map(int, re.findall(r"return (\d+)$", body, re.M))) == set(drops.TRY_CODES)

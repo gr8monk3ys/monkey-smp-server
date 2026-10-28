@@ -44,8 +44,11 @@ import math
 import sys
 from zoneinfo import ZoneInfo
 
-NS = "realms"
+from datapacks import NS, lines, text
+from events import STATE
+
 FN = f"data/{NS}/function/challenges"
+LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules.py reads it)
 ADVANCEMENT = f"data/{NS}/advancement/challenges"
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
@@ -231,16 +234,6 @@ def weekly() -> list[str]:
 # ---------------------------------------------------------------- the data pack
 
 
-def text(*parts) -> str:
-    """A text component as compact JSON: one part as itself, several as a list."""
-    value = parts[0] if len(parts) == 1 else list(parts)
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-
-
-def lines(*items: str) -> str:
-    return "\n".join(items) + "\n"
-
-
 def score(objective: str, color: str = "yellow") -> dict:
     return {"score": {"name": "@s", "objective": objective}, "color": color}
 
@@ -302,7 +295,7 @@ def datapack_files() -> dict[str, str]:
         "# realms:rules/launch). Completed challenges stay counted in rw.challenges.",
         *(f"scoreboard players reset * {o}" for o in weekly()),
         "# Events begun from now on count for the event challenge.",
-        "scoreboard players operation #firstevent rc.week = #event ev.state",
+        f"scoreboard players operation #firstevent rc.week = #event {STATE}",
         "scoreboard players add #firstevent rc.week 1",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
@@ -311,9 +304,9 @@ def datapack_files() -> dict[str, str]:
         "# #launched makes that once only, so a launch run again by mistake wipes nothing earned since; later",
         "# seasons keep the counts they carried.",
         f"function {NS}:challenges/restart",
-        *(f"execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run "
+        *(f"execute if score #season rw.day matches 1 unless score {LAUNCHED} matches 1 run "
           f"scoreboard players reset * {o}" for o in TEST_PLAY),
-        "scoreboard players set #launched rw.day 1",
+        f"scoreboard players set {LAUNCHED} 1",
     )
     active = []
     for kind in KINDS:

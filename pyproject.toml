@@ -13,7 +13,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 ignore = ["SIM115"]  # short scripts read small files with open(); the OS closes them
 
 [tool.ruff.lint.isort]
-known-first-party = ["add", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "retention", "validate", "wardrobe", "events", "block_wheel", "rules", "map_border", "modrinth", "site_links", "join_addresses", "funnel", "season", "standings", "client_env", "challenges", "drops", "npcs", "lootrestock_patch"]
+known-first-party = ["add", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "retention", "validate", "wardrobe", "events", "block_wheel", "rules", "map_border", "modrinth", "site_links", "join_addresses", "funnel", "season", "standings", "client_env", "challenges", "drops", "npcs", "lootrestock_patch", "datapacks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

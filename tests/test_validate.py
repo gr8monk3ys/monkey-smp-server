@@ -375,3 +375,9 @@ def test_verify_online_downloads_every_java_build(capsys):
     m["mods"] = []
     assert validate.verify_online(m, Upstream(http)) == []
     assert capsys.readouterr().out.count("ok  java ") == 5
+
+
+def test_a_stale_generated_pack_fails_validation(monkeypatch, capsys):
+    monkeypatch.setattr(validate.datapacks, "differences", lambda repo: ["package/realms/datapacks/realms-x/a"])
+    assert validate.main([]) == 1
+    assert "realms-x/a is out of date (run python tools/datapacks.py)" in capsys.readouterr().out

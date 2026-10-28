@@ -5,6 +5,7 @@ import zipfile
 
 import pytest
 
+import datapacks
 import season
 import wardrobe
 
@@ -61,7 +62,7 @@ def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
     (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(gzip.compress(nbt(SCOREBOARD)))
     assert season.main(["carry", str(old), "--into", str(new), "--season", "2"]) == 0
     pack = new / "datapacks" / "realms-carry"
-    assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == wardrobe.DATA_FORMAT
+    assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == datapacks.DATA_FORMAT
     assert json.loads((pack / "data/minecraft/tags/function/load.json").read_text()) == {"values": ["realms:carry/run"]}
     run = (pack / "data/realms/function/carry/run.mcfunction").read_text().splitlines()
     guard = run.index("execute if score #carried rw.day matches 1 run return 0")

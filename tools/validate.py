@@ -1,7 +1,8 @@
 """Check the manifest and package for mistakes that would break an install.
 
   python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack,
-                                        Fabric launcher profile, player installer files, the site's links and modpack)
+                                        Fabric launcher profile, player installer files, the site's links and modpack,
+                                        the generated data packs)
   python tools/validate.py --online     also download every file (Java for every platform, the Paper jar
                                         or Fabric launcher, plugins, mods, datapacks, and the PowerShell
                                         builds in pwsh.lock), verify its size and hash, apply each
@@ -15,6 +16,7 @@ import sys
 
 import build
 import client_env
+import datapacks
 import defaults
 import entries
 import launcher_profile
@@ -183,6 +185,9 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
     manifest = repo.load_manifest()
     errors = (validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
               + site_links.problems(repo))
+    if repo.root == REPO.root:  # the generators are this checkout's; an older release's packs came from older ones
+        errors += [f"{p} is out of date (run python tools/datapacks.py)" for p in datapacks.differences(repo)]
+        errors += datapacks.problems(datapacks.all_files(repo))
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
         errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)

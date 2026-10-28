@@ -670,7 +670,7 @@ counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statisti
   mine farms it. That costs the friend the blocks (logs and ancient debris drop themselves; ores need Silk
   Touch), so keep `mine` rewards small and look at anyone who finishes one in minutes.
 
-Then `python tools/wardrobe.py` (it writes the challenges into the wardrobe pack), run the checks, and
+Then `python tools/datapacks.py` (it writes the challenges into the wardrobe pack), run the checks, and
 release. Players need a new client pack only when skins change.
 
 **The launch weekend (Founder's Circlet).** `function realms:rules/launch` opens it, and it closes by itself
@@ -744,7 +744,7 @@ journalctl -u realms-drops --since today             # each try and why it didn'
 
 The timer logs why a night had no drop: automatic drops off, a drop already on, tonight's done, an event
 on, too few players, or no spots. Times, counts, the ring and the loot are constants at the top of
-`tools/drops.py`; change them there, run `python tools/drops.py pack` and the checks, and release.
+`tools/drops.py`; change them there, run `python tools/datapacks.py` and the checks, and release.
 
 ## Telling players what changed
 

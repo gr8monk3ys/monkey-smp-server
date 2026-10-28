@@ -395,11 +395,14 @@ def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, no
 
 def discord_message(week: dict) -> str:
     rows = [Row(**r) for r in week["rows"]]
-    lines = [f"**Faction standings, {span(week)}**", "```", *table_text(rows, TOP), "```",
-             *diplomacy.discord_lines(week),
-             f"Scored as {FORMULA} `/trigger standings` shows the board in game."]
-    message = "\n".join(lines)
-    return message if len(message) <= DISCORD_LIMIT else message[:DISCORD_LIMIT - 4] + "\n```"
+    head = [f"**Faction standings, {span(week)}**", "```", *table_text(rows, TOP), "```"]
+    foot = f"Scored as {FORMULA} `/trigger standings` shows the board in game."
+    room = DISCORD_LIMIT - len("\n".join([*head, foot]))   # what's left for the war and pacts lines
+    message = "\n".join([*head, *diplomacy.discord_lines(week, room), foot])
+    if len(message) <= DISCORD_LIMIT:
+        return message
+    cut = message[:DISCORD_LIMIT - 4]
+    return cut + "\n```" if cut.count("```") % 2 else message[:DISCORD_LIMIT]   # never leave a code block open
 
 
 def webhook() -> str:
@@ -453,26 +456,33 @@ def start(world: Path, state: Path, now: dt.datetime) -> int:
 
 
 def sync_factions(rcon, folder: Path, data: World) -> int:
-    """Each faction's number, owner and name in game (tools/diplomacy.py), from the parties as read."""
+    """Each faction's number, owner and name in game (tools/diplomacy.py), from the parties as read. A party file
+    read_parties left out (no owner) is one diplomacy can't tell about, so it keeps what it has in game."""
     factions = [diplomacy.Faction(p.id, board_name(p.name) or board_name(p.owner) or p.id[:8], p.members)
                 for p in data.parties]
-    return diplomacy.sync(rcon, factions, data.scores, folder, warn)
+    unsure = frozenset(p.id for p in saved_world.parties(folder) or [] if p.owner is None)
+    return diplomacy.sync(rcon, factions, data.scores, folder, warn, unsure)
 
 
 def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
     week = read_json(week_file(state))
     last_path = latest_week(state)
     data = read_world(world)
-    try:
+    status = 0
+    try:   # never in the board's way: the board goes up whatever happens here
         sent = sync_factions(rcon, world, data)
         if sent:
             print(f"factions in game: {sent} change(s) sent")
+    except (RconError, OSError, ValueError) as e:
+        print(f"could not write the factions in game: {e}", file=sys.stderr)
+        status = 1
+    try:
         update_board(rcon, table(data, week, warn), week, read_json(last_path) if last_path else None, now)
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         return 1
     print(f"board updated ({clock(now)})")
-    return 0
+    return status
 
 
 def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=urllib.request.urlopen) -> int:
@@ -484,10 +494,15 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     rows = table(data, week, warn)
     if start_ is None or now - start_ >= dt.timedelta(days=MIN_WEEK_DAYS):
         before = latest_week(state)
-        seq = (read_json(before) or {}).get("diplomacy_seq", 0) if before else 0
+        try:
+            storage = diplomacy.saved_storage(world)
+        except (OSError, ValueError) as e:   # the war and pacts lines are extra: the close goes on without them
+            warn(f"{e}: this week's war and pacts are left out of the post (the next one has them)")
+            storage = None
+        said = diplomacy.report(storage, data.scores, (read_json(before) or {}) if before else {})
         closed = {"start": week.get("start") if week else None, "end": now.isoformat(timespec="seconds"),
                   "formula": FORMULA, "rows": [asdict(r) for r in rows], "announced": False, "posted": False,
-                  **diplomacy.report(diplomacy.saved_storage(world), data.scores, seq), "wars_ended": False}
+                  **said, "wars_ended": False, "war_ends": diplomacy.week_end(data.scores, said["diplomacy_seq"])}
         path = state / "weeks" / f"{now:%Y-%m-%d}.json"
         write_json(path, closed)
         week = snapshot(data, now)
@@ -512,14 +527,19 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
             last["announced"] = True
             write_json(path, last)
             print("board updated and announced in chat")
-        if not last.get("wars_ended", True):   # a week closed before diplomacy has no wars to end
-            rcon(f"function {NS}:diplomacy/week_over")
-            last["wars_ended"] = True
-            write_json(path, last)
-            print("the week's wars are over")
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         status = 1
+    if not last.get("wars_ended", True):   # a week closed before diplomacy has no wars to end
+        try:   # the closed week's own wars (war_ends), so a late retry never ends one of the new week
+            for command in diplomacy.batch_commands(last.get("war_ends") or []):
+                rcon(command)
+            last["wars_ended"] = True
+            write_json(path, last)
+            print("the week's wars are over")
+        except RconError as e:
+            print(f"could not end the week's wars: {e}", file=sys.stderr)
+            status = 1
     if last.get("posted"):
         print("already posted to Discord")
     elif not url:

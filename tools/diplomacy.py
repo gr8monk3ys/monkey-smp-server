@@ -10,24 +10,29 @@ RCON, through sync() here. That is the in-game faction identity other features b
     realms:factions   command storage: names.f<N>, the faction's name as the board shows it, as a text
                       component {text:"Red Monkeys"} (plain ASCII, no quotes; show it with
                       {"nbt":"names.f<N>","storage":"realms:factions","interpret":true}, as the board's text is);
-                      ids.f<N>, the party's id. names.f<N> goes when the party does; ids.f<N> stays.
+                      ids.f<N>, the party's id. names.f<N> goes when the party does (missing from two runs
+                      in a row, so one bad read ends nothing); ids.f<N> stays.
 
 A number belongs to one party for the life of the world and is never given to another; a new season's world
 numbers its factions again from 1. It is only as fresh as the last board run: up to an hour behind, plus the 5
 minutes the saved world can be. To compare two players' factions in a pack:
     execute if score @s st.faction = @p[...] st.faction run ...      (same faction; no score never matches)
-From Python, numbers(world) and names(world) read it back from the saved world.
+From Python, numbers(world) and names(world) read it back from the saved world. sync() sends its changes many
+to a command: a list in storage realms:diplomacy batch that diplomacy/batch/run makes one by one.
 
 Diplomacy, in the realms-standings data pack (generated: edit this file, not it). A faction's leader (st.leader:
 its party's owner) opens /trigger diplomacy after the launch (#launched rw.day) and can, against any other faction:
     declare war    announced; kills between the two count double in the weekly Kills column (st.warkills
-                   adds the second one) until Sunday's close, when every war ends; declare again to go on.
+                   adds the second one) until Sunday's close, when every war then running ends; declare again
+                   to go on. (A war declared after the world's last save before the close runs to the next one.)
                    Not against a pact partner.
     offer a pact   announced; the other leader accepts from their menu (that ends a war between them). A pact
                    stands until either side breaks it, and a break is announced with the faction and the player.
                    At most MAX_PACTS each (rule 31: alliances, not confederations). Offers end at the close.
-Each is logged in storage realms:diplomacy log; standings' Sunday close puts the week's in the Discord post
-(report()) and then sends diplomacy/week_over. Claims, the griefing rules and rule 41 stay as they are.
+Each is logged in storage realms:diplomacy log, numbered; a war's score (dp.war) and an offer's (dp.offer) is its
+number there. Standings' Sunday close puts the week's in the Discord post (report()) and keeps week_end(): the
+wars and offers then running, each by its number, so a late retry ends those and never a newer one; week_over
+then trims the log. Claims, the griefing rules and rule 41 stay as they are.
 
 How a war kill is counted: a hidden advancement per faction number (kill/f<N>: player_killed_entity, the victim a
 player with st.faction N) runs as the killer at the kill, which knows its own faction, so the pair's war score
@@ -45,6 +50,7 @@ import nbt
 from challenges import LAUNCHED
 from datapacks import NS, lines, refuse, text
 from events import ARENA_TAG
+from rcon import LIMIT
 
 FN = f"data/{NS}/function/diplomacy"
 ADVANCEMENT = f"data/{NS}/advancement/diplomacy"
@@ -136,16 +142,30 @@ def assign(factions: list[Faction], taken: dict[str, int], warn: Callable[[str],
     return out
 
 
-def sync_commands(factions: list[Faction], scores: dict[str, dict[str, int]], storage: dict,
-                  warn: Callable[[str], None] = lambda msg: None) -> list[str]:
-    """The RCON commands that bring the game's faction numbers, leaders and names in line with the parties, given
-    what the saved world already holds (`scores`, the saved scoreboard; `storage`, saved_storage()). Only changes
-    are sent, so an hour with no new party or member sends nothing. Names first, then numbers."""
+def change(f: str, **args) -> dict:
+    """One change for the game to make: realms:diplomacy/<f>, given the rest as its macro arguments."""
+    return {"f": f, **args}
+
+
+def sync_changes(factions: list[Faction], scores: dict[str, dict[str, int]], storage: dict,
+                 warn: Callable[[str], None] = lambda msg: None, unsure: frozenset[str] = frozenset()) -> list[dict]:
+    """The changes (change()) that bring the game's faction numbers, leaders and names in line with the parties,
+    given what the saved world already holds (`scores`, the saved scoreboard; `storage`, saved_storage()). Only
+    what differs is sent, so an hour with no new party or member sends nothing.
+
+    A read that can't be trusted never ends a faction: with no parties read at all (the file missing or
+    unreadable) nothing is sent, the parties in `unsure` (on disk but not readable) keep what they have, and a
+    faction missing from a good read is only marked missing (realms:diplomacy missing.f<N>). It ends (its war
+    and pacts dissolved, its name removed) only when it is still missing on the next run."""
     saved = storage.get("factions", {})
     taken = {str(pid): n for key, pid in saved.get("ids", {}).items() if (n := number_of(key))}
     had_names = saved_names(storage)
+    was_missing = {n for key in storage.get("diplomacy", {}).get("missing", {}) if (n := number_of(key))}
+    if not factions and had_names:
+        warn("no parties read from the saved world: can't tell which factions are gone, so nothing was changed")
+        return []
     numbered = assign(factions, taken, warn)
-    commands, live = [], {}
+    changes, live = [], {}
     want = {FACTION: {}, LEADER: {}}
     for f in factions:
         n = numbered.get(f.id)
@@ -153,9 +173,9 @@ def sync_commands(factions: list[Faction], scores: dict[str, dict[str, int]], st
             continue
         live[n] = f
         if f.id not in taken:
-            commands.append(f"data modify storage {FACTIONS} ids.f{n} set value {json.dumps(f.id)}")
+            changes.append(change("sync/id", n=n, v=f.id))
         if had_names.get(n) != f.name:
-            commands.append(f"data modify storage {FACTIONS} names.f{n} set value {{text:{json.dumps(f.name)}}}")
+            changes.append(change("sync/name", n=n, v=f.name))
         for i, player in enumerate(f.members):
             if not PLAYER_NAME.fullmatch(player):
                 warn(f"{f.name}: {player!r} is not a player name; left out of its faction in game")
@@ -163,30 +183,69 @@ def sync_commands(factions: list[Faction], scores: dict[str, dict[str, int]], st
             want[FACTION][player] = n
             if i == 0:
                 want[LEADER][player] = 1
-    gone = {n for n in had_names if n not in live}
+    held = {taken[pid] for pid in unsure if pid in taken}
+    missing = {n for n in had_names if n not in live and n not in held}
+    gone, newly = missing & was_missing, missing - was_missing
+    for n in sorted(newly):
+        warn(f"faction {n} ({had_names[n]}) is missing from the parties read: it ends if it is still missing "
+             "on the next run")
+        changes.append(change("sync/missing", n=n))
+    changes += [change("sync/found", n=n) for n in sorted(was_missing - missing)]
     # A faction that is gone can't be picked in the menu any more, so its pacts and wars end here (while its
     # name is still there to announce it), and its partner gets the pact back.
-    pairs = {h for o in (WAR, PACT) for h, v in scores.get(o, {}).items() if v == 1}
+    pairs = {h for o in (WAR, PACT) for h, v in scores.get(o, {}).items() if v >= 1}
     for holder in sorted(pairs):
         m = re.fullmatch(r"#(\d+)\.(\d+)", holder)
         if m and {int(m[1]), int(m[2])} & gone:
-            commands.append(f"function {NS}:diplomacy/dissolve {{a:{int(m[1])},b:{int(m[2])}}}")
-    commands += [f"data remove storage {FACTIONS} names.f{n}" for n in sorted(gone)]
+            changes.append(change("dissolve", a=int(m[1]), b=int(m[2])))
+    changes += [change("sync/gone", n=n) for n in sorted(gone)]
+    kept = held | newly    # their players keep their number and leader until it is known
+    faction_of = scores.get(FACTION, {})
     for objective, wanted in want.items():
         have = {h: v for h, v in scores.get(objective, {}).items() if not h.startswith("#")}
-        commands += [f"scoreboard players set {p} {objective} {v}" for p, v in sorted(wanted.items())
-                     if have.get(p) != v]
-        commands += [f"scoreboard players reset {p} {objective}" for p in sorted(have) if p not in wanted]
-    return commands
+        changes += [change("sync/set", p=p, o=objective, v=v) for p, v in sorted(wanted.items()) if have.get(p) != v]
+        changes += [change("sync/reset", p=p, o=objective) for p in sorted(have)
+                    if p not in wanted and faction_of.get(p) not in kept]
+    return changes
+
+
+def snbt(value) -> str:
+    """SNBT for a change: compounds with plain keys, strings and ints."""
+    if isinstance(value, dict):
+        return "{" + ",".join(f"{k}:{snbt(v)}" for k, v in value.items()) + "}"
+    if isinstance(value, int):
+        return str(value)
+    return json.dumps(str(value))
+
+
+def batch_commands(changes: list[dict]) -> list[str]:
+    """The RCON commands that make the changes: as many as fit in one command go into storage realms:diplomacy
+    batch, and realms:diplomacy/batch/run makes them in order. Two commands for about 30 changes, so a first sync
+    of every faction and member takes seconds, not one `docker compose exec` per change."""
+    head, out, chunk = f"data modify storage {STORE} batch set value [", [], []
+
+    def flush():
+        out.extend([head + ",".join(chunk) + "]", f"function {NS}:diplomacy/batch/run"])
+
+    for c in changes:
+        one = snbt(c)
+        if chunk and len((head + ",".join([*chunk, one]) + "]").encode()) > LIMIT:
+            flush()
+            chunk = []
+        chunk.append(one)
+    if chunk:
+        flush()
+    return out
 
 
 def sync(rcon, factions: list[Faction], scores: dict[str, dict[str, int]], world: Path,
-         warn: Callable[[str], None] = lambda msg: None) -> int:
-    """Sends sync_commands; stops at the first one refused (RconError). Returns how many were sent."""
-    commands = sync_commands(factions, scores, saved_storage(world), warn)
-    for command in commands:
+         warn: Callable[[str], None] = lambda msg: None, unsure: frozenset[str] = frozenset()) -> int:
+    """Makes sync_changes in game; stops at the first command refused (RconError). Returns how many changes.
+    A saved storage that can't be read is a ValueError (or OSError), and nothing is sent."""
+    changes = sync_changes(factions, scores, saved_storage(world), warn, unsure)
+    for command in batch_commands(changes):
         rcon(command)
-    return len(commands)
+    return len(changes)
 
 
 # ---------------------------------------------------------------- the week's report
@@ -196,26 +255,40 @@ SAID = {"war": "{a} declared war on {b}", "pact": "{a} and {b} made a pact",
         "peace": "{a} and {b} made peace, and a pact", "break": "{a} broke its pact with {b}",
         "end": "staff ended the war or pact between {a} and {b}"}   # offers stay in game chat
 REPORT_LIMIT = 10      # declarations in one Discord post
+PACTS_LIMIT = 10       # pacts named in the "Pacts standing" line
+MORE = "- and more: `/trigger diplomacy` in game"
 
 
 def discord_name(name: str) -> str:
     return re.sub(r"([*_~|`\\>])", r"\\\1", name)
 
 
-def report(storage: dict, scores: dict[str, dict[str, int]], since: int) -> dict:
+def more(names: list[str], limit: int) -> str:
+    shown = "; ".join(names[:limit])
+    return shown + (f"; and {len(names) - limit} more" if len(names) > limit else "")
+
+
+def report(storage: dict | None, scores: dict[str, dict[str, int]], before: dict) -> dict:
     """What the Sunday close keeps for the Discord post: {"diplomacy": lines, "diplomacy_seq": the newest
-    declaration's number}. Declarations numbered above `since` (the last close's) are this week's; a log whose
-    newest is below it was started again (a new world), so all of it is."""
+    declaration's number, "diplomacy_world": the world's marker (#world dp.state)}. `before` is the last closed
+    week (its diplomacy_seq and diplomacy_world), {} for none. The declarations numbered above its seq are this
+    week's; in another world (the markers differ, a new season) all of them are. `storage` is None when the saved
+    storage couldn't be read: nothing is reported, and the next close reports this week's too."""
+    since, was = int(before.get("diplomacy_seq", 0) or 0), before.get("diplomacy_world")
+    world = scores.get(STATE, {}).get("#world")
+    if storage is None:
+        return {"diplomacy": [], "diplomacy_seq": since, "diplomacy_world": was if was is not None else world}
+    if world is not None and was is not None and world != was:
+        since = 0
     log = [e for e in storage.get("diplomacy", {}).get("log", []) if isinstance(e, dict)]
     newest = max((int(e.get("n", 0)) for e in log), default=0)
-    since = since if newest >= since else 0
     known = saved_names(storage)
 
     def name(n) -> str:
         return discord_name(known.get(int(n), f"faction {n}"))
-    events = [SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0)))
-              for e in sorted(log, key=lambda e: int(e.get("n", 0)))
-              if int(e.get("n", 0)) > since and e.get("kind") in SAID]
+    week = [e for e in sorted(log, key=lambda e: int(e.get("n", 0))) if int(e.get("n", 0)) > since]
+    events = [SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0))) for e in week
+              if e.get("kind") in SAID]
     pacts = []
     for holder, value in sorted(scores.get(PACT, {}).items()):
         m = re.fullmatch(r"#(\d+)\.(\d+)", holder)
@@ -228,15 +301,38 @@ def report(storage: dict, scores: dict[str, dict[str, int]], since: int) -> dict
         if len(events) > REPORT_LIMIT:
             out.append(f"- and {len(events) - REPORT_LIMIT} more")
     if pacts:
-        out.append("Pacts standing: " + "; ".join(pacts) + ".")
-    if any(e.get("kind") == "war" and int(e.get("n", 0)) > since for e in log):
+        out.append("Pacts standing: " + more(pacts, PACTS_LIMIT) + ".")
+    if any(e.get("kind") == "war" for e in week):
         out.append("Every war ends with the week: a leader can declare again in game with `/trigger diplomacy`.")
-    return {"diplomacy": out, "diplomacy_seq": max(newest, since)}
+    return {"diplomacy": out, "diplomacy_seq": max(newest, since), "diplomacy_world": world}
 
 
-def discord_lines(week: dict) -> list[str]:
-    """A closed week's lines for its Discord post (none for a week closed before diplomacy, or a quiet one)."""
-    return list(week.get("diplomacy") or [])
+def week_end(scores: dict[str, dict[str, int]], seq: int) -> list[dict]:
+    """The changes that end a closed week, from the scoreboard read at the close: each war and pact offer then
+    running ends (only if it is still the one declared then: its score is its declaration's number, so one
+    declared again since stays), then week_over announces it and trims the log up to `seq`. Kept in the closed
+    week's file, so a late retry ends the same ones and never a war of the new week."""
+    ends = [change("war_over", lo=int(m[1]), hi=int(m[2]), seq=v) for h, v in sorted(scores.get(WAR, {}).items())
+            if v >= 1 and (m := re.fullmatch(r"#(\d+)\.(\d+)", h))]
+    ends += [change("offer_over", a=int(m[1]), b=int(m[2]), seq=v) for h, v in sorted(scores.get(OFFER, {}).items())
+             if v >= 1 and (m := re.fullmatch(r"#(\d+)\.(\d+)", h))]
+    return [*ends, change("week_over", seq=seq)]
+
+
+def discord_lines(week: dict, room: int = 2000) -> list[str]:
+    """A closed week's lines for its Discord post (none for a week closed before diplomacy, or a quiet one), as
+    many as fit in `room` characters (each with its newline); when they don't all fit, the first ones that fit
+    with MORE after them."""
+    every = list(week.get("diplomacy") or [])
+    if sum(len(line) + 1 for line in every) <= room:
+        return every
+    out, used = [], len(MORE) + 1
+    for line in every:
+        if used + len(line) + 1 > room:
+            break
+        out.append(line)
+        used += len(line) + 1
+    return [*out, MORE] if used <= room else []
 
 
 # ---------------------------------------------------------------- the data pack
@@ -262,10 +358,10 @@ BREAK_BUTTON = button("Break the pact", "dark_red", "break", "Everyone is told, 
 
 # The menu's line for another faction: (when, what it says, its colour, the leader's buttons).
 ROWS = [
-    (f"if score #$(lo).$(hi) {WAR} matches 1", "at war", "red", [PEACE_BUTTON]),
+    (f"if score #$(lo).$(hi) {WAR} matches 1..", "at war", "red", [PEACE_BUTTON]),
     (f"if score #$(lo).$(hi) {PACT} matches 1", "pact", "green", [BREAK_BUTTON]),
-    (f"if score #$(b).$(a) {OFFER} matches 1", "offers you a pact", "aqua", [ACCEPT_BUTTON, WAR_BUTTON]),
-    (f"if score #$(a).$(b) {OFFER} matches 1", "you offered a pact", "gray", [WAR_BUTTON]),
+    (f"if score #$(b).$(a) {OFFER} matches 1..", "offers you a pact", "aqua", [ACCEPT_BUTTON, WAR_BUTTON]),
+    (f"if score #$(a).$(b) {OFFER} matches 1..", "you offered a pact", "gray", [WAR_BUTTON]),
     ("", "neutral", "gray", [WAR_BUTTON, PACT_BUTTON]),
 ]
 
@@ -289,7 +385,8 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard objectives add {LEADER} dummy",
         "# The second count of a war kill, for the weekly Kills column.",
         f"scoreboard objectives add {WARKILLS} dummy",
-        f'# "#LO.HI": 1 while two factions are at war ({WAR}) or have a pact ({PACT}); "#FROM.TO": a pact offer.',
+        f'# "#LO.HI": two factions at war ({WAR}: the declaration\'s number in the log) or with a pact ({PACT}: 1);',
+        f'# "#FROM.TO": a pact offer ({OFFER}: its number in the log).',
         f"scoreboard objectives add {WAR} dummy",
         f"scoreboard objectives add {PACT} dummy",
         f"scoreboard objectives add {OFFER} dummy",
@@ -301,6 +398,9 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard objectives add {TRIGGER} trigger",
         f"scoreboard players set #10 {TMP} 10",
         f"execute unless data storage {STORE} log run data modify storage {STORE} log set value []",
+        "# This world's marker: the Sunday report tells a new world (a new season) by it.",
+        f"execute unless score #world {STATE} matches 1.. store result score #world {STATE} run random value "
+        "1..2147483646",
         f"schedule function {NS}:diplomacy/second 20t replace",
     )
     f[f"{FN}/tick.mcfunction"] = lines(
@@ -317,7 +417,7 @@ def datapack_files() -> dict[str, str]:
         "# before it counts. Declarations can't be made before it; this clears anything staff set by hand.",
         *(f"scoreboard players reset * {o}" for o in (WAR, PACT, OFFER, PACTS, LAST, WARKILLS)),
         f"data modify storage {STORE} log set value []",
-        f"scoreboard players set #wars {STATE} 0",
+        f"scoreboard players set #ended {STATE} 0",
         f"scoreboard players set #launched {STATE} 1",
     )
     f[f"{FN}/pair.mcfunction"] = lines(
@@ -382,18 +482,17 @@ def datapack_files() -> dict[str, str]:
         "# Macro pair {a, b, lo, hi}: faction a declares war on faction b.",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run " + refuse(
             "You have a pact with them. Break it first (everyone is told)."),
-        f"$execute if score #$(lo).$(hi) {WAR} matches 1 run " + refuse(
+        f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run " + refuse(
             "You're at war with them already, until Sunday's close."),
-        f"$scoreboard players set #$(lo).$(hi) {WAR} 1",
         f"$scoreboard players reset #$(a).$(b) {OFFER}",
         f"$scoreboard players reset #$(b).$(a) {OFFER}",
-        f"scoreboard players add #wars {STATE} 1",
         announce({"text": "War! ", "color": "red", "bold": True}, faction("a"), *who,
                  {"text": " declared war on ", "color": "red"}, faction("b"),
                  gray(". Kills between them count double in the weekly standings until Sunday's close. Claims "
                       "still protect, and the griefing rules still apply.")),
         "execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.6 1",
         f'$function {NS}:diplomacy/log {{kind:"war",a:$(a),b:$(b)}}',
+        f"$scoreboard players operation #$(lo).$(hi) {WAR} = #seq {STATE}",
         done,
     )
     f[f"{FN}/pact.mcfunction"] = lines(
@@ -404,15 +503,15 @@ def datapack_files() -> dict[str, str]:
             "confederations). Break one first."),
         f"$execute if score #f$(b) {PACTS} matches {MAX_PACTS}.. run " + refuse(
             f"They have {MAX_PACTS} pacts, the most a faction can hold."),
-        f"$execute if score #$(b).$(a) {OFFER} matches 1 run return run function {NS}:diplomacy/accept with "
+        f"$execute if score #$(b).$(a) {OFFER} matches 1.. run return run function {NS}:diplomacy/accept with "
         f"storage {STORE} pair",
-        f"$execute if score #$(a).$(b) {OFFER} matches 1 run " + refuse(
+        f"$execute if score #$(a).$(b) {OFFER} matches 1.. run " + refuse(
             "Your offer stands until they accept it, or until Sunday's close."),
-        f"$scoreboard players set #$(a).$(b) {OFFER} 1",
         announce(faction("a"), *who, {"text": " offers ", "color": "aqua"}, faction("b"),
                  {"text": " a pact.", "color": "aqua"},
                  gray(" Their leader can accept it with /trigger diplomacy until Sunday's close.")),
         f'$function {NS}:diplomacy/log {{kind:"offer",a:$(a),b:$(b)}}',
+        f"$scoreboard players operation #$(a).$(b) {OFFER} = #seq {STATE}",
         done,
     )
     f[f"{FN}/accept.mcfunction"] = lines(
@@ -420,7 +519,7 @@ def datapack_files() -> dict[str, str]:
         f"$scoreboard players reset #$(a).$(b) {OFFER}",
         f"$scoreboard players reset #$(b).$(a) {OFFER}",
         f"scoreboard players set #peace {TMP} 0",
-        f"$execute if score #$(lo).$(hi) {WAR} matches 1 run scoreboard players set #peace {TMP} 1",
+        f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run scoreboard players set #peace {TMP} 1",
         f"$scoreboard players reset #$(lo).$(hi) {WAR}",
         f"$scoreboard players set #$(lo).$(hi) {PACT} 1",
         f"$scoreboard players add #f$(a) {PACTS} 1",
@@ -526,20 +625,76 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:diplomacy/war_kill with storage {STORE} pair",
     )
     f[f"{FN}/war_kill.mcfunction"] = lines(
-        f"$execute unless score #$(lo).$(hi) {WAR} matches 1 run return 0",
+        f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. run return 0",
         f"scoreboard players add @s {WARKILLS} 1",
         "title @s actionbar " + text({"text": "A war kill: it counts double this week.", "color": "red"}),
     )
 
     # ------------------------------------------------ the week's end and staff
+    f[f"{FN}/war_over.mcfunction"] = lines(
+        "# Macro {lo, hi, seq}: the Sunday close ends the war declared as number seq, if it still runs.",
+        f"$execute unless score #$(lo).$(hi) {WAR} matches $(seq) run return 0",
+        f"$scoreboard players reset #$(lo).$(hi) {WAR}",
+        f"scoreboard players add #ended {STATE} 1",
+    )
+    f[f"{FN}/offer_over.mcfunction"] = lines(
+        "# Macro {a, b, seq}: the Sunday close ends the pact offer made as number seq, if it still stands.",
+        f"$execute unless score #$(a).$(b) {OFFER} matches $(seq) run return 0",
+        f"$scoreboard players reset #$(a).$(b) {OFFER}",
+    )
     f[f"{FN}/week_over.mcfunction"] = lines(
-        "# tools/standings.py close runs this once a week has closed: every war and pact offer ends; pacts stand.",
-        f"execute if score #wars {STATE} matches 1.. run tellraw @a " + text(
+        "# Macro {seq}: after the close's war_over and offer_over (tools/diplomacy.py week_end): says so if a war",
+        "# ended, and trims the log up to seq, the closed week's last declaration (posted to Discord).",
+        f"execute if score #ended {STATE} matches 1.. run tellraw @a " + text(
             {"text": "The week is over, and so are its wars. ", "color": "gold"},
             gray("Pacts stand. A leader can declare war again with /trigger diplomacy.")),
-        f"scoreboard players reset * {WAR}",
-        f"scoreboard players reset * {OFFER}",
-        f"scoreboard players set #wars {STATE} 0",
+        f"scoreboard players set #ended {STATE} 0",
+        f"$scoreboard players set #trim {TMP} $(seq)",
+        f"function {NS}:diplomacy/trim",
+    )
+    f[f"{FN}/trim.mcfunction"] = lines(
+        "# Removes the log's entries numbered up to #trim dp.tmp (the log is in number order).",
+        f"execute unless data storage {STORE} log[0] run return 0",
+        f"execute store result score #n {TMP} run data get storage {STORE} log[0].n",
+        f"execute if score #n {TMP} > #trim {TMP} run return 0",
+        f"data remove storage {STORE} log[0]",
+        f"function {NS}:diplomacy/trim",
+    )
+    f[f"{FN}/batch/run.mcfunction"] = lines(
+        "# Makes the changes in storage realms:diplomacy batch in order, each realms:diplomacy/<f> with its entry",
+        "# (tools/diplomacy.py batch_commands): many changes per RCON command.",
+        f"execute unless data storage {STORE} batch[0] run return 0",
+        f"function {NS}:diplomacy/batch/one with storage {STORE} batch[0]",
+        f"data remove storage {STORE} batch[0]",
+        f"function {NS}:diplomacy/batch/run",
+    )
+    f[f"{FN}/batch/one.mcfunction"] = lines(
+        f"$function {NS}:diplomacy/$(f) with storage {STORE} batch[0]",
+    )
+    f[f"{FN}/sync/id.mcfunction"] = lines(
+        f"$data modify storage {FACTIONS} ids.f$(n) set from storage {STORE} batch[0].v",
+    )
+    f[f"{FN}/sync/name.mcfunction"] = lines(
+        f'$data modify storage {FACTIONS} names.f$(n) set value {{text:""}}',
+        f"$data modify storage {FACTIONS} names.f$(n).text set from storage {STORE} batch[0].v",
+    )
+    f[f"{FN}/sync/missing.mcfunction"] = lines(
+        "# Missing from one read of the parties: it ends only if it is still missing on the next run.",
+        f"$data modify storage {STORE} missing.f$(n) set value 1b",
+    )
+    f[f"{FN}/sync/found.mcfunction"] = lines(
+        f"$data remove storage {STORE} missing.f$(n)",
+    )
+    f[f"{FN}/sync/gone.mcfunction"] = lines(
+        "# Missing on two runs in a row: the faction is gone (its war and pacts were dissolved just before).",
+        f"$data remove storage {FACTIONS} names.f$(n)",
+        f"$data remove storage {STORE} missing.f$(n)",
+    )
+    f[f"{FN}/sync/set.mcfunction"] = lines(
+        "$scoreboard players set $(p) $(o) $(v)",
+    )
+    f[f"{FN}/sync/reset.mcfunction"] = lines(
+        "$scoreboard players reset $(p) $(o)",
     )
     f[f"{FN}/staff/factions.mcfunction"] = lines(
         "# Lists every faction's number and name (names.f<N>).",
@@ -555,15 +710,19 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:diplomacy/staff/end_pair with storage {STORE} pair",
     )
     f[f"{FN}/staff/end_pair.mcfunction"] = lines(
-        f"$execute unless score #$(lo).$(hi) {WAR} matches 1 unless score #$(lo).$(hi) {PACT} matches 1 run "
+        f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. unless score #$(lo).$(hi) {PACT} matches 1 run "
         + refuse("Those two have no war or pact."),
+        f"function {NS}:diplomacy/end_pair with storage {STORE} pair",
+        announce({"text": "Staff ended the war or pact between ", "color": "gold"}, faction("a"),
+                 {"text": " and ", "color": "gold"}, faction("b"), {"text": ".", "color": "gold"}),
+        f'$function {NS}:diplomacy/log {{kind:"end",a:$(a),b:$(b)}}',
+    )
+    f[f"{FN}/end_pair.mcfunction"] = lines(
+        "# Macro pair {a, b, lo, hi}: ends their war and pact (staff/end_pair, dissolve_pair); both get the pact back.",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(a) {PACTS} 1",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(b) {PACTS} 1",
         f"$scoreboard players reset #$(lo).$(hi) {WAR}",
         f"$scoreboard players reset #$(lo).$(hi) {PACT}",
-        announce({"text": "Staff ended the war or pact between ", "color": "gold"}, faction("a"),
-                 {"text": " and ", "color": "gold"}, faction("b"), {"text": ".", "color": "gold"}),
-        f'$function {NS}:diplomacy/log {{kind:"end",a:$(a),b:$(b)}}',
     )
     f[f"{FN}/dissolve.mcfunction"] = lines(
         "# Macro {a, b}: tools/standings.py sends this when one of the two factions' parties is gone: their war",
@@ -574,12 +733,9 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:diplomacy/dissolve_pair with storage {STORE} pair",
     )
     f[f"{FN}/dissolve_pair.mcfunction"] = lines(
-        f"$execute unless score #$(lo).$(hi) {WAR} matches 1 unless score #$(lo).$(hi) {PACT} matches 1 run "
+        f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. unless score #$(lo).$(hi) {PACT} matches 1 run "
         "return 0",
-        f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(a) {PACTS} 1",
-        f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(b) {PACTS} 1",
-        f"$scoreboard players reset #$(lo).$(hi) {WAR}",
-        f"$scoreboard players reset #$(lo).$(hi) {PACT}",
+        f"function {NS}:diplomacy/end_pair with storage {STORE} pair",
         announce({"text": "The war or pact between ", "color": "gray"}, faction("a"), gray(" and "), faction("b"),
                  gray(" is over: one of them is no longer a faction.")),
     )

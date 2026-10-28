@@ -205,7 +205,8 @@ record who is with whom.
   It opens at the launch, so nothing from test play counts.
 - **War.** A leader declares war on another faction. Everyone online is told, with a raid horn. Until
   Sunday's close (7 pm Pacific), a kill between the two factions counts twice in the weekly Kills column,
-  for both sides. The close ends every war; a leader declares again to go on. Claims still protect, and the
+  for both sides. The close ends every war; a leader declares again to go on. (A war declared in the last
+  few minutes before the close, after the world last saved, runs on to the next close.) Claims still protect, and the
   griefing rules and rule 41 still apply: a war changes the score, not what is allowed. Arena kills don't
   count, as for the Kills column.
 - **Pacts.** A leader offers a pact and the other leader accepts it from their own menu. An offer lasts until
@@ -221,8 +222,8 @@ record who is with whom.
 - **Feeding kills** to a war enemy is exploit B13, as with any kill: staff take both counts back
   (docs/ADMIN.md, "War and pacts").
 - **New and gone factions.** The hourly board run gives each new party its faction number in game, so a
-  party made a minute ago can't take part yet. When a party is gone, its wars and pacts end, announced, and
-  its pact partners get the slot back.
+  party made a minute ago can't take part yet. When a party is gone from two board runs in a row (so about
+  an hour after it goes), its wars and pacts end, announced, and its pact partners get the slot back.
 
 `tools/diplomacy.py` makes it, inside the `realms-standings` data pack. It needs no timer of its own: the
 standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.

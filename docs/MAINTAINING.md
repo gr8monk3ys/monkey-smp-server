@@ -47,7 +47,7 @@ outposts next) reads it here rather than asking the parties:
 |---|---|
 | `st.faction` score, by player name | the number (1 to 99) of the player's faction, offline players too. No score: in no faction, or in one made since the last board run |
 | `st.leader` score | 1 for each party's owner, the faction's leader |
-| storage `realms:factions` `names.f<N>` | faction N's name as the board shows it, as a text component: `{text:"Red Monkeys"}` (plain ASCII, no quotes). Show it with `{"nbt":"names.f<N>","storage":"realms:factions","interpret":true}`. Removed when the party is gone |
+| storage `realms:factions` `names.f<N>` | faction N's name as the board shows it, as a text component: `{text:"Red Monkeys"}` (plain ASCII, no quotes). Show it with `{"nbt":"names.f<N>","storage":"realms:factions","interpret":true}`. Removed when the party is gone from two board runs in a row (a run that reads no parties removes nothing) |
 | storage `realms:factions` `ids.f<N>` | the party id behind number N. Kept after the party is gone, so the number is never given again |
 
 - A number belongs to one party for the life of the world. A new season's world numbers again from 1.
@@ -57,7 +57,9 @@ outposts next) reads it here rather than asking the parties:
 - From Python, `diplomacy.numbers(world)` (party id to number) and `diplomacy.names(world)` (number to name)
   read it back from the saved world.
 - A pack that keeps a score per faction holds it as `#f<N>` and should end what it holds for a faction whose
-  `names.f<N>` is gone (the sync sends `realms:diplomacy/dissolve` for war and pacts before it removes one).
+  `names.f<N>` is gone (the sync runs `realms:diplomacy/dissolve` for war and pacts before it removes one).
+- The sync sends its changes many to an RCON command: a list in storage `realms:diplomacy batch` that
+  `realms:diplomacy/batch/run` makes in order, each the function `realms:diplomacy/<f>` with its entry.
 - None of it starts with `rw.`, so `tools/season.py` carries none of it into a new world.
 
 ## Server types: Paper or Fabric

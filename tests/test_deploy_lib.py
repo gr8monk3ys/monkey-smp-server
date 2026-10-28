@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -13,6 +14,10 @@ SOURCE = '. "$(dirname -- "$0")/lib.sh"'
 SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p != LIB)
 DASH = shutil.which("dash")
 needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
+COMPOSE = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
+RCON = f"{COMPOSE} exec -T realms realms rcon"
+# The 2.5.0 upgrade is a one-shot kept as it ran: its own wait_for_live and warn_players predate lib.sh's.
+OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live", "warn_players"}}
 
 
 def functions(text):
@@ -35,7 +40,7 @@ def test_every_deploy_script_loads_lib_once_and_keeps_no_copy_of_it(script):
     assert text.count(SOURCE) == 1
     head = text[:text.index(SOURCE)]
     assert "set -eu\n" in head and re.search(r"^LOG_NAME=[\w.-]+\n\Z", head, re.M)
-    assert not functions(text) & functions(LIB.read_text())
+    assert functions(text) & functions(LIB.read_text()) == OWN_COPIES.get(script.name, set())
     # The deploy lock is fd 9, opened only by deploy_lock (realms-backup.sh's own lock is fd 8).
     assert "$COMPOSE" not in text and not re.search(r'flock -[nw]( \d+)? 9|exec 9[<>]+ *"', text)
     if DASH:
@@ -52,18 +57,21 @@ def test_the_deploy_loads_lib_before_it_touches_the_checkout():
 
 @pytest.fixture
 def sh(tmp_path):
-    """Runs a dash snippet with lib.sh loaded and fake flock, docker and python3 first on PATH; each fake records
-    its arguments in `calls` and exits with FAKE_RC_<name> (default 0)."""
+    """Runs a dash snippet with lib.sh loaded and fake flock, docker, python3, curl and sleep first on PATH; each
+    fake records its arguments in `calls` (curl its JSON from stdin too) and exits with FAKE_RC_<name> (default 0)."""
     if not DASH:
         pytest.skip("needs dash")
     bin_dir, calls = tmp_path / "bin", tmp_path / "calls"
     bin_dir.mkdir()
-    for name in ("flock", "docker", "python3"):
+    for name in ("flock", "docker", "python3", "sleep"):
         (bin_dir / name).write_text(
             f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n'
             f'[ -z "${{FAKE_OUT_{name}:-}}" ] || printf "$FAKE_OUT_{name}"\n'
             f'case " $* " in *" send "*) exit "${{FAKE_RC_send:-0}}" ;; esac\n'
             f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
+    (bin_dir / "curl").write_text('#!/bin/sh\necho "curl $*" >>"$FAKE_CALLS"\n'
+                                  'case " $* " in *" -d @- "*) { cat; echo; } >>"$FAKE_CALLS" ;; esac\n'
+                                  'exit "${FAKE_RC_curl:-0}"\n', newline="\n")
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")  # root only when asked
     (bin_dir / "runuser").write_text('#!/bin/sh\necho "runuser $*" >>"$FAKE_CALLS"\n'
                                      'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n', newline="\n")
@@ -133,10 +141,9 @@ def test_deploy_lock_waits_on_fd_9(sh, seconds, flag):
 
 
 def test_rcon_and_running_go_through_the_release_compose(sh):
-    compose = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
     code, out, calls = sh("running && log up; rcon list", FAKE_OUT_docker=r"3f2a\n")
     assert code == 0 and out == ["[t] up", "3f2a"]
-    assert calls == [f"{compose} ps -q --status running realms", f"{compose} exec -T realms realms rcon list"]
+    assert calls == [f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]
     assert sh("running || log down")[1] == ["[t] down"]
 
 
@@ -169,3 +176,66 @@ def test_drops_outside_drop_hours_takes_no_lock(sh, tmp_path):
     code, out, calls = sh(f'sh "{(DEPLOY / "realms-drops.sh").as_posix()}"', REPO_DIR=(tmp_path / "repo").as_posix(),
                           REALMS_DEPLOY_ENV="/nonexistent")
     assert code == 0 and out == [] and len(calls) == 1 and " commands " in calls[0]
+
+
+LIST = r"There are 2 of a max of 20 players online: a, b\n"
+
+
+def test_discord_escapes_quotes_and_backslashes_into_valid_json(sh):
+    message = 'it said "no" at C:\\x\\'
+    code, out, calls = sh('discord "$1"', message, DISCORD_WEBHOOK_URL="https://hook/a")
+    assert code == 0 and out == []
+    assert calls == ["curl -fsS -m 15 -H Content-Type: application/json -d @- https://hook/a",
+                     r'{"content":"it said \"no\" at C:\\x\\"}']
+    assert json.loads(calls[1]) == {"content": message}
+
+
+def test_discord_posts_to_the_url_given_or_none_and_logs_a_failure(sh):
+    assert sh("discord hi https://hook/b")[2][0].endswith(" https://hook/b")
+    assert sh("discord hi ''", DISCORD_WEBHOOK_URL="https://hook/a")[2] == []   # empty: no post, no fallback
+    assert sh("discord hi")[2] == []
+    code, out, _ = sh("discord hi https://hook/b", FAKE_RC_curl="22")
+    assert code == 0 and out == ["[t] could not post to Discord"]
+
+
+def test_discord_attaches_a_file_to_the_same_json(sh):
+    calls = sh("""discord 'a "b"' https://hook/c /tmp/r.md""")[2]
+    assert calls == [r'curl -fsS -m 30 --form-string payload_json={"content":"a \"b\""} '
+                     "-F files[0]=@/tmp/r.md;type=text/markdown https://hook/c"]
+
+
+def test_players_online_reads_list(sh):
+    assert sh("players_online", FAKE_OUT_docker=LIST)[1] == ["2"]
+    assert sh("players_online; echo .", FAKE_RC_docker="1")[1] == ["."]
+
+
+def test_warn_players_says_it_twice_then_waits_a_minute(sh):
+    code, out, calls = sh("warn_players 'Server update to v2' 'Server update'", FAKE_OUT_docker=LIST)
+    assert code == 0 and out == ["[t] 2 player(s) online; warning them 5 minutes ahead"]
+    assert calls == [f"{RCON} list", f"{RCON} say Server update to v2 in 5 minutes (about 3 minutes offline).",
+                     "sleep 240", f"{RCON} say Server update in 1 minute. Find a safe spot.", "sleep 60"]
+    calls = sh("warn_players 'Performance test' '' '(about 25 minutes offline)'", FAKE_OUT_docker=LIST,
+               WARN_MINUTES="1")[2]
+    assert calls == [f"{RCON} list", f"{RCON} say Performance test in 1 minutes (about 25 minutes offline).",
+                     f"{RCON} say Performance test in 1 minute. Find a safe spot.", "sleep 60"]
+
+
+def test_warn_players_warns_nobody_when_no_one_is_on_or_warn_minutes_is_0(sh):
+    nobody = r"There are 0 of a max of 20 players online:\n"
+    assert sh("warn_players x", FAKE_OUT_docker=nobody)[1:] == ([], [f"{RCON} list"])
+    assert sh("warn_players x", FAKE_RC_docker="1")[1] == []
+    assert sh("warn_players x", FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1:] == ([], [])
+
+
+def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):
+    code, _, calls = sh("wait_for_live", FAKE_OUT_docker=r"up\n", FAKE_RC_docker="1", BOOT_TIMEOUT="30")
+    assert code == 1 and calls == ["sleep 15", f"{RCON} list"] * 2
+    code, _, calls = sh("wait_for_live && log up", BOOT_TIMEOUT="30")
+    assert code == 0 and calls == ["sleep 15", f"{RCON} list"]
+
+
+def test_wait_for_live_while_running_gives_up_when_the_container_stops(sh):
+    code, out, calls = sh("wait_for_live --while-running || log 'gave up'")
+    assert out == ["[t] gave up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running realms"]
+    code, out, calls = sh("wait_for_live --while-running && log up", FAKE_OUT_docker=r"3f2a\n")
+    assert out == ["[t] up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]

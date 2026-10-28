@@ -1,4 +1,5 @@
-# What every deploy script shares: settings, the log, the server's container, the deploy lock and the timers.
+# What every deploy script shares: settings, the log, the server's container, warning players and waiting for a
+# restart, Discord posts, the deploy lock and the timers.
 # Sourced, never run: after `set -eu`, a script sets LOG_NAME (the tag on its log lines) and
 #
 #   . "$(dirname -- "$0")/lib.sh"
@@ -56,6 +57,55 @@ running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
 # "rcon CMD": the server's answer on stdout; fails when docker or RCON did. The container's own `realms rcon`
 # finds the password itself, so no secret is read here.
 rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
+
+# "players_online": how many players are online, from `list` ("There are 3 of a max of 20 players online: ...");
+# nothing when the server didn't answer.
+players_online() { rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1; }
+
+# "warn_players FIRST [LAST [DETAIL]]": when players are online, says `FIRST in WARN_MINUTES minutes DETAIL.` in
+# chat, then a minute ahead `LAST in 1 minute. Find a safe spot.`, and returns a minute after that. LAST empty or
+# left out is FIRST; DETAIL is "(about 3 minutes offline)". WARN_MINUTES is 5 when unset, and 0 warns nobody.
+warn_players() {
+    lib_minutes=${WARN_MINUTES:-5}
+    [ "$lib_minutes" -gt 0 ] || return 0
+    lib_online=$(players_online || true)
+    [ "${lib_online:-0}" -gt 0 ] || return 0
+    log "$lib_online player(s) online; warning them $lib_minutes minutes ahead"
+    rcon "say $1 in $lib_minutes minutes ${3:-(about 3 minutes offline)}." >/dev/null || true
+    [ "$lib_minutes" -le 1 ] || sleep $(((lib_minutes - 1) * 60))
+    rcon "say ${2:-$1} in 1 minute. Find a safe spot." >/dev/null || true
+    sleep 60
+}
+
+# "wait_for_live [--while-running]": waits up to BOOT_TIMEOUT seconds (default 900) for the server to answer RCON,
+# asking every 15 seconds; returns 1 when it didn't. --while-running gives up as soon as the container isn't
+# running (a deploy's failed boot rolls back sooner); without it a container that crashed gets the whole time to
+# come back (compose restarts it).
+wait_for_live() {
+    lib_waited=0
+    while [ "$lib_waited" -lt "${BOOT_TIMEOUT:-900}" ]; do
+        sleep 15
+        lib_waited=$((lib_waited + 15))
+        [ "${1:-}" != --while-running ] || running || return 1
+        if rcon list >/dev/null; then return 0; fi
+    done
+    return 1
+}
+
+# "discord MSG [URL [FILE]]": posts MSG to the Discord webhook URL (left out: DISCORD_WEBHOOK_URL; empty: no post),
+# with FILE attached as Markdown when given. A post that fails is logged, never an error. MSG's backslashes and
+# double quotes are escaped, so any one-line text makes valid JSON.
+discord() {
+    if [ $# -gt 1 ]; then lib_url=$2; else lib_url=${DISCORD_WEBHOOK_URL:-}; fi
+    [ -n "$lib_url" ] || return 0
+    lib_json=$(printf '%s' "$1" | sed 's/[\\"]/\\&/g')
+    if [ $# -gt 2 ]; then
+        curl -fsS -m 30 --form-string "payload_json={\"content\":\"$lib_json\"}" -F "files[0]=@$3;type=text/markdown" \
+            "$lib_url" >/dev/null
+    else
+        printf '{"content":"%s"}' "$lib_json" | curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$lib_url" >/dev/null
+    fi || log 'could not post to Discord'
+}
 
 # "deploy_lock SECONDS [FILE]": waits up to SECONDS (0: not at all) for the deploy lock, FILE (default LOCK_FILE,
 # else /tmp/realms-deploy.lock), and holds it on fd 9 until the script exits; returns 1 only when it wasn't free in

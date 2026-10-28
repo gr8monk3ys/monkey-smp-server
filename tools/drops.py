@@ -29,8 +29,8 @@ is left in them; an emptied chest goes at once, and the drop ends when every che
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs it straight
-from the checkout.
+Stdlib only plus tools/map_border.py, tools/world.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs
+it straight from the checkout.
 """
 import argparse
 import datetime as dt
@@ -42,8 +42,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import map_border
-import nbt
 import rcon as server
+import world as saved  # the saved world (this file calls its folder world)
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -75,8 +75,7 @@ CLAIM_GAP = 6               # chunks between a drop's chunk and the nearest clai
 SPOT_GAP = 8                # chunks between two spots offered the same night
 SPOTS = 6                   # spots offered each time; the pack tries them in order
 DRAWS = 5000                # random chunks looked at to find them
-OVERWORLD = "minecraft:overworld"
-OPAC_CLAIMS = Path("data") / "openpartiesandclaims" / "player-claims"
+OVERWORLD = saved.OVERWORLD
 
 # Chest offsets from the drop's middle (x, z), one per chest. Never side by side, so they never join.
 CHEST_AT = ((0, 0), (3, 2), (-3, 2))
@@ -165,28 +164,21 @@ def slot_of(when: dt.datetime) -> str:
 
 
 def claimed_chunks(world: Path) -> set[tuple[int, int]]:
-    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server).
-    Open Parties and Claims saves a player's claims as dimensions > claims > positions: [{x, z}] (chunks)."""
-    out: set[tuple[int, int]] = set()
-    folder = world / OPAC_CLAIMS
-    for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        dim = nbt.read(path).get("dimensions", {}).get(OVERWORLD, {})
-        for claim in dim.get("claims", []):
-            out.update((int(p["x"]), int(p["z"])) for p in claim.get("positions", []))
-    return out
+    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server)."""
+    return {chunk for dimensions in saved.claims(world).values() for chunk in dimensions.get(OVERWORLD, [])}
 
 
 def border_now(world: Path) -> map_border.Border | None:
     """The Overworld border as it is now (a growing border counts at its current size, a shrinking one at its
     target), or None when the world has none saved."""
-    path = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
-    if not path.is_file():
+    found = saved.border(world, OVERWORLD)
+    if found is None:
         return None
-    data = nbt.read(path)["data"]
-    size = min(data["size"], data.get("lerp_target", data["size"]))
+    # The smaller of now and where it is heading: a drop must land inside the border whichever way it moves.
+    size = min(found.size, found.target)
     if size >= map_border.NO_BORDER:
         return None
-    return map_border.Border(data["center_x"], data["center_z"], size)
+    return map_border.Border(found.center_x, found.center_z, size)
 
 
 def ring(border: map_border.Border) -> tuple[float, float]:

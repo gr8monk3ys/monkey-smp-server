@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 import pytest
-from nbt_writer import Long, nbt
+from fake_world import FakeWorld
 
 import drops
 import events
@@ -32,26 +32,12 @@ def fn(path: str) -> str:
 
 
 
-def claim_file(chunks: dict[str, list[tuple[int, int]]]) -> dict:
-    """A player-claims file as Open Parties and Claims 0.32 saves it."""
-    return {"username": "x", "confirmedActivity": Long(0), "dimensions": {
-        dim: {"claims": [{"state": {"subConfigIndex": -1, "forceloadable": 0},
-                          "positions": [{"x": x, "z": z} for x, z in positions]}]}
-        for dim, positions in chunks.items()}}
-
-
 def make_world(root, size=2500.0, target=None, claims=None):
-    world = root / "world"
-    border = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
-    border.parent.mkdir(parents=True)
-    border.write_bytes(nbt({"DataVersion": 5023, "data": {
-        "center_x": SPAWN[0], "center_z": SPAWN[1], "size": size, "lerp_target": size if target is None else target,
-        "lerp_time": Long(0), "warning_blocks": 5}}, gzipped=True))
-    folder = world / drops.OPAC_CLAIMS
-    folder.mkdir(parents=True)
+    fake = FakeWorld(root / "world").border(drops.OVERWORLD, *SPAWN, size, target)
+    (fake.path / "data" / "openpartiesandclaims" / "player-claims").mkdir(parents=True)
     for i, chunks in enumerate(claims or []):
-        (folder / f"00000000-0000-0000-0000-00000000000{i}.nbt").write_bytes(nbt(claim_file(chunks)))
-    return world
+        fake.claims(f"00000000-0000-0000-0000-00000000000{i}", chunks)
+    return fake.path
 
 
 # A base south-east of spawn, one far to the west, the spawn claim (the server's) and a Nether claim that
@@ -115,6 +101,13 @@ def test_the_ring_follows_the_border_acts():
 def test_reads_the_border_and_every_overworld_claim(world):
     assert drops.border_now(world) == map_border.Border(*SPAWN, 2500)
     assert drops.claimed_chunks(world) == set(BASE) | set(WEST) | {(-5, 26)}
+
+
+def test_no_claims_folder_is_no_claims(tmp_path):
+    # Before anyone claims (and before Open Parties and Claims first saves), drops still land.
+    folder = FakeWorld(tmp_path / "world").border(drops.OVERWORLD, *SPAWN, 2500.0).path
+    assert drops.claimed_chunks(folder) == set()
+    assert len(drops.spots(folder, "x")) == drops.SPOTS
 
 
 def test_a_moving_border_counts_at_its_smaller_size(tmp_path):

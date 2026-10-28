@@ -1,33 +1,12 @@
-import gzip
 import json
-import struct
 import zipfile
 
 import pytest
+from nbt_writer import nbt
 
 import datapacks
 import season
 import wardrobe
-
-
-def nbt(value, name="") -> bytes:
-    """A tiny NBT writer for test fixtures: dicts, lists, strings and ints (ints are TAG_Int)."""
-    def tag(v) -> int:
-        return 10 if isinstance(v, dict) else 9 if isinstance(v, list) else 8 if isinstance(v, str) else 3
-
-    def payload(v) -> bytes:
-        if isinstance(v, dict):
-            return b"".join(bytes([tag(x)]) + string(k) + payload(x) for k, x in v.items()) + b"\x00"
-        if isinstance(v, list):
-            return bytes([tag(v[0]) if v else 0]) + struct.pack(">i", len(v)) + b"".join(payload(x) for x in v)
-        if isinstance(v, str):
-            return string(v)
-        return struct.pack(">i", v)
-
-    def string(s: str) -> bytes:
-        raw = s.encode()
-        return struct.pack(">H", len(raw)) + raw
-    return bytes([10]) + string(name) + payload(value)
 
 
 def scores(*rows):
@@ -52,14 +31,10 @@ SCOREBOARD = {"DataVersion": 5023, "data": {
 }}
 
 
-def test_reads_what_it_writes():
-    assert season.read_nbt(nbt(SCOREBOARD)) == SCOREBOARD
-
-
 def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
     old, new = tmp_path / "old" / "world", tmp_path / "new" / "world"
     (old / "data" / "minecraft").mkdir(parents=True)
-    (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(gzip.compress(nbt(SCOREBOARD)))
+    (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(SCOREBOARD, gzipped=True))
     assert season.main(["carry", str(old), "--into", str(new), "--season", "2"]) == 0
     pack = new / "datapacks" / "realms-carry"
     assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == datapacks.DATA_FORMAT

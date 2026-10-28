@@ -1,6 +1,5 @@
 import copy
 import datetime as dt
-import gzip
 import io
 import json
 import re
@@ -11,6 +10,7 @@ import urllib.error
 import uuid
 
 import pytest
+from nbt_writer import Ints, Long, nbt
 
 import events
 import rcon
@@ -27,35 +27,6 @@ WEBHOOK = "https://discord.com/api/webhooks/1/made-up-secret-token"
 # ---------------------------------------------------------------- a made-up world
 
 
-class Ints(list):
-    """An NBT int array (how Minecraft saves a UUID)."""
-
-
-class Long(int):
-    pass
-
-
-def nbt(value, name="") -> bytes:
-    """A tiny NBT writer: dicts, lists, strings, ints (TAG_Int), Long and Ints."""
-    def tag(v) -> int:
-        return (10 if isinstance(v, dict) else 11 if isinstance(v, Ints) else 9 if isinstance(v, list)
-                else 8 if isinstance(v, str) else 4 if isinstance(v, Long) else 3)
-
-    def payload(v) -> bytes:
-        if isinstance(v, dict):
-            return b"".join(bytes([tag(x)]) + string(k) + payload(x) for k, x in v.items()) + b"\x00"
-        if isinstance(v, Ints):
-            return struct.pack(f">i{len(v)}i", len(v), *v)
-        if isinstance(v, list):
-            return bytes([tag(v[0]) if v else 0]) + struct.pack(">i", len(v)) + b"".join(payload(x) for x in v)
-        if isinstance(v, str):
-            return string(v)
-        return struct.pack(">q" if isinstance(v, Long) else ">i", v)
-
-    def string(s: str) -> bytes:
-        raw = s.encode()
-        return struct.pack(">H", len(raw)) + raw
-    return bytes([10]) + string(name) + payload(value)
 
 
 PLAYERS = {name: str(uuid.uuid5(uuid.NAMESPACE_DNS, name)) for name in
@@ -104,7 +75,7 @@ def make_world(root, scoreboard=SCOREBOARD):
     for folder in ("parties", "player-claims", "player-configs"):
         (opac / folder).mkdir(parents=True)
     (world / "data" / "minecraft").mkdir(parents=True)
-    (world / "data" / "minecraft" / "scoreboard.dat").write_bytes(gzip.compress(nbt(scoreboard)))
+    (world / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(scoreboard, gzipped=True))
     parties = {"p-red": ("AlexFake", ["SamFake"]), "p-blue": ("RiaFake", ["TomFake"]), "p-lone": ("LoneFake", [])}
     for pid, (owner, members) in parties.items():
         data = {"owner": person(owner), "confirmedActivity": Long(1), "invites": [], "allies": [],

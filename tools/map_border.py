@@ -12,16 +12,16 @@ final size. A dimension without a border (the End) keeps its map as it is.
 The mask is the first layer of `render-mask` in each config/bluemap/maps/<map>.conf; later layers (the
 Nether's ceiling) are kept. BlueMap only sees the change after `bluemap reload`, and `bluemap purge <map>`
 then deletes the map's tiles and renders it again inside the new mask; the tool prints both.
-Stdlib only, so it runs on the VPS as it is (docs/LIVE.md).
+Stdlib only (plus tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
 """
 import argparse
-import gzip
 import math
 import re
-import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+import nbt
 
 MAPS = Path("config") / "bluemap" / "maps"
 NO_BORDER = 59_999_968  # the vanilla maximum: the dimension has no border to speak of
@@ -48,49 +48,6 @@ class Border:
         return f"border {self.size:g} wide at {self.center_x:g}, {self.center_z:g}"
 
 
-# --- NBT: just enough to read a world_border.dat (a gzipped compound) ----------------------------------------
-
-_NUMBERS = {1: ">b", 2: ">h", 3: ">i", 4: ">q", 5: ">f", 6: ">d"}
-_ARRAYS = {7: "b", 11: "i", 12: "q"}  # byte, int and long arrays
-
-
-def _read(data: bytes, pos: int, tag: int) -> tuple[object, int]:
-    """The value of type `tag` at `pos`, and the position after it."""
-    if tag in _NUMBERS:
-        return struct.unpack_from(_NUMBERS[tag], data, pos)[0], pos + struct.calcsize(_NUMBERS[tag])
-    if tag in _ARRAYS:
-        fmt = f">{struct.unpack_from('>i', data, pos)[0]}{_ARRAYS[tag]}"
-        return list(struct.unpack_from(fmt, data, pos + 4)), pos + 4 + struct.calcsize(fmt)
-    if tag == 8:
-        n = struct.unpack_from(">H", data, pos)[0]
-        return data[pos + 2:pos + 2 + n].decode("utf-8"), pos + 2 + n
-    if tag == 9:
-        item, n = data[pos], struct.unpack_from(">i", data, pos + 1)[0]
-        pos += 5
-        items = []
-        for _ in range(n):
-            value, pos = _read(data, pos, item)
-            items.append(value)
-        return items, pos
-    if tag == 10:
-        compound = {}
-        while (child := data[pos]) != 0:
-            name, pos = _read(data, pos + 1, 8)
-            compound[name], pos = _read(data, pos, child)
-        return compound, pos + 1
-    raise ValueError(f"unknown NBT tag {tag}")
-
-
-def read_nbt(path: Path) -> dict:
-    data = gzip.decompress(path.read_bytes())
-    if not data or data[0] != 10:
-        raise ValueError(f"{path}: not an NBT compound")
-    _, pos = _read(data, 1, 8)  # the root's name (empty)
-    root, _ = _read(data, pos, 10)
-    assert isinstance(root, dict)
-    return root
-
-
 def border_file(server: Path, world: str, dimension: str) -> Path:
     namespace, _, name = dimension.partition(":")
     return server / world / "dimensions" / namespace / name / "data" / "minecraft" / "world_border.dat"
@@ -98,7 +55,7 @@ def border_file(server: Path, world: str, dimension: str) -> Path:
 
 def read_border(path: Path) -> Border | None:
     """The border saved in a world_border.dat, or None when the dimension has none."""
-    data = read_nbt(path)["data"]
+    data = nbt.read(path)["data"]
     size = data.get("lerp_target", data["size"])  # where a growing border is heading
     if size >= NO_BORDER:
         return None

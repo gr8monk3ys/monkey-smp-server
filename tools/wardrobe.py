@@ -1,6 +1,7 @@
 """Builds the wardrobe: cosmetic skins for swords and helmets, earned by playing or by supporting.
 
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
+    python tools/wardrobe.py commands  the RCON command that starts a new day (deploy/realms-day.sh sends it)
 
 It writes two folders, both generated (edit this file, not them):
   package/realms/datapacks/realms-wardrobe/       the server side: /trigger wardrobe, unlock scores, the skins
@@ -22,19 +23,22 @@ Unlock scores (all per player name, so the store and staff can set them while th
   rw.challenges  weekly challenges done, in all seasons together (tools/challenges.py; never sold)
   rw.launch   1 for being online FOUNDER_MINUTES in Season I's launch weekend (never sold); rw.launchtime
               counts their seconds online while that window is open (`function realms:wardrobe/founder/...`)
-`function realms:wardrobe/day` starts a new day; deploy/realms-day.timer runs it at midnight UTC.
+`function realms:wardrobe/day` starts a new day; deploy/realms-day.timer sends it at midnight UTC (`send`).
 The weekly challenges (tools/challenges.py) go in the same data pack, and have a page of the menu:
 `/trigger challenges`, or page MENU_CHALLENGES of `/trigger wardrobe`.
 Every rw.* score lives in the world's scoreboard, so a new season's world starts without them:
 tools/season.py carries them over (docs/SEASONS.md, "Ending a season").
 """
+import argparse
 import json
 import math
 import struct
+import sys
 import zlib
 from pathlib import Path
 
 import challenges
+import rcon as server
 from challenges import FOUNDER_MINUTES, LAUNCH_SECONDS
 from datapacks import NS, function_tag, mcmeta, text
 from repo import Repo
@@ -818,3 +822,25 @@ def after_write(repo: Repo) -> None:
     options = repo.client / "overrides" / "options.txt"
     if options.is_file():
         enable_in_options(options)
+
+
+# ---------------------------------------------------------------- the day (deploy/realms-day.sh)
+
+DAY = [f"function {NS}:wardrobe/day"]
+
+
+def send_day(rcon, log=print) -> int:
+    """Starts a new day. Unlike the week, a server that isn't running is a failure: a missed day is never caught
+    up, so realms-day.service tries again every 10 minutes until the server answers."""
+    return server.send_if_running(rcon, DAY, log, required=True)
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="The wardrobe's day: the command that starts a new day for days played.")
+    sub = ap.add_subparsers(dest="command", required=True)
+    server.job_subcommands(sub, "sends it to the running server (deploy/realms-day.sh, at midnight UTC)", at=False)
+    return server.run_job(ap.parse_args(argv), lambda when: DAY, lambda rcon, when: send_day(rcon))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

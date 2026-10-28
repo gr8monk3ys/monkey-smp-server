@@ -4,6 +4,7 @@ import struct
 import pytest
 
 import challenges as challenges_module
+import rcon
 import wardrobe
 from repo import REPO
 
@@ -230,3 +231,15 @@ def test_enable_in_options_without_a_resource_pack_line(tmp_path):
 def png_size(data: bytes) -> tuple[int, int]:
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
     return struct.unpack(">II", data[16:24])
+
+
+def test_the_day_is_one_command_and_a_stopped_server_fails_it(capsys):
+    assert wardrobe.main(["commands"]) == 0 and capsys.readouterr().out.splitlines() == wardrobe.DAY
+    assert wardrobe.DAY == ["function realms:wardrobe/day"] and "data/realms/function/wardrobe/day.mcfunction" in (
+        wardrobe.datapack_files())
+    log = []
+    assert wardrobe.send_day(rcon.Recorder(running=False), log.append) == 1   # realms-day.service retries
+    server = rcon.Recorder()
+    assert wardrobe.send_day(server, log.append) == 0 and server.sent == wardrobe.DAY
+    refusing = rcon.Recorder({"function realms:wardrobe/day": "Unknown function realms:wardrobe/day"})
+    assert wardrobe.send_day(refusing, log.append) == 1

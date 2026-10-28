@@ -8,6 +8,11 @@
   everyone and keeps it for the season. `/trigger firsts` shows who holds each. The most firsts at the season's
   end earns the `[S1 Pioneer]` title. A new data pack, `realms-firsts` (`tools/firsts.py`); nothing counts
   before the launch. Not yet tried in game.
+- **Season Wrapped**: after the finale, every player gets a page on the site about their season: hours and
+  days played, PvP kills, weekly challenges, events, their faction's best weekly rank, their Server Firsts
+  and their skins, rarest first. A shared link shows their own line in Discord. Anyone can ask staff for no
+  page. Made by a maintainer tool, `tools/wrapped.py`, which also keeps a starting point at the launch so test
+  play doesn't count. Not yet tried on a real season's world.
 
 ## [2.8.0] - 2026-10-27
 

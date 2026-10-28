@@ -212,6 +212,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
 | 4:45 PM | the camera | Recording starts (below). |
 | 5:00 PM | an owner | Paste the whitelist line. In the console: `function realms:rules/launch`. Merge the `STORE_URL` pull request (if the roster is 30 or under and the store is approved). Post the launch announcement. |
+| 5:00 PM | an owner | Season Wrapped's starting point, on the VPS: `realms rcon "save-all flush"`, then `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out /srv/realms/seasons/season-I-wrapped-start.json`. It says how many players' counts it kept; it refuses before `rules/launch`. Without it, Season Wrapped counts staff test play (docs/SEASONS.md, "Ending a season"). |
 | 5:00 PM | an owner | `python tools/block_wheel.py "S1 launch"` on the maintainer's computer; paste its `tellraw` into the console and the three blocks into `#monkey-smp`. |
 | 5:00 to 6 PM | moderators | The launch hour (rule 23): PvP and the Nether are closed, the End stays closed. Answer install questions in `#help` and tickets. The hourly backup runs at 5:00 and takes a minute or two; a short stutter then is that. |
 | 5:10 PM | an owner | `spark tps` in the console: under 50 ms a tick holds 20 TPS. Then every half hour. |

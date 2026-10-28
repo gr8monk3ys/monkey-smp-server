@@ -458,6 +458,9 @@ are the example; change the numbers.
 **Two weeks before the end**
 
 1. Announce the end date again (it was announced on day one), the finale, and what carries over (above).
+   Say too that every player gets a Season Wrapped page after the finale (below) and that anyone who
+   doesn't want one tells staff; keep their names, one a line, in
+   `/srv/realms/seasons/season-I-opt-out.txt` (create it empty if no one asks).
 2. Open the vote on next season's twist in Discord, and set the next start date.
 3. Pick the next seed: try a few in singleplayer with the modpack, then put the winner in
    `package/realms/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
@@ -495,6 +498,25 @@ are the example; change the numbers.
    share set to "anyone with the link"), never the private backup bucket. Post the link in
    `#monkey-smp` and on the changelog page.
 
+Then the Season Wrapped pages, a page per player about their season (hours, days, PvP kills, challenges,
+events, their faction's best weekly rank, Server Firsts and skins), from step 6's world:
+
+```sh
+python3 /srv/realms/repo/tools/wrapped.py build /srv/realms/seasons/season-I/world --season 1 \
+    --standings /srv/realms/standings --start /srv/realms/seasons/season-I-wrapped-start.json \
+    --opt-out /srv/realms/seasons/season-I-opt-out.txt --out /srv/realms/seasons/season-I-wrapped
+```
+
+`season-I-wrapped-start.json` is the starting point `wrapped.py start` kept at the launch (`docs/LAUNCH.md`);
+it sits beside `season-I/`, not in it, so step 6's `cp` makes that folder. Without it Season I counts staff
+test play before the launch too, and a later season can't be made. It warns if it was kept well away from
+the launch (a rehearsal's file, say). Copy
+the folder into a checkout as `site/wrapped/season-1/` (`scp -r` to the maintainer's computer), open
+`index.html` and a page or two, and merge it in a pull request: the site deploys it at
+`/wrapped/season-1/`. Post that link in `#monkey-smp`. The pages are left out of search engines. A player who
+asks later to be taken down: add the name to the list, build again into an empty folder, and replace
+`site/wrapped/season-1/` with it.
+
 **Off-season (week 12)**
 
 The locked world stays up for tours and screenshots. Holidays and the Town Hall run as usual. Pass
@@ -531,7 +553,10 @@ renewals keep counting: the store's commands still reach the old world, and the 
     `world_the_nether` and `world_the_end`, BlueMap's map ids), then pre-generate the new one as on the
     first setup (`docs/LIVE.md`, step 6).
 17. Turn deploys back on: `sudo systemctl start realms-deploy.timer`. Launch as in week 0, with
-    `function realms:rules/launch` (`docs/RULES.md`).
+    `function realms:rules/launch` (`docs/RULES.md`). Right after it, keep Season Wrapped's starting point:
+    `realms rcon "save-all flush"`, then
+    `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out
+    /srv/realms/seasons/season-2-wrapped-start.json`.
 
 The new world starts unlocked; the lock lives in the old world. The `realms-carry` pack can stay (it
 won't run twice). Delete its folder at the next restart to tidy up.
@@ -590,6 +615,9 @@ Built:
   first player to each of 14 milestones is announced to everyone and keeps it for the season;
   `/trigger firsts` lists them, and the most firsts earns the season's Pioneer title ("Ending a season",
   step 4). Not yet tried in game.
+- Season Wrapped ("Ending a season", after step 8): `tools/wrapped.py` makes a page per player about their
+  season for the site, from the final world, the standings' closed weeks and a starting point kept at the
+  launch, with an opt-out list. Tried on made-up worlds only, not a real season's.
 
 Not built:
 

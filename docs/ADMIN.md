@@ -611,6 +611,10 @@ These are never sold or granted outside the event.
 `tools/season.py download` zips the final backup's world for players, and `tools/season.py carry` puts
 the wardrobe scores, hours played and title teams into the next season's world.
 
+`tools/wrapped.py start` keeps where everyone's counts stand right after `rules/launch` (`save-all flush`
+first), and `tools/wrapped.py build` makes the season's Season Wrapped pages from the final world after the
+finale; players on its opt-out list get no page and aren't named.
+
 **Block wheel (Build Battle).** On the maintainer's computer:
 
 ```

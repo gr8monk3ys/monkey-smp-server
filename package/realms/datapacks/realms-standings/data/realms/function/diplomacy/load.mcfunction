@@ -4,7 +4,8 @@ scoreboard objectives add st.faction dummy
 scoreboard objectives add st.leader dummy
 # The second count of a war kill, for the weekly Kills column.
 scoreboard objectives add st.warkills dummy
-# "#LO.HI": 1 while two factions are at war (dp.war) or have a pact (dp.pact); "#FROM.TO": a pact offer.
+# "#LO.HI": two factions at war (dp.war: the declaration's number in the log) or with a pact (dp.pact: 1);
+# "#FROM.TO": a pact offer (dp.offer: its number in the log).
 scoreboard objectives add dp.war dummy
 scoreboard objectives add dp.pact dummy
 scoreboard objectives add dp.offer dummy
@@ -16,4 +17,6 @@ scoreboard objectives add dp.state dummy
 scoreboard objectives add diplomacy trigger
 scoreboard players set #10 dp.tmp 10
 execute unless data storage realms:diplomacy log run data modify storage realms:diplomacy log set value []
+# This world's marker: the Sunday report tells a new world (a new season) by it.
+execute unless score #world dp.state matches 1.. store result score #world dp.state run random value 1..2147483646
 schedule function realms:diplomacy/second 20t replace

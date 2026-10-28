@@ -7,5 +7,5 @@ scoreboard players reset * dp.pacts
 scoreboard players reset * dp.last
 scoreboard players reset * st.warkills
 data modify storage realms:diplomacy log set value []
-scoreboard players set #wars dp.state 0
+scoreboard players set #ended dp.state 0
 scoreboard players set #launched dp.state 1

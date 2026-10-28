@@ -600,7 +600,11 @@ party made since can't take part until the next run. `/function realms:diplomacy
   as `st.kills` (above). A war kill counts in both.
 - **Before the launch** nobody can declare. The first second after `rules/launch`, every war, pact, offer
   and war kill from before it is cleared.
-- Wars and offers end at Sunday's close (the standings run sends `realms:diplomacy/week_over`); pacts stand.
+- Wars and offers end at Sunday's close; pacts stand. The close ends the ones running when the world last
+  saved, so a war declared in the last few minutes before it runs to the next close. If the close couldn't
+  reach the server, its next run ends those same ones, never a war declared since.
+- **"faction N (name) is missing from the parties read"** in the board run's log: one read didn't find the party. If the
+  next run still doesn't, its wars and pacts end. A run that reads no parties at all ends nothing and says so.
 
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts

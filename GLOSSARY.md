@@ -113,7 +113,7 @@ A file an install placed in the server folder and may later replace or remove; e
 _Avoid_: installed file, tracked file
 
 **Saved world**:
-What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/world.py` reads it.
+What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/saved_world.py` reads it.
 _Avoid_: live world, world state, save (alone)
 
 **Snapshot**:

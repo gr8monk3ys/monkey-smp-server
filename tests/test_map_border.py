@@ -2,6 +2,7 @@ import shutil
 
 import pytest
 from fake_world import FakeWorld
+from nbt_writer import nbt
 
 import map_border
 import rules
@@ -140,3 +141,12 @@ def test_a_world_never_saved_is_an_error_not_an_empty_mask(tmp_path, capsys, dim
     borders = {k: v for k, v in SEASON_ONE.items() if k != dimension}
     assert map_border.main([str(server(tmp_path, borders))]) == 2
     assert "no border saved" in capsys.readouterr().err
+
+
+def test_a_border_file_not_shaped_as_saved_is_an_error_naming_it(tmp_path, capsys):
+    # A world_border.dat with no "data" (or no size) is exit 2 with the file named, not a KeyError traceback.
+    srv = server(tmp_path, SEASON_ONE)
+    path = srv / "world/dimensions/minecraft/the_nether/data/minecraft/world_border.dat"
+    path.write_bytes(nbt({"DataVersion": 5023}, gzipped=True))
+    assert map_border.main([str(srv)]) == 2
+    assert str(path) in capsys.readouterr().err

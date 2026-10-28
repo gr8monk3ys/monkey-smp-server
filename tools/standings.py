@@ -50,7 +50,7 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-import world as saved  # its functions take the world folder, which this file calls `world`
+import saved_world
 from datapacks import NS, function_tag, lines, mcmeta, text
 from events import ARENA_TAG, CUP, LEVEL, STRENGTH
 from rcon import LIMIT, Docker, RconError
@@ -110,9 +110,9 @@ def usernames(world: Path) -> dict[str, str]:
 
 
 def read_parties(world: Path, names: dict[str, str]) -> list[Party]:
-    found = saved.parties(world)
+    found = saved_world.parties(world)
     if found is None:
-        warn(f"no {world / saved.PARTIES}: no factions (has a party been made with /openpac?)")
+        warn(f"no {world / saved_world.PARTIES}: no factions (has a party been made with /openpac?)")
         return []
     parties = []
     for p in found:
@@ -128,18 +128,18 @@ def read_parties(world: Path, names: dict[str, str]) -> list[Party]:
 def read_claims(world: Path) -> dict[str, int]:
     """Chunks claimed by each player, in every dimension; a claims file not named by a UUID is left out."""
     claims = {}
-    for name, dimensions in saved.claims(world).items():
+    for name, chunks in saved_world.claim_counts(world).items():
         try:
-            claims[saved.uuid_text(name)] = sum(len(chunks) for chunks in dimensions.values())
+            claims[saved_world.uuid_text(name)] = chunks
         except ValueError:
             continue
     return claims
 
 
 def read_scoreboard(world: Path) -> tuple[dict[str, dict[str, int]], dict[str, str]]:
-    board = saved.scoreboard(world)
+    board = saved_world.scoreboard(world)
     if board is None:
-        raise SystemExit(f"no scoreboard at {saved.scoreboard_path(world)}: give the world folder (server/world)")
+        raise SystemExit(f"no scoreboard at {saved_world.scoreboard_path(world)}: give the world folder (server/world)")
     labels = {holder: name.strip() for holder, name in board.displays.get(CUP, {}).items()}
     return board.scores, labels
 

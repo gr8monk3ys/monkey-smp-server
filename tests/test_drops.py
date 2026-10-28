@@ -6,11 +6,13 @@ import subprocess
 
 import pytest
 from fake_world import FakeWorld
+from nbt_writer import nbt
 
 import drops
 import events
 import map_border
 import rcon
+import saved_world
 from repo import REPO
 
 UTC = dt.timezone.utc  # noqa: UP017 (the module under test keeps to 3.10)
@@ -33,7 +35,7 @@ def fn(path: str) -> str:
 
 
 def make_world(root, size=2500.0, target=None, claims=None):
-    fake = FakeWorld(root / "world").border(drops.OVERWORLD, *SPAWN, size, target)
+    fake = FakeWorld(root / "world").border(saved_world.OVERWORLD, *SPAWN, size, target)
     (fake.path / "data" / "openpartiesandclaims" / "player-claims").mkdir(parents=True)
     for i, chunks in enumerate(claims or []):
         fake.claims(f"00000000-0000-0000-0000-00000000000{i}", chunks)
@@ -44,8 +46,8 @@ def make_world(root, size=2500.0, target=None, claims=None):
 # doesn't count.
 BASE = [(cx, cz) for cx in range(10, 14) for cz in range(40, 44)]
 WEST = [(-60, 20), (-60, 21)]
-CLAIMS = [{drops.OVERWORLD: BASE}, {drops.OVERWORLD: WEST, "minecraft:the_nether": [(0, 0)]},
-          {drops.OVERWORLD: [(-5, 26)]}]
+CLAIMS = [{saved_world.OVERWORLD: BASE}, {saved_world.OVERWORLD: WEST, "minecraft:the_nether": [(0, 0)]},
+          {saved_world.OVERWORLD: [(-5, 26)]}]
 
 
 @pytest.fixture
@@ -103,9 +105,18 @@ def test_reads_the_border_and_every_overworld_claim(world):
     assert drops.claimed_chunks(world) == set(BASE) | set(WEST) | {(-5, 26)}
 
 
+def test_a_bad_claim_outside_the_overworld_is_not_read(world):
+    # A Nether or End position with no x/z (or one that isn't a number) never stops the 10-minute run.
+    (world / "data/openpartiesandclaims/player-claims/00000000-0000-0000-0000-000000000009.nbt").write_bytes(nbt(
+        {"dimensions": {saved_world.OVERWORLD: {"claims": [{"positions": [{"x": 50, "z": 50}]}]},
+                        "minecraft:the_nether": {"claims": [{"positions": [{"y": 1}, {"x": "a", "z": 0}]}]},
+                        "minecraft:the_end": "not a compound"}}))
+    assert drops.claimed_chunks(world) == set(BASE) | set(WEST) | {(-5, 26), (50, 50)}
+
+
 def test_no_claims_folder_is_no_claims(tmp_path):
     # Before anyone claims (and before Open Parties and Claims first saves), drops still land.
-    folder = FakeWorld(tmp_path / "world").border(drops.OVERWORLD, *SPAWN, 2500.0).path
+    folder = FakeWorld(tmp_path / "world").border(saved_world.OVERWORLD, *SPAWN, 2500.0).path
     assert drops.claimed_chunks(folder) == set()
     assert len(drops.spots(folder, "x")) == drops.SPOTS
 
@@ -148,7 +159,7 @@ def test_spots_are_the_same_for_a_slot_and_new_for_the_next(world):
 def test_a_claim_next_to_a_spot_moves_it(tmp_path):
     first = drops.spots(make_world(tmp_path / "a"), "s")[0]
     cx, cz = chunk(*first)
-    claimed = make_world(tmp_path / "b", claims=[{drops.OVERWORLD: [(cx + drops.CLAIM_GAP, cz)]}])
+    claimed = make_world(tmp_path / "b", claims=[{saved_world.OVERWORLD: [(cx + drops.CLAIM_GAP, cz)]}])
     assert first not in drops.spots(claimed, "s")
 
 
@@ -156,7 +167,7 @@ def test_a_world_with_everything_claimed_has_no_spots(tmp_path):
     lo, hi = int((SPAWN[0] - 1250) // 16), int((SPAWN[0] + 1250) // 16)
     lo_z, hi_z = int((SPAWN[1] - 1250) // 16), int((SPAWN[1] + 1250) // 16)
     every = [(x, z) for x in range(lo, hi + 1, drops.CLAIM_GAP) for z in range(lo_z, hi_z + 1, drops.CLAIM_GAP)]
-    assert drops.spots(make_world(tmp_path, claims=[{drops.OVERWORLD: every}]), "s") == []
+    assert drops.spots(make_world(tmp_path, claims=[{saved_world.OVERWORLD: every}]), "s") == []
 
 
 # ---------------------------------------------------------------- the timer's commands

@@ -1,6 +1,6 @@
-"""A made-up saved world for the tests: the files tools/world.py reads, laid out and shaped as 26.3 and Open
-Parties and Claims save them (the paths are written out here, not taken from world.py, so a wrong path there
-fails the tests).
+"""A made-up saved world for the tests: the files tools/saved_world.py reads, laid out and shaped as 26.3 and
+Open Parties and Claims save them (the paths are written out here, not taken from saved_world.py, so a wrong
+path there fails the tests).
 
     folder = FakeWorld(tmp_path / "world").scores(("ev.cup", "red", 30)).claims(UUID, {OVERWORLD: [(0, 0)]}).path
 """
@@ -16,6 +16,20 @@ OVERWORLD = "minecraft:overworld"
 def uuid_ints(text: str) -> Ints:
     """A UUID as Minecraft saves it: four ints."""
     return Ints(struct.unpack(">4i", uuid.UUID(text).bytes))
+
+
+def member(player_uuid: str, username: str | None = None) -> dict:
+    """A party file's owner or member entry. username None: the entry has none."""
+    return {"uuid": uuid_ints(player_uuid), "rank": "MEMBER"} | ({"username": username} if username is not None else {})
+
+
+def toml_string(text: str) -> str:
+    """text as a TOML basic string: in double quotes, with backslash, the quote and control characters escaped."""
+    def escape(c: str) -> str:
+        if c in '\\"':
+            return "\\" + c
+        return f"\\u{ord(c):04x}" if ord(c) < 0x20 or c == "\x7f" else c
+    return '"' + "".join(escape(c) for c in text) + '"'
 
 
 def score_rows(*rows) -> list[dict]:
@@ -55,7 +69,7 @@ class FakeWorld:
         return self.scoreboard({"DataVersion": 5023, "data": data})
 
     def party(self, party_id: str, owner: dict | None, members=()) -> "FakeWorld":
-        """A party file; owner and members are {"uuid": uuid_ints(...), "username": ...}. owner None: no owner."""
+        """A party file; owner and members are member(...) entries. owner None: no owner."""
         data = {"confirmedActivity": Long(1), "invites": [], "allies": [], "members": list(members)}
         if owner is not None:
             data = {"owner": owner} | data
@@ -63,7 +77,8 @@ class FakeWorld:
 
     def party_name(self, owner_uuid: str, name: str) -> "FakeWorld":
         """The owner's player config with parties.name set, laid out as Open Parties and Claims writes it."""
-        toml = f'[playerConfig]\n\t[playerConfig.parties]\n\t\tname = "{name}"\n\t\tshareLocationWithParty = true\n'
+        toml = (f"[playerConfig]\n\t[playerConfig.parties]\n\t\tname = {toml_string(name)}\n"
+                "\t\tshareLocationWithParty = true\n")
         return self._write(f"data/openpartiesandclaims/player-configs/{owner_uuid}.toml", toml.encode())
 
     def claims(self, player: str, chunks: dict[str, list[tuple[int, int]]]) -> "FakeWorld":

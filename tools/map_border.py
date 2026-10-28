@@ -12,7 +12,7 @@ final size. A dimension without a border (the End) keeps its map as it is.
 The mask is the first layer of `render-mask` in each config/bluemap/maps/<map>.conf; later layers (the
 Nether's ceiling) are kept. BlueMap only sees the change after `bluemap reload`, and `bluemap purge <map>`
 then deletes the map's tiles and renders it again inside the new mask; the tool prints both.
-Stdlib only (plus tools/world.py and tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
+Stdlib only (plus tools/saved_world.py and tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
 """
 import argparse
 import math
@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import world as saved  # the saved world (its border files)
+import saved_world
 
 MAPS = Path("config") / "bluemap" / "maps"
 NO_BORDER = 59_999_968  # the vanilla maximum: the dimension has no border to speak of
@@ -48,7 +48,7 @@ class Border:
         return f"border {self.size:g} wide at {self.center_x:g}, {self.center_z:g}"
 
 
-def fit_border(found: saved.SavedBorder) -> Border | None:
+def fit_border(found: saved_world.SavedBorder) -> Border | None:
     """The border a map is fitted to, or None when the dimension has none to speak of."""
     # Where it is heading: staff run this straight after `worldborder set`, while it grows (docs/ADMIN.md).
     size = found.target
@@ -119,9 +119,9 @@ def fit_maps(server: Path) -> list[MapFit]:
         world, dimension = found.get("world"), found.get("dimension")
         if not world or not dimension:
             raise ValueError(f"{conf}: no world or dimension setting")
-        saved_border = saved.border(server / world, dimension)
+        saved_border = saved_world.border(server / world, dimension)
         if saved_border is None:
-            raise ValueError(f"{conf}: no border saved at {saved.border_path(server / world, dimension)} "
+            raise ValueError(f"{conf}: no border saved at {saved_world.border_path(server / world, dimension)} "
                              "(a 26.3 world that has been saved?)")
         border = fit_border(saved_border)
         try:

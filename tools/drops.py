@@ -29,7 +29,7 @@ is left in them; an emptied chest goes at once, and the drop ends when every che
 
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py, tools/world.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs
+Stdlib only plus tools/map_border.py, tools/saved_world.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs
 it straight from the checkout.
 """
 import argparse
@@ -43,7 +43,7 @@ from zoneinfo import ZoneInfo
 
 import map_border
 import rcon as server
-import world as saved  # the saved world (this file calls its folder world)
+import saved_world
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -75,7 +75,6 @@ CLAIM_GAP = 6               # chunks between a drop's chunk and the nearest clai
 SPOT_GAP = 8                # chunks between two spots offered the same night
 SPOTS = 6                   # spots offered each time; the pack tries them in order
 DRAWS = 5000                # random chunks looked at to find them
-OVERWORLD = saved.OVERWORLD
 
 # Chest offsets from the drop's middle (x, z), one per chest. Never side by side, so they never join.
 CHEST_AT = ((0, 0), (3, 2), (-3, 2))
@@ -165,13 +164,13 @@ def slot_of(when: dt.datetime) -> str:
 
 def claimed_chunks(world: Path) -> set[tuple[int, int]]:
     """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server)."""
-    return {chunk for dimensions in saved.claims(world).values() for chunk in dimensions.get(OVERWORLD, [])}
+    return {chunk for chunks in saved_world.claims(world, saved_world.OVERWORLD).values() for chunk in chunks}
 
 
 def border_now(world: Path) -> map_border.Border | None:
     """The Overworld border as it is now (a growing border counts at its current size, a shrinking one at its
     target), or None when the world has none saved."""
-    found = saved.border(world, OVERWORLD)
+    found = saved_world.border(world, saved_world.OVERWORLD)
     if found is None:
         return None
     # The smaller of now and where it is heading: a drop must land inside the border whichever way it moves.
@@ -326,7 +325,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/here.mcfunction"] = lines(
         "# Staff: a drop where you stand (in the Overworld: Nether or End coordinates would put it elsewhere).",
-        f"execute unless dimension {OVERWORLD} run " + refuse(
+        f"execute unless dimension {saved_world.OVERWORLD} run " + refuse(
             f"Supply drops land in the Overworld: stand there, or use /function {NS}:drops/start {{x:0,z:0}}."),
         f"execute store result storage {STORE} here.x int 1 run data get entity @s Pos[0]",
         f"execute store result storage {STORE} here.z int 1 run data get entity @s Pos[2]",
@@ -351,8 +350,9 @@ def datapack_files() -> dict[str, str]:
     )
     # forceload works in the dimension it runs in, and staff may start or stop a drop from the Nether or the
     # End: pinned to the Overworld, where the drop is, so the chunks loaded are the ones released.
-    f[f"{FN}/hold.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload add $(x0) $(z0) $(x1) $(z1)")
-    f[f"{FN}/release.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload remove $(x0) $(z0) $(x1) $(z1)")
+    overworld = f"$execute in {saved_world.OVERWORLD} run"
+    f[f"{FN}/hold.mcfunction"] = lines(f"{overworld} forceload add $(x0) $(z0) $(x1) $(z1)")
+    f[f"{FN}/release.mcfunction"] = lines(f"{overworld} forceload remove $(x0) $(z0) $(x1) $(z1)")
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #state {OBJ} matches 1 run return 0",
         f"function {NS}:drops/check_at with storage {STORE} spot",

@@ -9,7 +9,8 @@ import urllib.error
 import uuid
 
 import pytest
-from fake_world import OVERWORLD, FakeWorld, score_rows, uuid_ints
+from fake_world import OVERWORLD, FakeWorld, member, score_rows
+from nbt_writer import nbt
 
 import events
 import rcon
@@ -30,10 +31,6 @@ PLAYERS = {name: str(uuid.uuid5(uuid.NAMESPACE_DNS, name)) for name in
            ("AlexFake", "SamFake", "RiaFake", "TomFake", "LoneFake")}
 
 
-def person(name: str, username: str | None = None) -> dict:
-    return {"uuid": uuid_ints(PLAYERS[name]), "username": username or name, "rank": "MEMBER"}
-
-
 SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": score_rows(
     ("ev.cup", "red", 30, {"display": "Red Monkeys"}),
     ("ev.cup", "blue", 10, {"display": {"text": "Blue", "extra": [" Herons"]}}),
@@ -52,7 +49,8 @@ def make_world(root, scoreboard=SCOREBOARD):
     parties = {"p-red": ("AlexFake", ["SamFake"]), "p-blue": ("RiaFake", ["TomFake"]), "p-lone": ("LoneFake", [])}
     for pid, (owner, members) in parties.items():
         # the party file still has Sam's old name; usercache has the new one
-        fake.party(pid, person(owner), [person(m, "OldSam" if m == "SamFake" else None) for m in members])
+        fake.party(pid, member(PLAYERS[owner], owner),
+                   [member(PLAYERS[m], "OldSam" if m == "SamFake" else m) for m in members])
     for owner, name in (("AlexFake", "Red Monkeys"), ("RiaFake", "Blue Herons")):
         fake.party_name(PLAYERS[owner], name)
     for name, chunks in (("AlexFake", {OVERWORLD: 4}), ("SamFake", {OVERWORLD: 2, "minecraft:the_nether": 1}),
@@ -88,7 +86,8 @@ def test_reads_parties_names_and_claims(world):
 
 def test_what_the_world_lacks(world, tmp_path, capsys):
     # A party with no owner is left out, with a warning; a claims file not named by a UUID doesn't count.
-    FakeWorld(world).party("p-ghost", None, [person("TomFake")]).claims("server-claims", {OVERWORLD: [(0, 0)]})
+    fake = FakeWorld(world).party("p-ghost", None, [member(PLAYERS["TomFake"], "TomFake")])
+    fake.claims("server-claims", {OVERWORLD: [(0, 0)]})
     data = standings.read_world(world)
     assert "p-ghost" not in {p.id for p in data.parties} and "server-claims" not in data.claims
     assert "p-ghost.nbt has no owner: left out" in capsys.readouterr().err
@@ -98,6 +97,21 @@ def test_what_the_world_lacks(world, tmp_path, capsys):
     assert "no factions (has a party been made with /openpac?)" in capsys.readouterr().err
     with pytest.raises(SystemExit, match="no scoreboard at .*: give the world folder"):
         standings.read_world(tmp_path / "bare")
+
+
+def test_a_claim_saved_oddly_in_another_dimension_still_counts(world):
+    # Claims are counted, not read: a Nether position with no x/z never stops the weekly standings.
+    path = world / f"data/openpartiesandclaims/player-claims/{PLAYERS['LoneFake']}.nbt"
+    path.write_bytes(nbt({"dimensions": {OVERWORLD: {"claims": [{"positions": [{"x": 0, "z": 0}]}]},
+                                         "minecraft:the_nether": {"claims": [{"positions": [{"y": 1}, {}]}]}}}))
+    assert standings.read_world(world).claims[PLAYERS["LoneFake"]] == 3
+
+
+def test_a_party_file_with_a_bad_member_stops_standings_naming_it(world):
+    # As before saved_world.py: a faction can't be ranked without its members, so it stops, now naming the file.
+    FakeWorld(world).party("p-bad", member(PLAYERS["TomFake"], "TomFake"), [{"uuid": "nope", "rank": "MEMBER"}])
+    with pytest.raises(ValueError, match=re.escape(str(world / "data/openpartiesandclaims/parties/p-bad.nbt"))):
+        standings.read_world(world)
 
 
 def test_the_formula(world, capsys):

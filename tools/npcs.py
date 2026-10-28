@@ -20,6 +20,7 @@ import re
 import uuid
 from pathlib import Path
 
+import rules
 import season_calendar
 from datapacks import NS, lines, mcmeta
 from repo import Repo
@@ -103,19 +104,24 @@ CRIER_OTHER = "<br>".join((
 
 
 def day(d: dt.date) -> str:
-    return f"{d:%A} {d.day} {d:%B}"
+    return season_calendar.day_words(d)
 
 
 def crier_text(week: int) -> str:
+    season = season_calendar.SEASON
     if week == 0:
-        launch = season_calendar.saturday(0)
-        this = (f"Season I opens {day(launch)} at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP "
-                "and the Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is "
-                f"{day(launch + dt.timedelta(days=1))} at 6 PM.")
+        opens = season_calendar.words(season.launch)
+        local = season.launch.astimezone(season_calendar.PACIFIC)
+        pvp = local + dt.timedelta(seconds=rules.LAUNCH_SECONDS)
+        # Judging is the second night at the event hour (docs/SEASONS.md), not a time worked out from the launch.
+        this = (f"Season I opens {day(season.saturday(0))} at {opens['pacific']} ({opens['eastern']}): the launch "
+                f"hour, then PvP and the Nether open at {season_calendar.clock(pvp)}. The Build Battle wheel spins "
+                f"at {season_calendar.clock(local)}, and judging is {day(season.saturday(0) + dt.timedelta(days=1))} "
+                "at 6 PM.")
     else:
-        this = f"This week: {EVENTS[week]}, {day(season_calendar.saturday(week))}, {TIME}."
+        this = f"This week: {EVENTS[week]}, {day(season.saturday(week))}, {TIME}."
     if week < LAST_WEEK:
-        then = f"Next week: {EVENTS[week + 1]}, {day(season_calendar.saturday(week + 1))}."
+        then = f"Next week: {EVENTS[week + 1]}, {day(season.saturday(week + 1))}."
     else:
         then = f"Season II is planned for {day(season_calendar.SEASON_TWO)}."
     return "<br>".join((this, "", then, "", EVERY_WEEK))

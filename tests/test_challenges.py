@@ -12,7 +12,6 @@ import season_calendar
 import wardrobe
 from repo import REPO
 
-UTC = dt.timezone.utc  # noqa: UP017 (the module under test keeps to 3.10)
 FN = "data/realms/function/challenges"
 
 

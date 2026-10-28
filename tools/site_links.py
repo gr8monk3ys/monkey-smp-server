@@ -38,11 +38,6 @@ _STORE_TEXT = re.compile(r'<[a-z]+\b[^>]*\bdata-store="([^"]*)"[^>]*>')
 _HIDDEN = re.compile(r'("[^"]*")|\shidden(?:="[^"]*")?(?=[\s>])')
 # An element with a launch template, and its text when it holds nothing else (a <meta> holds nothing).
 _LAUNCH = re.compile(r'<([a-z]+)\b[^>]*\bdata-launch="([^"]*)"[^>]*>(?:([^<]*)</\1>)?')
-EASTERN = season_calendar.zone("America/New_York")   # shown next to Pacific, for the East Coast
-# Written out here rather than with strftime, which follows the machine's locale.
-DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
-          "November", "December"]
 
 
 def site(repo=REPO) -> Path:
@@ -92,20 +87,9 @@ def launch_time(value: str) -> dt.datetime:
     return when
 
 
-def _clock(when: dt.datetime) -> str:
-    hour = when.hour % 12 or 12
-    minutes = f":{when.minute:02}" if when.minute else ""
-    return f"{hour}{minutes} {'AM' if when.hour < 12 else 'PM'}"
-
-
 def launch_words(when: dt.datetime) -> dict[str, str]:
-    """What a data-launch template can say: {date}, {pacific} and {eastern}."""
-    west, east = when.astimezone(season_calendar.PACIFIC), when.astimezone(EASTERN)
-    eastern = f"{_clock(east)} Eastern"
-    if east.date() != west.date():
-        eastern = f"{DAYS[east.weekday()]} {eastern}"
-    return {"date": f"{DAYS[west.weekday()]} {west.day} {MONTHS[west.month - 1]} {west.year}",
-            "pacific": f"{_clock(west)} Pacific", "eastern": eastern}
+    """What a data-launch template can say: {date}, {pacific} and {eastern} (season_calendar.words)."""
+    return season_calendar.words(when)
 
 
 def _stamp_launch(page: str, value: str | None, errors: list[str]) -> str:

@@ -117,7 +117,7 @@ What the tools read from a world folder's files (scores, parties and claims, eac
 _Avoid_: live world, world state, save (alone)
 
 **Season calendar**:
-When a season happens, in Pacific time: its launch, the launch weekend (week 0), each week from its Monday at 12 AM, each week's Saturday (event night) and the weeknight drop nights. `tools/season_calendar.py` keeps it and every tool asks it; the website's launch time (`LAUNCH_AT` in `site/config.js`) must match it.
+When a season happens, in Pacific time: its launch, the launch weekend (week 0), each week from its Monday at 12 AM, each week's Saturday (event night) and the weeknight drop nights, all worked out from the launch (week 1 starts the Monday after it). `tools/season_calendar.py` keeps it and every tool asks it; the website's launch time (`LAUNCH_AT` in `site/config.js`) must match it.
 _Avoid_: schedule (that is the challenge rotation), season dates
 
 **Snapshot**:

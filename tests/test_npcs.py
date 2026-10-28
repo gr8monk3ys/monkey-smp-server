@@ -11,7 +11,6 @@ from repo import REPO
 
 FILES = npcs.datapack_files()
 PRESETS = {name: npcs.preset(name) for name in npcs.NPCS}
-SEASONS = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8")
 
 
 def walk(value):

@@ -7,7 +7,9 @@ import pytest
 import wrapped
 from fake_world import FakeWorld
 
+import firsts
 import season_calendar
+import site_links
 from repo import REPO
 
 PACIFIC = season_calendar.PACIFIC
@@ -96,7 +98,7 @@ def test_a_card_counts_this_season_only(tmp_path):
     world = season_files(tmp_path)
     start = wrapped.read_start(tmp_path / "start.json")
     weeks = wrapped.closed_weeks(tmp_path / "standings", season_calendar.SEASON)
-    cards = {c.name: c for c in wrapped.cards(world, start, weeks, season_calendar.SEASON)}
+    cards = {c.name: c for c in wrapped.cards(wrapped.scores(world), firsts.holders(world), start, weeks)}
     assert sorted(cards) == ["Alex", "Kai", "Mod"]     # Blip played under 10 minutes; #x isn't a player
     alex, mod = cards["Alex"], cards["Mod"]
     assert (alex.hours, alex.days, alex.kills, alex.challenges, alex.events, alex.bounties) == ("84", 31, 12, 9, 4, 2)
@@ -113,7 +115,7 @@ def test_a_card_counts_this_season_only(tmp_path):
 def test_skins_rarest_first_never_the_bought_ones(tmp_path):
     world = season_files(tmp_path)
     start = wrapped.read_start(tmp_path / "start.json")
-    cards = {c.name: c for c in wrapped.cards(world, start, [], season_calendar.SEASON)}
+    cards = {c.name: c for c in wrapped.cards(wrapped.scores(world), firsts.holders(world), start, [])}
     alex = cards["Alex"]
     # Emberfang (10 hours) only Alex holds; Rallier (3 events) Alex and Kai, Wayfarer (3 days) Alex and Mod (a tie
     # goes by name); Founder's Edge all three. The pass (rw.months) and tier skins (rw.tier) are left out.
@@ -182,20 +184,27 @@ def test_without_a_start_season_one_counts_from_zero_and_later_seasons_stop(tmp_
     assert "test play before the launch counts" in capsys.readouterr().err
     assert "7.0 hours played" in text(out / "mod.html")
     with pytest.raises(SystemExit, match="Season II needs --start"):
-        wrapped.main(["build", str(world), "--season", "2", "--standings", str(tmp_path / "standings"),
-                      "--out", str(tmp_path / "out2")])
+        wrapped.main(["build", str(world), "--season", "2", "--launch", "2027-02-20T17:00-08:00",
+                      "--standings", str(tmp_path / "standings"), "--out", str(tmp_path / "out2")])
 
 
-def test_a_later_season_takes_its_dates_from_the_start(tmp_path):
+def test_a_later_season_takes_its_dates_from_its_launch_not_the_start(tmp_path, capsys):
     world = season_files(tmp_path)
     start = tmp_path / "start.json"
     snap = json.loads(start.read_text(encoding="utf-8"))
-    snap["taken"] = "2027-02-20T17:03:00-08:00"
+    snap["taken"] = "2027-02-23T09:00:00-08:00"    # kept three days late
     start.write_text(json.dumps(snap), encoding="utf-8")
     out = tmp_path / "s2"
-    assert wrapped.main(["build", str(world), "--season", "2", "--standings", str(tmp_path / "standings"),
-                         "--start", str(start), "--out", str(out)]) == 0
-    assert "20 February 2027 to 8 May 2027" in text(out / "index.html")
+    args = ["build", str(world), "--season", "2", "--standings", str(tmp_path / "standings"), "--start", str(start),
+            "--out", str(out)]
+    with pytest.raises(SystemExit, match="Season II needs --launch"):
+        wrapped.main(args)
+    with pytest.raises(SystemExit):
+        wrapped.main([*args, "--launch", "2027-02-20T17:00"])    # no UTC offset
+    assert "--launch" in capsys.readouterr().err
+    assert wrapped.main([*args, "--launch", "2027-02-20T17:00-08:00"]) == 0
+    assert "20 February 2027 to 8 May 2027" in text(out / "index.html")     # from the launch, not the start
+    assert "not at the launch" in capsys.readouterr().err                  # and the late start is flagged
     assert "No faction in the weekly standings this season." in text(out / "alex.html")   # Season I's weeks
 
 
@@ -232,4 +241,135 @@ def test_a_damaged_closed_week_is_left_out(tmp_path, capsys):
     found = wrapped.closed_weeks(tmp_path, season_calendar.SEASON)
     assert [len(w["rows"]) for w in found] == [1]
     assert capsys.readouterr().err.count("left out") == 2
-    assert wrapped.faction_ranks("kai", found, season_calendar.SEASON) == ("", None)
+    assert wrapped.faction_ranks("kai", found) == ("", None)
+
+
+# ---------------------------------------------------------------- the review of #69
+
+
+def test_a_player_named_index_never_replaces_the_index(tmp_path):
+    world = season_files(tmp_path)
+    FakeWorld(world).scores(*end_scores(), ("rw.play", "Index", 2 * HOUR))
+    out = build(tmp_path, world)
+    page = wrapped.slug("Index")
+    assert page.startswith("player-") and wrapped.slug("INDEX") != "index"
+    assert "Season I, player by player" in text(out / "index.html")
+    assert "Index" in text(out / f"{page}.html") and f'href="{page}.html"' in (out / "index.html").read_text("utf-8")
+
+
+def test_bedrock_names_get_distinct_fixed_length_pages(tmp_path, monkeypatch):
+    one, two, short = wrapped.slug(".BedrockPlayer1"), wrapped.slug(".BedrockPlayer2"), wrapped.slug(".a")
+    assert len({one, two, short}) == 3 and len(one) == len(two) == len(short) == len("player-") + 16
+    world = season_files(tmp_path)
+    monkeypatch.setattr(wrapped, "slug", lambda name: "same")
+    with pytest.raises(SystemExit, match="would share the page same.html"):
+        build(tmp_path, world)
+    assert not (tmp_path / "site").exists()
+
+
+def test_start_never_replaces_the_launchs_file_without_force(tmp_path, capsys):
+    world = FakeWorld(tmp_path / "world").scores(*launch_scores()).path
+    out = tmp_path / "start.json"
+    assert wrapped.main(["start", str(world), "--out", str(out)]) == 0
+    first = out.read_text(encoding="utf-8")
+    FakeWorld(world).scores(*launch_scores(), ("rw.play", "Late", 99))
+    assert wrapped.main(["start", str(world), "--out", str(out)]) == 1
+    assert "--force" in capsys.readouterr().err and out.read_text(encoding="utf-8") == first
+    assert wrapped.main(["start", str(world), "--out", str(out), "--force"]) == 0
+    assert (tmp_path / "start.json.bak").read_text(encoding="utf-8") == first
+    assert "Late" in json.loads(out.read_text(encoding="utf-8"))["scores"]["rw.play"]
+
+
+def test_a_late_close_counts_for_the_week_it_closed(tmp_path):
+    weeks = tmp_path / "weeks"
+    season = season_calendar.SEASON
+    sunday = dt.datetime(2026, 11, 29, 19, 0, tzinfo=PACIFIC)                 # week 1's close
+    finale = sunday + dt.timedelta(weeks=wrapped.FINALE_WEEK - 1)              # week 11's, Sunday 7 PM
+    late = dt.timedelta(hours=5, minutes=30)                                    # Monday 12:30 AM, after a reboot
+
+    def week_file(begun, end, rank, name):
+        weeks.mkdir(parents=True, exist_ok=True)
+        (weeks / f"{end:%Y-%m-%d-%H}.json").write_text(json.dumps(
+            {"start": begun.isoformat() if begun else None, "end": end.isoformat(),
+             "rows": [row(name, rank, ["Alex"])]}), encoding="utf-8")
+
+    week_file(sunday - dt.timedelta(weeks=1), sunday + late, 3, "Week one")
+    week_file(None, sunday + dt.timedelta(weeks=1) + late, 2, "Week two")             # no start saved
+    week_file(finale - dt.timedelta(weeks=1), finale + late, 1, "The finale")
+    week_file(finale, finale + dt.timedelta(weeks=1), 1, "Off-season")              # week 12: left out
+    found = wrapped.closed_weeks(tmp_path, season)
+    assert [(w["week"], w["rows"][0]["name"]) for w in found] == [(1, "Week one"), (2, "Week two"),
+                                                                  (wrapped.FINALE_WEEK, "The finale")]
+    assert wrapped.faction_ranks("alex", found)[1] == wrapped.Rank(1, 1, wrapped.FINALE_WEEK, "The finale")
+
+
+def test_a_link_not_set_yet_goes_to_the_discord_titled_coming_soon():
+    links = {"DISCORD_INVITE": "https://discord.gg/x", "MAP_URL": ""}
+    foot = wrapped.foot(links, dt.date(2027, 2, 7))
+    assert f'<a href="https://discord.gg/x" title="{site_links.SOON}">Live map</a>' in foot
+    assert '<a href="https://discord.gg/x">Discord</a>' in foot
+    assert "Live map" not in wrapped.foot({}, dt.date(2027, 2, 7))
+    assert '<a href="https://map.example">Live map</a>' in wrapped.foot(links | {"MAP_URL": "https://map.example"},
+                                                                       dt.date(2027, 2, 7))
+
+
+def test_a_build_that_fails_part_way_leaves_the_earlier_pages(tmp_path, monkeypatch):
+    world = season_files(tmp_path, opt_out="")
+    out = build(tmp_path, world)
+    before = {p.relative_to(out): p.read_bytes() for p in out.rglob("*") if p.is_file()}
+    written = []
+    real = wrapped.write
+
+    def fails_on_the_third(path, data):
+        written.append(path)
+        if len(written) == 3:
+            raise OSError("disk full")
+        real(path, data)
+    monkeypatch.setattr(wrapped, "write", fails_on_the_third)
+    (tmp_path / "opt-out.txt").write_text("kai\n", encoding="utf-8")
+    with pytest.raises(OSError, match="disk full"):
+        build(tmp_path, world)
+    assert {p.relative_to(out): p.read_bytes() for p in out.rglob("*") if p.is_file()} == before
+    assert sorted(p.name for p in out.parent.iterdir()) == ["season-1"]        # nothing half-made left beside it
+    monkeypatch.setattr(wrapped, "write", real)
+    build(tmp_path, world)
+    assert not (out / "kai.html").exists() and sorted(p.name for p in out.parent.iterdir()) == ["season-1"]
+
+
+def test_a_start_without_a_utc_offset_is_refused(tmp_path):
+    start = tmp_path / "start.json"
+    start.write_text(json.dumps({"taken": "2026-11-21T17:02:00", "scores": {}}), encoding="utf-8")
+    with pytest.raises(SystemExit, match="is not a file `wrapped.py start` wrote .*no UTC offset"):
+        wrapped.read_start(start)
+
+
+def test_build_reads_the_world_once(tmp_path, monkeypatch):
+    world = season_files(tmp_path)
+    calls = {"holders": 0, "scores": 0}
+    holders, scores = firsts.holders, wrapped.scores
+
+    def counted(name, real):
+        def call(*args):
+            calls[name] += 1
+            return real(*args)
+        return call
+    monkeypatch.setattr(firsts, "holders", counted("holders", holders))
+    monkeypatch.setattr(wrapped, "scores", counted("scores", scores))
+    build(tmp_path, world)
+    assert calls == {"holders": 1, "scores": 1}
+
+
+@pytest.mark.parametrize(("ticks", "shown"), [
+    (int(9.94 * HOUR), "9.9"), (int(9.96 * HOUR), "10"), (int(9.999 * HOUR), "10"), (10 * HOUR, "10"),
+    (int(10.49 * HOUR), "10"), (int(10.51 * HOUR), "11"), (int(0.04 * HOUR), "0.0"), (0, "0.0")])
+def test_hours_round_once(ticks, shown):
+    assert wrapped.hours(ticks) == shown
+    assert wrapped.Card("A", "a", ticks, 0, 0, 0, 0, 0).hours == shown
+
+
+def test_the_index_total_rounds_as_the_cards_do(tmp_path):
+    world = season_files(tmp_path)
+    # Alex 84 h (and 10 minutes), Mod 2, Kai 3, Zed 0.6: 89.6 hours, which floor division showed as 89.
+    FakeWorld(world).scores(*end_scores(), ("rw.play", "Zed", int(0.6 * HOUR)))
+    out = build(tmp_path, world)
+    assert "90 hours played" in text(out / "index.html")

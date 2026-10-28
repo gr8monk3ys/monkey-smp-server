@@ -510,7 +510,7 @@ python3 /srv/realms/repo/tools/wrapped.py build /srv/realms/seasons/season-I/wor
 `season-I-wrapped-start.json` is the starting point `wrapped.py start` kept at the launch (`docs/LAUNCH.md`);
 it sits beside `season-I/`, not in it, so step 6's `cp` makes that folder. Without it Season I counts staff
 test play before the launch too, and a later season can't be made. It warns if it was kept well away from
-the launch (a rehearsal's file, say). Copy
+the launch (a rehearsal's file, say), and `start` never replaces one without `--force`. Copy
 the folder into a checkout as `site/wrapped/season-1/` (`scp -r` to the maintainer's computer), open
 `index.html` and a page or two, and merge it in a pull request: the site deploys it at
 `/wrapped/season-1/`. Post that link in `#monkey-smp`. The pages are left out of search engines. A player who
@@ -556,7 +556,8 @@ renewals keep counting: the store's commands still reach the old world, and the 
     `function realms:rules/launch` (`docs/RULES.md`). Right after it, keep Season Wrapped's starting point:
     `realms rcon "save-all flush"`, then
     `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out
-    /srv/realms/seasons/season-2-wrapped-start.json`.
+    /srv/realms/seasons/season-2-wrapped-start.json`. Note the launch time: that season's `build` needs it as
+    `--launch` (for example `--launch 2027-02-20T17:00-08:00`), since only Season I's is in the calendar.
 
 The new world starts unlocked; the lock lives in the old world. The `realms-carry` pack can stay (it
 won't run twice). Delete its folder at the next restart to tidy up.

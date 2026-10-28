@@ -1,11 +1,13 @@
 """Season Wrapped: at a season's end, a page for every player about their season, for the site.
 
-    python tools/wrapped.py start WORLD --out START.json
+    python tools/wrapped.py start WORLD --out START.json [--force]
         right after the launch (`function realms:rules/launch`): where everyone's counts stood, so test play
-        before it and what earlier seasons carried in don't count as this season's
+        before it and what earlier seasons carried in don't count as this season's. An existing START.json
+        is never replaced without --force (which keeps it as START.json.bak)
     python tools/wrapped.py build WORLD --season 1 --standings DIR --start START.json --out site/wrapped/season-1
-        [--opt-out FILE]
-        after the finale: one page per player, an index, and the skins' pictures
+        [--opt-out FILE] [--launch 2027-02-20T17:00-08:00]
+        after the finale: one page per player, an index, and the skins' pictures. Season I's launch is
+        tools/season_calendar.py's; a later season gives its own with --launch (its weeks and dates count from it)
 
 What players see (docs/SEASONS.md, "Ending a season"): monkeysmp.lscaturchio.xyz/wrapped/season-1/ lists everyone
 who played, and each player's page has their hours and days played, PvP kills, weekly challenges done and
@@ -29,15 +31,19 @@ Players who don't want a page are named in FILE (one name a line, # for a commen
 index, and their name is withheld where a Server First is listed; their play still counts in the totals and
 in how rare a skin is. Pages are marked noindex, so search engines leave them out; a link still works.
 The pages use the site's own style.css and fonts from two folders up, so --out is site/wrapped/season-<n>
-(served at /wrapped/season-<n>/). A re-run replaces what an earlier run wrote there and nothing else.
+(served at /wrapped/season-<n>/). The pages are made in a folder beside it and swapped in at the end, so a
+failed build leaves the earlier run's; a folder holding anything an earlier run didn't write is refused.
+A closed standings week counts for the season week it was for, even when its close ran late.
 Stdlib only, and Python 3.10 or newer, so the VPS runs it straight from the checkout.
 """
 import argparse
 import datetime as dt
+import hashlib
 import html
 import json
 import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,6 +66,7 @@ TICKS_AN_HOUR = 72000
 MIN_TICKS = 10 * 60 * 20                     # 10 minutes this season: less gets no page
 COUNTED = (PLAY, DAYS, EVENTS, CHALLENGES, KILLS, BOUNTY)
 NAME = re.compile(r"[A-Za-z0-9_]{1,16}")     # a Java name; anything else gets a made-up file name
+RESERVED = {"index"}                         # page names a player's page may not take
 ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
 
 
@@ -108,16 +115,32 @@ class Start:
 def read_start(path: Path) -> Start:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return Start(dt.datetime.fromisoformat(data["taken"]),
-                     {o: {n: int(s) for n, s in h.items()} for o, h in data["scores"].items()})
+        taken = dt.datetime.fromisoformat(data["taken"])
+        if taken.utcoffset() is None:
+            raise ValueError(f"taken {data['taken']!r} has no UTC offset")
+        return Start(taken, {o: {n: int(s) for n, s in h.items()} for o, h in data["scores"].items()})
     except FileNotFoundError:
         raise SystemExit(f"no {path}: give the file `wrapped.py start` wrote at the launch") from None
     except (ValueError, KeyError, TypeError, AttributeError) as e:
         raise SystemExit(f"{path} is not a file `wrapped.py start` wrote ({type(e).__name__}: {e})") from None
 
 
+def week_of(start: str | None, end: dt.datetime, season: season_calendar.Season) -> int:
+    """The season week a closed standings week belongs to. Weeks close on Sunday at 7 PM, but the timer is
+    Persistent, so a close can run late (after a reboot: Monday, or later) and its end then falls in the next
+    week. The middle of the standings week (start to end) stays in the week it was for; without a start, a day
+    before the end does, for a close up to a day late."""
+    try:
+        begun = dt.datetime.fromisoformat(start) if start else None
+        if begun is not None and begun < end:
+            return season.week_at(begun + (end - begun) / 2)
+    except (ValueError, TypeError):
+        pass
+    return season.week_at(end - dt.timedelta(days=1))
+
+
 def closed_weeks(state: Path, season: season_calendar.Season) -> list[dict]:
-    """The standings' closed weeks that ended in the season: after the launch, before the week after the finale."""
+    """The standings' closed weeks of the season: ended after the launch, and for a week up to the finale's."""
     where = state / "weeks"
     if not where.is_dir():
         warn(f"no {where}: no weekly ranks (give the standings folder, STANDINGS_DIR)")
@@ -128,12 +151,13 @@ def closed_weeks(state: Path, season: season_calendar.Season) -> list[dict]:
             week = json.loads(path.read_text(encoding="utf-8"))
             end = dt.datetime.fromisoformat(week["end"])
             rows = [r for r in week.get("rows", []) if isinstance(r, dict) and isinstance(r.get("rank"), int)]
-            ended_in_season = season.launch < end < season.week_begins(FINALE_WEEK + 1)   # TypeError: no offset
+            after_launch = end > season.launch   # TypeError: an end without a UTC offset
+            number = week_of(week.get("start"), end, season)
         except (ValueError, KeyError, TypeError, AttributeError) as e:
             warn(f"{path} left out: not a closed week ({type(e).__name__})")
             continue
-        if ended_in_season:
-            found.append({"end": end, "rows": rows})
+        if after_launch and number <= FINALE_WEEK:
+            found.append({"end": end, "week": number, "rows": rows})
     return found
 
 
@@ -184,25 +208,30 @@ class Card:
 
     @property
     def hours(self) -> str:
-        h = self.ticks / TICKS_AN_HOUR
-        return f"{h:.0f}" if h >= 10 else f"{h:.1f}"
+        return hours(self.ticks)
+
+
+def hours(ticks: int) -> str:
+    """Hours in words' figures: one decimal under 10, whole hours from 10 (rounded once, so 9.96 is "10")."""
+    tenths = round(ticks / TICKS_AN_HOUR, 1)
+    return f"{round(ticks / TICKS_AN_HOUR)}" if tenths >= 10 else f"{tenths:.1f}"
 
 
 def slug(name: str) -> str:
-    """A page's file name: the name in lower case (Java names are unique that way), else a stand-in."""
-    if NAME.fullmatch(name):
+    """A page's file name: a Java name in lower case (Java names are unique that way), else (a Bedrock name, or a
+    name that would be the index's) "player-" and a fixed-length hash of the name."""
+    if NAME.fullmatch(name) and name.lower() not in RESERVED:
         return name.lower()
-    return "player-" + "".join(f"{ord(c):x}" for c in name)[:24]
+    return "player-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:16]
 
 
-def faction_ranks(name: str, weeks: list[dict], season: season_calendar.Season) -> tuple[str, Rank | None]:
+def faction_ranks(name: str, weeks: list[dict]) -> tuple[str, Rank | None]:
     """Their last faction, and their faction's best rank in a week they were in it (an earlier week wins a tie)."""
     who, best, last = name.casefold(), None, ""
     for week in weeks:
         for row in week["rows"]:
             if who in {str(m).casefold() for m in row.get("members", [])}:
-                rank = Rank(row["rank"], len(week["rows"]), season.week_at(week["end"]),
-                            str(row.get("name", "")))
+                rank = Rank(row["rank"], len(week["rows"]), week["week"], str(row.get("name", "")))
                 last = rank.faction
                 if rank.rank > 0 and (best is None or rank.rank < best.rank):
                     best = rank
@@ -227,9 +256,9 @@ def skins_held(names: list[str], end: dict, begin: dict | None) -> dict[str, lis
     return out
 
 
-def cards(world: Path, start: Start | None, weeks: list[dict], season: season_calendar.Season) -> list[Card]:
-    """A card for everyone who played at least MIN_TICKS this season, by name."""
-    end = scores(world)
+def cards(end: dict[str, dict[str, int]], claimed: list[First], start: Start | None, weeks: list[dict]) -> list[Card]:
+    """A card for everyone who played at least MIN_TICKS this season, by name: `end` is the final world's
+    scores, `claimed` its firsts (firsts.holders)."""
     begin = start.scores if start else {}
     # Staff type a bounty hunter's name by hand, so its case may differ (as in tools/standings.py).
     lower = {BOUNTY: (folded(end.get(BOUNTY, {})), folded(begin.get(BOUNTY, {})))}
@@ -241,13 +270,12 @@ def cards(world: Path, start: Start | None, weeks: list[dict], season: season_ca
         return gained(end.get(objective, {}).get(name, 0), begin.get(objective, {}).get(name, 0))
     names = sorted((n for n in end.get(PLAY, {}) if not n.startswith("#") and this_season(PLAY, n) >= MIN_TICKS),
                    key=str.casefold)
-    claimed = firsts.holders(world)
     held = skins_held(names, end, start.scores if start else None)
     out = []
     for n in names:
         card = Card(n, slug(n), this_season(PLAY, n), this_season(DAYS, n), this_season(KILLS, n),
                     this_season(CHALLENGES, n), this_season(EVENTS, n), this_season(BOUNTY, n), skins=held[n])
-        card.faction, card.best = faction_ranks(n, weeks, season)
+        card.faction, card.best = faction_ranks(n, weeks)
         card.firsts = [f for f in claimed if f.player.casefold() == n.casefold()]
         out.append(card)
     return out
@@ -313,8 +341,14 @@ def head(title: str, description: str, url: str) -> str:
 
 def foot(links: dict[str, str], made: dt.date) -> str:
     def link(key: str, label: str) -> str:
-        url = links.get(key) or links.get("DISCORD_INVITE")
-        return f' &middot; <a href="{esc(url)}">{label}</a>' if url else ""
+        """As site_links stamps the site's own pages: a link not set yet goes to the Discord, titled so."""
+        if key not in links:
+            return ""
+        url, title = site_links.target(links, key)
+        if url == "#":
+            return ""
+        titled = f' title="{esc(title)}"' if title else ""
+        return f' &middot; <a href="{esc(url)}"{titled}>{label}</a>'
     return f"""  </main>
 
   <footer class="crown">
@@ -413,7 +447,7 @@ def index_page(shown: list[Card], everyone: list[Card], claimed: list[First], hi
       <h1>Season {name}, player by player</h1>
       <p class="lede">{season_span(season)}. Pick a name for that player's season.</p>
 """)
-    out.append(figures([(str(len(everyone)), "players"), (f"{ticks // TICKS_AN_HOUR}", "hours played"),
+    out.append(figures([(str(len(everyone)), "players"), (hours(ticks), "hours played"),
                         (str(sum(c.kills for c in everyone)), "PvP kills"),
                         (str(sum(c.challenges for c in everyone)), "weekly challenges done"),
                         (str(len(claimed)), "Server Firsts claimed")]))
@@ -498,13 +532,13 @@ def skin_png(skin_id: str) -> bytes:
     raise KeyError(skin_id)
 
 
-def clear_earlier_run(out: Path) -> None:
-    """Removes what an earlier run wrote in `out` (its pages, the style, the skins' pictures). A folder holding
-    anything else is refused, so a wrong --out never loses a file."""
-    if not out.is_dir():
-        if out.exists():
-            raise SystemExit(f"{out} is a file: give a folder (site/wrapped/season-<n>)")
+def check_earlier_run(out: Path) -> None:
+    """`out` must be missing, empty, or what an earlier run wrote (its pages, the style, the skins' pictures): the
+    build replaces the whole folder, so one holding anything else is refused and a wrong --out loses nothing."""
+    if not out.exists():
         return
+    if not out.is_dir():
+        raise SystemExit(f"{out} is a file: give a folder (site/wrapped/season-<n>)")
     pages = [p for p in out.glob("*.html")
              if f'content="{GENERATOR}"' in p.read_text(encoding="utf-8", errors="replace")]
     pictures = sorted((out / "skins").glob("*.png")) if (out / "skins").is_dir() else []
@@ -514,8 +548,6 @@ def clear_earlier_run(out: Path) -> None:
     if others:
         raise SystemExit(f"{out} holds {others[0].name}, which this tool didn't write: give an empty folder or the "
                          "one an earlier run wrote (site/wrapped/season-<n>)")
-    for p in [*pages, *pictures, out / "wrapped.css"]:
-        p.unlink(missing_ok=True)
 
 
 def write(path: Path, data: str | bytes) -> None:
@@ -526,10 +558,36 @@ def write(path: Path, data: str | bytes) -> None:
         path.write_text(data, encoding="utf-8", newline="\n")
 
 
+def replace_folder(out: Path, files: dict[str, str | bytes]) -> None:
+    """Writes `files` (path in the folder -> contents) into a new folder beside `out`, then swaps it in: a build
+    that fails part way leaves the earlier run's folder as it was."""
+    new, old = out.with_name(f".{out.name}.new"), out.with_name(f".{out.name}.old")
+    if old.is_dir() and not out.exists():
+        os.replace(old, out)            # an earlier run stopped between its two swaps: put its folder back
+    check_earlier_run(out)
+    shutil.rmtree(new, ignore_errors=True)
+    shutil.rmtree(old, ignore_errors=True)
+    try:
+        for rel, data in files.items():
+            write(new / rel, data)
+    except BaseException:
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+    if out.exists():
+        os.replace(out, old)
+    os.replace(new, out)
+    shutil.rmtree(old, ignore_errors=True)
+
+
 # ---------------------------------------------------------------- the commands
 
 
-def start(world: Path, out: Path, now: dt.datetime) -> int:
+def start(world: Path, out: Path, now: dt.datetime, force: bool = False) -> int:
+    backup = out.with_name(out.name + ".bak")
+    if out.exists() and not force:
+        print(f"{out} exists: it is the starting point an earlier `start` kept, at the launch. Give another --out, "
+              f"or --force to replace it (the old one is kept as {backup.name})", file=sys.stderr)
+        return 1
     board = scores(world)
     holder, objective = LAUNCHED.split()
     if board.get(objective, {}).get(holder, 0) != 1:
@@ -540,40 +598,60 @@ def start(world: Path, out: Path, now: dt.datetime) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_name(out.name + ".tmp")
     tmp.write_text(json.dumps(snapshot, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    if out.exists():
+        shutil.copy2(out, backup)
+        print(f"kept the earlier {out.name} as {backup}")
     os.replace(tmp, out)
     print(f"wrote {out}: {len(snapshot['scores'].get(PLAY, {}))} players' counts at {now:%Y-%m-%d %H:%M %Z}")
     return 0
 
 
+def launch_time(text: str) -> dt.datetime:
+    """--launch: an ISO time with its UTC offset (2027-02-20T17:00-08:00)."""
+    when = dt.datetime.fromisoformat(text)
+    if when.utcoffset() is None:
+        raise ValueError(f"{text} has no UTC offset")
+    return when
+
+
 def build(world: Path, n: int, state: Path, start_file: Path | None, out: Path, opt_out: Path | None,
-          today: dt.date) -> int:
+          today: dt.date, launch: dt.datetime | None = None) -> int:
     if not world.is_dir():
         raise SystemExit(f"{world} is not a folder: give the season's final world folder")
+    if launch is None and n != 1:
+        raise SystemExit(f"Season {season_name(n)} needs --launch, the time it launched (e.g. "
+                         "2027-02-20T17:00-08:00): its weeks and dates count from it")
+    season = season_calendar.Season(launch) if launch else season_calendar.SEASON
     snap = read_start(start_file) if start_file else None
     if snap is None and n != 1:
         raise SystemExit(f"Season {season_name(n)} needs --start: without it, what earlier seasons carried in "
                          "would read as this season's")
     if snap is None:
         warn("no --start: counting from zero, so staff test play before the launch counts too")
-    season = season_calendar.SEASON if n == 1 else season_calendar.Season(snap.taken)
-    if snap and not season.launch - dt.timedelta(hours=1) <= snap.taken <= season.launch + dt.timedelta(days=1):
+    elif not season.launch - dt.timedelta(hours=1) <= snap.taken <= season.launch + dt.timedelta(days=1):
         warn(f"the starting point was kept {snap.taken:%Y-%m-%d %H:%M %z}, not at the launch "
              f"({season.launch.astimezone(season_calendar.PACIFIC):%Y-%m-%d %H:%M %z}): a rehearsal's, or kept "
              "late (play before it doesn't count)")
     hidden = read_opt_out(opt_out)
-    everyone = cards(world, snap, closed_weeks(state, season), season)
-    shown = [c for c in everyone if c.name.casefold() not in hidden]
     claimed = firsts.holders(world)
+    everyone = cards(scores(world), claimed, snap, closed_weeks(state, season))
+    shown = [c for c in everyone if c.name.casefold() not in hidden]
+    by_slug: dict[str, str] = {}
+    for c in shown:
+        if c.slug in by_slug:
+            raise SystemExit(f"{by_slug[c.slug]} and {c.name} would share the page {c.slug}.html: nothing written")
+        by_slug[c.slug] = c.name
     config = site_links.site() / "config.js"
     links = site_links.load_links(config.read_text(encoding="utf-8")) if config.is_file() else {}
 
-    clear_earlier_run(out)
-    write(out / "wrapped.css", CSS)
-    write(out / "index.html", index_page(shown, everyone, claimed, hidden, n, season, links, today))
+    files: dict[str, str | bytes] = {"wrapped.css": CSS,
+                                     "index.html": index_page(shown, everyone, claimed, hidden, n, season, links,
+                                                              today)}
     for c in shown:
-        write(out / f"{c.slug}.html", card_page(c, n, season, len(everyone), links, today))
+        files[f"{c.slug}.html"] = card_page(c, n, season, len(everyone), links, today)
     for skin_id in sorted({s.id for c in shown for s in c.skins}):
-        write(out / "skins" / f"{skin_id}.png", skin_png(skin_id))
+        files[f"skins/{skin_id}.png"] = skin_png(skin_id)
+    replace_folder(out, files)
     left = sorted(hidden - {c.name.casefold() for c in everyone})
     print(f"wrote {out}: an index and {plural(len(shown), 'page')} ({len(everyone) - len(shown)} opted out) "
           f"for Season {season_name(n)}")
@@ -589,9 +667,13 @@ def main(argv=None) -> int:
     s.add_argument("world", type=Path, help="the live world folder (server/world), saved just now")
     s.add_argument("--out", type=Path, required=True,
                    help="the file to keep (e.g. /srv/realms/seasons/season-I-wrapped-start.json)")
+    s.add_argument("--force", action="store_true", help="replace an existing --out (kept as <out>.bak)")
     b = sub.add_parser("build", help="after the finale: the pages")
     b.add_argument("world", type=Path, help="the season's final world folder")
     b.add_argument("--season", type=int, required=True, help="the season's number (1 for Season I)")
+    b.add_argument("--launch", type=launch_time,
+                   help="when the season launched, with its UTC offset (2027-02-20T17:00-08:00); needed from "
+                        "Season II, Season I's is in tools/season_calendar.py")
     b.add_argument("--standings", type=Path, required=True, help="the standings folder (STANDINGS_DIR)")
     b.add_argument("--start", type=Path, help="the file `start` wrote at the launch")
     b.add_argument("--opt-out", type=Path, help="players who asked for no page, one name a line")
@@ -599,8 +681,9 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     now = season_calendar.now()
     if args.command == "start":
-        return start(args.world, args.out, now)
-    return build(args.world, args.season, args.standings, args.start, args.out, args.opt_out, now.date())
+        return start(args.world, args.out, now, args.force)
+    return build(args.world, args.season, args.standings, args.start, args.out, args.opt_out, now.date(),
+                 args.launch)
 
 
 if __name__ == "__main__":

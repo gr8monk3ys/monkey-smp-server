@@ -27,11 +27,15 @@ Points: every minute an outpost is held while a survival player of another facti
 a minute in op.min (#f<N>, kept from the launch). tools/standings.py counts the week's (from its snapshot, as
 it does bounties): POINTS_PER_HOUR standings points for each whole hour held, at most MAX_POINTS a week, on
 top of the 100-point columns. Nothing is given: no items, no effects. A faction whose party is gone loses
-what it holds, and its minutes (docs/MAINTAINING.md, "The faction number in game").
+what it holds (the pack, each minute) and its minutes (the hourly run, once diplomacy has removed its name;
+docs/MAINTAINING.md, "The faction number in game"). The launch draws a new #epoch: a week whose snapshot has
+another epoch (test play, an older world) counts every minute since; one with the same epoch counts what was
+added since, so a staff penalty (minutes taken off) lowers the week's hours and never raises them.
 
-The live map: `send` also keeps a marker set ("Outposts", one marker per outpost, no holders: those change too
-often to reload BlueMap for) in the Overworld map's config/bluemap/maps/*.conf, and sends `bluemap reload` when
-it changed. It reads the outposts from the saved world, so a new spot shows on the map the hour after.
+The live map: each run also keeps a marker set ("Outposts", one marker per outpost, no holders: those change
+too often to reload BlueMap for) in the Overworld map's config/bluemap/maps/*.conf, and sends `bluemap reload`
+only after it wrote a changed one. It reads the outposts from the saved world, so a new spot shows on the map
+the hour after. A config it can't write is warned about and left alone, with no reload.
 
 Stdlib only plus tools/diplomacy.py, drops.py, map_border.py and saved_world.py, and Python 3.10 or newer, so
 the VPS runs it straight from the checkout.
@@ -39,9 +43,11 @@ the VPS runs it straight from the checkout.
 import argparse
 import datetime as dt
 import json
+import os
 import random
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import diplomacy
@@ -57,7 +63,7 @@ from repo import Repo
 DATAPACK = "realms-outposts"
 FN = f"data/{NS}/function/outposts"
 STORE = f"{NS}:outposts"
-OBJ = "op"                  # #ring, #auto, #busy, #sec, #seq, #launched and the scratch values
+OBJ = "op"                  # #ring, #auto, #busy, #sec, #seq, #epoch, #launched and the scratch values
 HOLD = "op.hold"            # #o<i>: the number of the faction holding outpost i
 BY = "op.by"                # #o<i>: the faction capturing it now
 PROG = "op.prog"            # #o<i>: seconds it has been capturing
@@ -82,7 +88,7 @@ CLAIM_GAP = drops.CLAIM_GAP  # chunks between a new spot and the nearest claimed
 MOVE_GAP = 3                # a claim this close (chunks) moves the outpost
 CANDIDATES = 4              # spots sent for each outpost; the pack takes the first that is dry land
 CANDIDATE_GAP = 4           # chunks between two candidates for the same outpost
-DRAWS = 5000
+LOG_KEEP = 500              # captures kept in storage log (the oldest go): weeks of them
 
 # What `function realms:outposts/survey` returns, for the timer's log (meaning()).
 SURVEY_CODES = {
@@ -95,6 +101,11 @@ SURVEY_CODES = {
     15: "the season is locked",
     16: "no spots were sent",
 }
+
+
+def stderr(msg: str) -> None:
+    print(f"warning: {msg}", file=sys.stderr)
+
 
 HELP = [
     ("status", "where each outpost is, who holds it, the settings"),
@@ -147,32 +158,19 @@ def quarter(dx: float, dz: float) -> int:
     return 2 if dx > 0 else 4
 
 
-def near_claim(chunk: tuple[int, int], claims: set[tuple[int, int]], gap: int) -> bool:
-    return any((chunk[0] + dx, chunk[1] + dz) in claims for dx in range(-gap, gap + 1) for dz in range(-gap, gap + 1))
-
-
 def candidates(border: map_border.Border, claims: set[tuple[int, int]], seed: str,
                which: list[int]) -> list[dict]:
     """Up to CANDIDATES spots for each outpost in `which`, the first of each first: [{i, x, z}], x and z a chunk's
-    middle in that outpost's quarter of drops.ring(), CLAIM_GAP chunks from every claim. The same for the same
-    seed and world."""
-    inner, outer = drops.ring(border)
-    if outer <= inner or not which:
+    middle in that outpost's quarter of drops.ring(), CLAIM_GAP chunks from every claim (drops' sampler and claim
+    check). The same for the same seed and world."""
+    if not which:
         return []
-    rng = random.Random(seed)
-    cx, cz = border.center_x, border.center_z
-    lo_x, hi_x = int((cx - outer) // 16), int((cx + outer) // 16)
-    lo_z, hi_z = int((cz - outer) // 16), int((cz + outer) // 16)
     found: dict[int, list[tuple[int, int]]] = {i: [] for i in which}
-    for _ in range(DRAWS):
+    for chunk, x, z in drops.ring_chunks(border, random.Random(seed)):
         if all(len(v) >= CANDIDATES for v in found.values()):
             break
-        chunk = rng.randint(lo_x, hi_x), rng.randint(lo_z, hi_z)
-        x, z = chunk[0] * 16 + 8, chunk[1] * 16 + 8
-        if not inner <= max(abs(x - cx), abs(z - cz)) <= outer:
-            continue
-        i = quarter(x - cx, z - cz)
-        if i not in found or len(found[i]) >= CANDIDATES or near_claim(chunk, claims, CLAIM_GAP):
+        i = quarter(x - border.center_x, z - border.center_z)
+        if i not in found or len(found[i]) >= CANDIDATES or drops.near_claim(chunk, claims, CLAIM_GAP):
             continue
         if any(max(abs(chunk[0] - px // 16), abs(chunk[1] - pz // 16)) < CANDIDATE_GAP for px, pz in found[i]):
             continue
@@ -186,22 +184,27 @@ def candidates(border: map_border.Border, claims: set[tuple[int, int]], seed: st
 def to_move(spots: dict[int, dict], claims: set[tuple[int, int]]) -> list[int]:
     """The outposts that need a spot: none yet, or a claim within MOVE_GAP chunks of theirs."""
     return [i for i in range(1, COUNT + 1)
-            if i not in spots or near_claim((spots[i]["x"] // 16, spots[i]["z"] // 16), claims, MOVE_GAP)]
+            if i not in spots or drops.near_claim((spots[i]["x"] // 16, spots[i]["z"] // 16), claims, MOVE_GAP)]
 
 
-def plan(world: Path, when: dt.datetime) -> tuple[list[str], str]:
-    """The survey's RCON commands for now, and why there are none ("" when there are)."""
-    board = saved_world.scoreboard(world)
-    scores = board.scores if board else {}
-    if not launched(scores):
-        return [], "the season hasn't launched"
+def gone_minutes(scores: dict[str, dict[str, int]], storage: dict) -> list[str]:
+    """Resets for the minutes of factions whose name diplomacy has removed (the party is gone: its number is never
+    given again)."""
+    names = storage.get("factions", {}).get("names", {})
+    return [f"scoreboard players reset {holder} {MINUTES}" for holder in sorted(scores.get(MINUTES, {}))
+            if re.fullmatch(r"#f[1-9]\d*", holder) and holder[1:] not in names]
+
+
+def survey(world: Path, when: dt.datetime, scores: dict[str, dict[str, int]], spots: dict[int, dict]
+           ) -> tuple[list[str], str]:
+    """The survey's one RCON command for now (it carries its spots, so a survey already running keeps its own),
+    and why there is none ("" when there is)."""
     if scores.get(STATE, {}).get("#season_locked", 0) == 1:
         return [], "the season is locked"
     border = settled_border(world)
     if border is None:
         return [], "no Overworld border saved, or it is still moving"
     size = round(border.size)
-    spots = placed(diplomacy.saved_storage(world))
     claims = drops.claimed_chunks(world)
     fresh = scores.get(OBJ, {}).get("#ring", 0) != size
     which = list(range(1, COUNT + 1)) if fresh else to_move(spots, claims)
@@ -209,11 +212,44 @@ def plan(world: Path, when: dt.datetime) -> tuple[list[str], str]:
         return [], "every outpost has its spot"
     # Seeded by the border and the hour, so a retry for an outpost with no dry land tries new spots.
     found = candidates(border, claims, f"outposts {size} {when.astimezone(server.UTC):%Y%m%d%H}", which)
-    if not found:
-        return [], "no spot in the ring is far enough from every claim"
-    listed = ",".join(f"{{i:{c['i']},x:{c['x']},z:{c['z']}}}" for c in found)
-    return [f"data modify storage {STORE} cands set value [{listed}]",
-            f"function {NS}:outposts/survey {{ring:{size},fresh:{int(fresh)}}}"], ""
+    while found:
+        listed = ",".join(f"{{i:{c['i']},x:{c['x']},z:{c['z']}}}" for c in found)
+        command = f"function {NS}:outposts/survey {{ring:{size},fresh:{int(fresh)},cands:[{listed}]}}"
+        if len(command.encode()) <= server.LIMIT:
+            return [command], ""
+        found = found[:-1]   # the last candidates are the least needed
+    return [], "no spot in the ring is far enough from every claim"
+
+
+@dataclass
+class Run:
+    """One run's reading of the saved world: what to send and the map configs to write, read once."""
+    commands: list[str] = field(default_factory=list)
+    why: str = ""
+    maps: list[tuple[Path, str]] = field(default_factory=list)
+    spots: dict[int, dict] = field(default_factory=dict)
+    scores: dict[str, dict[str, int]] = field(default_factory=dict)
+    storage: dict = field(default_factory=dict)
+
+
+def read_run(world: Path, when: dt.datetime, warn=stderr) -> Run:
+    board = saved_world.scoreboard(world)
+    scores = board.scores if board else {}
+    storage = diplomacy.saved_storage(world)
+    spots = placed(storage)
+    run = Run(maps=map_changes(world, spots, warn), spots=spots, scores=scores, storage=storage)
+    if not launched(scores):
+        run.why = "the season hasn't launched"
+        return run
+    run.commands, run.why = survey(world, when, scores, spots)
+    run.commands = gone_minutes(scores, storage) + run.commands
+    return run
+
+
+def plan(world: Path, when: dt.datetime) -> tuple[list[str], str]:
+    """The RCON commands for now apart from the map's reload, and why there is no survey ("" when there is)."""
+    run = read_run(world, when)
+    return run.commands, run.why
 
 
 # ---------------------------------------------------------------- the live map
@@ -254,9 +290,9 @@ def with_markers(conf: str, spots: dict[int, dict]) -> str:
     return "\n".join(lines_)
 
 
-def map_changes(world: Path, spots: dict[int, dict], warn=lambda msg: print(f"warning: {msg}", file=sys.stderr)
-                ) -> list[tuple[Path, str]]:
-    """(config, its new text) for each of this world's Overworld maps whose marker set is out of step."""
+def map_changes(world: Path, spots: dict[int, dict], warn=stderr) -> list[tuple[Path, str]]:
+    """(config, its new text) for each of this world's Overworld maps whose marker set is out of step. One that
+    can't be written is warned about and left out, so nothing reloads BlueMap for it every hour."""
     server_dir = world.parent
     out = []
     for conf in sorted((server_dir / map_border.MAPS).glob("*.conf")):
@@ -269,8 +305,12 @@ def map_changes(world: Path, spots: dict[int, dict], warn=lambda msg: print(f"wa
         except ValueError as e:
             warn(f"{conf}: {e}; the map shows no outposts")
             continue
-        if fitted != text_:
-            out.append((conf, fitted))
+        if fitted == text_:
+            continue
+        if not os.access(conf, os.W_OK):
+            warn(f"{conf} can't be written: the map's outposts are out of date")
+            continue
+        out.append((conf, fitted))
     return out
 
 
@@ -278,36 +318,37 @@ def map_changes(world: Path, spots: dict[int, dict], warn=lambda msg: print(f"wa
 
 
 def commands(world: Path, when: dt.datetime) -> list[str]:
-    """What deploy/realms-outposts.sh sends: a survey when an outpost needs a spot, and `bluemap reload` when the
-    map's marker set is out of step with the saved outposts."""
-    out, _ = plan(world, when)
-    if map_changes(world, placed(diplomacy.saved_storage(world))):
-        out.append("bluemap reload")
-    return out
+    """What deploy/realms-outposts.sh sends: gone factions' minutes reset, a survey when an outpost needs a spot,
+    and `bluemap reload` when a map's marker set is out of step (and its config can be written)."""
+    run = read_run(world, when)
+    return run.commands + (["bluemap reload"] if run.maps else [])
 
 
 def meaning(command: str, answer: str) -> str:
     """The timer's log line for one command's answer: the survey's return code in words."""
     if command.startswith(f"function {NS}:outposts/survey"):
         m = re.search(r" returned (\d+)$", answer)
-        return f"{command}: {SURVEY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
-    said = "spots sent" if command.startswith("data modify") else command
-    return f"{said}: {answer or 'ok'}"
+        said = SURVEY_CODES.get(int(m[1]), answer) if m else answer or "ok"
+        return f"function {NS}:outposts/survey: {said}"
+    return f"{command}: {answer or 'ok'}"
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
-    """Writes the map's marker set when it is out of step, then sends commands(world, when) (none: nothing is
-    logged; a server that isn't running is skipped, and loads the map's markers when it starts). The survey waits
-    for its spots: if they don't arrive it isn't sent."""
-    out = commands(world, when)
-    if not out:
-        return 0
-    for conf, fitted in map_changes(world, placed(diplomacy.saved_storage(world))):
+    """Reads the world once, writes the map's marker set when it is out of step, then sends the commands (none:
+    nothing is logged; a server that isn't running is skipped, and loads the map's markers when it starts).
+    `bluemap reload` goes only after a config was written."""
+    run = read_run(world, when, warn=lambda msg: log(f"map: {msg}"))
+    written = False
+    for conf, fitted in run.maps:
         try:
             conf.write_text(fitted, encoding="utf-8", newline="")   # in place: keeps the owner
             log(f"map: outposts marker set written to {conf.name}")
+            written = True
         except OSError as e:
-            log(f"map: could not write {conf}: {e}")
+            log(f"map: could not write {conf}: {e}; no reload")
+    out = run.commands + (["bluemap reload"] if written else [])
+    if not out:
+        return 0
     return server.send_if_running(rcon, out, log, describe=meaning, stop=True)
 
 
@@ -332,8 +373,11 @@ def status(world: Path, when: dt.datetime) -> int:
         who = f"held by {names.get(h, f'faction {h}')}" if h else "held by nobody"
         close = " (a claim is too close: it moves)" if i in to_move({i: spot}, claims) else ""
         print(f"  {DIRECTIONS[i - 1][1]}: {spot['x']} {spot.get('y', '?')} {spot['z']}, {who}{close}")
-    out, why = plan(world, when)
-    print("the timer would send:" if out else f"the timer would send no survey: {why}")
+    run = read_run(world, when)
+    out, why = run.commands + (["bluemap reload"] if run.maps else []), run.why
+    print("the timer would send:" if out else f"the timer would send nothing: {why}")
+    if out and why:
+        print(f"  (no survey: {why})")
     for command in out:
         print(f"  {command}")
     return 0
@@ -342,21 +386,30 @@ def status(world: Path, when: dt.datetime) -> int:
 # ---------------------------------------------------------------- standings and the recap
 
 
+def epoch(scores: dict[str, dict[str, int]]) -> int:
+    """The launch's number (drawn once by the pack's launch): 0 before the launch."""
+    return scores.get(OBJ, {}).get("#epoch", 0)
+
+
 def baseline(scores: dict[str, dict[str, int]]) -> dict:
-    """What a standings week starts from (in its snapshot): every faction's minutes held, and the capture log's
-    newest number."""
-    return {"minutes": dict(sorted((h, v) for h, v in scores.get(MINUTES, {}).items() if h.startswith("#f"))),
+    """What a standings week starts from (in its snapshot): the launch's epoch, every faction's minutes held, and
+    the capture log's newest number."""
+    return {"epoch": epoch(scores),
+            "minutes": dict(sorted((h, v) for h, v in scores.get(MINUTES, {}).items() if h.startswith("#f"))),
             "seq": scores.get(OBJ, {}).get("#seq", 0)}
 
 
 def hours(scores: dict[str, dict[str, int]], base: dict | None, number: int | None) -> int:
-    """Whole hours faction `number` held outposts since the week's snapshot. A count below its starting point was
-    started again (the launch clears test play's), so all of it is new."""
+    """Whole hours faction `number` held outposts since the week's snapshot. A snapshot from another epoch (before
+    the launch, or another world) counts from nothing. In the same epoch a count lower than at the start is a
+    staff penalty: the week has no hours (it never adds any)."""
     if number is None:
         return 0
+    base = base or {}
     now = scores.get(MINUTES, {}).get(f"#f{number}", 0)
-    then = ((base or {}).get("minutes") or {}).get(f"#f{number}", 0)
-    return max(0, now - then if now >= then else now) // 60
+    same = epoch(scores) != 0 and base.get("epoch") == epoch(scores)
+    then = (base.get("minutes") or {}).get(f"#f{number}", 0) if same else 0
+    return max(0, now - then) // 60
 
 
 def points(held: int) -> int:
@@ -364,13 +417,13 @@ def points(held: int) -> int:
     return min(MAX_POINTS, POINTS_PER_HOUR * max(0, held))
 
 
-def captures(storage: dict, since: int | None) -> list[tuple[str, str]]:
-    """The captures logged after number `since` (a week's baseline()["seq"]), oldest first: (the outpost's name,
-    the faction's). A log whose newest is below `since` was started again (the launch, a new world): all of it."""
-    log = [e for e in storage.get("outposts", {}).get("log", []) if isinstance(e, dict) and e.get("kind") == "capture"]
-    newest = max((int(e.get("n", 0)) for e in log), default=0)
-    since = since or 0
-    since = since if newest >= since else 0
+def captures(storage: dict, base: dict | None) -> list[tuple[str, str]]:
+    """The captures logged since a week's baseline() (`base`), oldest first: (the outpost's name, the faction's).
+    A baseline from another epoch (before the launch, another world): all of the log."""
+    mine = storage.get("outposts", {})
+    log = [e for e in mine.get("log", []) if isinstance(e, dict) and e.get("kind") == "capture"]
+    base = base or {}
+    since = base.get("seq", 0) if base.get("epoch") and base.get("epoch") == mine.get("epoch") else 0
     known = diplomacy.saved_names(storage)
     out = []
     for e in sorted(log, key=lambda e: int(e.get("n", 0))):
@@ -380,12 +433,12 @@ def captures(storage: dict, since: int | None) -> list[tuple[str, str]]:
     return out
 
 
-def recap_lines(rows: list[dict], storage: dict, since: int | None) -> list[str]:
+def recap_lines(rows: list[dict], storage: dict, base: dict | None) -> list[str]:
     """An "outposts this week" section for the Sunday recap: [] for a week nobody held or took one. `rows` are a
-    closed week's (each with "outposts", hours held); `since` its starting baseline()["seq"]."""
+    closed week's (each with "outposts", hours held); `base` its snapshot's baseline() ("outposts")."""
     held = sorted(((r.get("outposts", 0), r["name"]) for r in rows if r.get("outposts", 0) > 0),
                   key=lambda t: (-t[0], t[1].casefold()))
-    taken = captures(storage, since)
+    taken = captures(storage, base)
     if not held and not taken:
         return []
     out = []
@@ -465,8 +518,11 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/launch.mcfunction"] = lines(
         "# Once, the first second after the launch (realms:rules/launch sets #launched rw.day): nothing from test",
         "# play counts. The outposts go, and the timer places them anew within the hour.",
-        "# Labels lose their ids too, so any left from test play go when their chunk loads.",
+        "# Labels lose their ids too, so any left from test play go when their chunk loads. A new epoch tells",
+        "# tools/standings.py that every minute from here on is new.",
         *(f"scoreboard players reset * {o}" for o in (HOLD, BY, PROG, MINUTES, ID)),
+        f"execute store result score #epoch {OBJ} run random value 1..1000000000",
+        f"execute store result storage {STORE} epoch int 1 run scoreboard players get #epoch {OBJ}",
         f"execute if score #busy {OBJ} matches 1 run function {NS}:outposts/unload with storage {STORE} cand",
         f"function {NS}:outposts/done",
         f"data remove storage {STORE} at",
@@ -477,17 +533,16 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/minute.mcfunction"] = lines(
         f"scoreboard players set #sec {OBJ} 0",
+        "# A gone faction's minutes are reset by the hourly timer (tools/outposts.py gone_minutes).",
         *(f"execute if score #o{i} {HOLD} matches 1.. run function {NS}:outposts/o/{i}/minute"
           for i in range(1, COUNT + 1)),
-        "# A faction that is gone (its name went at the board run) keeps nothing here.",
-        *(f"execute if score #f{n} {MINUTES} matches -2147483648.. unless data storage {diplomacy.FACTIONS} "
-          f"names.f{n} run scoreboard players reset #f{n} {MINUTES}" for n in range(1, diplomacy.MAX_FACTIONS + 1)),
     )
     f[f"{FN}/log.mcfunction"] = lines(
         "# Macro {o, f}: a capture, numbered, for the Sunday recap (tools/outposts.py captures).",
         f"scoreboard players add #seq {OBJ} 1",
         f'$data modify storage {STORE} log append value {{kind:"capture",o:$(o),f:$(f)}}',
         f"execute store result storage {STORE} log[-1].n int 1 run scoreboard players get #seq {OBJ}",
+        f"execute if data storage {STORE} log[{LOG_KEEP}] run data remove storage {STORE} log[0]",
     )
 
     # ------------------------------------------------ each outpost
@@ -496,9 +551,9 @@ def datapack_files() -> dict[str, str]:
 
     # ------------------------------------------------ finding the spots
     f[f"{FN}/survey.mcfunction"] = lines(
-        "# deploy/realms-outposts.sh: macro {ring, fresh}, after putting the spots in storage cands",
-        "# ([{i, x, z}], the first for each outpost first). fresh 1: a new border, so every outpost starts over;",
-        "# 0: only the outposts named get a spot (holders keep them). Returns why it didn't start (SURVEY_CODES).",
+        "# deploy/realms-outposts.sh: macro {ring, fresh, cands}, cands the spots ([{i, x, z}], the first for each",
+        "# outpost first). fresh 1: a new border, so every outpost starts over; 0: only the outposts named get a",
+        "# spot (holders keep them). Returns why it didn't start (SURVEY_CODES); a running survey keeps its spots.",
         f"execute unless score #auto {OBJ} matches 1 run return 10",
         f"execute if score #busy {OBJ} matches 1 run return 11",
         f"execute unless score {LAUNCHED} matches 1 run return 12",
@@ -507,6 +562,7 @@ def datapack_files() -> dict[str, str]:
         f"$scoreboard players set #want {OBJ} $(ring)",
         f"execute if score #fresh {OBJ} matches 1 if score #want {OBJ} = #ring {OBJ} run return 13",
         f"execute if score #fresh {OBJ} matches 0 unless score #want {OBJ} = #ring {OBJ} run return 14",
+        f"$data modify storage {STORE} cands set value $(cands)",
         f"execute unless data storage {STORE} cands[0] run return 16",
         f"scoreboard players set #busy {OBJ} 1",
         *(f"scoreboard players set #d{i} {OBJ} 0" for i in range(1, COUNT + 1)),
@@ -534,8 +590,20 @@ def datapack_files() -> dict[str, str]:
     )
     # forceload works in the dimension it runs in: pinned to the Overworld, where the outposts are.
     overworld = f"execute in {saved_world.OVERWORLD}"
+    f[f"{FN}/stopped.mcfunction"] = lines(
+        "# 1 when a survey must stop: outposts turned off, or the season locked.",
+        f"execute unless score #auto {OBJ} matches 1 run return 1",
+        f"execute if score {locked} run return 1",
+        "return 0",
+    )
+    f[f"{FN}/abort.mcfunction"] = lines(
+        "# Stopped mid-survey: the chunk being checked is let go, nothing is placed or announced.",
+        f"function {NS}:outposts/unload with storage {STORE} cand",
+        f"function {NS}:outposts/done",
+    )
     f[f"{FN}/pick.mcfunction"] = lines(
         "# Macro cand {i, x, z}: an outpost that found its spot this survey skips the rest of its candidates.",
+        f"execute if function {NS}:outposts/stopped run return run function {NS}:outposts/done",
         f"$execute if score #d$(i) {OBJ} matches 1 run return run function {NS}:outposts/next",
         f"scoreboard players set #wait {OBJ} 0",
         f"${overworld} run forceload add $(x) $(z)",
@@ -543,11 +611,12 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #busy {OBJ} matches 1 run return 0",
+        f"execute if function {NS}:outposts/stopped run return run function {NS}:outposts/abort",
         f"function {NS}:outposts/check_at with storage {STORE} cand",
     )
     f[f"{FN}/check_at.mcfunction"] = lines(
         f"${overworld} unless loaded $(x) 0 $(z) run return run function {NS}:outposts/wait",
-        f"${overworld} positioned $(x).5 0 $(z).5 positioned over motion_blocking_no_leaves if block ~ ~-1 ~ "
+        f"${overworld} positioned $(x) 0 $(z) align xz positioned over motion_blocking_no_leaves if block ~ ~-1 ~ "
         f"#{NS}:outposts/ground run return run function {NS}:outposts/found",
         "# Water, a build or anything else: the next candidate.",
         f"function {NS}:outposts/skip",
@@ -702,21 +771,30 @@ def outpost_files(i: int) -> dict[str, str]:
     )
     f[f"{o}/near.mcfunction"] = lines(
         f"# Macro at.o{i}, while a player is within {NEAR} blocks: its chunk is loaded, so its label is too.",
+        "# A label from an earlier spot goes first, so the one kept below is never it.",
+        f"execute as {labels} unless score @s {ID} = {me} {ID} run kill @s",
         f"$execute unless entity @e[type=minecraft:text_display,tag={label_tag},x=$(zx),y=$(zy),z=$(zz),"
-        f"dx={ZONE - 1},dy={BELOW + ABOVE},dz={ZONE - 1}] run summon minecraft:text_display $(x).5 $(ly) $(z).5 "
-        f"{{Tags:[\"{LABEL}\",\"{label_tag}\",\"op.new\"],billboard:\"center\",view_range:2.0f,text:{{text:\"\"}}}}",
+        f"dx={ZONE - 1},dy={BELOW + ABOVE},dz={ZONE - 1}] positioned $(x) $(ly) $(z) align xz run summon "
+        f"minecraft:text_display ~0.5 ~ ~0.5 {{Tags:[\"{LABEL}\",\"{label_tag}\",\"op.new\"],billboard:\"center\","
+        "view_range:2.0f}",
         f"scoreboard players operation @e[type=minecraft:text_display,tag=op.new] {ID} = {me} {ID}",
+        f"execute as @e[type=minecraft:text_display,tag=op.new] run data modify entity @s text set from storage "
+        f"{STORE} label.o{i}",
         "tag @e[type=minecraft:text_display,tag=op.new] remove op.new",
-        "# Entities load after their chunk: a label summoned before the old one loaded is one too many.",
+        "# Entities load after their chunk: one summoned before the old one loaded is one too many. Keep one.",
         f"execute store result score #lc {OBJ} if entity {labels}",
-        f"execute if score #lc {OBJ} matches 2.. run kill @e[type=minecraft:text_display,tag={label_tag},limit=1]",
-        f"execute as {labels} run data modify entity @s text set from storage {STORE} label.o{i}",
+        f"execute if score #lc {OBJ} matches 2.. run function {call}/one_label",
         "# Its square's corners, and a column at its middle while someone holds it.",
         *(f"$execute positioned $({cx}) 0 $({cz}) positioned over motion_blocking_no_leaves run particle "
           "minecraft:end_rod ~ ~0.5 ~ 0 1 0 0 3" for cx, cz in (("zx", "zz"), ("ex", "zz"), ("zx", "ez"),
                                                                 ("ex", "ez"))),
-        f"$execute if score {me} {HOLD} matches 1.. run particle minecraft:end_rod $(x).5 $(ly) $(z).5 "
-        "0.1 2 0.1 0.01 6",
+        f"$execute if score {me} {HOLD} matches 1.. positioned $(x) $(ly) $(z) align xz run particle "
+        "minecraft:end_rod ~0.5 ~ ~0.5 0.1 2 0.1 0.01 6",
+    )
+    f[f"{o}/one_label.mcfunction"] = lines(
+        f"tag @e[type=minecraft:text_display,tag={label_tag},limit=1] add op.keep",
+        f"kill @e[type=minecraft:text_display,tag={label_tag},tag=!op.keep]",
+        "tag @e[type=minecraft:text_display,tag=op.keep] remove op.keep",
     )
     f[f"{o}/label.mcfunction"] = lines(
         f"# The text over outpost {i}: its name and who holds it.",
@@ -777,6 +855,9 @@ def outpost_files(i: int) -> dict[str, str]:
     f[f"{o}/minute.mcfunction"] = lines(
         f"execute store result storage {STORE} tmp.h int 1 run scoreboard players get {me} {HOLD}",
         f"function {call}/credit with storage {STORE} tmp",
+        "# The holder's name as the board run last wrote it (a renamed party shows its new name).",
+        f"function {call}/label",
+        f"execute as {labels} run data modify entity @s text set from storage {STORE} label.o{i}",
     )
     f[f"{o}/credit.mcfunction"] = lines(
         "# Macro {h}: a minute held counts while a survival player of another faction is online (someone who",

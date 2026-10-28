@@ -154,8 +154,12 @@ def read_world(world: Path) -> World:
     if not world.is_dir():
         raise SystemExit(f"{world} is not a folder: give the world folder (server/world)")
     scores, labels = read_scoreboard(world)
-    return World(read_parties(world, usernames(world)), read_claims(world), scores, labels,
-                 diplomacy.numbers(world))
+    try:
+        numbers = diplomacy.numbers(world)
+    except (OSError, ValueError) as e:   # faction numbers only place outpost hours: the table goes on without them
+        warn(f"{e}: outpost hours are left out this run")
+        numbers = {}
+    return World(read_parties(world, usernames(world)), read_claims(world), scores, labels, numbers)
 
 
 # ---------------------------------------------------------------- the table

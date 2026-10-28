@@ -59,6 +59,8 @@ outposts) reads it here rather than asking the parties:
   read it back from the saved world.
 - A pack that keeps a score per faction holds it as `#f<N>` and should end what it holds for a faction whose
   `names.f<N>` is gone (the sync runs `realms:diplomacy/dissolve` for war and pacts before it removes one).
+  Rather than test all the numbers in a function, check the ones it holds (outposts does this for each held
+  outpost each minute) or let its Python job reset the rest from the saved storage (outposts' minutes, hourly).
 - The sync sends its changes many to an RCON command: a list in storage `realms:diplomacy batch` that
   `realms:diplomacy/batch/run` makes in order, each the function `realms:diplomacy/<f>` with its entry.
 - None of it starts with `rw.`, so `tools/season.py` carries none of it into a new world.

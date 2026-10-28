@@ -786,10 +786,14 @@ Four capture points in the newest border ring that factions take and hold for st
 - **Hours.** `op.min` holds each faction's minutes held since the launch (`#f3` for faction 3). A minute
   counts only while a survival player of another faction is online, so holding it overnight alone earns
   nothing. The standings count each whole hour held this week as +1 point, at most 20 (`POINTS_PER_HOUR`,
-  `MAX_POINTS`). A faction whose party is gone loses what it holds and its minutes.
+  `MAX_POINTS`). A faction whose party is gone loses what it holds within a minute of its name going
+  (diplomacy removes it at the second board run without the party), and its minutes at the next hourly
+  run. Taking minutes off (below) lowers that faction's hours for the week, never under 0; the launch draws
+  a new `#epoch op`, so a week that began before it counts every minute from the launch.
 - **The live map.** The timer writes an "Outposts" marker set into the Overworld map's
   `config/bluemap/maps/*.conf` (between two `# Monkey SMP outposts` lines; leave them) and sends
-  `bluemap reload` when it changed. Only the spots, not the holders.
+  `bluemap reload` after it wrote a changed one. Only the spots, not the holders. A config it can't write
+  is left as it is, with a `map:` line in the journal each hour and no reload.
 
 Over RCON (or in game with `/`; `function realms:outposts/help` lists them, clickable):
 
@@ -798,11 +802,12 @@ function realms:outposts/status                     # each outpost: where, holde
 function realms:outposts/release {i:1}              # free outpost 1 (1 North, 2 East, 3 South, 4 West), announced
 function realms:outposts/off                        # no captures, no hours and no new spots until on
 function realms:outposts/on
-scoreboard players remove #f3 op.min 120            # take back 2 hours from faction 3 (fed or traded outposts, B13)
+scoreboard players remove #f3 op.min 120            # take 2 hours off faction 3's week (B13), not below 0
 function realms:diplomacy/staff/factions            # which number is which faction
 ```
 
-Holders, capture counts and hours survive a restart. To see what the timer would do, on the VPS (it changes
+Holders, capture counts and hours survive a restart. Turning outposts off or locking the season stops a
+survey that is running: it lets the chunk it was checking go and announces nothing. To see what the timer would do, on the VPS (it changes
 nothing):
 
 ```sh

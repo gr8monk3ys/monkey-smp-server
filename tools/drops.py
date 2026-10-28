@@ -39,6 +39,7 @@ import json
 import random
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import map_border
@@ -179,29 +180,38 @@ def ring(border: map_border.Border) -> tuple[float, float]:
     return inner, border.size / 2 - BORDER_MARGIN
 
 
+def near_claim(chunk: tuple[int, int], claims: set[tuple[int, int]], gap: int = CLAIM_GAP) -> bool:
+    """A claimed chunk within `gap` chunks (either axis) of `chunk`."""
+    return any((chunk[0] + dx, chunk[1] + dz) in claims for dx in range(-gap, gap + 1) for dz in range(-gap, gap + 1))
+
+
+def ring_chunks(border: map_border.Border, rng: random.Random) -> Iterator[tuple[tuple[int, int], int, int]]:
+    """Random chunks in ring(border), DRAWS draws at most: (chunk, x, z), x and z its middle. Callers stop early
+    when they have what they need and keep their own gaps (drops between spots, outposts per quarter)."""
+    inner, outer = ring(border)
+    if outer <= inner:
+        return
+    cx, cz = border.center_x, border.center_z
+    lo_x, hi_x = int((cx - outer) // 16), int((cx + outer) // 16)
+    lo_z, hi_z = int((cz - outer) // 16), int((cz + outer) // 16)
+    for _ in range(DRAWS):
+        chunk = rng.randint(lo_x, hi_x), rng.randint(lo_z, hi_z)
+        x, z = chunk[0] * 16 + 8, chunk[1] * 16 + 8
+        if inner <= max(abs(x - cx), abs(z - cz)) <= outer:
+            yield chunk, x, z
+
+
 def spots(world: Path, seed: str, count: int = SPOTS) -> list[tuple[int, int]]:
     """Up to `count` drop spots (block x, z: the middle of a chunk), the same for the same seed and world."""
     border = border_now(world)
     if border is None:
         return []
-    inner, outer = ring(border)
-    if outer <= inner:
-        return []
     claims = claimed_chunks(world)
-    rng = random.Random(seed)
-    cx, cz = border.center_x, border.center_z
-    lo_x, hi_x = int((cx - outer) // 16), int((cx + outer) // 16)
-    lo_z, hi_z = int((cz - outer) // 16), int((cz + outer) // 16)
     picked: list[tuple[int, int]] = []
-    for _ in range(DRAWS):
+    for chunk, x, z in ring_chunks(border, random.Random(seed)):
         if len(picked) >= count:
             break
-        chunk = rng.randint(lo_x, hi_x), rng.randint(lo_z, hi_z)
-        x, z = chunk[0] * 16 + 8, chunk[1] * 16 + 8
-        if not inner <= max(abs(x - cx), abs(z - cz)) <= outer:
-            continue
-        if any((chunk[0] + dx, chunk[1] + dz) in claims
-               for dx in range(-CLAIM_GAP, CLAIM_GAP + 1) for dz in range(-CLAIM_GAP, CLAIM_GAP + 1)):
+        if near_claim(chunk, claims):
             continue
         if any(max(abs(chunk[0] - (px - 8) // 16), abs(chunk[1] - (pz - 8) // 16)) < SPOT_GAP for px, pz in picked):
             continue

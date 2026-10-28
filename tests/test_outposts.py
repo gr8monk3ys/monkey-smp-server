@@ -6,6 +6,7 @@ import subprocess
 import pytest
 from fake_world import FakeWorld, score_rows
 from nbt_writer import nbt
+from test_deploy_lib import job, needs_dash, sh  # noqa: F401 (sh is test_deploy_lib's fixture)
 from test_standings import SCOREBOARD
 from test_standings import make_world as standings_world
 
@@ -52,8 +53,13 @@ BASE = [(cx, cz) for cx in range(10, 14) for cz in range(40, 44)]
 
 
 def cands(commands: list[str]) -> list[dict]:
-    listed = re.search(r"cands set value \[(.*)\]$", commands[0])[1]
+    listed = re.search(r",cands:\[(.*)\]\}$", commands[-1])[1]
     return [{k: int(v) for k, v in re.findall(r"(\w):(-?\d+)", c)} for c in re.findall(r"\{[^}]*\}", listed)]
+
+
+def survey_of(commands: list[str]) -> str:
+    """The survey command without its spots."""
+    return re.sub(r",cands:\[.*\]\}$", "}", commands[-1])
 
 
 # ---------------------------------------------------------------- where
@@ -71,7 +77,7 @@ def test_nothing_before_the_launch_while_locked_or_while_the_border_grows(tmp_pa
 def test_the_first_run_places_four_outposts_one_in_each_quarter_of_the_ring(tmp_path):
     world = make_world(tmp_path, claims=[BASE])
     out, why = outposts.plan(world, NOON)
-    assert why == "" and out[1] == "function realms:outposts/survey {ring:2500,fresh:1}"
+    assert why == "" and len(out) == 1 and survey_of(out) == "function realms:outposts/survey {ring:2500,fresh:1}"
     assert all(c.isascii() and len(c.encode()) <= rcon.LIMIT for c in out)
     found = cands(out)
     inner, outer = drops.ring(map_border.Border(*SPAWN, 2500.0))
@@ -82,7 +88,7 @@ def test_the_first_run_places_four_outposts_one_in_each_quarter_of_the_ring(tmp_
         dx, dz = c["x"] - SPAWN[0], c["z"] - SPAWN[1]
         assert inner <= max(abs(dx), abs(dz)) <= outer
         assert outposts.quarter(dx, dz) == c["i"]
-        assert not outposts.near_claim((c["x"] // 16, c["z"] // 16), claimed, drops.CLAIM_GAP)
+        assert not drops.near_claim((c["x"] // 16, c["z"] // 16), claimed, drops.CLAIM_GAP)
     for i in range(1, 5):
         mine = [(c["x"] // 16, c["z"] // 16) for c in found if c["i"] == i]
         assert 1 <= len(mine) <= outposts.CANDIDATES
@@ -91,6 +97,25 @@ def test_the_first_run_places_four_outposts_one_in_each_quarter_of_the_ring(tmp_
     # The same hour gives the same spots; the next hour (a retry after water) new ones.
     assert outposts.plan(world, NOON)[0] == out
     assert outposts.plan(world, NOON + dt.timedelta(hours=1))[0] != out
+
+
+def test_the_spots_come_from_drops_sampler_and_claim_check(monkeypatch):
+    drawn = []
+
+    def ring_chunks(border, rng):
+        drawn.append(border)
+        yield (0, -40), 8, -632
+    monkeypatch.setattr(drops, "ring_chunks", ring_chunks)
+    monkeypatch.setattr(drops, "near_claim", lambda chunk, claims, gap=drops.CLAIM_GAP: False)
+    border = map_border.Border(*SPAWN, 2500.0)
+    assert outposts.candidates(border, set(), "s", [1, 2]) == [{"i": 1, "x": 8, "z": -632}]
+    assert drawn == [border] and not hasattr(outposts, "near_claim") and not hasattr(outposts, "DRAWS")
+
+
+def test_a_survey_too_long_for_one_command_sends_fewer_spots(tmp_path, monkeypatch):
+    monkeypatch.setattr(outposts.server, "LIMIT", 300)
+    out, why = outposts.plan(make_world(tmp_path, claims=[BASE]), NOON)
+    assert why == "" and len(out) == 1 and len(out[0].encode()) <= 300 and 1 <= len(cands(out)) < 16
 
 
 def test_quarters_split_the_ring_by_the_compass():
@@ -115,27 +140,38 @@ def test_a_claim_close_to_one_outpost_moves_only_that_one_and_a_missing_one_is_t
     near_east = [(744 // 16 + 2, 424 // 16)]                 # 2 chunks from the East outpost
     world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=spots, claims=[near_east])
     out, _ = outposts.plan(world, NOON)
-    assert out[1] == "function realms:outposts/survey {ring:2500,fresh:0}"
+    assert survey_of(out) == "function realms:outposts/survey {ring:2500,fresh:0}"
     assert {c["i"] for c in cands(out)} == {2, 4}
 
 
 def test_a_finished_border_act_places_them_all_again(tmp_path):
     world = make_world(tmp_path, size=4000.0, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
     out, _ = outposts.plan(world, NOON)
-    assert out[1] == "function realms:outposts/survey {ring:4000,fresh:1}"
+    assert survey_of(out) == "function realms:outposts/survey {ring:4000,fresh:1}"
     inner, _ = drops.ring(map_border.Border(*SPAWN, 4000.0))
     assert inner == 1250 and all(max(abs(c["x"] - SPAWN[0]), abs(c["z"] - SPAWN[1])) >= inner for c in cands(out))
 
 
 def test_the_survey_answer_is_logged_in_words():
-    survey = "function realms:outposts/survey {ring:2500,fresh:1}"
-    assert outposts.meaning(survey, "Function realms:outposts/survey returned 13").endswith(
-        "already placed for this border")
+    survey = "function realms:outposts/survey {ring:2500,fresh:1,cands:[{i:1,x:8,z:-632}]}"
+    assert outposts.meaning(survey, "Function realms:outposts/survey returned 13") == (
+        "function realms:outposts/survey: already placed for this border")
     assert outposts.meaning(survey, "Function realms:outposts/survey returned 1").endswith("checking the ground at "
                                                                                            "the spots")
-    assert outposts.meaning("data modify storage realms:outposts cands set value []", "") == "spots sent: ok"
+    reset = "scoreboard players reset #f3 op.min"
+    assert outposts.meaning(reset, "") == f"{reset}: ok"
     for code in outposts.SURVEY_CODES:
         assert f"return {code}" in fn("survey") or code == 1
+
+
+def test_a_running_survey_keeps_its_spots_and_the_spots_come_with_the_survey():
+    survey = fn("survey").splitlines()
+    put = survey.index("$data modify storage realms:outposts cands set value $(cands)")
+    for check in ("return 10", "return 11", "return 12", "return 13", "return 14", "return 15"):
+        assert next(n for n, line in enumerate(survey) if line.endswith(check)) < put
+    assert put < next(n for n, line in enumerate(survey) if line.endswith("set #busy op 1"))
+    every = "\n".join(FILES.values())
+    assert every.count("cands set value") == 1       # nothing else (and no RCON command) writes the spots
 
 
 # ---------------------------------------------------------------- the live map
@@ -166,6 +202,49 @@ def test_send_writes_the_map_marker_set_once_then_only_the_survey(tmp_path):
         encoding="utf-8")
 
 
+def test_a_failed_map_write_sends_no_reload(tmp_path, monkeypatch):
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    maps = map_conf(world)
+    before = (maps / "world.conf").read_text(encoding="utf-8")
+
+    def refuse(self, *args, **kwargs):
+        raise PermissionError("read-only file system")
+    monkeypatch.setattr(outposts.Path, "write_text", refuse)
+    server, log = rcon.Recorder(), []
+    assert outposts.send(server, world, NOON, log.append) == 0
+    assert server.sent == [] and (maps / "world.conf").read_text(encoding="utf-8") == before
+    assert len(log) == 1 and log[0].startswith("map: could not write ") and log[0].endswith("; no reload")
+
+
+def test_a_map_config_that_cant_be_written_is_warned_about_and_never_reloads(tmp_path):
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    conf = map_conf(world) / "world.conf"
+    conf.chmod(0o444)
+    try:
+        warned = []
+        assert outposts.map_changes(world, placed(), warned.append) == [] and "can't be written" in warned[0]
+        assert outposts.commands(world, NOON) == []
+        server, log = rcon.Recorder(), []
+        assert outposts.send(server, world, NOON, log.append) == 0 and server.sent == []
+        assert log == [f"map: {conf} can't be written: the map's outposts are out of date"]
+    finally:
+        conf.chmod(0o644)
+
+
+def test_the_saved_world_is_read_once_a_run(tmp_path, monkeypatch):
+    world = make_world(tmp_path, claims=[BASE], spots=placed())
+    map_conf(world)
+    reads = []
+    real = diplomacy.saved_storage
+    monkeypatch.setattr(outposts.diplomacy, "saved_storage", lambda w: reads.append(w) or real(w))
+    server = rcon.Recorder()
+    outposts.send(server, world, NOON, [].append)
+    assert len(reads) == 1 and server.sent[-1] == "bluemap reload" and len(server.sent) == 2
+    reads.clear()
+    outposts.commands(world, NOON)
+    assert len(reads) == 1
+
+
 def test_a_map_config_without_marker_sets_is_left_alone_with_a_warning(tmp_path):
     world = make_world(tmp_path, spots=placed())
     maps = world.parent / map_border.MAPS
@@ -187,19 +266,41 @@ def test_a_server_that_isnt_running_is_skipped(tmp_path):
 
 
 def test_hours_count_from_the_weeks_baseline_and_points_are_capped():
-    scores = {"op.min": {"#f1": 600, "#f2": 59, "#f3": 30}, "op": {"#seq": 7}}
-    base = outposts.baseline({"op.min": {"#f1": 400, "#f3": 90}, "op": {"#seq": 3}})
-    assert base == {"minutes": {"#f1": 400, "#f3": 90}, "seq": 3}
+    scores = {"op.min": {"#f1": 600, "#f2": 59, "#f3": 210}, "op": {"#seq": 7, "#epoch": 77}}
+    base = outposts.baseline({"op.min": {"#f1": 400, "#f3": 90}, "op": {"#seq": 3, "#epoch": 77}})
+    assert base == {"epoch": 77, "minutes": {"#f1": 400, "#f3": 90}, "seq": 3}
     assert outposts.hours(scores, base, 1) == 3                 # 200 minutes
     assert outposts.hours(scores, base, 2) == 0                 # 59 minutes: no whole hour
-    assert outposts.hours(scores, base, 3) == 0                 # restarted (30 < 90): 30 minutes, all new
+    assert outposts.hours(scores, base, 3) == 2                 # 120 minutes
     assert outposts.hours(scores, None, 1) == 10 and outposts.hours(scores, base, None) == 0
     assert [outposts.points(h) for h in (0, 1, 19, 20, 45)] == [0, 1, 19, 20, 20]
 
 
+def test_a_staff_penalty_lowers_the_weeks_hours_and_never_adds_any():
+    base = outposts.baseline({"op.min": {"#f3": 300}, "op": {"#epoch": 77}})
+    held = {"op.min": {"#f3": 300 + 150}, "op": {"#epoch": 77}}
+    assert outposts.hours(held, base, 3) == 2
+    held["op.min"]["#f3"] -= 120                                   # scoreboard players remove #f3 op.min 120
+    assert outposts.hours(held, base, 3) == 0
+    held["op.min"]["#f3"] -= 120                                   # below the week's start: still none, not 3
+    assert outposts.hours(held, base, 3) == 0
+
+
+def test_a_new_launch_counts_every_minute_since_it():
+    test_play = outposts.baseline({"op.min": {"#f1": 900}, "op": {"#epoch": 12}})
+    assert outposts.hours({"op.min": {"#f1": 130}, "op": {"#epoch": 99}}, test_play, 1) == 2
+    before = outposts.baseline({"op.min": {}, "op": {}})            # snapshot taken before the launch
+    assert before["epoch"] == 0 and outposts.hours({"op.min": {"#f1": 130}, "op": {"#epoch": 99}}, before, 1) == 2
+    assert outposts.hours({"op.min": {"#f1": 130}}, {"minutes": {"#f1": 60}}, 1) == 2   # no epoch on either side
+    launch = fn("launch")
+    assert "execute store result score #epoch op run random value 1..1000000000" in launch
+    assert "execute store result storage realms:outposts epoch int 1 run scoreboard players get #epoch op" in launch
+
+
 def test_the_standings_table_adds_outpost_hours_as_a_bonus_like_bounties(tmp_path):
     board = {"DataVersion": SCOREBOARD["DataVersion"], "data": {"PlayerScores": SCOREBOARD["data"]["PlayerScores"]
-                                                                + score_rows(("op.min", "#f1", 5 * 60 + 10))}}
+                                                                + score_rows(("op.min", "#f1", 5 * 60 + 10),
+                                                                             ("op", "#epoch", 77))}}
     world = standings_world(tmp_path, board)
     put_storage(world, {"factions": {"ids": {"f1": "p-red", "f2": "p-blue"},
                                      "names": {"f1": {"text": "Red Monkeys"}, "f2": {"text": "Blue Herons"}}}})
@@ -207,7 +308,7 @@ def test_the_standings_table_adds_outpost_hours_as_a_bonus_like_bounties(tmp_pat
     assert data.numbers == {"p-red": 1, "p-blue": 2}
     plain = {r.name: r.points for r in standings.table(standings.World(data.parties, data.claims, {
         k: v for k, v in data.scores.items() if k != "op.min"}, data.labels, data.numbers), None)}
-    rows = {r.name: r for r in standings.table(data, {"outposts": {"minutes": {"#f1": 60}}})}
+    rows = {r.name: r for r in standings.table(data, {"outposts": {"epoch": 77, "minutes": {"#f1": 60}}})}
     assert rows["Red Monkeys"].outposts == 4 and rows["Red Monkeys"].points == plain["Red Monkeys"] + 4
     assert rows["Blue Herons"].outposts == 0 and rows["Blue Herons"].points == plain["Blue Herons"]
     text = standings.table_text(list(rows.values()))
@@ -215,20 +316,37 @@ def test_the_standings_table_adds_outpost_hours_as_a_bonus_like_bounties(tmp_pat
     assert "outposts" not in standings.board_line(rows["Blue Herons"])
     assert "outpost" in standings.FORMULA and standings.WEIGHTS == (("cup", 40), ("land", 20), ("strength", 20),
                                                                      ("kills", 20))
-    assert standings.snapshot(data, NOON)["outposts"] == {"minutes": {"#f1": 310}, "seq": 0}
+    assert standings.snapshot(data, NOON)["outposts"] == {"epoch": 77, "minutes": {"#f1": 310}, "seq": 0}
+
+
+def test_a_damaged_storage_file_leaves_outpost_hours_out_of_the_table(tmp_path, capsys):
+    world = standings_world(tmp_path, SCOREBOARD)
+    (world / diplomacy.STORAGE_FILE).parent.mkdir(parents=True, exist_ok=True)
+    (world / diplomacy.STORAGE_FILE).write_bytes(b"\x1f\x8bnot really gzip")
+    data = standings.read_world(world)
+    assert data.numbers == {} and standings.table(data, None)
+    assert "outpost hours are left out this run" in capsys.readouterr().err
 
 
 def test_the_recap_section_names_who_held_longest_and_the_weeks_captures():
     storage = {"factions": {"names": {"f1": {"text": "Red *Monkeys*"}, "f2": {"text": "Blue Herons"}}},
-               "outposts": {"log": [{"kind": "capture", "o": 2, "f": 1, "n": 3},
-                                    {"kind": "capture", "o": 1, "f": 2, "n": 4},
-                                    {"kind": "capture", "o": 2, "f": 2, "n": 5}]}}
+               "outposts": {"epoch": 77, "log": [{"kind": "capture", "o": 2, "f": 1, "n": 3},
+                                                 {"kind": "capture", "o": 1, "f": 2, "n": 4},
+                                                 {"kind": "capture", "o": 2, "f": 2, "n": 5}]}}
     rows = [{"name": "Red *Monkeys*", "outposts": 6}, {"name": "Blue Herons", "outposts": 9}, {"name": "X"}]
-    out = outposts.recap_lines(rows, storage, 3)
+    out = outposts.recap_lines(rows, storage, {"epoch": 77, "seq": 3})
     assert out[0] == "**Outposts:** held longest by Blue Herons 9 h, Red \\*Monkeys\\* 6 h."
     assert out[1] == "2 captures this week; last, Blue Herons took the East outpost."
-    assert outposts.recap_lines([{"name": "X", "outposts": 0}], storage, 5) == []
-    assert len(outposts.captures(storage, 9)) == 3              # a log restarted since (a new world): all of it
+    assert outposts.recap_lines([{"name": "X", "outposts": 0}], storage, {"epoch": 77, "seq": 5}) == []
+    assert len(outposts.captures(storage, {"epoch": 12, "seq": 9})) == 3     # another launch (a new world): all of it
+    assert len(outposts.captures(storage, None)) == 3
+
+
+def test_the_capture_log_keeps_its_newest_entries():
+    log = fn("log")
+    assert f"if data storage realms:outposts log[{outposts.LOG_KEEP}] run data remove storage realms:outposts log[0]" \
+        in log
+    assert log.index("log[-1].n") < log.index(f"log[{outposts.LOG_KEEP}]")
 
 
 # ---------------------------------------------------------------- the data pack
@@ -265,7 +383,63 @@ def test_hours_count_only_while_a_rival_is_online_and_a_gone_faction_keeps_nothi
     assert "unless data storage realms:factions names.f$(h) run return run function realms:outposts/o/3/gone" in credit
     assert "unless score #all op > #mine op run return 0" in credit
     minute = fn("minute")
-    assert "unless data storage realms:factions names.f99 run scoreboard players reset #f99 op.min" in minute
+    assert "names.f" not in minute and len(minute.splitlines()) < 12     # no poll of all 99 numbers a minute
+
+
+def test_a_gone_factions_minutes_are_reset_by_the_hourly_run(tmp_path):
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500), ("op.min", "#f1", 90),
+                                         ("op.min", "#f2", 30), ("op.min", "#f12", 5)), spots=placed())
+    put_storage(world, {"factions": {"names": {"f1": {"text": "Red Monkeys"}}},
+                        "outposts": {"at": {f"o{i}": s for i, s in placed().items()}}})
+    assert outposts.plan(world, NOON) == (["scoreboard players reset #f12 op.min",
+                                           "scoreboard players reset #f2 op.min"], "every outpost has its spot")
+    locked = make_world(tmp_path / "l", scores=(LAUNCHED, ("ev.state", "#season_locked", 1), ("op.min", "#f2", 30)))
+    assert outposts.plan(locked, NOON)[0] == ["scoreboard players reset #f2 op.min"]   # the lock keeps no one's
+    early = make_world(tmp_path / "e", scores=(("op.min", "#f2", 30),))
+    assert outposts.plan(early, NOON) == ([], "the season hasn't launched")
+
+
+def test_a_survey_stops_cleanly_when_outposts_go_off_or_the_season_locks():
+    stopped = fn("stopped")
+    assert "unless score #auto op matches 1 run return 1" in stopped
+    assert "if score #season_locked ev.state matches 1 run return 1" in stopped and stopped.endswith("return 0\n")
+    pick, check = fn("pick").splitlines(), fn("check").splitlines()
+    assert pick[1] == "execute if function realms:outposts/stopped run return run function realms:outposts/done"
+    assert check.index("execute if function realms:outposts/stopped run return run function realms:outposts/abort") \
+        < next(n for n, line in enumerate(check) if "check_at" in line)
+    abort = fn("abort")
+    assert "function realms:outposts/unload with storage realms:outposts cand" in abort
+    assert "function realms:outposts/done" in abort and "tellraw" not in abort
+
+
+def test_centres_are_right_for_negative_coordinates_too():
+    every = "\n".join(FILES.values())
+    assert ").5" not in every
+    near = fn("o/1/near")
+    assert "positioned $(x) $(ly) $(z) align xz run summon minecraft:text_display ~0.5 ~ ~0.5 " in near
+    assert "positioned $(x) $(ly) $(z) align xz run particle minecraft:end_rod ~0.5 ~ ~0.5 " in near
+    assert "positioned $(x) 0 $(z) align xz positioned over motion_blocking_no_leaves" in fn("check_at")
+
+
+def test_a_moved_outposts_old_label_goes_before_one_label_is_kept():
+    near = fn("o/2/near").splitlines()
+    stale = near.index("execute as @e[type=minecraft:text_display,tag=op.l2] unless score @s op.id = #o2 op.id run "
+                       "kill @s")
+    summon = next(n for n, line in enumerate(near) if "summon minecraft:text_display" in line)
+    dedupe = near.index("execute if score #lc op matches 2.. run function realms:outposts/o/2/one_label")
+    assert stale < summon < dedupe
+    one = fn("o/2/one_label")
+    assert "tag @e[type=minecraft:text_display,tag=op.l2,limit=1] add op.keep" in one
+    assert "kill @e[type=minecraft:text_display,tag=op.l2,tag=!op.keep]" in one
+
+
+def test_only_a_new_label_gets_its_text_each_second_and_held_ones_refresh_each_minute():
+    near = fn("o/1/near")
+    assert "execute as @e[type=minecraft:text_display,tag=op.l1] run data modify entity" not in near
+    assert "execute as @e[type=minecraft:text_display,tag=op.new] run data modify entity @s text" in near
+    minute = fn("o/1/minute")
+    assert "function realms:outposts/o/1/label" in minute
+    assert "execute as @e[type=minecraft:text_display,tag=op.l1] run data modify entity @s text" in minute
 
 
 def test_nothing_is_given_and_restarts_keep_state():
@@ -320,3 +494,41 @@ def test_status_runs_on_a_fresh_world(tmp_path, capsys):
     assert outposts.main(["status", str(world), "--at", "2026-11-22T20:00:00Z"]) == 0
     out = capsys.readouterr().out
     assert "East: 744 64 424, held by nobody" in out and "every outpost has its spot" in out
+
+
+@pytest.fixture
+def outposts_job(request, tmp_path):
+    """test_deploy_lib's job() for deploy/realms-outposts.sh: (exit code, its logged lines, calls)."""
+    run = request.getfixturevalue("sh")
+    (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "repo" / "tools" / "outposts.py").write_text("")
+    return lambda *args, **env: job(run, tmp_path, SCRIPT, *args, **env)
+
+
+@needs_dash
+def test_the_timer_with_nothing_to_place_takes_no_lock(outposts_job):
+    code, logged, calls = outposts_job()
+    assert code == 0 and logged == [] and len(calls) == 1
+    assert calls[0].startswith("python3 -B ") and calls[0].endswith("outposts.py commands /srv/live/server/world")
+
+
+@needs_dash
+def test_the_timer_sends_under_the_deploy_lock(outposts_job):
+    code, logged, calls = outposts_job(FAKE_OUT_python3=r"bluemap reload: ok\n")
+    assert code == 0 and logged == ["bluemap reload: ok"]
+    send = calls.index("flock -w 1800 9") + 1
+    assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(
+        "outposts.py send /srv/live/server/world --docker /srv/live/docker")
+    code, logged, _ = outposts_job(FAKE_OUT_python3="x", FAKE_RC_send="1")
+    assert code == 1 and logged[-1] == "ERROR: not every command went through (the timer tries again in an hour)"
+
+
+@needs_dash
+def test_check_shows_the_outposts_and_the_commands_and_install_needs_root(outposts_job):
+    code, logged, calls = outposts_job("--check", FAKE_OUT_python3=r"bluemap reload\n")
+    assert code == 0 and logged[:3] == ["bluemap reload", "commands for now:", "  bluemap reload"]
+    assert not any(c.startswith("flock") for c in calls) and " status /srv/live/server/world" in calls[0]
+    _, logged, _ = outposts_job("--check")
+    assert "  none (before the launch, or nothing to place or move)" in logged
+    code, logged, _ = outposts_job("--install")
+    assert code == 1 and logged == ["ERROR: run as root: it installs systemd units"]

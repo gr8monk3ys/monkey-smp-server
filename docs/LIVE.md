@@ -269,9 +269,24 @@ It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 
 reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
 
+### The omens' timer (the release with omens)
+
+Once that release is live, install `realms-omens.timer` the same way (`docs/ADMIN.md`, "Omens"):
+
+```sh
+sh /srv/realms/repo/deploy/realms-omens.sh --check
+sudo sh /srv/realms/repo/deploy/realms-omens.sh --install
+```
+
+It runs every 10 minutes (5 minutes after the drops' timer) as `realms`, sends nothing outside an omen
+evening (two weekday evenings a week, from a start between 6:00 and 8:50 PM until 10 PM Pacific), and reads
+only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved scoreboard, claims and border
+from the world. `--check` doesn't show the week's plan. Without the timer there are no automatic omens;
+staff can still start one by hand.
+
 ### The day timer as a job (the release with `deploy/realms-day.sh`)
 
-The week, drops and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
+The week, drops, omens and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
 lock and reads each answer for a refusal. Before this release `realms-day.service` ran `docker compose ... rcon`
 itself, without either. It now sends `function realms:wardrobe/day_once {stamp:YYYYMMDD}`, the UTC date, and the
 wardrobe pack starts one day per date, so a retry after a run that reached the server never counts a second day.

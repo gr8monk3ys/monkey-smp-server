@@ -3,5 +3,6 @@
 # a weekly supply drop.
 setblock ~ ~ ~ minecraft:chest{CustomName:"Supply drop"}
 loot insert ~ ~ ~ loot realms:drops/supply
+execute if score #meteor dr matches 1 run loot insert ~ ~ ~ loot realms:drops/meteor
 summon minecraft:marker ~ ~ ~ {Tags:["dr.chest"]}
 particle minecraft:end_rod ~ ~1 ~ 0.3 1.5 0.3 0.05 40 force

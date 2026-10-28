@@ -454,3 +454,36 @@ def test_units_run_the_script_as_realms_every_ten_minutes():
     assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-drops.sh\n" in service
     timer = (DEPLOY / "realms-drops.timer").read_text()
     assert f"OnCalendar=*-*-* *:00/{drops.SLOT_MINUTES}:30" in timer
+
+
+# ---------------------------------------------------------------- the Meteor (an omen, tools/omens.py)
+
+
+def test_the_meteor_loot_is_modest_too():
+    for pool, item, weight, lo, hi in drops.METEOR_LOOT:
+        assert pool in drops.METEOR_ROLLS and weight > 0 and 1 <= lo <= hi <= 16, item
+        assert re.fullmatch(r"[a-z_]+", item) and not any(word in item for word in FORBIDDEN), item
+    table = json.loads(FILES["data/realms/loot_table/drops/meteor.json"])
+    assert len(table["pools"]) == len(drops.METEOR_ROLLS)
+
+
+def test_a_meteor_is_one_chest_with_more_in_it_announced_5_minutes_ahead():
+    meteor = fn("meteor")
+    assert set(map(int, re.findall(r"return (\d+)$", meteor, re.M))) <= set(drops.TRY_CODES)
+    for cond in drops.EVENTS_ON:
+        assert f"execute if score {cond} run return 13" in meteor
+    assert "execute if score #state dr matches 1.. run return 11" in meteor
+    # Extra: it keeps tonight's drop as it was, like a staff drop.
+    assert "$(night)" not in meteor
+    assert "execute store result storage realms:drops night int 1 run scoreboard players get #night dr" in meteor
+    found = fn("found")
+    assert "execute if score #meteor dr matches 1 run scoreboard players set #chests dr 1" in found
+    assert ("execute if score #meteor dr matches 1 run scoreboard players set #timer dr "
+            f"{drops.METEOR_COUNTDOWN}") in found
+    assert "execute if score #meteor dr matches 1 run loot insert ~ ~ ~ loot realms:drops/meteor" in fn("place")
+    # Every way a drop starts or ends says which it is.
+    for path in ("try", "start"):
+        assert "scoreboard players set #meteor dr 0" in fn(path)
+    assert "scoreboard players set #meteor dr 0" in fn("cleanup")
+    # The chest keeps its name either way: it is how the pack knows its own chests.
+    assert 'CustomName:"Supply drop"' in fn("place")

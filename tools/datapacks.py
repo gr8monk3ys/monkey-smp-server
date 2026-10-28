@@ -23,7 +23,7 @@ from repo import REPO, Repo
 MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
 DATA_FORMAT = 121
 NS = "realms"
-GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops")   # challenges writes into wardrobe's
+GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "omens")   # challenges: in wardrobe
 
 # Objectives the generated packs read but another data pack or mod creates.
 EXTERNAL_OBJECTIVES = {

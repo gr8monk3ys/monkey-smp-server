@@ -1,0 +1,52 @@
+{
+  "criteria": {
+    "dragon": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "minecraft:ender_dragon"
+          }
+        },
+        "player": {
+          "type": "minecraft:all_of",
+          "terms": [
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "min": 1
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#launched"
+                },
+                "score": "rw.day"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#dragon"
+                },
+                "score": "rf"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "realms:firsts/got/dragon"
+  }
+}

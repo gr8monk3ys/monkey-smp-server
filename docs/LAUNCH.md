@@ -146,6 +146,9 @@ below).
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
   launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
   test play's challenges, and the real launch wouldn't open the window again.
+- [ ] **Fri 20 Nov: staff inventories.** Anyone who played in the Season I world before launch empties their
+  inventory (or `clear NAME`): a diamond, ancient debris, a mace or an elytra kept from test play could claim
+  that Server First the moment the season starts (docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily from Sat 14 Nov: the whitelist.** `realms rcon "whitelist list"`. Before launch it holds staff
   only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
 

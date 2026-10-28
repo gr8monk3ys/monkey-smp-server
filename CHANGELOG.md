@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- **Server Firsts**: the first player on the server to reach each of 14 milestones (find a diamond, enter the
+  Nether, find a fortress or a bastion, ancient debris, a trial vault, a mace, win a raid, defeat the Wither,
+  light a beacon, enter the End, slay the dragon, an elytra, full Netherite once it is allowed) is announced to
+  everyone and keeps it for the season. `/trigger firsts` shows who holds each. The most firsts at the season's
+  end earns the `[S1 Pioneer]` title. A new data pack, `realms-firsts` (`tools/firsts.py`); nothing counts
+  before the launch. Not yet tried in game.
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

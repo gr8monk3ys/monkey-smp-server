@@ -124,6 +124,10 @@ _Avoid_: live world, world state, save (alone)
 When a season happens, in Pacific time: its launch, the launch weekend (week 0), each week from its Monday at 12 AM, each week's Saturday (event night) and the weeknight drop nights, all worked out from the launch (week 1 starts the Monday after it). `tools/season_calendar.py` keeps it and every tool asks it; the website's launch time (`LAUNCH_AT` in `site/config.js`) must match it.
 _Avoid_: schedule (that is the challenge rotation), season dates
 
+**Server First**:
+Being the first player on the server, this season, to reach one of the milestones in `tools/firsts.py` (enter the Nether, slay the dragon...). It is announced to everyone and held for the season; the most firsts earns the Pioneer title. A first is claimed; staff can reopen one.
+_Avoid_: achievement, advancement (the game's own; a first is server-wide and only one player holds it), record
+
 **Snapshot**:
 Capturing what a running server or player instance actually uses back into the manifest or client pack.
 _Avoid_: export, import, scan

@@ -94,3 +94,8 @@ class FakeWorld:
         data = {k: float(v) for k, v in data.items()} | {"lerp_time": Long(0), "warning_blocks": 5}
         return self._write(f"dimensions/{namespace}/{name}/data/minecraft/world_border.dat",
                            nbt({"DataVersion": 5023, "data": data}, gzipped=True))
+
+    def storage(self, namespace: str, contents: dict) -> "FakeWorld":
+        """A namespace's command storage as 26.3 saves it: data/<namespace>/command_storage.dat, key -> compound."""
+        return self._write(f"data/{namespace}/command_storage.dat",
+                           nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))

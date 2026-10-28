@@ -1265,6 +1265,112 @@ AfterAll {
     Remove-Item -LiteralPath $script:JreDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+Describe 'Patch rules golden fixture' {
+    # The same input zip, patch and answers tests/test_patches.py checks the Python rules against.
+    # If a rule changed on purpose, re-record: python -I tests/fixtures/patch-golden/record.py
+    BeforeDiscovery {
+        $golden = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'fixtures/patch-golden/expected.json') -Raw | ConvertFrom-Json
+        $script:hashCases = @($golden.expected_hash | ForEach-Object { @{ Case = $_; Hashes = ($_.hashes.PSObject.Properties.Name -join ', ') } })
+    }
+
+    BeforeAll {
+        $script:GoldenDir = Join-Native $RepoRoot 'tests/fixtures/patch-golden'
+        $script:Golden = Get-Content -LiteralPath (Join-Path $GoldenDir 'expected.json') -Raw | ConvertFrom-Json
+        $script:GoldenZip = Join-Path $GoldenDir 'input.zip'
+
+        # "name=value" lines sorted by name (ordinal), so two maps compare as one readable string.
+        function Format-Map($Map) {
+            $names = [string[]]@($Map.Keys)
+            [Array]::Sort($names, [StringComparer]::Ordinal)
+            return ($names | ForEach-Object { "$_=$($Map[$_])" }) -join "`n"
+        }
+
+        function ConvertTo-Map($Object) {
+            $map = @{}
+            foreach ($p in $Object.PSObject.Properties) { $map[$p.Name] = [string]$p.Value }
+            return $map
+        }
+
+        # {entry name: sha256 of its contents} of a zip, directory entries included.
+        function Get-ZipEntryHash([string]$Path) {
+            $map = @{}
+            $zip = [IO.Compression.ZipFile]::OpenRead($Path)
+            $sha = [Security.Cryptography.SHA256]::Create()
+            try {
+                foreach ($e in $zip.Entries) {
+                    $s = $e.Open()
+                    try { $map[$e.FullName] = ([BitConverter]::ToString($sha.ComputeHash($s)) -replace '-', '').ToLower() } finally { $s.Dispose() }
+                }
+            } finally { $sha.Dispose(); $zip.Dispose() }
+            return $map
+        }
+
+        function Copy-GoldenZip([string]$Name) {
+            $path = Join-Native $TestDrive "golden/$Name"
+            New-Item -ItemType Directory -Force -Path (Split-Path $path -Parent) | Out-Null
+            [IO.File]::Copy($GoldenZip, $path, $true)
+            return $path
+        }
+    }
+
+    It 'reads input.zip as recorded' {
+        (Get-FileHash -LiteralPath $GoldenZip -Algorithm SHA256).Hash.ToLower() | Should -Be $Golden.input.sha256
+        Format-Map (Get-ZipEntryHash $GoldenZip) | Should -BeExactly (Format-Map (ConvertTo-Map $Golden.input.entries))
+    }
+
+    It 'Get-PatchId gives the golden patch id' {
+        $dir = Join-Native $GoldenDir $Golden.patch.path
+        InModuleScope Realms -Parameters @{ Dir = $dir } { Get-PatchId $Dir } | Should -Be $Golden.patch.id
+    }
+
+    It 'Invoke-ZipPatch replaces exactly the golden files' {
+        $zip = Copy-GoldenZip 'patched.zip'
+        $dir = Join-Native $GoldenDir $Golden.patch.path
+        InModuleScope Realms -Parameters @{ Zip = $zip; Dir = $dir } { Invoke-ZipPatch $Zip $Dir 'input.zip' }
+        Format-Map (Get-ZipEntryHash $zip) | Should -BeExactly (Format-Map (ConvertTo-Map $Golden.patched.entries))
+    }
+
+    It 'Invoke-ZipPatch refuses a patch naming a file the zip does not have, and changes nothing' {
+        $zip = Copy-GoldenZip 'refused.zip'
+        $dir = Join-Native $GoldenDir $Golden.refused.path
+        $err = $null
+        try { InModuleScope Realms -Parameters @{ Zip = $zip; Dir = $dir } { Invoke-ZipPatch $Zip $Dir 'input.zip' } } catch { $err = "$_" }
+        $err | Should -Not -BeNullOrEmpty
+        foreach ($name in $Golden.refused.missing) { $err | Should -BeLike "*$name*" }
+        Format-Map (Get-ZipEntryHash $zip) | Should -BeExactly (Format-Map (ConvertTo-Map $Golden.input.entries))
+    }
+
+    It 'Get-ExpectedHash picks the golden hash from <Hashes>' -ForEach $hashCases {
+        $entry = [pscustomobject]@{ file = 'input.zip'; hashes = $Case.hashes }
+        if ($Case.error) {
+            { Get-ExpectedHash $entry } | Should -Throw "*$($Case.error)*"
+        } else {
+            $h = Get-ExpectedHash $entry
+            $h.Algorithm.ToLower() | Should -Be $Case.algorithm
+            $h.Value | Should -BeExactly $Case.value
+        }
+    }
+
+    It 'Install-PatchedArtifact produces the golden file and install id, then reuses it' {
+        $zip = $GoldenZip
+        $ctx = [pscustomobject]@{
+            RealmsDir   = $GoldenDir
+            DownloadDir = Join-Native $TestDrive 'golden-install/downloads'
+            Fetch       = { param($Url, $Out) [IO.File]::Copy($zip, $Out, $true) }.GetNewClosure()
+        }
+        $dest = Join-Native $TestDrive 'golden-install/mods/input.zip'
+        $params = @{ Ctx = $ctx; Entry = $Golden.entry; Dest = $dest }
+        $first = InModuleScope Realms -Parameters $params { Install-PatchedArtifact $Ctx $Entry $Dest $null }
+        $first.Changed | Should -BeTrue
+        $first.Record.id | Should -BeExactly $Golden.install_id
+        Format-Map (Get-ZipEntryHash $dest) | Should -BeExactly (Format-Map (ConvertTo-Map $Golden.patched.entries))
+
+        $params.Previous = $first.Record
+        $again = InModuleScope Realms -Parameters $params { Install-PatchedArtifact $Ctx $Entry $Dest $Previous }
+        $again.Changed | Should -BeFalse
+    }
+}
+
 Describe 'Real manifest contract' {
     It '<Kind> <Entry.file> has a file name and a usable hash' -ForEach $realArtifacts {
         $Entry.file | Should -Not -BeNullOrEmpty

@@ -33,6 +33,8 @@ lives in a few modules they share:
 | `tools/nbt.py` | reading the world's NBT files (level.dat, scoreboard.dat, world_border.dat, Open Parties and Claims' `*.nbt`): `nbt.read(path or bytes)` gives the root compound as plain Python values, gzipped or not. season, standings, drops and map_border all read through it; `tests/nbt_writer.py` makes the tests' made-up worlds |
 | `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, and the one list of answers that mean the server refused |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
+| `tools/checks.py` | the one list of fast checks (ruff, pytest, validate, datapacks, `dash -n`, Pester) that CI and maintainers run, and which of CI's boot jobs a run needs (`--boots`, `boots()`) |
+| `tools/local_ci.py` | CI on a maintainer's machine: checks a PR's head in a temporary worktree with checks.py and posts a `local-ci` commit status through `gh` (see "Tests") |
 
 ## Server types: Paper or Fabric
 
@@ -143,16 +145,20 @@ docker compose down               # must log "All dimensions are saved"
 The world, `java/` (the Linux build) and the downloaded PowerShell end up in
 `/tmp/realms-docker/TheRealms-Server`, exactly where a native run puts them.
 
-Open a PR. CI boots the release on clean runners:
+Open a PR. CI checks every push to it and boots the release on clean runners when the change can break the
+boot (`python tools/checks.py --boots` decides; Windows minutes count double and macOS 10x on this private
+repo, and the included minutes ran out in October 2026):
 
 | Job | Runs on | What |
 |---|---|---|
-| Lint, unit tests, manifest | every push and PR | ruff, pytest, `validate.py` |
-| Windows | every push and PR | PSScriptAnalyzer, Pester, build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
-| Linux (native) | every push and PR | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), same checks |
-| Linux (Docker) | every push and PR | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
-| Hosting bundle (Docker) | every push and PR | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
+| Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
+| Linux (native) | PRs out of draft that touch `package/`, the build or the boot tests; pushes to `main` that do; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
+| Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
+| Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/` or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
+| Hosting bundle (Docker) | when Windows runs | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
 | macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `realms.sh`, `pwsh.lock` or Java |
+
+Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not), or start a manual run.
 
 ## Capturing changes from a live server
 
@@ -336,8 +342,33 @@ To bring shops back:
 
 ```bash
 pip install pytest ruff
-python -m pytest -q && python -m ruff check tools tests && python tools/validate.py
+python tools/checks.py            # ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester
+python tools/checks.py pytest     # just one; --list says what each runs
 ```
+
+`tools/checks.py` is the one list of checks a change needs before review; CI runs the same file
+(`--strict`, so a tool missing on the runner fails instead of being skipped). Locally a missing tool is
+skipped and said: Pester needs PowerShell with Pester 5.5+, `sh` needs `dash` (on Windows, Git for Windows'
+own dash is found from `git`, which also lets the pytest tests of `deploy/lib.sh` run).
+
+### CI on this machine (local CI)
+
+When Actions can't run, check PRs here and post the result on GitHub as a commit status named `local-ci`:
+
+```bash
+python tools/local_ci.py 68 70      # these PRs
+python tools/local_ci.py --open     # every open PR whose head commit has no local-ci result yet
+```
+
+It checks each PR's head in a temporary worktree with this checkout's `tools/checks.py` (so a PR made before
+checks.py existed is checked the same way), needs an authenticated `gh`, never runs a PR from a fork, and keeps
+each run's output in `.git/local-ci/<sha>.log`. It doesn't boot the server: for a PR that changes the
+manifest, the installer or the launchers, run `tests/smoke.ps1` too (see "Releasing without Actions").
+
+### Review
+
+Before a PR leaves draft, run `/code-review` on it (Claude Code) and fix what it finds in one commit, "<area>:
+fix the review of #N", with a test for each correctness fix. Say in the PR what wasn't fixed and why.
 
 The unit tests never touch the network or the real checkout: tools take an `Upstream` catalog and
 a `Repo`, and tests pass a `RecordedHttp` adapter (replaying `tests/fixtures/upstream/*.json`, or
@@ -403,8 +434,7 @@ gets in:
 git fetch origin --tags
 git worktree add --detach ../release-vX.Y.Z vX.Y.Z
 cd ../release-vX.Y.Z
-python -m pytest -q && python -m ruff check tools tests && python tools/validate.py
-pwsh -c 'Invoke-Pester tests/Realms.Tests.ps1, tests/Player.Tests.ps1'   # or powershell -c on Windows 5.1
+python tools/checks.py   # Pester runs on pwsh, or Windows PowerShell 5.1 when pwsh is missing
 GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md
 gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
 python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)

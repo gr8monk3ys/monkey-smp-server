@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Maintainers: `tools/checks.py` runs every fast check (CI runs the same file), `tools/local_ci.py` checks PRs on a
+  maintainer's machine and posts a `local-ci` status when Actions can't run, and CI boots the server only when a
+  change can break the boot (none for draft PRs). Nothing changes for hosts or players.
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

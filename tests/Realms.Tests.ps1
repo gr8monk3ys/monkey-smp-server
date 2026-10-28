@@ -1285,24 +1285,31 @@ Describe 'Patch rules golden fixture' {
             return ($names | ForEach-Object { "$_=$($Map[$_])" }) -join "`n"
         }
 
+        # An ordinal, case-sensitive map (a hashtable would merge names that differ only in case).
+        function New-OrdinalMap { return ,(New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)) }
+
         function ConvertTo-Map($Object) {
-            $map = @{}
-            foreach ($p in $Object.PSObject.Properties) { $map[$p.Name] = [string]$p.Value }
-            return $map
+            $map = New-OrdinalMap
+            foreach ($p in $Object.PSObject.Properties) { $map.Add($p.Name, [string]$p.Value) }
+            return ,$map
         }
 
-        # {entry name: sha256 of its contents} of a zip, directory entries included.
+        # {entry name: sha256 of its contents} of a zip, directory entries included. A name that is in
+        # the zip twice (a replaced file added again instead of replaced) throws.
         function Get-ZipEntryHash([string]$Path) {
-            $map = @{}
+            $map = New-OrdinalMap
             $zip = [IO.Compression.ZipFile]::OpenRead($Path)
             $sha = [Security.Cryptography.SHA256]::Create()
             try {
                 foreach ($e in $zip.Entries) {
                     $s = $e.Open()
-                    try { $map[$e.FullName] = ([BitConverter]::ToString($sha.ComputeHash($s)) -replace '-', '').ToLower() } finally { $s.Dispose() }
+                    try {
+                        if ($map.ContainsKey($e.FullName)) { throw "$Path has $($e.FullName) twice" }
+                        $map.Add($e.FullName, ([BitConverter]::ToString($sha.ComputeHash($s)) -replace '-', '').ToLower())
+                    } finally { $s.Dispose() }
                 }
             } finally { $sha.Dispose(); $zip.Dispose() }
-            return $map
+            return ,$map
         }
 
         function Copy-GoldenZip([string]$Name) {
@@ -1343,7 +1350,11 @@ Describe 'Patch rules golden fixture' {
     It 'Get-ExpectedHash picks the golden hash from <Hashes>' -ForEach $hashCases {
         $entry = [pscustomobject]@{ file = 'input.zip'; hashes = $Case.hashes }
         if ($Case.error) {
-            { Get-ExpectedHash $entry } | Should -Throw "*$($Case.error)*"
+            # Each side words the refusal its own way; both name the file and the hashes it needs.
+            $err = $null
+            try { Get-ExpectedHash $entry } catch { $err = "$_" }
+            $err | Should -BeLike '*input.zip*'
+            $err | Should -BeLike '*sha512/sha256*'
         } else {
             $h = Get-ExpectedHash $entry
             $h.Algorithm.ToLower() | Should -Be $Case.algorithm
@@ -1353,10 +1364,11 @@ Describe 'Patch rules golden fixture' {
 
     It 'Install-PatchedArtifact produces the golden file and install id, then reuses it' {
         $zip = $GoldenZip
+        $fetched = New-Object System.Collections.ArrayList
         $ctx = [pscustomobject]@{
             RealmsDir   = $GoldenDir
             DownloadDir = Join-Native $TestDrive 'golden-install/downloads'
-            Fetch       = { param($Url, $Out) [IO.File]::Copy($zip, $Out, $true) }.GetNewClosure()
+            Fetch       = { param($Url, $Out) [void]$fetched.Add($Url); [IO.File]::Copy($zip, $Out, $true) }.GetNewClosure()
         }
         $dest = Join-Native $TestDrive 'golden-install/mods/input.zip'
         $params = @{ Ctx = $ctx; Entry = $Golden.entry; Dest = $dest }
@@ -1368,6 +1380,8 @@ Describe 'Patch rules golden fixture' {
         $params.Previous = $first.Record
         $again = InModuleScope Realms -Parameters $params { Install-PatchedArtifact $Ctx $Entry $Dest $Previous }
         $again.Changed | Should -BeFalse
+        $again.Record.id | Should -BeExactly $Golden.install_id
+        $fetched.Count | Should -Be 1
     }
 }
 

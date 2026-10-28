@@ -11,7 +11,7 @@ one fixture: tests/test_patches.py checks the Python side and tests/Realms.Tests
 Only re-record when a rule changes on purpose, then check that both test suites pass. The fixture holds
 only dummy text files (never a real jar or datapack):
   input.zip          the "upstream" zip: stored and deflated files plus a directory entry
-  patches/golden/    a patch in the real layout (paths as inside the zip), replacing three of its files
+  patches/golden/    a patch in the real layout (paths as inside the zip), replacing six of its files
   patches/adds-a-file/  a patch naming a file input.zip doesn't have, which both sides must refuse
 
 Python has no copy of the patch id: only the installer uses it (as the key in its install state that says
@@ -43,6 +43,10 @@ INPUT = [
     ("notes/a.txt", b"upstream a\n", zipfile.ZIP_DEFLATED),
     ("notes/b.txt", b"upstream b, never patched\n", zipfile.ZIP_DEFLATED),
     ("notes/deep/c.txt", b"upstream c\n", zipfile.ZIP_DEFLATED),
+    # Names a culture-aware sort orders differently from a code-point sort (case, and "-" against a letter).
+    ("notes/Upper.txt", b"upstream Upper\n", zipfile.ZIP_DEFLATED),
+    ("notes/a-z.txt", b"upstream a-z\n", zipfile.ZIP_DEFLATED),
+    ("notes/ab.txt", b"upstream ab\n", zipfile.ZIP_DEFLATED),
     ("overlay_1/notes/a.txt", b"upstream overlay a\n", zipfile.ZIP_STORED),
 ]
 
@@ -63,13 +67,20 @@ def sha256(data: bytes) -> str:
 
 
 def zip_entries(data: bytes) -> dict[str, str]:
-    """{entry name: sha256 of its contents}, sorted by name (entry order is not part of the rules)."""
+    """{entry name: sha256 of its contents}, sorted by name (entry order is not part of the rules).
+
+    A name that appears twice (a replaced file added again instead of replaced) raises ValueError.
+    """
     z = zipfile.ZipFile(io.BytesIO(data))
-    return {n: sha256(z.read(n)) for n in sorted(z.namelist())}
+    names = z.namelist()
+    if len(names) != len(set(names)):
+        raise ValueError(f"duplicate zip entries: {sorted({n for n in names if names.count(n) > 1})}")
+    return {n: sha256(z.read(n)) for n in sorted(names)}
 
 
 def patch_id(files: dict[str, bytes]) -> str:
-    """The installer's Get-PatchId: sha256 of "<path>=<sha256 of the file>;" for every file, by path."""
+    """The installer's Get-PatchId: sha256 of "<path>=<sha256 of the file>;" for every file, in ordinal
+    (code-point) order of the path."""
     return sha256("".join(f"{rel}={sha256(files[rel])};" for rel in sorted(files)).encode("utf-8"))
 
 
@@ -83,8 +94,8 @@ def expected_hash_cases(data: bytes) -> list[dict]:
         try:
             algo, value = entries.hash_of({"file": "input.zip", "hashes": hashes})
             out.append({"hashes": hashes, "algorithm": algo, "value": value})
-        except KeyError:
-            out.append({"hashes": hashes, "error": "no sha512/sha256"})
+        except KeyError as err:
+            out.append({"hashes": hashes, "error": err.args[0]})
     return out
 
 

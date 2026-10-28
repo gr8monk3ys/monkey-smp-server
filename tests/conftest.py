@@ -125,8 +125,11 @@ def make_zip(files: dict[str, bytes | str]) -> bytes:
 
 
 def zip_contents(data: bytes) -> dict[str, bytes]:
+    """{name: bytes} of a zip, in entry order; a name that appears twice fails the test."""
     z = zipfile.ZipFile(io.BytesIO(data))
-    return {n: z.read(n) for n in z.namelist()}
+    names = z.namelist()
+    assert len(names) == len(set(names)), f"duplicate zip entries: {names}"
+    return {n: z.read(n) for n in names}
 
 
 class FakeModrinth:

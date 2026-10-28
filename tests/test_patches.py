@@ -1,6 +1,9 @@
 import importlib.util
+import io
 import json
+import re
 import shutil
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -127,18 +130,43 @@ record = _recorder()
 GOLDEN = json.loads((GOLDEN_DIR / "expected.json").read_text(encoding="utf-8"))
 
 
+@pytest.fixture(scope="module")
+def golden_now() -> dict:
+    """What the Python rules answer today for the fixture (computed once)."""
+    return record.golden()
+
+
 @pytest.mark.parametrize("key", sorted(GOLDEN))
-def test_python_rules_give_the_golden_answers(key):
+def test_python_rules_give_the_golden_answers(golden_now, key):
     # On a failure: if the rule changed on purpose, re-record (record.py) and make Pester pass too.
-    assert record.golden()[key] == GOLDEN[key]
+    assert golden_now[key] == GOLDEN[key]
+
+
+def _names(data: bytes) -> list[str]:
+    return zipfile.ZipFile(io.BytesIO(data)).namelist()
 
 
 def test_golden_patch_replaces_files_in_place():
     data = (GOLDEN_DIR / "input.zip").read_bytes()
     patch = patches.read(GOLDEN_DIR / "patches" / "golden")
-    out = zip_contents(patches.apply(data, patch))
-    assert out == {**zip_contents(data), **patch}
-    assert sorted(out) == sorted(zip_contents(data))
+    out = patches.apply(data, patch)
+    assert _names(out) == _names(data)  # same entries, same order, none twice
+    assert zip_contents(out) == {**zip_contents(data), **patch}
+
+
+def test_golden_entries_refuse_a_duplicate_name():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z, pytest.warns(UserWarning, match="Duplicate name"):
+        z.writestr("a.txt", "one")
+        z.writestr("a.txt", "two")
+    with pytest.raises(ValueError, match="a.txt"):
+        record.zip_entries(buf.getvalue())
+
+
+@pytest.mark.parametrize("case", [c for c in GOLDEN["expected_hash"] if "error" in c])
+def test_golden_hash_refusal_is_the_real_message(case):
+    with pytest.raises(KeyError, match=re.escape(case["error"])):
+        entries.hash_of({"file": "input.zip", "hashes": case["hashes"]})
 
 
 def test_golden_refused_patch_names_the_missing_file():
@@ -151,3 +179,4 @@ def test_golden_entry_is_a_consistent_patched_entry():
     entry = GOLDEN["entry"]
     assert entries.matches(entry, (GOLDEN_DIR / "input.zip").read_bytes())
     assert entry["patch"]["base_sha512"] == entry["hashes"]["sha512"]
+

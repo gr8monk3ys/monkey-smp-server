@@ -13,6 +13,7 @@ import uuid
 import pytest
 
 import events
+import rcon
 import standings
 from repo import REPO
 
@@ -223,7 +224,7 @@ def test_board_commands_fit_rcon_and_stay_plain_ascii():
     commands = standings.board_commands(rows, BASELINE, last, SUNDAY)
     assert commands[-1] == "function realms:standings/publish"
     for c in commands:
-        assert len(c.encode()) <= standings.RCON_LIMIT
+        assert len(c.encode()) <= rcon.LIMIT
         assert c.isascii() and "\n" not in c and not c.startswith("-")
     assert commands[0].startswith("data modify storage realms:standings week set value {")
     assert commands[1].startswith("data modify storage realms:standings last set value {")
@@ -249,16 +250,8 @@ def test_snbt():
 # ---------------------------------------------------------------- the week: start, close, retries
 
 
-class FakeRcon:
-    def __init__(self, fail=0):
-        self.sent, self.fail = [], fail
-
-    def __call__(self, command):
-        if self.fail:
-            self.fail -= 1
-            raise standings.RconError("the server is down")
-        self.sent.append(command)
-        return "ok"
+def FakeRcon(fail=0):  # noqa: N802 (reads as the class it was)
+    return rcon.Recorder(fail=fail)
 
 
 class FakeDiscord:

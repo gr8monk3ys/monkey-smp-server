@@ -1,6 +1,7 @@
 #!/bin/sh
 # Keeps the weekly challenges and Season I's launch weekend on the wall clock (tools/challenges.py): sends the
-# output of `python3 tools/challenges.py commands` to the server over RCON. Minecraft has no wall clock, so this
+# output of `python3 tools/challenges.py commands` to the server over RCON (`challenges.py send`, which reads each
+# answer through tools/rcon.py; this only schedules and logs). Minecraft has no wall clock, so this
 # is how the server learns that a new week started (Monday, 12 AM Pacific) and when the launch weekend ends.
 # realms-week.timer runs it every hour as the realms user. Both commands do nothing when nothing changed, so
 # running it again, or by hand, is safe.
@@ -45,23 +46,26 @@ TIMER=realms-week.timer
 log() { printf '%s [realms-week] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
 
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
-# RCON exits 0 whenever the server answers, "Unknown function" too (say, the pack is off): read the answer.
-refused() {
-    case "$1" in
-        *'Unknown function'* | *'Unknown or incomplete command'* | *'Incorrect argument'* | *'<--[HERE]'*) return 0 ;;
-    esac
-    return 1
+# "logged CMD...": runs CMD, logging each line it prints as it prints it; returns CMD's exit code.
+logged() {
+    exec 3>&1
+    rc=$( { "$@" 2>&1 && echo 'exit=0' || echo "exit=$?"; } | while IFS= read -r l; do
+        case $l in exit=*) printf '%s' "${l#exit=}" ;; *) log "$l" >&3 ;; esac
+    done )
+    exec 3>&-
+    return "${rc:-1}"
+}
+
+TOOL=$REPO_DIR/tools/challenges.py
+need_tool() {
+    command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+    [ -r "$TOOL" ] || die "$TOOL is missing: is the release with the weekly challenges deployed?"
 }
 
 # The commands for now, one per line: `function realms:challenges/sync {week:N}`, and during and just after
 # the launch weekend `function realms:wardrobe/founder/sync {seconds:N}`.
 commands() {
-    command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
-    [ -r "$REPO_DIR/tools/challenges.py" ] || die "$REPO_DIR/tools/challenges.py is missing: is the release with the weekly challenges deployed?"
-    python3 -B "$REPO_DIR/tools/challenges.py" commands || die 'tools/challenges.py commands failed'
+    python3 -B "$TOOL" commands || die 'tools/challenges.py commands failed'
 }
 
 # Units whose copy in /etc/systemd/system differs from the deployed checkout's.
@@ -76,13 +80,19 @@ timer_running() { systemctl is-enabled --quiet "$TIMER" 2>/dev/null && systemctl
 
 case $MODE in
     check)
+        need_tool
         out=$(commands)
         log 'commands for now:'
         printf '%s\n' "$out" | while IFS= read -r c; do log "  $c"; done
         changed=$(changed_units)
         if timer_running; then state=running; else state='not running'; fi
         log "timer: $TIMER $state; units to copy:${changed:- none}"
-        if running; then log 'server: running'; else log 'server: not running (nothing would be sent this hour)'; fi
+        python3 -B "$REPO_DIR/tools/rcon.py" running --docker "$LIVE_DIR/docker" && up=0 || up=$?
+        case $up in
+            0) log 'server: running' ;;
+            1) log 'server: not running (nothing would be sent this hour)' ;;
+            *) log "server: can't tell (docker failed; see above)" ;;
+        esac
         log 'check finished: nothing was changed'
         ;;
     install)
@@ -107,30 +117,8 @@ case $MODE in
         systemctl list-timers --all --no-pager "$TIMER" 2>&1 | while IFS= read -r l; do log "  $l"; done
         ;;
     send)
-        out=$(commands)
-        if ! running; then
-            log 'server not running: nothing sent (the next hour catches up)'
-            exit 0
-        fi
-        failed=0
-        set -f  # the commands hold braces: no globbing while they are split into lines
-        old_ifs=$IFS
-        IFS='
-'
-        for c in $out; do
-            IFS=$old_ifs
-            if ! reply=$(rcon "$c"); then
-                log "RCON failed: $c"
-                failed=1
-            elif refused "$reply"; then
-                log "refused: $c: $reply"
-                failed=1
-            else
-                log "$c: ${reply:-ok}"
-            fi
-        done
-        IFS=$old_ifs
-        set +f
-        [ "$failed" = 0 ] || die 'not every command went through (the next hour tries again)'
+        need_tool
+        logged python3 -B -u "$TOOL" send --docker "$LIVE_DIR/docker" ||
+            die 'not every command went through (the next hour tries again)'
         ;;
 esac

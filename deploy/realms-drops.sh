@@ -1,6 +1,8 @@
 #!/bin/sh
 # Weeknight supply drops (tools/drops.py; docs/ADMIN.md, "Supply drops"): sends the output of
-# `python3 tools/drops.py commands WORLD` to the server over RCON. Minecraft can't see claims or the wall
+# `python3 tools/drops.py commands WORLD` to the server over RCON (`drops.py send`, which reads each answer
+# through tools/rcon.py and says what the try's return code means; this only schedules and logs). Minecraft
+# can't see claims or the wall
 # clock, so this picks the spots (from the saved claims and border) and the night; the realms-drops data pack
 # decides the rest (enough players online, no drop yet tonight, no event on). realms-drops.timer runs it every
 # 10 minutes as the realms user. Outside drop hours (Monday to Thursday, 6 to 10 PM Pacific) there is nothing
@@ -47,35 +49,23 @@ TIMER=realms-drops.timer
 log() { printf '%s [realms-drops] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
 
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
-# RCON exits 0 whenever the server answers, "Unknown function" too (say, the pack is off): read the answer.
-refused() {
-    case "$1" in
-        *'Unknown function'* | *'Unknown or incomplete command'* | *'Incorrect argument'* | *'<--[HERE]'*) return 0 ;;
-    esac
-    return 1
-}
-# What the pack's answer to `function realms:drops/try` means (tools/drops.py TRY_CODES).
-meaning() {
-    case "$1" in
-        *' returned 1') echo 'started: checking the ground at the spots' ;;
-        *' returned 10') echo 'automatic drops are off (function realms:drops/on)' ;;
-        *' returned 11') echo 'a drop is already on' ;;
-        *' returned 12') echo "tonight's drop already happened" ;;
-        *' returned 13') echo 'an event is on (the arena, a raid, Anarchy or the season lock)' ;;
-        *' returned 14') echo 'fewer survival players online than the minimum' ;;
-        *' returned 15') echo 'no spots were sent' ;;
-        *) echo "${1:-ok}" ;;
-    esac
+# "logged CMD...": runs CMD, logging each line it prints as it prints it; returns CMD's exit code.
+logged() {
+    exec 3>&1
+    rc=$( { "$@" 2>&1 && echo 'exit=0' || echo "exit=$?"; } | while IFS= read -r l; do
+        case $l in exit=*) printf '%s' "${l#exit=}" ;; *) log "$l" >&3 ;; esac
+    done )
+    exec 3>&-
+    return "${rc:-1}"
 }
 
 # The commands for now, one per line: the spots, then `function realms:drops/try {night:N}`. None outside
 # drop hours, or when no spot clear of every claim is left in the ring.
-commands() {
+need_tool() {
     command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
     [ -r "$TOOL" ] || die "$TOOL is missing: is the release with supply drops deployed?"
+}
+commands() {
     python3 -B "$TOOL" commands "$WORLD" || die 'tools/drops.py commands failed'
 }
 
@@ -91,7 +81,7 @@ timer_running() { systemctl is-enabled --quiet "$TIMER" 2>/dev/null && systemctl
 
 case $MODE in
     check)
-        [ -r "$TOOL" ] || die "$TOOL is missing: is the release with supply drops deployed?"
+        need_tool
         python3 -B "$TOOL" spots "$WORLD" 2>&1 | while IFS= read -r l; do log "$l"; done
         out=$(commands)
         log 'commands for now:'
@@ -100,7 +90,12 @@ case $MODE in
         changed=$(changed_units)
         if timer_running; then state=running; else state='not running'; fi
         log "timer: $TIMER $state; units to copy:${changed:- none}"
-        if running; then log 'server: running'; else log 'server: not running (nothing would be sent)'; fi
+        python3 -B "$REPO_DIR/tools/rcon.py" running --docker "$LIVE_DIR/docker" && up=0 || up=$?
+        case $up in
+            0) log 'server: running' ;;
+            1) log 'server: not running (nothing would be sent)' ;;
+            *) log "server: can't tell (docker failed; see above)" ;;
+        esac
         log 'check finished: nothing was changed'
         ;;
     install)
@@ -125,35 +120,9 @@ case $MODE in
         systemctl list-timers --all --no-pager "$TIMER" 2>&1 | while IFS= read -r l; do log "  $l"; done
         ;;
     send)
-        out=$(commands)
-        # Outside drop hours: nothing to do, and nothing worth a log line every 10 minutes.
-        [ -n "$out" ] || exit 0
-        if ! running; then
-            log 'server not running: nothing sent'
-            exit 0
-        fi
-        failed=0
-        set -f  # the commands hold braces: no globbing while they are split into lines
-        old_ifs=$IFS
-        IFS='
-'
-        for c in $out; do
-            IFS=$old_ifs
-            if ! reply=$(rcon "$c"); then
-                log "RCON failed: $c"
-                failed=1
-            elif refused "$reply"; then
-                log "refused: $c: $reply"
-                failed=1
-            else
-                case "$c" in
-                    'function '*) log "$c: $(meaning "$reply")" ;;
-                    *) log "spots sent: ${reply:-ok}" ;;
-                esac
-            fi
-        done
-        IFS=$old_ifs
-        set +f
-        [ "$failed" = 0 ] || die 'not every command went through (the timer tries again in 10 minutes)'
+        # Outside drop hours it prints nothing, so there is nothing worth a log line every 10 minutes.
+        need_tool
+        logged python3 -B -u "$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker" ||
+            die 'not every command went through (the timer tries again in 10 minutes)'
         ;;
 esac

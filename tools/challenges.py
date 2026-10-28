@@ -42,8 +42,10 @@ import datetime as dt
 import json
 import math
 import sys
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import rcon as server
 from datapacks import NS, lines, text
 from events import STATE
 
@@ -197,6 +199,13 @@ def commands(when: dt.datetime) -> list[str]:
     if when < LAUNCH_END + dt.timedelta(days=1):   # after that there is no window left to keep in step
         out.append(f"function {NS}:wardrobe/founder/sync {{seconds:{founder_left(when)}}}")
     return out
+
+
+def send(rcon, when: dt.datetime, log=print) -> int:
+    """Sends commands(when). A server that isn't running is skipped: the week is a score in the world, so the
+    next hour catches up."""
+    return server.send_if_running(rcon, commands(when), log,
+                                  skipped="server not running: nothing sent (the next hour catches up)")
 
 
 # ---------------------------------------------------------------- scores
@@ -447,14 +456,20 @@ def main(argv=None) -> int:
     s = sub.add_parser("schedule", help="which challenges run in the coming weeks")
     s.add_argument("--from", dest="first", type=int, help="the first week to show (default: this week)")
     s.add_argument("--weeks", type=int, default=12)
-    c = sub.add_parser("commands", help="the RCON commands deploy/realms-week.sh sends")
-    c.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
+    for name, about in (("commands", "the RCON commands for now (changes nothing)"),
+                        ("send", "sends them to the running server (deploy/realms-week.sh, hourly)")):
+        c = sub.add_parser(name, help=about)
+        c.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
+        if name == "send":
+            c.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
     args = ap.parse_args(argv)
     now = dt.datetime.now(UTC)
     if args.command == "schedule":
         print(schedule(week_at(now) if args.first is None else args.first, args.weeks))
-    else:
-        print("\n".join(commands(args.at or now)))
+        return 0
+    if args.command == "send":
+        return send(server.Docker(args.docker), args.at or now)
+    print("\n".join(commands(args.at or now)))
     return 0
 
 

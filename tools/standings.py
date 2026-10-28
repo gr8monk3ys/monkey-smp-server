@@ -45,7 +45,6 @@ import gzip
 import json
 import os
 import struct
-import subprocess
 import sys
 import tomllib
 import unicodedata
@@ -57,6 +56,7 @@ from pathlib import Path
 
 from datapacks import NS, function_tag, lines, mcmeta, text
 from events import ARENA_TAG, CUP, LEVEL, STRENGTH
+from rcon import LIMIT, Docker, RconError
 from repo import Repo
 from season import read_nbt
 
@@ -73,10 +73,6 @@ MIN_WEEK_DAYS = 3     # close leaves a week younger than this alone: it was clos
 TOP = 10              # factions on the board and in the Discord post
 LAST_TOP = 5          # factions in last week's table on the board
 NAME_LIMIT = 20       # characters of a faction's name on the board
-# The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
-RCON_LIMIT = 1400
-RCON_FAILED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
-               "RCON is turned off")
 DISCORD_LIMIT = 2000
 FORMULA = "Cup 40, land 20, Strength 20, kills this week 20, each as a share of the leader; +5 a bounty."
 OPAC = Path("data") / "openpartiesandclaims"
@@ -430,7 +426,7 @@ def store_command(key: str, head: str, rows: list[Row], top: int) -> str:
     """The command that puts one table in the storage, with fewer rows if all of them don't fit RCON."""
     for n in range(min(top, len(rows)), -1, -1):
         command = f"data modify storage {STORE} {key} set value {snbt(section(head, rows, n))}"
-        if len(command.encode()) <= RCON_LIMIT:
+        if len(command.encode()) <= LIMIT:
             return command
     raise ValueError("the board heading alone is too long for RCON")
 
@@ -445,26 +441,6 @@ def board_commands(rows: list[Row], week: dict | None, last: dict | None, now: d
                                       LAST_TOP))
     commands.append(f"function {NS}:standings/publish")
     return commands
-
-
-class RconError(Exception):
-    pass
-
-
-def docker_rcon(docker: Path):
-    """Runs one console command through the container's `realms rcon`; returns what the server answered."""
-    def run(command: str) -> str:
-        argv = ["docker", "compose", "--project-directory", str(docker), "-f", str(docker / "compose.yaml"),
-                "exec", "-T", "realms", "realms", "rcon", command]
-        try:
-            done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            raise RconError(f"could not run docker compose ({type(e).__name__})") from None
-        answer = (done.stdout + done.stderr).strip()
-        if done.returncode != 0 or any(m in answer for m in RCON_FAILED):
-            raise RconError(f"{command[:60]}... answered: {answer[-300:] or 'nothing'} (exit {done.returncode})")
-        return answer
-    return run
 
 
 def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, now: dt.datetime) -> None:
@@ -771,7 +747,7 @@ def main(argv=None) -> int:
         return show(args.world, args.state, now)
     if args.command == "start":
         return start(args.world, args.state, now)
-    rcon = docker_rcon(args.docker)
+    rcon = Docker(args.docker)
     if args.command == "board":
         return board(args.world, args.state, rcon, now)
     return close(args.world, args.state, rcon, now, webhook())

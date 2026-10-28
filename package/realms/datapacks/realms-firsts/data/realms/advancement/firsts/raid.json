@@ -33,6 +33,20 @@
                 },
                 "score": "rf"
               }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#season_locked"
+                },
+                "score": "ev.state"
+              }
             }
           ]
         }

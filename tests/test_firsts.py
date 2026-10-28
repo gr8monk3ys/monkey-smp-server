@@ -126,7 +126,8 @@ def test_the_first_launch_clears_test_play_and_a_later_one_nothing():
     launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"]
     assert launch.index("function realms:firsts/launch") < launch.index("function realms:challenges/launch")
     ours = [line for line in FILES[f"{FN}/launch.mcfunction"].splitlines() if not line.startswith("#")]
-    assert ours == ["execute if score #launched rw.day matches 1 run return 0", "function realms:firsts/clear"]
+    assert ours == ["execute if score #launched rw.day matches 1 run return 0", "function realms:firsts/clear",
+                    "function realms:firsts/clean"]
     clear = FILES[f"{FN}/clear.mcfunction"]
     assert "data remove storage realms:firsts held" in clear and "scoreboard players set #claimed rf 0" in clear
     for m in firsts.MILESTONES:
@@ -146,8 +147,79 @@ def test_load_keeps_claims_and_the_trigger_lists_every_milestone():
     assert "scoreboard players enable @a firsts" in FILES[f"{FN}/second.mcfunction"]
     use = FILES[f"{FN}/use.mcfunction"]
     for m in firsts.MILESTONES:
-        assert use.count(json.dumps(m["name"])) == 2, m["id"]
-    assert '"nbt":"held.vault.name"' in use
+        assert f"function realms:firsts/show/{m['id']}" in use
+
+
+def test_nothing_counts_once_the_season_is_locked():
+    for m in firsts.MILESTONES:
+        assert ("#season_locked", "ev.state", {"max": 0}) in [fixed(t) for t in terms(m["id"])]
+        got = FILES[f"{FN}/got/{m['id']}.mcfunction"]
+        assert "execute if score #season_locked ev.state matches 1 run return 0" in got
+        assert got.index("#season_locked") < got.index(f"function realms:firsts/claim/{m['id']}")
+
+
+def test_the_reward_checks_the_end_is_open_too():
+    got = FILES[f"{FN}/got/end.mcfunction"]
+    assert f"execute unless score #end_open {rules.OBJECTIVE} matches 1.. run return 0" in got
+    assert got.index("#end_open") < got.index("function realms:firsts/claim/end")
+    assert all("#end_open" not in FILES[f"{FN}/got/{m['id']}.mcfunction"]
+               for m in firsts.MILESTONES if m["id"] != "end")
+
+
+def test_an_item_kept_from_test_play_never_claims_its_first():
+    items = {m["id"]: m["item"] for m in firsts.MILESTONES if m.get("item")}
+    assert items == {"diamond": "diamond", "debris": "ancient_debris", "mace": "mace", "elytra": "elytra"}
+    clean = [line for line in FILES[f"{FN}/clean.mcfunction"].splitlines() if not line.startswith("#")]
+    assert len(clean) == len(items)
+    for (fid, item), line in zip(items.items(), clean, strict=True):
+        assert line.startswith(f"execute as @a[tag=!rf.clean.{fid}] ")
+        assert line.endswith(f" run tag @s add rf.clean.{fid}")
+        for slot in ("container.*", "armor.*", "weapon.offhand"):   # all inventory_changed watches
+            assert f"unless items entity @s {slot} minecraft:{item}" in line
+        got = FILES[f"{FN}/got/{fid}.mcfunction"]
+        assert f"execute unless entity @s[tag=rf.clean.{fid}] run return 0" in got
+        assert got.index("rf.clean.") < got.index(f"function realms:firsts/claim/{fid}")
+    for m in firsts.MILESTONES:
+        if not m.get("item"):
+            assert "rf.clean." not in FILES[f"{FN}/got/{m['id']}.mcfunction"]
+    # Marked at the first launch (after the clear) for whoever is online, and every second after the launch.
+    launch = [line for line in FILES[f"{FN}/launch.mcfunction"].splitlines() if not line.startswith("#")]
+    assert launch[-2:] == ["function realms:firsts/clear", "function realms:firsts/clean"]
+    assert ("execute if score #launched rw.day matches 1 run function realms:firsts/clean"
+            in FILES[f"{FN}/second.mcfunction"])
+
+
+def test_the_menu_reads_a_first_as_holders_does():
+    show = [line for line in FILES[f"{FN}/show/vault.mcfunction"].splitlines() if not line.startswith("#")]
+    assert show[0].startswith("execute unless score #vault rf matches 1.. run return run tellraw @s ")
+    assert '"text":"  open"' in show[0]
+    assert "execute if data storage realms:firsts held.vault{name:\"\"} run scoreboard players set #named rf 0" in show
+    assert "execute if data storage realms:firsts held.vault{week:-1} run scoreboard players set #dated rf 0" in show
+    lines = show[5:]
+    assert len(lines) == 6 and not lines[-1].startswith("execute")   # the last one: no name, no week
+    named = '{"storage":"realms:firsts","nbt":"held.vault.name","color":"yellow"}'
+    online = '{"selector":"@a[scores={rf.vault=1..}]","color":"yellow"}'
+    week = '"nbt":"held.vault.week"'
+    for line in lines:
+        dated = "if score #dated rf matches 1" in line
+        assert (week in line) == dated, line
+        if "if score #named rf matches 1" in line:
+            assert named in line
+        elif "if entity @a[scores={rf.vault=1..}]" in line:
+            assert online in line and named not in line
+        else:
+            assert "a player now offline" in line and named not in line
+    # Every other line returns, so the player sees exactly one.
+    assert all(line.startswith("execute ") and " run return run tellraw @s " in line for line in lines[:-1])
+
+
+def test_the_dragon_reopen_says_staff_must_respawn_it():
+    reopen = FILES[f"{FN}/reopen/dragon.mcfunction"]
+    assert "end crystals are banned" in reopen and "staff" in reopen and "claim/dragon" in reopen
+    assert "respawn" not in FILES[f"{FN}/reopen/wither.mcfunction"]
+    admin = (REPO.root / "docs" / "ADMIN.md").read_text(encoding="utf-8")
+    assert "reopen/dragon" not in admin.split("## Server Firsts")[1].split("```")[1]   # not the example
+    assert "respawn the dragon" in admin
 
 
 def test_the_pack_is_generated_and_consistent():
@@ -178,8 +250,8 @@ def test_holders_in_claim_order(tmp_path):
     assert [(f.id, f.player, f.order, f.week) for f in got] == [
         ("diamond", "Alex", 1, 0), ("nether", "Steve", 2, 0), ("dragon", "Steve", 3, 3)]
     assert got[2].milestone == "Slay the dragon"
-    assert [f.id for f in firsts.claimed_in(world, 0)] == ["diamond", "nether"]
-    assert firsts.claimed_in(world, 5) == []
+    assert [f.id for f in firsts.claimed_in(got, 0)] == ["diamond", "nether"]
+    assert firsts.claimed_in(got, 5) == []
 
 
 def test_a_missing_name_comes_from_the_scores(tmp_path):
@@ -236,6 +308,8 @@ def test_champion_prints_the_title_commands(tmp_path, capsys):
                  'team modify title_pioneer_s1 prefix "[S1 Pioneer] "', "team join title_pioneer_s1 Alex"):
         assert f"  {line}\n" in out
     assert firsts.season_title(2)[0].startswith("title_")   # tools/season.py carries title_* teams
+    assert firsts.title_commands("odd name", 1)[-1] == 'team join title_pioneer_s1 "odd name"'
+    assert firsts.title_commands("Kai_2", 1)[-1] == "team join title_pioneer_s1 Kai_2"
 
 
 def test_champion_with_no_firsts_and_list(tmp_path, capsys):

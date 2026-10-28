@@ -54,6 +54,14 @@ def refuse(msg: str) -> str:
     return "return run " + say({"text": msg, "color": "red"})
 
 
+def score_check(holder: str, objective: str, least: int | None = None, most: int | None = None) -> dict:
+    """A predicate condition (26.x shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
+    test = {k: v for k, v in (("min", least), ("max", most)) if v is not None}
+    return {"type": "minecraft:int_value_check", "test": test,
+            "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": holder},
+                      "score": objective}}
+
+
 def mcmeta(description: str, fmt: int = DATA_FORMAT) -> str:
     return json.dumps({"pack": {"description": description, "min_format": fmt, "max_format": fmt}}, indent=2) + "\n"
 

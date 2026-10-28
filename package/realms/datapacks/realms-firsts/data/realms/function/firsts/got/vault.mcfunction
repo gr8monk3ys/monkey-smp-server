@@ -3,6 +3,8 @@
 advancement revoke @s only realms:firsts/vault
 execute if score #vault rf matches 1.. run return 0
 execute unless score #launched rw.day matches 1 run return 0
+# Not once the season is locked (the finale: adventure mode, the world archived).
+execute if score #season_locked ev.state matches 1 run return 0
 # Not with kit gear in the event arena, and not in creative or spectator (staff).
 execute if entity @s[tag=ev.arena] run return 0
 execute unless entity @s[gamemode=!creative,gamemode=!spectator] run return 0

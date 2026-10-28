@@ -11,38 +11,47 @@ lists every milestone and who holds it. At the season's end the player with the 
 
 How it works: one hidden advancement per milestone, with vanilla's own trigger (the same criteria as the
 vanilla advancement it mirrors), that fires only once Season I has launched (`#launched rw.day`, set by
-`realms:rules/launch`) and only while nobody holds that first. Its reward function checks the rest (not in the
-event arena, not in creative or spectator, the End open, Netherite armor allowed) and claims it. A claim is
+`realms:rules/launch`), only while nobody holds that first and the season isn't locked (`#season_locked`,
+events' season/lock), and the End one only while the End is open. Its reward function checks all that again and
+the rest (not in the event arena, not in creative or spectator, Netherite armor allowed, and for an item a player
+was carrying since test play: see CLEAN) and claims it. A claim is
 kept twice, for the tools: in command storage `realms:firsts held.<id>` ({name, order, week}: the holder's name,
 1 for the season's first claim and so on, and the challenge week it fell in) and as the score `rf.<id>` of the
 holder (the same order). `holders(world)` reads them from the saved world (feature code such as the weekly
-recap uses it: "firsts this week" is `claimed_in(world, week)`).
+recap uses it: "firsts this week" is `claimed_in(holders(world), week)`).
 
 Nothing is sold and nothing helps in a fight: a first is a line in chat and, for the most firsts, a title.
 Banned things are never milestones (no totems, crystals or pearls), and full Netherite only counts once the
 owners lift rule 24 (the realms-no-netherite-armor pack, while it is on, stamps the game time every second:
 NETHERITE_BEAT; a stamp under NETHERITE_STALE ticks old means the rule still holds).
-Test play doesn't count: nothing fires before the launch, and the first `rules/launch` of a world clears any
-first claimed by hand before it (`realms:firsts/launch`).
+Test play doesn't count: nothing fires before the launch, the first `rules/launch` of a world clears any
+first claimed by hand before it (`realms:firsts/launch`), and an item first (diamond, debris, mace, elytra)
+counts only for a player seen after the launch without that item on them (CLEAN), so one kept from test play
+doesn't claim it.
 
 The data pack (package/realms/datapacks/realms-firsts/, generated: edit this file, not it) has the staff
-commands too (docs/ADMIN.md, "Server Firsts"). Stdlib only plus tools/saved_world.py and tools/nbt.py, and
-Python 3.10 or newer, so the VPS runs it straight from the checkout.
+commands too (docs/ADMIN.md, "Server Firsts"). Stdlib only. Unlike most of tools/ (Python 3.11+,
+docs/MAINTAINING.md) this file runs on Python 3.10 too, as drops.py does, because staff run `list` and
+`champion` on the VPS, whose python3 may be 3.10: it reads only saved_world's scoreboard and command storage,
+never its 3.11-only Open Parties and Claims reader (tomllib).
 """
 import argparse
 import json
 import sys
+import textwrap
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
 import saved_world
 from challenges import LAUNCHED
-from datapacks import NS, function_tag, lines, mcmeta, text
+from datapacks import NS, function_tag, lines, mcmeta, score_check, text
 from events import ARENA_TAG
+from events import STATE as EVENTS
 from repo import Repo
 from rules import NETHERITE_BEAT
 from rules import OBJECTIVE as RULES
+from season import mc_string
 
 DATAPACK = "realms-firsts"
 FN = f"data/{NS}/function/firsts"
@@ -54,6 +63,12 @@ TRIGGER = "firsts"
 NAME_TAG = "rf.name"        # the item display that reads a holder's name for a moment
 NETHERITE_STALE = 100       # ticks: an older stamp means the no-Netherite-armor pack is off
 TITLE = ("title_pioneer_s{season}", "aqua", "[S{season} Pioneer] ")   # team, color, prefix (season.py carries title_*)
+SEASON_LOCKED = "#season_locked"   # in EVENTS: 1 once events' season/lock has locked the world at the season's end
+# An item first counts for a player only once they have been seen after the launch without that item on them
+# (the tag CLEAN + id, kept in their player data): one carried over from test play never claims it. Checked at
+# the launch and every second after it, for the slots inventory_changed watches (inventory, armor, offhand).
+CLEAN = "rf.clean."
+ITEM_SLOTS = ("container.*", "armor.*", "weapon.offhand")
 
 # ---------------------------------------------------------------- the milestones: edit here
 #
@@ -64,11 +79,14 @@ TITLE = ("title_pioneer_s{season}", "aqua", "[S{season} Pioneer] ")   # team, co
 # trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.3)
 # player    a predicate on the player, added to the launched-and-unclaimed check
 # end       only while the End is open (rule 23: realms:rules/open_end); netherite: only once rule 24 is lifted
+# item      an item first (holding()): it counts only for a player not carrying it over from test play (CLEAN)
+# reopen    what staff should know before reopening it (the menu and docs/ADMIN.md say the rest)
 # Listed roughly in the order a season reaches them.
 
 
 def holding(item: str) -> dict:
-    return {"items": [{"items": f"minecraft:{item}"}]}
+    """An item first: inventory_changed while it is on the player (the item names its CLEAN tag)."""
+    return {"trigger": "inventory_changed", "conditions": {"items": [{"items": f"minecraft:{item}"}]}, "item": item}
 
 
 def killed(mob: str) -> dict:
@@ -87,7 +105,7 @@ FULL_NETHERITE = {"type": "minecraft:entity_properties", "entity": "this", "pred
 
 MILESTONES = [
     dict(id="diamond", name="Find a diamond", mirrors="story/mine_diamond",
-         about="Hold a diamond: mined, looted or traded.", trigger="inventory_changed", conditions=holding("diamond")),
+         about="Hold a diamond: mined, looted or traded.", **holding("diamond")),
     dict(id="nether", name="Enter the Nether", mirrors="story/enter_the_nether",
          about="Go through a Nether portal (after the launch hour).",
          trigger="changed_dimension", conditions={"to": "minecraft:the_nether"}),
@@ -96,7 +114,7 @@ MILESTONES = [
     dict(id="bastion", name="Find a bastion", mirrors="nether/find_bastion",
          about="Set foot in a bastion remnant.", trigger="location", player=inside("bastion_remnant")),
     dict(id="debris", name="Find ancient debris", mirrors="nether/obtain_ancient_debris",
-         about="Hold a block of ancient debris.", trigger="inventory_changed", conditions=holding("ancient_debris")),
+         about="Hold a block of ancient debris.", **holding("ancient_debris")),
     dict(id="vault", name="Open a trial vault", mirrors="adventure/under_lock_and_key",
          about="Use a trial key (or an ominous one) on a vault in trial chambers.", trigger="item_used_on_block",
          conditions={"location": {"type": "minecraft:all_of", "terms": [
@@ -105,7 +123,7 @@ MILESTONES = [
               "predicate": {"items": ["minecraft:trial_key", "minecraft:ominous_trial_key"]}}]}}),
     dict(id="mace", name="Get a mace", mirrors=None,
          about="Hold a mace, from an ominous vault's heavy core. Enchanted maces stay banned (B2).",
-         trigger="inventory_changed", conditions=holding("mace")),
+         **holding("mace")),
     dict(id="raid", name="Win a raid", mirrors="adventure/hero_of_the_village",
          about="Defend a village through a whole raid.", trigger="hero_of_the_village"),
     dict(id="wither", name="Defeat the Wither", mirrors=None,
@@ -118,9 +136,12 @@ MILESTONES = [
          trigger="changed_dimension", conditions={"to": "minecraft:the_end"}),
     dict(id="dragon", name="Slay the dragon", mirrors="end/kill_dragon",
          about="Land the killing blow on the Ender Dragon.", trigger="player_killed_entity",
-         conditions=killed("ender_dragon")),
+         conditions=killed("ender_dragon"),
+         reopen="Players can't bring the dragon back (end crystals are banned), so a reopened dragon stays open "
+                "until staff respawn it by hand. To move it to the right player, reopen it and run claim/dragon "
+                "as them."),
     dict(id="elytra", name="Find an elytra", mirrors="end/elytra",
-         about="Hold an elytra, from an End ship.", trigger="inventory_changed", conditions=holding("elytra")),
+         about="Hold an elytra, from an End ship.", **holding("elytra")),
     dict(id="netherite", name="Wear full Netherite", mirrors=None, netherite=True,
          about="Wear all four pieces of Netherite armor, once the owners lift rule 24 (the Netherite age).",
          trigger="location", player=FULL_NETHERITE),
@@ -176,9 +197,9 @@ def holders(world: Path) -> list[First]:
     return sorted(found, key=lambda f: (f.order <= 0, f.order, ids.index(f.id)))
 
 
-def claimed_in(world: Path, week: int) -> list[First]:
-    """The firsts claimed in challenge week `week` (season_calendar.week_at), in the order they were claimed."""
-    return [f for f in holders(world) if f.week == week]
+def claimed_in(firsts: list[First], week: int) -> list[First]:
+    """Of holders()' list, the firsts claimed in challenge week `week` (season_calendar.week_at), in claim order."""
+    return [f for f in firsts if f.week == week]
 
 
 @dataclass(frozen=True)
@@ -205,25 +226,20 @@ def champion(firsts: list[First]) -> Standing | None:
 # ---------------------------------------------------------------- the data pack
 
 
-def fixed_score(holder: str, objective: str, least: int | None = None, most: int | None = None) -> dict:
-    test = {k: v for k, v in (("min", least), ("max", most)) if v is not None}
-    return {"type": "minecraft:int_value_check", "test": test,
-            "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": holder},
-                      "score": objective}}
-
-
 LAUNCHED_HOLDER, LAUNCHED_OBJECTIVE = LAUNCHED.split()
 
 
 def advancement(m: dict) -> dict:
-    """A hidden advancement: vanilla's criterion for the milestone, checked only after the launch and while
-    nobody holds the first (so it costs next to nothing once it is claimed). The reward claims it.
+    """A hidden advancement: vanilla's criterion for the milestone, checked only after the launch, before the
+    season's lock and while nobody holds the first (so it costs next to nothing once it is claimed). The reward
+    checks again and claims it.
 
     26.x shapes, as tools/challenges.py's: a condition names its kind with "type", a criterion's "player" is
     one condition (not a list), and entity predicates are components."""
-    terms = [fixed_score(LAUNCHED_HOLDER, LAUNCHED_OBJECTIVE, least=1), fixed_score(f"#{m['id']}", OBJ, most=0)]
+    terms = [score_check(LAUNCHED_HOLDER, LAUNCHED_OBJECTIVE, least=1), score_check(f"#{m['id']}", OBJ, most=0),
+             score_check(SEASON_LOCKED, EVENTS, most=0)]
     if m.get("end"):
-        terms.append(fixed_score("#end_open", RULES, least=1))
+        terms.append(score_check("#end_open", RULES, least=1))
     if m.get("player"):
         terms.append(m["player"])
     conditions = {**m.get("conditions", {}), "player": {"type": "minecraft:all_of", "terms": terms}}
@@ -258,9 +274,18 @@ def got_function(m: dict) -> str:
            f"advancement revoke @s only {NS}:firsts/{fid}",
            f"execute if score #{fid} {OBJ} matches 1.. run return 0",
            f"execute unless score {LAUNCHED} matches 1 run return 0",
+           "# Not once the season is locked (the finale: adventure mode, the world archived).",
+           f"execute if score {SEASON_LOCKED} {EVENTS} matches 1 run return 0",
            "# Not with kit gear in the event arena, and not in creative or spectator (staff).",
            f"execute if entity @s[tag={ARENA_TAG}] run return 0",
            "execute unless entity @s[gamemode=!creative,gamemode=!spectator] run return 0"]
+    if m.get("end"):
+        out += ["# Only while the End is open (the advancement checks it too).",
+                f"execute unless score #end_open {RULES} matches 1.. run return 0"]
+    if m.get("item"):
+        out += [f"# Not for {m['item'].replace('_', ' ')} carried over from test play: this player must have been seen",
+                "# without one on them since the launch (realms:firsts/clean).",
+                f"execute unless entity @s[tag={CLEAN}{fid}] run return 0"]
     if m.get("netherite"):
         out += [f"# Rule 24: while realms-no-netherite-armor is on it stamps {NETHERITE_BEAT} every second, and",
                 "# takes the armor off within one. No stamp at all (no such pack): the rule isn't there.",
@@ -298,6 +323,46 @@ def claim_function(m: dict) -> str:
     )
 
 
+def clean_function() -> str:
+    """Tags each online player who has no item first's item on them (CLEAN). From the launch on."""
+    out = ["# Each item first counts for a player only once they have been seen without its item since the launch,",
+           "# so one carried over from test play doesn't claim it. Run at the launch and every second after it."]
+    for m in MILESTONES:
+        if m.get("item"):
+            missing = " ".join(f"unless items entity @s {slot} minecraft:{m['item']}" for slot in ITEM_SLOTS)
+            out.append(f"execute as @a[tag=!{CLEAN}{m['id']}] {missing} run tag @s add {CLEAN}{m['id']}")
+    return lines(*out)
+
+
+def show_function(m: dict) -> str:
+    """The milestone's line in /trigger firsts, read as holders() reads the saved world: the name from storage,
+    else the holder by their rf.<id> score (online only: a pack can't print an offline score holder), and no
+    week when it is unknown (-1)."""
+    fid = m["id"]
+    hover = {"action": "show_text", "value": m["about"]}
+    name = {"text": m["name"], "color": "green", "hover_event": hover}
+    out = [f"# {m['name']}: its line in /trigger firsts (one tellraw of the six runs).",
+           f"execute unless score #{fid} {OBJ} matches 1.. run return run tellraw @s " + text(
+               " ", {**name, "color": "white"}, {"text": "  open", "color": "gray"}),
+           f"execute store success score #named {OBJ} if data storage {STORE} held.{fid}.name",
+           f'execute if data storage {STORE} held.{fid}{{name:""}} run scoreboard players set #named {OBJ} 0',
+           f"execute store success score #dated {OBJ} if data storage {STORE} held.{fid}.week",
+           f"execute if data storage {STORE} held.{fid}{{week:-1}} run scoreboard players set #dated {OBJ} 0"]
+    holder = f"@a[scores={{{OBJ}.{fid}=1..}}]"
+    who = [(f"if score #named {OBJ} matches 1", held(fid, "name", "yellow")),
+           (f"if score #named {OBJ} matches 0 if entity {holder}", {"selector": holder, "color": "yellow"}),
+           ("", {"text": "a player now offline", "color": "gray"})]
+    when = [(f"if score #dated {OBJ} matches 1", [{"text": "  week ", "color": "dark_gray"},
+                                                   held(fid, "week", "dark_gray")]),
+            ("", [])]
+    for who_if, who_part in who:
+        for when_if, when_parts in when:
+            cmd = "tellraw @s " + text(" ", name, {"text": "  ", "color": "gray"}, who_part, *when_parts)
+            cond = " ".join(c for c in (who_if, when_if) if c)
+            out.append(f"execute {cond} run return run {cmd}" if cond else cmd)
+    return lines(*out)
+
+
 def datapack_files() -> dict[str, str]:
     f: dict[str, str] = {}
     f["pack.mcmeta"] = mcmeta("Monkey SMP Server Firsts: the first to each milestone (generated by tools/firsts.py)")
@@ -317,6 +382,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/second.mcfunction"] = lines(
         f"scoreboard players enable @a {TRIGGER}",
+        f"execute if score {LAUNCHED} matches 1 run function {NS}:firsts/clean",
         f"schedule function {NS}:firsts/second 20t replace",
     )
     f[f"{FN}/tick.mcfunction"] = lines(f"execute as @a[scores={{{TRIGGER}=1..}}] run function {NS}:firsts/use")
@@ -335,7 +401,10 @@ def datapack_files() -> dict[str, str]:
         "# first claimed before it (by hand, in test play) is cleared; a launch run again later clears nothing.",
         f"execute if score {LAUNCHED} matches 1 run return 0",
         f"function {NS}:firsts/clear",
+        "# Whoever is online now without an item first's item can claim it from the start (no one-second gap).",
+        f"function {NS}:firsts/clean",
     )
+    f[f"{FN}/clean.mcfunction"] = clean_function()
     f[f"{FN}/clear.mcfunction"] = lines(
         "# Every first open again, the count from zero. Staff: only on a test server (docs/ADMIN.md).",
         f"data remove storage {STORE} held",
@@ -355,14 +424,7 @@ def datapack_files() -> dict[str, str]:
         "tellraw @s " + text("", {"text": "\nServer Firsts", "color": "gold", "bold": True},
                              {"text": "  the first on the server to each, for the season", "color": "gray"}),
     ]
-    for m in MILESTONES:
-        fid = m["id"]
-        hover = {"action": "show_text", "value": m["about"]}
-        show.append(f"execute if score #{fid} {OBJ} matches 1.. run tellraw @s " + text(
-            " ", {"text": m["name"], "color": "green", "hover_event": hover}, {"text": "  ", "color": "gray"},
-            held(fid, "name", "yellow"), {"text": "  week ", "color": "dark_gray"}, held(fid, "week", "dark_gray")))
-        show.append(f"execute unless score #{fid} {OBJ} matches 1.. run tellraw @s " + text(
-            " ", {"text": m["name"], "color": "white", "hover_event": hover}, {"text": "  open", "color": "gray"}))
+    show += [f"function {NS}:firsts/show/{m['id']}" for m in MILESTONES]
     show.append("tellraw @s " + text(
         "", {"text": "You hold ", "color": "gray"}, {"score": {"name": "@s", "objective": OBJ}, "color": "white"},
         {"text": ". The most firsts at the season's end earns a title.", "color": "gray"}))
@@ -373,9 +435,12 @@ def datapack_files() -> dict[str, str]:
         f[f"{ADVANCEMENT}/{fid}.json"] = json.dumps(advancement(m), indent=2)
         f[f"{FN}/got/{fid}.mcfunction"] = got_function(m)
         f[f"{FN}/claim/{fid}.mcfunction"] = claim_function(m)
+        f[f"{FN}/show/{fid}.mcfunction"] = show_function(m)
+        note = [f"# {line}" for line in textwrap.wrap(m["reopen"], 106)] if m.get("reopen") else []
         f[f"{FN}/reopen/{fid}.mcfunction"] = lines(
             f"# {m['name']}: nobody holds it any more, and the next to do it claims it. Staff: for a first taken",
             "# by a mistake or an exploit (docs/ADMIN.md, \"Server Firsts\").",
+            *note,
             f"data remove storage {STORE} held.{fid}",
             f"scoreboard players reset * {OBJ}.{fid}",
             f"scoreboard players set #{fid} {OBJ} 0",
@@ -398,9 +463,8 @@ def season_title(season: int) -> tuple[str, str, str]:
 def title_commands(player: str, season: int) -> list[str]:
     """What staff run once at the season's end (docs/SEASONS.md, "Ending a season")."""
     team, color, prefix = season_title(season)
-    name = player if all(c.isalnum() or c == "_" for c in player) else json.dumps(player)
     return [f"team add {team}", f"team modify {team} color {color}",
-            f"team modify {team} prefix {json.dumps(prefix)}", f"team join {team} {name}"]
+            f"team modify {team} prefix {json.dumps(prefix)}", f"team join {team} {mc_string(player)}"]
 
 
 def show_list(world: Path) -> int:
@@ -418,14 +482,14 @@ def show_list(world: Path) -> int:
 
 def show_champion(world: Path, season: int) -> int:
     firsts = holders(world)
-    table = standings(firsts)
-    if not table:
+    best = champion(firsts)
+    if best is None:
         print("No firsts claimed: no title this season.")
         return 1
+    table = standings(firsts)
     for i, s in enumerate(table[:5], 1):
         print(f"{i}. {s.player}: {s.count} first{'s' if s.count != 1 else ''} (reached at claim #{s.reached})")
-    best = table[0]
-    tied = [s.player for s in table[1:] if s.count == best.count]
+    tied = [s.player for s in table if s.count == best.count and s != best]
     if tied:
         print(f"Tied on {best.count} with {', '.join(tied)}: {best.player} reached it first.")
     print(f"\nThe season title goes to {best.player}. Run once, in the console or over RCON:")

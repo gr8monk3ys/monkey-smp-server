@@ -454,7 +454,7 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
     text = (DEPLOY / SCRIPT).read_text()
     assert text.startswith("#!/bin/sh\n") and "set -eu" in text
     assert ". \"$ENV_FILE\"" not in text and "rcon.password" not in text and "WEBHOOK" not in text
-    assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR"}
+    assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
     assert 'python3 -B "$TOOL" commands "$WORLD"' in text and "WORLD=$LIVE_DIR/server/world" in text
     # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals or codes.
     assert '"$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker"' in text

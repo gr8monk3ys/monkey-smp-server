@@ -27,6 +27,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=shops-claims
+. "$(dirname -- "$0")/lib.sh"
+
 case "${1:-}" in
     '') MODE=apply ;;
     --check) MODE=check ;;
@@ -36,15 +39,8 @@ esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it stops the server and edits its files as their owner' >&2; exit 1; }
 
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-LOG=${SHOPS_LOG:-/var/log/realms-shops-claims.log}
+LOG_TO=${SHOPS_LOG:-/var/log/realms-shops-claims.log}
 
-# "setting NAME DEFAULT": NAME's value in the env file (the last one, quotes dropped), else DEFAULT.
-setting() {
-    v=''
-    [ ! -r "$ENV_FILE" ] ||
-        v=$(sed -n "s/^[[:space:]]*$1=//p" "$ENV_FILE" | tail -n 1 | sed -e 's/[[:space:]]*$//' -e "s/^[\"']//" -e "s/[\"']\$//")
-    printf '%s' "${v:-$2}"
-}
 LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
 LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
 WARN_MINUTES=${WARN_MINUTES:-$(setting WARN_MINUTES 5)}
@@ -61,18 +57,6 @@ ENTRY="hand\$$BLOCK"  # the same entry as defaults/config/openpartiesandclaims-s
 SERVICE_USER=realms   # the owner of the deploy lock (docs/LIVE.md)
 
 umask 022
-log() {
-    line="$(date '+%Y-%m-%d %H:%M:%S') [shops-claims] $*"
-    printf '%s\n' "$line" >>"$LOG"
-    printf '%s\n' "$line"
-}
-die() { log "ERROR: $*"; exit 1; }
-# Runs a command with its output in the log file only.
-logged() { "$@" >>"$LOG" 2>&1; }
-
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 
 wait_for_live() {
     waited=0
@@ -127,10 +111,8 @@ trap 'exit 129' HUP
 locked=''
 take_lock() {
     [ -z "$locked" ] || return 0
-    [ -e "$LOCK_FILE" ] || runuser -u "$SERVICE_USER" -- touch "$LOCK_FILE"
-    exec 9<"$LOCK_FILE"
     log 'waiting for the deploy lock'
-    flock -w 1800 9 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
+    deploy_lock 1800 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
     locked=1
 }
 
@@ -186,7 +168,7 @@ for tool in docker flock runuser awk grep sed stat tail wc mktemp chmod; do
     command -v "$tool" >/dev/null || die "$tool is missing"
 done
 cd /
-log "started ($MODE); log: $LOG"
+log "started ($MODE); log: $LOG_TO"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || die "$LIVE_DIR has no docker/compose.yaml (LIVE_DIR in $ENV_FILE?)"
 shops=''
 for jar in "$SERVER_DIR"/mods/universal_shops-*.jar; do

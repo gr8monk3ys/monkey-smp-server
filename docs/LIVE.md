@@ -643,7 +643,7 @@ systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min sh /srv/rea
 journalctl -fu realms-loadtest
 ```
 
-Before a release ships the script, copy `deploy/realms-loadtest.sh` and `tools/loadtest.py` to `/root/` and
+Before a release ships the script, copy `deploy/realms-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` to `/root/` and
 run `systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/realms-loadtest.sh`.
 
 Why it is safe for the live world and for players:

@@ -21,6 +21,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=standings
+. "$(dirname -- "$0")/lib.sh"
+
 case "${1:-}" in
     close | board | show) MODE=$1 ;;
     *) echo "usage: sh $0 close | board | show" >&2; exit 2 ;;
@@ -38,8 +41,6 @@ DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 STANDINGS_WEBHOOK_URL=${STANDINGS_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 export STANDINGS_WEBHOOK_URL
 
-log() { printf '%s [standings] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-
 WORLD=$LIVE_DIR/server/world
 TOOL=$REPO_DIR/tools/standings.py
 [ -f "$TOOL" ] || { log "no $TOOL: is a release with the standings live?"; exit 1; }
@@ -51,11 +52,10 @@ fi
 # Root would make files realms can't change, and a lock file realms-deploy.sh can't open (fs.protected_regular).
 [ "$(id -u)" != 0 ] || { echo "run it as realms: sudo -u realms sh $0 $MODE" >&2; exit 1; }
 
-exec 9>>"$LOCK_FILE"
 if [ "$MODE" = close ]; then
-    flock -w 1800 9 || { log 'the deploy lock was taken for 30 minutes; trying again later'; exit 1; }
+    deploy_lock 1800 || { log 'the deploy lock was taken for 30 minutes; trying again later'; exit 1; }
 else
-    flock -w 60 9 || { log 'a deploy, restart or backup is running; skipping this update'; exit 0; }
+    deploy_lock 60 || { log 'a deploy, restart or backup is running; skipping this update'; exit 0; }
 fi
 
 mkdir -p "$STANDINGS_DIR"

@@ -437,5 +437,5 @@ def test_units_run_the_script_as_realms_on_sunday_evening():
     board = (DEPLOY / "realms-standings-board.service").read_text()
     assert "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-standings.sh board" in board
     script = (DEPLOY / "realms-standings.sh").read_text()
-    assert "flock -w 1800 9" in script and "export STANDINGS_WEBHOOK_URL" in script
+    assert "deploy_lock 1800" in script and "export STANDINGS_WEBHOOK_URL" in script
     assert "STANDINGS_WEBHOOK_URL=" in (DEPLOY / "realms-deploy.env.example").read_text()

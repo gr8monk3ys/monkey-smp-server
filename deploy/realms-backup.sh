@@ -30,26 +30,16 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=backup
+. "$(dirname -- "$0")/lib.sh"
+
 ENV_FILE=${REALMS_BACKUP_ENV:-/etc/realms-backup.env}
 DEPLOY_ENV=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 STATE_DIR=/var/lib/realms-backup
-LOCK_FILE=/run/realms-backup.lock
+BACKUP_LOCK=/run/realms-backup.lock
 # The longest the server may go without saving while restic reads the world. The first backup sends
 # the whole world; later ones only what changed, usually in a minute or two.
 BACKUP_TIMEOUT=45m
-
-log() { printf '%s [backup] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-reason=''
-die() { reason=$*; log "ERROR: $*"; exit 1; }
-
-# The value of $2 in the KEY=value file $1 (else $3), exactly as written: not run through the shell,
-# so a password may hold $, quotes, spaces or backslashes. KEY="value" and KEY='value' work too.
-setting() {
-    v=''
-    [ ! -r "$1" ] || v=$(sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*//p" "$1" | tail -n 1 |
-        sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/")
-    printf '%s' "${v:-${3:-}}"
-}
 
 mode=backup
 if [ $# -gt 0 ]; then
@@ -66,19 +56,17 @@ fi
 [ "$(id -u)" = 0 ] || die "run this as root: only root may read $ENV_FILE"
 cd /
 
-LIVE_DIR=$(setting "$DEPLOY_ENV" LIVE_DIR /srv/realms/TheRealms-Server)
-DEPLOY_LOCK=$(setting "$DEPLOY_ENV" LOCK_FILE /tmp/realms-deploy.lock)
-WEBHOOK=$(setting "$DEPLOY_ENV" DISCORD_WEBHOOK_URL)
+LIVE_DIR=$(setting_in "$DEPLOY_ENV" LIVE_DIR /srv/realms/TheRealms-Server)
+DEPLOY_LOCK=$(setting_in "$DEPLOY_ENV" LOCK_FILE /tmp/realms-deploy.lock)
+WEBHOOK=$(setting_in "$DEPLOY_ENV" DISCORD_WEBHOOK_URL)
 # Every snapshot holds this path; restores name it (docs/LIVE.md).
 SERVER=$LIVE_DIR/server
-COMPOSE="docker compose --project-directory $LIVE_DIR/docker -f $LIVE_DIR/docker/compose.yaml"
-rcon() { $COMPOSE exec -T realms realms rcon "$1" >/dev/null 2>&1; }
 
 if [ "$mode" = save-on ]; then
     # Needs no settings: only whether a backup left saving off.
     [ -e "$STATE_DIR/saving-off" ] || exit 0
     log 'a backup stopped before turning saving back on: save-on'
-    rcon save-on || die 'save-on failed: run  docker compose exec realms realms rcon save-on'
+    rcon save-on >/dev/null || die 'save-on failed: run  docker compose exec realms realms rcon save-on'
     rm -f "$STATE_DIR/saving-off"
     exit 0
 fi
@@ -90,19 +78,19 @@ case "$(stat -c '%u:%a' "$ENV_FILE")" in
     *) log "WARNING: other users can read $ENV_FILE; make it root-only: chown root: $ENV_FILE && chmod 600 $ENV_FILE" ;;
 esac
 for key in RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
-    value=$(setting "$ENV_FILE" "$key")
+    value=$(setting_in "$ENV_FILE" "$key")
     [ -n "$value" ] || die "$key is empty in $ENV_FILE"
     export "$key=$value"
 done
 value=''
-AWS_DEFAULT_REGION=$(setting "$ENV_FILE" AWS_DEFAULT_REGION auto)
+AWS_DEFAULT_REGION=$(setting_in "$ENV_FILE" AWS_DEFAULT_REGION auto)
 RESTIC_CACHE_DIR=${RESTIC_CACHE_DIR:-/var/cache/realms-backup}
 export AWS_DEFAULT_REGION RESTIC_CACHE_DIR
-KEEP_HOURLY=$(setting "$ENV_FILE" KEEP_HOURLY 48)
-KEEP_DAILY=$(setting "$ENV_FILE" KEEP_DAILY 14)
-KEEP_WEEKLY=$(setting "$ENV_FILE" KEEP_WEEKLY 8)
-KEEP_MONTHLY=$(setting "$ENV_FILE" KEEP_MONTHLY 6)
-SNAPSHOT_HOST=$(setting "$ENV_FILE" SNAPSHOT_HOST monkey-smp)
+KEEP_HOURLY=$(setting_in "$ENV_FILE" KEEP_HOURLY 48)
+KEEP_DAILY=$(setting_in "$ENV_FILE" KEEP_DAILY 14)
+KEEP_WEEKLY=$(setting_in "$ENV_FILE" KEEP_WEEKLY 8)
+KEEP_MONTHLY=$(setting_in "$ENV_FILE" KEEP_MONTHLY 6)
+SNAPSHOT_HOST=$(setting_in "$ENV_FILE" SNAPSHOT_HOST monkey-smp)
 for n in "$KEEP_HOURLY" "$KEEP_DAILY" "$KEEP_WEEKLY" "$KEEP_MONTHLY"; do
     case "$n" in
         '' | *[!0-9]*) die "KEEP_HOURLY, KEEP_DAILY, KEEP_WEEKLY and KEEP_MONTHLY must be whole numbers, not '$n'" ;;
@@ -113,7 +101,7 @@ command -v restic >/dev/null || die 'restic is not installed (docs/LIVE.md, "Bac
 [ "$mode" != restic ] || exec restic "$@"
 
 # One backup at a time.
-exec 8>"$LOCK_FILE"
+exec 8>"$BACKUP_LOCK"
 flock -w 3600 8 || die 'another backup has been running for an hour'
 mkdir -p "$STATE_DIR"
 
@@ -130,7 +118,7 @@ discord() {
 
 save_on() {
     [ -e "$STATE_DIR/saving-off" ] || return 0
-    if rcon save-on; then
+    if rcon save-on >/dev/null; then
         rm -f "$STATE_DIR/saving-off"
         log 'saving is on again'
     else
@@ -153,7 +141,7 @@ on_exit() {
         fi
     elif [ "$rc" != 0 ] && [ ! -e "$STATE_DIR/failing" ]; then
         touch "$STATE_DIR/failing"
-        discord "Monkey SMP off-site backup FAILED: ${reason:-see the log}. It tries again every hour. Check: journalctl -u realms-backup"
+        discord "Monkey SMP off-site backup FAILED: ${DIED:-see the log}. It tries again every hour. Check: journalctl -u realms-backup"
     fi
 }
 trap on_exit EXIT
@@ -187,11 +175,10 @@ backup() {
     # for flock, and root may not open another user's file in /tmp for writing
     # (fs.protected_regular). No lock file means no deploy has run since boot.
     if [ -e "$DEPLOY_LOCK" ]; then
-        exec 9<"$DEPLOY_LOCK"
-        flock -w 2700 9 || die 'a deploy has held its lock for 45 minutes'
+        deploy_lock 2700 "$DEPLOY_LOCK" || die 'a deploy has held its lock for 45 minutes'
     fi
 
-    if ! rcon list; then
+    if ! rcon list >/dev/null; then
         skipped=$(cat "$STATE_DIR/skipped" 2>/dev/null || true)
         case "$skipped" in '' | *[!0-9]*) skipped=0 ;; esac
         skipped=$((skipped + 1))
@@ -201,13 +188,13 @@ backup() {
         return 0
     fi
     rm -f "$STATE_DIR/skipped"
-    [ -s "$SERVER/$(setting "$SERVER/server.properties" level-name world)/level.dat" ] ||
+    [ -s "$SERVER/$(setting_in "$SERVER/server.properties" level-name world)/level.dat" ] ||
         die "there is no world with a level.dat in $SERVER"
 
     log 'save-off, save-all flush'
     touch "$STATE_DIR/saving-off"
-    rcon save-off || die 'save-off failed'
-    rcon 'save-all flush' || die 'save-all flush failed'
+    rcon save-off >/dev/null || die 'save-off failed'
+    rcon 'save-all flush' >/dev/null || die 'save-all flush failed'
     sleep 3
 
     log "sending $SERVER to R2"

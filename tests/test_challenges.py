@@ -488,8 +488,9 @@ def test_the_week_script_sends_the_commands_hourly():
     # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals.
     assert '"$TOOL" send --docker "$LIVE_DIR/docker"' in text and "Unknown function" not in text
     assert "--check" in text and "--install" in text
-    # It reads its two settings without sourcing the env file (which holds the webhooks), and never a password.
-    assert "realms-deploy.env" in text and not re.search(r"^\s*(\.|source)\s", text, re.M)
+    # It reads its three settings without sourcing the env file (which holds the webhooks), and never a password.
+    assert "realms-deploy.env" in text
+    assert re.findall(r"^\s*(?:\.|source)\s.*", text, re.M) == ['. "$(dirname -- "$0")/lib.sh"']
     assert "WEBHOOK_URL" not in text and "rcon.password" not in text and "RCON_PASSWORD" not in text
     service = (REPO.root / "deploy" / "realms-week.service").read_text(encoding="utf-8")
     assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-week.sh" in service

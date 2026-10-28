@@ -34,6 +34,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=upgrade-2.5.0
+. "$(dirname -- "$0")/lib.sh"
+
 case "${1:-}" in
     '') MODE=apply ;;
     --check) MODE=check ;;
@@ -43,15 +46,8 @@ esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it installs packages and timers and stops the server' >&2; exit 1; }
 
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-LOG=${UPGRADE_LOG:-/var/log/realms-upgrade-2.5.0.log}
+LOG_TO=${UPGRADE_LOG:-/var/log/realms-upgrade-2.5.0.log}
 
-# "setting NAME DEFAULT": NAME's value in the env file (the last one, quotes dropped), else DEFAULT.
-setting() {
-    v=''
-    [ ! -r "$ENV_FILE" ] ||
-        v=$(sed -n "s/^[[:space:]]*$1=//p" "$ENV_FILE" | tail -n 1 | sed -e 's/[[:space:]]*$//' -e "s/^[\"']//" -e "s/[\"']\$//")
-    printf '%s' "${v:-$2}"
-}
 REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
 LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
 LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
@@ -85,18 +81,6 @@ SERVICE_USER=realms  # User= in the two .service files
 TAB=$(printf '\t')
 
 umask 022
-log() {
-    line="$(date '+%Y-%m-%d %H:%M:%S') [upgrade-2.5.0] $*"
-    printf '%s\n' "$line" >>"$LOG"
-    printf '%s\n' "$line"
-}
-die() { log "ERROR: $*"; exit 1; }
-# Runs a command with its output in the log file only.
-logged() { "$@" >>"$LOG" 2>&1; }
-
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
 
 wait_for_live() {
     waited=0
@@ -155,7 +139,7 @@ for tool in docker flock runuser systemctl apt-get install awk cmp stat sed grep
     command -v "$tool" >/dev/null || die "$tool is missing"
 done
 cd /
-log "started ($MODE); log: $LOG"
+log "started ($MODE); log: $LOG_TO"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || die "$LIVE_DIR has no docker/compose.yaml (LIVE_DIR in $ENV_FILE?)"
 for u in $UNITS realms-updates.sh; do
     [ -f "$REPO_DIR/deploy/$u" ] ||
@@ -173,17 +157,14 @@ fi
 locked=''
 take_lock() {
     [ -z "$locked" ] || return 0
-    [ -e "$LOCK_FILE" ] || runuser -u "$SERVICE_USER" -- touch "$LOCK_FILE"
-    exec 9<"$LOCK_FILE"
     log 'waiting for the deploy lock'
-    flock -w 1800 9 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
+    deploy_lock 1800 || die 'a deploy, restart or backup has held the deploy lock for 30 minutes; try again later'
     locked=1
 }
 
 # ---------------------------------------------------------------- 1. python3
 
-python_ok() { python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null; }
-if python_ok; then
+if python_ok 10; then
     log "python3: already installed ($(python3 --version 2>&1))"
 elif [ "$MODE" = check ]; then
     log 'python3: to do (missing, or older than 3.10)'
@@ -193,8 +174,8 @@ else
     export DEBIAN_FRONTEND=noninteractive
     logged apt-get install -y --no-install-recommends python3 ||
         { logged apt-get update && logged apt-get install -y --no-install-recommends python3; } ||
-        die "apt-get could not install python3 (see $LOG)"
-    python_ok || die "python3 is installed but older than 3.10: $(python3 --version 2>&1)"
+        die "apt-get could not install python3 (see $LOG_TO)"
+    python_ok 10 || die "python3 is installed but older than 3.10: $(python3 --version 2>&1)"
     log "python3: installed ($(python3 --version 2>&1))"
 fi
 
@@ -395,13 +376,12 @@ fi
 
 # ---------------------------------------------------------------- 4. the timers
 
-changed=''
-for u in $UNITS; do
-    cmp -s "$REPO_DIR/deploy/$u" "/etc/systemd/system/$u" || changed="$changed $u"
-done
+# $UNITS is a list of unit names.
+# shellcheck disable=SC2086
+changed=$(changed_units $UNITS)
 idle=''
 for t in $TIMERS; do
-    { systemctl is-enabled --quiet "$t" && systemctl is-active --quiet "$t"; } 2>/dev/null || idle="$idle $t"
+    timer_running "$t" || idle="$idle $t"
 done
 if [ -z "$changed$idle" ]; then
     log 'timers: already installed and running'

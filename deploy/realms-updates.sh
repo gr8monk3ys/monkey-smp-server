@@ -14,6 +14,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=updates
+. "$(dirname -- "$0")/lib.sh"
+
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 # shellcheck disable=SC1090
 [ ! -f "$ENV_FILE" ] || . "$ENV_FILE"
@@ -21,8 +24,6 @@ ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 REPO_DIR=${REPO_DIR:-/srv/realms/repo}
 DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
-
-log() { printf '%s [updates] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT

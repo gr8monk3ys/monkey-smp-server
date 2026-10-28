@@ -29,6 +29,9 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+LOG_NAME=loadtest
+. "$(dirname -- "$0")/lib.sh"
+
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 # shellcheck disable=SC1090
 [ ! -f "$ENV_FILE" ] || . "$ENV_FILE"
@@ -52,11 +55,6 @@ IMAGE=realms-loadtest
 CARPET_URL=https://cdn.modrinth.com/data/TQTTVgYE/versions/yt9oDFOj/fabric-carpet-26.3%2Bv260915.jar
 CARPET_SHA512=7a479ba69eb5049cb94365d5044bd58c9f970c50b3484861fe3675f1917f7c99c1b1f50a5e01bdd9ded940d76a995539009a3656e05be2f513f20ec14de991a7
 
-COMPOSE="docker compose --project-directory $LIVE_DIR/docker -f $LIVE_DIR/docker/compose.yaml"
-
-log() { printf '%s [loadtest] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-die() { log "ERROR: $*"; exit 1; }
-
 # Posts $1 to the webhook $2. The messages are ours (no quotes or backslashes), so printf makes valid JSON.
 discord() {
     [ -n "$2" ] || return 0
@@ -65,8 +63,6 @@ discord() {
         log 'could not post to Discord'
 }
 
-running() { [ -n "$($COMPOSE ps -q --status running realms 2>/dev/null)" ]; }
-rcon() { $COMPOSE exec -T realms realms rcon "$1" 2>/dev/null; }
 players_online() { rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1; }
 
 wait_for_live() {
@@ -100,9 +96,7 @@ grep -q -- '--spark' "$LOADTEST_PY" ||
 
 # One at a time with deploys, the daily restart and off-site backups. Read-only: root may not open another
 # user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.
-[ -e "$LOCK_FILE" ] || runuser -u "$(stat -c %U "$LIVE_DIR")" -- touch "$LOCK_FILE"
-exec 9<"$LOCK_FILE"
-flock -w 600 9 || die 'a deploy, restart or backup has held the deploy lock for 10 minutes; try again later'
+deploy_lock 600 || die 'a deploy, restart or backup has held the deploy lock for 10 minutes; try again later'
 
 running || die 'the live server is not running; start it first'
 progress=$(rcon 'chunky progress' || true)
@@ -139,7 +133,7 @@ cleanup() {
     if [ -n "$stopped" ]; then
         [ "$status" = 0 ] || discord 'The load test stopped with an error; see journalctl -u realms-loadtest.' "$STAFF_WEBHOOK_URL"
         log 'starting the live server again'
-        if $COMPOSE up -d realms && wait_for_live; then
+        if compose up -d realms && wait_for_live; then
             log 'the live server is back up'
             discord 'Monkey SMP is back up after the performance test.' "$DISCORD_WEBHOOK_URL"
         else
@@ -194,7 +188,7 @@ fi
 
 stopped=1
 log 'stopping the live server'
-$COMPOSE stop
+compose stop
 
 free_gb=$(awk '/^MemAvailable:/ { print int($2 / 1048576) }' /proc/meminfo)
 [ "$free_gb" -ge $((mem + 2)) ] ||

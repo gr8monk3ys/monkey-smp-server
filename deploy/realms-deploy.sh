@@ -28,6 +28,10 @@
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
 
+# Loaded before anything touches the checkout (tests/test_deploy_lib.py).
+LOG_NAME=deploy
+. "$(dirname -- "$0")/lib.sh"
+
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
 # shellcheck disable=SC1090
 [ ! -f "$ENV_FILE" ] || . "$ENV_FILE"
@@ -47,10 +51,6 @@ KEEP_BACKUPS=${KEEP_BACKUPS:-3}
 
 STATE="$LIVE_DIR/.deployed"
 FAILED="$LIVE_DIR/.deploy-failed"
-COMPOSE="docker compose --project-directory $LIVE_DIR/docker -f $LIVE_DIR/docker/compose.yaml"
-
-log() { printf '%s [deploy] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-die() { log "ERROR: $*"; exit 1; }
 
 case "$KEEP_BACKUPS" in
     '' | *[!0-9]* | 0*) die "KEEP_BACKUPS must be a whole number of at least 1, not '$KEEP_BACKUPS'" ;;
@@ -71,11 +71,10 @@ done
 # One deploy at a time: the timer and a manual run must not overlap. The daily restart takes the same
 # lock, so it never runs during a deploy (or an off-site backup, which waits for this lock too); it waits
 # for one to finish, and then usually finds the server freshly started and skips.
-exec 9>"$LOCK_FILE"
 if [ -n "$restart" ]; then
-    flock -w 1800 9 || { log 'the deploy lock was taken for 30 minutes; skipping the daily restart'; exit 0; }
+    deploy_lock 1800 || { log 'the deploy lock was taken for 30 minutes; skipping the daily restart'; exit 0; }
 else
-    flock -n 9 || { log 'another deploy is running; skipping'; exit 0; }
+    deploy_lock 0 || { log 'another deploy is running; skipping'; exit 0; }
 fi
 
 # DEPLOY_WINDOW "HH:MM-HH:MM" as two HHMM numbers; a window may cross midnight (23:00-01:00).
@@ -121,10 +120,6 @@ discord() {
         log 'could not post to Discord'
 }
 
-running() { [ -n "$($COMPOSE ps -q --status running realms 2>/dev/null)" ]; }
-
-rcon() { $COMPOSE exec -T realms realms rcon "$1" 2>/dev/null; }
-
 players_online() {
     # "There are 3 of a max of 20 players online: ..."
     rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1
@@ -144,7 +139,7 @@ warn_players() {
 
 # Recreates the container (its entrypoint installs, then starts) and waits for RCON to answer.
 restart_and_wait() {
-    $COMPOSE up -d --build --force-recreate
+    compose up -d --build --force-recreate
     waited=0
     while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
         sleep 15
@@ -157,7 +152,7 @@ restart_and_wait() {
 
 # Whole hours since the container started (a deploy recreates it, and so does a crash); empty if unknown.
 uptime_hours() {
-    id=$($COMPOSE ps -q realms 2>/dev/null) || return 0
+    id=$(compose ps -q realms 2>/dev/null) || return 0
     [ -n "$id" ] || return 0
     started=$(docker inspect -f '{{.State.StartedAt}}' "$id" 2>/dev/null) || return 0
     since=$(date -d "$started" +%s 2>/dev/null) || return 0
@@ -291,7 +286,7 @@ fi
 if running; then
     [ -n "$now" ] || warn_players "Server update to $label" 'Server update'
     log 'backing up the world'
-    $COMPOSE exec -T realms realms backup || die 'backup failed; not deploying'
+    compose exec -T realms realms backup || die 'backup failed; not deploying'
     # realms backup keeps 14; the off-site copy holds the history, so keep only the newest few.
     ls -1 "$LIVE_DIR/backups" | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort -r |
         tail -n +$((KEEP_BACKUPS + 1)) | while read -r old; do rm -rf "${LIVE_DIR:?}/backups/$old"; done

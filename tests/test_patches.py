@@ -180,3 +180,28 @@ def test_golden_entry_is_a_consistent_patched_entry():
     assert entries.matches(entry, (GOLDEN_DIR / "input.zip").read_bytes())
     assert entry["patch"]["base_sha512"] == entry["hashes"]["sha512"]
 
+
+# --- a patch never replaces a file whose place in the zip matters (the installer moves replaced files last) ---
+
+@pytest.mark.parametrize("name", ["META-INF/MANIFEST.MF", "meta-inf/manifest.mf"])
+def test_make_and_apply_refuse_the_jar_manifest(name):
+    jar = make_zip({name: b"Manifest-Version: 1.0\n", "a/B.class": b"old"})
+    edited = make_zip({name: b"Manifest-Version: 2.0\n", "a/B.class": b"old"})
+    with pytest.raises(patches.PatchError, match="(?i)META-INF/MANIFEST.MF"):
+        patches.make(jar, edited)
+    with pytest.raises(patches.PatchError, match="(?i)META-INF/MANIFEST.MF"):
+        patches.apply(jar, {name: b"Manifest-Version: 2.0\n"})
+
+
+def test_make_still_allows_other_files_of_a_jar():
+    jar = make_zip({"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n", "a/B.class": b"old"})
+    edited = make_zip({"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n", "a/B.class": b"new"})
+    assert patches.make(jar, edited) == {"a/B.class": b"new"}
+
+
+def test_check_catches_a_patch_of_the_jar_manifest(release):
+    repo, manifest, kind, entry = release
+    (patches.folder(repo, entry) / "META-INF").mkdir()
+    (patches.folder(repo, entry) / "META-INF" / "MANIFEST.MF").write_bytes(b"Manifest-Version: 1.0\n")
+    errors = patches.check(manifest, repo)
+    assert any(e.startswith(f"{kind} {entry['file']}:") and "META-INF/MANIFEST.MF" in e for e in errors), errors

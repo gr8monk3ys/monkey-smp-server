@@ -67,9 +67,10 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    `chunky radius 500` and `chunky start`. It carries on after a restart because the default
    `config/chunky/config.json` sets `continueOnRestart`; on a server set up before that, set it to `true`
    in that file once and run `chunky continue`.
-7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
-   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
-   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC. Then
+7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-deploy.{service,timer} /etc/systemd/system/`,
+   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer`. Then
+   `sudo sh /srv/realms/repo/deploy/realms-day.sh --install` for the day timer, which counts "days played" for
+   the wardrobe (docs/RETENTION.md) at midnight UTC (`--check` shows what it sends and whether it runs). Then
    `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
    server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
    (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
@@ -267,6 +268,22 @@ sudo sh /srv/realms/repo/deploy/realms-drops.sh --install
 It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 6 to 10 PM Pacific, and
 reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
+
+### The day timer as a job (the release with `deploy/realms-day.sh`)
+
+The week, drops and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
+lock and reads each answer for a refusal. Before this release `realms-day.service` ran `docker compose ... rcon`
+itself, without either. Once the release is live, replace it from the deployed checkout (it copies only the
+units that changed, and restarting the timer doesn't start a new day):
+
+```sh
+sh /srv/realms/repo/deploy/realms-day.sh --check
+sudo sh /srv/realms/repo/deploy/realms-day.sh --install
+```
+
+Until then the old unit keeps working. Like the old one, the new one tries again every 10 minutes while the
+server is down; it now also does when the server turns the command down (say, the wardrobe pack is off), until
+it is accepted: `journalctl -u realms-day` shows each try.
 
 ### The spawn NPCs (the release with spawn NPCs)
 

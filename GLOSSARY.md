@@ -102,6 +102,10 @@ _Avoid_: export, server pack, server package
 A second hostname for the live server, one per place it's promoted (`yt.monkeysmp.lscaturchio.xyz`), with its own SRV and A records, so joins can be counted by where players found it (docs/PROMOTION.md).
 _Avoid_: vanity domain, referral link, alias
 
+**Timed job**:
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops (every 10 minutes) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+_Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
+
 ## Lifecycle
 
 **Install**:

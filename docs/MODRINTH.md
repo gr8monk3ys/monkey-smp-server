@@ -17,8 +17,9 @@ yet: it waits for Modrinth's answer on paid access (below), and the owner hasn't
 ## Before the first publish (the owner, once)
 
 1. **Account.** Make a Modrinth account (signing in with GitHub works) and turn on two-factor auth.
-2. **The modpack project.** On modrinth.com, create a **Project** (Modrinth's create dialog now offers only Project and Server;
-   the uploaded `.mrpack` makes it a modpack): name `Monkey SMP`, URL `monkeysmp`. It starts as a private draft. Fill it in from [The modpack listing](#the-modpack-listing).
+2. **The modpack project.** On modrinth.com, create a project: name `Monkey SMP`, URL `monkeysmp`. The
+   create dialog offers only Project and Server; pick Project, and the uploaded `.mrpack` makes it a modpack.
+   It starts as a private draft. Fill it in from [The modpack listing](#the-modpack-listing).
 3. **A token.** Settings > Personal access tokens (modrinth.com/settings/pats) > Create a token: name
    `monkey-smp release`, scopes **Read projects, Write projects, Read versions, Create versions**, with an
    expiry. Keep it in your password manager. It never goes in the repo, an issue, a chat or a command line.
@@ -104,7 +105,7 @@ You need a server pass and your Minecraft name on the whitelist. You can get bot
 1. Install this pack in the [Modrinth App](https://modrinth.com/app). In the instance settings, under Java and memory, give it at least 6 GB.
 2. Press Play, go to Multiplayer > Add Server, enter `monkeysmp.lscaturchio.xyz` and join.
 
-The app updates the pack whenever the server moves to a new version. A PC with 16 GB of RAM and a mid-range graphics card runs it fine. If you get stuck, ask on [Discord](https://discord.gg/C25hy9Ca9W).
+The app updates the pack whenever the server needs a new one. A PC with 16 GB of RAM and a mid-range graphics card runs it fine. If you get stuck, ask on [Discord](https://discord.gg/C25hy9Ca9W).
 
 ## What the server is like
 

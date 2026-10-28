@@ -532,7 +532,8 @@ storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex 
 Until it is approved, checkout takes only test payments and the public store address isn't known.
 `monkeysmp.tebex.io` belongs to another server, so read the address off the Tebex panel once the store is live.
 Then make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
-only after that fill in `STORE_URL` (below).
+only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
+and terms against the table below before the first real sale.
 
 Tebex can't change the price of a subscription already sold, so set these before the store link goes on
 the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-sale.md):

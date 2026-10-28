@@ -19,20 +19,22 @@ rounds of restructuring each give one shared job a single home:
   `realms-week.sh`, `realms-drops.sh` and `tools/standings.py` go through it; the tests use its `Recorder` fake.
 - **`deploy/lib.sh`** holds the helpers every VPS script had copied (PR #59): reading `/etc/realms-deploy.env`
   (one parser: the last value as written wins), logging, the compose command, RCON, the deploy lock and timer
-  installs. Two behaviour changes on the VPS:
+  installs. Three behaviour changes on the VPS:
   - The week and drops timers now wait up to 30 minutes for the deploy lock before sending, so they no longer
     land while a deploy, the daily restart or an off-site backup has the server stopped.
   - A script's `ERROR:` line now goes to stderr, not stdout. Under systemd both reach the journal unchanged;
     a hand run that pipes stdout sees the error on the terminal instead.
-  - A deploy lock the script can't open is an error, not "busy", and root never creates or opens the lock
-    through a link someone left in `/tmp`.
+  - A deploy lock the script can't open is an error, not "busy": the script stops with an error instead of
+    skipping quietly. Root never creates or opens the lock through a link someone left in `/tmp`.
 - **`tools/nbt.py`** reads every world file (PR #60): `season`, `standings`, `drops` and `map_border` used to
   decode NBT four different ways. A damaged file is now one `ValueError` that names the file (`map_border`
   prints `error: …` and exits 2) instead of a traceback, `season` and `map_border` accept files that aren't
   gzipped, and a damaged claims file with a negative list count is an error instead of reading as "no claims".
 
-Before Season I (Saturday 21 November), run the week, drops and standings jobs once on the VPS after this
-deploys (`--check` first; docs/LIVE.md), so the new lock and RCON paths have run once against the live world.
+Before Season I (Saturday 21 November), once this is live, run each VPS job once against the live world, so
+the new lock and RCON paths have run there: `realms-week.sh --check` and `realms-drops.sh --check` first, then
+the jobs themselves, and `realms-standings.sh show` then `board` (standings has no `--check`; `show` changes
+nothing). The commands are in docs/LIVE.md and docs/ADMIN.md.
 
 ## [2.8.0] - 2026-10-27
 

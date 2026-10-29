@@ -96,7 +96,7 @@ def reference(slug: str, base_sha512: str) -> dict:
 
 
 def folder(repo, entry: dict) -> Path:
-    return repo.realms.joinpath(*entry["patch"]["path"].split("/"))
+    return repo.monkey.joinpath(*entry["patch"]["path"].split("/"))
 
 
 def check(manifest: dict, repo) -> list[str]:

@@ -1,0 +1,20 @@
+# One chat line per challenge that is on, with this player's progress (the menu and the hello).
+execute if score #solo rc.week matches 0 run function monkey:challenges/line/logs
+execute if score #solo rc.week matches 1 run function monkey:challenges/line/days
+execute if score #solo rc.week matches 2 run function monkey:challenges/line/iron
+execute if score #solo rc.week matches 3 run function monkey:challenges/line/hostiles
+execute if score #solo rc.week matches 4 run function monkey:challenges/line/fish
+execute if score #solo rc.week matches 5 run function monkey:challenges/line/diamonds
+execute if score #solo rc.week matches 6 run function monkey:challenges/line/breed
+execute if score #solo rc.week matches 7 run function monkey:challenges/line/trade
+execute if score #solo rc.week matches 8 run function monkey:challenges/line/enchant
+execute if score #solo rc.week matches 9 run function monkey:challenges/line/debris
+execute if score #faction rc.week matches 0 run function monkey:challenges/line/event
+execute if score #faction rc.week matches 1 run function monkey:challenges/line/raid
+execute if score #faction rc.week matches 2 run function monkey:challenges/line/fortress
+execute if score #faction rc.week matches 3 run function monkey:challenges/line/breezes
+execute if score #faction rc.week matches 4 run function monkey:challenges/line/brutes
+execute if score #explore rc.week matches 0 run function monkey:challenges/line/loot
+execute if score #explore rc.week matches 1 run function monkey:challenges/line/structures
+execute if score #explore rc.week matches 2 run function monkey:challenges/line/nether
+execute if score #explore rc.week matches 3 run function monkey:challenges/line/rare

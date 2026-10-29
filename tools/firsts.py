@@ -1,6 +1,6 @@
 """Server Firsts: the first player on the server to reach each of the season's milestones keeps it for the season.
 
-    python tools/datapacks.py                          regenerate the realms-firsts data pack (with the others)
+    python tools/datapacks.py                          regenerate the monkey-firsts data pack (with the others)
     python tools/firsts.py list WORLD                  every first and who holds it, from the saved world
     python tools/firsts.py champion WORLD --season 1   who has the most (the season title), and the staff commands
 
@@ -11,25 +11,25 @@ lists every milestone and who holds it. At the season's end the player with the 
 
 How it works: one hidden advancement per milestone, with vanilla's own trigger (the same criteria as the
 vanilla advancement it mirrors), that fires only once Season I has launched (`#launched rw.day`, set by
-`realms:rules/launch`), only while nobody holds that first and the season isn't locked (`#season_locked`,
+`monkey:rules/launch`), only while nobody holds that first and the season isn't locked (`#season_locked`,
 events' season/lock), and the End one only while the End is open. Its reward function checks all that again and
 the rest (not in the event arena, not in creative or spectator, Netherite armor allowed, and for an item a player
 was carrying since test play: see CLEAN) and claims it. A claim is
-kept twice, for the tools: in command storage `realms:firsts held.<id>` ({name, order, week}: the holder's name,
+kept twice, for the tools: in command storage `monkey:firsts held.<id>` ({name, order, week}: the holder's name,
 1 for the season's first claim and so on, and the challenge week it fell in) and as the score `rf.<id>` of the
 holder (the same order). `holders(world)` reads them from the saved world (feature code such as the weekly
 recap uses it: "firsts this week" is `claimed_in(holders(world), week)`).
 
 Nothing is sold and nothing helps in a fight: a first is a line in chat and, for the most firsts, a title.
 Banned things are never milestones (no totems, crystals or pearls), and full Netherite only counts once the
-owners lift rule 24 (the realms-no-netherite-armor pack, while it is on, stamps the game time every second:
+owners lift rule 24 (the monkey-no-netherite-armor pack, while it is on, stamps the game time every second:
 NETHERITE_BEAT; a stamp under NETHERITE_STALE ticks old means the rule still holds).
 Test play doesn't count: nothing fires before the launch, the first `rules/launch` of a world clears any
-first claimed by hand before it (`realms:firsts/launch`), and an item first (diamond, debris, mace, elytra)
+first claimed by hand before it (`monkey:firsts/launch`), and an item first (diamond, debris, mace, elytra)
 counts only for a player seen after the launch without that item on them (CLEAN), so one kept from test play
 doesn't claim it.
 
-The data pack (package/realms/datapacks/realms-firsts/, generated: edit this file, not it) has the staff
+The data pack (package/monkey/datapacks/monkey-firsts/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Server Firsts"). Stdlib only. Unlike most of tools/ (Python 3.11+,
 docs/MAINTAINING.md) this file runs on Python 3.10 too, as drops.py does, because staff run `list` and
 `champion` on the VPS, whose python3 may be 3.10: it reads only saved_world's scoreboard and command storage,
@@ -53,7 +53,7 @@ from rules import NETHERITE_BEAT
 from rules import OBJECTIVE as RULES
 from season import mc_string
 
-DATAPACK = "realms-firsts"
+DATAPACK = "monkey-firsts"
 FN = f"data/{NS}/function/firsts"
 ADVANCEMENT = f"data/{NS}/advancement/firsts"
 STORE = f"{NS}:firsts"
@@ -78,7 +78,7 @@ ITEM_SLOTS = ("container.*", "armor.*", "weapon.offhand")
 # about     the hover text: what counts
 # trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.3)
 # player    a predicate on the player, added to the launched-and-unclaimed check
-# end       only while the End is open (rule 23: realms:rules/open_end); netherite: only once rule 24 is lifted
+# end       only while the End is open (rule 23: monkey:rules/open_end); netherite: only once rule 24 is lifted
 # item      an item first (holding()): it counts only for a player not carrying it over from test play (CLEAN)
 # reopen    what staff should know before reopening it (the menu and docs/ADMIN.md say the rest)
 # Listed roughly in the order a season reaches them.
@@ -168,7 +168,7 @@ class First:
 def holders(world: Path, scores: dict[str, dict[str, int]] | None = None) -> list[First]:
     """Every first claimed in the saved world, in the order they were claimed (empty before any).
 
-    Read from command storage realms:firsts held.<id> ({name, order, week}); a holder whose name isn't there
+    Read from command storage monkey:firsts held.<id> ({name, order, week}); a holder whose name isn't there
     (storage not saved yet, or the in-game name lookup failed) is taken from the scores rf.<id>. A file not
     shaped as the server saves it is a ValueError (saved_world's). `scores`: the saved scoreboard's scores, when
     the caller has read them already."""
@@ -286,10 +286,10 @@ def got_function(m: dict) -> str:
                 f"execute unless score #end_open {RULES} matches 1.. run return 0"]
     if m.get("item"):
         out += [f"# Not for {m['item'].replace('_', ' ')} carried over from test play: this player must have been seen",
-                "# without one on them since the launch (realms:firsts/clean).",
+                "# without one on them since the launch (monkey:firsts/clean).",
                 f"execute unless entity @s[tag={CLEAN}{fid}] run return 0"]
     if m.get("netherite"):
-        out += [f"# Rule 24: while realms-no-netherite-armor is on it stamps {NETHERITE_BEAT} every second, and",
+        out += [f"# Rule 24: while monkey-no-netherite-armor is on it stamps {NETHERITE_BEAT} every second, and",
                 "# takes the armor off within one. No stamp at all (no such pack): the rule isn't there.",
                 f"execute store result score #age {OBJ} run time query gametime",
                 f"scoreboard players operation #age {OBJ} -= {NETHERITE_BEAT} {RULES}",
@@ -399,7 +399,7 @@ def datapack_files() -> dict[str, str]:
         f"kill @e[type=minecraft:item_display,tag={NAME_TAG}]",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
-        "# Run by realms:rules/launch before challenges/launch sets #launched. At a world's first launch, a",
+        "# Run by monkey:rules/launch before challenges/launch sets #launched. At a world's first launch, a",
         "# first claimed before it (by hand, in test play) is cleared; a launch run again later clears nothing.",
         f"execute if score {LAUNCHED} matches 1 run return 0",
         f"function {NS}:firsts/clear",
@@ -451,7 +451,7 @@ def datapack_files() -> dict[str, str]:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- the command line

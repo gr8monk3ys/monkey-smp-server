@@ -13,7 +13,7 @@ package/downloads/
 package/smoke-console.log*
 package/pwsh/
 package/exports/
-package/.realms-launch
+package/.monkey-launch
 package/loadtest/
 package/scheduled-backups.log
 

@@ -6,13 +6,13 @@
 # server's own copy (deploy/claims-exception.sh does the work). Run it as root. Started with systemd-run it carries
 # on if the SSH connection drops while the server is stopped:
 #
-#   systemd-run --unit=realms-npcs --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/npc-claims.sh
-#   journalctl -fu realms-npcs
+#   systemd-run --unit=monkey-npcs --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/npc-claims.sh
+#   journalctl -fu monkey-npcs
 #
 #   sh npc-claims.sh --check   says whether it is still to do, and changes nothing
 #   sh npc-claims.sh --now     stops the server without the warning in chat
 #
-# Its log is /var/log/realms-npc-claims.log (or NPCS_LOG).
+# Its log is /var/log/monkey-npc-claims.log (or NPCS_LOG).
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -21,7 +21,7 @@ LOG_NAME=npc-claims
 . "$(dirname -- "$0")/lib.sh"
 
 WHAT='NPCs in claims'
-LOG_TO=${NPCS_LOG:-/var/log/realms-npc-claims.log}
+LOG_TO=${NPCS_LOG:-/var/log/monkey-npc-claims.log}
 KEEP_AS=before-npcs
 KEY=forcedEntityProtectionExceptionList
 # The same entries as defaults/config/openpartiesandclaims-server.toml.

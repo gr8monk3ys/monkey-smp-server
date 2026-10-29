@@ -1,0 +1,10 @@
+# Runs monkey-backup.service every hour on the hour (and after boot if a run was missed).
+[Unit]
+Description=Monkey SMP: back up the world to R2 every hour
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

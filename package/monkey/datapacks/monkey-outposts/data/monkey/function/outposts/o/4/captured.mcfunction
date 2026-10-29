@@ -1,0 +1,8 @@
+scoreboard players operation #o4 op.hold = #c op
+scoreboard players set #o4 op.prog 0
+scoreboard players reset #o4 op.by
+function monkey:outposts/o/4/label
+execute as @e[type=minecraft:text_display,tag=op.l4] run data modify entity @s text set from storage monkey:outposts label.o4
+execute store result storage monkey:outposts tmp.c int 1 run scoreboard players get #c op
+function monkey:outposts/o/4/taken with storage monkey:outposts tmp
+execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.4 1.4

@@ -7,7 +7,7 @@ import pytest
 
 import rcon
 
-DOCKER = Path("/srv/realms/TheRealms-Server/docker")
+DOCKER = Path("/srv/monkey/MonkeySMP-Server/docker")
 
 
 class FakeRun:
@@ -28,11 +28,11 @@ def test_docker_sends_through_the_containers_own_rcon():
     run = FakeRun(stdout="There are 0 of a max of 30 players online\n")
     assert rcon.Docker(DOCKER, run)("list") == "There are 0 of a max of 30 players online"
     assert run.argv == [["docker", "compose", "--project-directory", str(DOCKER), "-f", str(DOCKER / "compose.yaml"),
-                         "exec", "-T", "realms", "realms", "rcon", "list"]]
+                         "exec", "-T", "monkey", "monkey", "rcon", "list"]]
 
 
 @pytest.mark.parametrize("run", [
-    FakeRun(stdout="Unknown function realms:drops/try"),
+    FakeRun(stdout="Unknown function monkey:drops/try"),
     FakeRun(stdout="Unknown or incomplete command, see below for error\n...<--[HERE]"),
     FakeRun(stdout="Incorrect argument for command"),
     FakeRun(stderr="RCON is turned off", code=1),
@@ -42,13 +42,13 @@ def test_docker_sends_through_the_containers_own_rcon():
 ])
 def test_docker_raises_when_a_command_is_refused_or_fails(run):
     with pytest.raises(rcon.RconError):
-        rcon.Docker(DOCKER, run)("function realms:drops/try {night:1}")
+        rcon.Docker(DOCKER, run)("function monkey:drops/try {night:1}")
 
 
 @pytest.mark.parametrize(("run", "up"), [(FakeRun(stdout="3f2a9c\n"), True), (FakeRun(stdout=""), False)])
 def test_docker_running_asks_compose(run, up):
     assert rcon.Docker(DOCKER, run).running() is up
-    assert run.argv[0][-5:] == ["ps", "-q", "--status", "running", "realms"]
+    assert run.argv[0][-5:] == ["ps", "-q", "--status", "running", "monkey"]
 
 
 @pytest.mark.parametrize("run", [FakeRun(stderr="permission denied", code=1), FakeRun(error=OSError("no docker"))])
@@ -58,8 +58,8 @@ def test_a_broken_docker_is_not_a_stopped_server(run):
 
 
 def test_docker_warnings_stay_out_of_the_answer():
-    run = FakeRun(stdout="Function realms:drops/try returned 13\n", stderr="WARN[0000] `version` is obsolete\n")
-    assert rcon.Docker(DOCKER, run)("function realms:drops/try") == "Function realms:drops/try returned 13"
+    run = FakeRun(stdout="Function monkey:drops/try returned 13\n", stderr="WARN[0000] `version` is obsolete\n")
+    assert rcon.Docker(DOCKER, run)("function monkey:drops/try") == "Function monkey:drops/try returned 13"
 
 
 def test_rcon_turned_off_on_stderr_is_still_refused():
@@ -68,13 +68,13 @@ def test_rcon_turned_off_on_stderr_is_still_refused():
 
 
 def test_recorder_answers_by_command_or_prefix_and_refuses_like_the_server():
-    server = rcon.Recorder({"list": "0 players", "function realms:drops/": "Function returned 1"})
+    server = rcon.Recorder({"list": "0 players", "function monkey:drops/": "Function returned 1"})
     assert server("list") == "0 players"
-    assert server("function realms:drops/try") == "Function returned 1"
+    assert server("function monkey:drops/try") == "Function returned 1"
     assert server("say hi") == ""
     with pytest.raises(rcon.RconError):
-        rcon.Recorder({"function": "Unknown function realms:x"})("function realms:x")
-    assert server.sent == ["list", "function realms:drops/try", "say hi"]
+        rcon.Recorder({"function": "Unknown function monkey:x"})("function monkey:x")
+    assert server.sent == ["list", "function monkey:drops/try", "say hi"]
 
 
 def test_send_with_stop_sends_nothing_after_a_failure():
@@ -106,15 +106,15 @@ def test_a_required_job_fails_when_the_server_is_not_running():
 
 
 def test_coded_reads_the_call_through_its_codes_and_storage_by_key():
-    describe = rcon.coded("function realms:x/try", {1: "started", 5: "off"})
-    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 5") == (
-        "function realms:x/try {n:1}: off")
-    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 9") == (
-        "function realms:x/try {n:1}: Function realms:x/try returned 9")
-    assert describe("function realms:x/try {n:1}", "") == "function realms:x/try {n:1}: ok"
-    assert describe("data modify storage realms:x spots set value [{x:1,z:2}]", "") == "spots sent: ok"
-    assert describe("function realms:x/stop", "Function realms:x/stop returned 1") == (
-        "function realms:x/stop: Function realms:x/stop returned 1")
+    describe = rcon.coded("function monkey:x/try", {1: "started", 5: "off"})
+    assert describe("function monkey:x/try {n:1}", "Function monkey:x/try returned 5") == (
+        "function monkey:x/try {n:1}: off")
+    assert describe("function monkey:x/try {n:1}", "Function monkey:x/try returned 9") == (
+        "function monkey:x/try {n:1}: Function monkey:x/try returned 9")
+    assert describe("function monkey:x/try {n:1}", "") == "function monkey:x/try {n:1}: ok"
+    assert describe("data modify storage monkey:x spots set value [{x:1,z:2}]", "") == "spots sent: ok"
+    assert describe("function monkey:x/stop", "Function monkey:x/stop returned 1") == (
+        "function monkey:x/stop: Function monkey:x/stop returned 1")
 
 
 def test_send_carries_on_past_a_failure_and_says_so():

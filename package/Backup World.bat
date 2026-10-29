@@ -1,7 +1,7 @@
 @echo off
 rem Copies the world and settings into the backups folder. Safe while the server runs.
 title Monkey SMP - Backup World
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0realms\realms.ps1" backup
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0monkey\monkey.ps1" backup
 if errorlevel 1 (
   echo.
   echo Something went wrong - see the message above. READ ME FIRST.txt has help.

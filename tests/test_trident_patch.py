@@ -44,7 +44,7 @@ def test_no_strike_near_spawn_or_a_player_in_grace():
     strike = text(STRIKE)
     assert "positioned ~-64 -64 ~-64 as @e[type=minecraft:trident,tag=tawc.hit,dx=128,dy=384,dz=128]" in strike
     assert "as @a[distance=..6]" in strike
-    assert "armor.body *[custom_data~{realms_grace:{}}]" in strike
+    assert "armor.body *[custom_data~{monkey_grace:{}}]" in strike
     lines = strike.splitlines()
     summon = next(i for i, line in enumerate(lines) if "summon minecraft:lightning_bolt" in line)
     assert all("remove tawc.hit" not in line for line in lines[summon:-1])
@@ -57,5 +57,5 @@ def test_a_trident_is_struck_once():
 
 
 def test_the_manifest_pins_the_patch_to_the_mod_jar():
-    entry = next(e for e in load_json(REPO.realms / "manifest.json")["mods"] if e["slug"] == SLUG)
+    entry = next(e for e in load_json(REPO.monkey / "manifest.json")["mods"] if e["slug"] == SLUG)
     assert entry["patch"] == patches.reference(SLUG, entry["hashes"]["sha512"])

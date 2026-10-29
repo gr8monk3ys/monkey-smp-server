@@ -8,7 +8,7 @@ Only stable releases for the same Minecraft version are considered. The server i
 stable build, or for Fabric the newest stable loader for the Minecraft version and/or the newest
 stable installer (one server update; the launcher jar is downloaded to pin its size and hash).
 Java is a newer Temurin release of the pinned Java major, taken only once Adoptium has it for every
-platform; PowerShell (package/realms/pwsh.lock, used by realms.sh on Linux and macOS) is the newest LTS
+platform; PowerShell (package/monkey/pwsh.lock, used by monkey.sh on Linux and macOS) is the newest LTS
 release. Both are pinned from the checksums their publishers list (re-checked by validate.py --online).
 The pinned Java builds and pwsh.lock are also compared with what Adoptium and GitHub list for them now;
 a pin that no longer matches is reported as a problem.

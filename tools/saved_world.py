@@ -9,7 +9,7 @@
     saved_world.claims(folder, saved_world.OVERWORLD)   # claim file -> one dimension's claimed chunks [(x, z)]
     saved_world.claim_counts(folder)                    # claim file -> chunks claimed in every dimension
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
-    saved_world.command_storage(folder, "realms")       # `data ... storage realms:<key>`: key -> compound (None)
+    saved_world.command_storage(folder, "monkey")       # `data ... storage monkey:<key>`: key -> compound (None)
     saved_world.advancements(folder, {"minecraft:end/kill_dragon"})   # player UUID -> advancement -> when done
 
 The files, relative to the world folder:

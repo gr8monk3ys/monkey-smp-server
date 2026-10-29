@@ -1,14 +1,14 @@
 """Supply drops: on weeknight evenings, once enough players are online, chests land outside every territory.
 
     python tools/drops.py spots WORLD [--at TIME]      the spots a drop would try now, and why (changes nothing)
-    python tools/drops.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-drops.sh)
-    python tools/datapacks.py                          regenerates the realms-drops data pack (with the others)
+    python tools/drops.py commands WORLD [--at TIME]   the RCON commands for now (deploy/monkey-drops.sh)
+    python tools/datapacks.py                          regenerates the monkey-drops data pack (with the others)
 
 When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (HOURS here; the nights are
 tools/season_calendar.py's drop_night).
-deploy/realms-drops.sh sends `commands` every 10 minutes; outside those hours there are none. The pack starts
+deploy/monkey-drops.sh sends `commands` every 10 minutes; outside those hours there are none. The pack starts
 the night's drop the first time it is asked while MIN_PLAYERS or more are online in survival (staff change it
-in game: `function realms:drops/min {players:N}`), no drop ran that night, and no event is on (the arena, a
+in game: `function monkey:drops/min {players:N}`), no drop ran that night, and no event is on (the arena, a
 raid, Anarchy, the season lock). One drop a night at most.
 
 Where: Minecraft can't see claims, so this script picks the spots, from the files the server saves (as it
@@ -29,11 +29,11 @@ never beats progression or what players trade). The chests despawn after DESPAWN
 is left in them; an emptied chest goes at once, and the drop ends when every chest is empty or broken.
 
 A Meteor (tools/omens.py, an omen) is the same drop with a 5-minute warning (METEOR_COUNTDOWN) and one
-chest with more in it (METEOR_LOOT on top of LOOT): `function realms:drops/meteor`, run after the spots
+chest with more in it (METEOR_LOOT on top of LOOT): `function monkey:drops/meteor`, run after the spots
 are in storage as the try is, with the same return codes. It is extra: it neither needs nor uses up the
 night's drop (omens come once or twice a week), but never runs while a drop is on.
 
-The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
+The data pack (package/monkey/datapacks/monkey-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
 Stdlib only plus tools/map_border.py, tools/saved_world.py, tools/nbt.py and tools/season_calendar.py, and
 Python 3.10 or newer, so the VPS runs it straight from the checkout.
@@ -54,7 +54,7 @@ from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
 
-DATAPACK = "realms-drops"
+DATAPACK = "monkey-drops"
 FN = f"data/{NS}/function/drops"
 STORE = f"{NS}:drops"
 LOOT_TABLE = f"{NS}:drops/supply"
@@ -62,7 +62,7 @@ BAR = f"{NS}:drop"
 OBJ = "dr"
 
 HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
-SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
+SLOT_MINUTES = 10           # how often deploy/monkey-drops.timer asks
 
 MIN_PLAYERS = 4             # survival players online for the weeknight drop, and for each further chest
 MAX_CHESTS = 3
@@ -131,10 +131,10 @@ OPEN = ["minecraft:air", "minecraft:cave_air", "minecraft:short_grass", "minecra
         "minecraft:short_dry_grass", "minecraft:snow", "#minecraft:small_flowers"]
 OPTIONAL = {"minecraft:short_dry_grass"}   # newer blocks: the tag still loads on a Minecraft without them
 
-# What `function realms:drops/try` returns, for the timer's log (meaning()).
+# What `function monkey:drops/try` returns, for the timer's log (meaning()).
 TRY_CODES = {
     1: "started: checking the ground at the spots",
-    10: "automatic drops are off (function realms:drops/on)",
+    10: "automatic drops are off (function monkey:drops/on)",
     11: "a drop is already on",
     12: "tonight's drop already happened",
     13: "an event is on (the arena, a raid, Anarchy or the season lock)",
@@ -241,7 +241,7 @@ def spots(world: Path, seed: str, count: int = SPOTS) -> list[tuple[int, int]]:
 
 
 def commands(world: Path, when: dt.datetime) -> list[str]:
-    """What deploy/realms-drops.sh sends: nothing outside drop hours, else the spots and the try."""
+    """What deploy/monkey-drops.sh sends: nothing outside drop hours, else the spots and the try."""
     night = night_of(when)
     if night is None:
         return []
@@ -334,7 +334,7 @@ def datapack_files() -> dict[str, str]:
 
     # ---- starting
     f[f"{FN}/try.mcfunction"] = lines(
-        "# The weeknight drop: deploy/realms-drops.sh calls this every 10 minutes in drop hours, after putting",
+        "# The weeknight drop: deploy/monkey-drops.sh calls this every 10 minutes in drop hours, after putting",
         f"# the spots in storage {STORE} spots. Returns why it didn't start (tools/drops.py TRY_CODES).",
         f"execute unless score #auto {OBJ} matches 1 run return 10",
         f"execute if score #state {OBJ} matches 1.. run return 11",
@@ -646,7 +646,7 @@ def help_function(files: dict[str, str]) -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- main
@@ -688,7 +688,7 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Supply drops: the spots, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
-    server.job_subcommands(sub, "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)",
+    server.job_subcommands(sub, "sends them to the running server (deploy/monkey-drops.sh, every 10 minutes)",
                            world=True, others=[("spots", "the spots a drop would try now, and why")])
     args = ap.parse_args(argv)
     if args.command == "spots":

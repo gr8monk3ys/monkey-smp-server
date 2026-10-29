@@ -1,0 +1,14 @@
+# Posts Monkey SMP news to the public Discord channel (deploy/monkey-news.sh, tools/news.py). Started every 10
+# minutes by monkey-news.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-news.sh --install`
+# (docs/LIVE.md). Skips the run when a deploy, restart or backup holds the deploy lock.
+[Unit]
+Description=Monkey SMP: news to Discord
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-news.sh
+TimeoutStartSec=5min
+Nice=10

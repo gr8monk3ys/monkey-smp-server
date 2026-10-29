@@ -1,6 +1,6 @@
 """Load-test an installed server package with Carpet fake players, and profile it.
 
-  python tools/loadtest.py C:/temp/realms-test/TheRealms-Server --carpet C:/Downloads/fabric-carpet-26.3.jar
+  python tools/loadtest.py C:/temp/monkey-test/MonkeySMP-Server --carpet C:/Downloads/fabric-carpet-26.3.jar
       Starts the server in that folder (an unzipped release installed once, e.g. by tests/smoke.ps1, so it
       has its own ports and a world), spawns --players fake players with Carpet over RCON, waits --warmup
       seconds, then samples `tick query` every 10 s for --minutes while Java Flight Recorder records CPU
@@ -252,9 +252,9 @@ def powershell(root: Path) -> list[str]:
 
 
 def launch_arguments(root: Path, memory_gb: int) -> list[str]:
-    """The JVM and server arguments the package's own launcher uses (Get-LaunchArguments in Realms.psm1)."""
-    script = (f"Import-Module '{root / 'realms' / 'Realms.psm1'}'; "
-              f"$ctx = New-RealmsContext -Root '{root}' -RealmsDir '{root / 'realms'}' -NonInteractive; "
+    """The JVM and server arguments the package's own launcher uses (Get-LaunchArguments in Monkey.psm1)."""
+    script = (f"Import-Module '{root / 'monkey' / 'Monkey.psm1'}'; "
+              f"$ctx = New-MonkeyContext -Root '{root}' -MonkeyDir '{root / 'monkey'}' -NonInteractive; "
               f"Get-LaunchArguments -Manifest $ctx.Manifest -MemoryGB {memory_gb}")
     out = subprocess.run([*powershell(root), "-Command", script],
                          capture_output=True, text=True, check=True).stdout
@@ -277,7 +277,7 @@ def wait_for_rcon(proc: subprocess.Popen, port: int, password: str, timeout_s: i
 
 def planned_parking(root: Path, slugs: list[str], parked: Path) -> list[tuple[Path, Path]]:
     """(jar in server/mods, where it waits during the run) for each mod slug to leave out."""
-    manifest = json.loads((root / "realms" / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((root / "monkey" / "manifest.json").read_text(encoding="utf-8"))
     files = {m["slug"]: m["file"] for m in manifest.get("mods", [])}
     unknown = [s for s in slugs if s not in files]
     if unknown:
@@ -287,7 +287,7 @@ def planned_parking(root: Path, slugs: list[str], parked: Path) -> list[tuple[Pa
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    ap.add_argument("root", type=Path, help="an installed server package (the folder with realms/ and server/)")
+    ap.add_argument("root", type=Path, help="an installed server package (the folder with monkey/ and server/)")
     ap.add_argument("--carpet", type=Path, required=True, help="the Carpet mod jar for the pack's Minecraft version")
     ap.add_argument("--players", type=int, default=25)
     ap.add_argument("--scenario", choices=("still", "walk", "explore"), default="still")

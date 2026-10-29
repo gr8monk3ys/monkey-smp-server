@@ -27,5 +27,5 @@ def test_patching_an_already_patched_class_is_refused():
 
 
 def test_the_manifest_pins_the_patch_to_the_loot_restock_jar():
-    entry = next(e for e in load_json(REPO.realms / "manifest.json")["mods"] if e["slug"] == "lootrestock")
+    entry = next(e for e in load_json(REPO.monkey / "manifest.json")["mods"] if e["slug"] == "lootrestock")
     assert entry["patch"] == patches.reference("lootrestock", entry["hashes"]["sha512"])

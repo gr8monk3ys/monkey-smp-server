@@ -35,9 +35,9 @@ $ErrorActionPreference = 'Stop'
 $script:UserAgent = 'gr8monk3ys/monkey-smp-server'
 $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 # The key of our profile in launcher_profiles.json. Fixed, so updates replace it instead of adding more.
-$script:ProfileKey = 'the-realms'
-$script:StateFileName = '.realms-client-state.json'
-$script:BackupSuffix = '.the-realms-backup'
+$script:ProfileKey = 'monkey-smp'
+$script:StateFileName = '.monkey-client-state.json'
+$script:BackupSuffix = '.monkey-smp-backup'
 # The Microsoft Store / Xbox app launcher keeps its profiles in the second file. Both are updated if present.
 $script:ProfileFiles = @('launcher_profiles.json', 'launcher_profiles_microsoft_store.json')
 $script:LauncherProcesses = @('MinecraftLauncher', 'Minecraft')
@@ -223,15 +223,15 @@ function Get-ClientMemoryGB {
 
 <#
 .SYNOPSIS
-    The one TheRealms-Client-*.mrpack in $Folder (where the player unzipped the download).
+    The one MonkeySMP-Client-*.mrpack in $Folder (where the player unzipped the download).
 #>
 function Find-ClientPack {
     param([Parameter(Mandatory)] [string]$Folder)
-    $found = @(Get-ChildItem -LiteralPath $Folder -Filter 'TheRealms-Client-*.mrpack' -File -ErrorAction SilentlyContinue)
+    $found = @(Get-ChildItem -LiteralPath $Folder -Filter 'MonkeySMP-Client-*.mrpack' -File -ErrorAction SilentlyContinue)
     if ($found.Count -eq 1) { return $found[0].FullName }
     if (-not $found.Count) {
-        throw ("Couldn't find the client pack (TheRealms-Client-<version>.mrpack) in $Folder. Unzip the whole " +
-            "TheRealms-Player download first (right-click it > Extract All), then run the installer from the unzipped folder.")
+        throw ("Couldn't find the client pack (MonkeySMP-Client-<version>.mrpack) in $Folder. Unzip the whole " +
+            "MonkeySMP-Player download first (right-click it > Extract All), then run the installer from the unzipped folder.")
     }
     throw ("Found more than one client pack in ${Folder}: $(($found | ForEach-Object { $_.Name }) -join ', '). " +
         'Keep only the newest one, or unzip the new download into an empty folder.')
@@ -328,7 +328,7 @@ function Read-ClientPack {
 function Read-FabricProfile {
     param([Parameter(Mandatory)] [string]$Path, [Parameter(Mandatory)] $Pack)
     if (-not $Path -or -not [IO.File]::Exists($Path)) {
-        throw "The Fabric profile (installer\fabric-profile.json) is missing. Unzip the whole TheRealms-Player download again."
+        throw "The Fabric profile (installer\fabric-profile.json) is missing. Unzip the whole MonkeySMP-Player download again."
     }
     try { $json = ConvertFrom-JsonText (Read-TextFile $Path) } catch { throw "$Path is not valid JSON: $($_.Exception.Message)" }
     $want = "fabric-loader-$($Pack.Loader)-$($Pack.Minecraft)"
@@ -336,7 +336,7 @@ function Read-FabricProfile {
     $parent = [string](Get-Field $json 'inheritsFrom')
     if ($id -ne $want -or $parent -ne $Pack.Minecraft) {
         throw ("The Fabric profile is for '$id' (Minecraft '$parent'), but the client pack needs '$want'. " +
-            'The download is mixed up; get the TheRealms-Player zip again.')
+            'The download is mixed up; get the MonkeySMP-Player zip again.')
     }
     return [pscustomobject]@{ Id = $id; Path = $Path }
 }
@@ -395,7 +395,7 @@ function Get-LauncherTimestamp { return (Get-Date).ToUniversalTime().ToString("y
 <#
 .SYNOPSIS
     Sets (or with -Remove, deletes) our profile in one launcher_profiles.json and keeps every other
-    key exactly as it was. The first change makes <file>.the-realms-backup. Returns $true if the file changed.
+    key exactly as it was. The first change makes <file>.monkey-smp-backup. Returns $true if the file changed.
 .PARAMETER Fields
     The profile fields to set. Other fields of an existing profile (e.g. a resolution the player set) are kept.
 #>
@@ -513,7 +513,7 @@ function Save-ClientFile($Context, $File, [string]$Path) {
     }
 }
 
-# Install state (.realms-client-state.json in the game folder): the pack files the last run placed.
+# Install state (.monkey-client-state.json in the game folder): the pack files the last run placed.
 function Read-ClientState($Context) {
     if (-not [IO.File]::Exists($Context.StateFile)) { return @() }
     try { $s = ConvertFrom-JsonText (Read-TextFile $Context.StateFile) } catch { $s = $null }

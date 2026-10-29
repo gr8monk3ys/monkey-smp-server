@@ -8,7 +8,7 @@
   raid, a mace, a beacon, the Wither, the End, the dragon, an elytra, full Netherite), the first on the server
   this season to finish a rare advancement (Monsters Hunted, A Balanced Diet, Adventuring Time...) or new
   factions: "Steve killed the Ender Dragon. First this season." At most a few a day and each once a season,
-  read from the saved world every 10 minutes (`tools/news.py`, `deploy/realms-news.sh`, `realms-news.timer`).
+  read from the saved world every 10 minutes (`tools/news.py`, `deploy/monkey-news.sh`, `monkey-news.timer`).
   Off until the owner adds `NEWS_WEBHOOK_URL` on the VPS and installs the timer (docs/LIVE.md, "The news
   timer"). Not yet run against a live server.
 
@@ -46,7 +46,7 @@ same as 2.9.0's, so players don't need to update it. After it deploys, place the
   server, run `deploy/npc-claims.sh` once (one restart; docs/LIVE.md, "NPCs in claims"). Not yet tried in game.
 - The update check's "Verify every pinned download" step piped into `tee` without `pipefail`, so a broken
   download never reached its issue. It runs under `bash` now.
-- docs: LAUNCH.md put the R2 keys in `/etc/realms-deploy.env` (the backup reads `/etc/realms-backup.env`) and
+- docs: LAUNCH.md put the R2 keys in `/etc/monkey-deploy.env` (the backup reads `/etc/monkey-backup.env`) and
   the store at `monkeysmp.tebex.io` (another server's); LIVE.md said the off-site copy covers `backups/` (it
   sends `server/` only).
 
@@ -63,14 +63,14 @@ them).
   the biggest mover, the top fighter, bounties claimed, land claimed, challenges done, event turnout and next
   Saturday's event, when there is something to say (`tools/recap.py`). Same webhook, same Sunday timer, still
   under Discord's 2000 characters. A week that closes before the launch (test play) is kept but no longer
-  posted. `deploy/realms-standings.sh preview` prints the recap as it would post now. Nothing to set up on the
+  posted. `deploy/monkey-standings.sh preview` prints the recap as it would post now. Nothing to set up on the
   VPS: the first close after this release starts counting the week's challenges, land and events, so its
   recap leaves those lines out.
 - **Server Firsts**: the first player on the server to reach each of 14 milestones (find a diamond, enter the
   Nether, find a fortress or a bastion, ancient debris, a trial vault, a mace, win a raid, defeat the Wither,
   light a beacon, enter the End, slay the dragon, an elytra, full Netherite once it is allowed) is announced to
   everyone and keeps it for the season. `/trigger firsts` shows who holds each. The most firsts at the season's
-  end earns the `[S1 Pioneer]` title. A new data pack, `realms-firsts` (`tools/firsts.py`); nothing counts
+  end earns the `[S1 Pioneer]` title. A new data pack, `monkey-firsts` (`tools/firsts.py`); nothing counts
   before the launch. Not yet tried in game.
 - **Season Wrapped**: after the finale, every player gets a page on the site about their season: hours and
   days played, PvP kills, weekly challenges, events, their faction's best weekly rank, their Server Firsts
@@ -81,8 +81,8 @@ them).
   `/trigger diplomacy`, from the launch on. A kill between two factions at war counts twice in the weekly
   Kills column until Sunday's close, when every war ends. A pact stands until either side breaks it, at most 2
   each, and every declaration is announced in chat and listed in Sunday's Discord post. Claims and the rules
-  don't change. In the `realms-standings` data pack (`tools/diplomacy.py`).
-- Each faction now has a number in game (`st.faction`, `st.leader`, storage `realms:factions`), written by
+  don't change. In the `monkey-standings` data pack (`tools/diplomacy.py`).
+- Each faction now has a number in game (`st.faction`, `st.leader`, storage `monkey:factions`), written by
   the standings' hourly board run, for packs that need to tell factions apart (docs/MAINTAINING.md, "The
   faction number in game").
 - **Outposts** (docs/SEASONS.md, "Outposts"): four capture points out in the newest border ring, one in each
@@ -90,15 +90,15 @@ them).
   take it; a text over it says who holds it. Each hour your faction holds one while another faction is online
   is +1 weekly standings point, at most 20 a week, on top of the usual columns. Nothing is given. They move out
   after each border act, and show on the live map. `/trigger outposts` lists them. From the launch on, in the
-  new `realms-outposts` data pack (`tools/outposts.py`), placed by a new hourly timer on the VPS.
+  new `monkey-outposts` data pack (`tools/outposts.py`), placed by a new hourly timer on the VPS.
 - Omens: short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM
   Pacific, 4 or more online, never Saturday, never during an event or a supply drop). A Blood Moon (Hard and
   roused mobs for a night, a little extra loot per kill), a Meteor (one richer supply drop with 5 minutes'
   warning, and the night's own drop still comes), Truce Hour (no PvP for an hour) or Hunted (a 30-minute
   bounty on the longest kill streak, claimed through staff as any bounty and withdrawn when the hunt ends).
-  `tools/omens.py` generates the new `realms-omens` data pack and plans each week from a secret the pack
-  keeps in the world; `realms-omens.timer` offers the evening's omen every 10 minutes. Install it once with
-  `deploy/realms-omens.sh --install` (docs/LIVE.md). Staff commands: docs/ADMIN.md, "Omens".
+  `tools/omens.py` generates the new `monkey-omens` data pack and plans each week from a secret the pack
+  keeps in the world; `monkey-omens.timer` offers the evening's omen every 10 minutes. Install it once with
+  `deploy/monkey-omens.sh --install` (docs/LIVE.md). Staff commands: docs/ADMIN.md, "Omens".
 
 ### Changed
 
@@ -119,8 +119,8 @@ them).
     pack creates. The shared objective names (`events.ARENA_TAG`, `STATE`, `STRENGTH`, `CUP`,
     `challenges.LAUNCHED`) live in the pack that owns them.
   - **`tools/rcon.py`** sends every VPS job's RCON commands and decides when the server refused one (PR #58).
-    `realms-week.sh`, `realms-drops.sh` and `tools/standings.py` go through it; the tests use its `Recorder` fake.
-  - **`deploy/lib.sh`** holds the helpers every VPS script had copied (PR #59): reading `/etc/realms-deploy.env`
+    `monkey-week.sh`, `monkey-drops.sh` and `tools/standings.py` go through it; the tests use its `Recorder` fake.
+  - **`deploy/lib.sh`** holds the helpers every VPS script had copied (PR #59): reading `/etc/monkey-deploy.env`
     (one parser: the last value as written wins), logging, the compose command, RCON, the deploy lock and timer
     installs. Three behaviour changes on the VPS:
     - The week and drops timers now wait up to 30 minutes for the deploy lock before sending, so they no longer
@@ -135,8 +135,8 @@ them).
     gzipped, and a damaged claims file with a negative list count is an error instead of reading as "no claims".
 
 Before Season I (Saturday 31 October), once this is live, run each VPS job once against the live world, so
-the new lock and RCON paths have run there: `realms-week.sh --check` and `realms-drops.sh --check` first, then
-the jobs themselves, and `realms-standings.sh show` then `board` (standings has no `--check`; `show` changes
+the new lock and RCON paths have run there: `monkey-week.sh --check` and `monkey-drops.sh --check` first, then
+the jobs themselves, and `monkey-standings.sh show` then `board` (standings has no `--check`; `show` changes
 nothing). The commands are in docs/LIVE.md and docs/ADMIN.md.
 
 ## [2.8.0] - 2026-10-27
@@ -192,7 +192,7 @@ new mods, but the new structures and End only in land nobody has visited, should
   one became a zombified piglin on a test server); the patch strikes only the attacker's own trident in flight.
   Its lightning isn't damage a player causes, so PvP grace and the spawn claim didn't stop it: the patch strikes
   nothing within 64 blocks of spawn or within 6 blocks of a player in grace.
-- Configs in `package/realms/defaults/` (copied on start where missing, so they reach the live server too;
+- Configs in `package/monkey/defaults/` (copied on start where missing, so they reach the live server too;
   docs/ADMIN.md, "Mod settings"; `tests/test_mod_defaults.py`):
   - Carry On: nothing that stores items (chests of every kind, barrels, shulker boxes, furnaces, hoppers,
     dispensers, droppers, crafters, brewing stands, pots, shelves, lecterns, jukeboxes), no spawners or trial
@@ -217,7 +217,7 @@ new mods, but the new structures and End only in land nobody has visited, should
   Fair Fletching (B1, B6).
 - Balance: the data files of the twelve gameplay mods on the brief's list were checked against the Strength SMP
   progression, the weekly challenges, the drop loot and rule 43. None replaces a Strength SMP, Monkey SMP
-  (`realms`) or drop file. Better Craftables replaces 66 vanilla recipes (the template copy above, stone tools,
+  (`monkey`) or drop file. Better Craftables replaces 66 vanilla recipes (the template copy above, stone tools,
   trim templates, redstone parts and more), Friends & Foes brings its own loot tables and a beehive recipe, Ultimate
   Minecarts the furnace minecart recipe; the rest only add their own. Defaults are kept except the configs above.
   The owners' calls are in the admin notes.
@@ -245,8 +245,8 @@ new mods, but the new structures and End only in land nobody has visited, should
 A fix for the severe lag since 2.5.0, supply drops and spawn NPCs; shops are shelved. Same Minecraft (26.3) and
 world as 2.6.0: hosts unzip over 2.6.0 or 2.5.0. Players must update the client pack: Easy NPC is needed on the
 client too, so an old pack can't join. On the live VPS, once 2.7.0 is live (docs/LIVE.md): the 2.6.0 one-time
-steps if they aren't done yet (`deploy/install-standings.sh`, `deploy/realms-week.sh --install`), then
-`deploy/realms-drops.sh --install`, place the spawn NPCs (docs/ADMIN.md, "Spawn NPCs"), and run the `lp` lines
+steps if they aren't done yet (`deploy/install-standings.sh`, `deploy/monkey-week.sh --install`), then
+`deploy/monkey-drops.sh --install`, place the spawn NPCs (docs/ADMIN.md, "Spawn NPCs"), and run the `lp` lines
 under "Existing servers" in docs/ADMIN.md that remove the rank nodes Vanilla Permissions used. Skip
 `deploy/shops-claims.sh`: shops are shelved.
 
@@ -261,26 +261,26 @@ under "Existing servers" in docs/ADMIN.md that remove the rank nodes Vanilla Per
   - Moderators reach a spot with `ledger tp minecraft:overworld X Y Z`, or by clicking a position in Ledger's
     inspect and search results (Ledger's own `ledger.commands.tp`, already in the rank). Teleporting to a player,
     or moving one, is an op's job.
-  - Whitelisting is an owner's job again (console, RCON, `Add Player.bat`, or `realms add-player` on the VPS).
+  - Whitelisting is an owner's job again (console, RCON, `Add Player.bat`, or `monkey add-player` on the VPS).
   - An op switches a builder's game mode, so Easy NPC's editor is for ops and players an op puts in creative.
   - The rank files drop the nodes that did nothing without the mod (builders' `minecraft.command.gamemode`;
     moderators' `minecraft.command.teleport`, `tp` and `whitelist`). Existing servers keep their copies, which
     now grant nothing; "Existing servers" under "Moderation" in docs/ADMIN.md has the `lp` lines that remove them.
 - New: **supply drops** (docs/SEASONS.md's event catalog; docs/ADMIN.md, "Supply drops"). Monday to Thursday,
   6 to 10 PM Pacific, from Season I's first week, the first time 4 or more players are online in survival
-  (`function realms:drops/min {players:N}`) and no event is on: chat and a boss bar give the coordinates 10
+  (`function monkey:drops/min {players:N}`) and no event is on: chat and a boss bar give the coordinates 10
   minutes ahead, then 1 chest per 4 players online (at most 3) lands in the newest border ring, 6 or more
   chunks from every claim, on dry natural ground. The chests despawn after 20 minutes. Modest loot (food,
   iron, coal, arrows, torches, logs, XP bottles): nothing Strength, no netherite, diamonds or emeralds.
-  `tools/drops.py` picks the spots from the saved claims and border and generates the new `realms-drops`
+  `tools/drops.py` picks the spots from the saved claims and border and generates the new `monkey-drops`
   data pack, which also has staff commands (`start`, `here`, `stop`, `status`, `on`, `off`). On the VPS,
-  `realms-drops.timer` offers the night's drop every 10 minutes; install it once with
-  `deploy/realms-drops.sh --install` (docs/LIVE.md).
+  `monkey-drops.timer` offers the night's drop every 10 minutes; install it once with
+  `deploy/monkey-drops.sh --install` (docs/LIVE.md).
 - New: **spawn NPCs**, so a player who joins when no staff are on is met at spawn. The Guide greets new
   players and offers the short rules, how to find a faction, and buttons for this week's challenges, the faction
   standings and the wardrobe; the Town Crier shows this week's Saturday event and the next. They are Easy NPC
   7.17.1 (`easy-npc`, `easy-npc-core`, `easy-npc-config-ui`), needed on the client too: players update the
-  client pack. `tools/npcs.py` writes them into the new `realms-npcs` data pack, and
+  client pack. `tools/npcs.py` writes them into the new `monkey-npcs` data pack, and
   `defaults/config/easy_npc/security.cfg` keeps Easy NPC's editor features to ops. Staff place them once per
   world, on the live VPS too, once the release is live (docs/ADMIN.md, "Spawn NPCs").
 - Fixed (supply drops, before release): a staff `start`, `here` or `stop` run from the Nether or the End
@@ -302,14 +302,14 @@ under "Existing servers" in docs/ADMIN.md that remove the rank nodes Vanilla Per
 2.6.0 rehearsed on a test server (Carpet fake players): the standings and bounties, the weekly challenges,
 Founder's Circlet, the wardrobe, shops, the launch hour and the launch run sheet (docs/LAUNCH.md). Fixes from it:
 
-- Fixed: `function realms:rules/launch` opens Founder's Circlet's window only the first time (`#launched
+- Fixed: `function monkey:rules/launch` opens Founder's Circlet's window only the first time (`#launched
   rw.day`, which the launch already set so a second run wipes nothing). Run again after the launch weekend, it
-  opened another 31-hour window that `realms-week.timer` no longer closes, so the Circlet could be earned
+  opened another 31-hour window that `monkey-week.timer` no longer closes, so the Circlet could be earned
   outside the weekend. `founder/open` by hand still opens it (docs/ADMIN.md).
-- Fixed: a re-run of `deploy/realms-standings.sh` on Sunday said "board updated and announced in chat" though
+- Fixed: a re-run of `deploy/monkey-standings.sh` on Sunday said "board updated and announced in chat" though
   the week is announced only once; it now says it was already announced.
 - docs/LAUNCH.md: a check by Saturday 14 November that the two one-time 2.6.0 steps on the VPS are done
-  (`realms-week.sh --check`, `install-standings.sh --check`), a warning that
+  (`monkey-week.sh --check`, `install-standings.sh --check`), a warning that
   `rules/launch` on the live world before launch starts Founder's Circlet's window early, and the check at
   midnight on Sunday that the window has closed.
 
@@ -319,7 +319,7 @@ Season I's date and launch kit, weekly faction standings, weekly challenges, ite
 client install. Same Minecraft (26.3) and world as 2.5.0: hosts unzip over 2.5.0. Players update the client pack
 for the new skins' textures and the optional tick boxes; shops need nothing on the client. On the live VPS, once
 2.6.0 is live, run the one-time setup for each (docs/LIVE.md): `deploy/install-standings.sh`,
-`deploy/shops-claims.sh` and `deploy/realms-week.sh --install`.
+`deploy/shops-claims.sh` and `deploy/monkey-week.sh --install`.
 
 - Site: the pass wording follows `STORE_URL`. While it is empty (no store yet), the join steps, the Server
   Pass card, the invite ladder and the creator page say passes are arranged in the Discord and staff whitelist
@@ -327,12 +327,12 @@ for the new skins' textures and the optional tick boxes; shops need nothing on t
   running `tools/site_links.py` switches the pages to the store's wording (`data-store="open"` and `"soon"`).
 - Weekly faction standings: one rank a week from Cup points (40), claimed land (20), the members' Strength
   (20) and their PvP kills this week outside the arena (20), each as a share of the column's leader, +5 a
-  claimed bounty. `tools/standings.py` reads the saved world; the new `realms-standings` data pack counts
-  the week's kills and holds the board at spawn (`/trigger standings`). On the VPS `realms-standings.timer`
+  claimed bounty. `tools/standings.py` reads the saved world; the new `monkey-standings` data pack counts
+  the week's kills and holds the board at spawn (`/trigger standings`). On the VPS `monkey-standings.timer`
   closes the week on Sundays at 7 PM Pacific, keeps it in `STANDINGS_DIR` and posts it to
   `STANDINGS_WEBHOOK_URL` (else `DISCORD_WEBHOOK_URL`), under the deploy lock; an hourly timer updates the
   board. The bounty board now pays the Bounty Hunter title and +5 standings points instead of coins
-  (`realms:standings/bounty/post` and `/claim`). Set up once with `deploy/install-standings.sh`
+  (`monkey:standings/bounty/post` and `/claim`). Set up once with `deploy/install-standings.sh`
   (docs/LIVE.md).
 - New: **shops** and a **lighter client install**. Universal Shops (with Polymer, server only: the client pack
   doesn't need it) lets players sell from a chest while offline, priced in items; the shop block holds the
@@ -362,7 +362,7 @@ for the new skins' textures and the optional tick boxes; shops need nothing on t
   Season I's launch weekend (Saturday 21 November 2026, 5 PM Pacific, to the end of Sunday): `rules/launch`
   opens it and it closes by itself; never sold. All four skins are look-only. Players update the client pack
   for the new textures. On the VPS, install the hourly week timer once this is live:
-  `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` (docs/LIVE.md).
+  `sudo sh /srv/monkey/repo/deploy/monkey-week.sh --install` (docs/LIVE.md).
 
 ## [2.5.0] - 2026-10-26
 
@@ -395,20 +395,20 @@ VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
   walked past, but no longer get far terrain from the server, and the server saves the CPU it spent generating it.
   A server set up before this keeps its old file: see "Distant Horizons stops sending its own LODs" in
   `docs/LIVE.md` (the steps work on any server). How to switch it back is in `docs/ADMIN.md`.
-- Live server: a **daily restart** at 4:30 AM Pacific (`realms-restart.timer`, `realms-deploy.sh --restart`), with
+- Live server: a **daily restart** at 4:30 AM Pacific (`monkey-restart.timer`, `monkey-deploy.sh --restart`), with
   the usual 5- and 1-minute warnings in chat. It shares the deploy lock, skips a server a deploy restarted that
   morning (`RESTART_MIN_UPTIME`, 6 hours), and posts a `spark health` link from just before the restart, so memory
   use can be compared from day to day.
-- Live server: a **weekly update check** on Mondays (`realms-updates.timer`): `tools/check_updates.py` against the
+- Live server: a **weekly update check** on Mondays (`monkey-updates.timer`): `tools/check_updates.py` against the
   live release, posted to Discord with the report attached, while the GitHub Actions check can't run.
 - Live server: **`deploy/upgrade-2.5.0.sh`** does this release's one-off VPS steps in one go. The Distant Horizons,
   Code of Conduct, ServerCore and claims settings change with one restart (under the deploy lock, with warnings in
   chat and a copy of each file), then it makes the spawn claim over RCON, installs python3 for the update check,
   and installs the two timers. It skips steps already done, `--check` only reports, and it reads no secrets. See
   "One-off steps when upgrading" in `docs/LIVE.md`.
-- Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it
+- Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/monkey-deploy.env` when it
   is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
-- Live server: **`deploy/realms-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
+- Live server: **`deploy/monkey-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
   players on a throwaway copy of the live server (no Tebex, no published ports), with the live server stopped
   and always started again. `tools/loadtest.py --spark` adds a spark profile of every thread, and `summary.json`
   now records ServerCore's status. docs/LIVE.md has how to run it, the decision rule (about 40 ms at 25 players),
@@ -436,7 +436,7 @@ VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
   database, mod server config and session files. `carry` writes a one-shot data pack into the next season's
   world that puts back every wardrobe score, hours played (as `rw.playbase`) and the supporter, title and
   champion teams.
-- New: `function realms:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
+- New: `function monkey:events/season/lock` and `unlock`. The lock puts survival players in adventure mode
   with PvP off and peaceful difficulty, and holds across restarts.
 - New: `tools/funnel.py` matches a Tebex payments export to the server logs: purchase, first join, 30 minutes
   played, D7 and renewal, with the month-2 renewal rate as the headline and a list of buyers who never
@@ -467,7 +467,7 @@ VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
 - New rule 26: **48 hours of PvP grace** for a first join. Other players can't hurt a new player; attacking a
   player or `/trigger end_grace` ends it, and nobody gets it in the launch hour. Fights in the event arena don't
   count, and grace is off there. Players who joined before this update get neither grace nor the welcome
-  (Minecraft's own statistics say they've played). Built into the `realms-rules` data pack (no new mod).
+  (Minecraft's own statistics say they've played). Built into the `monkey-rules` data pack (no new mod).
 - New rule 26: **spawn is a no-PvP zone**, an Open Parties and Claims server claim over the 7 x 7 chunks
   around spawn. An admin sets it up once per world with two console commands (admin notes in `docs/RULES.md`):
   the mod keeps that setting per world and doesn't let a data pack claim.
@@ -527,16 +527,16 @@ below say what to change on an existing one.
 - docs/PROMOTION.md: the listing kit for free server lists and the Official Minecraft Server List, join
   addresses per channel (DNS records and how to count them), a creator outreach template and the plan for
   clips from real event nights.
-- Live server: **off-site backups**. Every hour `realms-backup.timer` sends the live `server/` folder, encrypted,
+- Live server: **off-site backups**. Every hour `monkey-backup.timer` sends the live `server/` folder, encrypted,
   to a Cloudflare R2 bucket with restic, between `save-off` / `save-all flush` and `save-on` (saving comes back on
   also when restic fails, hangs or is killed). It leaves out what the installer downloads again (jars, libraries,
   logs, BlueMap tiles), keeps 48 hourly, 14 daily, 8 weekly and 6 monthly snapshots, and reads back 5% of the
   stored data after each run (`restic check --read-data-subset=5%`). It posts to the Discord webhook when backups
-  fail and when they work again. The keys and the restic password go in a root-only `/etc/realms-backup.env`
-  (`deploy/realms-backup.env.example`), and the password is kept off the VPS too. docs/LIVE.md covers setup,
+  fail and when they work again. The keys and the restic password go in a root-only `/etc/monkey-backup.env`
+  (`deploy/monkey-backup.env.example`), and the password is kept off the VPS too. docs/LIVE.md covers setup,
   restores, the cost and a monthly restore drill on the home PC, which also rehearses the playit fallback.
 - Live server: deploys keep only the newest 3 world backups in `backups/` (`KEEP_BACKUPS` in
-  `/etc/realms-deploy.env`; was 14), since R2 now holds the history.
+  `/etc/monkey-deploy.env`; was 14), since R2 now holds the history.
 - New server-only mod: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) 0.2 logs the join address
   each player came in through, and the new `tools/join_addresses.py` counts joins, players and new players per
   address from the server logs (docs/PROMOTION.md, "Counting joins per address"). It ships with
@@ -552,7 +552,7 @@ Fixes and live-server tooling. Same Minecraft (26.3), mods, client pack and worl
 - Fix: Arena Glory no longer leaves a death corpse wearing the kit inside the arena, so nobody loots a second
   kit. The arena tick and the between-rounds clear remove `player-death-corpses` mannequins in the radius.
 - Live server: updates wait for a deploy window. Set `DEPLOY_WINDOW` (e.g. `04:00-05:00`) and `DEPLOY_TZ` in
-  `/etc/realms-deploy.env` and a release tagged during the day goes live at 4 AM; `realms-deploy.sh --now` still
+  `/etc/monkey-deploy.env` and a release tagged during the day goes live at 4 AM; `monkey-deploy.sh --now` still
   deploys right away, and `--status` says whether the window is open. The first deploy on a new machine doesn't wait.
 - Live server: the Discord "back up" message says to update the modpack only when the pack really changed, not
   on every release (each release bumps the pack's version number, which doesn't stop an old pack from joining).
@@ -565,30 +565,30 @@ wardrobe resource pack).
 
 - New: the **live server** setup in `deploy/` (`docs/LIVE.md`): a VPS pulls and deploys the newest release tag,
   with world backups, a chunky pregen and the public site.
-- The GitHub repo is now **gr8monk3ys/monkey-smp-server** (was `the-realms-server`). GitHub redirects the old
+- The GitHub repo is now **gr8monk3ys/monkey-smp-server** (was `monkey-smp-server`). GitHub redirects the old
   URLs, so existing clones, release links and installers keep working; update a clone's remote with
   `git remote set-url origin https://github.com/gr8monk3ys/monkey-smp-server.git`.
 - New: a **server icon**, the Monkey SMP monkey in the multiplayer server list. It ships in `defaults/`, so it is
   copied only where the server has no `server-icon.png` yet; a host's own icon is kept. Logo, banners and the
   trailer are in `marketing/`.
-- New: **event tooling**. The `realms-events` data pack (made by `tools/events.py`) runs Arena Glory (join,
+- New: **event tooling**. The `monkey-events` data pack (made by `tools/events.py`) runs Arena Glory (join,
   kits, Strength held at +3, drops cleaned), the Anarchy and Faction Raid timers, official faction flags,
-  event books, the Season Cup and an attendance count; `/function realms:events/help` lists the commands.
+  event books, the Season Cup and an attendance count; `/function monkey:events/help` lists the commands.
   `tools/block_wheel.py` draws Build Battle blocks from a published seed. See the Events section of `docs/ADMIN.md`.
 - Docs: `docs/SEASONS.md`, the plan for seasons and events. It covers 12-week seasons in acts (border growth, Dragon Night,
   Netherite age, a finale), one event a week from a catalog (KOTH, supply drops, bounties, tournaments), what
   carries over between seasons, and the research behind it. The owners' three pillar events (Build Battle with a block wheel, Faction Raid
   capture the flag, Arena Glory kit combat) run every season and score a faction Season Cup, plus
   Anarchy (90 minutes of suspended combat rules when the End opens; griefing, cheating and conduct rules stay).
-- The server is now called **Monkey SMP** (was The Realms): server list message, window titles, the launcher
-  profile, the client pack and the site. Download names (`TheRealms-*`), the `.the-realms` game folder and the
+- The server is now called **Monkey SMP** (was Monkey SMP): server list message, window titles, the launcher
+  profile, the client pack and the site. Download names (`MonkeySMP-*`), the `.monkey-smp` game folder and the
   backup task keep their old names, so updating needs nothing new. The uninstaller is now "Uninstall Monkey SMP.bat".
 - New: the **wardrobe**, cosmetic skins for swords and helmets (`/trigger wardrobe`), unlocked by days played,
   tenure, invites, supporter tier or being a founder. Look only: no damage, armor or durability changes.
 - New: the server enforces the Season I rules it can (two data packs from `tools/rules.py`): a 2500 x 2500
-  border centred on spawn, set once (the Nether's at 1:8); the launch hour (`function realms:rules/launch`
-  closes PvP and the Nether for an hour, the End stays closed until `function realms:rules/open_end`); no
-  Netherite armor until `datapack disable "file/realms-no-netherite-armor"`; Fire Aspect and Flame disabled.
+  border centred on spawn, set once (the Nether's at 1:8); the launch hour (`function monkey:rules/launch`
+  closes PvP and the Nether for an hour, the End stays closed until `function monkey:rules/open_end`); no
+  Netherite armor until `datapack disable "file/monkey-no-netherite-armor"`; Fire Aspect and Flame disabled.
   Factions (Open Parties and Claims parties) hold at most 4 players on new installs. See the admin notes
   in `docs/RULES.md`.
 - New: `tools/retention.py` reports D1/D7/D30 return rates and weekly players from the server logs.
@@ -682,10 +682,10 @@ their world; players run the new player installer (or import the new .mrpack).
 
 Easier for players: no Modrinth App or Prism needed.
 
-- New download for players: **TheRealms-Player-2.1.0.zip**. Double-click "Install for Minecraft Launcher.bat"
+- New download for players: **MonkeySMP-Player-2.1.0.zip**. Double-click "Install for Minecraft Launcher.bat"
   and it sets up Fabric and every mod, resource pack and shader (downloaded from Modrinth, each file
-  hash-checked) in a separate folder, then adds a "The Realms" installation to the normal Minecraft
-  Launcher. Running it again updates; "Uninstall The Realms.bat" removes it.
+  hash-checked) in a separate folder, then adds a "Monkey SMP" installation to the normal Minecraft
+  Launcher. Running it again updates; "Uninstall Monkey SMP.bat" removes it.
 - The player zip also contains the .mrpack for Modrinth App / Prism users, and a plain-language READ ME.
 - New docs/SHARING.md: which file to send to whom, with copy-paste messages for the host and players.
 - playit.gg instructions now cover the second tunnel voice chat needs.
@@ -728,7 +728,7 @@ Synced with the updated mod list.
 
 ## [1.0.0] - 2026-10-04
 
-First packaged release of The Realms.
+First packaged release of Monkey SMP.
 
 - Paper 26.1.2 build 74 on Eclipse Temurin JRE 25.0.4.1.
 - 20 plugins: Towns & Nations (+ BlueMap addon, SphereLib), LuckPerms, EssentialsX (+ Spawn), VaultUnlocked,

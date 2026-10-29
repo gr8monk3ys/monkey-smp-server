@@ -70,7 +70,7 @@ connects without needing help.
 
 ## Brand Commitments
 
-- The name is Monkey SMP (players' name; internal names keep `realms`, see `GLOSSARY.md`).
+- The name is Monkey SMP (players' name; internal names keep `monkey`, see `GLOSSARY.md`).
 - The logo: a pixel-art monkey on a green tile beside the words MONKEY SMP (`site/public/kit/`, `site/public/favicon.svg`).
 - The site gets its own identity built from the server (owner, 2026-10-26). It no longer matches
   lscaturchio.xyz's "Field Notebook" look.

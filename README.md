@@ -25,9 +25,9 @@ Every [release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest)
 
 | File | For | |
 |---|---|---|
-| `TheRealms-Server-<version>.zip` | the **host** | run the server on Windows, macOS or Linux (or with Docker), or prepare it for an online host |
-| `TheRealms-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | double-click `Install for Minecraft Launcher.bat`, then pick "Monkey SMP" in the launcher |
-| `TheRealms-Client-<version>.mrpack` | players using the Modrinth App or Prism, while the Modrinth page isn't up | import it into the Modrinth App or Prism Launcher (it's also inside the player zip, and it's the file `tools/modrinth.py` uploads) |
+| `MonkeySMP-Server-<version>.zip` | the **host** | run the server on Windows, macOS or Linux (or with Docker), or prepare it for an online host |
+| `MonkeySMP-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | double-click `Install for Minecraft Launcher.bat`, then pick "Monkey SMP" in the launcher |
+| `MonkeySMP-Client-<version>.mrpack` | players using the Modrinth App or Prism, while the Modrinth page isn't up | import it into the Modrinth App or Prism Launcher (it's also inside the player zip, and it's the file `tools/modrinth.py` uploads) |
 
 Most players don't need a file: the client pack is also the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
 on Modrinth, which installs in one click in the Modrinth App on every OS and updates itself
@@ -35,7 +35,7 @@ on Modrinth, which installs in one click in the Modrinth App on every OS and upd
 
 ## Run it on your own computer (Windows, macOS, Linux)
 
-Download **`TheRealms-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest)
+Download **`MonkeySMP-Server-<version>.zip`** from the [latest release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest)
 and unzip it somewhere permanent (e.g. Documents). The computer needs 16 GB of RAM or more (12 GB is enough for a few players).
 
 | | Start | Stop |
@@ -64,8 +64,8 @@ which every Mac and nearly every Linux has ([ADR-0007](docs/adr/0007-one-install
 On a Linux VPS, or anything else with Docker:
 
 ```sh
-unzip TheRealms-Server-<version>.zip
-cd TheRealms-Server/docker
+unzip MonkeySMP-Server-<version>.zip
+cd MonkeySMP-Server/docker
 # in .env: EULA=TRUE and OWNER=<your Minecraft name>, optionally MEMORY_GB=6
 docker compose up -d
 docker compose logs -f      # watch it start (Ctrl+C stops watching, not the server)
@@ -83,7 +83,7 @@ folder exactly as with a native run. Open 25565/tcp (game) and 24454/udp (voice 
 - **Minecraft hosts** (Shockbyte, Apex, BisectHosting, any Pterodactyl panel) only take a finished server:
   1. Unzip the release on your computer and run **`Prepare for Hosting.bat`** (Windows) or
      `sh prepare-for-hosting.sh` (macOS, Linux).
-  2. It installs everything as above, then writes `exports/TheRealms-<version>-hosting.zip`: the finished
+  2. It installs everything as above, then writes `exports/MonkeySMP-<version>-hosting.zip`: the finished
      server plus `start.sh`, `start.bat`, `docker-compose.yml` and `HOSTING.txt`.
   3. Extract that zip into the panel's server root, pick the Fabric launcher jar and Java 25, start.
      `HOSTING.txt` inside has the step-by-step.
@@ -96,7 +96,7 @@ The bundle is built from the official downloads on your own computer, so nothing
 Players need the mods (the server adds blocks, mobs and items). On **every OS** the easiest way is the
 [Modrinth App](https://modrinth.com/app): install the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
 and the app keeps it up to date. Windows players who'd rather keep the normal Minecraft Launcher unzip
-`TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**: it installs
+`MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**: it installs
 Fabric and every mod, resource pack and shader into a separate folder (downloaded from Modrinth, each
 file hash-checked) and adds a **Monkey SMP** installation to the launcher. [Prism Launcher](https://prismlauncher.org)
 installs the pack from Modrinth too, or imports the `.mrpack`. Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
@@ -113,12 +113,12 @@ package/                    <- exactly what goes in the release zip
   Start Server.command      <- double-click launcher for macOS (runs start.sh)
   READ ME FIRST.txt         <- plain-language guide for the host
   docker/                   <- Dockerfile + compose.yaml that run this folder in a container
-  realms/
-    realms.ps1              <- entry script every launcher ends up in (Windows PowerShell 5.1 or PowerShell 7)
-    realms.sh               <- macOS/Linux bootstrap: finds or downloads pwsh, then runs realms.ps1
-    Realms.psm1             <- the installer module: install, start/stop, backup, RCON, hosting export
+  monkey/
+    monkey.ps1              <- entry script every launcher ends up in (Windows PowerShell 5.1 or PowerShell 7)
+    monkey.sh               <- macOS/Linux bootstrap: finds or downloads pwsh, then runs monkey.ps1
+    Monkey.psm1             <- the installer module: install, start/stop, backup, RCON, hosting export
     manifest.json           <- every download, pinned by URL + size + hash (Java once per platform)
-    pwsh.lock               <- the portable PowerShell 7 builds realms.sh may download, pinned the same way
+    pwsh.lock               <- the portable PowerShell 7 builds monkey.sh may download, pinned the same way
     defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, Tectonic, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
 player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
@@ -129,7 +129,7 @@ tests/                      <- pytest + Pester unit tests, smoke tests (Windows,
 
 - **Nothing third-party is committed or re-uploaded.** The release zip is ~100 KB of scripts and configs;
   jars are fetched from Adoptium, Fabric and Modrinth (and PowerShell from Microsoft) on the host's machine ([ADR-0002](docs/adr/0002-download-and-verify-instead-of-redistributing.md)).
-- **Installs are idempotent.** `realms.ps1 install` skips files that already match the manifest,
+- **Installs are idempotent.** `monkey.ps1 install` skips files that already match the manifest,
   replaces outdated ones, and removes mods that were dropped from the manifest. Config defaults are only
   copied when the file doesn't exist yet, so the host's edits are never overwritten.
 - **The world seed is pinned**, so every copy (local or hosted) generates the same terrain.

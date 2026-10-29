@@ -11,9 +11,9 @@
     The player's own files (worlds, screenshots, extra packs, changed settings) are never touched.
 
     This script only parses the command line; the work is done by PlayerInstall.psm1 next to it.
-    It expects to sit in the unzipped TheRealms-Player folder:
+    It expects to sit in the unzipped MonkeySMP-Player folder:
         Install for Minecraft Launcher.bat
-        TheRealms-Client-<version>.mrpack
+        MonkeySMP-Client-<version>.mrpack
         installer\install-client.ps1, PlayerInstall.psm1, fabric-profile.json
 
 .EXAMPLE
@@ -27,7 +27,7 @@ param(
     [string]$MinecraftDir = (Join-Path $env:APPDATA '.minecraft'),
 
     # The folder Monkey SMP plays from (mods, worlds, screenshots). Fixed, so updates reuse it.
-    [string]$GameDir = (Join-Path $env:APPDATA '.the-realms'),
+    [string]$GameDir = (Join-Path $env:APPDATA '.monkey-smp'),
 
     # Game memory in GB. 0 = pick from the computer's RAM.
     [ValidateRange(0, 64)]
@@ -36,7 +36,7 @@ param(
     # Never prompt: warn instead of waiting for the launcher to close, and uninstall without asking.
     [switch]$NonInteractive,
 
-    # The client pack to install. Default: the one TheRealms-Client-*.mrpack next to the .bat.
+    # The client pack to install. Default: the one MonkeySMP-Client-*.mrpack next to the .bat.
     [string]$Pack,
 
     # Remove the profile (and, after asking, the game folder) instead of installing.

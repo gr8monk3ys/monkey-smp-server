@@ -71,7 +71,7 @@ to `api.modrinth.com` only (it refuses any other host).
 
 What it does, checking before each step so a re-run after a failure picks up where it stopped:
 
-1. Builds `dist/TheRealms-Client-<version>.mrpack`, the same bytes as the GitHub release's file.
+1. Builds `dist/MonkeySMP-Client-<version>.mrpack`, the same bytes as the GitHub release's file.
 2. Uploads it as version `<version>` of `monkeysmp`, with the version's CHANGELOG section as its notes, unless
    Modrinth already has that version with the same file, or the newest version holds the same pack apart
    from its version number. A release that didn't touch `client/` asks nothing of players (the same rule as

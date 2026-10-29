@@ -2,7 +2,7 @@
 
 A Minecraft factions server packaged so that anyone can host it on Windows, macOS or Linux from a single download, and kept reproducible by pinning everything it runs.
 
-Formerly **The Realms**. Only the name players see changed: code, folders, the `realms` command, the `realms:` data pack namespace, the `TheRealms-*` download names and the `.the-realms` game folder keep the old name so existing installs and the live deploy keep working.
+Formerly **Monkey SMP**. Only the name players see changed: code, folders, the `monkey` command, the `monkey:` data pack namespace, the `MonkeySMP-*` download names and the `.monkey-smp` game folder keep the old name so existing installs and the live deploy keep working.
 
 ## People
 
@@ -103,7 +103,7 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Timed job**:
-A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
 
 ## Lifecycle
@@ -150,7 +150,7 @@ _Avoid_: spawn protection (Minecraft uses that for something else)
 
 **Spawn NPC**:
 The Guide or the Town Crier: an Easy NPC character at spawn that answers new players when no staff are on.
-Staff place each one once per world from the `realms-npcs` data pack.
+Staff place each one once per world from the `monkey-npcs` data pack.
 _Avoid_: bot, villager
 
 **Sunday recap**:
@@ -168,7 +168,7 @@ The owner of a faction's party, the one player who declares war and makes pacts 
 _Avoid_: owner (that is the admin account), chief
 
 **Faction number**:
-The number from 1 to 99 a party gets in game for the life of a world, so data packs can tell factions apart (`st.faction`, `realms:factions`). `tools/diplomacy.py` gives it.
+The number from 1 to 99 a party gets in game for the life of a world, so data packs can tell factions apart (`st.faction`, `monkey:factions`). `tools/diplomacy.py` gives it.
 _Avoid_: faction id (that is the party's id), team number
 
 **War**:

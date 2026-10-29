@@ -1,7 +1,7 @@
 """Capture a running setup into the repo, so it can be rebuilt anywhere.
 
   python tools/snapshot.py server C:/MCServer/factions
-      Rewrites package/realms/manifest.json from a Paper or Fabric server folder. Every plugin, mod
+      Rewrites package/monkey/manifest.json from a Paper or Fabric server folder. Every plugin, mod
       and datapack must be on Modrinth (matched by hash) or the snapshot fails.
 
       Paper (paper.jar + version_history.json): the Paper build is matched by hash, plugins come
@@ -14,7 +14,7 @@
       Datapacks come from <level-name>/datapacks/*.zip (level-name read from server.properties).
       A mod or datapack edited in place is matched against mod-originals/ or datapack-originals/
       <same name>, and the files that differ are stored as a patch under
-      package/realms/patches/<slug>/, pinned to that original's hash.
+      package/monkey/patches/<slug>/, pinned to that original's hash.
 
   python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
       Rewrites client/ (a Modrinth modpack source) from a Prism instance: mods, resource packs
@@ -27,7 +27,7 @@
   python tools/snapshot.py profile
       Re-pins only client/fabric-profile.json, for the versions client/modrinth.index.json names.
 
-Hand-curated config defaults (package/realms/defaults/) are not touched.
+Hand-curated config defaults (package/monkey/defaults/) are not touched.
 """
 import argparse
 import hashlib

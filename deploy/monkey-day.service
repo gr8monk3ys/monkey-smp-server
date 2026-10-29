@@ -1,0 +1,18 @@
+# Starts a new day for the wardrobe's "days played" count (deploy/monkey-day.sh, tools/wardrobe.py). Started by
+# monkey-day.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-day.sh --install` (docs/LIVE.md). If the
+# server is down or the command isn't accepted, it tries again every 10 minutes, for up to 6 hours: then it posts
+# a staff alert and exits 4, which ends the retries (the next midnight's run starts afresh). The first failed
+# try's time is kept in its StateDirectory. A retry after a run that did reach the server starts no second day.
+[Unit]
+Description=Monkey SMP: start a new wardrobe day
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+StateDirectory=monkey-day
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-day.sh
+Restart=on-failure
+RestartSec=10min
+RestartPreventExitStatus=4

@@ -1,0 +1,74 @@
+{
+  "criteria": {
+    "end": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "minecraft:the_end",
+        "player": {
+          "type": "minecraft:all_of",
+          "terms": [
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "min": 1
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#launched"
+                },
+                "score": "rw.day"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#end"
+                },
+                "score": "rf"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#season_locked"
+                },
+                "score": "ev.state"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "min": 1
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#end_open"
+                },
+                "score": "monkey.rules"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "monkey:firsts/got/end"
+  }
+}

@@ -1,8 +1,8 @@
-"""tools/news.py and deploy/realms-news.sh: what is news, firsts per season, the limits, never posting twice.
+"""tools/news.py and deploy/monkey-news.sh: what is news, firsts per season, the limits, never posting twice.
 
 The saved files are shaped as Minecraft 26.3 writes them (tests/fake_world.py): advancements as on a 26.3 test
 server's players/advancements/<uuid>.json (2026-10-25, DataVersion 5023), the ids from the 26.3 server jar's
-data/minecraft/advancement/, the firsts' claims as the realms-firsts pack stores them (tools/firsts.py). Players,
+data/minecraft/advancement/, the firsts' claims as the monkey-firsts pack stores them (tools/firsts.py). Players,
 UUIDs and factions are made up.
 """
 import datetime as dt
@@ -44,7 +44,7 @@ def world(tmp_path, *, launched=True, season=1, held=None, advancements=None, pa
     rows = [("rw.day", "#launched", 1 if launched else 0), ("rw.day", "#season", season), *extra_scores]
     fake = FakeWorld(tmp_path / "server" / "world").scores(*rows)
     if held:
-        fake.storage("realms", {"firsts": {"held": {
+        fake.storage("monkey", {"firsts": {"held": {
             k: {"name": name, "order": order, "week": 0} for k, (name, order) in held.items()}}})
     for name, done in (advancements or {}).items():
         fake.advancements(PLAYERS[name], {adv: saved_time(when) for adv, when in done.items()})
@@ -495,12 +495,12 @@ def test_preview_and_found_change_nothing(tmp_path, capsys):
 
 
 DEPLOY = REPO.root / "deploy"
-SCRIPT = DEPLOY / "realms-news.sh"
-UNITS = ["realms-news.service", "realms-news.timer"]
+SCRIPT = DEPLOY / "monkey-news.sh"
+UNITS = ["monkey-news.service", "monkey-news.timer"]
 DASH = shutil.which("dash")
 
 
-@pytest.mark.parametrize("name", ["realms-news.sh", *UNITS])
+@pytest.mark.parametrize("name", ["monkey-news.sh", *UNITS])
 def test_deploy_files_are_plain_ascii_with_lf(name):
     data = (DEPLOY / name).read_bytes()
     assert data.isascii() and b"\r" not in data
@@ -518,22 +518,22 @@ def test_the_script_reads_settings_without_sourcing_and_never_prints_the_webhook
                                 r'if \[ -n "\$NEWS_WEBHOOK_URL" \]; then .*|'
                                 r'\[ -n "\$NEWS_WEBHOOK_URL" \] \|\| .*)', line), line
     assert "DISCORD_WEBHOOK_URL" not in text and "STANDINGS_WEBHOOK_URL" not in text
-    example = (DEPLOY / "realms-deploy.env.example").read_text()
-    assert "\nNEWS_WEBHOOK_URL=\n" in example and "#NEWS_DIR=/srv/realms/news\n" in example
+    example = (DEPLOY / "monkey-deploy.env.example").read_text()
+    assert "\nNEWS_WEBHOOK_URL=\n" in example and "#NEWS_DIR=/srv/monkey/news\n" in example
 
 
-def test_units_run_it_as_realms_every_ten_minutes_clear_of_the_other_jobs():
-    service = (DEPLOY / "realms-news.service").read_text()
-    assert "User=realms\n" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-news.sh\n" in service
-    timer = (DEPLOY / "realms-news.timer").read_text()
+def test_units_run_it_as_monkey_every_ten_minutes_clear_of_the_other_jobs():
+    service = (DEPLOY / "monkey-news.service").read_text()
+    assert "User=monkey\n" in service and "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-news.sh\n" in service
+    timer = (DEPLOY / "monkey-news.timer").read_text()
     assert "OnCalendar=*-*-* *:02/10:15\n" in timer and "Persistent=false\n" in timer
-    others = [p.read_text() for p in DEPLOY.glob("*.timer") if p.name != "realms-news.timer"]
+    others = [p.read_text() for p in DEPLOY.glob("*.timer") if p.name != "monkey-news.timer"]
     assert not any("*:02/10" in t for t in others)
 
 
 @pytest.fixture
 def script(tmp_path):
-    """Runs realms-news.sh under dash with fake python3, flock, id, stat, install and systemctl first on PATH;
+    """Runs monkey-news.sh under dash with fake python3, flock, id, stat, install and systemctl first on PATH;
     each records its arguments (and python3 whether NEWS_WEBHOOK_URL reached it) in `calls`. python3's version
     check (python_ok) answers FAKE_RC_version and isn't recorded."""
     if not DASH:
@@ -544,7 +544,7 @@ def script(tmp_path):
         first = ('case "$1" in -c) exit "${FAKE_RC_version:-0}" ;; --version) echo "Python 3.9.2"; exit 0 ;; esac\n'
                  if name == "python3" else "")
         extra = 'echo "webhook ${NEWS_WEBHOOK_URL:+given}" >>"$FAKE_CALLS"\n' if name == "python3" else ""
-        out = 'echo realms\n' if name == "stat" else ""
+        out = 'echo monkey\n' if name == "stat" else ""
         (bin_dir / name).write_text(f'#!/bin/sh\n{first}echo "{name} $*" >>"$FAKE_CALLS"\n{extra}{out}'
                                     f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")
@@ -552,25 +552,25 @@ def script(tmp_path):
     (repo / "tools").mkdir(parents=True)
     (repo / "tools" / "news.py").write_text("")
     shutil.copytree(DEPLOY, repo / "deploy", ignore=shutil.ignore_patterns("*.env*"))
-    env_file = tmp_path / "realms-deploy.env"
+    env_file = tmp_path / "monkey-deploy.env"
 
     def run(*args, settings="", **env):
         env_file.write_text(f"REPO_DIR={repo.as_posix()}\nLIVE_DIR=/srv/live\n"
                             f"NEWS_DIR={(tmp_path / 'news').as_posix()}\n{settings}", newline="\n")
         environ = {k: v for k, v in os.environ.items() if "WEBHOOK" not in k and k not in ("REPO_DIR", "NEWS_DIR")}
         environ |= {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
-                    "LOCK_FILE": (tmp_path / "lock").as_posix(), "REALMS_DEPLOY_ENV": env_file.as_posix(), **env}
-        done = subprocess.run([DASH, (repo / "deploy" / "realms-news.sh").as_posix(), *args], env=environ,
+                    "LOCK_FILE": (tmp_path / "lock").as_posix(), "MONKEY_DEPLOY_ENV": env_file.as_posix(), **env}
+        done = subprocess.run([DASH, (repo / "deploy" / "monkey-news.sh").as_posix(), *args], env=environ,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         said = calls.read_text().splitlines() if calls.exists() else []
         calls.unlink(missing_ok=True)
-        out = [re.sub(r"^\S+ \S+ \[realms-news\] ", "", line) for line in done.stdout.splitlines()]
+        out = [re.sub(r"^\S+ \S+ \[monkey-news\] ", "", line) for line in done.stdout.splitlines()]
         return done.returncode, out, said
     run.repo, run.news = repo, tmp_path / "news"
     return run
 
 
-def test_the_script_posts_as_realms_under_the_lock_with_the_webhook_in_its_environment(script):
+def test_the_script_posts_as_monkey_under_the_lock_with_the_webhook_in_its_environment(script):
     code, out, calls = script(settings=f"NEWS_WEBHOOK_URL={URL}\n")
     world = "/srv/live/server/world"
     tool = f"{script.repo.as_posix()}/tools/news.py"
@@ -588,7 +588,7 @@ def test_the_script_skips_a_run_while_the_deploy_lock_is_held_and_refuses_root(s
     code, out, calls = script(settings=f"NEWS_WEBHOOK_URL={URL}\n", FAKE_RC_flock="1")
     assert code == 0 and out[-1].endswith("skipping this run") and not any(c.startswith("python3") for c in calls)
     code, out, calls = script(settings=f"NEWS_WEBHOOK_URL={URL}\n", FAKE_ID="0")
-    assert code == 1 and "run it as realms" in out[-1] and calls == []
+    assert code == 1 and "run it as monkey" in out[-1] and calls == []
 
 
 def test_check_says_whether_the_webhook_is_set_never_its_value(script):
@@ -603,8 +603,8 @@ def test_install_makes_the_news_folder_and_starts_the_timer_as_root_only(script)
     code, out, calls = script("--install")
     assert code == 1 and "run as root" in out[-1]
     code, out, calls = script("--install", FAKE_ID="0")
-    assert code == 0 and f"install -d -m 755 -o realms -g realms {script.news.as_posix()}" in calls
-    assert any(c.startswith("systemctl enable --now realms-news.timer") for c in calls)
+    assert code == 0 and f"install -d -m 755 -o monkey -g monkey {script.news.as_posix()}" in calls
+    assert any(c.startswith("systemctl enable --now monkey-news.timer") for c in calls)
     assert script("--bogus")[0] == 2
 
 

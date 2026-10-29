@@ -12,7 +12,7 @@ import season_calendar
 import wardrobe
 from repo import REPO
 
-FN = "data/realms/function/challenges"
+FN = "data/monkey/function/challenges"
 
 
 def at(text: str) -> dt.datetime:
@@ -93,9 +93,9 @@ def test_the_server_picks_what_the_schedule_says(week):
     for kind, c in challenges.picks(week).items():
         assert challenges.of_kind(kind)[indexes[kind]] is c
         i = indexes[kind]
-        assert (f"execute if score #{kind} rc.week matches {i} run function realms:challenges/line/{c['id']}"
+        assert (f"execute if score #{kind} rc.week matches {i} run function monkey:challenges/line/{c['id']}"
                 in show.splitlines())
-        assert (f"execute if score #{kind} rc.week matches {i} as @a run function realms:challenges/progress/"
+        assert (f"execute if score #{kind} rc.week matches {i} as @a run function monkey:challenges/progress/"
                 f"{c['id']}" in second.splitlines())
 
 
@@ -132,30 +132,30 @@ def test_send_skips_a_stopped_server_and_reports_a_refusal():
     assert log == ["server not running: nothing sent (the next hour catches up)"]
     server = rcon.Recorder()
     assert challenges.send(server, when, log.append) == 0 and server.sent == challenges.commands(when)
-    refusing = rcon.Recorder({"function realms:challenges/": "Unknown function realms:challenges/sync"})
+    refusing = rcon.Recorder({"function monkey:challenges/": "Unknown function monkey:challenges/sync"})
     assert challenges.send(refusing, when, log.append) == 1
     assert refusing.sent == challenges.commands(when)[1:]   # the refused one is logged; the rest still go
 
 
 def test_the_hourly_commands():
     assert challenges.commands(at("2026-11-08T01:00:30Z")) == [
-        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:111570}"]
+        "function monkey:challenges/sync {week:0}", "function monkey:wardrobe/founder/sync {seconds:111570}"]
     assert challenges.commands(at("2026-11-09T08:00:30Z")) == [
-        "function realms:challenges/sync {week:1}", "function realms:wardrobe/founder/sync {seconds:0}"]
+        "function monkey:challenges/sync {week:1}", "function monkey:wardrobe/founder/sync {seconds:0}"]
     # A day after the window there is nothing left to keep in step: only the week.
-    assert challenges.commands(at("2026-11-10T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
-    assert challenges.commands(at("2026-11-10T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
-    assert challenges.commands(at("2027-01-11T08:00:30Z")) == ["function realms:challenges/sync {week:10}"]
+    assert challenges.commands(at("2026-11-10T07:59:59Z"))[1:] == ["function monkey:wardrobe/founder/sync {seconds:0}"]
+    assert challenges.commands(at("2026-11-10T08:00:00Z")) == ["function monkey:challenges/sync {week:1}"]
+    assert challenges.commands(at("2027-01-11T08:00:30Z")) == ["function monkey:challenges/sync {week:10}"]
     assert challenges.main(["commands", "--at", "2026-11-30T08:00:00Z"]) == 0
 
 
 def founder(name: str) -> list[str]:
-    return datapack(f"data/realms/function/wardrobe/founder/{name}.mcfunction").splitlines()
+    return datapack(f"data/monkey/function/wardrobe/founder/{name}.mcfunction").splitlines()
 
 
 def test_the_launch_opens_the_window_for_season_one_only():
-    launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"].splitlines()
-    assert "execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open" in launch
+    launch = rules.rules_files()["data/monkey/function/rules/launch.mcfunction"].splitlines()
+    assert "execute unless score #launched rw.day matches 1 run function monkey:wardrobe/founder/open" in launch
     opening = founder("open")
     guard = next(i for i, line in enumerate(opening) if not line.startswith("#"))
     assert opening[guard].startswith("execute unless score #season rw.day matches 1 run return run tellraw @s ")
@@ -174,25 +174,25 @@ def test_ten_minutes_online_while_the_window_is_open_earns_the_circlet():
     body = [line for line in second if not line.startswith("#")]
     assert body[0] == "execute unless score #founder.open rw.day matches 1 run return 0"
     assert ("execute if score #founder.now rw.day >= #founder.until rw.day run return run "
-            "function realms:wardrobe/founder/close") in body
+            "function monkey:wardrobe/founder/close") in body
     assert "scoreboard players add @a rw.launchtime 1" in body
     assert f"scoreboard players set @a[scores={{rw.launchtime={challenges.FOUNDER_MINUTES * 60}..}}] rw.launch 1" \
         in body
     # Counted for whoever is online, so players who join after the launch hour count the same.
     assert body.index("scoreboard players add @a rw.launchtime 1") > body.index(
         "execute unless score #founder.open rw.day matches 1 run return 0")
-    wardrobe_second = datapack("data/realms/function/wardrobe/second.mcfunction").splitlines()
-    assert "function realms:wardrobe/founder/second" in wardrobe_second
+    wardrobe_second = datapack("data/monkey/function/wardrobe/second.mcfunction").splitlines()
+    assert "function monkey:wardrobe/founder/second" in wardrobe_second
 
 
 def test_the_wall_clock_moves_only_a_window_the_launch_opened():
     sync = [line for line in founder("sync") if not line.startswith("#")]
     assert sync[0] == "execute unless score #founder.auto rw.day matches 1 run return 0"
     assert "$scoreboard players set #founder.left rw.day $(seconds)" in sync
-    assert ("execute if score #founder.left rw.day matches ..0 run return run function realms:wardrobe/founder/close"
+    assert ("execute if score #founder.left rw.day matches ..0 run return run function monkey:wardrobe/founder/close"
             in sync)
     assert "scoreboard players operation #founder.left rw.day *= #second rw.const" in sync
-    assert "scoreboard players set #second rw.const 20" in datapack("data/realms/function/wardrobe/load.mcfunction")
+    assert "scoreboard players set #second rw.const 20" in datapack("data/monkey/function/wardrobe/load.mcfunction")
     # Staff's open_for is manual: the wall clock leaves it alone. close stops both.
     assert "scoreboard players set #founder.auto rw.day 0" in founder("open_for")
     assert "$scoreboard players set #founder.until rw.day $(hours)" in founder("open_for")
@@ -205,7 +205,7 @@ def test_the_wall_clock_moves_only_a_window_the_launch_opened():
 def test_the_launch_weekend_score_carries_and_its_counter_does_not():
     assert "rw.launchtime" in season.NOT_CARRIED
     assert "rw.launch" not in season.NOT_CARRIED and "rw.challenges" not in season.NOT_CARRIED
-    load = datapack("data/realms/function/wardrobe/load.mcfunction")
+    load = datapack("data/monkey/function/wardrobe/load.mcfunction")
     for objective in ("rw.launch", "rw.launchtime", "rw.challenges"):
         assert f"scoreboard objectives add {objective} dummy" in load
 
@@ -217,15 +217,15 @@ def test_sync_starts_a_new_week_once_and_keeps_a_fresh_world():
     sync = [line for line in datapack(f"{FN}/sync.mcfunction").splitlines() if not line.startswith("#")]
     assert sync == [
         "$execute if score #week rc.week matches $(week) run return 0",
-        "execute unless score #week rc.week matches -1 run function realms:challenges/restart",
+        "execute unless score #week rc.week matches -1 run function monkey:challenges/restart",
         "$scoreboard players set #week rc.week $(week)",
-        "function realms:challenges/pick",
+        "function monkey:challenges/pick",
     ]
     load = datapack(f"{FN}/load.mcfunction")
     # Only a world with no week yet gets -1; a restart keeps the week it had.
     assert ("execute unless score #week rc.week matches -2147483648.. run scoreboard players set #week rc.week -1"
             in load.splitlines())
-    assert "function realms:challenges/load" in datapack("data/realms/function/wardrobe/load.mcfunction")
+    assert "function monkey:challenges/load" in datapack("data/monkey/function/wardrobe/load.mcfunction")
 
 
 def test_a_new_week_clears_every_challenge_score_and_nothing_else():
@@ -249,10 +249,10 @@ def test_challenge_scores_are_never_carried_to_the_next_season():
 
 
 def test_the_launch_clears_test_play():
-    launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"].splitlines()
-    assert "function realms:challenges/launch" in launch
+    launch = rules.rules_files()["data/monkey/function/rules/launch.mcfunction"].splitlines()
+    assert "function monkey:challenges/launch" in launch
     clear = datapack(f"{FN}/launch.mcfunction").splitlines()
-    assert "function realms:challenges/restart" in clear
+    assert "function monkey:challenges/restart" in clear
     # Challenges done and Founder's Circlet earned before Season I's launch were test play, however many weeks
     # the timer counted before it. A later season's launch keeps the carried count, and a launch run again by
     # mistake wipes nothing: #launched is set after the first.
@@ -263,8 +263,8 @@ def test_the_launch_clears_test_play():
     assert clear[-1] == "scoreboard players set #launched rw.day 1"
     # rules/launch opens the window first, so the reset clears only the minutes from before it. It reads the same
     # score before it opens Founder's Circlet's window, so only the first launch opens it.
-    opening = "execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open"
-    assert launch.index(opening) < launch.index("function realms:challenges/launch")
+    opening = "execute unless score #launched rw.day matches 1 run function monkey:wardrobe/founder/open"
+    assert launch.index(opening) < launch.index("function monkey:challenges/launch")
 
 
 # ---------------------------------------------------------------- no farming
@@ -304,23 +304,23 @@ def test_kill_challenges_never_count_players():
         if "kill" not in c:
             continue
         assert "player" not in c["kill"]
-        tag = json.loads(datapack(f"data/realms/tags/entity_type/challenges/{c['id']}.json"))
+        tag = json.loads(datapack(f"data/monkey/tags/entity_type/challenges/{c['id']}.json"))
         ids = [v if isinstance(v, str) else v["id"] for v in tag["values"]]
         assert "minecraft:player" not in ids
         assert set(ids) >= {f"minecraft:{m}" for m in c["kill"]}
         optional = [v for v in tag["values"] if isinstance(v, dict)]
         assert all(v["required"] is False for v in optional)
-        advancement = json.loads(datapack(f"data/realms/advancement/challenges/{c['id']}.json"))
+        advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{c['id']}.json"))
         criterion = advancement["criteria"]["kill"]
         assert criterion["trigger"] == "minecraft:player_killed_entity"
         assert criterion["conditions"]["entity"] == {
             "type": "minecraft:entity_properties", "entity": "this",
-            "predicate": {"minecraft:entity_type": f"#realms:challenges/{c['id']}"}}
+            "predicate": {"minecraft:entity_type": f"#monkey:challenges/{c['id']}"}}
 
 
 def test_loot_counts_a_structure_chest_once_from_any_table():
     loot = next(c for c in challenges.POOL if c.get("loot"))
-    advancement = json.loads(datapack(f"data/realms/advancement/challenges/{loot['id']}.json"))
+    advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{loot['id']}.json"))
     assert len(advancement["requirements"]) == 1   # any one criterion fires it (OR)
     assert set(advancement["requirements"][0]) == set(advancement["criteria"])
     tables = [c["conditions"]["loot_tables"] for c in advancement["criteria"].values()]
@@ -332,17 +332,17 @@ def test_loot_counts_a_structure_chest_once_from_any_table():
 def test_rewards_count_one_and_take_the_advancement_back():
     data = wardrobe.datapack_files()
     for path, text in data.items():
-        if path.startswith("data/realms/advancement/challenges/"):
+        if path.startswith("data/monkey/advancement/challenges/"):
             reward = json.loads(text)["rewards"]["function"]
-            name = path.removeprefix("data/realms/advancement/").removesuffix(".json")
+            name = path.removeprefix("data/monkey/advancement/").removesuffix(".json")
             body = data[f"data/{reward.replace(':', '/function/', 1)}.mcfunction"]
-            assert f"advancement revoke @s only realms:{name}" in body
+            assert f"advancement revoke @s only monkey:{name}" in body
 
 
 def test_visits_are_checked_only_while_the_challenge_is_on():
     for c in challenges.POOL:
         for group, structures in c.get("visit", {}).items():
-            advancement = json.loads(datapack(f"data/realms/advancement/challenges/{c['id']}/{group}.json"))
+            advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{c['id']}/{group}.json"))
             player = advancement["criteria"]["visit"]["conditions"]["player"]
             assert player["type"] == "minecraft:all_of"
             week, flag, place = player["terms"]
@@ -373,7 +373,7 @@ def test_advancements_use_the_26_condition_shapes():
                 walk(value, f"{path}[{i}]")
 
     for path, text in wardrobe.datapack_files().items():
-        if path.startswith("data/realms/advancement/challenges/"):
+        if path.startswith("data/monkey/advancement/challenges/"):
             advancement = json.loads(text)
             walk(advancement, path)
             for criterion in advancement["criteria"].values():
@@ -392,7 +392,7 @@ def test_each_challenge_finishes_once_a_week():
     for c in challenges.POOL:
         progress = datapack(f"{FN}/progress/{c['id']}.mcfunction")
         assert (f"execute if score @s rc.{c['kind']} matches {c['goal']}.. unless score @s rc.{c['id']}.done "
-                f"matches 1 run function realms:challenges/done/{c['id']}") in progress
+                f"matches 1 run function monkey:challenges/done/{c['id']}") in progress
         done = datapack(f"{FN}/done/{c['id']}.mcfunction").splitlines()
         assert f"scoreboard players set @s rc.{c['id']}.done 1" in done
         assert done.count("scoreboard players add @s rw.challenges 1") == 1
@@ -403,16 +403,16 @@ def test_each_challenge_finishes_once_a_week():
 
 def test_every_function_the_wardrobe_pack_calls_exists():
     data = wardrobe.datapack_files()
-    defined = {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
-               for p in data if p.startswith("data/realms/function/")}
-    other_packs = {p.removeprefix("data/realms/function/").removesuffix(".mcfunction")
-                   for p in rules.rules_files() if p.startswith("data/realms/function/")}
+    defined = {p.removeprefix("data/monkey/function/").removesuffix(".mcfunction")
+               for p in data if p.startswith("data/monkey/function/")}
+    other_packs = {p.removeprefix("data/monkey/function/").removesuffix(".mcfunction")
+                   for p in rules.rules_files() if p.startswith("data/monkey/function/")}
     called = set()
     for path, text in data.items():
         if path.endswith(".mcfunction"):
-            called |= set(re.findall(r"function realms:([a-z0-9_/.]+)", text))
+            called |= set(re.findall(r"function monkey:([a-z0-9_/.]+)", text))
         elif "/advancement/" in path:
-            called.add(json.loads(text)["rewards"]["function"].removeprefix("realms:"))
+            called.add(json.loads(text)["rewards"]["function"].removeprefix("monkey:"))
     assert called - defined - other_packs == set()
 
 
@@ -421,14 +421,14 @@ def test_the_trigger_is_enabled_and_opens_the_page():
     assert "scoreboard players enable @a challenges" in second
     use = datapack(f"{FN}/use.mcfunction").splitlines()
     assert use == ["# Runs as a player who just used /trigger challenges: the wardrobe's challenges page.",
-                   "function realms:wardrobe/menu_challenges", "scoreboard players set @s challenges 0",
+                   "function monkey:wardrobe/menu_challenges", "scoreboard players set @s challenges 0",
                    "scoreboard players enable @s challenges"]
 
 
 def test_the_weekly_hello_lists_the_three():
     greet = datapack(f"{FN}/greet.mcfunction").splitlines()
     assert "scoreboard players operation @s rc.seen = #week rc.week" in greet
-    assert "function realms:challenges/lines" in greet
+    assert "function monkey:challenges/lines" in greet
     assert '"command":"/trigger challenges"' in greet[2]
 
 
@@ -436,7 +436,7 @@ def test_the_weekly_hello_lists_the_three():
 
 
 def test_the_week_script_sends_the_commands_hourly():
-    script = (REPO.root / "deploy" / "realms-week.sh").read_bytes()
+    script = (REPO.root / "deploy" / "monkey-week.sh").read_bytes()
     assert b"\r" not in script and script.isascii()
     text = script.decode()
     assert text.startswith("#!/bin/sh\n")
@@ -448,13 +448,13 @@ def test_the_week_script_sends_the_commands_hourly():
     assert '"$lib_tool" send "$@" --docker "$LIVE_DIR/docker"' in lib and "Unknown function" not in text + lib
     assert "--check" in text and "--install" in text
     # Its three settings are read without sourcing the env file (which holds the webhooks), and never a password.
-    assert "realms-deploy.env" in text and "realms-deploy.env" in lib
+    assert "monkey-deploy.env" in text and "monkey-deploy.env" in lib
     assert re.findall(r"^\s*(?:\.|source)\s.*", text, re.M) == ['. "$(dirname -- "$0")/lib.sh"']
     assert "WEBHOOK_URL" not in text and "rcon.password" not in text and "RCON_PASSWORD" not in text
-    service = (REPO.root / "deploy" / "realms-week.service").read_text(encoding="utf-8")
-    assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-week.sh" in service
-    timer = (REPO.root / "deploy" / "realms-week.timer").read_text(encoding="utf-8")
+    service = (REPO.root / "deploy" / "monkey-week.service").read_text(encoding="utf-8")
+    assert "User=monkey" in service and "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-week.sh" in service
+    timer = (REPO.root / "deploy" / "monkey-week.timer").read_text(encoding="utf-8")
     assert "Persistent=true" in timer
     assert re.search(r"^OnCalendar=\*-\*-\* \*:00:30$", timer, re.M)
-    for unit in ("realms-week.service", "realms-week.timer"):
+    for unit in ("monkey-week.service", "monkey-week.timer"):
         assert b"\r" not in (REPO.root / "deploy" / unit).read_bytes()

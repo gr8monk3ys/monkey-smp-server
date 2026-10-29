@@ -184,12 +184,12 @@ export const roles: Role[] = [
         heading: "The season's systems",
         note: "Each one lists its own commands in chat, clickable.",
         cmds: [
-          { code: "/function realms:events/help", does: "Events: the arena, Anarchy, the Faction Raid, flags, books and the Cup." },
-          { code: "/function realms:standings/help", does: "The standings board and bounties." },
-          { code: "/function realms:diplomacy/help", does: "Faction numbers, and ending a war or pact by hand." },
-          { code: "/function realms:drops/help", does: "Supply drops: status, a drop now, on and off." },
-          { code: "/function realms:omens/help", does: "Omens: status, start, stop, on and off." },
-          { code: "/function realms:outposts/help", does: "Outposts: status, freeing one, on and off." },
+          { code: "/function monkey:events/help", does: "Events: the arena, Anarchy, the Faction Raid, flags, books and the Cup." },
+          { code: "/function monkey:standings/help", does: "The standings board and bounties." },
+          { code: "/function monkey:diplomacy/help", does: "Faction numbers, and ending a war or pact by hand." },
+          { code: "/function monkey:drops/help", does: "Supply drops: status, a drop now, on and off." },
+          { code: "/function monkey:omens/help", does: "Omens: status, start, stop, on and off." },
+          { code: "/function monkey:outposts/help", does: "Outposts: status, freeing one, on and off." },
         ],
       },
       {

@@ -16,7 +16,7 @@ def test_arena_keeps_strength_aside_and_lets_nothing_out():
     for slots in ("container.* *", "weapon.offhand *"):
         assert f"if items entity @s {slots} run return" in join
     # armor.* includes the body slot, which holds a new player's PvP grace item (tools/rules.py)
-    assert "if items entity @s armor.* *[!custom_data~{realms_grace:{}}] run return" in join
+    assert "if items entity @s armor.* *[!custom_data~{monkey_grace:{}}] run return" in join
     assert join.index("return") < join.index("tag @s add ev.arena")
     assert f"scoreboard players operation @s ev.strength = @s {events.LEVEL}" in join
     assert f"scoreboard players set @s {events.LEVEL} 3" in join
@@ -69,8 +69,8 @@ def test_strength_sync_removes_every_modifier_above_the_level():
 
 def test_rejoining_takes_you_out_of_the_arena_and_takes_raid_flags():
     rejoined = fn("rejoined")
-    assert "function realms:events/arena/leave" in rejoined
-    assert "clear @s *[custom_data~{realms_flag:{}}]" in rejoined
+    assert "function monkey:events/arena/leave" in rejoined
+    assert "clear @s *[custom_data~{monkey_flag:{}}]" in rejoined
     assert rejoined.index("#raid ev.state") < rejoined.index("clear @s")
 
 
@@ -80,9 +80,9 @@ def test_kits_follow_the_bans():
         names = [n for n, _ in items + events.FOOD] + list(events.ARMOR.values())
         assert not set(names) & events.BANNED, kit
         gear = [line for line in body.splitlines() if line.startswith(("give ", "item replace"))]
-        assert gear and all("[custom_data={realms_kit:{}}]" in line for line in gear), f"{kit}: every item marked"
+        assert gear and all("[custom_data={monkey_kit:{}}]" in line for line in gear), f"{kit}: every item marked"
         for line in gear:
-            assert "[" not in line.replace("[custom_data={realms_kit:{}}]", ""), f"{kit}: no other components"
+            assert "[" not in line.replace("[custom_data={monkey_kit:{}}]", ""), f"{kit}: no other components"
         assert "unless entity @s[tag=ev.arena] run return" in body
 
 
@@ -103,7 +103,7 @@ def test_anarchy_runs_90_minutes_then_a_10_minute_ceasefire_and_clears_contraban
         assert f"clear @a minecraft:{item}" in over
     assert "ender_pearl" not in over
     second = fn("anarchy/second")
-    end = "if score #anarchy ev.timer matches ..0 run return run function realms:events/anarchy"
+    end = "if score #anarchy ev.timer matches ..0 run return run function monkey:events/anarchy"
     assert f"matches 1 {end}/phase2" in second
     assert f"matches 2 {end}/over" in second
 
@@ -117,7 +117,7 @@ def test_flags_survive_being_placed_and_broken():
         assert {"minecraft:custom_data", "minecraft:lore", "minecraft:banner_patterns"} <= set(include)
     assert len(events.COLORS) == 16
     stamp = fn("flag/stamp")
-    assert '"realms_flag":{"id":"$(id)","n":$(n)}' in stamp
+    assert '"monkey_flag":{"id":"$(id)","n":$(n)}' in stamp
     assert '"type":"minecraft:set_count","count":1' in stamp
 
 
@@ -135,5 +135,5 @@ def test_season_lock_freezes_the_world_and_unlock_undoes_it():
     assert ("execute if score #season_locked ev.state matches 1 run gamemode adventure @a[gamemode=survival]"
             in fn("second").splitlines())
     # Unlock puts back what server.properties sets.
-    props = (REPO.realms / "defaults" / "server.properties").read_text(encoding="utf-8").splitlines()
+    props = (REPO.monkey / "defaults" / "server.properties").read_text(encoding="utf-8").splitlines()
     assert "pvp=true" in props and "difficulty=normal" in props

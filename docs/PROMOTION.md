@@ -125,7 +125,7 @@ every real player with "Connection Throttled.".
 Joins per address, on the VPS (`--since` counts from that day on, e.g. the start of a campaign):
 
 ```sh
-python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs --since 2026-11-07
+python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs --since 2026-11-07
 ```
 
 It prints, for each address, the joins, the different players, and the **new** players: those whose first

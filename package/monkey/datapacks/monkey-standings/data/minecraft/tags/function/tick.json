@@ -1,0 +1,6 @@
+{
+  "values": [
+    "monkey:standings/tick",
+    "monkey:diplomacy/tick"
+  ]
+}

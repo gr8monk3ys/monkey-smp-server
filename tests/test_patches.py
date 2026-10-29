@@ -117,7 +117,7 @@ def test_check_catches_broken_references(release, break_it, message):
     assert any(message in e for e in errors), errors
 
 
-# --- the golden fixture: the same input, patch and answers as Realms.Tests.ps1 checks the installer against ---
+# --- the golden fixture: the same input, patch and answers as Monkey.Tests.ps1 checks the installer against ---
 
 def _recorder():
     spec = importlib.util.spec_from_file_location("patch_golden_record", GOLDEN_DIR / "record.py")

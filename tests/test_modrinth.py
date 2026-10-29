@@ -32,7 +32,7 @@ def built_pack(repo, tmp_path, version=VERSION) -> bytes:
 
 
 def remote_version(vid: str, number: str, pack: bytes, published: str) -> dict:
-    url = f"https://cdn.modrinth.com/data/PACK/versions/{vid}/TheRealms-Client-{number}.mrpack"
+    url = f"https://cdn.modrinth.com/data/PACK/versions/{vid}/MonkeySMP-Client-{number}.mrpack"
     return {"id": vid, "version_number": number, "date_published": published,
             "files": [{"url": url, "primary": True, "hashes": {"sha512": hashlib.sha512(pack).hexdigest()}}]}
 
@@ -99,12 +99,12 @@ def test_the_versions_notes_are_its_changelog_section(repo):
 
 def test_version_data_files_the_mrpack_as_a_fabric_modpack(repo):
     index = load_json(repo.client / "modrinth.index.json")
-    data = modrinth.version_data("PACK", VERSION, index, "TheRealms-Client-2.0.0.mrpack", "notes")
+    data = modrinth.version_data("PACK", VERSION, index, "MonkeySMP-Client-2.0.0.mrpack", "notes")
     assert data["project_id"] == "PACK"
     assert data["version_number"] == VERSION and data["name"] == "Monkey SMP 2.0.0"
     assert data["game_versions"] == [index["dependencies"]["minecraft"]]
     assert data["loaders"] == ["fabric"]
-    assert data["file_parts"] == ["TheRealms-Client-2.0.0.mrpack"] == [data["primary_file"]]
+    assert data["file_parts"] == ["MonkeySMP-Client-2.0.0.mrpack"] == [data["primary_file"]]
     assert data["version_type"] == "release" and data["status"] == "listed" and data["dependencies"] == []
 
 
@@ -131,7 +131,7 @@ def test_publish_uploads_the_first_version_and_points_the_server_at_it(repo, tmp
     [upload] = http.uploads
     assert upload["data"]["version_number"] == VERSION
     assert upload["data"]["changelog"] == "Fabric.\n\n- New mods."
-    assert upload["TheRealms-Client-2.0.0.mrpack"] == (tmp_path / "dist" / "TheRealms-Client-2.0.0.mrpack").read_bytes()
+    assert upload["MonkeySMP-Client-2.0.0.mrpack"] == (tmp_path / "dist" / "MonkeySMP-Client-2.0.0.mrpack").read_bytes()
     assert http.edits == [{"minecraft_java_server": {"content": {"kind": "modpack", "version_id": "NEW"}}}]
 
 
@@ -291,7 +291,7 @@ def test_dry_run_prints_the_upload_without_a_token(repo, monkeypatch, capsys):
     modrinth.main(["--dry-run"], repo)
     out = capsys.readouterr().out
     assert '"version_number": "2.0.0"' in out and "<id of monkeysmp>" in out
-    assert (repo.dist / "TheRealms-Client-2.0.0.mrpack").is_file()
+    assert (repo.dist / "MonkeySMP-Client-2.0.0.mrpack").is_file()
 
 
 def test_main_refuses_a_checkout_that_is_not_the_release_tag(repo, monkeypatch):

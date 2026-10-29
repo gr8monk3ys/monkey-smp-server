@@ -1,15 +1,15 @@
 """Factions in game, and war and pacts between them (docs/SEASONS.md, "War and pacts").
 
 Data packs can't see Open Parties and Claims' parties; tools/standings.py reads them from the saved world. Its
-hourly board run (deploy/realms-standings.sh board) also gives each faction a number and writes it in game over
+hourly board run (deploy/monkey-standings.sh board) also gives each faction a number and writes it in game over
 RCON, through sync() here. That is the in-game faction identity other features build on, and all of it:
 
     st.faction        score, by player name (offline players too): the number (1 to MAX_FACTIONS) of the
                       faction the player is in. No score: in no faction, or in one made since the last run.
     st.leader         score: 1 for each party's owner, the player who speaks for the faction.
-    realms:factions   command storage: names.f<N>, the faction's name as the board shows it, as a text
+    monkey:factions   command storage: names.f<N>, the faction's name as the board shows it, as a text
                       component {text:"Red Monkeys"} (plain ASCII, no quotes; show it with
-                      {"nbt":"names.f<N>","storage":"realms:factions","interpret":true}, as the board's text is);
+                      {"nbt":"names.f<N>","storage":"monkey:factions","interpret":true}, as the board's text is);
                       ids.f<N>, the party's id. names.f<N> goes when the party does (missing from two runs
                       in a row, so one bad read ends nothing); ids.f<N> stays.
 
@@ -18,9 +18,9 @@ numbers its factions again from 1. It is only as fresh as the last board run: up
 minutes the saved world can be. To compare two players' factions in a pack:
     execute if score @s st.faction = @p[...] st.faction run ...      (same faction; no score never matches)
 From Python, numbers(world) and names(world) read it back from the saved world. sync() sends its changes many
-to a command: a list in storage realms:diplomacy batch that diplomacy/batch/run makes one by one.
+to a command: a list in storage monkey:diplomacy batch that diplomacy/batch/run makes one by one.
 
-Diplomacy, in the realms-standings data pack (generated: edit this file, not it). A faction's leader (st.leader:
+Diplomacy, in the monkey-standings data pack (generated: edit this file, not it). A faction's leader (st.leader:
 its party's owner) opens /trigger diplomacy after the launch (#launched rw.day) and can, against any other faction:
     declare war    announced; kills between the two count double in the weekly Kills column (st.warkills
                    adds the second one) until Sunday's close, when every war then running ends; declare again
@@ -29,7 +29,7 @@ its party's owner) opens /trigger diplomacy after the launch (#launched rw.day) 
     offer a pact   announced; the other leader accepts from their menu (that ends a war between them). A pact
                    stands until either side breaks it, and a break is announced with the faction and the player.
                    At most MAX_PACTS each (rule 31: alliances, not confederations). Offers end at the close.
-Each is logged in storage realms:diplomacy log, numbered; a war's score (dp.war) and an offer's (dp.offer) is its
+Each is logged in storage monkey:diplomacy log, numbered; a war's score (dp.war) and an offer's (dp.offer) is its
 number there. Standings' Sunday close puts the week's in the Discord post (report()) and keeps week_end(): the
 wars and offers then running, each by its number, so a late retry ends those and never a newer one; week_over
 then trims the log. Claims, the griefing rules and rule 41 stay as they are.
@@ -56,7 +56,7 @@ FN = f"data/{NS}/function/diplomacy"
 ADVANCEMENT = f"data/{NS}/advancement/diplomacy"
 FACTIONS = f"{NS}:factions"
 STORE = f"{NS}:diplomacy"
-STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.3 saves the realms namespace's storage
+STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.3 saves the monkey namespace's storage
 
 MAX_FACTIONS = 99      # numbers given in a world; /trigger diplomacy set <N><action> holds N up to 99
 MAX_PACTS = 2          # pacts a faction can hold at once
@@ -76,7 +76,7 @@ PLAYER_NAME = re.compile(r"[A-Za-z0-9_]{1,16}")
 
 
 def saved_storage(world: Path) -> dict:
-    """The realms namespace's command storage as last saved: {"factions": {...}, "diplomacy": {...}, ...};
+    """The monkey namespace's command storage as last saved: {"factions": {...}, "diplomacy": {...}, ...};
     {} when none is saved yet."""
     path = world / STORAGE_FILE
     if not path.is_file():
@@ -143,7 +143,7 @@ def assign(factions: list[Faction], taken: dict[str, int], warn: Callable[[str],
 
 
 def change(f: str, **args) -> dict:
-    """One change for the game to make: realms:diplomacy/<f>, given the rest as its macro arguments."""
+    """One change for the game to make: monkey:diplomacy/<f>, given the rest as its macro arguments."""
     return {"f": f, **args}
 
 
@@ -155,7 +155,7 @@ def sync_changes(factions: list[Faction], scores: dict[str, dict[str, int]], sto
 
     A read that can't be trusted never ends a faction: with no parties read at all (the file missing or
     unreadable) nothing is sent, the parties in `unsure` (on disk but not readable) keep what they have, and a
-    faction missing from a good read is only marked missing (realms:diplomacy missing.f<N>). It ends (its war
+    faction missing from a good read is only marked missing (monkey:diplomacy missing.f<N>). It ends (its war
     and pacts dissolved, its name removed) only when it is still missing on the next run."""
     saved = storage.get("factions", {})
     taken = {str(pid): n for key, pid in saved.get("ids", {}).items() if (n := number_of(key))}
@@ -219,8 +219,8 @@ def snbt(value) -> str:
 
 
 def batch_commands(changes: list[dict]) -> list[str]:
-    """The RCON commands that make the changes: as many as fit in one command go into storage realms:diplomacy
-    batch, and realms:diplomacy/batch/run makes them in order. Two commands for about 30 changes, so a first sync
+    """The RCON commands that make the changes: as many as fit in one command go into storage monkey:diplomacy
+    batch, and monkey:diplomacy/batch/run makes them in order. Two commands for about 30 changes, so a first sync
     of every faction and member takes seconds, not one `docker compose exec` per change."""
     head, out, chunk = f"data modify storage {STORE} batch set value [", [], []
 
@@ -375,7 +375,7 @@ def gray(s: str) -> dict:
 
 
 def datapack_files() -> dict[str, str]:
-    """The diplomacy functions and advancements; tools/standings.py puts them in the realms-standings pack."""
+    """The diplomacy functions and advancements; tools/standings.py puts them in the monkey-standings pack."""
     f: dict[str, str] = {}
     long_cooldown = COOLDOWN_SECONDS * 20
     f[f"{FN}/load.mcfunction"] = lines(
@@ -413,7 +413,7 @@ def datapack_files() -> dict[str, str]:
         f"{NS}:diplomacy/launch",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
-        "# Once, the first second after the launch (realms:rules/launch sets #launched rw.day): nothing from",
+        "# Once, the first second after the launch (monkey:rules/launch sets #launched rw.day): nothing from",
         "# before it counts. Declarations can't be made before it; this clears anything staff set by hand.",
         *(f"scoreboard players reset * {o}" for o in (WAR, PACT, OFFER, PACTS, LAST, WARKILLS)),
         f"data modify storage {STORE} log set value []",
@@ -661,7 +661,7 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:diplomacy/trim",
     )
     f[f"{FN}/batch/run.mcfunction"] = lines(
-        "# Makes the changes in storage realms:diplomacy batch in order, each realms:diplomacy/<f> with its entry",
+        "# Makes the changes in storage monkey:diplomacy batch in order, each monkey:diplomacy/<f> with its entry",
         "# (tools/diplomacy.py batch_commands): many changes per RCON command.",
         f"execute unless data storage {STORE} batch[0] run return 0",
         f"function {NS}:diplomacy/batch/one with storage {STORE} batch[0]",

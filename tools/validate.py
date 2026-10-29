@@ -30,7 +30,7 @@ PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Sch
                  "Prepare for Hosting.bat", "READ ME FIRST.txt",
                  # Linux and macOS: the same launchers as sh scripts, and the PowerShell bootstrap they share.
                  "start.sh", "stop.sh", "backup.sh", "add-player.sh", "prepare-for-hosting.sh", "Start Server.command",
-                 "realms/realms.sh", "realms/pwsh.lock")
+                 "monkey/monkey.sh", "monkey/pwsh.lock")
 # The Docker image files (package/docker/), checked once that folder exists.
 DOCKER_FILES = ("docker/Dockerfile", "docker/compose.yaml", "docker/entrypoint.sh", "docker/.env.example")
 # Read by sh (or Docker) on Linux and macOS: a CR at the end of a line breaks them.

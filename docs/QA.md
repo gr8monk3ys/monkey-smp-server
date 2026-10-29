@@ -11,7 +11,7 @@ Commands for staff, in full: [ADMIN.md](ADMIN.md).
 ## The one rule: never on the live world
 
 Test on your own copy of the server, never on the live VPS world, and never before launch. Several of these
-steps happen only once per world. `function realms:rules/launch` on the live world before 5 PM on launch day
+steps happen only once per world. `function monkey:rules/launch` on the live world before 5 PM on launch day
 would open Founder's Circlet's window early and wipe the test play it's meant to wipe at the real launch, and
 the real launch wouldn't open the window again. `challenges/sync` clears the week's progress, and
 `firsts/clear` reopens every Server First. On a test copy all of that is fine; that's what it's for.
@@ -22,8 +22,8 @@ watch and read status: no staff commands that change anything.
 ## Set up a test server (about 15 minutes)
 
 1. From the [releases page](https://github.com/gr8monk3ys/monkey-smp-server/releases), download the release
-   you're testing: `TheRealms-Server-<version>.zip` for the server and, unless you play through the Modrinth
-   App, `TheRealms-Player-<version>.zip` (Windows, normal launcher) or `TheRealms-Client-<version>.mrpack`
+   you're testing: `MonkeySMP-Server-<version>.zip` for the server and, unless you play through the Modrinth
+   App, `MonkeySMP-Player-<version>.zip` (Windows, normal launcher) or `MonkeySMP-Client-<version>.mrpack`
    (Modrinth App or Prism) for the game. Same version for both.
 2. Unzip the server into a **new, empty folder** (not over an old test server: a used world can hide a bug
    that only shows on a fresh one).
@@ -49,8 +49,8 @@ one, in the server window (they work in game too, with a `/`, as an op).
 
 These work on a fresh world before anyone runs the launch.
 
-**The spawn NPCs.** As admin, stand at spawn and run `/function realms:npcs/guide/here`, then a few blocks
-away `/function realms:npcs/crier/here`.
+**The spawn NPCs.** As admin, stand at spawn and run `/function monkey:npcs/guide/here`, then a few blocks
+away `/function monkey:npcs/crier/here`.
 
 - [ ] The Guide (gold name) and the Town Crier (yellow) appear where you stood, facing your way, normal size.
 - [ ] Walking within 8 blocks of the Guide shows a speech bubble; the Crier calls out every 5 minutes.
@@ -82,7 +82,7 @@ away `/function realms:npcs/crier/here`.
 
 ## The launch
 
-On the test server only, as admin, run `function realms:rules/launch`.
+On the test server only, as admin, run `function monkey:rules/launch`.
 
 - [ ] Chat announces the launch; the Nether and PvP are closed and open again an hour later. Nobody gets grace
   in that hour (rule 23).
@@ -98,30 +98,30 @@ land, and the Nether portal stays shut.
 
 ## The week
 
-**Challenges.** `function realms:challenges/sync {week:1}` starts week 1.
+**Challenges.** `function monkey:challenges/sync {week:1}` starts week 1.
 
 - [ ] `/trigger challenges` lists three challenges, with what counts when you hover.
 - [ ] Finish an easy one: chat says so, and the menu shows it done.
-- [ ] `function realms:standings/place` at spawn puts the standings board there, and `/trigger standings`
+- [ ] `function monkey:standings/place` at spawn puts the standings board there, and `/trigger standings`
   opens the standings in chat (empty until the VPS's hourly run fills them).
 
 **Supply drops.** Stand somewhere outside every claim.
 
-- [ ] `function realms:drops/here`: a chat message with the spot and a boss bar counting down 10 minutes,
+- [ ] `function monkey:drops/here`: a chat message with the spot and a boss bar counting down 10 minutes,
   with reminders at 5 and 1.
 - [ ] Chests land with a "Supply drop" label. Loot is food, iron, coal, arrows and the like: never diamonds,
   netherite, golden apples, potions or enchanted gear.
-- [ ] `function realms:drops/stop` removes them; `function realms:drops/status` says nothing is on.
+- [ ] `function monkey:drops/stop` removes them; `function monkey:drops/status` says nothing is on.
 
 **Omens.**
 
-- [ ] `function realms:omens/start/truce`: a boss bar, and players can't hurt each other for the hour.
-  `function realms:omens/stop` ends it and PvP comes back.
-- [ ] In the afternoon (`time set 9000`), `function realms:omens/start/blood_moon`: "The moon is coming up red
+- [ ] `function monkey:omens/start/truce`: a boss bar, and players can't hurt each other for the hour.
+  `function monkey:omens/stop` ends it and PvP comes back.
+- [ ] In the afternoon (`time set 9000`), `function monkey:omens/start/blood_moon`: "The moon is coming up red
   tonight". Let the sun set by itself (about 3 minutes; jumping the clock may skip the nightfall it waits for):
   a title, the game goes to Hard, and mobs near you are faster. At dawn, or after 15 minutes, the difficulty
   goes back.
-- [ ] With a second player: `function realms:omens/hunt {name:"THEIRNAME"}` puts a title and boss bar on them
+- [ ] With a second player: `function monkey:omens/hunt {name:"THEIRNAME"}` puts a title and boss bar on them
   and posts a bounty; killing them names you in chat.
 
 **Server Firsts.** After the launch, in survival:
@@ -136,18 +136,18 @@ another hourly timer. Both run only on the VPS, against the live world, so a hom
 restore drill copy) never gets either. Check these in the first evening after the launch, once two real
 factions exist and an hour has passed. Read and watch only: real players' wars and outposts are at stake.
 
-- [ ] `function realms:diplomacy/staff/factions` lists both factions with their numbers.
+- [ ] `function monkey:diplomacy/staff/factions` lists both factions with their numbers.
 - [ ] A faction leader's `/trigger diplomacy` shows buttons for war and a pact; a plain member's shows only
   how things stand.
-- [ ] `function realms:outposts/status` lists four outposts, and the live map shows them. When a faction takes
+- [ ] `function monkey:outposts/status` lists four outposts, and the live map shows them. When a faction takes
   one, chat says so and `status` names the holder.
 
 ## Saturday events
 
-- [ ] `function realms:events/arena/set_lobby`, `set_pit`, `open`: a player near the lobby with an empty
+- [ ] `function monkey:events/arena/set_lobby`, `set_pit`, `open`: a player near the lobby with an empty
   inventory can `/trigger arena set 1` and lands in the pit in adventure mode; `/trigger arena set 2` clears
   the kit and puts them back at the entrance in survival.
-- [ ] `function realms:events/season/lock` puts survival players in adventure with PvP off; `season/unlock`
+- [ ] `function monkey:events/season/lock` puts survival players in adventure with PvP off; `season/unlock`
   undoes it.
 
 ## Reporting what you find

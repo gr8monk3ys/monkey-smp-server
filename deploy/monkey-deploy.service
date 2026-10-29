@@ -1,0 +1,13 @@
+# Runs one deploy check (monkey-deploy.sh). Started by monkey-deploy.timer; install with docs/LIVE.md.
+[Unit]
+Description=Monkey SMP: deploy the newest release if it isn't live
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-deploy.sh
+# A deploy with a 5-minute warning, a backup and a first-start download can take a while.
+TimeoutStartSec=45min

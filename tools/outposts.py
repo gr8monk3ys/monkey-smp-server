@@ -1,21 +1,21 @@
 """Outposts: four capture points in the newest border ring that factions take and hold for standings points.
 
     python tools/outposts.py status WORLD [--at TIME]     where they are, who holds them, what the timer would do
-    python tools/outposts.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-outposts.sh)
-    python tools/datapacks.py                             regenerates the realms-outposts data pack (with the others)
+    python tools/outposts.py commands WORLD [--at TIME]   the RCON commands for now (deploy/monkey-outposts.sh)
+    python tools/datapacks.py                             regenerates the monkey-outposts data pack (with the others)
 
 Where (this script, from the saved world, as drops does; Minecraft can't see claims): one outpost in each
 quarter of the newest border ring (North, East, South, West of the border's centre), on the middle of an
 Overworld chunk, inside drops.ring() (past SPAWN_CLEAR blocks from spawn before the first border act; after
 one, only the land it added), 64 blocks inside the border and CLAIM_GAP chunks or more from every claimed
-chunk. deploy/realms-outposts.sh sends `commands` every hour. Before the launch (#launched rw.day) there are
+chunk. deploy/monkey-outposts.sh sends `commands` every hour. Before the launch (#launched rw.day) there are
 none. After it, the first run places all four; when a border act has finished growing (`worldborder set`) the
 next run places all four again in the new ring (holders start over; hours already earned stay). In between,
 an outpost with a claim within MOVE_GAP chunks moves to a new spot in its quarter (its holder keeps it), and
 one that has no spot yet (none was dry land) is tried again. The pack checks the ground at each candidate in
 turn, as drops does, and takes the first dry, natural one.
 
-How (the realms-outposts data pack, generated: edit this file, not it): a faction captures an outpost by having
+How (the monkey-outposts data pack, generated: edit this file, not it): a faction captures an outpost by having
 members inside its square (ZONE blocks across, from BELOW blocks under the ground to ABOVE over it) with no
 other faction's player there for CAPTURE_SECONDS. A player counts only by tools/diplomacy.py's faction number
 (st.faction): one in no faction, or in a faction made since the last hourly board run, neither captures nor
@@ -60,7 +60,7 @@ from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import ARENA_TAG, STATE
 from repo import Repo
 
-DATAPACK = "realms-outposts"
+DATAPACK = "monkey-outposts"
 FN = f"data/{NS}/function/outposts"
 STORE = f"{NS}:outposts"
 OBJ = "op"                  # #ring, #auto, #busy, #sec, #seq, #epoch, #launched and the scratch values
@@ -90,10 +90,10 @@ CANDIDATES = 4              # spots sent for each outpost; the pack takes the fi
 CANDIDATE_GAP = 4           # chunks between two candidates for the same outpost
 LOG_KEEP = 500              # captures kept in storage log (the oldest go): weeks of them
 
-# What `function realms:outposts/survey` returns, for the timer's log (meaning()).
+# What `function monkey:outposts/survey` returns, for the timer's log (meaning()).
 SURVEY_CODES = {
     1: "started: checking the ground at the spots",
-    10: "outposts are off (function realms:outposts/on)",
+    10: "outposts are off (function monkey:outposts/on)",
     11: "a survey is already running",
     12: "the season hasn't launched",
     13: "already placed for this border",
@@ -318,7 +318,7 @@ def map_changes(world: Path, spots: dict[int, dict], warn=stderr) -> list[tuple[
 
 
 def commands(world: Path, when: dt.datetime) -> list[str]:
-    """What deploy/realms-outposts.sh sends: gone factions' minutes reset, a survey when an outpost needs a spot,
+    """What deploy/monkey-outposts.sh sends: gone factions' minutes reset, a survey when an outpost needs a spot,
     and `bluemap reload` when a map's marker set is out of step (and its config can be written)."""
     run = read_run(world, when)
     return run.commands + (["bluemap reload"] if run.maps else [])
@@ -516,7 +516,7 @@ def datapack_files() -> dict[str, str]:
         f"execute if score #sec {OBJ} matches 60.. run function {NS}:outposts/minute",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
-        "# Once, the first second after the launch (realms:rules/launch sets #launched rw.day): nothing from test",
+        "# Once, the first second after the launch (monkey:rules/launch sets #launched rw.day): nothing from test",
         "# play counts. The outposts go, and the timer places them anew within the hour.",
         "# Labels lose their ids too, so any left from test play go when their chunk loads. A new epoch tells",
         "# tools/standings.py that every minute from here on is new.",
@@ -551,7 +551,7 @@ def datapack_files() -> dict[str, str]:
 
     # ------------------------------------------------ finding the spots
     f[f"{FN}/survey.mcfunction"] = lines(
-        "# deploy/realms-outposts.sh: macro {ring, fresh, cands}, cands the spots ([{i, x, z}], the first for each",
+        "# deploy/monkey-outposts.sh: macro {ring, fresh, cands}, cands the spots ([{i, x, z}], the first for each",
         "# outpost first). fresh 1: a new border, so every outpost starts over; 0: only the outposts named get a",
         "# spot (holders keep them). Returns why it didn't start (SURVEY_CODES); a running survey keeps its spots.",
         f"execute unless score #auto {OBJ} matches 1 run return 10",
@@ -921,7 +921,7 @@ def help_function(files: dict[str, str]) -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- main
@@ -930,7 +930,7 @@ def packs(repo: Repo) -> dict[Path, dict[str, str]]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Outposts: their spots, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
-    server.job_subcommands(sub, "sends them to the running server (deploy/realms-outposts.sh, hourly)",
+    server.job_subcommands(sub, "sends them to the running server (deploy/monkey-outposts.sh, hourly)",
                            world=True, others=[("status", "where they are, who holds them, what the timer would do")])
     args = ap.parse_args(argv)
     if args.command == "status":

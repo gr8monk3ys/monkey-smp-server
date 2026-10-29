@@ -11,7 +11,7 @@ from repo import REPO
 
 def test_every_posix_script_is_checked():
     found = {p.relative_to(REPO.root).as_posix() for p in checks.sh_scripts(REPO.root)}
-    assert {"deploy/lib.sh", "package/start.sh", "package/realms/realms.sh", "package/Start Server.command"} <= found
+    assert {"deploy/lib.sh", "package/start.sh", "package/monkey/monkey.sh", "package/Start Server.command"} <= found
     # tests/*-smoke.sh are bash on purpose (CI runs them with bash), so they stay out
     assert not any(name.startswith("tests/") for name in found)
 
@@ -93,7 +93,7 @@ def test_an_unknown_check_is_refused(capsys):
 
 
 def test_a_draft_pr_boots_nothing_and_a_release_boots_everything():
-    pack = ["package/realms/datapacks/realms-drops/data/realms/function/drops/try.mcfunction"]
+    pack = ["package/monkey/datapacks/monkey-drops/data/monkey/function/drops/try.mcfunction"]
     assert checks.boots("pull_request", "refs/pull/70/merge", True, [], pack) == {"linux": False, "windows": False}
     assert checks.boots("push", "refs/tags/v2.9.0", False, [], []) == {"linux": True, "windows": True}
     assert checks.boots("workflow_dispatch", "refs/heads/x", False, [], []) == {"linux": True, "windows": True}
@@ -105,8 +105,8 @@ def test_a_ready_pr_boots_what_its_change_can_break():
     def plan(*paths):
         return checks.boots("pull_request", "refs/pull/1/merge", False, [], list(paths))
     assert plan("tools/standings.py", "tests/test_standings.py", "docs/ADMIN.md") == {"linux": False, "windows": False}
-    assert plan("package/realms/datapacks/realms-drops/pack.mcmeta") == {"linux": True, "windows": False}
-    assert plan("package/realms/Realms.psm1") == {"linux": True, "windows": True}
+    assert plan("package/monkey/datapacks/monkey-drops/pack.mcmeta") == {"linux": True, "windows": False}
+    assert plan("package/monkey/Monkey.psm1") == {"linux": True, "windows": True}
     assert plan("package/start.bat") == {"linux": True, "windows": True}
     assert plan("player/installer/PlayerInstall.psm1") == {"linux": True, "windows": True}
     # the build makes the zip every boot unzips, Windows' included
@@ -117,7 +117,7 @@ def test_a_ready_pr_boots_what_its_change_can_break():
 
 
 def test_a_push_to_main_boots_on_linux_only():
-    assert checks.boots("push", "refs/heads/main", False, [], ["package/realms/Realms.psm1"]) \
+    assert checks.boots("push", "refs/heads/main", False, [], ["package/monkey/Monkey.psm1"]) \
         == {"linux": True, "windows": False}
     assert checks.boots("push", "refs/heads/main", False, [], ["docs/LIVE.md"]) == {"linux": False, "windows": False}
 

@@ -1,7 +1,7 @@
 # The live server (monkeysmp.lscaturchio.xyz)
 
 How the paid, always-on copy of Monkey SMP runs: one Linux VPS running the Docker setup from the release,
-kept in step with this repo by `deploy/realms-deploy.sh`, with a home PC on playit.gg as the fallback.
+kept in step with this repo by `deploy/monkey-deploy.sh`, with a home PC on playit.gg as the fallback.
 The business side (prices, costs, referrals) is in the plan linked from the PR that added this file; the
 public site is `site/`.
 
@@ -9,7 +9,7 @@ public site is `site/`.
 players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchio.xyz (A) --> VPS :25565
                                                      \-> failover: SRV target swapped to the playit.gg address
 browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
-repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: realms-deploy.timer --> docker compose (the release's docker/)
+repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: monkey-deploy.timer --> docker compose (the release's docker/)
 ```
 
 ## Why releases, not every push
@@ -17,7 +17,7 @@ repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: realms-deploy.timer --> dock
 A deploy restarts the server, and when `client/` changed every player has to update their pack before they
 can join again. A release tag is the point where both exist: the release workflow publishes the matching
 `.mrpack`. So the VPS follows the newest `vX.Y.Z` tag. To make any merge to `main` go live instead, set
-`TRACK=main` in `/etc/realms-deploy.env`. GitHub Actions doesn't start in this private repo right now
+`TRACK=main` in `/etc/monkey-deploy.env`. GitHub Actions doesn't start in this private repo right now
 (billing), and the VPS pulls rather than being pushed to, so nothing here depends on Actions or on an
 SSH key into the server.
 
@@ -34,32 +34,32 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 ## Set up (once)
 
 1. **User and Docker.** As root: install Docker Engine with the compose plugin, `git`, `rsync` and `curl`;
-   `adduser --disabled-password realms`; `usermod -aG docker realms`; `mkdir -p /srv/realms && chown realms: /srv/realms`.
+   `adduser --disabled-password monkey`; `usermod -aG docker monkey`; `mkdir -p /srv/monkey && chown monkey: /srv/monkey`.
 2. **Firewall.** Open 25565/tcp (game), 24454/udp (voice chat), and 80/tcp, 443/tcp and 443/udp for Caddy,
    which serves the live map over HTTPS (step 9). Don't open 8100: BlueMap is published on 127.0.0.1 only
    (`MAP_PORT` in step 5), because ports Docker publishes skip ufw's rules, so ufw alone could not keep it
    private. Keep SSH key-only. RCON (25575) stays unpublished (compose.yaml).
-3. **Clone with a read-only deploy key.** As `realms`: `ssh-keygen -t ed25519 -f ~/.ssh/realms_deploy -N ''`,
+3. **Clone with a read-only deploy key.** As `monkey`: `ssh-keygen -t ed25519 -f ~/.ssh/monkey_deploy -N ''`,
    add the `.pub` file as a read-only deploy key in the repo settings on GitHub, then trust GitHub's host
    key as GitHub publishes it (fingerprint `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` in its docs)
    rather than whatever key the network answers with, and clone:
    ```sh
-   printf 'Host github.com\n  IdentityFile ~/.ssh/realms_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+   printf 'Host github.com\n  IdentityFile ~/.ssh/monkey_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
    echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >> ~/.ssh/known_hosts
-   git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/realms/repo
+   git clone git@github.com:gr8monk3ys/monkey-smp-server.git /srv/monkey/repo
    ```
-4. **Settings.** Back on your admin account (`realms` has no sudo): `sudo cp /srv/realms/repo/deploy/realms-deploy.env.example /etc/realms-deploy.env`, edit
+4. **Settings.** Back on your admin account (`monkey` has no sudo): `sudo cp /srv/monkey/repo/deploy/monkey-deploy.env.example /etc/monkey-deploy.env`, edit
    it (the Discord webhook is optional; `DEPLOY_WINDOW` is when updates may go live), then
-   `sudo chown root:realms /etc/realms-deploy.env && sudo chmod 640 /etc/realms-deploy.env` (the deploy
-   service runs as `realms`, so it has to be able to read the file).
-5. **First deploy.** As `realms` (`sudo -iu realms`): `sh /srv/realms/repo/deploy/realms-deploy.sh` copies the release folder to
-   `/srv/realms/TheRealms-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
+   `sudo chown root:monkey /etc/monkey-deploy.env && sudo chmod 640 /etc/monkey-deploy.env` (the deploy
+   service runs as `monkey`, so it has to be able to read the file).
+5. **First deploy.** As `monkey` (`sudo -iu monkey`): `sh /srv/monkey/repo/deploy/monkey-deploy.sh` copies the release folder to
+   `/srv/monkey/MonkeySMP-Server` and stops, asking for `docker/.env`: copy `.env.example` to `.env`
    there, set `EULA=TRUE`, `OWNER=<your Minecraft name>`, `MEMORY_GB=10`, `TZ=America/Los_Angeles` and
    `MAP_PORT=127.0.0.1:8100` (the map is reached through Caddy, step 9).
-   To keep an existing world, copy its `server` folder into `/srv/realms/TheRealms-Server/` now. Run the
+   To keep an existing world, copy its `server` folder into `/srv/monkey/MonkeySMP-Server/` now. Run the
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
-   anything else. Leave the border alone: the `realms-rules` pack sets Season I's starting border (2500
+   anything else. Leave the border alone: the `monkey-rules` pack sets Season I's starting border (2500
    wide, 312.5 in the Nether, centred on spawn) and the border acts in docs/SEASONS.md grow it by hand.
    Generate out to the season's largest border (6000) plus the view distance. In the console:
    `chunky worldborder` (centres Chunky on the border, not on 0,0), `chunky radius 3200` and `chunky start`
@@ -67,14 +67,14 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    `chunky radius 500` and `chunky start`. It carries on after a restart because the default
    `config/chunky/config.json` sets `continueOnRestart`; on a server set up before that, set it to `true`
    in that file once and run `chunky continue`.
-7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-deploy.{service,timer} /etc/systemd/system/`,
-   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer`. Then
-   `sudo sh /srv/realms/repo/deploy/realms-day.sh --install` for the day timer, which counts "days played" for
+7. **Timers.** `sudo cp /srv/monkey/repo/deploy/monkey-deploy.{service,timer} /etc/systemd/system/`,
+   `sudo systemctl daemon-reload && sudo systemctl enable --now monkey-deploy.timer`. Then
+   `sudo sh /srv/monkey/repo/deploy/monkey-day.sh --install` for the day timer, which counts "days played" for
    the wardrobe (docs/RETENTION.md) at midnight UTC (`--check` shows what it sends and whether it runs). Then
-   `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
+   `sudo sh /srv/monkey/repo/deploy/monkey-week.sh --install` for the week timer: every hour it tells the
    server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
-   (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
-   sends and whether it runs. Then `sudo sh /srv/realms/repo/deploy/realms-drops.sh --install` for the
+   (docs/ADMIN.md, "Weekly challenges"). `sh /srv/monkey/repo/deploy/monkey-week.sh --check` shows what it
+   sends and whether it runs. Then `sudo sh /srv/monkey/repo/deploy/monkey-drops.sh --install` for the
    weeknight supply drops (docs/ADMIN.md, "Supply drops"), and place the spawn NPCs once the server is up
    (docs/ADMIN.md, "Spawn NPCs").
 8. **DNS** (Cloudflare, which holds the lscaturchio.xyz zone): an `A` record `play.monkeysmp` to the VPS
@@ -102,34 +102,34 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 
 ## Day to day
 
-| Do this | How (on the VPS, as `realms`) |
+| Do this | How (on the VPS, as `monkey`) |
 |---|---|
 | Ship a change | merge to `main`, then tag a release as in docs/MAINTAINING.md. In the next deploy window (`DEPLOY_WINDOW`, 4-5 AM Pacific in the example settings) the VPS warns anyone online, backs up, updates and restarts |
-| Ship it right now | `sh /srv/realms/repo/deploy/realms-deploy.sh --now` (ignores the window and skips the warning) |
-| When will it go live? | `sh /srv/realms/repo/deploy/realms-deploy.sh --status`: the newest tag, what is live, and whether the window is open |
-| What is live? | `sh /srv/realms/repo/deploy/realms-deploy.sh --status` |
-| Deploy log | `journalctl -u realms-deploy -n 100` |
-| Console | `cd /srv/realms/TheRealms-Server/docker && docker compose attach realms` (leave with Ctrl+P, Ctrl+Q) |
-| A command | `docker compose exec realms realms rcon "say hi"` |
-| Let a player in by hand | `docker compose exec realms realms add-player NAME` |
-| Grow the border (a border act) | `docker compose exec realms realms rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map" |
-| Store or staff grants (wardrobe) | `docker compose exec realms realms rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
-| Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
-| Joins per join address | `python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs` (docs/PROMOTION.md) |
-| This week's standings so far | `sh /srv/realms/repo/deploy/realms-standings.sh show` (changes nothing); log: `journalctl -u realms-standings -u realms-standings-board -n 50` |
-| The Sunday recap, as it would post now | `sh /srv/realms/repo/deploy/realms-standings.sh preview` (changes nothing) |
-| Backup log (as root) | `journalctl -u realms-backup -n 50` |
-| Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
+| Ship it right now | `sh /srv/monkey/repo/deploy/monkey-deploy.sh --now` (ignores the window and skips the warning) |
+| When will it go live? | `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status`: the newest tag, what is live, and whether the window is open |
+| What is live? | `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` |
+| Deploy log | `journalctl -u monkey-deploy -n 100` |
+| Console | `cd /srv/monkey/MonkeySMP-Server/docker && docker compose attach monkey` (leave with Ctrl+P, Ctrl+Q) |
+| A command | `docker compose exec monkey monkey rcon "say hi"` |
+| Let a player in by hand | `docker compose exec monkey monkey add-player NAME` |
+| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map" |
+| Store or staff grants (wardrobe) | `docker compose exec monkey monkey rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
+| Retention numbers | `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs` |
+| Joins per join address | `python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs` (docs/PROMOTION.md) |
+| This week's standings so far | `sh /srv/monkey/repo/deploy/monkey-standings.sh show` (changes nothing); log: `journalctl -u monkey-standings -u monkey-standings-board -n 50` |
+| The Sunday recap, as it would post now | `sh /srv/monkey/repo/deploy/monkey-standings.sh preview` (changes nothing) |
+| Backup log (as root) | `journalctl -u monkey-backup -n 50` |
+| Off-site snapshots (as root) | `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots` |
 
-Logged in as root, become `realms` for these, for example
-`runuser -u realms -- sh /srv/realms/repo/deploy/realms-deploy.sh --now`. As root the deploy stops at
-"cannot create /tmp/realms-deploy.lock: Permission denied": the lock belongs to `realms`, and the kernel's
+Logged in as root, become `monkey` for these, for example
+`runuser -u monkey -- sh /srv/monkey/repo/deploy/monkey-deploy.sh --now`. As root the deploy stops at
+"cannot create /tmp/monkey-deploy.lock: Permission denied": the lock belongs to `monkey`, and the kernel's
 `fs.protected_regular` keeps even root from opening another user's file in `/tmp`.
 
 If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previous release back, restarts
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
 before the update is the newest folder in `backups/`. To try a skipped commit again (say, once the cause is
-fixed), delete `.deploy-failed` in `/srv/realms/TheRealms-Server` and run the deploy with `--now`.
+fixed), delete `.deploy-failed` in `/srv/monkey/MonkeySMP-Server` and run the deploy with `--now`.
 
 ## One-off steps when upgrading
 
@@ -144,16 +144,16 @@ once 2.5.0 is live, `--check` first (it says what is left and changes nothing). 
 if SSH drops while the server is stopped:
 
 ```sh
-sudo sh /srv/realms/repo/deploy/upgrade-2.5.0.sh --check
-sudo systemd-run --unit=realms-upgrade --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/upgrade-2.5.0.sh
-journalctl -fu realms-upgrade
+sudo sh /srv/monkey/repo/deploy/upgrade-2.5.0.sh --check
+sudo systemd-run --unit=monkey-upgrade --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/upgrade-2.5.0.sh
+journalctl -fu monkey-upgrade
 ```
 
 It warns players online `WARN_MINUTES` (5) and 1 minute ahead (`--now` skips that), stops the server for about
 3 minutes, keeps the old files (`DistantHorizons.toml.before-2.5.0`, the others `.pre-onboarding`) and starts the
 server again whatever happens. A setting it can't find (a mod renamed it) is left for you, with the rest done.
-It reads no secrets from `/etc/realms-deploy.env` and of `server.properties` only the `enable-code-of-conduct`
-line; its log is `/var/log/realms-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
+It reads no secrets from `/etc/monkey-deploy.env` and of `server.properties` only the `enable-code-of-conduct`
+line; its log is `/var/log/monkey-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
 machine"): they need keys the owner makes.
 
 ### A new world for Season I (2.8.0)
@@ -180,26 +180,26 @@ the supporter, title and champion teams over; claims, parties and Strength start
 off, so deaths drop items. If the owners ever keep the old world instead, run `gamerule keep_inventory false`
 there.
 
-As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`realms rcon` is short for
-`docker compose exec realms realms rcon`), and the two `systemctl` lines on your admin account:
+As `monkey` (`sudo -iu monkey`), in `/srv/monkey/MonkeySMP-Server/docker` (`monkey rcon` is short for
+`docker compose exec monkey monkey rcon`), and the two `systemctl` lines on your admin account:
 
 1. Let 2.8.0 deploy as usual. The deploy backs the world up first, so the newest folder in `../backups/` from
    before the update is the old world as 2.7.0 left it. Keep it out of the rotation:
-   `mkdir -p /srv/realms/seasons/pre-season && cp -a ../backups/<that folder> /srv/realms/seasons/pre-season/backup-2.7`.
-   The off-site backups copy `server/` only (not `backups/` or `/srv/realms/seasons`), so keep a copy of
-   `/srv/realms/seasons` off the VPS by hand.
-2. Pause deploys: `sudo systemctl stop realms-deploy.timer`.
-3. Warn and stop: `realms rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
+   `mkdir -p /srv/monkey/seasons/pre-season && cp -a ../backups/<that folder> /srv/monkey/seasons/pre-season/backup-2.7`.
+   The off-site backups copy `server/` only (not `backups/` or `/srv/monkey/seasons`), so keep a copy of
+   `/srv/monkey/seasons` off the VPS by hand.
+2. Pause deploys: `sudo systemctl stop monkey-deploy.timer`.
+3. Warn and stop: `monkey rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
    `docker compose stop`.
-4. Move the old world aside (keep it): `mv ../server/world /srv/realms/seasons/pre-season/world`. Then put
+4. Move the old world aside (keep it): `mv ../server/world /srv/monkey/seasons/pre-season/world`. Then put
    2.8.0's short rules in place (they quote rules 44 to 46, and the server keeps its own copy, so an update
-   doesn't replace it): `cp ../realms/defaults/codeofconduct/en_us.txt ../server/codeofconduct/en_us.txt`.
+   doesn't replace it): `cp ../monkey/defaults/codeofconduct/en_us.txt ../server/codeofconduct/en_us.txt`.
    Everyone accepts them on their first join.
 5. Carry the wardrobe over, before the first start:
 
    ```sh
-   python3 /srv/realms/repo/tools/season.py carry /srv/realms/seasons/pre-season/world \
-       --into /srv/realms/TheRealms-Server/server/world --season 1
+   python3 /srv/monkey/repo/tools/season.py carry /srv/monkey/seasons/pre-season/world \
+       --into /srv/monkey/MonkeySMP-Server/server/world --season 1
    ```
 
    `--season 1`: it's still Season I, so everyone who plays stays a founder and Founder's Circlet still opens
@@ -213,11 +213,11 @@ As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`real
 8. Check:
 
    ```sh
-   realms rcon "scoreboard players get #carried rw.day"     # 1
-   realms rcon "scoreboard players get #season rw.day"      # 1
-   realms rcon "scoreboard players get NAME rw.tier"        # a supporter: the same as in the old world
-   realms rcon "gamerule keep_inventory"                    # false
-   realms rcon "worldborder get"                            # 2500
+   monkey rcon "scoreboard players get #carried rw.day"     # 1
+   monkey rcon "scoreboard players get #season rw.day"      # 1
+   monkey rcon "scoreboard players get NAME rw.tier"        # a supporter: the same as in the old world
+   monkey rcon "gamerule keep_inventory"                    # false
+   monkey rcon "worldborder get"                            # 2500
    grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l   # 17 (rule B18)
    grep -E '^(reset_time_value|reset_time_unit|only_reset_when_empty)=' ../server/lootrestock.properties   # 7, days, true
    ```
@@ -225,85 +225,85 @@ As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`real
    The last two are the new 2.8.0 configs, copied because the live server didn't have them (docs/ADMIN.md,
    "Mod settings").
 9. The no-PvP spawn claim, as in docs/RULES.md (rule 26):
-   `realms rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"`, then
-   `realms rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"`.
-10. Pre-generate as on the first setup (step 6 above): `realms rcon "chunky worldborder"`,
-    `realms rcon "chunky radius 3200"`, `realms rcon "chunky start"`; the Nether with
-    `realms rcon "chunky world minecraft:the_nether"`, `"chunky worldborder"`, `"chunky radius 500"`,
+   `monkey rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"`, then
+   `monkey rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"`.
+10. Pre-generate as on the first setup (step 6 above): `monkey rcon "chunky worldborder"`,
+    `monkey rcon "chunky radius 3200"`, `monkey rcon "chunky start"`; the Nether with
+    `monkey rcon "chunky world minecraft:the_nether"`, `"chunky worldborder"`, `"chunky radius 500"`,
     `"chunky start"`. The End has no border, so give it a centre:
-    `realms rcon "chunky world minecraft:the_end"`, `"chunky center 0 0"`, `"chunky radius 2000"`,
+    `monkey rcon "chunky world minecraft:the_end"`, `"chunky center 0 0"`, `"chunky radius 2000"`,
     `"chunky start"` (on a test server, End cities and Qrafty's villages were 400 to 2000 blocks out).
-    `realms rcon "chunky progress"` shows how far it is.
-11. Clear the old world off the live map: `realms rcon "bluemap purge world"`, and the same for
+    `monkey rcon "chunky progress"` shows how far it is.
+11. Clear the old world off the live map: `monkey rcon "bluemap purge world"`, and the same for
     `world_the_nether` and `world_the_end` (if one says "BlueMap is still loading", run it again a few
     seconds later). The map's border masks are config, not world: they still fit Season I's start.
-12. In game, as an op at spawn: `/function realms:npcs/guide/here` and `/function realms:npcs/crier/here` where
-    each should stand, and `/function realms:standings/place` for the board (docs/ADMIN.md, "Spawn NPCs" and
+12. In game, as an op at spawn: `/function monkey:npcs/guide/here` and `/function monkey:npcs/crier/here` where
+    each should stand, and `/function monkey:standings/place` for the board (docs/ADMIN.md, "Spawn NPCs" and
     "Weekly standings and bounties").
-13. Turn deploys back on: `sudo systemctl start realms-deploy.timer` (unless the launch freeze has started:
+13. Turn deploys back on: `sudo systemctl start monkey-deploy.timer` (unless the launch freeze has started:
     docs/LAUNCH.md).
 
 The week, day, drops and standings timers need nothing: they find the world by its path and talk over RCON,
-so a run during the switch just fails and the next one works. Within the hour `realms-week.timer` tells the new
-world the challenge week. The launch itself is unchanged: `function realms:rules/launch` at 5 PM on the day.
-The old world stays in `/srv/realms/seasons/pre-season/`: to go back to it, stop the server, move the new
+so a run during the switch just fails and the next one works. Within the hour `monkey-week.timer` tells the new
+world the challenge week. The launch itself is unchanged: `function monkey:rules/launch` at 5 PM on the day.
+The old world stays in `/srv/monkey/seasons/pre-season/`: to go back to it, stop the server, move the new
 `world` aside and move the old one back (`backup-2.7` is the same world before 2.8.0 touched it).
 
 ### The weekly challenges' timer (the release with the weekly challenges)
 
-Once that release is live, install `realms-week.timer` from the deployed checkout. It is safe to run again
+Once that release is live, install `monkey-week.timer` from the deployed checkout. It is safe to run again
 (it copies only units that changed), and `--check` says what it would send and changes nothing:
 
 ```sh
-sh /srv/realms/repo/deploy/realms-week.sh --check
-sudo sh /srv/realms/repo/deploy/realms-week.sh --install
+sh /srv/monkey/repo/deploy/monkey-week.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-week.sh --install
 ```
 
 Do it before the launch (Saturday 7 November 2026, 5 PM Pacific): without the timer the challenge week never
 turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
 It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
-`LIVE_DIR` from `/etc/realms-deploy.env`.
+`LIVE_DIR` from `/etc/monkey-deploy.env`.
 
 ### The supply drops' timer (the release with supply drops)
 
-Once that release is live, install `realms-drops.timer` the same way (`docs/ADMIN.md`, "Supply drops"):
+Once that release is live, install `monkey-drops.timer` the same way (`docs/ADMIN.md`, "Supply drops"):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-drops.sh --check
-sudo sh /srv/realms/repo/deploy/realms-drops.sh --install
+sh /srv/monkey/repo/deploy/monkey-drops.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-drops.sh --install
 ```
 
-It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 6 to 10 PM Pacific, and
-reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
+It runs every 10 minutes as `monkey`, sends nothing outside Monday to Thursday, 6 to 10 PM Pacific, and
+reads only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
 
 ### The outposts' timer (the release with outposts)
 
-Once that release is live, install `realms-outposts.timer` the same way (`docs/ADMIN.md`, "Outposts"):
+Once that release is live, install `monkey-outposts.timer` the same way (`docs/ADMIN.md`, "Outposts"):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-outposts.sh --check
-sudo sh /srv/realms/repo/deploy/realms-outposts.sh --install
+sh /srv/monkey/repo/deploy/monkey-outposts.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-outposts.sh --install
 ```
 
-It runs every hour at 45 past as `realms`, sends nothing before the launch or when every outpost has its
-spot, and reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims, border,
+It runs every hour at 45 past as `monkey`, sends nothing before the launch or when every outpost has its
+spot, and reads only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, plus the saved claims, border,
 scores and storage from the world. It also writes the "Outposts" marker set into the Overworld map's config
 under `server/config/bluemap/maps/` and sends `bluemap reload` when that changed. Without the timer there
 are no outposts: the pack waits for spots.
 
 ### The omens' timer (the release with omens)
 
-Once that release is live, install `realms-omens.timer` the same way (`docs/ADMIN.md`, "Omens"):
+Once that release is live, install `monkey-omens.timer` the same way (`docs/ADMIN.md`, "Omens"):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-omens.sh --check
-sudo sh /srv/realms/repo/deploy/realms-omens.sh --install
+sh /srv/monkey/repo/deploy/monkey-omens.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-omens.sh --install
 ```
 
-It runs every 10 minutes (5 minutes after the drops' timer) as `realms`, sends nothing outside an omen
+It runs every 10 minutes (5 minutes after the drops' timer) as `monkey`, sends nothing outside an omen
 evening (two weekday evenings a week, from a start between 6:00 and 8:50 PM until 10 PM Pacific), and reads
-only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved scoreboard, claims and border
+only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, plus the saved scoreboard, claims and border
 from the world. `--check` doesn't show the week's plan. Without the timer there are no automatic omens;
 staff can still start one by hand.
 
@@ -314,51 +314,51 @@ challenge or a new faction (`docs/ADMIN.md`, "Monkey SMP news"). Once that relea
 
 1. In Discord, open the channel (#monkey-smp) > Edit Channel > Integrations > Webhooks > New Webhook, name it
    Monkey SMP, and Copy Webhook URL. It may be the standings' webhook if that already posts there.
-2. Put it in the settings file, which stays root:realms, mode 640 (`sudo nano /etc/realms-deploy.env`):
+2. Put it in the settings file, which stays root:monkey, mode 640 (`sudo nano /etc/monkey-deploy.env`):
    `NEWS_WEBHOOK_URL=https://discord.com/api/webhooks/...`. Nowhere else: never in git, a ticket or chat.
 3. Install the timer and look at what it would post:
 
 ```sh
-sudo sh /srv/realms/repo/deploy/realms-news.sh --install
-sh /srv/realms/repo/deploy/realms-news.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-news.sh --install
+sh /srv/monkey/repo/deploy/monkey-news.sh --check
 ```
 
-It runs every 10 minutes (2 minutes past, clear of the drops and omens) as `realms`, reads `REPO_DIR`,
-`LIVE_DIR`, `LOCK_FILE`, `NEWS_DIR` (default `/srv/realms/news`) and `NEWS_WEBHOOK_URL` from
-`/etc/realms-deploy.env`, and only the saved world (no RCON). `--check` says whether the webhook is set, never
+It runs every 10 minutes (2 minutes past, clear of the drops and omens) as `monkey`, reads `REPO_DIR`,
+`LIVE_DIR`, `LOCK_FILE`, `NEWS_DIR` (default `/srv/monkey/news`) and `NEWS_WEBHOOK_URL` from
+`/etc/monkey-deploy.env`, and only the saved world (no RCON). `--check` says whether the webhook is set, never
 its value. Install it, webhook set, before the launch, so launch night posts: nothing posts before
-`realms:rules/launch`, and the runs before it are what date the launch (no calendar date is used). A season
+`monkey:rules/launch`, and the runs before it are what date the launch (no calendar date is used). A season
 whose first launched run had no run in the 3 hours before it (the webhook added mid-season), or a gap of more
 than 3 hours between runs (the webhook emptied for a while, the VPS down), keeps what turned up meanwhile as
 baseline and posts only what is new after it. To stop it, empty `NEWS_WEBHOOK_URL` (or
-`sudo systemctl disable --now realms-news.timer`). A new season needs nothing as long as the webhook stays set
+`sudo systemctl disable --now monkey-news.timer`). A new season needs nothing as long as the webhook stays set
 across it: a new world is a new `season-<n>.json` in `NEWS_DIR`, so every first is news again.
 
-### The day timer as a job (the release with `deploy/realms-day.sh`)
+### The day timer as a job (the release with `deploy/monkey-day.sh`)
 
 The week, drops, omens and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
-lock and reads each answer for a refusal. Before this release `realms-day.service` ran `docker compose ... rcon`
-itself, without either. It now sends `function realms:wardrobe/day_once {stamp:YYYYMMDD}`, the UTC date, and the
+lock and reads each answer for a refusal. Before this release `monkey-day.service` ran `docker compose ... rcon`
+itself, without either. It now sends `function monkey:wardrobe/day_once {stamp:YYYYMMDD}`, the UTC date, and the
 wardrobe pack starts one day per date, so a retry after a run that reached the server never counts a second day.
 Once the release is live (its wardrobe pack has `day_once`), replace the unit from the deployed checkout (it
 copies only the units that changed, and restarting the timer doesn't start a new day):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-day.sh --check
-sudo sh /srv/realms/repo/deploy/realms-day.sh --install
+sh /srv/monkey/repo/deploy/monkey-day.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-day.sh --install
 ```
 
-Until then the old unit keeps working: it runs `function realms:wardrobe/day`, which the release keeps (staff can
+Until then the old unit keeps working: it runs `function monkey:wardrobe/day`, which the release keeps (staff can
 run it for an extra day). Like the old one, the new one tries again every 10 minutes while the server is down; it
 now also does when the server turns the command down (say, the wardrobe pack is off). It gives up after 6 hours
 of tries: it posts to the staff channel and stops, and the next midnight's run starts afresh. `journalctl -u
-realms-day` shows each try; to start the given-up day later, run `sh /srv/realms/repo/deploy/realms-day.sh` as
-`realms` (by hand it has no limit, and a date already started is left alone).
+monkey-day` shows each try; to start the given-up day later, run `sh /srv/monkey/repo/deploy/monkey-day.sh` as
+`monkey` (by hand it has no limit, and a date already started is left alone).
 
 ### The spawn NPCs (the release with spawn NPCs)
 
-The release adds the `realms-npcs` data pack but places no one. Once it is live, an op places the Guide and
-the Town Crier at spawn once, in game: `/function realms:npcs/guide/here` and `/function realms:npcs/crier/here`
+The release adds the `monkey-npcs` data pack but places no one. Once it is live, an op places the Guide and
+the Town Crier at spawn once, in game: `/function monkey:npcs/guide/here` and `/function monkey:npcs/crier/here`
 where each should stand (docs/ADMIN.md, "Spawn NPCs"). Until then there are no NPCs at spawn. Place them again
 after a release that changes their text.
 
@@ -374,15 +374,15 @@ whose list still reads `["minecraft:minecart"]`. `deploy/npc-claims.sh` adds the
 skips them when they're already there (only those exact entries count). Run it as root, `--check` first:
 
 ```sh
-sudo sh /srv/realms/repo/deploy/npc-claims.sh --check
-sudo systemd-run --unit=realms-npcs --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/npc-claims.sh
-journalctl -fu realms-npcs
+sudo sh /srv/monkey/repo/deploy/npc-claims.sh --check
+sudo systemd-run --unit=monkey-npcs --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/npc-claims.sh
+journalctl -fu monkey-npcs
 ```
 
 It works like `deploy/shops-claims.sh` ("Shops in claims"): it warns players online (`--now` skips that), takes
 the deploy lock, stops the server for about 3 minutes (the mod reads the list only on start), keeps the old file
 as `openpartiesandclaims-server.toml.before-npcs` and starts the server again whatever happens; its log is
-`/var/log/realms-npc-claims.log`. It prints only the `forcedEntityProtectionExceptionList` line. If that list is
+`/var/log/monkey-npc-claims.log`. It prints only the `forcedEntityProtectionExceptionList` line. If that list is
 missing or spread over several lines, it changes nothing and says so: add the entries it names to it by hand
 with the server stopped. Nothing to do in game: the NPCs stay where they are.
 
@@ -390,19 +390,19 @@ with the server stopped. Nothing to do in game: the NPCs stay where they are.
 
 The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,
 and those carry the real ores ("Distant Horizons and x-ray" in docs/ADMIN.md). Turn them off with the server
-stopped, so Distant Horizons can't write over the change. As `realms` (`sudo -iu realms`):
+stopped, so Distant Horizons can't write over the change. As `monkey` (`sudo -iu monkey`):
 
 ```sh
-cd /srv/realms/TheRealms-Server/docker
-exec 9>/tmp/realms-deploy.lock && flock 9    # the deploy lock (LOCK_FILE in /etc/realms-deploy.env): no deploy or backup starts meanwhile
-docker compose stop realms
-f=/srv/realms/TheRealms-Server/server/config/DistantHorizons.toml
+cd /srv/monkey/MonkeySMP-Server/docker
+exec 9>/tmp/monkey-deploy.lock && flock 9    # the deploy lock (LOCK_FILE in /etc/monkey-deploy.env): no deploy or backup starts meanwhile
+docker compose stop monkey
+f=/srv/monkey/MonkeySMP-Server/server/config/DistantHorizons.toml
 cp "$f" "$f.bak"
 sed -i -e 's/^\([[:space:]]*synchronizeOnLoad[[:space:]]*=\).*/\1 false/' \
        -e 's/^\([[:space:]]*enableRealTimeUpdates[[:space:]]*=\).*/\1 false/' \
        -e 's/^\([[:space:]]*generatorPlan[[:space:]]*=\).*/\1 "DISABLED"/' "$f"
 grep -nE '^[[:space:]]*(synchronizeOnLoad|enableRealTimeUpdates|generatorPlan)[[:space:]]*=' "$f"
-docker compose start realms
+docker compose start monkey
 exec 9>&-                                    # let deploys and backups run again
 ```
 
@@ -417,16 +417,16 @@ The release brings the short rules (`server/codeofconduct/en_us.txt`, a new file
 own copies of three files, so four settings in them stay off: the Code of Conduct (`server.properties`), ServerCore's
 breeding cap and villager lobotomization (`config/servercore/config.yml`) and Open Parties and Claims' 4 chunks per
 player (`config/openpartiesandclaims-server.toml`). Spawn's no-PvP claim belongs to the world, so it's made from the
-console. Do this after the release is live: `ls /srv/realms/TheRealms-Server/server/codeofconduct/en_us.txt` must
-list the file. Then, as `realms` (`sudo -iu realms`):
+console. Do this after the release is live: `ls /srv/monkey/MonkeySMP-Server/server/codeofconduct/en_us.txt` must
+list the file. Then, as `monkey` (`sudo -iu monkey`):
 
 ```sh
-cd /srv/realms/TheRealms-Server/docker
-exec 9>/tmp/realms-deploy.lock && flock 9    # the deploy lock, as above
-S=/srv/realms/TheRealms-Server/server
+cd /srv/monkey/MonkeySMP-Server/docker
+exec 9>/tmp/monkey-deploy.lock && flock 9    # the deploy lock, as above
+S=/srv/monkey/MonkeySMP-Server/server
 P=$S/server.properties C=$S/config/servercore/config.yml O=$S/config/openpartiesandclaims-server.toml
-docker compose exec -T realms realms rcon "say The server restarts in 1 minute for a settings update." && sleep 60
-docker compose stop realms
+docker compose exec -T monkey monkey rcon "say The server restarts in 1 minute for a settings update." && sleep 60
+docker compose stop monkey
 for f in "$P" "$C" "$O"; do [ -e "$f.pre-onboarding" ] || cp -p "$f" "$f.pre-onboarding"; done   # once
 grep -q '^enable-code-of-conduct=' "$P" || echo 'enable-code-of-conduct=true' >> "$P"
 sed -i 's/^enable-code-of-conduct=.*/enable-code-of-conduct=true/' "$P"
@@ -436,10 +436,10 @@ cat "$C.new" > "$C" && rm "$C.new"
 sed -i 's/^\([[:space:]]*maxPlayerClaims[[:space:]]*=\).*/\1 4/' "$O"
 grep -h -E '^enable-code-of-conduct=|^[[:space:]]*maxPlayerClaims[[:space:]]*=' "$P" "$O"
 grep -A2 -E '^[[:space:]]*(lobotomize-villagers|breeding-cap):' "$C" | grep 'enabled:'
-docker compose start realms
-until docker compose exec -T realms realms rcon list >/dev/null 2>&1; do sleep 10; done
-docker compose exec -T realms realms rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"
-docker compose exec -T realms realms rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"
+docker compose start monkey
+until docker compose exec -T monkey monkey rcon list >/dev/null 2>&1; do sleep 10; done
+docker compose exec -T monkey monkey rcon "opac server-claims-config set claims.protection.exceptions.playersByPlayers false"
+docker compose exec -T monkey monkey rcon "oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48"
 exec 9>&-                                    # let deploys and backups run again
 ```
 
@@ -463,14 +463,14 @@ Open Parties and Claims' "can't interact" message in a claim. `deploy/shops-clai
 and skips it when it's already there. Run it as root once that release is live, `--check` first:
 
 ```sh
-sudo sh /srv/realms/repo/deploy/shops-claims.sh --check
-sudo systemd-run --unit=realms-shops --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/shops-claims.sh
-journalctl -fu realms-shops
+sudo sh /srv/monkey/repo/deploy/shops-claims.sh --check
+sudo systemd-run --unit=monkey-shops --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/shops-claims.sh
+journalctl -fu monkey-shops
 ```
 
 Like `upgrade-2.5.0.sh` it warns players online (`--now` skips that), takes the deploy lock, stops the server for
 about 3 minutes, keeps the old file as `openpartiesandclaims-server.toml.before-shops`, and starts the server
-again whatever happens; its log is `/var/log/realms-shops-claims.log`. It prints only the
+again whatever happens; its log is `/var/log/monkey-shops-claims.log`. It prints only the
 `forcedBlockProtectionExceptionList` line. If that list is missing or spread over several lines, it changes
 nothing and says so: add the entry by hand with the server stopped, as in the section above.
 
@@ -478,7 +478,7 @@ nothing and says so: add the entry by hand with the server stopped, as in the se
 
 `backups/` is on the same disk as the world, so a dead disk or a lost VPS takes both. So every hour the VPS
 also sends the live server folder, encrypted, to a Cloudflare R2 bucket with [restic](https://restic.net).
-`realms-backup.timer` runs `deploy/realms-backup.sh` on the hour:
+`monkey-backup.timer` runs `deploy/monkey-backup.sh` on the hour:
 
 1. It waits for a running deploy, and keeps deploys out until it is done with the world (a deploy check
    that comes meanwhile logs "another deploy is running" and goes ahead 5 minutes later).
@@ -495,8 +495,8 @@ also sends the live server folder, encrypted, to a Cloudflare R2 bucket with [re
    the bucket shows up within days instead of at restore time.
 
 When backups fail, or the server hasn't answered for 3 hours, it posts to the Discord webhook in
-`/etc/realms-deploy.env`, once, and again when they work. A deploy still backs up into `backups/` before it
-updates, and keeps the newest 3 there (`KEEP_BACKUPS` in `/etc/realms-deploy.env`): R2 holds the history.
+`/etc/monkey-deploy.env`, once, and again when they work. A deploy still backs up into `backups/` before it
+updates, and keeps the newest 3 there (`KEEP_BACKUPS` in `/etc/monkey-deploy.env`): R2 holds the history.
 
 **Cost.** R2's free tier (October 2026) is 10 GB-month of storage, 1 million writes and 10 million reads a
 month, with free downloads and no minimum storage time. restic keeps each piece of data once, so the bucket
@@ -514,7 +514,7 @@ thousands of operations a month, far under the free amounts, and downloads cost 
    Key (shown once). Make a second token with **Object Read** only for the home PC (the restore drill below).
 2. **The restic password.** Make a long random one in your password manager and save it there with the keys
    and the address. **Keep it off the VPS**: it is the only way to read the backups, and a VPS that dies takes
-   `/etc/realms-backup.env` with it, leaving the bucket unreadable. Lost R2 keys can be made again; a lost
+   `/etc/monkey-backup.env` with it, leaving the bucket unreadable. Lost R2 keys can be made again; a lost
    password can't.
 3. **restic and the settings**, on the VPS as root. restic 0.19.1 from its release (Debian 12's package is
    0.14, too old for the restore commands below; `apt install bzip2` if `bunzip2` is missing):
@@ -522,22 +522,22 @@ thousands of operations a month, far under the free amounts, and downloads cost 
    curl -fsSLO https://github.com/restic/restic/releases/download/v0.19.1/restic_0.19.1_linux_amd64.bz2
    echo 'f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c  restic_0.19.1_linux_amd64.bz2' | sha256sum -c
    bunzip2 restic_0.19.1_linux_amd64.bz2 && install -m 755 restic_0.19.1_linux_amd64 /usr/local/bin/restic
-   install -m 600 -o root -g root /srv/realms/repo/deploy/realms-backup.env.example /etc/realms-backup.env
-   nano /etc/realms-backup.env
+   install -m 600 -o root -g root /srv/monkey/repo/deploy/monkey-backup.env.example /etc/monkey-backup.env
+   nano /etc/monkey-backup.env
    ```
    Type the address (as `s3:https://...`), the two keys and the password into the file. It stays root-only:
    never copy the values into the repo or a chat.
 4. **The unit, the first backup and the timer:**
    ```sh
-   cp /srv/realms/repo/deploy/realms-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload
-   sh /srv/realms/repo/deploy/realms-backup.sh --init
-   systemctl start realms-backup
-   systemctl enable --now realms-backup.timer
+   cp /srv/monkey/repo/deploy/monkey-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload
+   sh /srv/monkey/repo/deploy/monkey-backup.sh --init
+   systemctl start monkey-backup
+   systemctl enable --now monkey-backup.timer
    ```
    `--init` creates the repository in the bucket. The first backup sends the whole server folder, so the
    server doesn't save until it is done (players can keep playing); later ones send only the changes.
-   `/srv/realms/repo` is checked out at the live release, so these files arrive with the first release that
-   has them (or `git checkout --detach origin/main` there as `realms`: the deploy script decides what is
+   `/srv/monkey/repo` is checked out at the live release, so these files arrive with the first release that
+   has them (or `git checkout --detach origin/main` there as `monkey`: the deploy script decides what is
    live from its own record, not from that checkout).
 5. **Put the monthly restore drill (below) in your calendar.**
 
@@ -547,29 +547,29 @@ deleting it.
 
 ### Restore
 
-Every snapshot holds the server folder at its path on the VPS, `/srv/realms/TheRealms-Server/server`.
-Restoring `latest:/srv/realms/TheRealms-Server/server` gives the newest one; `--restic snapshots` lists the
-others by ID and time, and `<ID>:/srv/realms/TheRealms-Server/server` restores one of them. On the VPS the
+Every snapshot holds the server folder at its path on the VPS, `/srv/monkey/MonkeySMP-Server/server`.
+Restoring `latest:/srv/monkey/MonkeySMP-Server/server` gives the newest one; `--restic snapshots` lists the
+others by ID and time, and `<ID>:/srv/monkey/MonkeySMP-Server/server` restores one of them. On the VPS the
 script reads the keys from the settings file, so none go on the command line.
 
 **On the VPS** (the world broke, or a mistake needs undoing), as root:
 
 ```sh
-sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/TheRealms-Server/server --target /srv/realms/restore
-cd /srv/realms/TheRealms-Server/docker && docker compose stop
-mv ../server/world ../server/world.before-restore && mv /srv/realms/restore/world ../server/world
-chown -R realms: ../server/world && docker compose up -d
+sh /srv/monkey/repo/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/restore
+cd /srv/monkey/MonkeySMP-Server/docker && docker compose stop
+mv ../server/world ../server/world.before-restore && mv /srv/monkey/restore/world ../server/world
+chown -R monkey: ../server/world && docker compose up -d
 ```
 
 Only the world goes back. The whitelist, bans, LuckPerms and the mods stay as they are, so nobody who paid
 since then loses access. The last 3 deploys' backups are also in `backups/`, with no download: move
-`../backups/<time>/world` in instead. Delete `world.before-restore` and `/srv/realms/restore` once the server
+`../backups/<time>/world` in instead. Delete `world.before-restore` and `/srv/monkey/restore` once the server
 is fine.
 
 **On a new VPS**: set it up as in "Set up (once)" above. In step 5, before running the deploy script the
 second time, do steps 2 and 3 of the off-site setup with the values from your password manager, then
-`sh /srv/realms/repo/deploy/realms-backup.sh --restic restore latest:/srv/realms/TheRealms-Server/server --target /srv/realms/TheRealms-Server/server`
-and `chown -R realms: /srv/realms/TheRealms-Server/server`. Then run the deploy script, download the Tebex
+`sh /srv/monkey/repo/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/MonkeySMP-Server/server`
+and `chown -R monkey: /srv/monkey/MonkeySMP-Server/server`. Then run the deploy script, download the Tebex
 jar into `server/mods` again (backups leave jars out; see "Payments and Discord"), and finish with step 4
 of the off-site setup. The new VPS carries on the same series of snapshots.
 
@@ -580,7 +580,7 @@ read and the world loads, and it rehearses the playit.gg fallback below, which s
 
 1. **Make room.** Stop any other Minecraft server on the PC first, test servers included: two servers fight
    over BlueMap's port 8100, and the one that loses shuts down. Check that about 12 GB of memory is free.
-2. **The release.** Download the zip of the release that is live (`realms-deploy.sh --status` on the VPS)
+2. **The release.** Download the zip of the release that is live (`monkey-deploy.sh --status` on the VPS)
    from the repo's GitHub releases, and unzip it into a new, empty folder, e.g. `C:\MonkeySMP-drill`.
 3. **restic** (once): get `restic_0.19.1_windows_amd64.zip` from https://github.com/restic/restic/releases
    and unzip `restic.exe` to `C:\Tools\restic`.
@@ -592,7 +592,7 @@ read and the world loads, and it rehearses the playit.gg fallback below, which s
    $env:AWS_ACCESS_KEY_ID = '<read-only Access Key ID>'
    $env:AWS_SECRET_ACCESS_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Secret Access Key')).Password
    C:\Tools\restic\restic.exe snapshots --latest 1
-   C:\Tools\restic\restic.exe restore latest:/srv/realms/TheRealms-Server/server --target server
+   C:\Tools\restic\restic.exe restore latest:/srv/monkey/MonkeySMP-Server/server --target server
    ```
    The newest snapshot should be from the last hour or two.
 5. **Start it** with `Start Server.bat`. Backups leave the jars out, so the first start downloads Java,
@@ -632,7 +632,7 @@ Only one copy may run the world at a time: two live copies split the world into 
   `https://cdn.modrinth.com/data/nRA0jiJt/versions/qg7SxggJ/tebex-fabric-26.2-2.4.6-0096441.jar`. Once
   there is a 26.3 build it can go into the manifest with `tools/add.py`, and then it comes back by itself.
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
-  appeals and the `realms` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
+  appeals and the `monkey` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
 
 ### The store (set up once, before the first sale)
@@ -685,25 +685,25 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | What | Runs on | Does |
 |---|---|---|
 | Uptime Kuma | the home PC (fleet repo, `services/uptime-kuma.md`) | every minute: a Minecraft status ping to `monkeysmp.lscaturchio.xyz` (through the SRV record, as players connect) and an HTTP check of the live map; alerts in a Discord channel; quiet 4-5 AM Pacific, when deploys and the daily restart happen |
-| `realms-restart.timer` | the VPS | restarts the server at 4:30 AM Pacific and posts a spark health link |
-| `realms-updates.timer` | the VPS | Mondays at 10 AM Pacific: lists newer builds of what the live release pins |
-| `realms-standings.timer` | the VPS | Sundays at 7 PM Pacific: closes the week's faction standings and posts them (below) |
-| `realms-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
-| `realms-news.timer` | the VPS | every 10 minutes: Monkey SMP news to the public channel, a few lines a week ("The news timer") |
+| `monkey-restart.timer` | the VPS | restarts the server at 4:30 AM Pacific and posts a spark health link |
+| `monkey-updates.timer` | the VPS | Mondays at 10 AM Pacific: lists newer builds of what the live release pins |
+| `monkey-standings.timer` | the VPS | Sundays at 7 PM Pacific: closes the week's faction standings and posts them (below) |
+| `monkey-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
+| `monkey-news.timer` | the VPS | every 10 minutes: Monkey SMP news to the public channel, a few lines a week ("The news timer") |
 
 Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
 the time anyway. The update check runs on the VPS rather than the home PC: it uses the webhook that is already
-in `/etc/realms-deploy.env` (no second copy of it), and it checks the release that is actually live.
+in `/etc/monkey-deploy.env` (no second copy of it), and it checks the release that is actually live.
 
 Install the two timers once the release after 2.4.1 is live (they run from the deployed checkout):
 
 ```sh
 sudo apt-get install -y python3    # the update check runs tools/check_updates.py (3.10 or newer)
-sudo cp /srv/realms/repo/deploy/realms-{restart,updates}.{service,timer} /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now realms-restart.timer realms-updates.timer
+sudo cp /srv/monkey/repo/deploy/monkey-{restart,updates}.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now monkey-restart.timer monkey-updates.timer
 ```
 
-Both post to `STAFF_WEBHOOK_URL` in `/etc/realms-deploy.env` when it is set (a staff-only channel), and to
+Both post to `STAFF_WEBHOOK_URL` in `/etc/monkey-deploy.env` when it is set (a staff-only channel), and to
 `DISCORD_WEBHOOK_URL` otherwise.
 
 **The daily restart** keeps memory from creeping up over days of uptime (Distant Horizons, BlueMap and mod
@@ -712,63 +712,63 @@ the server is younger than `RESTART_MIN_UPTIME` hours (6) and the restart skips.
 the deploy lock, so it never overlaps a deploy or an off-site backup. It warns anyone online 5 minutes and 1
 minute ahead, like a deploy, takes `spark health` just before stopping, and posts "back up (had been up N h)"
 with that link. If memory use in those reports keeps climbing from day to day, something leaks and the
-restart only hides it. Log: `journalctl -u realms-restart -n 50`. To restart now as the timer would, as
-`realms`: `RESTART_MIN_UPTIME=0 sh /srv/realms/repo/deploy/realms-deploy.sh --restart`.
+restart only hides it. Log: `journalctl -u monkey-restart -n 50`. To restart now as the timer would, as
+`monkey`: `RESTART_MIN_UPTIME=0 sh /srv/monkey/repo/deploy/monkey-deploy.sh --restart`.
 
 **The weekly update check** runs `tools/check_updates.py` against the live release, since the GitHub Actions
 check can't run in this private repo. It posts every Monday, with the report attached when there is anything
 newer, so a Monday without a post means the timer is broken. It changes nothing: taking an update is still
 `check_updates.py --apply` on a PC, the smoke test and a release (docs/MAINTAINING.md). Run it now with
-`sudo systemctl start realms-updates`; log: `journalctl -u realms-updates`.
+`sudo systemctl start monkey-updates`; log: `journalctl -u monkey-updates`.
 
 **The weekly standings** (docs/SEASONS.md, "Weekly standings") run `tools/standings.py` from the deployed
-checkout, through `deploy/realms-standings.sh`, as `realms`. They read the world's saved files (parties,
+checkout, through `deploy/monkey-standings.sh`, as `monkey`. They read the world's saved files (parties,
 claims, scoreboard) and send only the board's text to the game, over RCON through the container. Set them up
 once a release with them is live and the server has started on it, as root, `--check` first:
 
 ```sh
-sudo sh /srv/realms/repo/deploy/install-standings.sh --check
-sudo sh /srv/realms/repo/deploy/install-standings.sh
+sudo sh /srv/monkey/repo/deploy/install-standings.sh --check
+sudo sh /srv/monkey/repo/deploy/install-standings.sh
 ```
 
-It skips whatever is already done: python3 (3.11 or newer), a check that the `realms-standings` data pack is
-on, the folder the weeks are kept in (`STANDINGS_DIR`, default `/srv/realms/standings`), the first week's
+It skips whatever is already done: python3 (3.11 or newer), a check that the `monkey-standings` data pack is
+on, the folder the weeks are kept in (`STANDINGS_DIR`, default `/srv/monkey/standings`), the first week's
 snapshot, and the two timers. Two things stay by hand:
 
-- The channel: `STANDINGS_WEBHOOK_URL` in `/etc/realms-deploy.env`, a public channel such as `#monkey-smp`.
+- The channel: `STANDINGS_WEBHOOK_URL` in `/etc/monkey-deploy.env`, a public channel such as `#monkey-smp`.
   Empty, the post goes to `DISCORD_WEBHOOK_URL`. The webhook is never printed or logged.
-- The board: an op stands at spawn and runs `/function realms:standings/place` (docs/ADMIN.md).
+- The board: an op stands at spawn and runs `/function monkey:standings/place` (docs/ADMIN.md).
 
 On Sunday at 7 PM Pacific the timer closes the week: it keeps the final table in
 `STANDINGS_DIR/weeks/<date>.json`, starts the next week from a new snapshot, puts both on the board, announces
 it in chat and posts it to Discord as the Sunday recap ("Monkey SMP Weekly": the table and a few lines on the
-week, worked out at the close and kept in the same file). Before the launch (`function realms:rules/launch`
+week, worked out at the close and kept in the same file). Before the launch (`function monkey:rules/launch`
 sets `#launched rw.day`) it keeps the week but posts nothing. It waits up to 30 minutes for the deploy lock, so it never runs during a
 deploy, the daily restart or an off-site backup. If the board or Discord fails, the service fails and systemd
 tries again every 10 minutes for 2 hours; a retry finishes what is left and never closes the week twice (a
 week closes only when it is at least 3 days old). The hourly board update skips its turn when the lock is
 busy. To run the Sunday job now (it still closes only a week at least 3 days old):
-`sudo systemctl start realms-standings`; log: `journalctl -u realms-standings -n 50`.
+`sudo systemctl start monkey-standings`; log: `journalctl -u monkey-standings -n 50`.
 
 ## Load test
 
 The player table in docs/ADMIN.md was measured on an i7-8700K with nothing else running. The VPS core is
 faster, but it has only two threads, shared by the game thread, C2ME's chunk workers, Distant Horizons'
 LOD builders, BlueMap's renderer and the garbage collector, so its number has to be measured on the VPS.
-`deploy/realms-loadtest.sh` runs `tools/loadtest.py` there: 25 Carpet fake players standing spread out in
+`deploy/monkey-loadtest.sh` runs `tools/loadtest.py` there: 25 Carpet fake players standing spread out in
 generated terrain (the same test as the table), 5 minutes measured, with a spark profile of every thread.
 
 Run it as root at a quiet time, after Chunky has finished pre-generating (it refuses before that; `FORCE=1`
-overrides) and not around midnight UTC (realms-day.timer). The server is offline for about 15 minutes: the
+overrides) and not around midnight UTC (monkey-day.timer). The server is offline for about 15 minutes: the
 script says so on Discord and warns anyone online. Started with `systemd-run`, it carries on if SSH drops:
 
 ```sh
-systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/realms-loadtest.sh
-journalctl -fu realms-loadtest
+systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/monkey-loadtest.sh
+journalctl -fu monkey-loadtest
 ```
 
-Before a release ships the script, copy `deploy/realms-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` to `/root/` and
-run `systemd-run --unit=realms-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/realms-loadtest.sh`.
+Before a release ships the script, copy `deploy/monkey-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` to `/root/` and
+run `systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/monkey-loadtest.sh`.
 
 Why it is safe for the live world and for players:
 

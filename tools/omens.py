@@ -1,11 +1,11 @@
 """Omens: short world events nobody announces ahead, on one or two weekday evenings a week.
 
     python tools/omens.py plan WORLD [--at TIME]       this week's evenings and omens (spoils the surprise)
-    python tools/omens.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-omens.sh)
-    python tools/datapacks.py                          regenerates the realms-omens data pack (with the others)
+    python tools/omens.py commands WORLD [--at TIME]   the RCON commands for now (deploy/monkey-omens.sh)
+    python tools/datapacks.py                          regenerates the monkey-omens data pack (with the others)
 
 When: PER_WEEK evenings a week, Monday to Friday, never Saturday (event night) or Sunday, from Season I's first
-week. Each evening has a start time between 6:00 and 8:50 PM Pacific; deploy/realms-omens.sh asks every 10
+week. Each evening has a start time between 6:00 and 8:50 PM Pacific; deploy/monkey-omens.sh asks every 10
 minutes from then until 10 PM, and the pack starts the evening's omen the first time it is asked while
 MIN_PLAYERS or more are online in survival, the season has launched, no omen ran that evening, no event is on
 (the arena, a raid, Anarchy, the season lock) and no supply drop is on. An evening that never gets 4 players
@@ -31,7 +31,7 @@ that can):
               they are is shown.
 Nothing an omen gives helps in a fight or beats progression: no Strength, nothing the rules ban, no diamonds.
 
-The data pack (package/realms/datapacks/realms-omens/, generated: edit this file, not it) has the staff
+The data pack (package/monkey/datapacks/monkey-omens/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Omens"). Stdlib only plus tools/saved_world.py and tools/drops.py, and Python 3.10
 or newer, so the VPS runs it straight from the checkout.
 """
@@ -56,7 +56,7 @@ from events import ARENA_TAG, STATE
 from repo import Repo
 from rules import OBJECTIVE as RULES
 
-DATAPACK = "realms-omens"
+DATAPACK = "monkey-omens"
 FN = f"data/{NS}/function/omens"
 STORE = f"{NS}:omens"
 BAR = f"{NS}:omen"
@@ -104,10 +104,10 @@ BLOOD_LOOT = [
 ]
 BLOOD_LOOT_TABLE = f"{NS}:omens/blood_moon"
 
-# What `function realms:omens/try` returns, for the timer's log (meaning()).
+# What `function monkey:omens/try` returns, for the timer's log (meaning()).
 TRY_CODES = {
     1: "started",
-    20: "automatic omens are off (function realms:omens/on)",
+    20: "automatic omens are off (function monkey:omens/on)",
     21: "an omen is already on",
     22: "tonight's omen already happened",
     23: "an event is on (the arena, a raid, Anarchy or the season lock)",
@@ -193,7 +193,7 @@ def hunt_choices(scores: dict[str, dict[str, int]]) -> list[str]:
 
 
 def commands(world: Path, when: dt.datetime) -> list[str]:
-    """What deploy/realms-omens.sh sends: nothing outside an evening's omen hours, else the evening's order, what
+    """What deploy/monkey-omens.sh sends: nothing outside an evening's omen hours, else the evening's order, what
     the omens in it need (the meteor's spots, the hunt's names), and the try. An omen with nothing to work with
     (no spots, no streak) is left out of the order. `late` tells the pack a Meteor now would keep the night's
     supply drop from coming before 10 PM (METEOR_LATE)."""
@@ -380,7 +380,7 @@ def datapack_files() -> dict[str, str]:
 
     # ---- starting
     f[f"{FN}/try.mcfunction"] = lines(
-        "# The evening's omen: deploy/realms-omens.sh calls this every 10 minutes from the evening's start until",
+        "# The evening's omen: deploy/monkey-omens.sh calls this every 10 minutes from the evening's start until",
         f"# 10 PM, after putting the order (and the meteor's spots, the hunt's names) in storage {STORE}. Returns",
         "# why it didn't start (tools/omens.py TRY_CODES).",
         f"execute unless score #auto {OBJ} matches 1 run return 20",
@@ -478,8 +478,8 @@ def datapack_files() -> dict[str, str]:
         f"effect give @s minecraft:resistance {BLOOD_BUFF} 0 true",
     )
     f[f"{bm}/kill.mcfunction"] = lines(
-        "# A player killed a roused mob (advancement realms:omens/blood_kill): the bonus drop, at their feet.",
-        "advancement revoke @s only realms:omens/blood_kill",
+        "# A player killed a roused mob (advancement monkey:omens/blood_kill): the bonus drop, at their feet.",
+        "advancement revoke @s only monkey:omens/blood_kill",
         f"execute unless score #state {OBJ} matches {STATES['blood_moon']} run return 0",
         f"execute unless score #phase {OBJ} matches 1 run return 0",
         f"execute if score @s om.loot matches {BLOOD_CAP}.. run return 0",
@@ -625,9 +625,9 @@ def datapack_files() -> dict[str, str]:
                              {"text": " is withdrawn: a kill from now on doesn't claim it.", "color": "gray"}),
     )
     f[f"{hu}/kill.mcfunction"] = lines(
-        "# A player killed the hunted player (advancement realms:omens/hunted_kill). Staff check the kill as for",
+        "# A player killed the hunted player (advancement monkey:omens/hunted_kill). Staff check the kill as for",
         "# any bounty, then claim it for them with standings' bounty/claim.",
-        "advancement revoke @s only realms:omens/hunted_kill",
+        "advancement revoke @s only monkey:omens/hunted_kill",
         f"execute unless score #state {OBJ} matches {STATES['hunted']} run return 0",
         f"execute if entity @s[tag={ARENA_TAG}] run return 0",
         "tellraw @a " + text(head("hunted", "red"), {"selector": "@s", "color": "white"},
@@ -700,7 +700,7 @@ def datapack_files() -> dict[str, str]:
         f"$function {NS}:omens/hunted/on {{name:\"$(name)\"}}",
     )
     f[f"{FN}/stop.mcfunction"] = lines(
-        "# Staff: ends the omen now. A Meteor's drop goes on: /function realms:drops/stop ends that.",
+        "# Staff: ends the omen now. A Meteor's drop goes on: /function monkey:drops/stop ends that.",
         f"execute unless score #state {OBJ} matches 1.. run " + refuse("No omen is on."),
         f"execute unless score #state {OBJ} matches {STATES['meteor']} run tellraw @a " + text(
             {"text": "Staff called the omen off.", "color": "gray"}),
@@ -749,7 +749,7 @@ def help_function(files: dict[str, str]) -> str:
         out.append(say({"text": f" {cmd}", "color": "aqua",
                         "click_event": {"action": "suggest_command", "command": full}},
                        {"text": f"  {note}", "color": "dark_gray"}))
-    out.append(say({"text": " A Meteor by hand: /function realms:drops/start", "color": "dark_gray"}))
+    out.append(say({"text": " A Meteor by hand: /function monkey:drops/start", "color": "dark_gray"}))
     return lines(*out)
 
 
@@ -757,7 +757,7 @@ def help_function(files: dict[str, str]) -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- main
@@ -768,7 +768,7 @@ def show_plan(world: Path, when: dt.datetime) -> int:
     secret = key(board.scores if board else {})
     week = season_calendar.week_at(when)
     if secret is None:
-        print("no omen key saved in this world yet (the realms-omens pack makes one when it loads): no omens")
+        print("no omen key saved in this world yet (the monkey-omens pack makes one when it loads): no omens")
         return 1
     if week < 1:
         print(f"season week {week}: omens start in week 1")
@@ -796,7 +796,7 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Omens: the week's plan, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
-    server.job_subcommands(sub, "sends them to the running server (deploy/realms-omens.sh, every 10 minutes)",
+    server.job_subcommands(sub, "sends them to the running server (deploy/monkey-omens.sh, every 10 minutes)",
                            world=True, others=[("plan", "this week's evenings and omens (spoils the surprise)")])
     args = ap.parse_args(argv)
     if args.command == "plan":

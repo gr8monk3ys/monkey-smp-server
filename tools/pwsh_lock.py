@@ -1,9 +1,9 @@
-"""package/realms/pwsh.lock: the portable PowerShell that realms.sh downloads on Linux and macOS.
+"""package/monkey/pwsh.lock: the portable PowerShell that monkey.sh downloads on Linux and macOS.
 
 One line per platform, `<platform> <url> <sha256>`, for the four Unix platforms of JAVA_PLATFORMS
 (Windows runs the installer on its built-in Windows PowerShell 5.1). Lines starting with # are
 comments. Every url is the same PowerShell release's .tar.gz from github.com/PowerShell/PowerShell;
-realms.sh unpacks it into pwsh/<file name without .tar.gz>/ next to realms/ and checks the sha256 first.
+monkey.sh unpacks it into pwsh/<file name without .tar.gz>/ next to monkey/ and checks the sha256 first.
 
   parse(text) -> [Pin]          the pins, in file order (ValueError on a malformed line)
   check(text) -> [str]          problems (empty = fine)
@@ -19,7 +19,7 @@ from upstream import JAVA_PLATFORMS
 PLATFORMS = {"linux-x64": "linux-x64", "linux-aarch64": "linux-arm64", "mac-x64": "osx-x64", "mac-aarch64": "osx-arm64"}
 URL = re.compile(r"https://github\.com/PowerShell/PowerShell/releases/download/v(?P<version>\d+\.\d+\.\d+)/"
                  r"powershell-(?P=version)-(?P<target>[a-z0-9-]+)\.tar\.gz")
-HEADER = ("# PowerShell {version} (LTS) for realms.sh on Linux and macOS: <platform> <url> <sha256>.\n"
+HEADER = ("# PowerShell {version} (LTS) for monkey.sh on Linux and macOS: <platform> <url> <sha256>.\n"
           "# Re-pin with `python tools/check_updates.py --apply`; check with `python tools/validate.py --online`.\n")
 
 assert set(PLATFORMS) == set(JAVA_PLATFORMS) - {"windows-x64"}
@@ -56,7 +56,7 @@ def version(pins: list[Pin]) -> str:
 
 def check(text: str) -> list[str]:
     if "\r" in text:
-        return ["pwsh.lock must have LF line endings (realms.sh reads it with sh)"]
+        return ["pwsh.lock must have LF line endings (monkey.sh reads it with sh)"]
     try:
         pins = parse(text)
     except ValueError as err:

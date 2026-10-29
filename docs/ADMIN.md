@@ -1,6 +1,6 @@
 # Running the server (admins)
 
-Everything below assumes the release zip is unzipped into a folder, called `TheRealms-Server` here.
+Everything below assumes the release zip is unzipped into a folder, called `MonkeySMP-Server` here.
 Paths are written Windows-style (`server\logs`); on macOS and Linux they are `server/logs`.
 
 ## Day to day
@@ -11,33 +11,33 @@ Paths are written Windows-style (`server\logs`); on macOS and Linux they are `se
 | Stop (saves the world) | type `stop` in the server window, or `Stop Server.bat` | type `stop`, or `sh stop.sh` |
 | Let someone join | `Add Player.bat`, or `whitelist add NAME` in the server window | `sh add-player.sh NAME`, or `whitelist add NAME` |
 | Back up | `Backup World.bat` | `sh backup.sh` |
-| Back up automatically | `Schedule Backups.bat` (a Windows scheduled task, 6 AM and 6 PM while you're signed in; each run is logged to `scheduled-backups.log`) | a cron job (`crontab -e`): `0 6,18 * * * cd /path/to/TheRealms-Server && sh backup.sh >> scheduled-backups.log 2>&1` |
+| Back up automatically | `Schedule Backups.bat` (a Windows scheduled task, 6 AM and 6 PM while you're signed in; each run is logged to `scheduled-backups.log`) | a cron job (`crontab -e`): `0 6,18 * * * cd /path/to/MonkeySMP-Server && sh backup.sh >> scheduled-backups.log 2>&1` |
 | Update to a new release | stop the server, unzip the new release **over** the old folder, start again | the same (see below for the Mac) |
 
 Backups are safe while the server runs and keep the newest 14 in `backups\`.
 
 Updating never touches the world or your config edits. It only swaps mod/datapack/server files to the
-versions pinned in the new manifest. On Linux, `unzip -o TheRealms-Server-<version>.zip` next to the
-old `TheRealms-Server` folder updates it in place. The Mac's Finder doesn't unzip over a folder (it
-makes `TheRealms-Server 2`): move `server` and `backups` from the old folder into the new one, or use
+versions pinned in the new manifest. On Linux, `unzip -o MonkeySMP-Server-<version>.zip` next to the
+old `MonkeySMP-Server` folder updates it in place. The Mac's Finder doesn't unzip over a folder (it
+makes `MonkeySMP-Server 2`): move `server` and `backups` from the old folder into the new one, or use
 the same `unzip -o` in Terminal.
 
 **Exception: 1.x (Paper) to 2.x (Fabric).** These are different servers with different worlds. Unzip 2.x
 into a **new** folder; the installer refuses to install over a 1.x world so nothing gets mixed up.
 
-The same actions from PowerShell (on macOS and Linux, `sh realms/realms.sh` takes the same commands):
+The same actions from PowerShell (on macOS and Linux, `sh monkey/monkey.sh` takes the same commands):
 
 ```powershell
-.\realms\realms.ps1 start | stop | backup | status
-.\realms\realms.ps1 add-player Steve
-.\realms\realms.ps1 rcon "list"           # run a console command on the running server
+.\monkey\monkey.ps1 start | stop | backup | status
+.\monkey\monkey.ps1 add-player Steve
+.\monkey\monkey.ps1 rcon "list"           # run a console command on the running server
 ```
 
 Memory is picked from the computer's RAM: 3 GB on 8 GB, 4 on 12, 5 on 16, 6 on 24 and 8 GB from 32 GB up.
 8 GB is plenty of memory even for 25 players (a 25-player test peaked at about 4.3 GB in use), though the CPU
 can't keep up with that many (see "How many players" below). To force a value,
-set the environment variable `REALMS_MEMORY_GB` (on Windows `setx REALMS_MEMORY_GB 8`, then open a new window; on macOS/Linux
-`REALMS_MEMORY_GB=8 sh start.sh`) or pass
+set the environment variable `MONKEY_MEMORY_GB` (on Windows `setx MONKEY_MEMORY_GB 8`, then open a new window; on macOS/Linux
+`MONKEY_MEMORY_GB=8 sh start.sh`) or pass
 `-MemoryGB 8`. Size it from spark's numbers rather than giving it everything: the whole heap is reserved at
 start, so more than the server uses only takes RAM from everything else. The "Prepare for Hosting" bundle
 defaults to `MEMORY_GB=6` (use 8 for a big group); give that machine about 2 GB more RAM.
@@ -54,7 +54,7 @@ The image has no Minecraft, Java or mods in it: it mounts the release folder and
 downloads everything into it, so `server\`, `backups\` and the world are the same files a native run
 uses, and you can switch between the two (stop one before starting the other).
 
-| Do this | How (in `TheRealms-Server/docker`) |
+| Do this | How (in `MonkeySMP-Server/docker`) |
 |---|---|
 | First start | put `EULA=TRUE` and `OWNER=<your Minecraft name>` in `.env`, then `docker compose up -d` |
 | Watch the console | `docker compose logs -f` (Ctrl+C stops watching, not the server) |
@@ -103,7 +103,7 @@ What keeps it there:
 - **Pre-generate the world.** Generating new terrain on the main thread is what drags the tick rate down when
   many players explore at once, and Tectonic's tall terrain makes each chunk expensive. Generate out to the
   season's largest border (6000 wide, docs/SEASONS.md) plus the view distance, without changing the border: the
-  `realms-rules` pack sets the starting one (Rule 25) and the border acts grow it. With nobody online, in the
+  `monkey-rules` pack sets the starting one (Rule 25) and the border acts grow it. With nobody online, in the
   server console: `chunky worldborder` (centres on the border, which is on spawn, not 0,0), `chunky radius 3200`
   and `chunky start` (hours; `chunky progress` shows how far). For the Nether (1 block there is 8 in the
   Overworld): `chunky world minecraft:the_nether`, `chunky worldborder`, `chunky radius 500` and `chunky start`.
@@ -145,7 +145,7 @@ players online (CHANGELOG), so it is gone. Who does what now:
   results. It's Ledger's own `ledger.commands.tp` node, already in the rank. It can't take them to a player or
   move someone else; that's an op's job (`tp NAME X Y Z`, `tp NAME OTHER`).
 - **Whitelist.** An owner, from the console or RCON: `whitelist add NAME`, `Add Player.bat`, or on the live VPS
-  `docker compose exec realms realms add-player NAME` (docs/LIVE.md).
+  `docker compose exec monkey monkey add-player NAME` (docs/LIVE.md).
 - **A builder's game mode.** An op, in the console: `gamemode creative NAME`, and `gamemode survival NAME`
   when the job is done.
 
@@ -374,22 +374,22 @@ faction (`#smp-forum`), and buttons that open this week's challenges, the factio
 (what `/trigger challenges`, `standings` and `wardrobe` do). The rules and faction pages have a button for the
 Monkey SMP links, the Discord first. The **Town Crier** (yellow) calls out every 5 minutes. Right-clicked, it
 shows this week's Saturday event and next week's, picked by the challenges' week number, so it turns over on
-Monday with them. Their text is in `tools/npcs.py`, which writes the `realms-npcs` data pack.
+Monday with them. Their text is in `tools/npcs.py`, which writes the `monkey-npcs` data pack.
 
 Place them once per world. In game, as an op, stand where each one goes, facing the way it should face:
 
 ```
-/function realms:npcs/guide/here
-/function realms:npcs/crier/here
+/function monkey:npcs/guide/here
+/function monkey:npcs/crier/here
 ```
 
 It stands in the middle of your block. From the console or RCON (on the live VPS,
-`docker compose exec realms realms rcon "..."`), give the spot instead. Someone has to be near it so its chunk
+`docker compose exec monkey monkey rcon "..."`), give the spot instead. Someone has to be near it so its chunk
 is loaded; otherwise nothing appears and the log says "Error importing preset".
 
 ```
-function realms:npcs/guide/place {x:0.5,y:72,z:3.5,yaw:180}   # y: the block it stands on + 1; yaw: 0 south, 90 west, 180 north, 270 east
-function realms:npcs/crier/remove                              # near it
+function monkey:npcs/guide/place {x:0.5,y:72,z:3.5,yaw:180}   # y: the block it stands on + 1; yaw: 0 south, 90 west, 180 north, 270 east
+function monkey:npcs/crier/remove                              # near it
 ```
 
 - **Placing again** moves it and resets it to this release's version: each has a fixed UUID, so there is only
@@ -416,7 +416,7 @@ function realms:npcs/crier/remove                              # near it
 
 ## Mod settings (since 2.8.0)
 
-These configs ship in `package/realms/defaults/` and are copied on start only when the file is missing, so an
+These configs ship in `package/monkey/defaults/` and are copied on start only when the file is missing, so an
 edit on the server sticks. Stop the server before editing one. `tests/test_mod_defaults.py` keeps the shipped
 values.
 
@@ -481,11 +481,11 @@ It also stops at the world border. Chunky generates out to the season's largest 
 shipped files fit Season I's start (2500 wide around spawn, 312.5 in the Nether), and the End has no border.
 After each border act, and once on a server whose map files BlueMap wrote itself, fit the masks to the
 border with `tools/map_border.py` from this repo (Python 3; on the live server the repo is at
-`/srv/realms/repo`) and render the maps again:
+`/srv/monkey/repo`) and render the maps again:
 
 ```
 save-all                                    # console: the tool reads the border from the saved world
-python3 /srv/realms/repo/tools/map_border.py /srv/realms/TheRealms-Server/server
+python3 /srv/monkey/repo/tools/map_border.py /srv/monkey/MonkeySMP-Server/server
 bluemap reload                              # console
 bluemap purge world                         # console: deletes the map's tiles and renders it again (an hour or so)
 bluemap purge world_the_nether
@@ -508,8 +508,8 @@ folders you want, and keep `server\world\datapacks` (the installer re-adds missi
 
 ## Events
 
-The `realms-events` data pack (made by `tools/events.py`) has the staff side of the events in
-`docs/SEASONS.md`. Run `/function realms:events/help` in game for a clickable list. Commands below are
+The `monkey-events` data pack (made by `tools/events.py`) has the staff side of the events in
+`docs/SEASONS.md`. Run `/function monkey:events/help` in game for a clickable list. Commands below are
 typed in game as an op, or over RCON without the `/`.
 
 **Arena Glory.** Build the arena in the overworld, outside the no-PvP spawn claim (the 7 x 7 chunks around
@@ -517,13 +517,13 @@ spawn): walls and a roof, and no chests, hoppers or other containers within the 
 vanish), and players inside are held at Strength +3 and can't withdraw Strength.
 
 ```
-/function realms:events/arena/set_lobby            # stand at the entrance; players must be within 8 blocks to join
-/function realms:events/arena/set_pit              # stand in the pit; joiners and respawns go here
-/function realms:events/arena/set_size {size:48}   # radius around the pit; leaving it takes a player out
-/function realms:events/arena/open                 # announces a clickable join
-/execute as @a[tag=ev.arena] run function realms:events/arena/kit/sword   # or archer, axe, spear, mace
-/function realms:events/arena/round                # clears arrows, tridents and items between rounds
-/function realms:events/arena/close                # takes everyone out
+/function monkey:events/arena/set_lobby            # stand at the entrance; players must be within 8 blocks to join
+/function monkey:events/arena/set_pit              # stand in the pit; joiners and respawns go here
+/function monkey:events/arena/set_size {size:48}   # radius around the pit; leaving it takes a player out
+/function monkey:events/arena/open                 # announces a clickable join
+/execute as @a[tag=ev.arena] run function monkey:events/arena/kit/sword   # or archer, axe, spear, mace
+/function monkey:events/arena/round                # clears arrows, tridents and items between rounds
+/function monkey:events/arena/close                # takes everyone out
 ```
 
 Players join with `/trigger arena set 1` (empty inventory, armor and offhand, survival mode, at the
@@ -546,35 +546,35 @@ Kit gear is marked, so it can't be smuggled out:
 **Anarchy and Faction Raid.** Each start shows a boss bar to everyone and counts down on its own.
 
 ```
-/function realms:events/anarchy/start   # 90 minutes, then a 10-minute ceasefire; then clears totems, end crystals, enchanted golden apples
-/function realms:events/anarchy/stop
-/function realms:events/raid/start      # 2 hours; a player who logs out during it loses any flag they carry
-/function realms:events/raid/stop
+/function monkey:events/anarchy/start   # 90 minutes, then a 10-minute ceasefire; then clears totems, end crystals, enchanted golden apples
+/function monkey:events/anarchy/stop
+/function monkey:events/raid/start      # 2 hours; a player who logs out during it loses any flag they carry
+/function monkey:events/raid/stop
 ```
 
 **Flags, books and the Cup.**
 
 ```
-/function realms:events/flag/make {id:"red",name:"Red Monkeys"}    # hold a banner: makes it that faction's numbered flag
-/function realms:events/book/sharpness {season:"I"}                # run as the winner: a lore-tagged event book
-/function realms:events/cup/faction {id:"red",name:"Red Monkeys"}  # once per faction
-/function realms:events/cup/add {id:"red",points:30,why:"Build Battle, 1st"}
-/function realms:events/cup/show                                   # or cup/hide
+/function monkey:events/flag/make {id:"red",name:"Red Monkeys"}    # hold a banner: makes it that faction's numbered flag
+/function monkey:events/book/sharpness {season:"I"}                # run as the winner: a lore-tagged event book
+/function monkey:events/cup/faction {id:"red",name:"Red Monkeys"}  # once per faction
+/function monkey:events/cup/add {id:"red",points:30,why:"Build Battle, 1st"}
+/function monkey:events/cup/show                                   # or cup/hide
 ```
 
 A flag keeps its tag and number when it is placed and broken. Copies made in a crafting grid carry the
 same number, so two flags with one number means a copy. Book names are the enchantment ids (`book/protection`,
 `book/efficiency`, ...); Fire Aspect, Flame, Breach, Density, Wind Burst and the curses have none.
 
-**Weekly standings and bounties.** The `realms-standings` data pack (made by `tools/standings.py`) counts
+**Weekly standings and bounties.** The `monkey-standings` data pack (made by `tools/standings.py`) counts
 the week's kills and holds the board; the VPS works the standings out and posts them on Sundays
-(`docs/SEASONS.md`, "Weekly standings"; `docs/LIVE.md`). `/function realms:standings/help` lists these:
+(`docs/SEASONS.md`, "Weekly standings"; `docs/LIVE.md`). `/function monkey:standings/help` lists these:
 
 ```
-/function realms:standings/place                                        # stand at spawn: puts the board there
-/function realms:standings/remove                                       # next to it: removes it (to move it)
-/function realms:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
-/function realms:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
+/function monkey:standings/place                                        # stand at spawn: puts the board there
+/function monkey:standings/remove                                       # next to it: removes it (to move it)
+/function monkey:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
+/function monkey:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
 ```
 
 - **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
@@ -592,17 +592,17 @@ the week's kills and holds the board; the VPS works the standings out and posts 
   spawn is loaded; it catches up within a second of someone coming near. `/trigger standings` shows the
   same in chat, anywhere.
 - **The Sunday recap** ("Monkey SMP Weekly", docs/SEASONS.md) is worked out when the week closes. To see what
-  it would say now, on the VPS: `sudo -u realms sh /srv/realms/repo/deploy/realms-standings.sh preview`
+  it would say now, on the VPS: `sudo -u monkey sh /srv/monkey/repo/deploy/monkey-standings.sh preview`
   (changes nothing). Kills or a bounty you take back after the close stay in that week's recap; take them back
   before Sunday 7 PM Pacific. Events count in its turnout line only when begun with `events/begin`.
 
 **War and pacts.** Faction leaders (party owners) declare war and make pacts with `/trigger diplomacy`
 (`docs/SEASONS.md`, "War and pacts"). The hourly board run gives each party its faction number in game; a
-party made since can't take part until the next run. `/function realms:diplomacy/help` lists these:
+party made since can't take part until the next run. `/function monkey:diplomacy/help` lists these:
 
 ```
-/function realms:diplomacy/staff/factions          # every faction's number and name
-/function realms:diplomacy/staff/end {a:3,b:7}      # ends the war or pact between factions 3 and 7, announced
+/function monkey:diplomacy/staff/factions          # every faction's number and name
+/function monkey:diplomacy/staff/end {a:3,b:7}      # ends the war or pact between factions 3 and 7, announced
 ```
 
 - **Ending one by hand.** Use `staff/end` when a war or pact breaks the rules (a pact that is really a
@@ -618,8 +618,8 @@ party made since can't take part until the next run. `/function realms:diplomacy
 - **"faction N (name) is missing from the parties read"** in the board run's log: one read didn't find the party. If the
   next run still doesn't, its wars and pacts end. A run that reads no parties at all ends nothing and says so.
 
-**Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
-`/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
+**Attendance.** `/function monkey:events/begin {name:"Faction Raid"}` starts an event; then
+`/execute as <player> run function monkey:events/attend` for everyone who came (joining the arena counts
 on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and
 the Plumed Helm at 10 (`docs/RETENTION.md`). An event begun this week also counts for the weekly challenge
 "Come to an event" when it is on, so always start events with `begin`. On the launch weekend, begin the
@@ -638,8 +638,8 @@ These are never sold or granted outside the event.
 **Ending a season.** `docs/SEASONS.md`, "Ending a season", is the full runbook. The world lock:
 
 ```
-/function realms:events/season/lock     # survival players to adventure, PvP off, peaceful; kept across restarts
-/function realms:events/season/unlock   # back to survival, PvP on, normal difficulty
+/function monkey:events/season/lock     # survival players to adventure, PvP off, peaceful; kept across restarts
+/function monkey:events/season/unlock   # back to survival, PvP on, normal difficulty
 ```
 
 `tools/season.py download` zips the final backup's world for players, and `tools/season.py carry` puts
@@ -663,7 +663,7 @@ Minecraft update with `--pool <data reports folder>`.
 ## Weekly challenges
 
 Three challenges a week, from the pool in `tools/challenges.py`, with skins at 3, 9 and 18 done (players'
-side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `realms-wardrobe` data pack. A new week
+side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `monkey-wardrobe` data pack. A new week
 starts every Monday at 12 AM Pacific; week 1 is the week of Monday 9 November 2026, and the launch
 weekend before it is week 0. The dates are `tools/season_calendar.py`'s, shared with the drops and the Crier.
 
@@ -672,17 +672,17 @@ What runs when, on the maintainer's computer or the VPS:
 ```
 python tools/challenges.py schedule                 # this week and the next 11
 python tools/challenges.py schedule --from 0 --weeks 13
-python tools/challenges.py commands                 # what realms-week.timer sends this hour
+python tools/challenges.py commands                 # what monkey-week.timer sends this hour
 ```
 
-The server has no calendar: `realms-week.timer` sends the week every hour (`docs/LIVE.md`, step 7), and
-`sh /srv/realms/repo/deploy/realms-week.sh --check` on the VPS shows the commands and whether the timer runs.
+The server has no calendar: `monkey-week.timer` sends the week every hour (`docs/LIVE.md`, step 7), and
+`sh /srv/monkey/repo/deploy/monkey-week.sh --check` on the VPS shows the commands and whether the timer runs.
 Over RCON (or in game with `/`):
 
 ```
 scoreboard players get #week rc.week                # the week the server is on (-1: it was never told)
-function realms:challenges/sync {week:5}            # start week 5 unless it is already on (clears this week's progress)
-function realms:challenges/restart                  # clear everyone's progress this week; finished ones stay counted
+function monkey:challenges/sync {week:5}            # start week 5 unless it is already on (clears this week's progress)
+function monkey:challenges/restart                  # clear everyone's progress this week; finished ones stay counted
 scoreboard players get NAME rw.challenges           # a player's challenges done, all seasons
 ```
 
@@ -711,14 +711,14 @@ counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statisti
 Then `python tools/datapacks.py` (it writes the challenges into the wardrobe pack), run the checks, and
 release. Players need a new client pack only when skins change.
 
-**The launch weekend (Founder's Circlet).** `function realms:rules/launch` opens it, and it closes by itself
+**The launch weekend (Founder's Circlet).** `function monkey:rules/launch` opens it, and it closes by itself
 at the end of Sunday 8 November, Pacific (31 hours of game time, kept to the wall clock by
-`realms-week.timer`). It works in Season I only. If something goes wrong:
+`monkey-week.timer`). It works in Season I only. If something goes wrong:
 
 ```
-function realms:wardrobe/founder/open               # open it as the launch does, if rules/launch didn't run
-function realms:wardrobe/founder/open_for {hours:6} # open it, or keep it open, for 6 hours of game time from now
-function realms:wardrobe/founder/close              # close it now
+function monkey:wardrobe/founder/open               # open it as the launch does, if rules/launch didn't run
+function monkey:wardrobe/founder/open_for {hours:6} # open it, or keep it open, for 6 hours of game time from now
+function monkey:wardrobe/founder/close              # close it now
 scoreboard players get #founder.open rw.day         # 1 while it is open
 scoreboard players get NAME rw.launchtime           # seconds NAME was online while it was open (600 unlocks)
 ```
@@ -733,8 +733,8 @@ clears nothing and doesn't open the window again (use `founder/open` above if it
 ## Supply drops
 
 On weeknight evenings, once enough people are on, chests of supplies land outside every territory
-(`docs/SEASONS.md`, "Supply drop"). They live in the `realms-drops` data pack, generated by `tools/drops.py`,
-and `realms-drops.timer` on the VPS starts them (`docs/LIVE.md`, "The supply drops' timer").
+(`docs/SEASONS.md`, "Supply drop"). They live in the `monkey-drops` data pack, generated by `tools/drops.py`,
+and `monkey-drops.timer` on the VPS starts them (`docs/LIVE.md`, "The supply drops' timer").
 
 - **When.** Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (9 November 2026). Every 10
   minutes in those hours the timer offers the night's drop; it starts the first time 4 or more players are
@@ -758,16 +758,16 @@ and `realms-drops.timer` on the VPS starts them (`docs/LIVE.md`, "The supply dro
   tag or saddle. Nothing Strength, no netherite, diamonds, emeralds, golden apples, potions or enchanted gear:
   a drop must never beat progression or what players trade. The tests reject those.
 
-Over RCON (or in game with `/`; `function realms:drops/help` lists them, clickable):
+Over RCON (or in game with `/`; `function monkey:drops/help` lists them, clickable):
 
 ```
-function realms:drops/status                        # what's on: state, seconds left, the settings, where
-function realms:drops/start {x:1200,z:-300}         # a drop there now, whoever is online (it still checks the ground)
-function realms:drops/here                          # a drop where you stand, now
-function realms:drops/stop                          # end it now; its chests go with what's in them
-function realms:drops/min {players:6}               # players needed for the weeknight drop (and per extra chest)
-function realms:drops/off                           # no weeknight drops until /function realms:drops/on
-function realms:drops/on
+function monkey:drops/status                        # what's on: state, seconds left, the settings, where
+function monkey:drops/start {x:1200,z:-300}         # a drop there now, whoever is online (it still checks the ground)
+function monkey:drops/here                          # a drop where you stand, now
+function monkey:drops/stop                          # end it now; its chests go with what's in them
+function monkey:drops/min {players:6}               # players needed for the weeknight drop (and per extra chest)
+function monkey:drops/off                           # no weeknight drops until /function monkey:drops/on
+function monkey:drops/on
 ```
 
 A staff `start` doesn't use up the night: the weeknight drop can still come after it. A Meteor (an omen, "Omens" below) is
@@ -776,9 +776,9 @@ every territory yourself (`/openpac-claims` or the live map). Settings and a dro
 restart. To see what the timer would do, on the VPS (it changes nothing):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-drops.sh --check   # tonight's spots, the commands, whether the timer runs
-python3 /srv/realms/repo/tools/drops.py spots /srv/realms/TheRealms-Server/server/world --at 2026-11-24T03:00:00Z
-journalctl -u realms-drops --since today             # each try and why it didn't start
+sh /srv/monkey/repo/deploy/monkey-drops.sh --check   # tonight's spots, the commands, whether the timer runs
+python3 /srv/monkey/repo/tools/drops.py spots /srv/monkey/MonkeySMP-Server/server/world --at 2026-11-24T03:00:00Z
+journalctl -u monkey-drops --since today             # each try and why it didn't start
 ```
 
 The timer logs why a night had no drop: automatic drops off, a drop already on, tonight's done, an event
@@ -791,30 +791,30 @@ The first player on the server to reach each of 14 milestones (find a diamond, e
 fortress and a bastion, ancient debris, a trial vault, a mace, win a raid, defeat the Wither, light a beacon,
 enter the End, slay the dragon, an elytra, wear full Netherite) is announced to everyone, with a title on
 screen and a sound, and keeps that first for the season. `/trigger firsts` lists them all and who holds each.
-They live in the `realms-firsts` data pack, generated by `tools/firsts.py` (`MILESTONES` is the list). No
+They live in the `monkey-firsts` data pack, generated by `tools/firsts.py` (`MILESTONES` is the list). No
 timer: the pack does it all.
 
-Nothing counts before `function realms:rules/launch`, after `function realms:events/season/lock` (the
+Nothing counts before `function monkey:rules/launch`, after `function monkey:events/season/lock` (the
 season's end), in the event arena, or in creative or spectator. Enter the End counts only while the End is open (`rules/open_end`), and full Netherite only once rule 24 is lifted
-(`datapack disable "file/realms-no-netherite-armor"`; the pack's own heartbeat tells the firsts, so there is
+(`datapack disable "file/monkey-no-netherite-armor"`; the pack's own heartbeat tells the firsts, so there is
 nothing else to run). The first launch of a world clears any first claimed before it; a launch run again
 later clears nothing.
 
 Over RCON (or in game with `/`):
 
 ```
-function realms:firsts/reopen/wither                # nobody holds it now; the next to do it claims it
-execute as NAME at @s run function realms:firsts/claim/wither   # give an open one by hand (an outage); NAME online
-data get storage realms:firsts held                 # every claim: name, order, week
+function monkey:firsts/reopen/wither                # nobody holds it now; the next to do it claims it
+execute as NAME at @s run function monkey:firsts/claim/wither   # give an open one by hand (an outage); NAME online
+data get storage monkey:firsts held                 # every claim: name, order, week
 scoreboard players get NAME rf.wither               # NAME's claim order for it (none: not theirs)
-function realms:firsts/clear                        # every first open again: test servers only
+function monkey:firsts/clear                        # every first open again: test servers only
 ```
 
 On the VPS, from the saved world (changes nothing; `save-all` first for the last few minutes):
 
 ```sh
-python3 /srv/realms/repo/tools/firsts.py list /srv/realms/TheRealms-Server/server/world
-python3 /srv/realms/repo/tools/firsts.py champion /srv/realms/TheRealms-Server/server/world --season 1
+python3 /srv/monkey/repo/tools/firsts.py list /srv/monkey/MonkeySMP-Server/server/world
+python3 /srv/monkey/repo/tools/firsts.py champion /srv/monkey/MonkeySMP-Server/server/world --season 1
 ```
 
 `reopen` is for a first taken by an exploit or a mistake; say so in Discord when you use it. A claim by hand
@@ -832,7 +832,7 @@ release.
 ## Monkey SMP news
 
 One plain line in the public Discord channel (#monkey-smp) when something notable happens, a few a week at
-most (`tools/news.py`, run by `realms-news.timer`; set up in docs/LIVE.md, "The news timer"):
+most (`tools/news.py`, run by `monkey-news.timer`; set up in docs/LIVE.md, "The news timer"):
 
 - **A Server First** from a short list (the early ones, diamond, fortress, bastion, debris and a vault, stay
   in game): `Steve reached the Nether.` / `won a raid.` / `got a mace.` / `lit a beacon.` /
@@ -866,18 +866,18 @@ files) and release.
 On the VPS (changes nothing):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-news.sh --check      # what the next run would post, and what waits
-python3 /srv/realms/repo/tools/news.py found /srv/realms/TheRealms-Server/server/world   # all in the world, test play too
+sh /srv/monkey/repo/deploy/monkey-news.sh --check      # what the next run would post, and what waits
+python3 /srv/monkey/repo/tools/news.py found /srv/monkey/MonkeySMP-Server/server/world   # all in the world, test play too
 ```
 
 To leave one out (a first taken by an exploit and reopened before it posted, say), set its item's `"status"`
-to `"dropped"` in that season's file, as realms (`sudo -u realms nano /srv/realms/news/season-1.json`).
+to `"dropped"` in that season's file, as monkey (`sudo -u monkey nano /srv/monkey/news/season-1.json`).
 
 ## Outposts
 
 Four capture points in the newest border ring that factions take and hold for standings points
-(`docs/SEASONS.md`, "Outposts"). They live in the `realms-outposts` data pack, generated by
-`tools/outposts.py`, and `realms-outposts.timer` on the VPS places them (`docs/LIVE.md`, "The outposts' timer").
+(`docs/SEASONS.md`, "Outposts"). They live in the `monkey-outposts` data pack, generated by
+`tools/outposts.py`, and `monkey-outposts.timer` on the VPS places them (`docs/LIVE.md`, "The outposts' timer").
 
 - **Where.** Every hour the timer reads the saved world. After the launch (`#launched rw.day`), and after a
   border act has finished growing, it sends up to 4 spots for each outpost: chunk middles in that outpost's
@@ -900,15 +900,15 @@ Four capture points in the newest border ring that factions take and hold for st
   `bluemap reload` after it wrote a changed one. Only the spots, not the holders. A config it can't write
   is left as it is, with a `map:` line in the journal each hour and no reload.
 
-Over RCON (or in game with `/`; `function realms:outposts/help` lists them, clickable):
+Over RCON (or in game with `/`; `function monkey:outposts/help` lists them, clickable):
 
 ```
-function realms:outposts/status                     # each outpost: where, holder's number, who is capturing it
-function realms:outposts/release {i:1}              # free outpost 1 (1 North, 2 East, 3 South, 4 West), announced
-function realms:outposts/off                        # no captures, no hours and no new spots until on
-function realms:outposts/on
+function monkey:outposts/status                     # each outpost: where, holder's number, who is capturing it
+function monkey:outposts/release {i:1}              # free outpost 1 (1 North, 2 East, 3 South, 4 West), announced
+function monkey:outposts/off                        # no captures, no hours and no new spots until on
+function monkey:outposts/on
 scoreboard players remove #f3 op.min 120            # take 2 hours off faction 3's week (B13), not below 0
-function realms:diplomacy/staff/factions            # which number is which faction
+function monkey:diplomacy/staff/factions            # which number is which faction
 ```
 
 Holders, capture counts and hours survive a restart. Turning outposts off or locking the season stops a
@@ -916,9 +916,9 @@ survey that is running: it lets the chunk it was checking go and announces nothi
 nothing):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-outposts.sh --check   # the outposts, the commands, whether the timer runs
-python3 /srv/realms/repo/tools/outposts.py status /srv/realms/TheRealms-Server/server/world
-journalctl -u realms-outposts --since today              # each survey and what it returned
+sh /srv/monkey/repo/deploy/monkey-outposts.sh --check   # the outposts, the commands, whether the timer runs
+python3 /srv/monkey/repo/tools/outposts.py status /srv/monkey/MonkeySMP-Server/server/world
+journalctl -u monkey-outposts --since today              # each survey and what it returned
 ```
 
 To place them all again now (a bad spot, say), set `#ring op` to 0 over RCON
@@ -929,8 +929,8 @@ run `python tools/datapacks.py` and the checks, and release.
 ## Omens
 
 Short world events that nobody announces ahead, on one or two weekday evenings a week (`docs/SEASONS.md`,
-the event catalog). They live in the `realms-omens` data pack, generated by `tools/omens.py`, and
-`realms-omens.timer` on the VPS starts them (`docs/LIVE.md`, "The omens' timer").
+the event catalog). They live in the `monkey-omens` data pack, generated by `tools/omens.py`, and
+`monkey-omens.timer` on the VPS starts them (`docs/LIVE.md`, "The omens' timer").
 
 - **When.** Two evenings a week, Monday to Friday, from Season I's first week. Each has a start time between
   6:00 and 8:50 PM Pacific; from then until 10 PM the timer offers the evening's omen every 10 minutes, and
@@ -965,33 +965,33 @@ the event catalog). They live in the `realms-omens` data pack, generated by `too
     outside the arena, counted from the launch) is hunted for 30 minutes: a title, a boss bar, and the
     standings bounty posted on them (`standings/bounty/post`). Whoever kills them is named in chat. As for
     any bounty, check the kill was fair, then claim it:
-    `function realms:standings/bounty/claim {hunter:"Steve",target:"Alex"}` (+5 standings points and the
+    `function monkey:standings/bounty/claim {hunter:"Steve",target:"Alex"}` (+5 standings points and the
     Bounty Hunter title). Nothing shows where the hunted player is. The hunt ends if they die some other way
     or log off; when it ends without a kill, chat says the bounty is withdrawn, so a kill after that line
     doesn't claim it.
 - An event that starts during an omen ends it (a Meteor's drop carries on). Nothing an omen gives helps in a
   fight: no Strength, nothing the rules ban, no diamonds.
 
-Over RCON (or in game with `/`; `function realms:omens/help` lists them, clickable):
+Over RCON (or in game with `/`; `function monkey:omens/help` lists them, clickable):
 
 ```
-function realms:omens/status                 # what's on, seconds left, the settings, last evening with one
-function realms:omens/start/blood_moon       # a Blood Moon at the next nightfall
-function realms:omens/start/truce            # a Truce Hour now
-function realms:omens/hunt {name:"Alex"}     # hunt Alex for 30 minutes (online, in survival, any streak)
-function realms:omens/stop                   # end the omen now (a Meteor's drop: function realms:drops/stop)
-function realms:omens/min {players:6}        # players needed for an evening's omen
-function realms:omens/off                    # no automatic omens until /function realms:omens/on
-function realms:omens/on
+function monkey:omens/status                 # what's on, seconds left, the settings, last evening with one
+function monkey:omens/start/blood_moon       # a Blood Moon at the next nightfall
+function monkey:omens/start/truce            # a Truce Hour now
+function monkey:omens/hunt {name:"Alex"}     # hunt Alex for 30 minutes (online, in survival, any streak)
+function monkey:omens/stop                   # end the omen now (a Meteor's drop: function monkey:drops/stop)
+function monkey:omens/min {players:6}        # players needed for an evening's omen
+function monkey:omens/off                    # no automatic omens until /function monkey:omens/on
+function monkey:omens/on
 ```
 
-A Meteor by hand is a supply drop (`function realms:drops/start`, above). A staff start doesn't use up the
+A Meteor by hand is a supply drop (`function monkey:drops/start`, above). A staff start doesn't use up the
 evening. Settings and an omen in progress survive a restart. On the VPS (it changes nothing):
 
 ```sh
-sh /srv/realms/repo/deploy/realms-omens.sh --check   # the commands for now (none outside an evening), the timer
-python3 /srv/realms/repo/tools/omens.py plan /srv/realms/TheRealms-Server/server/world   # this week: spoils it
-journalctl -u realms-omens --since today             # each try and why it didn't start
+sh /srv/monkey/repo/deploy/monkey-omens.sh --check   # the commands for now (none outside an evening), the timer
+python3 /srv/monkey/repo/tools/omens.py plan /srv/monkey/MonkeySMP-Server/server/world   # this week: spoils it
+journalctl -u monkey-omens --since today             # each try and why it didn't start
 ```
 
 The timer logs why an evening had no omen: automatic omens off, the season not launched, an omen or a drop

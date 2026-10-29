@@ -1,1 +1,0 @@
-$tellraw @s ["",{"text":" - East at ","color":"gray"},{"nbt":"at.o2.x","storage":"realms:outposts","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"at.o2.z","storage":"realms:outposts","color":"aqua"},{"text":": ","color":"gray"},{"nbt":"names.f$(h)","storage":"realms:factions","interpret":true,"color":"white"},{"text":" hold it","color":"gray"}]

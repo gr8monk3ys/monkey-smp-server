@@ -74,7 +74,7 @@ Why these counters:
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
-`realms-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
+`monkey-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
 retries. Without it, nobody's day count moves.
 
 When the store, staff or an event raises a player's months, events or a holiday score, they get an
@@ -118,15 +118,15 @@ Only this week's play counts, and nothing can be farmed with an alt or a friend:
 None of them needs griefing: structures and loot are out in the world, and nothing asks for another
 faction's base.
 
-Minecraft has no calendar, so `realms-week.timer` tells the server the week every hour
-(`deploy/realms-week.sh`, `docs/LIVE.md`, step 7). The week is a score in the world, so the daily restart
+Minecraft has no calendar, so `monkey-week.timer` tells the server the week every hour
+(`deploy/monkey-week.sh`, `docs/LIVE.md`, step 7). The week is a score in the world, so the daily restart
 and deploys keep it. Without the timer the week never turns over.
 
 ### The launch weekend
 
-Founder's Circlet is the one skin tied to a date. `function realms:rules/launch` (rule 23, the launch hour)
+Founder's Circlet is the one skin tied to a date. `function monkey:rules/launch` (rule 23, the launch hour)
 opens the window, and it closes by itself at the end of Sunday, Pacific: 31 hours of game time from the
-Season I launch, kept to the wall clock by `realms-week.timer` (game time stops while the server is empty). Every
+Season I launch, kept to the wall clock by `monkey-week.timer` (game time stops while the server is empty). Every
 second a player is online while it is open counts, so players who join hours after the launch hour get it
 the same way; at 10 minutes in all it unlocks. Their seconds online (`rw.launchtime`) are not carried; the
 skin (`rw.launch`) is. It works in Season I only. Staff fallbacks are in `docs/ADMIN.md`, "Weekly
@@ -224,7 +224,7 @@ job for the Discord bot's repo, not built yet.
 ## Reading the numbers
 
 ```sh
-python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs
+python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs
 ```
 
 This reads the joins in the server logs. Nothing leaves the machine. It prints, for each week's new
@@ -241,7 +241,7 @@ Worth checking monthly, next to the pass funnel below:
 ### The pass funnel: from purchase to renewal
 
 ```sh
-python3 /srv/realms/repo/tools/funnel.py ~/payments.csv /srv/realms/TheRealms-Server/server/logs --log-tz America/Los_Angeles
+python3 /srv/monkey/repo/tools/funnel.py ~/payments.csv /srv/monkey/MonkeySMP-Server/server/logs --log-tz America/Los_Angeles
 ```
 
 Export the payments from Tebex (creator panel, Payments, Export as CSV) and copy the file to the VPS.

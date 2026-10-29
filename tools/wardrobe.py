@@ -1,10 +1,10 @@
 """Builds the wardrobe: cosmetic skins for swords and helmets, earned by playing or by supporting.
 
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
-    python tools/wardrobe.py commands  the RCON command that starts a new day (deploy/realms-day.sh sends it)
+    python tools/wardrobe.py commands  the RCON command that starts a new day (deploy/monkey-day.sh sends it)
 
 It writes two folders, both generated (edit this file, not them):
-  package/realms/datapacks/realms-wardrobe/       the server side: /trigger wardrobe, unlock scores, the skins
+  package/monkey/datapacks/monkey-wardrobe/       the server side: /trigger wardrobe, unlock scores, the skins
   client/overrides/resourcepacks/Monkey SMP Wardrobe/ the client side: models and pixel art
 
 A skin only changes how an item looks (`item_model`, and `equippable.asset_id` for helmets). Damage,
@@ -18,13 +18,13 @@ Unlock scores (all per player name, so the store and staff can set them while th
   rw.invites  friends invited who bought a pass
   rw.tier     supporter tier: 1 Ember, 2 Banner, 3 Crown (0 when it lapses)
   rw.founder  1 for everyone who played during the first season
-  rw.events   events attended (the realms-events pack counts it, once per event)
+  rw.events   events attended (the monkey-events pack counts it, once per event)
   rw.<holiday>  1 for coming to that holiday's event (staff set it at the event; never sold)
   rw.challenges  weekly challenges done, in all seasons together (tools/challenges.py; never sold)
   rw.launch   1 for being online FOUNDER_MINUTES in Season I's launch weekend (never sold); rw.launchtime
-              counts their seconds online while that window is open (`function realms:wardrobe/founder/...`)
-`function realms:wardrobe/day` starts a new day; deploy/realms-day.sh starts it at midnight UTC through
-`function realms:wardrobe/day_once {stamp:YYYYMMDD}` (`send`), which a retry the same UTC date leaves alone.
+              counts their seconds online while that window is open (`function monkey:wardrobe/founder/...`)
+`function monkey:wardrobe/day` starts a new day; deploy/monkey-day.sh starts it at midnight UTC through
+`function monkey:wardrobe/day_once {stamp:YYYYMMDD}` (`send`), which a retry the same UTC date leaves alone.
 The weekly challenges (tools/challenges.py) go in the same data pack, and have a page of the menu:
 `/trigger challenges`, or page MENU_CHALLENGES of `/trigger wardrobe`.
 Every rw.* score lives in the world's scoreboard, so a new season's world starts without them:
@@ -48,7 +48,7 @@ from repo import Repo
 from season_calendar import LAUNCH_SECONDS
 
 RESOURCE_FORMAT = 97
-DATAPACK = "realms-wardrobe"
+DATAPACK = "monkey-wardrobe"
 RESOURCEPACK = "Monkey SMP Wardrobe"
 
 # What each unlock score means, for the menu and the "locked" message: objective -> (singular, plural).
@@ -566,7 +566,7 @@ def datapack_files() -> dict[str, str]:
         "# get it within a second.\n"
         "scoreboard players add #today rw.day 1\n")
     f[f"{fn}/day_once.mcfunction"] = "\n".join([
-        "# Macro {stamp:YYYYMMDD}: deploy/realms-day.sh sends it at midnight UTC with that UTC date. Starts the day",
+        "# Macro {stamp:YYYYMMDD}: deploy/monkey-day.sh sends it at midnight UTC with that UTC date. Starts the day",
         "# unless the day for that date already started, so a retry after a timeout never makes one date two days.",
         "$execute if score #day.sent rw.day matches $(stamp) run return 0",
         "$scoreboard players set #day.sent rw.day $(stamp)",
@@ -708,7 +708,7 @@ def founder_files() -> dict[str, str]:
 
     While it is open, everyone online counts seconds in rw.launchtime; FOUNDER_MINUTES of them set rw.launch.
     It shuts when game time passes #founder.until. Game time stops while the server is empty, so
-    deploy/realms-week.sh sends `founder/sync` every hour with the seconds left on the wall clock (from
+    deploy/monkey-week.sh sends `founder/sync` every hour with the seconds left on the wall clock (from
     tools/challenges.py), and the window ends at the end of Sunday, Pacific, even after a quiet night. State is in
     rw.day: #founder.open, #founder.auto (1 while the clock may move the end) and #founder.until.
     """
@@ -719,8 +719,8 @@ def founder_files() -> dict[str, str]:
     gold = "gold"
     return {
         f"{fn}/open.mcfunction": "\n".join([
-            "# Opens the launch weekend: realms:rules/launch runs this (staff can too, if the launch didn't). Season I",
-            f"# only. It lasts {LAUNCH_SECONDS // 3600} hours of game time; deploy/realms-week.sh moves the end to "
+            "# Opens the launch weekend: monkey:rules/launch runs this (staff can too, if the launch didn't). Season I",
+            f"# only. It lasts {LAUNCH_SECONDS // 3600} hours of game time; deploy/monkey-week.sh moves the end to "
             "the end of Sunday,",
             "# Pacific, on the wall clock.",
             season_one,
@@ -754,7 +754,7 @@ def founder_files() -> dict[str, str]:
                                  {"text": "Founder's Circlet stays with everyone who earned it.", "color": "yellow"}),
         ]) + "\n",
         f"{fn}/sync.mcfunction": "\n".join([
-            "# Macro {seconds:N}, from deploy/realms-week.sh every hour: N seconds of the launch weekend are left on",
+            "# Macro {seconds:N}, from deploy/monkey-week.sh every hour: N seconds of the launch weekend are left on",
             "# the wall clock. An open window the launch opened ends then (0 shuts it now); otherwise nothing.",
             "execute unless score #founder.auto rw.day matches 1 run return 0",
             "$scoreboard players set #founder.left rw.day $(seconds)",
@@ -826,7 +826,7 @@ def enable_in_options(options: Path) -> None:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str | bytes]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files(),
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files(),
             repo.client / "overrides" / "resourcepacks" / RESOURCEPACK: resourcepack_files()}
 
 
@@ -836,9 +836,9 @@ def after_write(repo: Repo) -> None:
         enable_in_options(options)
 
 
-# ---------------------------------------------------------------- the day (deploy/realms-day.sh)
+# ---------------------------------------------------------------- the day (deploy/monkey-day.sh)
 
-# How long realms-day.service keeps trying one day before it gives up (and the timer's next run starts afresh).
+# How long monkey-day.service keeps trying one day before it gives up (and the timer's next run starts afresh).
 GIVE_UP = dt.timedelta(hours=6)
 
 
@@ -853,8 +853,8 @@ def day_commands(when: dt.datetime) -> list[str]:
 
 def send_day(rcon, when: dt.datetime, pending: Path | None = None, log=print) -> int:
     """Starts the day for `when`'s UTC date (day_once does nothing when it already started). Unlike the week, a
-    server that isn't running is a failure (NOT_RUNNING): a missed day is never caught up, so realms-day.service
-    tries again every 10 minutes. With `pending` (realms-day.service's state file), a date that has failed for
+    server that isn't running is a failure (NOT_RUNNING): a missed day is never caught up, so monkey-day.service
+    tries again every 10 minutes. With `pending` (monkey-day.service's state file), a date that has failed for
     GIVE_UP is given up (GAVE_UP), so the retries end and the next midnight's run starts afresh."""
     code = server.send_if_running(rcon, day_commands(when), log, required=True,
                                   skipped="server not running: the day isn't started yet")
@@ -885,8 +885,8 @@ def send_day(rcon, when: dt.datetime, pending: Path | None = None, log=print) ->
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="The wardrobe's day: the command that starts a new day for days played.")
     sub = ap.add_subparsers(dest="command", required=True)
-    server.job_subcommands(sub, "sends it to the running server (deploy/realms-day.sh, at midnight UTC)")
-    state = os.environ.get("STATE_DIRECTORY")   # realms-day.service's StateDirectory=
+    server.job_subcommands(sub, "sends it to the running server (deploy/monkey-day.sh, at midnight UTC)")
+    state = os.environ.get("STATE_DIRECTORY")   # monkey-day.service's StateDirectory=
     sub.choices["send"].add_argument(
         "--pending", type=Path, default=Path(state.split(":")[0]) / "pending" if state else None,
         help="where a failing date's first try is kept, to give up after 6 hours "

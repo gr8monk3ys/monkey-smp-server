@@ -1,27 +1,27 @@
 #!/bin/sh
 # The one-off steps for the weekly faction standings on the live VPS (docs/LIVE.md, "Monitoring, the daily
 # restart and the update check"; docs/SEASONS.md, "Weekly standings"). Run it as root once a release with the
-# standings is live and the server has started on it (the start puts the realms-standings data pack in the
+# standings is live and the server has started on it (the start puts the monkey-standings data pack in the
 # world):
 #
-#   sudo sh /srv/realms/repo/deploy/install-standings.sh --check   says what is still to do, and changes nothing
-#   sudo sh /srv/realms/repo/deploy/install-standings.sh           does it
+#   sudo sh /srv/monkey/repo/deploy/install-standings.sh --check   says what is still to do, and changes nothing
+#   sudo sh /srv/monkey/repo/deploy/install-standings.sh           does it
 #
 # Each step is skipped when it is already done, so running it again is safe:
 #   1. installs python3 if it is missing (tools/standings.py needs 3.11 or newer, for tomllib)
-#   2. checks the realms-standings data pack is in the world and turned on (it counts the week's PvP kills)
-#   3. makes the folder the standings keep their weeks in (STANDINGS_DIR, default /srv/realms/standings), as realms
-#   4. starts the first week: a snapshot of every player's kills and bounties so far, as realms
-#   5. installs realms-standings.timer (Sundays 7 PM Pacific) and realms-standings-board.timer (hourly) from the
+#   2. checks the monkey-standings data pack is in the world and turned on (it counts the week's PvP kills)
+#   3. makes the folder the standings keep their weeks in (STANDINGS_DIR, default /srv/monkey/standings), as monkey
+#   4. starts the first week: a snapshot of every player's kills and bounties so far, as monkey
+#   5. installs monkey-standings.timer (Sundays 7 PM Pacific) and monkey-standings-board.timer (hourly) from the
 #      deployed checkout and starts them, then puts this week so far on the in-game board once
-# Two steps stay by hand: the webhook (STANDINGS_WEBHOOK_URL in /etc/realms-deploy.env; empty = the
+# Two steps stay by hand: the webhook (STANDINGS_WEBHOOK_URL in /etc/monkey-deploy.env; empty = the
 # DISCORD_WEBHOOK_URL channel), and the board at spawn, which staff place in game with
-# /function realms:standings/place (docs/ADMIN.md).
+# /function monkey:standings/place (docs/ADMIN.md).
 #
-# It reads only REPO_DIR, LIVE_DIR and STANDINGS_DIR from /etc/realms-deploy.env (or REALMS_DEPLOY_ENV), without
-# sourcing it, so the webhooks are never read. RCON goes through the container's own `realms rcon`, which finds
+# It reads only REPO_DIR, LIVE_DIR and STANDINGS_DIR from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV), without
+# sourcing it, so the webhooks are never read. RCON goes through the container's own `monkey rcon`, which finds
 # the password itself. No secret is read, printed or asked for. What it prints also goes to
-# /var/log/realms-install-standings.log (or INSTALL_LOG), with the output of apt-get and systemctl.
+# /var/log/monkey-install-standings.log (or INSTALL_LOG), with the output of apt-get and systemctl.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -36,18 +36,18 @@ case "${1:-}" in
 esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it installs packages and timers' >&2; exit 1; }
 
-ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-LOG_TO=${INSTALL_LOG:-/var/log/realms-install-standings.log}
+ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
+LOG_TO=${INSTALL_LOG:-/var/log/monkey-install-standings.log}
 
-REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
-LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
-STANDINGS_DIR=${STANDINGS_DIR:-$(setting STANDINGS_DIR /srv/realms/standings)}
+REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/monkey/repo)}
+LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}
+STANDINGS_DIR=${STANDINGS_DIR:-$(setting STANDINGS_DIR /srv/monkey/standings)}
 
 WORLD=$LIVE_DIR/server/world
-PACK=realms-standings
-UNITS='realms-standings.service realms-standings.timer realms-standings-board.service realms-standings-board.timer'
-TIMERS='realms-standings.timer realms-standings-board.timer'
-SERVICE_USER=realms  # User= in the two .service files
+PACK=monkey-standings
+UNITS='monkey-standings.service monkey-standings.timer monkey-standings-board.service monkey-standings-board.timer'
+TIMERS='monkey-standings.timer monkey-standings-board.timer'
+SERVICE_USER=monkey  # User= in the two .service files
 
 umask 022
 
@@ -62,7 +62,7 @@ done
 cd /
 log "started ($MODE); log: $LOG_TO"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || die "$LIVE_DIR has no docker/compose.yaml (LIVE_DIR in $ENV_FILE?)"
-for f in tools/standings.py deploy/realms-standings.sh; do
+for f in tools/standings.py deploy/monkey-standings.sh; do
     [ -f "$REPO_DIR/$f" ] || die "$REPO_DIR has no $f: the deployed release has no standings yet; run this once it does"
 done
 for u in $UNITS; do
@@ -96,7 +96,7 @@ fi
 pack_ok=''
 if [ ! -f "$WORLD/datapacks/$PACK/pack.mcmeta" ]; then
     log "data pack: not in $WORLD/datapacks yet. Restart the server once on a release that has it" \
-        "(runuser -u $SERVICE_USER -- env RESTART_MIN_UPTIME=0 sh $REPO_DIR/deploy/realms-deploy.sh --restart), then run this again"
+        "(runuser -u $SERVICE_USER -- env RESTART_MIN_UPTIME=0 sh $REPO_DIR/deploy/monkey-deploy.sh --restart), then run this again"
     problems=$((problems + 1))
 elif ! running; then
     log 'data pack: in the world, but the server is not running, so whether it is on is unknown; start it and run this again'
@@ -111,7 +111,7 @@ else
             log 'data pack: in the world and on'
             pack_ok=1 ;;
         *)
-            log "data pack: in the world but not on; turn it on with: realms rcon 'datapack enable \"file/$PACK\"'"
+            log "data pack: in the world but not on; turn it on with: monkey rcon 'datapack enable \"file/$PACK\"'"
             problems=$((problems + 1)) ;;
     esac
 fi
@@ -181,10 +181,10 @@ else
     # shellcheck disable=SC2086
     [ -z "$changed" ] || logged systemctl restart $TIMERS
     log 'timers: running'
-    if logged systemctl start realms-standings-board.service; then
+    if logged systemctl start monkey-standings-board.service; then
         log 'board: this week so far is on the in-game board'
     else
-        log 'board: the first update failed: journalctl -u realms-standings-board'
+        log 'board: the first update failed: journalctl -u monkey-standings-board'
         problems=$((problems + 1))
     fi
 fi
@@ -194,7 +194,7 @@ systemctl list-timers --all --no-pager $TIMERS 2>&1 | while IFS= read -r l; do l
 # ---------------------------------------------------------------- done
 
 log "by hand, if not done yet: STANDINGS_WEBHOOK_URL in $ENV_FILE for the Sunday post (empty = the" \
-    'DISCORD_WEBHOOK_URL channel), and the board at spawn: stand there and run /function realms:standings/place'
+    'DISCORD_WEBHOOK_URL channel), and the board at spawn: stand there and run /function monkey:standings/place'
 if [ "$problems" -gt 0 ]; then
     log "finished: $problems thing(s) need a look by hand (above)"
     exit 1

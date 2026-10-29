@@ -174,27 +174,27 @@ def test_commands_send_the_spots_then_try_tonight(world):
     out = drops.commands(world, when)
     assert len(out) == 2
     listed = ",".join(f"{{x:{x},z:{z}}}" for x, z in drops.spots(world, drops.slot_of(when)))
-    assert out[0] == f"data modify storage realms:drops spots set value [{listed}]"
-    assert out[1] == "function realms:drops/try {night:20261124}"
+    assert out[0] == f"data modify storage monkey:drops spots set value [{listed}]"
+    assert out[1] == "function monkey:drops/try {night:20261124}"
     for c in out:
         assert c.isascii() and "\n" not in c and len(c.encode()) <= rcon.LIMIT
 
 
 def test_send_logs_what_the_try_returned(world):
-    server = rcon.Recorder({"function realms:drops/try": "Function realms:drops/try returned 13"})
+    server = rcon.Recorder({"function monkey:drops/try": "Function monkey:drops/try returned 13"})
     log = []
     assert drops.send(server, world, pacific(2026, 11, 24, 19, 5), log.append) == 0
     assert server.sent == drops.commands(world, pacific(2026, 11, 24, 19, 5))
-    assert log == ["spots sent: ok", f"function realms:drops/try {{night:20261124}}: {drops.TRY_CODES[13]}"]
+    assert log == ["spots sent: ok", f"function monkey:drops/try {{night:20261124}}: {drops.TRY_CODES[13]}"]
 
 
 @pytest.mark.parametrize(("answer", "said"), [
-    ("Function realms:drops/try returned 1", drops.TRY_CODES[1]),
-    ("Function realms:drops/try returned 99", "Function realms:drops/try returned 99"),
+    ("Function monkey:drops/try returned 1", drops.TRY_CODES[1]),
+    ("Function monkey:drops/try returned 99", "Function monkey:drops/try returned 99"),
     ("", "ok"),
 ])
 def test_every_try_answer_reads_as_words(answer, said):
-    try_ = "function realms:drops/try {night:1}"
+    try_ = "function monkey:drops/try {night:1}"
     assert drops.meaning(try_, answer) == f"{try_}: {said}"
 
 
@@ -207,10 +207,10 @@ def test_send_is_silent_outside_drop_hours_and_skips_a_stopped_server(world):
 
 
 def test_send_fails_when_the_pack_is_missing(world):
-    server = rcon.Recorder({"function realms:drops/try": "Unknown function realms:drops/try"})
+    server = rcon.Recorder({"function monkey:drops/try": "Unknown function monkey:drops/try"})
     log = []
     assert drops.send(server, world, pacific(2026, 11, 24, 19, 5), log.append) == 1
-    assert log[-1].startswith("refused or failed: function realms:drops/try")
+    assert log[-1].startswith("refused or failed: function monkey:drops/try")
 
 
 def test_the_try_is_not_sent_when_the_spots_do_not_arrive(world):
@@ -220,8 +220,8 @@ def test_the_try_is_not_sent_when_the_spots_do_not_arrive(world):
 
 
 def test_only_the_try_is_read_through_the_codes():
-    assert drops.meaning("function realms:drops/stop", "Function realms:drops/stop returned 1") == (
-        "function realms:drops/stop: Function realms:drops/stop returned 1")
+    assert drops.meaning("function monkey:drops/stop", "Function monkey:drops/stop returned 1") == (
+        "function monkey:drops/stop: Function monkey:drops/stop returned 1")
 
 
 def test_no_commands_outside_drop_hours_or_without_spots(world, tmp_path):
@@ -233,7 +233,7 @@ def test_no_commands_outside_drop_hours_or_without_spots(world, tmp_path):
 def test_main_prints_the_commands_and_the_spots(world, capsys):
     assert drops.main(["commands", str(world), "--at", "2026-11-25T03:00:00Z"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[1] == "function realms:drops/try {night:20261124}"
+    assert out[1] == "function monkey:drops/try {night:20261124}"
     assert drops.main(["commands", str(world), "--at", "2026-11-25T08:00:00Z"]) == 0
     assert capsys.readouterr().out == ""
     assert drops.main(["spots", str(world), "--at", "2026-11-25T03:00:00Z"]) == 0
@@ -257,7 +257,7 @@ def test_the_loot_is_modest():
 
 
 def test_the_loot_table_is_26_3s_form():
-    table = json.loads(FILES["data/realms/loot_table/drops/supply.json"])
+    table = json.loads(FILES["data/monkey/loot_table/drops/supply.json"])
     assert table["type"] == "minecraft:chest" and len(table["pools"]) == len(drops.ROLLS)
     for pool in table["pools"]:
         for entry in pool["entries"]:
@@ -277,7 +277,7 @@ def test_try_returns_every_code_and_checks_the_events():
     assert set(map(int, re.findall(r"return (\d+)$", body, re.M))) == set(drops.TRY_CODES)
     for cond in drops.EVENTS_ON:
         assert f"execute if score {cond} run return 13" in body
-    # Every event state the drop checks is one realms-events sets.
+    # Every event state the drop checks is one monkey-events sets.
     events_text = "\n".join(events.datapack_files().values())
     for cond in drops.EVENTS_ON:
         holder = cond.split()[0]
@@ -287,7 +287,7 @@ def test_try_returns_every_code_and_checks_the_events():
 def test_the_order_of_the_checks():
     body = [line for line in fn("try").splitlines() if not line.startswith("#")]
     assert body[0].endswith("return 10") and body[1].endswith("return 11") and body[2].endswith("return 12")
-    assert body[-2] == "function realms:drops/locate" and body[-1] == "return 1"
+    assert body[-2] == "function monkey:drops/locate" and body[-1] == "return 1"
 
 
 def test_chests_scale_with_players_and_stay_within_the_cap():
@@ -307,13 +307,13 @@ def test_chests_scale_with_players_and_stay_within_the_cap():
 
 
 def test_chests_land_only_on_natural_ground_and_replace_only_plants_or_air():
-    ground = json.loads(FILES["data/realms/tags/block/drops/ground.json"])["values"]
+    ground = json.loads(FILES["data/monkey/tags/block/drops/ground.json"])["values"]
     assert not any(word in v for v in ground for word in ("planks", "log", "wool", "glass", "brick", "concrete"))
-    open_ = json.loads(FILES["data/realms/tags/block/drops/open.json"])["values"]
+    open_ = json.loads(FILES["data/monkey/tags/block/drops/open.json"])["values"]
     assert {"id": "minecraft:short_dry_grass", "required": False} in open_
     assert "minecraft:air" in open_ and not any("water" in str(v) for v in open_)
     check = fn("check_at")
-    assert "if block ~ ~-1 ~ #realms:drops/ground if block ~ ~ ~ #realms:drops/open" in check
+    assert "if block ~ ~-1 ~ #monkey:drops/ground if block ~ ~ ~ #monkey:drops/open" in check
     assert "positioned over motion_blocking_no_leaves" in check   # water is motion-blocking: a sea spot fails
 
 
@@ -327,7 +327,7 @@ def test_only_drop_chests_are_removed():
     assert fn("emptied").splitlines()[1] == "setblock ~ ~ ~ minecraft:air"
     # A drop that landed before 2.8.0 still holds its loot table and no items until it's opened.
     assert ("at @s unless data block ~ ~ ~ LootTable unless data block ~ ~ ~ Items[0] "
-            "run function realms:drops/emptied") in fn("landed")
+            "run function monkey:drops/emptied") in fn("landed")
 
 
 def test_drop_chests_are_filled_when_placed_so_loot_restock_never_refills_them():
@@ -335,19 +335,19 @@ def test_drop_chests_are_filled_when_placed_so_loot_restock_never_refills_them()
     # never has one: it is filled when it lands.
     body = [line for line in fn("place").splitlines() if not line.startswith("#")]
     assert body[0] == 'setblock ~ ~ ~ minecraft:chest{CustomName:"Supply drop"}'
-    assert body[1] == "loot insert ~ ~ ~ loot realms:drops/supply"
+    assert body[1] == "loot insert ~ ~ ~ loot monkey:drops/supply"
     assert "LootTable" not in "".join(body)
 
 
 def test_a_drop_ends_cleanly():
     cleanup = fn("cleanup")
     for want in ("kill @e[type=minecraft:marker,tag=dr.chest]", "kill @e[type=minecraft:marker,tag=dr.spot]",
-                 "kill @e[type=minecraft:text_display,tag=dr.label]", "bossbar remove realms:drop",
-                 "function realms:drops/release with storage realms:drops spot", "schedule clear realms:drops/check",
+                 "kill @e[type=minecraft:text_display,tag=dr.label]", "bossbar remove monkey:drop",
+                 "function monkey:drops/release with storage monkey:drops spot", "schedule clear monkey:drops/check",
                  "scoreboard players set #state dr 0"):
         assert want in cleanup, want
     for name in ("looted", "expire", "blocked", "stop"):
-        assert "function realms:drops/cleanup" in fn(name), name
+        assert "function monkey:drops/cleanup" in fn(name), name
     assert "forceload add $(x0) $(z0) $(x1) $(z1)" in fn("hold")
     assert "forceload remove $(x0) $(z0) $(x1) $(z1)" in fn("release")
 
@@ -376,14 +376,14 @@ def test_timings():
     assert drops.COUNTDOWN == 600   # docs/SEASONS.md: announced 10 minutes ahead
     for s in drops.WARN_AT:
         assert f"execute if score #timer dr matches {s} run tellraw @a" in fn("countdown")
-    assert "execute if score #timer dr matches ..0 run function realms:drops/land" in fn("countdown")
-    assert "execute if score #timer dr matches ..0 run function realms:drops/expire" in fn("landed")
+    assert "execute if score #timer dr matches ..0 run function monkey:drops/land" in fn("countdown")
+    assert "execute if score #timer dr matches ..0 run function monkey:drops/expire" in fn("landed")
 
 
 def test_a_restart_picks_the_drop_up_again():
     load = fn("load")
-    assert "schedule function realms:drops/second 20t replace" in load
-    assert "execute if score #state dr matches 1 run schedule function realms:drops/check 20t replace" in load
+    assert "schedule function monkey:drops/second 20t replace" in load
+    assert "execute if score #state dr matches 1 run schedule function monkey:drops/check 20t replace" in load
     # Settings staff changed survive a reload.
     assert "execute unless score #min dr matches 1.. run scoreboard players set #min dr 4" in load
     assert "execute unless score #auto dr matches 0.. run scoreboard players set #auto dr 1" in load
@@ -392,7 +392,7 @@ def test_a_restart_picks_the_drop_up_again():
 def test_a_staff_drop_keeps_tonights():
     start = fn("start")
     assert start.splitlines()[1].startswith("execute if score #state dr matches 1.. run return run tellraw @s")
-    assert "execute store result storage realms:drops night int 1 run scoreboard players get #night dr" in start
+    assert "execute store result storage monkey:drops night int 1 run scoreboard players get #night dr" in start
 
 
 def test_announcements_name_the_place_and_never_spread_bold():
@@ -402,22 +402,22 @@ def test_announcements_name_the_place_and_never_spread_bold():
                 parts = json.loads(line[line.index("tellraw @a ") + len("tellraw @a "):])
                 assert parts[0] == "" and parts[1] == drops.HEAD, f"{path}: {line}"
     assert "spot.y" in fn("found") and "spot.x" in fn("found") and "spot.z" in fn("found")
-    assert "bossbar set realms:drop players @a" in fn("found")
+    assert "bossbar set monkey:drop players @a" in fn("found")
 
 
 def test_help_lists_every_staff_command():
     help_ = fn("help")
     assert help_.count("suggest_command") == len(drops.HELP)
     for cmd, _ in drops.HELP:
-        assert f"/function realms:drops/{cmd}" in help_
+        assert f"/function monkey:drops/{cmd}" in help_
 
 
 # ---------------------------------------------------------------- the VPS scripts
 
 
 DEPLOY = REPO.root / "deploy"
-SCRIPT = "realms-drops.sh"
-UNITS = ["realms-drops.service", "realms-drops.timer"]
+SCRIPT = "monkey-drops.sh"
+UNITS = ["monkey-drops.service", "monkey-drops.timer"]
 
 
 @pytest.mark.parametrize("name", [SCRIPT, *UNITS])
@@ -449,10 +449,10 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
         subprocess.run([shell, "-n", str(DEPLOY / SCRIPT)], check=True)
 
 
-def test_units_run_the_script_as_realms_every_ten_minutes():
-    service = (DEPLOY / "realms-drops.service").read_text()
-    assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-drops.sh\n" in service
-    timer = (DEPLOY / "realms-drops.timer").read_text()
+def test_units_run_the_script_as_monkey_every_ten_minutes():
+    service = (DEPLOY / "monkey-drops.service").read_text()
+    assert "User=monkey" in service and "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-drops.sh\n" in service
+    timer = (DEPLOY / "monkey-drops.timer").read_text()
     assert f"OnCalendar=*-*-* *:00/{drops.SLOT_MINUTES}:30" in timer
 
 
@@ -463,7 +463,7 @@ def test_the_meteor_loot_is_modest_too():
     for pool, item, weight, lo, hi in drops.METEOR_LOOT:
         assert pool in drops.METEOR_ROLLS and weight > 0 and 1 <= lo <= hi <= 16, item
         assert re.fullmatch(r"[a-z_]+", item) and not any(word in item for word in FORBIDDEN), item
-    table = json.loads(FILES["data/realms/loot_table/drops/meteor.json"])
+    table = json.loads(FILES["data/monkey/loot_table/drops/meteor.json"])
     assert len(table["pools"]) == len(drops.METEOR_ROLLS)
 
 
@@ -475,12 +475,12 @@ def test_a_meteor_is_one_chest_with_more_in_it_announced_5_minutes_ahead():
     assert "execute if score #state dr matches 1.. run return 11" in meteor
     # Extra: it keeps tonight's drop as it was, like a staff drop.
     assert "$(night)" not in meteor
-    assert "execute store result storage realms:drops night int 1 run scoreboard players get #night dr" in meteor
+    assert "execute store result storage monkey:drops night int 1 run scoreboard players get #night dr" in meteor
     found = fn("found")
     assert "execute if score #meteor dr matches 1 run scoreboard players set #chests dr 1" in found
     assert ("execute if score #meteor dr matches 1 run scoreboard players set #timer dr "
             f"{drops.METEOR_COUNTDOWN}") in found
-    assert "execute if score #meteor dr matches 1 run loot insert ~ ~ ~ loot realms:drops/meteor" in fn("place")
+    assert "execute if score #meteor dr matches 1 run loot insert ~ ~ ~ loot monkey:drops/meteor" in fn("place")
     # Every way a drop starts or ends says which it is.
     for path in ("try", "start"):
         assert "scoreboard players set #meteor dr 0" in fn(path)

@@ -3,11 +3,11 @@
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
 
 It writes (edit this file, not them):
-  package/realms/datapacks/realms-npcs/          the two Easy NPC presets and the staff functions that place them
-  package/realms/defaults/config/easy_npc/security.cfg
+  package/monkey/datapacks/monkey-npcs/          the two Easy NPC presets and the staff functions that place them
+  package/monkey/defaults/config/easy_npc/security.cfg
 
 The NPCs are Easy NPC entities (the easy-npc mods in the manifest). Nothing here spawns them: staff place them
-once per world with `/function realms:npcs/guide/here` (docs/ADMIN.md, "Spawn NPCs"). Each has a fixed UUID,
+once per world with `/function monkey:npcs/guide/here` (docs/ADMIN.md, "Spawn NPCs"). Each has a fixed UUID,
 so placing it again replaces it with the preset's current version instead of adding a second one.
 
 The Guide's buttons open what players already reach with /trigger (challenges, standings, wardrobe) by
@@ -25,7 +25,7 @@ import season_calendar
 from datapacks import NS, lines, mcmeta
 from repo import Repo
 
-DATAPACK = "realms-npcs"
+DATAPACK = "monkey-npcs"
 FN = f"data/{NS}/function/npcs"
 MODEL = "humanoid"
 PRESETS = f"data/{NS}/easy_npc/preset/{MODEL}"
@@ -77,7 +77,7 @@ EVERY_WEEK = ("Every event is in the Discord's events list: press Interested the
 GUIDE_HELLO = "Welcome to Monkey SMP! Right-click me if you're new here."
 GUIDE_TEXT = ("Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, "
               "or open this week's challenges, the faction standings and your wardrobe.")
-# The short rules (package/realms/defaults/codeofconduct/en_us.txt), cut to what a new player needs first.
+# The short rules (package/monkey/defaults/codeofconduct/en_us.txt), cut to what a new player needs first.
 RULES_TEXT = "<br>".join((
     "The short rules:",
     "- No combat logging, and no teaming in other factions' fights.",
@@ -347,7 +347,7 @@ def security_cfg() -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 def files(repo: Repo) -> dict[Path, str]:

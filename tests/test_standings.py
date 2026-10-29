@@ -40,7 +40,8 @@ SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": score_rows(
     (events.LEVEL, "TomFake", 3), (events.LEVEL, "LoneFake", -2),
     ("ev.strength", "TomFake", 1),   # Tom is in the arena: his own Strength is 1, held at +3 in there
     ("st.kills", "AlexFake", 7), ("st.kills", "SamFake", 2), ("st.kills", "RiaFake", 10),
-    ("st.kills", "LoneFake", 1), ("st.bounty", "SamFake", 1))}}
+    ("st.kills", "LoneFake", 1), ("st.bounty", "SamFake", 1),
+    ("rw.day", "#launched", 1))}}   # realms:rules/launch has run: the recap posts
 BASELINE = {"start": "2026-10-25T19:00:00-07:00", "kills": {"AlexFake": 5, "RiaFake": 4}, "bounty": {}}
 
 
@@ -264,7 +265,7 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     assert url == WEBHOOK and kind == "application/json"
     assert body["allowed_mentions"] == {"parse": []}
     assert "Red Monkeys" in body["content"] and len(body["content"]) <= 2000
-    assert "week of Sun 25 Oct to Sun 1 Nov" in body["content"]
+    assert "Sun 25 Oct to Sun 1 Nov" in body["content"] and body["content"].startswith("**Monkey SMP Weekly**")
     first = capsys.readouterr()
     assert "board updated and announced in chat" in first.out
     # run again (a retry, a re-run): nothing is closed or posted twice

@@ -117,6 +117,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
 | Joins per join address | `python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs` (docs/PROMOTION.md) |
 | This week's standings so far | `sh /srv/realms/repo/deploy/realms-standings.sh show` (changes nothing); log: `journalctl -u realms-standings -u realms-standings-board -n 50` |
+| The Sunday recap, as it would post now | `sh /srv/realms/repo/deploy/realms-standings.sh preview` (changes nothing) |
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
@@ -641,7 +642,9 @@ snapshot, and the two timers. Two things stay by hand:
 
 On Sunday at 7 PM Pacific the timer closes the week: it keeps the final table in
 `STANDINGS_DIR/weeks/<date>.json`, starts the next week from a new snapshot, puts both on the board, announces
-it in chat and posts it to Discord. It waits up to 30 minutes for the deploy lock, so it never runs during a
+it in chat and posts it to Discord as the Sunday recap ("Monkey SMP Weekly": the table and a few lines on the
+week, worked out at the close and kept in the same file). Before the launch (`function realms:rules/launch`
+sets `#launched rw.day`) it keeps the week but posts nothing. It waits up to 30 minutes for the deploy lock, so it never runs during a
 deploy, the daily restart or an off-site backup. If the board or Discord fails, the service fails and systemd
 tries again every 10 minutes for 2 hours; a retry finishes what is left and never closes the week twice (a
 week closes only when it is at least 3 days old). The hourly board update skips its turn when the lock is

@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- The Sunday standings post is now a short recap, "Monkey SMP Weekly": the final table, then a line each for
+  the biggest mover, the top fighter, bounties claimed, land claimed, challenges done, event turnout and next
+  Saturday's event, when there is something to say (`tools/recap.py`). Same webhook, same Sunday timer, still
+  under Discord's 2000 characters. A week that closes before the launch (test play) is kept but no longer
+  posted. `deploy/realms-standings.sh preview` prints the recap as it would post now. Nothing to set up on the
+  VPS: the first close after this release starts counting the week's challenges, land and events, so its
+  recap leaves those lines out.
+
 ### Changed
 
 - Season I opens on Saturday 31 October 2026 at 5 PM Pacific, three weeks earlier than 21 November. Week 1

@@ -1,47 +1,75 @@
-/* A field guide: short sections to read once, then the week as a row of stone days, then every command
- * by rank as rows to look up: the command in mono on the left, what it does beside it. */
-main > section + section { padding-top: 0; }
-.hero { padding-bottom: 72px; }   /* the front page's hero runs into its trailer; this one ends */
+/* The guide reads like documentation: a sidebar of every page on the left, the page you're on to its right, and
+ * links to the pages before and after it at the bottom. Short pages to read once, the week as a row of stone
+ * days, and every command by rank as rows to look up: the command in mono on the left, what it does beside it. */
+.docs {
+  display: grid; grid-template-columns: 15rem minmax(0, 1fr); column-gap: 64px; align-items: start;
+  padding: 104px var(--gutter) 112px;
+}
+
+/* The sidebar: section labels over plain links on a leaf rule; the page you're on is gold on a gold rule. */
+.guide-nav {
+  position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto;
+  padding: 4px 4px 16px 0; scrollbar-width: thin;
+}
+.guide-label {
+  margin: 28px 0 8px; font: 700 0.8125rem/1.5 var(--body); color: var(--sage);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.guide-nav div:first-child .guide-label { margin-top: 0; }
+.guide-nav ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--leaf-2); }
+.guide-nav a {
+  display: block; margin-left: -2px; padding: 6px 0 6px 14px; border-left: 2px solid transparent;
+  color: var(--bone-2); font-weight: 600; line-height: 1.35; text-decoration: none;
+}
+.guide-nav a:hover { color: var(--bone); border-left-color: var(--leaf-3); }
+.guide-nav a[aria-current="page"] { color: var(--gold); border-left-color: var(--gold); font-weight: 700; }
+.guide-menu { display: none; }
+
+/* The page. */
+.doc > h1 { font-size: clamp(2.25rem, 4vw, 3.25rem); margin-bottom: 0.4em; }
+.doc > .lede { max-width: var(--measure); margin: 0 0 40px; font-size: 1.2rem; color: var(--bone-2); }
+.doc h2 { margin: 56px 0 14px; font: 700 1.6rem/1.15 var(--display); color: var(--bone); }
+.doc h3 { margin: 36px 0 10px; font: 700 1rem/1.3 var(--body); color: var(--sage); }
+.doc > .lede + h2, .doc > .lede + .prose > h2:first-child { margin-top: 0; }
+.doc > .small { max-width: var(--measure); }
+.doc .after { margin-top: 28px; }
 .prose { max-width: var(--measure); }
 .prose ul { margin: 0 0 1em; padding-left: 1.1em; }
 .prose li { margin-bottom: 0.5em; }
 .prose li::marker { color: var(--sage); }
-.prose h3 { margin-top: 1.6em; }
 .prose strong { color: var(--bone); }
 
-/* On this page: the sections and the ranks, as plain links in two rows. */
-/* Beside the lede in the front page's launch slot; on a phone, under it (that slot comes first there). */
-.toc { grid-area: launch; display: grid; gap: 14px; max-width: 48rem; }
-.toc p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; }
-.toc b { flex: 0 0 100%; color: var(--sage); font-size: 0.95rem; }
-.toc a { font-weight: 700; }
-
-/* The week: Monday to Friday across the top with the omen band under them, Saturday and Sunday standing
- * the full height at the end. On a phone the days stack in order. */
-.week {
-  list-style: none; margin: 40px 0 0; padding: 0; display: grid; gap: 12px;
-  grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto auto;
+/* Before and after: two blocks under a leaf rule, the next page on the right. */
+.pager {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;
+  max-width: 48rem; margin-top: 88px; padding-top: 28px; border-top: 2px solid var(--leaf-2);
 }
+.pager a {
+  display: grid; gap: 2px; padding: 12px 16px 14px; color: var(--bone); font-weight: 700; text-decoration: none;
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.pager a:hover { color: var(--gold-hi); }
+.pager span { font-size: 0.8125rem; color: var(--sage); text-transform: uppercase; letter-spacing: 0.06em; }
+.pager .next { grid-column: 2; text-align: right; }
+
+/* The week: one stone row a day, Monday to Sunday, the day's name on the left; the omen band (any weekday
+ * evening) sits in the shade after Friday. */
+.week { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-width: 48rem; }
 .week li {
   --ring: var(--ink);
-  display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 16px; color: var(--ink);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 12px 14px 14px; color: var(--ink);
   background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
 }
-.week h3 { margin: 0; color: var(--ink); font-size: 1.25rem; }
-.week p { margin: 0; font-size: 0.95rem; line-height: 1.45; }
-.week .at { display: block; font: 700 1.5rem/1.1 var(--display); color: var(--ink); }
+.doc .week h2 { flex: 0 0 7rem; margin: 0; color: var(--ink); font-size: 1.2rem; }
+.week p { flex: 1 1 14rem; margin: 0; font-size: 0.95rem; line-height: 1.45; }
+.week .at { font: 700 1.25rem/1.1 var(--display); color: var(--ink); margin-right: 6px; }
 .week .quiet { color: var(--ink-2); }
-.week .sat, .week .sun { grid-row: 1 / span 2; }
-.week .omens {
-  grid-column: 1 / span 5; grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
-  color: var(--bone-2); background: var(--shade) padding-box; border-image-source: var(--frame-shade);
-}
-.week .omens h3 { color: var(--bone); }
-.week .omens p { flex: 1 1 24rem; }
+.week .omens { color: var(--bone-2); background: var(--shade) padding-box; border-image-source: var(--frame-shade); }
+.doc .week .omens h2 { color: var(--bone); }
 .week + .small { max-width: var(--measure); margin-top: 14px; }
 
 /* What each rank can do, one row a rank; the rank leads in the display face. */
-.ranks { margin: 32px 0 0; max-width: 52rem; }
+.ranks { margin: 0 0 28px; max-width: 52rem; }
 .ranks div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 2px solid var(--leaf-2); }
 .ranks div:last-child { border-bottom: 2px solid var(--leaf-2); }
 .ranks dt { font: 700 1.25rem/1.2 var(--display); color: var(--bone); }
@@ -49,16 +77,13 @@ main > section + section { padding-top: 0; }
 .ranks dt a:hover { color: var(--gold-hi); text-decoration: underline; }
 .ranks dd { margin: 0; }
 
-/* Commands, by rank: one heading a rank, one group of rows per job. */
-.role { margin-top: 72px; }
-.role > h3 { font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 0.35em; }
-.role > p { max-width: var(--measure); }
-.role h4 { margin: 32px 0 8px; font: 700 1rem/1.3 var(--body); color: var(--sage); }
-.cmds { margin: 0; max-width: 60rem; }
+/* Commands: one group of rows per job. */
+.cmds { margin: 0 0 1em; max-width: 60rem; }
 .cmds div {
-  display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 6px 28px; align-items: baseline;
+  display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 6px 28px; align-items: baseline;
   padding: 12px 0; border-top: 2px solid var(--leaf-2);
 }
+.prose .cmds { max-width: none; }
 .cmds div:last-child { border-bottom: 2px solid var(--leaf-2); }
 .cmds dt code { font-size: 1rem; color: var(--bone); overflow-wrap: anywhere; }
 .cmds dt kbd {
@@ -67,19 +92,32 @@ main > section + section { padding-top: 0; }
 }
 .cmds dd { margin: 0; }
 .cmds dd code { font-size: 0.94em; }
-.role + .role { margin-top: 88px; }
 
+/* On a tablet or phone the sidebar folds into a menu bar above the page: the page you're on, and a plus that
+ * opens every page. */
 @media (max-width: 960px) {
-  .week { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .week .sat, .week .sun, .week .omens { grid-row: auto; grid-column: auto; }
-  .week li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
-  .week h3 { flex: 0 0 7rem; }
-  .week p { flex: 1 1 14rem; }
-  .week .at { display: inline; font-size: 1.25rem; margin-right: 6px; }
+  .docs { grid-template-columns: minmax(0, 1fr); padding-top: 88px; padding-bottom: 72px; }
+  .guide-nav { position: static; max-height: none; overflow: visible; margin-bottom: 40px; padding: 0; }
+  .guide-menu {
+    display: flex; width: 100%; min-height: 56px; justify-content: flex-start; align-items: baseline; gap: 12px;
+    padding: 0 48px 0 14px; position: relative; color: var(--bone); text-align: left;
+    background: var(--shade) padding-box; border-image-source: var(--frame-shade);
+  }
+  .guide-menu:hover { color: var(--bone); border-image-source: var(--frame-shade); }
+  .guide-menu span { font-size: 0.8125rem; color: var(--sage); text-transform: uppercase; letter-spacing: 0.06em; }
+  .guide-menu::after {
+    content: ""; position: absolute; right: 16px; top: 50%; width: 14px; height: 14px; margin-top: -7px;
+    background: var(--gold);
+    -webkit-mask: var(--icon-plus) center / contain no-repeat; mask: var(--icon-plus) center / contain no-repeat;
+  }
+  .guide-nav[data-open] .guide-menu::after { -webkit-mask-image: var(--icon-minus); mask-image: var(--icon-minus); }
+  .guide-nav:not([data-open]) #guide-pages { display: none; }
+  #guide-pages { padding: 20px 14px 4px; }
 }
 @media (max-width: 760px) {
-  .hero .toc { grid-area: trailer; margin-top: 32px; }
   .cmds div, .ranks div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .week h3 { flex-basis: 100%; }
-  .role, .role + .role { margin-top: 64px; }
+  .doc .week h2 { flex-basis: 100%; }
+  .doc h2 { margin-top: 44px; }
+  .pager { grid-template-columns: minmax(0, 1fr); margin-top: 64px; }
+  .pager .next { grid-column: 1; }
 }

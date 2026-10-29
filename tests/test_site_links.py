@@ -192,11 +192,24 @@ def test_built_checks_every_page(tmp_path):
     out.mkdir()
     assert site_links.main(["--check", "--built", str(out)], repo=repo) == 1
     for name in site_links.PAGES:
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_text(GOOD_LINKS + GOOD_LAUNCH, encoding="utf-8")
     assert site_links.main(["--check", "--built", str(out)], repo=repo) == 0
     (out / "guide.html").write_text(GOOD_LINKS.replace("discord.gg/abc", "discord.gg/old"), encoding="utf-8")
     [error] = site_links.problems(repo, built=out)
     assert error.startswith("out/guide.html: data-link=\"STORE_URL\" goes to https://discord.gg/old")
+
+
+def test_built_checks_pages_in_folders_too(tmp_path):
+    repo = fake_site(tmp_path)
+    site_links.main([], repo=repo)
+    out = tmp_path / "site" / "out"
+    for name in site_links.PAGES:
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
+        (out / name).write_text(GOOD_LINKS + GOOD_LAUNCH, encoding="utf-8")
+    (out / "guide" / "week.html").write_text(GOOD_LINKS.replace("discord.gg/abc", "discord.gg/old"), encoding="utf-8")
+    [error] = site_links.problems(repo, built=out)
+    assert error.startswith("out/guide/week.html: data-link=\"STORE_URL\" goes to https://discord.gg/old")
 
 
 def test_a_repo_without_the_site_has_nothing_to_check(tmp_path):

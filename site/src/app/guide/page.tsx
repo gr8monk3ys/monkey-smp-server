@@ -1,8 +1,15 @@
-import { guideMetadata, GuidePage } from "@/components/guide-page";
+import type { Metadata } from "next";
+import { GuidePage } from "@/components/guide-page";
 import { OldAnchors } from "@/components/old-anchors";
 import FirstHour from "@/content/guide/first-hour.mdx";
 
-export const metadata = guideMetadata("/guide");
+// /guide is the address every nav and footer links as the guide, so its preview describes the whole guide, not
+// just this first page.
+export const metadata: Metadata = {
+  title: "How it works - Monkey SMP",
+  description: "How Monkey SMP works: the first hour, factions and land, a week of challenges, drops and events, "
+    + "and every command by rank, from player to admin.",
+};
 
 export default function Guide() {
   return (

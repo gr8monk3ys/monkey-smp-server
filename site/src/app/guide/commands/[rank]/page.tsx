@@ -1,11 +1,18 @@
 import { Fragment } from "react";
 import { guideMetadata, GuidePage } from "@/components/guide-page";
+import { rankIds } from "@/content/guide/pages";
 import { type Command, roles } from "@/content/guide/commands";
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return roles.map((role) => ({ rank: role.id }));
+  // pages.ts lists the sidebar's rank pages and commands.tsx has their commands: a rank in one but not the
+  // other would be a page with no commands, or a sidebar link to a 404.
+  const ids = roles.map((role) => role.id);
+  if (ids.join() !== rankIds.join()) {
+    throw new Error(`The guide's rank pages (${rankIds.join(", ")}) and commands.tsx's roles (${ids.join(", ")}) differ`);
+  }
+  return ids.map((rank) => ({ rank }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/guide/commands/[rank]">) {

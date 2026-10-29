@@ -34,7 +34,10 @@ from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
 KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "LAUNCH_AT")
-PAGES = ("index.html", "changes.html", "creators.html", "guide.html", "guide/commands/players.html")
+# Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
+GUIDE = ("guide", "guide/factions", "guide/week", "guide/commands", "guide/discord",
+         *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
+PAGES = ("index.html", "changes.html", "creators.html", *(f"{page}.html" for page in GUIDE))
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 

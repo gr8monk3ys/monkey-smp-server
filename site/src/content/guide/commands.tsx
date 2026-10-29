@@ -23,12 +23,11 @@ export type Command = ({ code: string } | { kbd: string } | { term: string }) & 
  * rows. */
 export type Group = { heading?: string; note?: ReactNode; text?: ReactNode; cmds?: Command[] };
 
-export type Role = { id: string; title: string; intro: ReactNode; groups: Group[]; after?: ReactNode };
+export type Role = { id: string; intro: ReactNode; groups: Group[]; after?: ReactNode };
 
 export const roles: Role[] = [
   {
     id: "players",
-    title: "Players",
     intro: <>Menus open in chat; click a line to use it. Type the start of a command and press <kbd>Tab</kbd> to see
       the rest.</>,
     groups: [
@@ -84,7 +83,6 @@ export const roles: Role[] = [
   },
   {
     id: "leaders",
-    title: "Faction leaders",
     intro: "The player who made the party leads it. Everything players can do, plus:",
     groups: [{
       cmds: [
@@ -100,7 +98,6 @@ export const roles: Role[] = [
   },
   {
     id: "supporters",
-    title: "Supporters",
     intro: <>Nothing to type. Your name color shows by itself, and your skins appear in <code>/trigger wardrobe</code>{" "}
       with an &quot;Unlocked&quot; line in chat. Banner and Crown supporters tell staff the title they want, and staff
       set it.</>,
@@ -108,7 +105,6 @@ export const roles: Role[] = [
   },
   {
     id: "moderators",
-    title: "Moderators",
     intro: <>Typed in game, without the <code>/</code> where shown. Every punishment needs a reason, which the player
       sees and the next moderator can look up. Start the reason with <code>-s</code> to keep it out of public chat.
       Durations look like <code>30m</code>, <code>12h</code>, <code>3d</code> or <code>1d12h</code>.</>,
@@ -165,7 +161,6 @@ export const roles: Role[] = [
   },
   {
     id: "admins",
-    title: "Admins",
     intro: <>Every mod&apos;s commands, plus Minecraft&apos;s own (<code>/tp</code>, <code>/gamemode</code>,{" "}
       <code>/give</code>, <code>/whitelist</code> and the rest), which need op as well as the rank.</>,
     groups: [

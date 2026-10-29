@@ -1,10 +1,9 @@
-// A week on the server (the guide's #week): Monday to Friday across the top with the omen band under them,
-// Saturday and Sunday standing the full height at the end. Times are Pacific. Keep it in step with
-// tools/season_calendar.py, tools/drops.py and tools/omens.py.
+// A week on the server (/guide/week): one row per day, Monday to Sunday, with the omens between Friday and
+// Saturday. Times are Pacific. Keep it in step with tools/season_calendar.py, tools/drops.py and tools/omens.py.
 export type Day = {
   name: string;
-  /** "omens" sets the block in the shade (guide.css); "sat" and "sun" mark the weekend. */
-  place?: "omens" | "sat" | "sun";
+  /** "omens" sets the row in the shade (guide.css). */
+  place?: "omens";
   lines: { at?: string; text: string; quiet?: boolean }[];
 };
 
@@ -21,11 +20,11 @@ export const week: Day[] = [
     lines: [{ text: "One or two weekday evenings, with no warning: a Blood Moon, a Meteor, a Truce Hour or a Hunted player." }],
   },
   {
-    name: "Saturday", place: "sat",
+    name: "Saturday",
     lines: [{ at: "6 PM", text: "The week's event: a Faction Raid, Arena Glory, a Build Battle, or the border breaking open." }],
   },
   {
-    name: "Sunday", place: "sun",
+    name: "Sunday",
     lines: [{ at: "7 PM", text: "The week's faction standings close and go up in the Discord. Wars end." }],
   },
 ];

@@ -35,7 +35,8 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
         href: "/guide/commands", title: "Ranks",
         description: "Every rank on Monkey SMP, from player to admin, and what each can do.",
       },
-      // One page per rank in commands.tsx's `roles`, same ids and titles (the build fails on a rank without one).
+      // One page per rank in commands.tsx's `roles`, by id; the titles live here. commands/[rank]/page.tsx fails
+      // the build when the two lists differ.
       ...[
         ["players", "Players"], ["leaders", "Faction leaders"], ["supporters", "Supporters"],
         ["moderators", "Moderators"], ["admins", "Admins"],
@@ -58,6 +59,9 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
 ];
 
 export const pages = sections.flatMap((section) => section.pages);
+
+/** The ids of the per-rank command pages (/guide/commands/<id>), in reading order. */
+export const rankIds = pages.flatMap((p) => p.href.match(/^\/guide\/commands\/([^/]+)$/)?.[1] ?? []);
 
 export function guidePage(href: string): GuidePage {
   const found = pages.find((p) => p.href === href);

@@ -10,8 +10,8 @@ export function guideMetadata(href: string): Metadata {
 
 /** One page of the guide: its title, an optional lede, the page itself, then the pages before and after it. */
 export function GuidePage({ href, lede, children }: { href: string; lede?: ReactNode; children: ReactNode }) {
-  const at = pages.findIndex((p) => p.href === href);
-  const page = pages[at];
+  const page = guidePage(href);
+  const at = pages.indexOf(page);
   const prev = pages[at - 1];
   const next = pages[at + 1];
   return (

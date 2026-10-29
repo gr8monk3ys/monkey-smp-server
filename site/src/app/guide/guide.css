@@ -11,11 +11,11 @@
   position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto;
   padding: 4px 4px 16px 0; scrollbar-width: thin;
 }
-.guide-nav h2 {
+.guide-label {
   margin: 28px 0 8px; font: 700 0.8125rem/1.5 var(--body); color: var(--sage);
   text-transform: uppercase; letter-spacing: 0.06em;
 }
-.guide-nav div:first-child h2 { margin-top: 0; }
+.guide-nav div:first-child .guide-label { margin-top: 0; }
 .guide-nav ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--leaf-2); }
 .guide-nav a {
   display: block; margin-left: -2px; padding: 6px 0 6px 14px; border-left: 2px solid transparent;
@@ -98,20 +98,21 @@
 @media (max-width: 960px) {
   .docs { grid-template-columns: minmax(0, 1fr); padding-top: 88px; padding-bottom: 72px; }
   .guide-nav { position: static; max-height: none; overflow: visible; margin-bottom: 40px; padding: 0; }
-  .guide-nav[data-ready] .guide-menu {
+  .guide-menu {
     display: flex; width: 100%; min-height: 56px; justify-content: flex-start; align-items: baseline; gap: 12px;
     padding: 0 48px 0 14px; position: relative; color: var(--bone); text-align: left;
     background: var(--shade) padding-box; border-image-source: var(--frame-shade);
   }
-  .guide-nav[data-ready] .guide-menu:hover { color: var(--bone); border-image-source: var(--frame-shade); }
+  .guide-menu:hover { color: var(--bone); border-image-source: var(--frame-shade); }
   .guide-menu span { font-size: 0.8125rem; color: var(--sage); text-transform: uppercase; letter-spacing: 0.06em; }
   .guide-menu::after {
     content: ""; position: absolute; right: 16px; top: 50%; width: 14px; height: 14px; margin-top: -7px;
-    background: var(--gold); mask: var(--icon-plus) center / contain no-repeat;
+    background: var(--gold);
+    -webkit-mask: var(--icon-plus) center / contain no-repeat; mask: var(--icon-plus) center / contain no-repeat;
   }
-  .guide-nav[data-open] .guide-menu::after { mask-image: var(--icon-minus); }
-  .guide-nav[data-ready]:not([data-open]) #guide-pages { display: none; }
-  .guide-nav[data-ready] #guide-pages { padding: 20px 14px 4px; }
+  .guide-nav[data-open] .guide-menu::after { -webkit-mask-image: var(--icon-minus); mask-image: var(--icon-minus); }
+  .guide-nav:not([data-open]) #guide-pages { display: none; }
+  #guide-pages { padding: 20px 14px 4px; }
 }
 @media (max-width: 760px) {
   .cmds div, .ranks div { grid-template-columns: minmax(0, 1fr); gap: 4px; }

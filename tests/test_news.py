@@ -548,6 +548,8 @@ def script(tmp_path):
         (bin_dir / name).write_text(f'#!/bin/sh\n{first}echo "{name} $*" >>"$FAKE_CALLS"\n{extra}{out}'
                                     f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")
+    for fake in bin_dir.iterdir():
+        fake.chmod(0o755)   # PATH skips a file that isn't executable, and the real command would run instead
     repo = tmp_path / "repo"
     (repo / "tools").mkdir(parents=True)
     (repo / "tools" / "news.py").write_text("")

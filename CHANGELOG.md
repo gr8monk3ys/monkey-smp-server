@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Monkey SMP news**: one plain line in the public Discord channel for a rare Server First (the Nether, a
+  raid, a mace, a beacon, the Wither, the End, the dragon, an elytra, full Netherite), the first on the server
+  this season to finish a rare advancement (Monsters Hunted, A Balanced Diet, Adventuring Time...) or new
+  factions: "Steve killed the Ender Dragon. First this season." At most a few a day and each once a season,
+  read from the saved world every 10 minutes (`tools/news.py`, `deploy/realms-news.sh`, `realms-news.timer`).
+  Off until the owner adds `NEWS_WEBHOOK_URL` on the VPS and installs the timer (docs/LIVE.md, "The news
+  timer"). Not yet run against a live server.
+
 ## [2.9.1] - 2026-10-29
 
 Season I's new date: it opens on Saturday 7 November, a week later. This must be live before Monday

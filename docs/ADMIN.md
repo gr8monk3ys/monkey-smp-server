@@ -829,6 +829,50 @@ still would: staff who play before launch don't stash those (docs/LAUNCH.md). To
 scores and storage, so never rename one mid-season), run `python tools/datapacks.py` and the checks, and
 release.
 
+## Monkey SMP news
+
+One plain line in the public Discord channel (#monkey-smp) when something notable happens, a few a week at
+most (`tools/news.py`, run by `realms-news.timer`; set up in docs/LIVE.md, "The news timer"):
+
+- **A Server First** from a short list (the early ones, diamond, fortress, bastion, debris and a vault, stay
+  in game): `Steve reached the Nether.` / `won a raid.` / `got a mace.` / `lit a beacon.` /
+  `defeated the Wither.` / `entered the End.` / `killed the Ender Dragon.` / `found an elytra.` /
+  `is wearing full Netherite.`, each followed by `First this season.` Whoever the firsts pack says holds it
+  (above), so a reopened first already posted isn't posted again.
+- **The first on the server this season to finish a rare advancement**: Monsters Hunted, Adventuring Time,
+  Sniper Duel, Arbalistic, Smithing with Style, A Balanced Diet, Two by Two, A Complete Catalogue, The Whole
+  Pack, Serious Dedication, How Did We Get Here?, A Furious Cocktail, Hot Tourist Destinations, Uneasy
+  Alliance, Return to Sender, Beaconator, The Next Generation: `Steve completed Monsters Hunted. First this
+  season.` From each player's saved advancements, which keep when each was done: the earliest since the launch.
+- **New factions**: `New faction: Red Wolves, led by Steve.`, or several found together in one line,
+  `New factions: Red Wolves, Steve's faction and The Cartographers.`
+
+Only players' Minecraft names and faction names go out, escaped so none can be a link or a mention, and the
+posts ping nobody: never coordinates, chat, addresses or anything from a ticket. It reads only the saved world
+(the server saves every 5 minutes), so a post lands 5 to 25 minutes after the moment. Nothing posts before
+the launch.
+
+The limits, in `LIMITS` and below it in `tools/news.py`: in any 24 hours at most 4 firsts, 2 challenges and
+2 faction lines, 6 in all, and 2 a run. What is over a limit waits for a later run, in the order it happened,
+and is dropped once it has waited 3 days. A challenge waits 15 minutes first, in case an earlier finish is
+still to be saved. Each season keeps `NEWS_DIR/season-<n>.json`: every item seen and whether it was posted.
+It is written before and after each post, so a run killed mid-post, or a post Discord took without
+answering (a timeout, a dropped connection, a 5xx), loses that line rather than ever posting it twice; only a
+refusal (a 4xx) or a failure to connect is tried again. The runs before the launch date the season, so it
+counts from the launch whenever that is; turned on mid-season, or back on after more than 3 hours off, it keeps
+what turned up meanwhile as baseline and posts only what is new. To change what is news, edit `FIRST_LINES` or `CHALLENGES` (an advancement id from the game's own
+files) and release.
+
+On the VPS (changes nothing):
+
+```sh
+sh /srv/realms/repo/deploy/realms-news.sh --check      # what the next run would post, and what waits
+python3 /srv/realms/repo/tools/news.py found /srv/realms/TheRealms-Server/server/world   # all in the world, test play too
+```
+
+To leave one out (a first taken by an exploit and reopened before it posted, say), set its item's `"status"`
+to `"dropped"` in that season's file, as realms (`sudo -u realms nano /srv/realms/news/season-1.json`).
+
 ## Outposts
 
 Four capture points in the newest border ring that factions take and hold for standings points

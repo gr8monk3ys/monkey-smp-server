@@ -1,0 +1,11 @@
+# Runs realms-news.service every 10 minutes, 2 minutes 15 seconds past (clear of the drops and omens on the
+# same 10 minutes). No catching up at boot: a missed run is just the next one, and nothing is lost by it.
+[Unit]
+Description=Monkey SMP: news to Discord, every 10 minutes
+
+[Timer]
+OnCalendar=*-*-* *:02/10:15
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -2,9 +2,11 @@
 # Weekly faction standings on the live VPS (tools/standings.py; docs/SEASONS.md, "Weekly standings").
 #
 #   sh realms-standings.sh close   ends the week: its final table goes on the in-game board, in chat and in
-#                                  Discord, and a new week starts (realms-standings.timer, Sundays 7 PM Pacific)
+#                                  Discord (the Sunday recap, after the launch), and a new week starts
+#                                  (realms-standings.timer, Sundays 7 PM Pacific)
 #   sh realms-standings.sh board   this week so far on the in-game board (realms-standings-board.timer, hourly)
 #   sh realms-standings.sh show    prints this week so far; changes nothing
+#   sh realms-standings.sh preview prints the Sunday recap as it would post if the week closed now; changes nothing
 #
 # Run it as realms (the services do), so the files it keeps stay realms's and the deploy lock stays usable:
 #   sudo -u realms sh /srv/realms/repo/deploy/realms-standings.sh show
@@ -25,8 +27,8 @@ LOG_NAME=standings
 . "$(dirname -- "$0")/lib.sh"
 
 case "${1:-}" in
-    close | board | show) MODE=$1 ;;
-    *) echo "usage: sh $0 close | board | show" >&2; exit 2 ;;
+    close | board | show | preview) MODE=$1 ;;
+    *) echo "usage: sh $0 close | board | show | preview" >&2; exit 2 ;;
 esac
 
 ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
@@ -45,8 +47,8 @@ WORLD=$LIVE_DIR/server/world
 TOOL=$REPO_DIR/tools/standings.py
 [ -f "$TOOL" ] || { log "no $TOOL: is a release with the standings live?"; exit 1; }
 
-if [ "$MODE" = show ]; then
-    exec python3 -B "$TOOL" show "$WORLD" --state "$STANDINGS_DIR"
+if [ "$MODE" = show ] || [ "$MODE" = preview ]; then
+    exec python3 -B "$TOOL" "$MODE" "$WORLD" --state "$STANDINGS_DIR"
 fi
 
 # Root would make files realms can't change, and a lock file realms-deploy.sh can't open (fs.protected_regular).

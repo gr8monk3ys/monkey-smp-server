@@ -14,6 +14,9 @@ This module is the one owner of what a patch is. Its interface:
 The rules, shared with the installer:
   - A patch only REPLACES files that already exist in the upstream zip. Making a patch that adds or
     removes files, or applying one that names a file the zip doesn't have, raises PatchError.
+  - A patch never replaces a file whose place in the zip matters (ORDER_SENSITIVE): the installer's
+    Invoke-ZipPatch moves replaced files to the end of the zip, and Java's JarInputStream only finds
+    META-INF/MANIFEST.MF as the first or second entry. make, apply and check refuse one.
   - A mod or datapack entry's `patch` is {"path": "patches/<folder>", "base_sha512": <hex>}, where
     base_sha512 is the hash of the exact upstream file the patch was made against. In a consistent
     manifest that equals the entry's own hashes.sha512; when they differ, the pin moved without the
@@ -28,6 +31,7 @@ from pathlib import Path
 import entries
 
 PATCHES_DIR = "patches"
+ORDER_SENSITIVE = ("META-INF/MANIFEST.MF",)  # compared ignoring case, as JarInputStream does
 
 
 class PatchError(Exception):
@@ -42,7 +46,9 @@ def make(original: bytes, edited: bytes) -> dict[str, bytes]:
         added, removed = sorted(after - before), sorted(before - after)
         raise PatchError("a patch can only edit files in place; "
                          f"added: {added or 'none'}, removed: {removed or 'none'}")
-    return {n: b.read(n) for n in sorted(after) if not n.endswith("/") and a.read(n) != b.read(n)}
+    files = {n: b.read(n) for n in sorted(after) if not n.endswith("/") and a.read(n) != b.read(n)}
+    _refuse_order_sensitive(files)
+    return files
 
 
 def write(folder: Path, files: dict[str, bytes]) -> None:
@@ -61,6 +67,7 @@ def read(folder: Path) -> dict[str, bytes]:
 
 def apply(zip_bytes: bytes, files: dict[str, bytes]) -> bytes:
     """Replace files inside a zip. Every patched path must already exist in the zip."""
+    _refuse_order_sensitive(files)
     src = zipfile.ZipFile(io.BytesIO(zip_bytes))
     missing = sorted(set(files) - set(src.namelist()))
     if missing:
@@ -70,6 +77,18 @@ def apply(zip_bytes: bytes, files: dict[str, bytes]) -> bytes:
         for info in src.infolist():
             dst.writestr(info, files[info.filename] if info.filename in files else src.read(info))
     return out.getvalue()
+
+
+def order_sensitive(names) -> list[str]:
+    """The names a patch must not replace, because their place in the zip matters."""
+    wanted = {n.upper() for n in ORDER_SENSITIVE}
+    return sorted(n for n in names if n.upper() in wanted)
+
+
+def _refuse_order_sensitive(files) -> None:
+    if bad := order_sensitive(files):
+        raise PatchError(f"a patch can't replace {', '.join(bad)}: the installer moves replaced files to the end "
+                         "of the zip, and Java only reads the manifest near the start")
 
 
 def reference(slug: str, base_sha512: str) -> dict:
@@ -112,6 +131,8 @@ def _check_entry(kind: str, entry: dict, repo) -> list[str]:
         where = folder(repo, entry)
         if not where.is_dir() or not any(p.is_file() for p in where.rglob("*")):
             errors.append(f"{name}: patch folder {path} is missing or empty")
+        elif bad := order_sensitive(f.relative_to(where).as_posix() for f in where.rglob("*") if f.is_file()):
+            errors.append(f"{name}: patch {path} replaces {', '.join(bad)}, whose place in the zip matters")
     if patch["base_sha512"] != entry.get("hashes", {}).get("sha512"):
         errors.append(f"{name}: patch was made against a different upstream file (base_sha512 differs from "
                       "the pinned sha512); re-make it with a snapshot")

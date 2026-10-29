@@ -102,6 +102,10 @@ _Avoid_: export, server pack, server package
 A second hostname for the live server, one per place it's promoted (`yt.monkeysmp.lscaturchio.xyz`), with its own SRV and A records, so joins can be counted by where players found it (docs/PROMOTION.md).
 _Avoid_: vanity domain, referral link, alias
 
+**Timed job**:
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+_Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
+
 ## Lifecycle
 
 **Install**:
@@ -111,6 +115,26 @@ _Avoid_: setup, sync, deploy
 **Managed file**:
 A file an install placed in the server folder and may later replace or remove; every other file belongs to the host.
 _Avoid_: installed file, tracked file
+
+**Omen**:
+A short world event the server starts by itself, unannounced, on one or two weekday evenings a week: Blood Moon, Meteor, Truce Hour or Hunted (`tools/omens.py`, docs/ADMIN.md, "Omens"). Unlike an event, no staff run it and nobody knows the evening ahead.
+_Avoid_: random event, world event (alone)
+
+**Saved world**:
+What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/saved_world.py` reads it.
+_Avoid_: live world, world state, save (alone)
+
+**Season calendar**:
+When a season happens, in Pacific time: its launch, the launch weekend (week 0), each week from its Monday at 12 AM, each week's Saturday (event night) and the weeknight drop nights, all worked out from the launch (week 1 starts the Monday after it). `tools/season_calendar.py` keeps it and every tool asks it; the website's launch time (`LAUNCH_AT` in `site/config.js`) must match it.
+_Avoid_: schedule (that is the challenge rotation), season dates
+
+**Server First**:
+Being the first player on the server, this season, to reach one of the milestones in `tools/firsts.py` (enter the Nether, slay the dragon...). It is announced to everyone and held for the season; the most firsts earns the Pioneer title. A first is claimed; staff can reopen one.
+_Avoid_: achievement, advancement (the game's own; a first is server-wide and only one player holds it), record
+
+**Season Wrapped**:
+A player's page about their season on the site (`/wrapped/season-<n>/`), made after the finale by `tools/wrapped.py`: hours and days played, PvP kills, challenges, events, their faction's best weekly rank, their Server Firsts and skins. Counted from the launch, so test play doesn't show. A player can opt out.
+_Avoid_: recap (the weekly post), stats page, profile
 
 **Snapshot**:
 Capturing what a running server or player instance actually uses back into the manifest or client pack.
@@ -124,3 +148,33 @@ _Avoid_: spawn protection (Minecraft uses that for something else)
 The Guide or the Town Crier: an Easy NPC character at spawn that answers new players when no staff are on.
 Staff place each one once per world from the `realms-npcs` data pack.
 _Avoid_: bot, villager
+
+**Sunday recap**:
+"Monkey SMP Weekly", the Discord post the weekly standings close makes on Sunday evening: the final table, then one line per section (biggest mover, top fighter, bounties, land, challenges, event turnout, next Saturday). `tools/recap.py` keeps the sections; nothing posts before the launch.
+_Avoid_: newsletter, digest, weekly report
+
+## Factions
+
+**Faction**:
+A group of up to 4 players: an Open Parties and Claims party. Its name is the party's name, or "NAME's faction" after its owner.
+_Avoid_: team, clan, party (alone: that is the mod's word)
+
+**Faction leader**:
+The owner of a faction's party, the one player who declares war and makes pacts for it (`st.leader`).
+_Avoid_: owner (that is the admin account), chief
+
+**Faction number**:
+The number from 1 to 99 a party gets in game for the life of a world, so data packs can tell factions apart (`st.faction`, `realms:factions`). `tools/diplomacy.py` gives it.
+_Avoid_: faction id (that is the party's id), team number
+
+**War**:
+Declared by one faction's leader on another faction, until Sunday's close: kills between the two count twice in the weekly standings. It changes the score, not the rules.
+_Avoid_: raid (that is the event), feud
+
+**Pact**:
+An agreement between two factions, made in game, that neither declares war on the other until one leader breaks it. At most 2 per faction. Not an Open Parties and Claims ally: allies share claims, a pact doesn't.
+_Avoid_: alliance (rule 31's word, for the relationship itself), treaty
+
+**Outpost**:
+One of four capture points in the newest border ring (North, East, South, West). A faction takes one by being alone inside it for 60 seconds, and each hour it holds one is a weekly standings point (at most 20). `tools/outposts.py` places them.
+_Avoid_: KOTH (that is the staff event), point, flag (that is Faction Raid's)

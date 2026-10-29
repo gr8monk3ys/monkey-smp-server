@@ -105,34 +105,41 @@ are a plan, not a contract. What is promised is the end date.
 
 #### Season I calendar
 
-Season I opens on **Saturday 21 November 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
-`site/config.js`, and the run sheet in docs/LAUNCH.md). Week N's event is the Saturday N weeks later at
-6 PM Pacific, 9 PM Eastern. Daylight saving time ends on 1 November 2026 and starts again on 14 March 2027,
-so every Season I time is standard time.
+Season I opens on **Saturday 31 October 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
+`site/config.js`, and the run sheet in docs/LAUNCH.md). The tools keep these dates in one place,
+`tools/season_calendar.py` (the weeks, the Saturdays, the drop nights and the launch weekend); a test checks it
+against `LAUNCH_AT` and this table. Week N's event is the Saturday N weeks later at
+6 PM Pacific, 9 PM Eastern. Daylight saving time ends at 2 AM on Sunday 1 November 2026, the night of the
+launch, and starts again on 14 March 2027: the launch is at 5 PM daylight time, and every Season I time
+after it is standard time.
 
 | Week | Saturday | The event | Also that week |
 | --- | --- | --- | --- |
-| 0 | 21 Nov 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 22 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 22 Nov |
-| 1 | 28 Nov | Faction Raid I | Thanksgiving is Thursday 26 Nov |
-| 2 | 5 Dec | The border breaks: 2500 to 4000 | Town Hall (first Saturday). Midwinter announced. |
-| 3 | 12 Dec | **Dragon Night**: the End opens, Anarchy for 90 minutes | Midwinter decorating at spawn starts |
-| 4 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | Netherite age announced |
-| 5 | 26 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter comes down. The day after Christmas: expect a thin crowd. |
-| 6 | 2 Jan 2027 | Faction Raid II | Town Hall. The first Base of the Month (entries by 25 Dec). |
-| 7 | 9 Jan | Build Battle II | |
-| 8 | 16 Jan | The border breaks again: 4000 to 6000 | |
-| 9 | 23 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
-| 10 | 30 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
-| 11 | 6 Feb | **The finale**. The world locks after it. | Town Hall. Base of the Month (entries by 25 Jan). |
-| 12 | 13 Feb | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 19 Feb |
-| | 20 Feb | Season II opens (proposed; owners confirm it by 23 Jan) | |
+| 0 | 31 Oct 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 1 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 1 Nov. Launch night is Hallowtide (below). |
+| 1 | 7 Nov | Faction Raid I | Town Hall (first Saturday) |
+| 2 | 14 Nov | The border breaks: 2500 to 4000 | |
+| 3 | 21 Nov | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
+| 4 | 28 Nov | Faction Raid II | Thanksgiving is Thursday 26 Nov. Netherite age announced. |
+| 5 | 5 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Town Hall. Midwinter announced. |
+| 6 | 12 Dec | Build Battle II | Midwinter decorating at spawn starts |
+| 7 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | |
+| 8 | 26 Dec | The border breaks again: 4000 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
+| 9 | 2 Jan 2027 | Arena Glory II | Town Hall. The first Base of the Month (entries by 25 Dec). "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
+| 10 | 9 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
+| 11 | 16 Jan | **The finale**. The world locks after it. | The second Base of the Month (entries by 10 Jan) |
+| 12 | 23 Jan | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 29 Jan |
+| | 30 Jan | Season II opens (proposed; owners confirm it by 2 Jan) | |
 
-- **The end date to announce on day one:** Season I ends with the finale on Saturday 6 February 2027. The
-  world stays up, locked, through the off-season week, and Season II is planned for Saturday 20 February.
-- **Holidays in the season:** only Midwinter (19 Dec). Hallowtide (31 Oct 2026) comes before launch, while
-  the world is still closed, so Gravelight waits for Hallowtide 2027 (30 Oct). Midsummer (19 Jun 2027) is
-  after Season I.
-- **No Base of the Month in December.** Bases are four days old on 25 November.
+- **The end date to announce on day one:** Season I ends with the finale on Saturday 16 January 2027. The
+  world stays up, locked, through the off-season week, and Season II is planned for Saturday 30 January.
+- **The calendar moved with the launch** (21 November to 31 October, decided 29 October). The season is
+  still 12 weeks; the holidays stay on their own dates, so Arena Glory I (Midwinter) moved from week 4 to
+  week 7, Faction Raid II to week 4 and Build Battle II to week 6.
+- **Holidays in the season:** Hallowtide (31 Oct 2026) is launch night, and Midwinter is 19 Dec. The launch is
+  Hallowtide's event this year (pumpkins and soul lanterns at spawn if staff have the time, no boss night or
+  maze), so Gravelight waits for Hallowtide 2027 (30 Oct) unless the owners decide to give it for being on
+  that night. Midsummer (19 Jun 2027) is after Season I.
+- **No Base of the Month in December.** Bases are under four weeks old on 25 November.
 
 ### A weekly rhythm
 
@@ -159,12 +166,13 @@ faction that never wins an event still has a column it can lead.
 | Cup | The faction's Season Cup points so far (`ev.cup`) | 40 |
 | Land | Chunks its members have claimed (Open Parties and Claims) | 20 |
 | Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
-| Kills | PvP kills by its members this week, outside the event arena | 20 |
+| Kills | PvP kills by its members this week, outside the event arena; a war enemy's count twice (War and pacts, below) | 20 |
 | Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
+| Outposts | +1 for each whole hour the faction held an outpost this week, at most 20 (Outposts, below) | |
 
 Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
 the faction with the most land gets 20, one with half as much gets 10. Add the columns up and the bounties
-on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
+and outpost hours on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
 7 chunks (the most), Strength 7 (the most) and 4 kills to the Blue Herons' 6: 40 + 20 + 20 + 13 = 93, and
 98 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
 the factions share the rank. Strength below zero counts as zero.
@@ -180,6 +188,18 @@ the factions share the rank. Strength below zero counts as zero.
   (`STANDINGS_WEBHOOK_URL`, else the main channel), announced in chat, and kept on the board. The board is
   a text display at spawn, and `/trigger standings` shows it in chat anywhere. It has this week so far,
   updated every hour, and last week's final top five.
+- **The Sunday recap.** The Discord post is "Monkey SMP Weekly": the final table, then a line each for
+  what happened that week, when anything did: the biggest mover (places climbed since last week's final
+  table, matched by party, so a renamed faction still counts), the top fighter (most PvP kills outside the
+  arena), bounties claimed, land claimed (chunks players claimed that week; land given up doesn't subtract
+  from it), challenges done, event turnout (players at the week's last event), and next Saturday's event. A
+  week the recap could count in full, with none of it, says it was a quiet one. The week is named by the
+  days it ran, so a close that runs late, after midnight on Monday, still names its own week. Nothing posts
+  before the launch: a week that closes during test play is kept, never posted, and is no "last week" to
+  move up from. The week the launch falls in (the launch weekend's, week 0: it began before the launch
+  time) began in test play, and the launch clears test play's challenges but not its kills, claims or
+  events, so that recap has the table, the challenges done since the launch, a line saying the season is
+  open, and next Saturday; the rest start the week after.
 - Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
   board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
 
@@ -190,8 +210,74 @@ Between events, three **weekly challenges** (one solo, one faction, one explore)
 do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
 the Saturday event, and each one done counts toward three wardrobe skins (`docs/RETENTION.md`, "Weekly
 challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
-launch weekend is challenge week 0, and week 1 starts on Monday 23 November 2026. See what runs when with
+launch weekend is challenge week 0, and week 1 starts on Monday 2 November 2026. See what runs when with
 `python tools/challenges.py schedule`.
+
+### War and pacts
+
+Factions can declare war and make pacts in game. It gives the weekly Kills column a reason, and it puts on
+record who is with whom.
+
+- **Who decides.** A faction's leader, the owner of its party, types `/trigger diplomacy`. Anyone in a
+  faction can open it to see how theirs stands with every other faction; only the leader gets the buttons.
+  It opens at the launch, so nothing from test play counts.
+- **War.** A leader declares war on another faction. Everyone online is told, with a raid horn. Until
+  Sunday's close (7 pm Pacific), a kill between the two factions counts twice in the weekly Kills column,
+  for both sides. The close ends every war; a leader declares again to go on. (A war declared in the last
+  few minutes before the close, after the world last saved, runs on to the next close.) Claims still protect, and the
+  griefing rules and rule 41 still apply: a war changes the score, not what is allowed. Arena kills don't
+  count, as for the Kills column.
+- **Pacts.** A leader offers a pact and the other leader accepts it from their own menu. An offer lasts until
+  Sunday's close. Accepting ends a war between the two. While a pact stands, neither can declare war on the
+  other. It stands until either leader breaks it, and the break is announced with the faction and the player
+  who broke it; 2 minutes later that leader can declare war. A faction holds at most 2 pacts (rule 31:
+  alliances, not confederations). A pact is not an Open Parties and Claims ally: allies share claims, a pact
+  shares nothing.
+- **Limits.** One declaration (war, offer, acceptance or break) per faction every 2 minutes, so chat isn't
+  flooded.
+- **Where it shows.** In chat at once. Sunday's standings post in Discord adds the week's wars, pacts, peace
+  and broken pacts (at most 10, then "and N more") and the pacts still standing. Offers stay out of it.
+- **Feeding kills** to a war enemy is exploit B13, as with any kill: staff take both counts back
+  (docs/ADMIN.md, "War and pacts").
+- **New and gone factions.** The hourly board run gives each new party its faction number in game, so a
+  party made a minute ago can't take part yet. When a party is gone from two board runs in a row (so about
+  an hour after it goes), its wars and pacts end, announced, and its pact partners get the slot back.
+
+`tools/diplomacy.py` makes it, inside the `realms-standings` data pack. It needs no timer of its own: the
+standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
+
+### Outposts
+
+Four capture points out in the newest land, so factions have somewhere to meet between events.
+
+- **Where.** One in each quarter of the newest border ring: North, East, South and West of the border's
+  centre. Before the first border act that is past 400 blocks from spawn; after one, only the land it added.
+  Each stands on dry ground, 6 or more chunks from every claim. They are placed within the hour after the
+  launch, and again within the hour after each border act has finished growing.
+- **Taking one.** Stand inside its square (25 blocks across, from 8 under the ground to 24 over it) with
+  your faction and nobody from another faction for 60 seconds. Two factions inside: it is contested, and the
+  count waits. Everyone leaves: the attempt ends. The holder's members are told when someone starts, and
+  everyone is told when it falls. A text over it says who holds it, and particles mark its corners.
+- **Who counts.** Players in survival with a faction number: in a party the hourly board run has picked up
+  (War and pacts, "New and gone factions"). A player in no party, or in one made since the last board run,
+  can't take one and doesn't block one. Players in the event arena don't count.
+- **Points.** Each minute a faction holds an outpost while a survival player of another faction is online
+  counts. Each whole hour of those this week is +1 standings point, at most 20 a week, on top of the 100
+  (the Outposts row above). Holding all four for an hour is four hours. Nothing else is given: no items, no
+  effects.
+- **Moves.** A claim made within 3 chunks of an outpost moves it to a new spot in its quarter within the
+  hour; its holder keeps it. After a border act all four move out to the new ring and start with no holder;
+  hours already earned stay.
+- **Where it shows.** `/trigger outposts` lists each one, where it is, who holds it, whether someone is
+  taking it, and your faction's hours this season. The live map has an "Outposts" marker set with the four
+  spots (not the holders: those change too often).
+- **Restarts** keep the holders, the attempts' counts and the hours (scores and storage are saved with the
+  world). Test play before the launch counts for nothing: the launch clears it.
+- **Feeding** an outpost to a friendly faction, or trading one back and forth for hours, is exploit B13, as
+  feeding kills is: staff free it and take the hours back (docs/ADMIN.md, "Outposts").
+
+`tools/outposts.py` places them and makes the `realms-outposts` data pack; `deploy/realms-outposts.sh` runs
+every hour on the VPS (docs/LIVE.md). Staff commands are in docs/ADMIN.md.
 
 ### The pillar events
 
@@ -370,6 +456,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | --- | --- | --- |
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. Built: one comes by itself on weeknight evenings once 4 or more are on, and staff can start one any time (docs/ADMIN.md, "Supply drops"). | Exploration, small fights, new players |
+| **Omens** | Short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM Pacific, 4 or more online, never Saturday or during a drop): a Blood Moon (harder mobs for a night, a little extra loot), a Meteor (one richer supply drop, 5 minutes' warning), Truce Hour (no PvP for an hour) or Hunted (a bounty on the longest kill streak). Built (docs/ADMIN.md, "Omens"). | Surprise on quiet evenings, the players who are on |
 | **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
@@ -456,6 +543,9 @@ are the example; change the numbers.
 **Two weeks before the end**
 
 1. Announce the end date again (it was announced on day one), the finale, and what carries over (above).
+   Say too that every player gets a Season Wrapped page after the finale (below) and that anyone who
+   doesn't want one tells staff; keep their names, one a line, in
+   `/srv/realms/seasons/season-I-opt-out.txt` (create it empty if no one asks).
 2. Open the vote on next season's twist in Discord, and set the next start date.
 3. Pick the next seed: try a few in singleplayer with the modpack, then put the winner in
    `package/realms/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
@@ -464,6 +554,11 @@ are the example; change the numbers.
 **After the finale (end of week 11)**
 
 4. Post the final Cup standings and crown the champion: its title team ("The season champion", above).
+   Then the Pioneer title, for the most Server Firsts (a tie goes to whoever reached that number first):
+   `python3 /srv/realms/repo/tools/firsts.py champion /srv/realms/TheRealms-Server/server/world --season 1`
+   names the player and prints the four `team` commands; run them with `realms rcon`. A player shows one team at a
+   time, so one who already shows a title or supporter color picks which to keep (`team join` moves them).
+   The team's name starts with `title_`, so the carry (step 13) keeps it into the next season.
 5. Lock the world: `realms rcon "function realms:events/season/lock"`. Players in survival switch to
    adventure (they can look around and use doors, but not build or break; claims still guard
    containers), PvP is off and the difficulty is peaceful. It stays locked across restarts, and players who log in during the off-season
@@ -487,6 +582,25 @@ are the example; change the numbers.
 8. Upload it where anyone can download it without an account (a public bucket of its own, or a file
    share set to "anyone with the link"), never the private backup bucket. Post the link in
    `#monkey-smp` and on the changelog page.
+
+Then the Season Wrapped pages, a page per player about their season (hours, days, PvP kills, challenges,
+events, their faction's best weekly rank, Server Firsts and skins), from step 6's world:
+
+```sh
+python3 /srv/realms/repo/tools/wrapped.py build /srv/realms/seasons/season-I/world --season 1 \
+    --standings /srv/realms/standings --start /srv/realms/seasons/season-I-wrapped-start.json \
+    --opt-out /srv/realms/seasons/season-I-opt-out.txt --out /srv/realms/seasons/season-I-wrapped
+```
+
+`season-I-wrapped-start.json` is the starting point `wrapped.py start` kept at the launch (`docs/LAUNCH.md`);
+it sits beside `season-I/`, not in it, so step 6's `cp` makes that folder. Without it Season I counts staff
+test play before the launch too, and a later season can't be made. It warns if it was kept well away from
+the launch (a rehearsal's file, say), and `start` never replaces one without `--force`. Copy
+the folder into a checkout as `site/wrapped/season-1/` (`scp -r` to the maintainer's computer), open
+`index.html` and a page or two, and merge it in a pull request: the site deploys it at
+`/wrapped/season-1/`. Post that link in `#monkey-smp`. The pages are left out of search engines. A player who
+asks later to be taken down: add the name to the list, build again into an empty folder, and replace
+`site/wrapped/season-1/` with it.
 
 **Off-season (week 12)**
 
@@ -524,7 +638,11 @@ renewals keep counting: the store's commands still reach the old world, and the 
     `world_the_nether` and `world_the_end`, BlueMap's map ids), then pre-generate the new one as on the
     first setup (`docs/LIVE.md`, step 6).
 17. Turn deploys back on: `sudo systemctl start realms-deploy.timer`. Launch as in week 0, with
-    `function realms:rules/launch` (`docs/RULES.md`).
+    `function realms:rules/launch` (`docs/RULES.md`). Right after it, keep Season Wrapped's starting point:
+    `realms rcon "save-all flush"`, then
+    `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out
+    /srv/realms/seasons/season-2-wrapped-start.json`. Note the launch time: that season's `build` needs it as
+    `--launch` (for example `--launch 2027-02-20T17:00-08:00`), since only Season I's is in the calendar.
 
 The new world starts unlocked; the lock lives in the old world. The `realms-carry` pack can stay (it
 won't run twice). Delete its folder at the next restart to tidy up.
@@ -572,6 +690,15 @@ Built:
   Seen in game on a test server on 26 October 2026 (2.6.0, Carpet fake players): the four columns, the board
   and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
   run of `deploy/realms-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
+- The Sunday recap ("Where it shows", above): `tools/recap.py`, posted by the same Sunday close to the same
+  webhook. `realms-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
+  not yet seen in Discord or run on the VPS.
+
+- War and pacts ("War and pacts"): `tools/diplomacy.py`, in the `realms-standings` data pack:
+  `/trigger diplomacy`, war kills counted twice, the Sunday post's lines and the wars' end at the close, and
+  each faction's number in game (`st.faction`), written by the hourly board run for other features to use
+  (docs/MAINTAINING.md, "The faction number in game"). Checked by the unit tests and the generated packs'
+  checks only: not yet tried in game.
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `realms-drops` data pack and `deploy/realms-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat
@@ -579,6 +706,26 @@ Built:
   border ring, 6 or more chunks from every claim, and despawns after 20 minutes. Modest loot (food, iron,
   arrows, wood): nothing Strength, no netherite, diamonds or emeralds. Tried on a test server: the pack
   loads, the chests land, scale and despawn, and a drop survives a restart.
+- Server Firsts (docs/ADMIN.md, "Server Firsts"): `tools/firsts.py` and the `realms-firsts` data pack. The
+  first player to each of 14 milestones is announced to everyone and keeps it for the season;
+  `/trigger firsts` lists them, and the most firsts earns the season's Pioneer title ("Ending a season",
+  step 4). Not yet tried in game.
+- Season Wrapped ("Ending a season", after step 8): `tools/wrapped.py` makes a page per player about their
+  season for the site, from the final world, the standings' closed weeks and a starting point kept at the
+  launch, with an opt-out list. Tried on made-up worlds only, not a real season's.
+
+- Outposts ("Outposts"): `tools/outposts.py`, the `realms-outposts` data pack and `deploy/realms-outposts.sh`
+  with its hourly timer. Four capture points in the newest border ring, 6 or more chunks from every claim, 60
+  seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
+  the live map. Checked by the unit tests and the generated packs' checks only: not yet tried in game.
+
+- Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `realms-omens` data
+  pack and `deploy/realms-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),
+  each from a start time between 6:00 and 8:50 PM Pacific until 10 PM, the first time 4 or more are online,
+  the season has launched and no event or supply drop is on. The week's evenings, times and omens come from
+  a secret the pack draws in game and keeps in the world, so nobody can work them out from the repo. Blood
+  Moon, Meteor (through `tools/drops.py`), Truce Hour and Hunted (through the standings' bounty commands;
+  staff claim the bounty as for any other). Not yet tried in game.
 
 Not built:
 

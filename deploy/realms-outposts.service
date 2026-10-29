@@ -1,0 +1,11 @@
+# Places and moves the outposts (deploy/realms-outposts.sh, tools/outposts.py). Started every hour by
+# realms-outposts.timer; install with `sudo sh /srv/realms/repo/deploy/realms-outposts.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: outposts
+After=docker.service
+
+[Service]
+Type=oneshot
+User=realms
+Group=realms
+ExecStart=/bin/sh /srv/realms/repo/deploy/realms-outposts.sh

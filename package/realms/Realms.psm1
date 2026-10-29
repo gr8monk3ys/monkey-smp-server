@@ -398,9 +398,15 @@ function Save-Artifact($Context, $Entry, [string]$Path) {
 
 # ================================================================ patches
 
+# sha256 of "<path>=<sha256 of the file>;" for every file of a patch folder, in ordinal order of the path
+# (the same on every platform and culture; tests/fixtures/patch-golden pins it).
 function Get-PatchId([string]$Dir) {
+    $files = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
+    foreach ($f in Get-RelativeFile $Dir) { $files[$f.Rel] = $f.FullName }
+    $rels = [string[]]@($files.Keys)
+    [Array]::Sort($rels, [StringComparer]::Ordinal)
     $sb = New-Object System.Text.StringBuilder
-    foreach ($f in Get-RelativeFile $Dir) { [void]$sb.Append("$($f.Rel)=$(Get-Hash $f.FullName SHA256);") }
+    foreach ($rel in $rels) { [void]$sb.Append("$rel=$(Get-Hash $files[$rel] SHA256);") }
     $sha = [Security.Cryptography.SHA256]::Create()
     try { $hash = $sha.ComputeHash($script:Utf8.GetBytes($sb.ToString())) } finally { $sha.Dispose() }
     return ([BitConverter]::ToString($hash) -replace '-', '').ToLower()

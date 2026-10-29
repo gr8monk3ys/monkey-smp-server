@@ -2,6 +2,95 @@
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-10-29
+
+Season I's release: the season opens on Saturday 31 October (below), with six new season features. The
+client pack's mods are the same as 2.8.0's apart from its version number, so players on 2.8.0 don't need
+to update it (`tools/modrinth.py` uploads nothing, and the live server's Discord message asks nothing of
+them).
+
+### Added
+
+- The Sunday standings post is now a short recap, "Monkey SMP Weekly": the final table, then a line each for
+  the biggest mover, the top fighter, bounties claimed, land claimed, challenges done, event turnout and next
+  Saturday's event, when there is something to say (`tools/recap.py`). Same webhook, same Sunday timer, still
+  under Discord's 2000 characters. A week that closes before the launch (test play) is kept but no longer
+  posted. `deploy/realms-standings.sh preview` prints the recap as it would post now. Nothing to set up on the
+  VPS: the first close after this release starts counting the week's challenges, land and events, so its
+  recap leaves those lines out.
+- **Server Firsts**: the first player on the server to reach each of 14 milestones (find a diamond, enter the
+  Nether, find a fortress or a bastion, ancient debris, a trial vault, a mace, win a raid, defeat the Wither,
+  light a beacon, enter the End, slay the dragon, an elytra, full Netherite once it is allowed) is announced to
+  everyone and keeps it for the season. `/trigger firsts` shows who holds each. The most firsts at the season's
+  end earns the `[S1 Pioneer]` title. A new data pack, `realms-firsts` (`tools/firsts.py`); nothing counts
+  before the launch. Not yet tried in game.
+- **Season Wrapped**: after the finale, every player gets a page on the site about their season: hours and
+  days played, PvP kills, weekly challenges, events, their faction's best weekly rank, their Server Firsts
+  and their skins, rarest first. A shared link shows their own line in Discord. Anyone can ask staff for no
+  page. Made by a maintainer tool, `tools/wrapped.py`, which also keeps a starting point at the launch so test
+  play doesn't count. Not yet tried on a real season's world.
+- **War and pacts** (docs/SEASONS.md, "War and pacts"): a faction's leader declares war or makes a pact with
+  `/trigger diplomacy`, from the launch on. A kill between two factions at war counts twice in the weekly
+  Kills column until Sunday's close, when every war ends. A pact stands until either side breaks it, at most 2
+  each, and every declaration is announced in chat and listed in Sunday's Discord post. Claims and the rules
+  don't change. In the `realms-standings` data pack (`tools/diplomacy.py`).
+- Each faction now has a number in game (`st.faction`, `st.leader`, storage `realms:factions`), written by
+  the standings' hourly board run, for packs that need to tell factions apart (docs/MAINTAINING.md, "The
+  faction number in game").
+- **Outposts** (docs/SEASONS.md, "Outposts"): four capture points out in the newest border ring, one in each
+  quarter, 6 or more chunks from every claim. Stand in one with your faction and nobody else for 60 seconds to
+  take it; a text over it says who holds it. Each hour your faction holds one while another faction is online
+  is +1 weekly standings point, at most 20 a week, on top of the usual columns. Nothing is given. They move out
+  after each border act, and show on the live map. `/trigger outposts` lists them. From the launch on, in the
+  new `realms-outposts` data pack (`tools/outposts.py`), placed by a new hourly timer on the VPS.
+- Omens: short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM
+  Pacific, 4 or more online, never Saturday, never during an event or a supply drop). A Blood Moon (Hard and
+  roused mobs for a night, a little extra loot per kill), a Meteor (one richer supply drop with 5 minutes'
+  warning, and the night's own drop still comes), Truce Hour (no PvP for an hour) or Hunted (a 30-minute
+  bounty on the longest kill streak, claimed through staff as any bounty and withdrawn when the hunt ends).
+  `tools/omens.py` generates the new `realms-omens` data pack and plans each week from a secret the pack
+  keeps in the world; `realms-omens.timer` offers the evening's omen every 10 minutes. Install it once with
+  `deploy/realms-omens.sh --install` (docs/LIVE.md). Staff commands: docs/ADMIN.md, "Omens".
+
+### Changed
+
+- Season I opens on Saturday 31 October 2026 at 5 PM Pacific, three weeks earlier than 21 November. Week 1
+  starts on Monday 2 November, the finale is on 16 January 2027 and Season II is proposed for 30 January. The
+  launch weekend (Founder's Circlet) is 32 hours, because the clocks go back that night. The holidays keep
+  their dates, so Arena Glory I (Midwinter, 19 December) moves to week 7, Faction Raid II to week 4 and
+  Build Battle II to week 6; the Town Crier says so. On the live server, place the Crier again after this
+  release (docs/ADMIN.md, "Spawn NPCs").
+- Maintainers: `tools/checks.py` runs every fast check (CI runs the same file), `tools/local_ci.py` checks PRs on a
+  maintainer's machine and posts a `local-ci` status when Actions can't run, and CI boots the server only when a
+  change can break the boot (none for draft PRs). Nothing changes for hosts or players.
+- Maintainers: four rounds of restructuring each give one shared job a single home:
+  - **`tools/datapacks.py`** holds every generated pack (PR #57). `python tools/datapacks.py` regenerates
+    them all and `--check` only compares, in place of each generator's own `--check` and `pack` commands
+    (docs/ADMIN.md). Generators now only define `packs(repo)`. `validate.py` reports any pack that's out of date
+    and runs the checks across all packs, which now include a scoreboard objective that one pack reads and no
+    pack creates. The shared objective names (`events.ARENA_TAG`, `STATE`, `STRENGTH`, `CUP`,
+    `challenges.LAUNCHED`) live in the pack that owns them.
+  - **`tools/rcon.py`** sends every VPS job's RCON commands and decides when the server refused one (PR #58).
+    `realms-week.sh`, `realms-drops.sh` and `tools/standings.py` go through it; the tests use its `Recorder` fake.
+  - **`deploy/lib.sh`** holds the helpers every VPS script had copied (PR #59): reading `/etc/realms-deploy.env`
+    (one parser: the last value as written wins), logging, the compose command, RCON, the deploy lock and timer
+    installs. Three behaviour changes on the VPS:
+    - The week and drops timers now wait up to 30 minutes for the deploy lock before sending, so they no longer
+      land while a deploy, the daily restart or an off-site backup has the server stopped.
+    - A script's `ERROR:` line now goes to stderr, not stdout. Under systemd both reach the journal unchanged;
+      a hand run that pipes stdout sees the error on the terminal instead.
+    - A deploy lock the script can't open is an error, not "busy": the script stops with an error instead of
+      skipping quietly. Root never creates or opens the lock through a link someone left in `/tmp`.
+  - **`tools/nbt.py`** reads every world file (PR #60): `season`, `standings`, `drops` and `map_border` used to
+    decode NBT four different ways. A damaged file is now one `ValueError` that names the file (`map_border`
+    prints `error: …` and exits 2) instead of a traceback, `season` and `map_border` accept files that aren't
+    gzipped, and a damaged claims file with a negative list count is an error instead of reading as "no claims".
+
+Before Season I (Saturday 31 October), once this is live, run each VPS job once against the live world, so
+the new lock and RCON paths have run there: `realms-week.sh --check` and `realms-drops.sh --check` first, then
+the jobs themselves, and `realms-standings.sh show` then `board` (standings has no `--check`; `show` changes
+nothing). The commands are in docs/LIVE.md and docs/ADMIN.md.
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

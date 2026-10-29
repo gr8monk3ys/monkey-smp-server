@@ -1,9 +1,17 @@
 name: CI
 
+# What runs when (docs/MAINTAINING.md, "Tests"): every push to a PR runs tools/checks.py, the same checks a
+# maintainer runs (python tools/checks.py) and tools/local_ci.py posts when Actions can't run. The boot jobs cost
+# far more (Windows minutes count double on this private repo), so `checks.py --boots` decides which a run needs:
+# none for a draft PR, the ones its change can break for a ready one, all of them for a release tag, a manual
+# run or a PR labelled `boot`.
 on:
   push:
     branches: [main]
   pull_request:
+    # not `labeled`: any label (triage ones too) would start a run and cancel the one going. The `boot` label
+    # takes effect from the next push; to boot now, run the workflow by hand on the branch.
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
     inputs:
       macos:
@@ -26,18 +34,31 @@ concurrency:
 
 jobs:
   tools:
-    name: Lint, unit tests, manifest
+    name: Checks (lint, tests, packs, sh, Pester), build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    outputs:
+      linux: ${{ steps.plan.outputs.linux }}
+      windows: ${{ steps.plan.outputs.windows }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the boot plan diffs the PR against where it left its base
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
-      - run: pip install pytest ruff
-      - run: ruff check tools tests
-      - run: pytest -q
-      - run: python tools/validate.py
+          # 3.11 is the oldest Python the tools run on (pyproject.toml; Debian 12 on the VPS); the last one listed
+          # is the default `python`.
+          python-version: |
+            3.11
+            3.12
+      - run: python -m pip install pytest ruff && python3.11 -m pip install pytest
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
+      - name: tools/checks.py (ruff, pytest, validate, datapacks, sh, pester)
+        run: python tools/checks.py --strict
+      - name: Unit tests on Python 3.11
+        run: python3.11 -m pytest -q -p no:cacheprovider
       - name: Build release files
         run: python tools/build.py
       - name: Upload release files
@@ -45,24 +66,21 @@ jobs:
         with:
           name: dist
           path: dist/
-
-  pester-linux:
-    name: Unit tests (PowerShell 7, Linux)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - name: Unit tests (Pester)
-        shell: pwsh
-        run: |
-          Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
-          Import-Module Pester -MinimumVersion 5.5
-          $r = Invoke-Pester -Path tests/Realms.Tests.ps1 -Output Detailed -PassThru
-          if ($r.FailedCount) { exit 1 }
+      - name: Which boot jobs this run needs
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}   # JSON: a label name can hold spaces
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python tools/checks.py --boots | tee -a "$GITHUB_OUTPUT"
 
   smoke:
     name: Boot the packaged server (Windows)
     needs: tools
+    if: needs.tools.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -151,6 +169,7 @@ jobs:
   native:
     name: Boot the packaged server (${{ matrix.os }})
     needs: tools
+    if: needs.tools.outputs.linux == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -214,6 +233,7 @@ jobs:
   docker:
     name: Boot the server with Docker (Linux)
     needs: tools
+    if: needs.tools.outputs.linux == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

@@ -10,6 +10,8 @@ execute if score #season_locked ev.state matches 1 run return 13
 execute store result score #online dr if entity @a[gamemode=survival]
 execute if score #online dr < #min dr run return 14
 execute unless data storage realms:drops spots[0] run return 15
+scoreboard players set #meteor dr 0
+data modify storage realms:drops name set value {text:"Supply drop"}
 $data modify storage realms:drops night set value $(night)
 function realms:drops/locate
 return 1

@@ -4,7 +4,8 @@
     python tools/drops.py commands WORLD [--at TIME]   the RCON commands for now (deploy/realms-drops.sh)
     python tools/datapacks.py                          regenerates the realms-drops data pack (with the others)
 
-When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (NIGHTS, HOURS, FIRST_NIGHT).
+When: Monday to Thursday, 6 to 10 PM Pacific, from Season I's first week (HOURS here; the nights are
+tools/season_calendar.py's drop_night).
 deploy/realms-drops.sh sends `commands` every 10 minutes; outside those hours there are none. The pack starts
 the night's drop the first time it is asked while MIN_PLAYERS or more are online in survival (staff change it
 in game: `function realms:drops/min {players:N}`), no drop ran that night, and no event is on (the arena, a
@@ -27,23 +28,28 @@ arrows, wood; nothing Strength, no netherite, diamonds or emeralds, nothing the 
 never beats progression or what players trade). The chests despawn after DESPAWN seconds with whatever
 is left in them; an emptied chest goes at once, and the drop ends when every chest is empty or broken.
 
+A Meteor (tools/omens.py, an omen) is the same drop with a 5-minute warning (METEOR_COUNTDOWN) and one
+chest with more in it (METEOR_LOOT on top of LOOT): `function realms:drops/meteor`, run after the spots
+are in storage as the try is, with the same return codes. It is extra: it neither needs nor uses up the
+night's drop (omens come once or twice a week), but never runs while a drop is on.
+
 The data pack (package/realms/datapacks/realms-drops/, generated: edit this file, not it) has the staff
 commands too (docs/ADMIN.md, "Supply drops"): a drop now at coordinates or where you stand, stop, on/off.
-Stdlib only plus tools/map_border.py and tools/nbt.py, and Python 3.10 or newer, so the VPS runs it straight
-from the checkout.
+Stdlib only plus tools/map_border.py, tools/saved_world.py, tools/nbt.py and tools/season_calendar.py, and
+Python 3.10 or newer, so the VPS runs it straight from the checkout.
 """
 import argparse
 import datetime as dt
 import json
 import random
-import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import map_border
-import nbt
 import rcon as server
+import saved_world
+import season_calendar
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from events import STATE
 from repo import Repo
@@ -55,11 +61,7 @@ LOOT_TABLE = f"{NS}:drops/supply"
 BAR = f"{NS}:drop"
 OBJ = "dr"
 
-UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-PACIFIC = ZoneInfo("America/Los_Angeles")
-NIGHTS = (0, 1, 2, 3)       # Monday to Thursday (Saturday is event night)
-HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific
-FIRST_NIGHT = dt.date(2026, 11, 23)   # Monday of Season I's week 1 (tools/challenges.py WEEK_ONE)
+HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
 SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
 
 MIN_PLAYERS = 4             # survival players online for the weeknight drop, and for each further chest
@@ -67,6 +69,7 @@ MAX_CHESTS = 3
 COUNTDOWN = 10 * 60         # announced this long before it lands (docs/SEASONS.md: 10 minutes ahead)
 DESPAWN = 20 * 60           # the chests go this long after landing
 WARN_AT = (300, 60)         # seconds left in the countdown when chat is reminded
+METEOR_COUNTDOWN = 5 * 60   # a Meteor (an omen, tools/omens.py) lands this soon after it is announced, in 1 chest
 
 ACTS = (2500, 4000, 6000)   # the border's sizes through a season (docs/SEASONS.md, the acts)
 SPAWN_CLEAR = 400           # no drop this close to spawn (the border's centre), in blocks either way
@@ -75,8 +78,6 @@ CLAIM_GAP = 6               # chunks between a drop's chunk and the nearest clai
 SPOT_GAP = 8                # chunks between two spots offered the same night
 SPOTS = 6                   # spots offered each time; the pack tries them in order
 DRAWS = 5000                # random chunks looked at to find them
-OVERWORLD = "minecraft:overworld"
-OPAC_CLAIMS = Path("data") / "openpartiesandclaims" / "player-claims"
 
 # Chest offsets from the drop's middle (x, z), one per chest. Never side by side, so they never join.
 CHEST_AT = ((0, 0), (3, 2), (-3, 2))
@@ -106,6 +107,19 @@ LOOT = [
     ("extra", "saddle", 1, 1, 1),
 ]
 ROLLS = {"food": (3, 4), "supplies": (2, 3), "extra": (1, 1)}
+# A Meteor's one chest gets LOOT and then this on top: more of the same kind of thing, still nothing that beats
+# progression (no diamonds, emeralds or netherite, nothing Strength).
+METEOR_LOOT = [
+    ("metal", "iron_ingot", 3, 4, 8),
+    ("metal", "gold_ingot", 2, 3, 6),
+    ("metal", "copper_ingot", 2, 6, 12),
+    ("rock", "obsidian", 2, 2, 4),
+    ("rock", "magma_block", 2, 2, 4),
+    ("rock", "amethyst_shard", 1, 3, 6),
+    ("rock", "experience_bottle", 3, 4, 8),
+]
+METEOR_ROLLS = {"metal": (2, 3), "rock": (2, 3)}
+METEOR_LOOT_TABLE = f"{NS}:drops/meteor"
 
 # What a drop may sit on: the natural ground of the Overworld's surface, so never on someone's build.
 # (26.3's substrate_overworld is dirt, grass blocks, podzol, mycelium, mud and moss.)
@@ -127,6 +141,9 @@ TRY_CODES = {
     14: "fewer survival players online than the minimum",
     15: "no spots were sent",
 }
+# What players read: the drop's name in chat and on the boss bar (in storage, `name`). The chests themselves are
+# always named CHEST_NAME, which is how the pack tells its own chests from anyone else's.
+NAMES = {"supply": "Supply drop", "meteor": "Meteor"}
 
 HELP = [
     ("start {x:0,z:0}", "a drop at those coordinates, now (any number online)"),
@@ -142,22 +159,17 @@ HELP = [
 # ---------------------------------------------------------------- when
 
 
-def parse_time(value: str) -> dt.datetime:
-    when = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return when if when.tzinfo else when.replace(tzinfo=UTC)
-
-
 def night_of(when: dt.datetime) -> int | None:
     """The drop night `when` falls in, as YYYYMMDD (its Pacific date), or None outside drop hours."""
-    local = when.astimezone(PACIFIC)
-    if local.date() < FIRST_NIGHT or local.weekday() not in NIGHTS or not HOURS[0] <= local.hour < HOURS[1]:
+    local = when.astimezone(season_calendar.PACIFIC)
+    if not season_calendar.drop_night(local.date()) or not HOURS[0] <= local.hour < HOURS[1]:
         return None
     return int(local.strftime("%Y%m%d"))
 
 
 def slot_of(when: dt.datetime) -> str:
     """The 10-minute slot, which seeds the draw: the same slot draws the same spots."""
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     return f"{local:%Y%m%d-%H}{local.minute // SLOT_MINUTES}"
 
 
@@ -165,28 +177,21 @@ def slot_of(when: dt.datetime) -> str:
 
 
 def claimed_chunks(world: Path) -> set[tuple[int, int]]:
-    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server).
-    Open Parties and Claims saves a player's claims as dimensions > claims > positions: [{x, z}] (chunks)."""
-    out: set[tuple[int, int]] = set()
-    folder = world / OPAC_CLAIMS
-    for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        dim = nbt.read(path).get("dimensions", {}).get(OVERWORLD, {})
-        for claim in dim.get("claims", []):
-            out.update((int(p["x"]), int(p["z"])) for p in claim.get("positions", []))
-    return out
+    """Every claimed chunk in the Overworld, whoever claimed it (players, parties' members, the server)."""
+    return {chunk for chunks in saved_world.claims(world, saved_world.OVERWORLD).values() for chunk in chunks}
 
 
 def border_now(world: Path) -> map_border.Border | None:
     """The Overworld border as it is now (a growing border counts at its current size, a shrinking one at its
     target), or None when the world has none saved."""
-    path = world / "dimensions" / "minecraft" / "overworld" / "data" / "minecraft" / "world_border.dat"
-    if not path.is_file():
+    found = saved_world.border(world, saved_world.OVERWORLD)
+    if found is None:
         return None
-    data = nbt.read(path)["data"]
-    size = min(data["size"], data.get("lerp_target", data["size"]))
+    # The smaller of now and where it is heading: a drop must land inside the border whichever way it moves.
+    size = min(found.size, found.target)
     if size >= map_border.NO_BORDER:
         return None
-    return map_border.Border(data["center_x"], data["center_z"], size)
+    return map_border.Border(found.center_x, found.center_z, size)
 
 
 def ring(border: map_border.Border) -> tuple[float, float]:
@@ -196,29 +201,38 @@ def ring(border: map_border.Border) -> tuple[float, float]:
     return inner, border.size / 2 - BORDER_MARGIN
 
 
+def near_claim(chunk: tuple[int, int], claims: set[tuple[int, int]], gap: int = CLAIM_GAP) -> bool:
+    """A claimed chunk within `gap` chunks (either axis) of `chunk`."""
+    return any((chunk[0] + dx, chunk[1] + dz) in claims for dx in range(-gap, gap + 1) for dz in range(-gap, gap + 1))
+
+
+def ring_chunks(border: map_border.Border, rng: random.Random) -> Iterator[tuple[tuple[int, int], int, int]]:
+    """Random chunks in ring(border), DRAWS draws at most: (chunk, x, z), x and z its middle. Callers stop early
+    when they have what they need and keep their own gaps (drops between spots, outposts per quarter)."""
+    inner, outer = ring(border)
+    if outer <= inner:
+        return
+    cx, cz = border.center_x, border.center_z
+    lo_x, hi_x = int((cx - outer) // 16), int((cx + outer) // 16)
+    lo_z, hi_z = int((cz - outer) // 16), int((cz + outer) // 16)
+    for _ in range(DRAWS):
+        chunk = rng.randint(lo_x, hi_x), rng.randint(lo_z, hi_z)
+        x, z = chunk[0] * 16 + 8, chunk[1] * 16 + 8
+        if inner <= max(abs(x - cx), abs(z - cz)) <= outer:
+            yield chunk, x, z
+
+
 def spots(world: Path, seed: str, count: int = SPOTS) -> list[tuple[int, int]]:
     """Up to `count` drop spots (block x, z: the middle of a chunk), the same for the same seed and world."""
     border = border_now(world)
     if border is None:
         return []
-    inner, outer = ring(border)
-    if outer <= inner:
-        return []
     claims = claimed_chunks(world)
-    rng = random.Random(seed)
-    cx, cz = border.center_x, border.center_z
-    lo_x, hi_x = int((cx - outer) // 16), int((cx + outer) // 16)
-    lo_z, hi_z = int((cz - outer) // 16), int((cz + outer) // 16)
     picked: list[tuple[int, int]] = []
-    for _ in range(DRAWS):
+    for chunk, x, z in ring_chunks(border, random.Random(seed)):
         if len(picked) >= count:
             break
-        chunk = rng.randint(lo_x, hi_x), rng.randint(lo_z, hi_z)
-        x, z = chunk[0] * 16 + 8, chunk[1] * 16 + 8
-        if not inner <= max(abs(x - cx), abs(z - cz)) <= outer:
-            continue
-        if any((chunk[0] + dx, chunk[1] + dz) in claims
-               for dx in range(-CLAIM_GAP, CLAIM_GAP + 1) for dz in range(-CLAIM_GAP, CLAIM_GAP + 1)):
+        if near_claim(chunk, claims):
             continue
         if any(max(abs(chunk[0] - (px - 8) // 16), abs(chunk[1] - (pz - 8) // 16)) < SPOT_GAP for px, pz in picked):
             continue
@@ -250,7 +264,8 @@ def score(holder: str, color: str = "white") -> dict:
     return {"score": {"name": holder, "objective": OBJ}, "color": color}
 
 
-HEAD = {"text": "Supply drop: ", "color": "gold", "bold": True}
+NAME = {"nbt": "name", "storage": STORE, "interpret": True}
+HEAD = {"text": "", "color": "gold", "bold": True, "extra": [NAME, ": "]}
 AT_XZ = [spot("x"), {"text": ", ", "color": "aqua"}, spot("z")]
 AT_XYZ = [spot("x"), {"text": " ", "color": "aqua"}, spot("y"), {"text": " ", "color": "aqua"}, spot("z")]
 EVENTS_ON = [f"#arena {STATE} matches 1", f"#raid {STATE} matches 1..", f"#anarchy {STATE} matches 1..",
@@ -260,11 +275,20 @@ CHEST_NAME = "Supply drop"
 LABEL = "dr.label"
 
 
-def loot_table() -> dict:
+def kind(name: str) -> str:
+    """Names the drop that is starting (NAMES): the supply drop or a Meteor."""
+    return f"data modify storage {STORE} name set value " + snbt_text(NAMES[name])
+
+
+def snbt_text(words: str) -> str:
+    return '{text:"' + words + '"}'
+
+
+def loot_table(loot: list = LOOT, rolls: dict = ROLLS) -> dict:
     pools = []
-    for pool, (lo, hi) in ROLLS.items():
+    for pool, (lo, hi) in rolls.items():
         entries = []
-        for p, name, weight, a, b in LOOT:
+        for p, name, weight, a, b in loot:
             if p != pool:
                 continue
             entry = {"type": "minecraft:item", "name": f"minecraft:{name}", "weight": weight}
@@ -282,6 +306,7 @@ def datapack_files() -> dict[str, str]:
     f["pack.mcmeta"] = mcmeta("Monkey SMP supply drops (generated by tools/drops.py)")
     f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:drops/load")
     f[f"data/{NS}/loot_table/drops/supply.json"] = json.dumps(loot_table(), indent=2)
+    f[f"data/{NS}/loot_table/drops/meteor.json"] = json.dumps(loot_table(METEOR_LOOT, METEOR_ROLLS), indent=2)
     f[f"data/{NS}/tags/block/drops/ground.json"] = json.dumps({"values": GROUND}, indent=2)
     f[f"data/{NS}/tags/block/drops/open.json"] = json.dumps(
         {"values": [{"id": v, "required": False} if v in OPTIONAL else v for v in OPEN]}, indent=2)
@@ -295,6 +320,8 @@ def datapack_files() -> dict[str, str]:
         f"execute unless score #min {OBJ} matches 1.. run scoreboard players set #min {OBJ} {MIN_PLAYERS}",
         f"execute unless score #auto {OBJ} matches 0.. run scoreboard players set #auto {OBJ} 1",
         f"execute unless score #state {OBJ} matches 0.. run scoreboard players set #state {OBJ} 0",
+        f"execute unless score #meteor {OBJ} matches 0.. run scoreboard players set #meteor {OBJ} 0",
+        f"execute unless data storage {STORE} name run " + kind("supply"),
         f"schedule function {NS}:drops/second 20t replace",
         "# Checking the ground when the server stopped: check again (a schedule may not outlast a restart).",
         f"execute if score #state {OBJ} matches 1 run schedule function {NS}:drops/check 20t replace",
@@ -316,7 +343,24 @@ def datapack_files() -> dict[str, str]:
         f"execute store result score #online {OBJ} if entity @a[gamemode=survival]",
         f"execute if score #online {OBJ} < #min {OBJ} run return 14",
         f"execute unless data storage {STORE} spots[0] run return 15",
+        f"scoreboard players set #meteor {OBJ} 0",
+        kind("supply"),
         f"$data modify storage {STORE} night set value $(night)",
+        f"function {NS}:drops/locate",
+        "return 1",
+    )
+    f[f"{FN}/meteor.mcfunction"] = lines(
+        "# A Meteor (tools/omens.py): a drop announced 5 minutes ahead, one chest with more in it. Run with the",
+        "# spots in storage like the try, and the same codes. It is extra: tonight's drop is kept as it was.",
+        f"execute unless score #auto {OBJ} matches 1 run return 10",
+        f"execute if score #state {OBJ} matches 1.. run return 11",
+        *(f"execute if score {cond} run return 13" for cond in EVENTS_ON),
+        f"execute unless data storage {STORE} spots[0] run return 15",
+        f"execute store result score #online {OBJ} if entity @a[gamemode=survival]",
+        f"scoreboard players set #meteor {OBJ} 1",
+        kind("meteor"),
+        f"data modify storage {STORE} night set value 0",
+        f"execute store result storage {STORE} night int 1 run scoreboard players get #night {OBJ}",
         f"function {NS}:drops/locate",
         "return 1",
     )
@@ -326,6 +370,8 @@ def datapack_files() -> dict[str, str]:
             f"A supply drop is on already. /function {NS}:drops/stop ends it."),
         f"$data modify storage {STORE} spots set value [{{x:$(x),z:$(z)}}]",
         f"execute store result score #online {OBJ} if entity @a[gamemode=survival]",
+        f"scoreboard players set #meteor {OBJ} 0",
+        kind("supply"),
         "# A drop by hand doesn't use up tonight's: keep the night as it was.",
         f"data modify storage {STORE} night set value 0",
         f"execute store result storage {STORE} night int 1 run scoreboard players get #night {OBJ}",
@@ -334,7 +380,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/here.mcfunction"] = lines(
         "# Staff: a drop where you stand (in the Overworld: Nether or End coordinates would put it elsewhere).",
-        f"execute unless dimension {OVERWORLD} run " + refuse(
+        f"execute unless dimension {saved_world.OVERWORLD} run " + refuse(
             f"Supply drops land in the Overworld: stand there, or use /function {NS}:drops/start {{x:0,z:0}}."),
         f"execute store result storage {STORE} here.x int 1 run data get entity @s Pos[0]",
         f"execute store result storage {STORE} here.z int 1 run data get entity @s Pos[2]",
@@ -359,8 +405,9 @@ def datapack_files() -> dict[str, str]:
     )
     # forceload works in the dimension it runs in, and staff may start or stop a drop from the Nether or the
     # End: pinned to the Overworld, where the drop is, so the chunks loaded are the ones released.
-    f[f"{FN}/hold.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload add $(x0) $(z0) $(x1) $(z1)")
-    f[f"{FN}/release.mcfunction"] = lines(f"$execute in {OVERWORLD} run forceload remove $(x0) $(z0) $(x1) $(z1)")
+    overworld = f"$execute in {saved_world.OVERWORLD} run"
+    f[f"{FN}/hold.mcfunction"] = lines(f"{overworld} forceload add $(x0) $(z0) $(x1) $(z1)")
+    f[f"{FN}/release.mcfunction"] = lines(f"{overworld} forceload remove $(x0) $(z0) $(x1) $(z1)")
     f[f"{FN}/check.mcfunction"] = lines(
         f"execute unless score #state {OBJ} matches 1 run return 0",
         f"function {NS}:drops/check_at with storage {STORE} spot",
@@ -380,8 +427,10 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/next.mcfunction"] = lines(
         f"function {NS}:drops/release with storage {STORE} spot",
         f"execute if data storage {STORE} spots[0] run return run function {NS}:drops/locate",
-        "# None was dry land: no drop this time (the timer sends new spots in 10 minutes).",
+        "# None was dry land: no drop this time (the timer sends new spots in 10 minutes). A Meteor that found",
+        "# none ends here too (tools/omens.py then tries the evening's next omen).",
         f"scoreboard players set #state {OBJ} 0",
+        f"scoreboard players set #meteor {OBJ} 0",
         f"data remove storage {STORE} spot",
     )
     f[f"{FN}/found.mcfunction"] = lines(
@@ -395,24 +444,32 @@ def datapack_files() -> dict[str, str]:
         f"execute if score #chests {OBJ} matches ..0 run scoreboard players set #chests {OBJ} 1",
         f"execute if score #chests {OBJ} matches {MAX_CHESTS + 1}.. run scoreboard players set #chests {OBJ} "
         f"{MAX_CHESTS}",
+        f"execute if score #meteor {OBJ} matches 1 run scoreboard players set #chests {OBJ} 1",
         f"scoreboard players set #state {OBJ} 2",
         f"scoreboard players set #timer {OBJ} {COUNTDOWN}",
-        f"bossbar add {BAR} " + text({"text": "Supply drop", "color": "gold"}),
+        f"execute if score #meteor {OBJ} matches 1 run scoreboard players set #timer {OBJ} {METEOR_COUNTDOWN}",
+        f"bossbar add {BAR} " + text({"text": "", "color": "gold", "extra": [NAME]}),
         f"bossbar set {BAR} color yellow",
-        f"bossbar set {BAR} max {COUNTDOWN}",
-        f"bossbar set {BAR} value {COUNTDOWN}",
+        f"execute if score #meteor {OBJ} matches 1 run bossbar set {BAR} color purple",
+        f"execute store result bossbar {BAR} max run scoreboard players get #timer {OBJ}",
+        f"execute store result bossbar {BAR} value run scoreboard players get #timer {OBJ}",
         f"bossbar set {BAR} players @a",
         f"bossbar set {BAR} visible true",
-        "tellraw @a " + text("", HEAD, {"text": "it lands at ", "color": "yellow"}, *AT_XYZ,
-                             {"text": f" in {COUNTDOWN // 60} minutes, with ", "color": "yellow"},
-                             score("#chests", "aqua"), {"text": " chest(s) of supplies. First come, first served; "
-                                                         "the usual rules apply out there.", "color": "yellow"}),
+        f"execute unless score #meteor {OBJ} matches 1 run tellraw @a " + text(
+            "", HEAD, {"text": "it lands at ", "color": "yellow"}, *AT_XYZ,
+            {"text": f" in {COUNTDOWN // 60} minutes, with ", "color": "yellow"},
+            score("#chests", "aqua"), {"text": " chest(s) of supplies. First come, first served; "
+                                        "the usual rules apply out there.", "color": "yellow"}),
+        f"execute if score #meteor {OBJ} matches 1 run tellraw @a " + text(
+            "", HEAD, {"text": "something is falling out of the sky. It comes down at ", "color": "yellow"},
+            *AT_XYZ, {"text": f" in {METEOR_COUNTDOWN // 60} minutes: one chest, with more in it than a supply "
+                              "drop. First come, first served; the usual rules apply out there.", "color": "yellow"}),
         "execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 1 0.7",
     )
 
     # ---- the countdown and the landing
     def bar_name(label: str, color: str, place: list) -> str:
-        return f"bossbar set {BAR} name " + text({"text": "Supply drop at ", "color": color}, *place,
+        return f"bossbar set {BAR} name " + text({"text": "", "color": color, "extra": [NAME, " at "]}, *place,
                                                  {"text": f": {label} ", "color": color}, score("#mins"),
                                                  {"text": " min", "color": color})
 
@@ -433,6 +490,7 @@ def datapack_files() -> dict[str, str]:
     place = [f"execute if score #chests {OBJ} matches {k + 1}.. positioned ~{dx} ~ ~{dz} positioned over "
              f"motion_blocking_no_leaves {fits} run function {NS}:drops/place"
              for k, (dx, dz) in enumerate(CHEST_AT)]
+    meteor_label = text({"text": NAMES["meteor"], "color": "light_purple", "bold": True})
     f[f"{FN}/land.mcfunction"] = lines(
         f"scoreboard players set #state {OBJ} 3",
         f"scoreboard players set #timer {OBJ} {DESPAWN}",
@@ -442,15 +500,26 @@ def datapack_files() -> dict[str, str]:
         f"limit=1] positioned over motion_blocking_no_leaves if block ~ ~ ~ #{NS}:drops/open run function "
         f"{NS}:drops/place",
         f"execute unless entity @e[type=minecraft:marker,tag=dr.chest] run return run function {NS}:drops/blocked",
-        f"execute at @e[type=minecraft:marker,tag=dr.spot,limit=1] positioned over motion_blocking_no_leaves run "
-        f"summon minecraft:text_display ~ ~1.8 ~ {{Tags:[\"{LABEL}\"],billboard:\"center\","
-        f"text:{{text:\"{CHEST_NAME}\",color:\"gold\",bold:true}}}}",
+        f"execute unless score #meteor {OBJ} matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] positioned "
+        f"over motion_blocking_no_leaves run summon minecraft:text_display ~ ~1.8 ~ {{Tags:[\"{LABEL}\"],"
+        f"billboard:\"center\",text:{{text:\"{CHEST_NAME}\",color:\"gold\",bold:true}}}}",
+        f"execute if score #meteor {OBJ} matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run function "
+        f"{NS}:drops/impact",
         f"bossbar set {BAR} color red",
         f"bossbar set {BAR} max {DESPAWN}",
         "tellraw @a " + text("", HEAD, {"text": "it has landed at ", "color": "yellow"}, *AT_XYZ,
                              {"text": f". The chests despawn in {DESPAWN // 60} minutes, with whatever is still in "
                                       "them.", "color": "yellow"}),
         "execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 1 1.2",
+    )
+    f[f"{FN}/impact.mcfunction"] = lines(
+        "# A Meteor coming down, at the drop's middle: its label, a flash and a bang. Nothing is broken or set alight.",
+        "execute positioned over motion_blocking_no_leaves run summon minecraft:text_display ~ ~1.8 ~ "
+        f"{{Tags:[\"{LABEL}\"],billboard:\"center\",text:{meteor_label}}}",
+        "particle minecraft:explosion_emitter ~ ~1 ~ 0 0 0 0 1 force",
+        "particle minecraft:flame ~ ~1 ~ 1 1.5 1 0.05 80 force",
+        "particle minecraft:large_smoke ~ ~2 ~ 1 2 1 0.02 60 force",
+        "playsound minecraft:entity.generic.explode master @a ~ ~ ~ 6 0.6",
     )
     f[f"{FN}/chests.mcfunction"] = lines("# Run at the drop's middle.", *place)
     f[f"{FN}/place.mcfunction"] = lines(
@@ -459,6 +528,7 @@ def datapack_files() -> dict[str, str]:
         "# a weekly supply drop.",
         f"setblock ~ ~ ~ {CHEST}{{CustomName:\"{CHEST_NAME}\"}}",
         f"loot insert ~ ~ ~ loot {LOOT_TABLE}",
+        f"execute if score #meteor {OBJ} matches 1 run loot insert ~ ~ ~ loot {METEOR_LOOT_TABLE}",
         "summon minecraft:marker ~ ~ ~ {Tags:[\"dr.chest\"]}",
         "particle minecraft:end_rod ~ ~1 ~ 0.3 1.5 0.3 0.05 40 force",
     )
@@ -522,6 +592,7 @@ def datapack_files() -> dict[str, str]:
         f"bossbar remove {BAR}",
         f"scoreboard players set #state {OBJ} 0",
         f"scoreboard players set #timer {OBJ} 0",
+        f"scoreboard players set #meteor {OBJ} 0",
         f"data remove storage {STORE} spot",
         f"data remove storage {STORE} spots",
     )
@@ -550,7 +621,8 @@ def datapack_files() -> dict[str, str]:
             {"text": ", weeknight drops on ", "color": "gray"}, score("#auto"),
             {"text": ", needs ", "color": "gray"}, score("#min"),
             {"text": " online (now ", "color": "gray"}, score("#online"),
-            {"text": "), last night with a drop ", "color": "gray"}, score("#night")),
+            {"text": "), last night with a drop ", "color": "gray"}, score("#night"),
+            {"text": ", a Meteor ", "color": "gray"}, score("#meteor")),
         f"execute if score #state {OBJ} matches 2.. run " + say({"text": "At ", "color": "gray"}, *AT_XYZ),
     )
     f[f"{FN}/help.mcfunction"] = help_function(f)
@@ -582,7 +654,7 @@ def packs(repo: Repo) -> dict[Path, dict[str, str]]:
 
 def show_spots(world: Path, when: dt.datetime) -> int:
     night = night_of(when)
-    local = when.astimezone(PACIFIC)
+    local = when.astimezone(season_calendar.PACIFIC)
     print(f"{local:%a %d %b %Y %H:%M} Pacific: " + (f"drop night {night}" if night else
           "outside drop hours (Monday to Thursday, 6 to 10 PM Pacific, from Season I week 1)"))
     border = border_now(world)
@@ -600,13 +672,7 @@ def show_spots(world: Path, when: dt.datetime) -> int:
     return 0 if found else 1
 
 
-def meaning(command: str, answer: str) -> str:
-    """The timer's log line for one command's answer: the try's return code in words."""
-    if not command.startswith(f"function {NS}:drops/try"):
-        said = command[:60] if command.startswith("function ") else "spots sent"
-        return f"{said}: {answer or 'ok'}"
-    m = re.search(r" returned (\d+)$", answer)
-    return f"{command}: {TRY_CODES.get(int(m[1]), answer) if m else answer or 'ok'}"
+meaning = server.coded(f"function {NS}:drops/try", TRY_CODES)   # the timer's log line: the try's code in words
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
@@ -622,24 +688,13 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Supply drops: the spots, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
-    for name, about in (("spots", "the spots a drop would try now, and why"),
-                        ("commands", "the RCON commands for now (changes nothing)"),
-                        ("send", "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)")):
-        p = sub.add_parser(name, help=about)
-        p.add_argument("world", type=Path, help="the world folder (server/world)")
-        p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
-        if name == "send":
-            p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+    server.job_subcommands(sub, "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)",
+                           world=True, others=[("spots", "the spots a drop would try now, and why")])
     args = ap.parse_args(argv)
-    now = args.at or dt.datetime.now(UTC)
     if args.command == "spots":
-        return show_spots(args.world, now)
-    if args.command == "send":
-        return send(server.Docker(args.docker), args.world, now)
-    out = commands(args.world, now)
-    if out:
-        print("\n".join(out))
-    return 0
+        return show_spots(args.world, server.job_time(args))
+    return server.run_job(args, lambda when: commands(args.world, when),
+                          lambda rcon, when: send(rcon, args.world, when))
 
 
 if __name__ == "__main__":

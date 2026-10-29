@@ -1,0 +1,12 @@
+# Runs realms-omens.service every 10 minutes, 5 minutes 30 seconds past (5 minutes after the supply drops'
+# timer). Outside an omen evening's hours it sends nothing, so the server's own time zone doesn't matter. No
+# catching up at boot: a missed slot is just the next one.
+[Unit]
+Description=Monkey SMP: omens, every 10 minutes
+
+[Timer]
+OnCalendar=*-*-* *:05/10:30
+Persistent=false
+
+[Install]
+WantedBy=timers.target

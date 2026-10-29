@@ -67,9 +67,10 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    `chunky radius 500` and `chunky start`. It carries on after a restart because the default
    `config/chunky/config.json` sets `continueOnRestart`; on a server set up before that, set it to `true`
    in that file once and run `chunky continue`.
-7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-{deploy,day}.{service,timer} /etc/systemd/system/`,
-   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer realms-day.timer`.
-   The day timer counts "days played" for the wardrobe (docs/RETENTION.md) at midnight UTC. Then
+7. **Timers.** `sudo cp /srv/realms/repo/deploy/realms-deploy.{service,timer} /etc/systemd/system/`,
+   `sudo systemctl daemon-reload && sudo systemctl enable --now realms-deploy.timer`. Then
+   `sudo sh /srv/realms/repo/deploy/realms-day.sh --install` for the day timer, which counts "days played" for
+   the wardrobe (docs/RETENTION.md) at midnight UTC (`--check` shows what it sends and whether it runs). Then
    `sudo sh /srv/realms/repo/deploy/realms-week.sh --install` for the week timer: every hour it tells the
    server which weekly challenge week it is and keeps Season I's launch weekend on the wall clock
    (docs/ADMIN.md, "Weekly challenges"). `sh /srv/realms/repo/deploy/realms-week.sh --check` shows what it
@@ -116,6 +117,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Retention numbers | `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs` |
 | Joins per join address | `python3 /srv/realms/repo/tools/join_addresses.py /srv/realms/TheRealms-Server/server/logs` (docs/PROMOTION.md) |
 | This week's standings so far | `sh /srv/realms/repo/deploy/realms-standings.sh show` (changes nothing); log: `journalctl -u realms-standings -u realms-standings-board -n 50` |
+| The Sunday recap, as it would post now | `sh /srv/realms/repo/deploy/realms-standings.sh preview` (changes nothing) |
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
@@ -250,7 +252,7 @@ sh /srv/realms/repo/deploy/realms-week.sh --check
 sudo sh /srv/realms/repo/deploy/realms-week.sh --install
 ```
 
-Do it before the launch (Saturday 21 November 2026, 5 PM Pacific): without the timer the challenge week never
+Do it before the launch (Saturday 31 October 2026, 5 PM Pacific): without the timer the challenge week never
 turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
 It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
 `LIVE_DIR` from `/etc/realms-deploy.env`.
@@ -267,6 +269,57 @@ sudo sh /srv/realms/repo/deploy/realms-drops.sh --install
 It runs every 10 minutes as `realms`, sends nothing outside Monday to Thursday, 6 to 10 PM Pacific, and
 reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims and border from
 the world. Without it there are no automatic drops; staff can still start one by hand.
+
+### The outposts' timer (the release with outposts)
+
+Once that release is live, install `realms-outposts.timer` the same way (`docs/ADMIN.md`, "Outposts"):
+
+```sh
+sh /srv/realms/repo/deploy/realms-outposts.sh --check
+sudo sh /srv/realms/repo/deploy/realms-outposts.sh --install
+```
+
+It runs every hour at 45 past as `realms`, sends nothing before the launch or when every outpost has its
+spot, and reads only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved claims, border,
+scores and storage from the world. It also writes the "Outposts" marker set into the Overworld map's config
+under `server/config/bluemap/maps/` and sends `bluemap reload` when that changed. Without the timer there
+are no outposts: the pack waits for spots.
+
+### The omens' timer (the release with omens)
+
+Once that release is live, install `realms-omens.timer` the same way (`docs/ADMIN.md`, "Omens"):
+
+```sh
+sh /srv/realms/repo/deploy/realms-omens.sh --check
+sudo sh /srv/realms/repo/deploy/realms-omens.sh --install
+```
+
+It runs every 10 minutes (5 minutes after the drops' timer) as `realms`, sends nothing outside an omen
+evening (two weekday evenings a week, from a start between 6:00 and 8:50 PM until 10 PM Pacific), and reads
+only `REPO_DIR` and `LIVE_DIR` from `/etc/realms-deploy.env`, plus the saved scoreboard, claims and border
+from the world. `--check` doesn't show the week's plan. Without the timer there are no automatic omens;
+staff can still start one by hand.
+
+### The day timer as a job (the release with `deploy/realms-day.sh`)
+
+The week, drops, omens and day timers are timed jobs (GLOSSARY.md): one runner in `deploy/lib.sh` takes the deploy
+lock and reads each answer for a refusal. Before this release `realms-day.service` ran `docker compose ... rcon`
+itself, without either. It now sends `function realms:wardrobe/day_once {stamp:YYYYMMDD}`, the UTC date, and the
+wardrobe pack starts one day per date, so a retry after a run that reached the server never counts a second day.
+Once the release is live (its wardrobe pack has `day_once`), replace the unit from the deployed checkout (it
+copies only the units that changed, and restarting the timer doesn't start a new day):
+
+```sh
+sh /srv/realms/repo/deploy/realms-day.sh --check
+sudo sh /srv/realms/repo/deploy/realms-day.sh --install
+```
+
+Until then the old unit keeps working: it runs `function realms:wardrobe/day`, which the release keeps (staff can
+run it for an extra day). Like the old one, the new one tries again every 10 minutes while the server is down; it
+now also does when the server turns the command down (say, the wardrobe pack is off). It gives up after 6 hours
+of tries: it posts to the staff channel and stops, and the next midnight's run starts afresh. `journalctl -u
+realms-day` shows each try; to start the given-up day later, run `sh /srv/realms/repo/deploy/realms-day.sh` as
+`realms` (by hand it has no limit, and a date already started is left alone).
 
 ### The spawn NPCs (the release with spawn NPCs)
 
@@ -526,6 +579,15 @@ Only one copy may run the world at a time: two live copies split the world into 
 
 ### The store (set up once, before the first sale)
 
+Status (2026-10-28): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
+(`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
+storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
+Until it is approved, checkout takes only test payments and the public store address isn't known.
+`monkeysmp.tebex.io` belongs to another server, so read the address off the Tebex panel once the store is live.
+Then make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
+only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
+and terms against the table below before the first real sale.
+
 Tebex can't change the price of a subscription already sold, so set these before the store link goes on
 the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-sale.md):
 
@@ -619,7 +681,9 @@ snapshot, and the two timers. Two things stay by hand:
 
 On Sunday at 7 PM Pacific the timer closes the week: it keeps the final table in
 `STANDINGS_DIR/weeks/<date>.json`, starts the next week from a new snapshot, puts both on the board, announces
-it in chat and posts it to Discord. It waits up to 30 minutes for the deploy lock, so it never runs during a
+it in chat and posts it to Discord as the Sunday recap ("Monkey SMP Weekly": the table and a few lines on the
+week, worked out at the close and kept in the same file). Before the launch (`function realms:rules/launch`
+sets `#launched rw.day`) it keeps the week but posts nothing. It waits up to 30 minutes for the deploy lock, so it never runs during a
 deploy, the daily restart or an off-site backup. If the board or Discord fails, the service fails and systemd
 tries again every 10 minutes for 2 hours; a retry finishes what is left and never closes the week twice (a
 week closes only when it is at least 3 days old). The hourly board update skips its turn when the lock is

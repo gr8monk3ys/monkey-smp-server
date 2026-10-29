@@ -6,5 +6,6 @@ schedule clear realms:drops/check
 bossbar remove realms:drop
 scoreboard players set #state dr 0
 scoreboard players set #timer dr 0
+scoreboard players set #meteor dr 0
 data remove storage realms:drops spot
 data remove storage realms:drops spots

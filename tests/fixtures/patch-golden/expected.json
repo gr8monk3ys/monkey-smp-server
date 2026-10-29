@@ -1,0 +1,93 @@
+{
+  "_about": "Pinned by tests/test_patches.py (Python) and tests/Realms.Tests.ps1 (PowerShell). Re-record with: python -I tests/fixtures/patch-golden/record.py",
+  "input": {
+    "file": "input.zip",
+    "sha256": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98",
+    "entries": {
+      "README.txt": "2eccf3c6273df4b86531ed723b7c127146e21f50de846150eb8cfbb72f684dee",
+      "notes/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "notes/Upper.txt": "2897d20b43f0a19edce5ce874dbdbc077818518d21cd413b1b57998da7864154",
+      "notes/a-z.txt": "59cd3f7243daa21680fa4caa3064fc8ac71f74dd7ddef7981375a3457499f3e5",
+      "notes/a.txt": "a6e5a1a5544b7b5f531c40eefdc1e5a9aa9d89c2c3ac4867f8cf0f9d8b9582fe",
+      "notes/ab.txt": "4d91e5e19d4813a9c28cac322dce4a696e2219cf3534a511d0fddd7b6869f834",
+      "notes/b.txt": "afabec252637bf38a28649dd77cf84d429152f4b37efd91b184ffee14e866be4",
+      "notes/deep/c.txt": "9670ca58671f2fb3eadc8e2284833d957d4a4430a62a1618a95418ec5bcccee2",
+      "overlay_1/notes/a.txt": "8d157271ec53bbda6ebe9b1471b03b487c3ff578dc6f0c5232f40505fdcf2f84"
+    }
+  },
+  "patch": {
+    "path": "patches/golden",
+    "files": {
+      "notes/a-z.txt": "e3261213fb63c0230214d09009368e244353a3a70db082b30684330bcd51aaa9",
+      "notes/a.txt": "4dc17050486df6b353f8b68ed140a544341f4d7a450e243b604bb0e9834cda7a",
+      "notes/ab.txt": "1df5db14100296324b7b71fb2129df82a3951606ad748bc6a3fd73e4b47ac96a",
+      "notes/deep/c.txt": "7a7577b49ebdea5370793395545bf584e7f521530b9cfdcdf34af51f01535810",
+      "notes/Upper.txt": "052c0b3a11237ce472d53e3961bb697067851fe39b2bc532384340e647a6b1d2",
+      "overlay_1/notes/a.txt": "2aa460fab4c0112fc8d3b9a2a7e4d86565fe15018627e31341ff5564f2bd4317"
+    },
+    "id": "06935ffe9a712b6c17f596167f7f726be92038d6115466f91c2b1c91f8e82e33"
+  },
+  "patched": {
+    "entries": {
+      "README.txt": "2eccf3c6273df4b86531ed723b7c127146e21f50de846150eb8cfbb72f684dee",
+      "notes/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "notes/Upper.txt": "052c0b3a11237ce472d53e3961bb697067851fe39b2bc532384340e647a6b1d2",
+      "notes/a-z.txt": "e3261213fb63c0230214d09009368e244353a3a70db082b30684330bcd51aaa9",
+      "notes/a.txt": "4dc17050486df6b353f8b68ed140a544341f4d7a450e243b604bb0e9834cda7a",
+      "notes/ab.txt": "1df5db14100296324b7b71fb2129df82a3951606ad748bc6a3fd73e4b47ac96a",
+      "notes/b.txt": "afabec252637bf38a28649dd77cf84d429152f4b37efd91b184ffee14e866be4",
+      "notes/deep/c.txt": "7a7577b49ebdea5370793395545bf584e7f521530b9cfdcdf34af51f01535810",
+      "overlay_1/notes/a.txt": "2aa460fab4c0112fc8d3b9a2a7e4d86565fe15018627e31341ff5564f2bd4317"
+    }
+  },
+  "refused": {
+    "path": "patches/adds-a-file",
+    "missing": [
+      "notes/new.txt"
+    ]
+  },
+  "entry": {
+    "file": "input.zip",
+    "url": "https://example.invalid/input.zip",
+    "size": 1116,
+    "hashes": {
+      "sha512": "cd5efa8260070654097f0c19a038cdf7f9c892d583656a46caba7740b64f62c402dc5dce547032f0aa8ef97af0ffc9b82f5eae5962f6597fa02847fe5c88c44c"
+    },
+    "patch": {
+      "path": "patches/golden",
+      "base_sha512": "cd5efa8260070654097f0c19a038cdf7f9c892d583656a46caba7740b64f62c402dc5dce547032f0aa8ef97af0ffc9b82f5eae5962f6597fa02847fe5c88c44c"
+    }
+  },
+  "install_id": "cd5efa8260070654097f0c19a038cdf7f9c892d583656a46caba7740b64f62c402dc5dce547032f0aa8ef97af0ffc9b82f5eae5962f6597fa02847fe5c88c44c:06935ffe9a712b6c17f596167f7f726be92038d6115466f91c2b1c91f8e82e33",
+  "expected_hash": [
+    {
+      "hashes": {
+        "sha512": "cd5efa8260070654097f0c19a038cdf7f9c892d583656a46caba7740b64f62c402dc5dce547032f0aa8ef97af0ffc9b82f5eae5962f6597fa02847fe5c88c44c",
+        "sha256": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98"
+      },
+      "algorithm": "sha512",
+      "value": "cd5efa8260070654097f0c19a038cdf7f9c892d583656a46caba7740b64f62c402dc5dce547032f0aa8ef97af0ffc9b82f5eae5962f6597fa02847fe5c88c44c"
+    },
+    {
+      "hashes": {
+        "sha256": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98"
+      },
+      "algorithm": "sha256",
+      "value": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98"
+    },
+    {
+      "hashes": {
+        "sha1": "0dc6afaff28d3300ab71ae163660bb55f0493b5b",
+        "sha256": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98"
+      },
+      "algorithm": "sha256",
+      "value": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98"
+    },
+    {
+      "hashes": {
+        "sha1": "0dc6afaff28d3300ab71ae163660bb55f0493b5b"
+      },
+      "error": "input.zip has no sha512/sha256"
+    }
+  ]
+}

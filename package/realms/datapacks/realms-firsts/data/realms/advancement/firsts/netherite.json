@@ -1,0 +1,79 @@
+{
+  "criteria": {
+    "netherite": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": {
+          "type": "minecraft:all_of",
+          "terms": [
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "min": 1
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#launched"
+                },
+                "score": "rw.day"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#netherite"
+                },
+                "score": "rf"
+              }
+            },
+            {
+              "type": "minecraft:int_value_check",
+              "test": {
+                "max": 0
+              },
+              "value": {
+                "type": "minecraft:score",
+                "target": {
+                  "type": "minecraft:fixed",
+                  "name": "#season_locked"
+                },
+                "score": "ev.state"
+              }
+            },
+            {
+              "type": "minecraft:entity_properties",
+              "entity": "this",
+              "predicate": {
+                "minecraft:equipment": {
+                  "head": {
+                    "items": "minecraft:netherite_helmet"
+                  },
+                  "chest": {
+                    "items": "minecraft:netherite_chestplate"
+                  },
+                  "legs": {
+                    "items": "minecraft:netherite_leggings"
+                  },
+                  "feet": {
+                    "items": "minecraft:netherite_boots"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "realms:firsts/got/netherite"
+  }
+}

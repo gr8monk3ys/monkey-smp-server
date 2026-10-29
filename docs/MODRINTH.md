@@ -10,14 +10,16 @@ server shows up in Modrinth's server discovery.
 | modpack **Monkey SMP** | `monkeysmp` | every client-pack release as a version (the release's `.mrpack`) | `tools/modrinth.py`, after each release |
 | server listing **Monkey SMP** | `monkeysmp-server` | the address, region, tags, and which modpack version players get | made once by hand; `tools/modrinth.py` moves its modpack version |
 
-Status (2026-10-25): neither project exists yet. Both slugs were free. The owner creates the projects; the
-modpack can go to review now, and the server listing waits for Modrinth's answer on paid access (below).
+Status (2026-10-28): the modpack `monkeysmp` holds version 2.8.0 (2.9.0 left `client/` alone, so it uploaded
+nothing) and was submitted for review on 2026-10-28, with the listing below. The server listing doesn't exist
+yet: it waits for Modrinth's answer on paid access (below), and the owner hasn't sent that question yet.
 
 ## Before the first publish (the owner, once)
 
 1. **Account.** Make a Modrinth account (signing in with GitHub works) and turn on two-factor auth.
-2. **The modpack project.** On modrinth.com, create a project of type **Modpack**: name `Monkey SMP`, URL
-   `monkeysmp`. It starts as a private draft. Fill it in from [The modpack listing](#the-modpack-listing).
+2. **The modpack project.** On modrinth.com, create a project: name `Monkey SMP`, URL `monkeysmp`. The
+   create dialog offers only Project and Server; pick Project, and the uploaded `.mrpack` makes it a modpack.
+   It starts as a private draft. Fill it in from [The modpack listing](#the-modpack-listing).
 3. **A token.** Settings > Personal access tokens (modrinth.com/settings/pats) > Create a token: name
    `monkey-smp release`, scopes **Read projects, Write projects, Read versions, Create versions**, with an
    expiry. Keep it in your password manager. It never goes in the repo, an issue, a chat or a command line.
@@ -83,65 +85,53 @@ change, change it too.
 |---|---|
 | Name | Monkey SMP |
 | URL | `monkeysmp` |
-| Summary | The player pack for Monkey SMP, a small whitelisted modded factions server on Minecraft Java 26.3 (Fabric): land claims, allies, proximity voice, new terrain and structures, shaders, and Sodium for speed. |
-| Categories | Multiplayer, Adventure, Combat |
+| Summary | The client pack for Monkey SMP, a small whitelisted factions server on Minecraft 26.3 (Fabric). It has the claims map, proximity voice, the new terrain mods and shaders. |
+| Categories | Multiplayer (featured), Adventure, Combat |
 | Environment | client-side only (the server runs its own package, not this pack) |
 | License | MIT for the pack's own files (configs, settings, the Monkey SMP Wardrobe resource pack); every mod, resource pack and shader keeps its own license and is downloaded from its own Modrinth page |
 | Icon | `marketing/logo/png/mark-512.png` |
-| Links | website `https://monkeysmp.lscaturchio.xyz`, Discord `https://discord.gg/C25hy9Ca9W`. No source or issues link: the repo is private, and Modrinth flags links it can't open. |
-| Disclosures | **Paid features**: joining the server needs a paid pass, and supporter tiers unlock some of the Wardrobe's cosmetic skins. The pack itself is free. |
+| Links | Wiki `https://monkeysmp.lscaturchio.xyz` (Modrinth has no website field, and the site is the players' guide), Discord `https://discord.gg/C25hy9Ca9W`. No source or issues link: the repo is private, and Modrinth flags links it can't open. |
+| Disclosures | **Paid features**, two entries: "Joining the server needs a paid server pass (the pack itself is free)" and "Supporter tiers unlock some Wardrobe cosmetic skins". Nothing else is on (the owners left AI-generated content off). |
 
 ### Description
 
 ```markdown
-**Claim land. Make allies. Keep what you can hold.**
+Monkey SMP is a small whitelisted factions server on Minecraft Java 26.3 (Fabric). Most of us play in the evenings, Pacific time. This is the pack you need to join, with the shaders, sounds and settings we actually play with.
 
-Monkey SMP is a modded factions server on Minecraft Java 26.3 (Fabric), for a small crowd that plays evenings,
-Pacific time. This pack has everything you need to join it, set up the way the server is meant to look and
-sound.
+## Joining
 
-## Joining the server
+You need a server pass and your Minecraft name on the whitelist. You can get both at [monkeysmp.lscaturchio.xyz](https://monkeysmp.lscaturchio.xyz).
 
-The server is whitelisted: you need a server pass and your Minecraft name on the list. Both are on
-**[monkeysmp.lscaturchio.xyz](https://monkeysmp.lscaturchio.xyz)**. Then:
+1. Install this pack in the [Modrinth App](https://modrinth.com/app). In the instance settings, under Java and memory, give it at least 6 GB.
+2. Press Play, go to Multiplayer > Add Server, enter `monkeysmp.lscaturchio.xyz` and join.
 
-1. Install this pack in the [Modrinth App](https://modrinth.com/app) and give it 6 GB of memory or more
-   (the instance's settings, Java and memory).
-2. Press Play. In the game: **Multiplayer > Add Server**, address `monkeysmp.lscaturchio.xyz`, **Join Server**.
+The app updates the pack whenever the server needs a new one. A PC with 16 GB of RAM and a mid-range graphics card runs it fine. If you get stuck, ask on [Discord](https://discord.gg/C25hy9Ca9W).
 
-When the server moves to a new version, the app updates the pack. A computer with 16 GB of RAM and a
-mid-range graphics card runs it well. Questions: [Discord](https://discord.gg/C25hy9Ca9W).
+## What the server is like
 
-## On the server
+- Factions of up to four players. You claim land on the map (2×2 chunks per player), allies share claims, and PvP is on everywhere outside spawn.
+- Strength SMP rules: winning fights makes you stronger, and losing them drains it.
+- Tectonic and Terralith terrain, with mountains past y 500. Incendium redoes the Nether, Endercon the End, and Dungeons and Taverns adds new structures.
+- Proximity voice through Simple Voice Chat. There's a live BlueMap of the world on the website.
+- Every season has a Build Battle, a Faction Raid and Arena Glory, and the factions play for the Season Cup.
 
-- **Factions** of up to four. Claim land on the map, 2×2 chunks per player; allies share claims; PvP is on
-  outside spawn.
-- **Strength SMP**: win fights and your strength grows, lose them and it drains away.
-- **New terrain and structures**: Tectonic and Terralith push mountains past y 500, plus Incendium's Nether,
-  Endercon's End and Dungeons and Taverns.
-- **Proximity voice** with Simple Voice Chat, and a live BlueMap of the world on the website.
-- **Seasons and events**: Build Battle, Faction Raid and Arena Glory every season, for a faction Season Cup.
+## What's in the pack
 
-## In the pack
+- Performance: Sodium, Lithium, FerriteCore and ImmediatelyFast, plus Distant Horizons for long view distances.
+- Visuals: Iris with Complementary, BSL and Photon (press O to switch shaders or turn them off), Fresh Animations, Continuity and 3D Skin Layers.
+- Maps: Xaero's Minimap and World Map (you can claim chunks from the map), JEI and AppleSkin.
+- Sound: Simple Voice Chat (press V) and the Enhanced Audio resource pack.
+- Server content: Naturalist, Variants and Ventures, Goat Expansion and the other mods that add blocks, mobs and items. Don't turn these off, because the server needs them.
+- The Monkey SMP Wardrobe resource pack, for the server's sword and helmet skins. You earn most of them by playing.
 
-- **Speed**: Sodium, Lithium, FerriteCore, ImmediatelyFast and Distant Horizons
-  for far views.
-- **Looks**: Iris with Complementary, BSL and Photon shaders (press **O** to switch or turn them off), Fresh
-  Animations, Continuity, 3D Skin Layers.
-- **Maps and info**: Xaero's Minimap and World Map (claim chunks from the map), JEI, AppleSkin.
-- **Sound**: Simple Voice Chat (press **V**) and the Enhanced Audio resource pack.
-- **The server's content**: Naturalist, Variants and Ventures, Goat Expansion and the other mods that add
-  blocks, mobs and items. These are the files you can't leave out.
-- **Monkey SMP Wardrobe**: the resource pack for the server's sword and helmet skins, earned by playing.
-- **Slow computer?** Most of the rest is optional: switch off Distant Horizons, the shaders and the visual and
-  sound mods in the instance's Content tab. Keep Sodium and the other speed mods. The website's FAQ says more.
+If your computer struggles, turn off Distant Horizons, the shaders and the visual and sound mods in the instance's Content tab, and leave the performance mods on. The FAQ on the website has more.
 
-Hosted by Diego and Lorenzo Scaturchio.
+Run by Diego and Lorenzo Scaturchio.
 ```
 
 ### Gallery
 
-From `site/img/` (in-game screenshots, the site's captions). The first is the featured image.
+From `site/img/` (in-game screenshots, the site's captions). The first is the banner image.
 
 | File | Title | Description |
 |---|---|---|
@@ -168,7 +158,7 @@ Create it once the paid-access question is answered (next section).
 | Language | English |
 | Max players | 30 (`max-players` in `defaults/server.properties`) |
 | Tags | Factions, PvP, Teams, Roleplay, SMP, Whitelisted, World Resets |
-| Summary, description, icon, gallery, links | as the modpack's; the description can start at "On the server" |
+| Summary, description, icon, gallery, links | as the modpack's; the description can start at "What the server is like" |
 
 A linked server listing doesn't follow new modpack versions on its own (other listings on Modrinth still link
 old versions), which is why `tools/modrinth.py` moves it on each release. Discovery ranks servers by players
@@ -177,16 +167,17 @@ has to stay up and reachable at that address.
 
 ## Review, and the paid-access rule
 
-**Review takes about four weeks for a modpack.** Of the last 100 modpacks Modrinth approved (checked
-2026-10-25), the median wait from submission to approval was 29 days (most between 28 and 31). Server listings
-went faster: a median of 4 days.
+**Review can take about four weeks for a modpack.** Modrinth's page after submitting says it aims to review
+within a week, but of the last 100 modpacks it approved (checked 2026-10-25) the median wait from submission to
+approval was 29 days (most between 28 and 31). Server listings went faster: a median of 4 days. Editing the
+project while it waits doesn't lose its place in the queue.
 
 **Modrinth rejects servers that charge for access.** Since July 2026 its moderators' checklist has a rule for
 server listings: Modrinth doesn't list servers that "require players to pay for access or donate to be able
 to join". Monkey SMP's pass is exactly that. The public content rules don't spell it out, and the rule applies
 to server listings only, not to modpacks, so:
 
-- **The modpack can go to review now.** It is a normal client pack; the description says joining needs a pass.
+- **The modpack went to review on 2026-10-28.** It is a normal client pack; the description says joining needs a pass.
 - **The server listing waits for Modrinth's answer.** The owner asks Modrinth support first (the Help Center,
   support.modrinth.com, the chat bubble): can a paid-access, whitelisted server list, for instance if it has a
   free way in (a trial, free nights)? If not, the modpack alone still gives players one-click install and

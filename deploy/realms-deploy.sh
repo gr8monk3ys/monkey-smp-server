@@ -48,6 +48,8 @@ STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 RESTART_MIN_UPTIME=${RESTART_MIN_UPTIME:-6}
 LOCK_FILE=${LOCK_FILE:-/tmp/realms-deploy.lock}
 KEEP_BACKUPS=${KEEP_BACKUPS:-3}
+whole_number WARN_MINUTES "$WARN_MINUTES" minutes
+whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 STATE="$LIVE_DIR/.deployed"
 FAILED="$LIVE_DIR/.deploy-failed"
@@ -110,44 +112,10 @@ in_window() {
 
 # ---------------------------------------------------------------- helpers
 
-# Posts $1 to the webhook $2 (default DISCORD_WEBHOOK_URL).
-discord() {
-    url=${2:-$DISCORD_WEBHOOK_URL}
-    [ -n "$url" ] || return 0
-    # The message is ours (no quotes or backslashes in it), so plain printf makes valid JSON.
-    printf '{"content":"%s"}' "$1" |
-        curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$url" >/dev/null ||
-        log 'could not post to Discord'
-}
-
-players_online() {
-    # "There are 3 of a max of 20 players online: ..."
-    rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1
-}
-
-# If players are online, warns them in chat WARN_MINUTES and 1 minute ahead. $1 begins the first
-# message ("Server update to v2.4.1"), $2 the last ("Server update").
-warn_players() {
-    warn_online=$(players_online || true)
-    [ "${warn_online:-0}" -gt 0 ] || return 0
-    log "$warn_online player(s) online; warning them"
-    rcon "say $1 in $WARN_MINUTES minutes (about 3 minutes offline)." >/dev/null || true
-    [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
-    rcon "say $2 in 1 minute. Find a safe spot." >/dev/null || true
-    sleep 60
-}
-
 # Recreates the container (its entrypoint installs, then starts) and waits for RCON to answer.
 restart_and_wait() {
     compose up -d --build --force-recreate
-    waited=0
-    while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
-        sleep 15
-        waited=$((waited + 15))
-        running || return 1
-        if rcon list >/dev/null; then return 0; fi
-    done
-    return 1
+    wait_for_live --while-running
 }
 
 # Whole hours since the container started (a deploy recreates it, and so does a crash); empty if unknown.
@@ -194,10 +162,10 @@ if [ -n "$restart" ]; then
         log "the server started ${hours}h ago (a deploy or a crash restarted it); skipping the daily restart"
         exit 0
     fi
-    online=$(players_online || true)
     health=$(spark_health)
     log "daily restart after ${hours:-?}h up; spark health: ${health:-no link}"
-    warn_players 'Daily restart' 'Daily restart'
+    warn_players 'Daily restart'
+    online=$PLAYERS_ONLINE   # counted by warn_players, before the warning
     if restart_and_wait; then
         log 'back up after the daily restart'
         msg="Daily restart: Monkey SMP is back up (it had been up ${hours:-?} h, ${online:-?} online)."

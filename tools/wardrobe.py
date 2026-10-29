@@ -1,6 +1,7 @@
 """Builds the wardrobe: cosmetic skins for swords and helmets, earned by playing or by supporting.
 
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
+    python tools/wardrobe.py commands  the RCON command that starts a new day (deploy/realms-day.sh sends it)
 
 It writes two folders, both generated (edit this file, not them):
   package/realms/datapacks/realms-wardrobe/       the server side: /trigger wardrobe, unlock scores, the skins
@@ -22,22 +23,29 @@ Unlock scores (all per player name, so the store and staff can set them while th
   rw.challenges  weekly challenges done, in all seasons together (tools/challenges.py; never sold)
   rw.launch   1 for being online FOUNDER_MINUTES in Season I's launch weekend (never sold); rw.launchtime
               counts their seconds online while that window is open (`function realms:wardrobe/founder/...`)
-`function realms:wardrobe/day` starts a new day; deploy/realms-day.timer runs it at midnight UTC.
+`function realms:wardrobe/day` starts a new day; deploy/realms-day.sh starts it at midnight UTC through
+`function realms:wardrobe/day_once {stamp:YYYYMMDD}` (`send`), which a retry the same UTC date leaves alone.
 The weekly challenges (tools/challenges.py) go in the same data pack, and have a page of the menu:
 `/trigger challenges`, or page MENU_CHALLENGES of `/trigger wardrobe`.
 Every rw.* score lives in the world's scoreboard, so a new season's world starts without them:
 tools/season.py carries them over (docs/SEASONS.md, "Ending a season").
 """
+import argparse
+import datetime as dt
 import json
 import math
+import os
 import struct
+import sys
 import zlib
 from pathlib import Path
 
 import challenges
-from challenges import FOUNDER_MINUTES, LAUNCH_SECONDS
+import rcon as server
+from challenges import FOUNDER_MINUTES
 from datapacks import NS, function_tag, mcmeta, text
 from repo import Repo
+from season_calendar import LAUNCH_SECONDS
 
 RESOURCE_FORMAT = 97
 DATAPACK = "realms-wardrobe"
@@ -554,8 +562,16 @@ def datapack_files() -> dict[str, str]:
             {"text": "[Open the wardrobe]", "color": "aqua", "underlined": True,
              "click_event": {"action": "run_command", "command": command}})
     f[f"{fn}/day.mcfunction"] = (
-        "# A new real day (deploy/realms-day.timer runs this at midnight UTC). Players online get it within a second.\n"
+        "# A new real day (day_once starts it at midnight UTC; staff can run this for an extra one). Players online\n"
+        "# get it within a second.\n"
         "scoreboard players add #today rw.day 1\n")
+    f[f"{fn}/day_once.mcfunction"] = "\n".join([
+        "# Macro {stamp:YYYYMMDD}: deploy/realms-day.sh sends it at midnight UTC with that UTC date. Starts the day",
+        "# unless the day for that date already started, so a retry after a timeout never makes one date two days.",
+        "$execute if score #day.sent rw.day matches $(stamp) run return 0",
+        "$scoreboard players set #day.sent rw.day $(stamp)",
+        f"function {NS}:wardrobe/day",
+    ]) + "\n"
     lines = ["# This player's first login of the day.", "scoreboard players add @s rw.days 1",
              "scoreboard players operation @s rw.lastday = #today rw.day"]
     for _, _kind, s in skins():
@@ -818,3 +834,66 @@ def after_write(repo: Repo) -> None:
     options = repo.client / "overrides" / "options.txt"
     if options.is_file():
         enable_in_options(options)
+
+
+# ---------------------------------------------------------------- the day (deploy/realms-day.sh)
+
+# How long realms-day.service keeps trying one day before it gives up (and the timer's next run starts afresh).
+GIVE_UP = dt.timedelta(hours=6)
+
+
+def day_stamp(when: dt.datetime) -> int:
+    """The UTC date `when` falls on, as YYYYMMDD: the day a run starts, so one date is never two days."""
+    return int(when.astimezone(server.UTC).strftime("%Y%m%d"))
+
+
+def day_commands(when: dt.datetime) -> list[str]:
+    return [f"function {NS}:wardrobe/day_once {{stamp:{day_stamp(when)}}}"]
+
+
+def send_day(rcon, when: dt.datetime, pending: Path | None = None, log=print) -> int:
+    """Starts the day for `when`'s UTC date (day_once does nothing when it already started). Unlike the week, a
+    server that isn't running is a failure (NOT_RUNNING): a missed day is never caught up, so realms-day.service
+    tries again every 10 minutes. With `pending` (realms-day.service's state file), a date that has failed for
+    GIVE_UP is given up (GAVE_UP), so the retries end and the next midnight's run starts afresh."""
+    code = server.send_if_running(rcon, day_commands(when), log, required=True,
+                                  skipped="server not running: the day isn't started yet")
+    if pending is None:
+        return code
+    if code == 0:
+        pending.unlink(missing_ok=True)
+        return 0
+    stamp, first = day_stamp(when), when
+    try:
+        was, since = pending.read_text().split()
+        if int(was) == stamp:
+            first = dt.datetime.fromtimestamp(int(since), server.UTC)
+    except (OSError, ValueError):
+        pass
+    if when - first >= GIVE_UP:
+        pending.unlink(missing_ok=True)
+        log(f"gave up: the day for {stamp} didn't start in {GIVE_UP.seconds // 3600} hours of tries")
+        return server.GAVE_UP
+    if first == when:
+        try:
+            pending.write_text(f"{stamp} {int(when.timestamp())}\n")
+        except OSError as e:
+            log(f"can't keep the first try's time in {pending} ({e}); it tries again without a limit")
+    return code
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="The wardrobe's day: the command that starts a new day for days played.")
+    sub = ap.add_subparsers(dest="command", required=True)
+    server.job_subcommands(sub, "sends it to the running server (deploy/realms-day.sh, at midnight UTC)")
+    state = os.environ.get("STATE_DIRECTORY")   # realms-day.service's StateDirectory=
+    sub.choices["send"].add_argument(
+        "--pending", type=Path, default=Path(state.split(":")[0]) / "pending" if state else None,
+        help="where a failing date's first try is kept, to give up after 6 hours "
+             "(default: $STATE_DIRECTORY/pending; none: no limit)")
+    args = ap.parse_args(argv)
+    return server.run_job(args, day_commands, lambda rcon, when: send_day(rcon, when, args.pending))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,3 +1,5 @@
+import argparse
+import datetime as dt
 import subprocess
 from pathlib import Path
 
@@ -96,6 +98,25 @@ def test_send_if_running_gives_the_timers_exit_code(server, code, line):
     assert log[0].startswith(line)
 
 
+def test_a_required_job_fails_when_the_server_is_not_running():
+    log = []
+    assert rcon.send_if_running(rcon.Recorder(running=False), ["a"], log.append, required=True) == rcon.NOT_RUNNING
+    assert log == ["server not running: nothing sent"] and rcon.NOT_RUNNING not in (0, 1, rcon.GAVE_UP)
+    assert rcon.send_if_running(rcon.Recorder(), ["a"], log.append, required=True) == 0
+
+
+def test_coded_reads_the_call_through_its_codes_and_storage_by_key():
+    describe = rcon.coded("function realms:x/try", {1: "started", 5: "off"})
+    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 5") == (
+        "function realms:x/try {n:1}: off")
+    assert describe("function realms:x/try {n:1}", "Function realms:x/try returned 9") == (
+        "function realms:x/try {n:1}: Function realms:x/try returned 9")
+    assert describe("function realms:x/try {n:1}", "") == "function realms:x/try {n:1}: ok"
+    assert describe("data modify storage realms:x spots set value [{x:1,z:2}]", "") == "spots sent: ok"
+    assert describe("function realms:x/stop", "Function realms:x/stop returned 1") == (
+        "function realms:x/stop: Function realms:x/stop returned 1")
+
+
 def test_send_carries_on_past_a_failure_and_says_so():
     server, log = rcon.Recorder(fail=1), []
     assert rcon.send(server, ["a", "b"], log.append) is False
@@ -103,3 +124,47 @@ def test_send_carries_on_past_a_failure_and_says_so():
     assert log == ["refused or failed: the server is down", "b: ok"]
     assert rcon.send(rcon.Recorder(), ["c"], log.append, describe=lambda c, a: f"<{c}>") is True
     assert log[-1] == "<c>"
+
+
+# ---------------------------------------------------------------- a timed job's command line
+
+
+def test_parse_time_reads_utc_and_offsets():
+    utc = dt.datetime(2026, 11, 23, 8, tzinfo=rcon.UTC)
+    assert rcon.parse_time("2026-11-23T08:00:00Z") == rcon.parse_time("2026-11-23T00:00:00-08:00") == utc
+    assert rcon.parse_time("2026-11-23T08:00:00") == utc   # no offset: UTC
+
+
+def job(argv, world=False, at=True, commands=lambda when: ["a", "b"]):
+    """Parses argv with job_subcommands and runs it; returns (exit code, what send was given)."""
+    ap = argparse.ArgumentParser()
+    sub = ap.add_subparsers(dest="command", required=True)
+    rcon.job_subcommands(sub, "sends them", world=world, at=at, others=[("spots", "where")])
+    args = ap.parse_args(argv)
+    given = []
+    code = rcon.run_job(args, commands, lambda server, when: given.append((server.folder, when, args)) or 7)
+    return code, given
+
+
+def test_job_commands_prints_one_per_line_and_nothing_when_there_are_none(capsys):
+    assert job(["commands", "--at", "2026-11-23T08:00:00Z"]) == (0, [])
+    assert capsys.readouterr().out == "a\nb\n"
+    assert job(["commands"], commands=lambda when: []) == (0, [])
+    assert capsys.readouterr().out == ""
+
+
+def test_job_send_gets_the_docker_folder_and_the_time():
+    code, [(folder, when, _)] = job(["send", "--docker", "/srv/d", "--at", "2026-11-23T08:00:00"])
+    assert code == 7 and folder == Path("/srv/d") and when == dt.datetime(2026, 11, 23, 8, tzinfo=rcon.UTC)
+    code, [(_, when, args)] = job(["send", "--docker", "/srv/d"])
+    assert abs(dt.datetime.now(rcon.UTC) - when) < dt.timedelta(minutes=1)   # no --at: now
+    assert abs(rcon.job_time(args) - when) < dt.timedelta(minutes=1)   # the time a tool's other commands get too
+    assert rcon.job_time(argparse.Namespace()) - when < dt.timedelta(minutes=1)   # a job without --at
+
+
+def test_job_subcommands_take_the_world_first_and_at_only_when_asked(capsys):
+    code, [(_, _, args)] = job(["send", "/w", "--docker", "/d"], world=True)
+    assert args.world == Path("/w")
+    with pytest.raises(SystemExit):
+        job(["commands", "--at", "2026-11-23T08:00:00Z"], at=False)
+    assert "unrecognized arguments: --at" in capsys.readouterr().err

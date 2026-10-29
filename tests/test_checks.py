@@ -23,6 +23,44 @@ def test_the_sh_check_runs_dash_on_each_script():
     assert all(cmd[:2] == ["dash", "-n"] for cmd in commands)
 
 
+def test_the_site_check_builds_the_site_then_checks_its_pages():
+    site = next(c for c in checks.CHECKS if c.name == "site")
+    assert (site.needs, site.cwd) == ("bun", "site")
+    commands = site.command(REPO.root)
+    assert commands[:4] == [["bun", "install", "--frozen-lockfile"], ["bun", "run", "lint"],
+                            ["bun", "run", "typecheck"], ["bun", "run", "build"]]
+    assert commands[-1][-4:] == ["../tools/site_links.py", "--check", "--built", "out"]
+
+
+def test_a_check_runs_in_its_own_folder(monkeypatch, tmp_path):
+    (tmp_path / "sub").mkdir()
+    here = checks.Check("here", "", lambda root: [[sys.executable, "-c", "import os; print(os.getcwd())"]], "cwd",
+                        "sub")
+    monkeypatch.setattr(checks, "CHECKS", (here,))
+    out = io.StringIO()
+    [result] = checks.run(["here"], tmp_path, strict=True, out=out)
+    assert result.state == "passed" and str(tmp_path / "sub") in out.getvalue()
+
+
+def test_a_failing_site_step_fails_the_check(monkeypatch, tmp_path):
+    (tmp_path / "site").mkdir()
+    site = next(c for c in checks.CHECKS if c.name == "site")
+    fails = [[sys.executable, "-c", "raise SystemExit(1)"]]
+    broken = checks.Check("site", "", lambda root: fails, site.about, site.cwd)
+    monkeypatch.setattr(checks, "CHECKS", (broken,))
+    [result] = checks.run(["site"], tmp_path, strict=True, out=io.StringIO())
+    assert result.state == "failed"
+
+
+def test_without_bun_the_site_is_skipped_and_says_why(monkeypatch, tmp_path):
+    monkeypatch.setattr(checks.shutil, "which", lambda name, path=None: None)
+    site = next(c for c in checks.CHECKS if c.name == "site")
+    assert "https://bun.sh" in checks.missing(site, {})
+    out = io.StringIO()
+    [result] = checks.run(["site"], tmp_path, strict=False, out=out)
+    assert result.state == "skipped" and "== site: skipped (needs bun, which builds the site" in out.getvalue()
+
+
 def test_a_missing_tool_is_skipped_or_failed_when_strict(monkeypatch, tmp_path):
     monkeypatch.setattr(checks, "missing", lambda check, env: "dash")
     loose = checks.run(["sh"], tmp_path, strict=False, out=io.StringIO())

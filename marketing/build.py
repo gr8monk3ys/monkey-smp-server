@@ -3,7 +3,7 @@
     python marketing/logo.py     # only after changing the pixel grids
     python marketing/build.py    # needs Inkscape on PATH, Pillow, and the fonts in FONTS (see README.md)
 
-Small outputs land in the repo (marketing/logo/png, marketing/server-icon.png, site/img/og.jpg); every
+Small outputs land in the repo (marketing/logo/png, marketing/server-icon.png, site/public/img/og.jpg); every
 output, big banners included, is also written to OUT.
 """
 
@@ -274,7 +274,7 @@ def main():
     (HERE / "banners").mkdir(exist_ok=True)
     shutil.copy(OUT / "server-list-468x60.png", HERE / "banners")
     shutil.copy(OUT / "discord-banner-960x540.png", HERE / "banners")
-    Image.open(OUT / "og-1200x630.png").save(REPO / "site" / "img" / "og.jpg", quality=86, optimize=True)
+    Image.open(OUT / "og-1200x630.png").save(REPO / "site" / "public" / "img" / "og.jpg", quality=86, optimize=True)
     for p in made:
         if p.parent != OUT:
             shutil.copy(p, OUT / p.name)

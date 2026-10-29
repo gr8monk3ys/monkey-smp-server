@@ -10,11 +10,13 @@ pins every download (Java per platform) and `package/realms/pwsh.lock` the porta
 are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server. See `README.md` and
 `docs/MAINTAINING.md`.
 
-- Checks: `python tools/checks.py` (ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester 5); CI runs the same file.
+- Checks: `python tools/checks.py` (ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester 5, the site via bun); CI runs the same file.
   Before a PR leaves draft: `/code-review`, fix its findings (docs/MAINTAINING.md, "Review"). No Actions minutes? `python tools/local_ci.py <PR>`
 - `package/realms/*.ps1`/`*.psm1` must stay plain ASCII and run on both Windows PowerShell 5.1 and PowerShell 7
   on Linux/macOS (ADR-0003, ADR-0007): Windows-only calls go behind a platform check.
 - `package/*.sh`, `package/realms/realms.sh` and `Start Server.command` are POSIX `sh` (no bash-isms), LF line endings.
+- `site/` is the public website: Next.js built as a static export with bun; links, the address and the launch
+  time live in `site/config.json`. See `site/README.md`.
 - Domain terms: `GLOSSARY.md`. Decisions not to re-litigate: `docs/adr/`.
 - Never commit worlds, jars, datapacks or a live `server.properties` (it holds the RCON password).
 

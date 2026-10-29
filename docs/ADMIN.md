@@ -959,7 +959,7 @@ at the top of `tools/omens.py`; change them there, run `python tools/datapacks.p
 
 Players read changes in two places, with the same words in both:
 
-- **`site/changes.html`**, the "What changed" page on the site: newest first, one dated entry per update
+- **`site/src/content/changes.mdx`**, the "What changed" page on the site (`/changes`): newest first, one dated entry per update
   that players notice. It is the record a player can link to in an argument about a rule.
 - **`#changelog` in Discord**, an announcement channel nobody else posts in, on the day the change goes
   live, linking to the page.
@@ -969,7 +969,8 @@ needs, new wardrobe skins, config that changes play (the border, Netherite age, 
 and season dates. What stays out: server internals, fixes nobody could see, and anything that helps a
 cheater. Write it for players: what changed, from when, and what they have to do ("Update the modpack").
 
-When a release has a player-facing change, add its entry to `site/changes.html` in the same pull request
+When a release has a player-facing change, add its entry to `site/src/content/changes.mdx` in the same pull request (an `<Entry>` on top; the
+file's first lines say how)
 (`docs/MAINTAINING.md`, "Releasing"). A change made by hand on the live server (a rule ruling, a config
 edit) gets an entry the same day. The site deploys from `main` (`site/README.md`).
 

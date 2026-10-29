@@ -284,7 +284,7 @@ close to". At $12 (20% off) the three-month pass stretched that reading and earn
 passes: about $10.80, or $3.60 a month. Tebex can't change the price of a subscription already sold, so
 the prices were settled before the first sale (docs/adr/0008-pass-prices-settled-before-the-first-sale.md).
 
-A creator code (site/creators.html) pays its creator 20% of a three-month pass, and Tebex takes 1% more on
+A creator code (the site's /creators page) pays its creator 20% of a three-month pass, and Tebex takes 1% more on
 payments made with a code, which leaves about $9.70 ($3.24 a month). Codes are for finding players, not
 for paying the server.
 

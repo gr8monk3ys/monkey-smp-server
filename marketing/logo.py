@@ -11,7 +11,7 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "logo"
 
-# Palette. PEN, PAPER and INK are the site's (site/style.css); the fur and face tones are the mark's own.
+# Palette. PEN, PAPER and INK are the site's (site/src/app/style.css); the fur and face tones are the mark's own.
 PEN = "#184e35"
 PEN_DEEP = "#0f3524"
 PAPER = "#f9f8f5"

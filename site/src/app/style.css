@@ -1,0 +1,381 @@
+/* Monkey SMP: the monkey's own jungle, drawn in Minecraft's flat block language (DESIGN.md).
+ * Leaf green is the ground, bone is text, gold is action (a gold fill is always pressable), stone is reference.
+ * Every object is flat block colour with a stepped bevel, a 2 px outline and stepped pixel corners (the
+ * --frame-* images); nothing casts a shadow, glows or blurs, and motion steps instead of gliding. */
+
+@font-face {
+  font-family: "Pixelify Sans Monkey";
+  src: url("/fonts/pixelify-sans-monkey-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson-next-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/fonts/atkinson-mono-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+:root {
+  --shade: #0e3122;   /* deepest: counters, the footer */
+  --ground: #133f2b;  /* the page */
+  --leaf: #184e35;    /* the logo's tile: the pricing band */
+  --leaf-2: #1f6142;  /* the canopy */
+  --leaf-3: #2b7a4b;
+  --bone: #f9f8f5;    /* headings and strong text, from the wordmark */
+  --bone-2: #e2dcce;  /* body text */
+  --sage: #b3dcbf;    /* secondary text, a pale leaf */
+  --gold: #e8b23a;    /* action, from "SMP" */
+  --gold-hi: #f3cb6b;
+  --ink: #1a1f23;     /* outlines; text on gold and stone */
+  --ink-2: #2e3530;   /* secondary text on stone */
+  --stone: #b6bcad;   /* reference: the address plaque, the rule tablets */
+  --ring: var(--bone);
+
+  --display: "Pixelify Sans Monkey", sans-serif;
+  --body: "Atkinson Hyperlegible Next", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", monospace;
+  --wide: 76rem;
+  --measure: 32em;  /* about 70 characters of Atkinson a line */
+  --gutter: max(16px, calc((100% - var(--wide)) / 2));
+
+  /* Block frames for border-image (14 x 14, sliced 6 px): outline, fill, light top row, dark bevel. */
+  --frame-gold: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f3cb6b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-gold-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23f0bf52' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f8d98a' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-gold-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c98f1f' d='M4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-bone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E");
+  --frame-bone-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  --frame-stone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23b6bcad' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c9cec1' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23959b8e' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-leaf: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%232b7a4b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23184e35' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-shade: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%230e3122' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  --frame-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231a1f23' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  --frame-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E");
+  --moss: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M0 0h32v2H0zM0 2h6v2H0zM10 2h4v2h-4zM18 2h8v2h-8zM2 4h2v2H2zM20 4h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M6 2h2v2H6zM28 2h2v2h-2zM12 4h2v4h-2zM22 4h2v4h-2zM2 6h2v2H2z'/%3E%3C/svg%3E");
+  /* The same two-step corner as a clip, for pictures: the outer edge, and the picture inside a 2 px outline. */
+  --stair: polygon(0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 2px,
+    calc(100% - 2px) 2px, calc(100% - 2px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px),
+    calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 4px 100%,
+    4px calc(100% - 2px), 2px calc(100% - 2px), 2px calc(100% - 4px), 0 calc(100% - 4px));
+  --stair-in: polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px,
+    100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%,
+    2px calc(100% - 2px), 0 calc(100% - 2px));
+  --icon-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M4 0h2v10H4zM0 4h10v2H0z'/%3E%3C/svg%3E");
+  --icon-minus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath d='M0 4h10v2H0z'/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html {
+  scroll-padding-top: 24px;
+  scrollbar-color: var(--leaf-3) var(--shade);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--bone-2);
+  font: 400 1.0625rem/1.6 var(--body);
+  caret-color: var(--gold);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--gold); color: var(--ink); }
+::-webkit-scrollbar { width: 14px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--shade); }
+::-webkit-scrollbar-thumb { background: var(--leaf-3); border: 3px solid var(--shade); }
+
+a { color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+a:hover { color: var(--gold-hi); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+code { font: 500 0.94em/1.3 var(--mono); color: var(--bone); }
+p { margin: 0 0 1em; }
+[hidden] { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+h1, h2, h3 { color: var(--bone); margin: 0 0 0.5em; text-wrap: balance; }
+h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.04; }
+h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); }
+h2 { font-size: clamp(2.1rem, 4.2vw, 3.4rem); margin-bottom: 0.55em; }
+h3 { font: 700 1.3rem/1.2 var(--display); }
+
+.skip { position: absolute; left: -999px; top: 16px; z-index: 10; }
+.skip:focus {
+  left: 16px; padding: 6px 12px; color: var(--ink); font-weight: 700; text-decoration: none;
+  background: var(--gold) padding-box; border: 6px solid transparent; border-image: var(--frame-gold) 6 fill / 6px;
+}
+
+/* Buttons: gold blocks for actions, bone outlines beside them. Pressing one pushes it down a pixel onto
+ * its bevel; there is no easing to watch. */
+.button, button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: 0 18px; margin: 0;
+  font: 700 1.0625rem/1.1 var(--body); color: var(--ink); text-decoration: none; text-align: center;
+  background: var(--gold) padding-box; cursor: pointer;
+  border: 6px solid transparent; border-image: var(--frame-gold) 6 fill / 6px;
+}
+.button:hover, button:hover { color: var(--ink); border-image-source: var(--frame-gold-hover); }
+.button:active, button:active { border-image-source: var(--frame-gold-down); transform: translateY(2px); }
+.button.ghost { color: var(--bone); background: none; border-image-source: var(--frame-bone); }
+.button.ghost:hover { border-image-source: var(--frame-bone-hover); }
+.button.ghost:active { transform: translateY(2px); }
+
+/* The canopy: the nav sits in a band of leaves whose blocks hang over the top of the page. */
+.canopy {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 32px;
+  padding: 14px var(--gutter) 10px;
+  background: var(--leaf-2);
+}
+.canopy::after, .crown::before {
+  content: ""; position: absolute; left: 0; right: 0; height: 48px; pointer-events: none;
+  background: url("/img/canopy.svg") 0 0 / 256px 48px repeat-x;
+}
+.canopy::after { top: 100%; }
+.brand { display: block; line-height: 0; }
+.brand img { height: 48px; width: auto; image-rendering: pixelated; }
+.canopy nav { display: flex; flex-wrap: wrap; gap: 2px; margin-right: -10px; }
+.canopy nav a {
+  padding: 10px; color: var(--bone); font-weight: 700; text-decoration: none;
+}
+.canopy nav a:hover { color: var(--bone); text-decoration: underline; text-underline-offset: 6px; }
+
+/* A section crowned with leaves: a strip of the canopy colour with blocks hanging from it. */
+.crown { position: relative; border-top: 16px solid var(--leaf-2); }
+.crown::before { top: 0; }
+
+main > section, footer { padding: 112px var(--gutter); }
+.note { max-width: var(--measure); font-size: 1.125rem; }
+.small { color: var(--sage); font-size: 0.95rem; }
+
+/* First screen: the hook across the top, what the server is beside the launch counting down, then the
+ * address and the two ways in; the trailer starts at the fold. The monkey peers out of the leaves. */
+.hero {
+  position: relative; display: grid; align-items: start; column-gap: 64px; padding-top: 96px; padding-bottom: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "hook hook" "lede launch" "ways ways" "trailer trailer";
+}
+.monkey {
+  position: absolute; z-index: 1; top: -64px; right: var(--gutter);
+  width: 224px; height: 224px; image-rendering: pixelated;
+}
+.hero h1 { grid-area: hook; margin-bottom: 0.45em; }
+.lede { grid-area: lede; max-width: var(--measure); margin: 0; font-size: 1.2rem; color: var(--bone-2); }
+
+.launch { grid-area: launch; }
+.launch .when { margin: 0; font-size: 1.125rem; color: var(--bone-2); }
+#launch-label { display: block; margin-bottom: 4px; font: 700 1.6rem/1.15 var(--display); color: var(--bone); }
+.counter { display: flex; flex-wrap: wrap; gap: 12px 14px; margin: 14px 0 10px; }
+.counter .cell { display: grid; justify-items: center; gap: 6px; }
+.counter b {
+  display: block; overflow: hidden; min-width: 84px; padding: 4px 8px 2px;
+  font: 700 2.75rem/1 var(--display); color: var(--gold); text-align: center; font-variant-numeric: tabular-nums;
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.counter i { display: block; font-style: normal; }
+.counter .unit { font-size: 0.9rem; font-weight: 700; color: var(--sage); }
+#countdown { margin: 0; color: var(--sage); }
+
+/* The signature moment: a digit that changes drops into its block like a placed block, in four steps. */
+.counter i.drop { animation: drop 320ms steps(4, end) backwards; }
+.counter .cell:nth-child(2) i.drop { animation-delay: 80ms; }
+.counter .cell:nth-child(3) i.drop { animation-delay: 160ms; }
+@keyframes drop { from { transform: translateY(-100%); } }
+
+/* The same move on scroll: a block of a [data-place] list that starts below the fold waits out of sight
+ * (.unplaced, set by the Place component) and drops into place in three steps as it comes into view (.placed). In-page
+ * links scroll there instead of jumping. Neither happens for visitors who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .unplaced { opacity: 0; }
+  .placed { animation: place 240ms steps(3, end) backwards; }
+}
+@keyframes place { from { transform: translateY(-18px); } }
+
+.ways { grid-area: ways; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; margin-top: 36px; }
+.plaque {
+  --ring: var(--ink);
+  display: inline-grid; grid-template-columns: minmax(0, auto) auto; align-items: center; gap: 0 18px;
+  max-width: 100%; padding: 6px 4px 8px 12px; color: var(--ink);
+  background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+}
+.plaque > span { font-size: 0.875rem; font-weight: 700; color: var(--ink-2); }
+.plaque code { grid-column: 1; font-size: 1.25rem; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.plaque button { grid-column: 2; grid-row: 1 / span 2; min-height: 48px; min-width: 96px; }
+.cta { display: flex; flex-wrap: wrap; gap: 14px; }
+
+/* Pictures sit in the same outline as everything else, and each says where it was taken. */
+.shot { position: relative; padding: 2px; background: var(--ink); clip-path: var(--stair); }
+.shot > img, .shot > video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover;
+  background: var(--shade); clip-path: var(--stair-in);
+}
+.where, .tag {
+  display: inline-block; padding: 0 6px; font: 700 0.8125rem/1.5 var(--body); color: var(--bone);
+  background: var(--ink) padding-box; border: 6px solid transparent; border-image: var(--frame-ink) 6 fill / 6px;
+}
+.where { position: absolute; z-index: 1; top: 12px; left: 12px; }
+figure { margin: 0; }
+figcaption { margin-top: 12px; color: var(--sage); max-width: var(--measure); }
+
+.trailer { grid-area: trailer; margin-top: 64px; }
+
+/* The world: what you get, read as a two-column field guide beside the heading; where a feature has a hard
+ * number, the number leads it. */
+#world { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); gap: 24px 64px; }
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
+.features .fig { margin: 0 0 8px; font: 700 2.25rem/1 var(--display); color: var(--bone); }
+.features h3 { margin-bottom: 0.4em; }
+.features p { margin: 0; max-width: var(--measure); }
+
+.gallery { display: grid; gap: 32px 20px; margin-top: 40px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.gallery figure { grid-column: span 2; }
+.gallery figure:first-child { grid-column: span 4; grid-row: span 2; }
+
+/* Three steps in; the numbers are the order you do them in. */
+.steps { list-style: none; margin: 40px 0 0; padding: 0; display: grid; gap: 40px 48px; grid-template-columns: repeat(3, minmax(0, 1fr)); counter-reset: step; }
+.steps li { counter-increment: step; }
+.steps li::before {
+  content: counter(step); display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 20px;
+  font: 700 2.5rem/1 var(--display); color: var(--gold);
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.steps p { margin: 0; }
+
+/* Pricing: one pass, the same for everyone, as the one solid block; the tiers beside it only change how you
+ * look, so they are drawn as an outline. */
+#pricing { background: var(--leaf); padding-top: 128px; }
+.plans { display: grid; gap: 24px; margin-top: 40px; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+.panel {
+  display: flex; flex-direction: column; padding: 22px 26px 28px;
+  background: var(--leaf-2) padding-box; border: 6px solid transparent; border-image: var(--frame-leaf) 6 fill / 6px;
+}
+.panel.support { background: none; border-image: var(--frame-line) 6 / 6px; }
+.panel h3 { font-size: 1.6rem; }
+.price { margin: 8px 0 4px; font: 700 clamp(3.5rem, 7vw, 5rem)/1 var(--display); color: var(--bone); }
+.price span { font: 700 1.125rem var(--body); color: var(--sage); }
+.alt { color: var(--sage); font-weight: 700; }
+.needs { padding: 14px 0; margin: 0 0 18px; border-block: 2px solid var(--leaf); font-size: 0.975rem; }
+.panel ul { margin: 0 0 18px; padding-left: 1.1em; }
+.panel li { margin-bottom: 4px; }
+.panel li::marker { color: var(--gold); }
+.panel .button { align-self: flex-start; margin-top: 8px; }
+.tag { margin-left: 8px; vertical-align: middle; font-family: var(--body); }
+.tiers { width: 100%; margin: 4px 0 22px; border-collapse: collapse; }
+.tiers th, .tiers td { padding: 14px 0; text-align: left; vertical-align: top; border-top: 2px solid var(--leaf); }
+.support .tiers th, .support .tiers td { border-top-color: var(--leaf-2); }
+.tiers th { padding-right: 20px; white-space: nowrap; font: 700 1.25rem/1.2 var(--display); color: var(--bone); }
+.tiers th span { display: block; margin-top: 4px; font: 700 0.95rem var(--body); color: var(--sage); }
+.extras { display: grid; gap: 40px 56px; margin-top: 64px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ladder { list-style: none; margin: 0 0 18px; padding: 0; }
+.ladder li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 12px 0; border-top: 2px solid var(--leaf-2); }
+.ladder li:last-child { border-bottom: 2px solid var(--leaf-2); }
+.ladder b { font: 700 1.25rem/1.2 var(--display); color: var(--bone); }
+
+/* Rules carved as stone tablets, in columns, each as tall as its rule, with moss along the top. */
+.rules { list-style: none; margin: 40px 0 0; padding: 0; columns: 3 19rem; column-gap: 20px; }
+/* The creators' terms: what you earn leads across the top, the other six pair up in rows, so no column
+ * ends a tablet short. */
+.rules.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; columns: auto; }
+.rules.terms li { margin: 0; }
+.rules.terms li:first-child { grid-column: 1 / -1; }
+.rules.terms li:first-child p { max-width: var(--measure); }
+.rules li {
+  --ring: var(--ink);
+  position: relative; break-inside: avoid; margin: 0 0 20px; padding: 18px 20px 22px; color: var(--ink);
+  background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+}
+.rules li::before {
+  content: ""; position: absolute; top: -4px; left: -2px; right: -2px; height: 8px;
+  background: var(--moss) 0 0 / 32px 8px repeat-x;
+}
+.rules h3 { color: var(--ink); }
+.rules p { margin: 0; }
+.rules a { color: var(--ink); }
+.rules + .small { max-width: var(--measure); margin-top: 12px; }
+
+/* Questions: rows that open; the marker is a drawn pixel plus. */
+.faq { display: grid; gap: 0 56px; margin-top: 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+details { border-top: 2px solid var(--leaf-2); }
+summary {
+  display: flex; justify-content: space-between; gap: 16px; padding: 18px 0; cursor: pointer; list-style: none;
+  font: 700 1.125rem/1.35 var(--body); color: var(--bone);
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: ""; flex: none; width: 12px; height: 12px; margin-top: 6px; background: var(--gold);
+  -webkit-mask: var(--icon-plus) center / 12px 12px no-repeat; mask: var(--icon-plus) center / 12px 12px no-repeat;
+}
+details[open] summary::after { -webkit-mask-image: var(--icon-minus); mask-image: var(--icon-minus); }
+summary:hover { color: var(--gold-hi); }
+details p { margin: -4px 0 20px; max-width: var(--measure); }
+
+/* Press kit: each image at a whole-number scale of its pixels. */
+.kit { display: grid; gap: 40px; margin-top: 40px; justify-items: start; }
+.kit img { display: block; max-width: 100%; height: auto; image-rendering: pixelated; }
+.kit .plate {
+  box-sizing: content-box; width: 348px; max-width: calc(100% - 56px); padding: 22px 16px;
+  background: var(--ink) padding-box; border: 6px solid transparent; border-image: var(--frame-ink) 6 fill / 6px;
+}
+.kit .wide { width: 640px; image-rendering: auto; }
+
+footer { position: relative; padding-top: 112px; padding-bottom: 64px; background: var(--shade); }
+footer p:first-child a { color: var(--bone); font-weight: 700; }
+footer p:first-child a:hover { color: var(--gold-hi); }
+footer .small { margin: 0; }
+
+@media (max-width: 960px) {
+  #world { grid-template-columns: 1fr; }
+  .plans, .extras { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; max-width: 40rem; }
+  .monkey { width: 160px; height: 160px; top: -48px; }
+}
+
+@media (max-width: 760px) {
+  .rules.terms { grid-template-columns: minmax(0, 1fr); }
+  .canopy { padding-top: 12px; padding-bottom: 6px; }
+  .canopy::after, .crown::before { height: 36px; background-size: 192px 36px; }
+  .brand img { height: 32px; }
+  .canopy nav { width: calc(100% + 10px); margin: 0 -5px; gap: 0; }
+  .canopy nav a { padding: 10px 5px; font-size: 1rem; }
+  main > section, footer { padding-top: 72px; padding-bottom: 72px; }
+  /* On a phone the countdown, the address and the two ways in come before the description, so they all
+   * fit on the first screen. */
+  .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "launch" "ways" "lede" "trailer"; }
+  .hero:has(.launch) .lede { margin-top: 32px; }
+  #pricing { padding-top: 88px; }
+  footer { padding-top: 88px; padding-bottom: 48px; }
+  .monkey { width: 96px; height: 96px; top: -28px; }
+  .lede { font-size: 1.125rem; }
+  .launch { margin-top: 20px; }
+  .ways { margin-top: 28px; }
+  /* The address gets its own full-width line, so it never breaks mid-name; Copy moves up beside the label. */
+  .plaque { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 6px 4px 10px 12px; }
+  .plaque code { grid-column: 1 / -1; grid-row: 2; font-size: 1.125rem; }
+  .plaque button { grid-row: 1; min-height: 44px; }
+  .counter b { min-width: 72px; font-size: 2.25rem; }
+  .features, .faq { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: 1fr; gap: 28px; }
+  .gallery figure, .gallery figure:first-child { grid-column: auto; grid-row: auto; }
+  .panel { padding: 18px 18px 24px; }
+  .tiers th { white-space: normal; }
+  .ladder li { grid-template-columns: 1fr; gap: 2px; }
+  .trailer { margin-top: 48px; }
+}
+
+/* The front page's seven links stay on one line down to a 360 px phone. */
+@media (max-width: 420px) {
+  .canopy nav a { padding-inline: 3px; }
+}
+@media (max-width: 380px) {
+  .canopy nav a { font-size: 0.875rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .counter i.drop { animation: none; }
+  .button:active, button:active, .button.ghost:active { transform: none; }
+}

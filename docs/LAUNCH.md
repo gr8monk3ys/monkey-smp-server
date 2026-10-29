@@ -10,11 +10,12 @@ the first weekly event). Every date below is Pacific time. Daylight saving time 
 Every Discord, Reddit and server-list text here and in docs/PROMOTION.md is a **draft**. Nothing is posted,
 pinned, submitted or sent until an owner has read it and said yes.
 
-The launch time lives in one place, `LAUNCH_AT` in `site/config.js`. `python tools/site_links.py` writes it
-into the site (the hero, the "Season I launch" rule, and the description that link previews show), and the
+The launch time lives in one place, `LAUNCH_AT` in `site/config.json`. The site's build writes it into the
+pages (the hero, the "Season I launch" rule, and the description that link previews show), and the
 front page adds the visitor's own time and a countdown, then says "Season I is live" once it has passed. To
-move the launch: change `LAUNCH_AT`, run the tool, and change the dates in this file, in the Season I
-calendar (docs/SEASONS.md) and in the drafts (docs/PROMOTION.md, "Season I launch announcements").
+move the launch: change `LAUNCH_AT` and `tools/season_calendar.py`'s launch (a test holds them together), and
+change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in the drafts
+(docs/PROMOTION.md, "Season I launch announcements").
 
 ## The dates
 
@@ -55,9 +56,8 @@ order and the dates.
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
   approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
   `STORE_URL` is empty.
-- [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.js`, then
-  `python tools/site_links.py`) and leave it unmerged. It merges **at 5 PM on launch day** (launch day,
-  below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
+- [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.json`) and
+  leave it unmerged. It merges **at 5 PM on launch day** (launch day, below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
   arranged in the Discord, which stays true. Site-only pull requests are fine during the release freeze.
 - [ ] **Keep the storefront's address to staff until it merges.** A pass bought there goes on the whitelist
   within a minute, and that player could walk into the world before everyone else. Staff check the whitelist
@@ -74,8 +74,8 @@ before turning it on for everyone.
 - [ ] **The same day, cancel the trial** on Tebex's payment history page and check `whitelist remove` ran.
   No money changes hands if it's cancelled inside the 7 days.
 - [ ] **Thu 5 Nov: decide.** Trials go on only if all three checks passed. Then add the FAQ answer from
-  docs/LIVE.md to `site/index.html` in its own small pull request, and add the trial line to the T-1 and
-  launch announcements (docs/PROMOTION.md). If the whitelist waited for the first charge, leave trials off
+  docs/LIVE.md to the site (`faq` in `site/src/content/front.tsx`) in its own small pull request, and add
+  the trial line to the T-1 and launch announcements (docs/PROMOTION.md). If the whitelist waited for the first charge, leave trials off
   and plan an open-house evening in December instead (docs/LIVE.md).
 - [ ] If the store isn't approved in time, there is no trial at launch. Say nothing about one.
 

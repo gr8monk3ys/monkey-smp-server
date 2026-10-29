@@ -4,7 +4,7 @@
         right after the launch (`function realms:rules/launch`): where everyone's counts stood, so test play
         before it and what earlier seasons carried in don't count as this season's. An existing START.json
         is never replaced without --force (which keeps it as START.json.bak)
-    python tools/wrapped.py build WORLD --season 1 --standings DIR --start START.json --out site/wrapped/season-1
+    python tools/wrapped.py build WORLD --season 1 --standings DIR --start START.json --out site/public/wrapped/season-1
         [--opt-out FILE] [--launch 2027-02-20T17:00-08:00]
         after the finale: one page per player, an index, and the skins' pictures. Season I's launch is
         tools/season_calendar.py's; a later season gives its own with --launch (its weeks and dates count from it)
@@ -30,9 +30,11 @@ tiers are left out: the page is about play, and nobody's spending is shown.
 Players who don't want a page are named in FILE (one name a line, # for a comment): no page, not on the
 index, and their name is withheld where a Server First is listed; their play still counts in the totals and
 in how rare a skin is. Pages are marked noindex, so search engines leave them out; a link still works.
-The pages use the site's own style.css and fonts from two folders up, so --out is site/wrapped/season-<n>
-(served at /wrapped/season-<n>/). The pages are made in a folder beside it and swapped in at the end, so a
-failed build leaves the earlier run's; a folder holding anything an earlier run didn't write is refused.
+The pages use the site's own stylesheet (site/public/wrapped/site.css, a copy of src/app/style.css that
+tools/site_links.py keeps in step) and fonts from two folders up, so --out is site/public/wrapped/season-<n>
+(served at /wrapped/season-<n>/; the site's build copies public/ as it is). The pages are made in a folder
+beside it and swapped in at the end, so a failed build leaves the earlier run's; a folder holding anything an
+earlier run didn't write is refused.
 A closed standings week counts for the season week it was for, even when its close ran late.
 Stdlib only, and Python 3.10 or newer, so the VPS runs it straight from the checkout.
 """
@@ -57,8 +59,8 @@ from challenges import LAUNCHED
 from firsts import First
 from standings import BOUNTY, KILLS, folded, gained
 
-SITE = "https://monkeysmp.lscaturchio.xyz"    # site/index.html's og:url
-ROOT = "../../"                              # from site/wrapped/season-<n>/ back to site/
+SITE = "https://monkeysmp.lscaturchio.xyz"    # site/src/lib/config.ts's SITE_URL
+ROOT = "../../"                              # from site/public/wrapped/season-<n>/ back to site/public/
 GENERATOR = "tools/wrapped.py"               # in every page's generator meta: a re-run may replace those
 FINALE_WEEK = 11                             # docs/SEASONS.md: the finale is week 11, the world locks after it
 PLAY, DAYS, EVENTS, CHALLENGES = "rw.play", "rw.days", "rw.events", "rw.challenges"
@@ -321,7 +323,7 @@ def head(title: str, description: str, url: str) -> str:
   <link rel="icon" href="{ROOT}favicon.svg" type="image/svg+xml">
   <link rel="preload" href="{ROOT}fonts/pixelify-sans-monkey-bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{ROOT}fonts/atkinson-next-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{ROOT}style.css">
+  <link rel="stylesheet" href="{ROOT}wrapped/site.css">
   <link rel="stylesheet" href="wrapped.css">
 </head>
 <body class="wrapped">
@@ -341,7 +343,7 @@ def head(title: str, description: str, url: str) -> str:
 
 def foot(links: dict[str, str], made: dt.date) -> str:
     def link(key: str, label: str) -> str:
-        """As site_links stamps the site's own pages: a link not set yet goes to the Discord, titled so."""
+        """As the site's own pages link (site_links.target): a link not set yet goes to the Discord, titled so."""
         if key not in links:
             return ""
         url, title = site_links.target(links, key)
@@ -538,7 +540,7 @@ def check_earlier_run(out: Path) -> None:
     if not out.exists():
         return
     if not out.is_dir():
-        raise SystemExit(f"{out} is a file: give a folder (site/wrapped/season-<n>)")
+        raise SystemExit(f"{out} is a file: give a folder (site/public/wrapped/season-<n>)")
     pages = [p for p in out.glob("*.html")
              if f'content="{GENERATOR}"' in p.read_text(encoding="utf-8", errors="replace")]
     pictures = sorted((out / "skins").glob("*.png")) if (out / "skins").is_dir() else []
@@ -547,7 +549,7 @@ def check_earlier_run(out: Path) -> None:
     others = [p for p in found if p not in ours]
     if others:
         raise SystemExit(f"{out} holds {others[0].name}, which this tool didn't write: give an empty folder or the "
-                         "one an earlier run wrote (site/wrapped/season-<n>)")
+                         "one an earlier run wrote (site/public/wrapped/season-<n>)")
 
 
 def write(path: Path, data: str | bytes) -> None:
@@ -641,8 +643,7 @@ def build(world: Path, n: int, state: Path, start_file: Path | None, out: Path, 
         if c.slug in by_slug:
             raise SystemExit(f"{by_slug[c.slug]} and {c.name} would share the page {c.slug}.html: nothing written")
         by_slug[c.slug] = c.name
-    config = site_links.site() / "config.js"
-    links = site_links.load_links(config.read_text(encoding="utf-8")) if config.is_file() else {}
+    links = site_links.links()
 
     files: dict[str, str | bytes] = {"wrapped.css": CSS,
                                      "index.html": index_page(shown, everyone, claimed, hidden, n, season, links,
@@ -677,7 +678,7 @@ def main(argv=None) -> int:
     b.add_argument("--standings", type=Path, required=True, help="the standings folder (STANDINGS_DIR)")
     b.add_argument("--start", type=Path, help="the file `start` wrote at the launch")
     b.add_argument("--opt-out", type=Path, help="players who asked for no page, one name a line")
-    b.add_argument("--out", type=Path, required=True, help="site/wrapped/season-<n> in a checkout")
+    b.add_argument("--out", type=Path, required=True, help="site/public/wrapped/season-<n> in a checkout")
     args = ap.parse_args(argv)
     now = season_calendar.now()
     if args.command == "start":

@@ -1,0 +1,22 @@
+/* One update after another, each dated on a stone tag (in a rail on the left on a wide screen); the
+ * line to act on is bold, with a gold marker. */
+#updates { padding-top: 0; }
+.changes { max-width: var(--measure); margin-top: 40px; }
+.changes article { padding: 32px 0 36px; border-top: 2px solid var(--leaf-2); }
+.changes article:last-child { border-bottom: 2px solid var(--leaf-2); }
+.changes h3 { font-size: 1.5rem; margin-bottom: 0.7em; }
+.changes h3 time {
+  display: table; margin-bottom: 12px; padding: 0 6px; font: 700 0.875rem/1.5 var(--body); color: var(--ink);
+  background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+}
+.changes ul { margin: 0; padding-left: 1.1em; }
+.changes li { margin-bottom: 0.5em; }
+.changes li:last-child { margin-bottom: 0; }
+.changes li::marker { color: var(--sage); }
+.changes .todo { color: var(--bone); font-weight: 700; }
+.changes .todo::marker { color: var(--gold); }
+@media (min-width: 960px) {
+  .changes { max-width: calc(10rem + 40px + var(--measure)); }
+  .changes article { position: relative; padding-left: calc(10rem + 40px); }
+  .changes h3 time { position: absolute; left: 0; top: 30px; margin: 0; }
+}

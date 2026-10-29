@@ -209,13 +209,19 @@ def test_a_later_season_takes_its_dates_from_its_launch_not_the_start(tmp_path, 
 
 
 def test_the_pages_point_at_the_sites_own_files():
+    # The pages sit in site/public/wrapped/season-<n>/: two folders up is what the site serves, a file from
+    # site/public/ or one of its pages, built as <page>.html (site/src/app/<page>/page.tsx), so the links work on
+    # any static server as well as on Vercel, where clean URLs redirect them.
     site = REPO.root / "site"
-    index = (site / "index.html").read_text(encoding="utf-8")
-    assert f'<meta property="og:url" content="{wrapped.SITE}/">' in index
+    config = (site / "src" / "lib" / "config.ts").read_text(encoding="utf-8")
+    assert f'SITE_URL = "{wrapped.SITE}"' in config
     page = wrapped.head("t", "d", "u") + wrapped.foot({}, dt.date(2027, 1, 17))
-    for ref in re.findall(r'(?:href|src)="\.\./\.\./([^"#]*)', page):
-        assert (site / ref).exists() if ref else True, ref
-    assert (site / "img" / "og.jpg").is_file()
+    refs = re.findall(r'(?:href|src)="\.\./\.\./([^"#]*)', page)
+    assert "wrapped/site.css" in refs and "changes.html" in refs
+    for ref in refs:
+        page = site / "src" / "app" / ref.removesuffix(".html") / "page.tsx"
+        assert (site / "public" / ref).is_file() or page.is_file(), ref
+    assert (site / "public" / "img" / "og.jpg").is_file()
     assert wrapped.slug("Steve_01") == "steve_01" and wrapped.slug(".bedrock").startswith("player-")
     assert [wrapped.ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101)] == [
         "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]

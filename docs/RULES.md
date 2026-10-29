@@ -1,7 +1,7 @@
 # Monkey SMP: Season I rules
 
-The full rulebook, for `#smp-rules` in the Discord. The website (`site/index.html`, "Rules") shows the
-short version; when a rule changes, change both. Rule numbers follow the owners' rulebook, so "rule 35"
+The full rulebook, for `#smp-rules` in the Discord. The website (the front page's "Rules", from
+`site/src/content/rules.tsx`) shows the short version; when a rule changes, change both. Rule numbers follow the owners' rulebook, so "rule 35"
 means the same thing everywhere.
 
 Hosted by Diego A. Scaturchio and Lorenzo D. Scaturchio.

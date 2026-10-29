@@ -16,13 +16,13 @@ this folder, so a change is an edit and a re-run, not a redraw.
 | `logo/png/` | `mark-512/256/128/64.png`, `logo-696w/1392w.png`, `logo-stacked-704w.png` (transparent). |
 | `server-icon.png` | 64 x 64 Minecraft server-list icon. Copy it next to `server.properties` on the live server. |
 | `banners/` | The two small banners: `server-list-468x60.png` and `discord-banner-960x540.png`. |
-| `build.py` | Renders `logo/png`, `server-icon.png`, every banner and `site/img/og.jpg`. |
+| `build.py` | Renders `logo/png`, `server-icon.png`, every banner and `site/public/img/og.jpg`. |
 | `music.py` | Synthesises the trailer music (numpy + scipy, no samples). |
 | `trailer.py` | Renders the trailer: Pillow frames piped into ffmpeg, with the music. |
 
-The site also uses `site/img/og.jpg` (Open Graph / Twitter card, wired into `site/index.html`) and
-`site/img/icon-256.png` (apple-touch-icon).
-`site/media/` holds the 720p trailer and its poster (the logo-reveal frame), and `site/kit/` copies of the
+The site also uses `site/public/img/og.jpg` (Open Graph / Twitter card, set in `site/src/app/page.tsx`) and
+`site/public/img/icon-256.png` (apple-touch-icon).
+`site/public/media/` holds the 720p trailer and its poster (the logo-reveal frame), and `site/public/kit/` copies of the
 logo PNGs and both banners for the site's "Spread the word" section. Copy them again after a re-export.
 
 ## Kept out of git
@@ -32,7 +32,7 @@ The big renders live in `D:\DevData\monkey-smp-marketing\out\` (override with `M
 - `monkey-smp-trailer-1080p.mp4`: the trailer, 1920 x 1080, 30 fps, 60 s, H.264 + AAC, -14 LUFS.
 - `trailer-music.wav`: its music on its own.
 - `discord-invite-splash-1920x1080.png`, `youtube-header-2560x1440.png`, `twitter-header-1500x500.png`,
-  `og-1200x630.png` (PNG master of `site/img/og.jpg`), plus copies of everything in the repo.
+  `og-1200x630.png` (PNG master of `site/public/img/og.jpg`), plus copies of everything in the repo.
 
 The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketing\footage\` (`build`,
 `raid`, `arena`, `cup`, `wardrobe`, each a 1080p30 mp4). It was filmed on the photo server with Carpet
@@ -40,7 +40,7 @@ fake players acting out each event through the real `realms:events` functions, s
 sidebar and wardrobe items are what players will see. It is staged, not a recording of a real event.
 
 Fonts sit in `D:\DevData\monkey-smp-marketing\fonts\`; the screenshots are the full-size originals in
-`D:\DevData\realms-photos\shots\` (override with `MONKEY_SHOTS`; `site/img` has smaller copies).
+`D:\DevData\realms-photos\shots\` (override with `MONKEY_SHOTS`; `site/public/img` has smaller copies).
 
 ## Look
 
@@ -73,7 +73,7 @@ Needs Python 3.11 with Pillow, numpy and scipy, Inkscape 1.4 on `PATH` (it raste
 
 Text lives in the scripts: taglines and the address at the top of `build.py`, the trailer's sections
 (screenshot, pan, kicker, headline, sub) in `SECTIONS` in `trailer.py`, the Discord invite in `DISCORD`.
-Keep the facts in step with `site/index.html` and `docs/RULES.md`.
+Keep the facts in step with the site (`site/src/app/page.tsx`, `site/src/content/`) and `docs/RULES.md`.
 
 ## Trailer
 

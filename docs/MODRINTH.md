@@ -30,7 +30,7 @@ yet: it waits for Modrinth's answer on paid access (below), and the owner hasn't
 6. **The server listing.** Once that's settled, create it from [The server listing](#the-server-listing). The next
    `tools/modrinth.py` run points it at the newest version.
 
-Then set `MODPACK_URL` in `site/config.js` to `https://modrinth.com/modpack/monkeysmp` once the project is
+Then set `MODPACK_URL` in `site/config.json` to `https://modrinth.com/modpack/monkeysmp` once the project is
 approved (a draft page is a 404 for everyone else).
 
 ## Publishing a version
@@ -139,7 +139,7 @@ Run by Diego and Lorenzo Scaturchio.
 
 ### Gallery
 
-From `site/img/` (in-game screenshots, the site's captions). The first is the banner image.
+From `site/public/img/` (in-game screenshots, the site's captions). The first is the banner image.
 
 | File | Title | Description |
 |---|---|---|

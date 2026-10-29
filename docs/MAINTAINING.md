@@ -11,7 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`) | `python tools/datapacks.py` |
+| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`) | `python tools/datapacks.py` |
 | `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
@@ -44,12 +44,13 @@ lives in a few modules they share:
 | `tools/local_ci.py` | CI on a maintainer's machine: checks a PR's head in a temporary worktree with checks.py and posts a `local-ci` commit status through `gh` (see "Tests") |
 
 | `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the realms namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `realms-standings` pack, and the week's lines for the Sunday post (`report`) |
+| `tools/outposts.py` | outposts (`docs/SEASONS.md`): their spots in the newest border ring from the saved world (as drops picks its spots), the `realms-outposts` pack that checks the ground and runs the captures by faction number, the live map's marker set, and what standings asks of it: a week's `baseline`, `hours` held and their `points`. `recap_lines` is an "outposts this week" section for a Sunday recap. Run hourly by `deploy/realms-outposts.sh`; Python 3.10, no tomllib |
 
 ### The faction number in game
 
 Data packs can't see Open Parties and Claims' parties, so `tools/diplomacy.py` gives each party a number and
-writes it in game. Anything in a pack that needs "which faction is this player in" (war and pacts now,
-outposts next) reads it here rather than asking the parties:
+writes it in game. Anything in a pack that needs "which faction is this player in" (war and pacts and
+outposts) reads it here rather than asking the parties:
 
 | Where | What |
 |---|---|
@@ -66,6 +67,8 @@ outposts next) reads it here rather than asking the parties:
   read it back from the saved world.
 - A pack that keeps a score per faction holds it as `#f<N>` and should end what it holds for a faction whose
   `names.f<N>` is gone (the sync runs `realms:diplomacy/dissolve` for war and pacts before it removes one).
+  Rather than test all the numbers in a function, check the ones it holds (outposts does this for each held
+  outpost each minute) or let its Python job reset the rest from the saved storage (outposts' minutes, hourly).
 - The sync sends its changes many to an RCON command: a list in storage `realms:diplomacy batch` that
   `realms:diplomacy/batch/run` makes in order, each the function `realms:diplomacy/<f>` with its entry.
 - None of it starts with `rw.`, so `tools/season.py` carries none of it into a new world.

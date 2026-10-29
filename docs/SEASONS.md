@@ -168,10 +168,11 @@ faction that never wins an event still has a column it can lead.
 | Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
 | Kills | PvP kills by its members this week, outside the event arena; a war enemy's count twice (War and pacts, below) | 20 |
 | Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
+| Outposts | +1 for each whole hour the faction held an outpost this week, at most 20 (Outposts, below) | |
 
 Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
 the faction with the most land gets 20, one with half as much gets 10. Add the columns up and the bounties
-on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
+and outpost hours on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
 7 chunks (the most), Strength 7 (the most) and 4 kills to the Blue Herons' 6: 40 + 20 + 20 + 13 = 93, and
 98 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
 the factions share the rank. Strength below zero counts as zero.
@@ -244,6 +245,39 @@ record who is with whom.
 
 `tools/diplomacy.py` makes it, inside the `realms-standings` data pack. It needs no timer of its own: the
 standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
+
+### Outposts
+
+Four capture points out in the newest land, so factions have somewhere to meet between events.
+
+- **Where.** One in each quarter of the newest border ring: North, East, South and West of the border's
+  centre. Before the first border act that is past 400 blocks from spawn; after one, only the land it added.
+  Each stands on dry ground, 6 or more chunks from every claim. They are placed within the hour after the
+  launch, and again within the hour after each border act has finished growing.
+- **Taking one.** Stand inside its square (25 blocks across, from 8 under the ground to 24 over it) with
+  your faction and nobody from another faction for 60 seconds. Two factions inside: it is contested, and the
+  count waits. Everyone leaves: the attempt ends. The holder's members are told when someone starts, and
+  everyone is told when it falls. A text over it says who holds it, and particles mark its corners.
+- **Who counts.** Players in survival with a faction number: in a party the hourly board run has picked up
+  (War and pacts, "New and gone factions"). A player in no party, or in one made since the last board run,
+  can't take one and doesn't block one. Players in the event arena don't count.
+- **Points.** Each minute a faction holds an outpost while a survival player of another faction is online
+  counts. Each whole hour of those this week is +1 standings point, at most 20 a week, on top of the 100
+  (the Outposts row above). Holding all four for an hour is four hours. Nothing else is given: no items, no
+  effects.
+- **Moves.** A claim made within 3 chunks of an outpost moves it to a new spot in its quarter within the
+  hour; its holder keeps it. After a border act all four move out to the new ring and start with no holder;
+  hours already earned stay.
+- **Where it shows.** `/trigger outposts` lists each one, where it is, who holds it, whether someone is
+  taking it, and your faction's hours this season. The live map has an "Outposts" marker set with the four
+  spots (not the holders: those change too often).
+- **Restarts** keep the holders, the attempts' counts and the hours (scores and storage are saved with the
+  world). Test play before the launch counts for nothing: the launch clears it.
+- **Feeding** an outpost to a friendly faction, or trading one back and forth for hours, is exploit B13, as
+  feeding kills is: staff free it and take the hours back (docs/ADMIN.md, "Outposts").
+
+`tools/outposts.py` places them and makes the `realms-outposts` data pack; `deploy/realms-outposts.sh` runs
+every hour on the VPS (docs/LIVE.md). Staff commands are in docs/ADMIN.md.
 
 ### The pillar events
 
@@ -678,6 +712,11 @@ Built:
 - Season Wrapped ("Ending a season", after step 8): `tools/wrapped.py` makes a page per player about their
   season for the site, from the final world, the standings' closed weeks and a starting point kept at the
   launch, with an opt-out list. Tried on made-up worlds only, not a real season's.
+
+- Outposts ("Outposts"): `tools/outposts.py`, the `realms-outposts` data pack and `deploy/realms-outposts.sh`
+  with its hourly timer. Four capture points in the newest border ring, 6 or more chunks from every claim, 60
+  seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
+  the live map. Checked by the unit tests and the generated packs' checks only: not yet tried in game.
 
 Not built:
 

@@ -30,6 +30,12 @@
 - Each faction now has a number in game (`st.faction`, `st.leader`, storage `realms:factions`), written by
   the standings' hourly board run, for packs that need to tell factions apart (docs/MAINTAINING.md, "The
   faction number in game").
+- **Outposts** (docs/SEASONS.md, "Outposts"): four capture points out in the newest border ring, one in each
+  quarter, 6 or more chunks from every claim. Stand in one with your faction and nobody else for 60 seconds to
+  take it; a text over it says who holds it. Each hour your faction holds one while another faction is online
+  is +1 weekly standings point, at most 20 a week, on top of the usual columns. Nothing is given. They move out
+  after each border act, and show on the live map. `/trigger outposts` lists them. From the launch on, in the
+  new `realms-outposts` data pack (`tools/outposts.py`), placed by a new hourly timer on the VPS.
 
 ### Changed
 

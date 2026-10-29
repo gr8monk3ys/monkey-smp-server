@@ -103,7 +103,7 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Timed job**:
-A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops (every 10 minutes) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops (every 10 minutes), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
 
 ## Lifecycle
@@ -170,3 +170,7 @@ _Avoid_: raid (that is the event), feud
 **Pact**:
 An agreement between two factions, made in game, that neither declares war on the other until one leader breaks it. At most 2 per faction. Not an Open Parties and Claims ally: allies share claims, a pact doesn't.
 _Avoid_: alliance (rule 31's word, for the relationship itself), treaty
+
+**Outpost**:
+One of four capture points in the newest border ring (North, East, South, West). A faction takes one by being alone inside it for 60 seconds, and each hour it holds one is a weekly standings point (at most 20). `tools/outposts.py` places them.
+_Avoid_: KOTH (that is the staff event), point, flag (that is Faction Raid's)

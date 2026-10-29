@@ -199,8 +199,8 @@ These carry over from the server's earlier rulebook.
 - **No real-money trading.** Don't buy or sell items, land, Strength or accounts for real money, gift
   cards or crypto.
 - **Keep it all-ages.** Names, skins, signs, banners, builds and chat stay free of sexual or hateful content.
-- **In the Discord:** questions before buying go in `#smp-faq`; suggestions, bugs, recruitment and trading
-  go in `#smp-forum`; payment problems, reports and appeals go in a ticket. No spam or mass pings.
+- **In the Discord:** `#smp-faq` has the answers but is read-only, so questions before buying go in
+  `#smp-forum` or a ticket; suggestions, bugs, recruitment and trading go in `#smp-forum`; payment problems, reports and appeals go in a ticket. No spam or mass pings.
 - **Enforcement:** a warning, then a temporary ban (1 to 7 days), then a permanent ban. Cheating, hate and
   doxxing can skip straight to a ban. Admins decide edge cases.
 - **Appeals:** open a ticket (Front Desk) and say what happened, one appeal per decision. A different admin

@@ -1,8 +1,28 @@
 # Changelog
 
-## [Unreleased]
+## [2.10.0] - 2026-10-29
+
+The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the
+`monkey` command, the `monkey:` data pack namespace, the settings and the download names, not just from what
+players see. A server or world from before 2.10.0 has to be moved over once (below); players update the client
+pack, a small download (only the wardrobe's resource pack changed).
+
+### Changed
+
+- Every name is Monkey SMP: `monkey.sh`/`monkey.ps1` and the `monkey` command, the `monkey:` namespace and the
+  `monkey-*` data packs, the `.monkey-*` state files, `MONKEY_*` settings, the `MonkeySMP-Server`,
+  `MonkeySMP-Client` and `MonkeySMP-Player` downloads, and on the live VPS `/srv/monkey`, the `monkey` user,
+  `/etc/monkey-deploy.env` and the `monkey-*` timers. The Docker Compose project is `monkey-smp`.
+- The player installer moves an existing game folder from the old name to `%APPDATA%\.monkey-smp`, keeping
+  worlds, screenshots and settings, and replaces the old launcher profile with the "Monkey SMP" one.
 
 ### Added
+
+- `tools/migrate_names.py` moves a server folder from before 2.10.0 over: it renames the old-named files and
+  folders and swaps the names inside the world's saved data (scheduled functions, scores, tags, command storage,
+  the NPCs, every chunk) and the configs. Stop the server, back it up, then run it on the server package folder
+  (`--apply`; without it, it only lists what it would change). docs/LIVE.md, "Monkey SMP names (2.10.0)", has the
+  live VPS's steps.
 
 - **Monkey SMP news**: one plain line in the public Discord channel for a rare Server First (the Nether, a
   raid, a mace, a beacon, the Wither, the End, the dragon, an elytra, full Netherite), the first on the server

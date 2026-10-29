@@ -156,6 +156,28 @@ It reads no secrets from `/etc/monkey-deploy.env` and of `server.properties` onl
 line; its log is `/var/log/monkey-upgrade-2.5.0.log`. The off-site backups stay a manual step ("Backups off the
 machine"): they need keys the owner makes.
 
+### Monkey SMP names (2.10.0)
+
+Before 2.10.0 the server's folders, user, timers, settings file and data pack namespace had the server's old
+name. 2.10.0 renames all of them (CHANGELOG), so a VPS set up before it is switched over once, with the server
+stopped, before 2.10.0 deploys. In this order, as root:
+
+1. Stop and disable every old timer, the deploy timer first, so nothing deploys or sends commands mid-switch.
+2. Stop the server (`docker compose down` in the old `docker` folder: the Compose project's name changed too, so
+   the new one wouldn't stop the old container) and keep a copy of `server/`.
+3. Move the folders to `/srv/monkey/repo` and `/srv/monkey/MonkeySMP-Server`, rename the user and its group to
+   `monkey` (same uid, so the files keep their owner), its deploy key to `~/.ssh/monkey_deploy` (and in
+   `~/.ssh/config`), the settings file to `/etc/monkey-deploy.env` with its `REPO_DIR` and `LIVE_DIR` updated, and
+   `/var/lib/` state folders to their `monkey-` names.
+4. As `monkey`, check out 2.10.0 in the repo and move the world and the server folder over with
+   `python3 /srv/monkey/repo/tools/migrate_names.py /srv/monkey/MonkeySMP-Server` (lists the changes), then the
+   same with `--apply`.
+5. Remove the old units from `/etc/systemd/system`, install the `monkey-*` units for the same jobs from the
+   checkout, enable their timers, and start `monkey-deploy.service` once: it deploys 2.10.0 and starts the server.
+
+Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
+run `migrate_names.py` on it first.
+
 ### A new world for Season I (2.8.0)
 
 2.8.0's structures and its new End (Dungeons and Taverns, Crazy Chambers, Endercon, Qrafty's End Villages) only

@@ -397,7 +397,8 @@ function realms:npcs/crier/remove                              # near it
   so). If the old spot is far away and nobody is near it, run `remove` there first, or the old one can stay.
 - **Talking to them in a claim.** Spawn is a server claim, and Open Parties and Claims protects entities in a
   claim too. `forcedEntityProtectionExceptionList` in `server\config\openpartiesandclaims-server.toml` holds
-  `"hand$easy_npc:*"`: anyone may right-click an Easy NPC in any claim with an empty hand. With an item in the
+  `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` (named ids: the mod documents ids and tags, not
+  wildcards): anyone may right-click an Easy NPC in any claim with an empty hand. With an item in the
   hand the click is refused (the mod says to try an empty hand), so nobody can put a name tag or a lead on
   one. The entry applies after a restart. A server installed before it shipped keeps its old file: add the
   entry with the server stopped, or on the live VPS run `deploy/npc-claims.sh` (`docs/LIVE.md`, "NPCs in

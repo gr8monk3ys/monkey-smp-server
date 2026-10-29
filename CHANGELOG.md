@@ -30,8 +30,8 @@ same as 2.9.0's, so players don't need to update it. After it deploys, place the
 
 - Players can talk to the Guide and the Town Crier again. Spawn's server claim also protected the NPCs, so a
   right-click got Open Parties and Claims' "You are not allowed to interact with this entity in this chunk";
-  only ops could use them. `defaults/config/openpartiesandclaims-server.toml` now adds `"hand$easy_npc:*"` to
-  `forcedEntityProtectionExceptionList`: anyone may right-click an Easy NPC in any claim with an empty hand,
+  only ops could use them. `defaults/config/openpartiesandclaims-server.toml` now adds
+  `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` to `forcedEntityProtectionExceptionList`: anyone may right-click an Easy NPC in any claim with an empty hand,
   while the claim still protects its blocks and nobody can hit the NPCs or use items on them. On the live
   server, run `deploy/npc-claims.sh` once (one restart; docs/LIVE.md, "NPCs in claims"). Not yet tried in game.
 - The update check's "Verify every pinned download" step piped into `tee` without `pipefail`, so a broken

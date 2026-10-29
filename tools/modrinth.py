@@ -2,7 +2,8 @@
 
   python tools/modrinth.py --dry-run    build the .mrpack and print what would be uploaded (no token, no network)
   python tools/modrinth.py              upload it, then point the server listing at it (needs MODRINTH_TOKEN)
-  python tools/modrinth.py --check      does Modrinth's newest version hold this checkout's pack? (exit 1 if not)
+  python tools/modrinth.py --check      does Modrinth's newest version hold this checkout's pack? (exit 1 if not,
+                                        2 if the check itself failed)
 
 Run it from a clean checkout of the release tag, after the GitHub release (docs/MAINTAINING.md, "Releasing").
 The token is a Modrinth personal access token with the scopes Read projects, Write projects, Read versions and
@@ -203,7 +204,6 @@ def check(repo, http, project: str, dist: Path | None = None, log=print) -> bool
     install from Modrinth get what the server expects. A project Modrinth doesn't show (still under review, and
     no token) has nothing to compare yet: that passes, with a note."""
     version = repo.load_manifest()["version"]
-    payload = build_pack(repo, version, dist).read_bytes()
     try:
         project_id = http.request("GET", f"{MODRINTH}/project/{project}")["id"]
     except NotFound:
@@ -214,6 +214,7 @@ def check(repo, http, project: str, dist: Path | None = None, log=print) -> bool
     if newest is None:
         log(f"{project} has no versions on Modrinth: publish {version} with tools/modrinth.py")
         return False
+    payload = build_pack(repo, version, dist).read_bytes()   # built only when there is something to compare
     if (_primary_file(newest)["hashes"]["sha512"] == hashlib.sha512(payload).hexdigest()
             or pack_contents(http.download(_primary_file(newest)["url"])) == pack_contents(payload)):
         log(f"{project} {newest['version_number']} on Modrinth holds the same pack as {version}")
@@ -273,7 +274,12 @@ def main(argv=None, repo=REPO, http=None) -> None:
         print(f"{mrpack}  {mrpack.stat().st_size / 1e6:.1f} MB")
         return
     if args.check:
-        ok = check(repo, http or ModrinthHttp(os.environ.get(TOKEN_ENV, "").strip()), args.project)
+        # Exit 2 when the check itself failed (Modrinth down, a bad token): that isn't "Modrinth is behind".
+        try:
+            ok = check(repo, http or ModrinthHttp(os.environ.get(TOKEN_ENV, "").strip()), args.project)
+        except (SystemExit, OSError) as e:
+            print(f"the check failed: {e.code if isinstance(e, SystemExit) else e}", file=sys.stderr)
+            raise SystemExit(2) from None
         raise SystemExit(0 if ok else 1)
     if http is None:
         token = os.environ.get(TOKEN_ENV, "").strip()

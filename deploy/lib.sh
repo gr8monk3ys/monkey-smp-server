@@ -51,10 +51,17 @@ log_each() {
 # "python_ok MINOR": python3 is installed and 3.MINOR or newer.
 python_ok() { python3 -c "import sys; sys.exit(sys.version_info < (3, $1))" 2>/dev/null; }
 
+# "absolute PATH": PATH, made absolute against the working directory.
+absolute() { case $1 in /*) printf '%s\n' "$1" ;; *) printf '%s\n' "$PWD/$1" ;; esac; }
+
 # The server's container, through the release's docker folder in LIVE_DIR. Run from /: docker compose stats the
 # working directory, and a hand run as realms from root's home (`runuser -u realms -- sh ...` in /root) would
-# otherwise fail every call, so `running` would say no and the deploy skip the backup.
-compose() { (cd / && docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"); }
+# otherwise fail every call, so `running` would say no and the deploy skip the backup. A relative LIVE_DIR is
+# taken from the caller's folder, before the cd.
+compose() {
+    lib_live=$(absolute "$LIVE_DIR")
+    (cd / && docker compose --project-directory "$lib_live/docker" -f "$lib_live/docker/compose.yaml" "$@")
+}
 running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
 # "rcon CMD": the server's answer on stdout; fails when docker or RCON did. The container's own `realms rcon`
 # finds the password itself, so no secret is read here.

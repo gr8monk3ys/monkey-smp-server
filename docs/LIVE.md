@@ -335,15 +335,16 @@ the Town Crier at spawn once, in game: `/function realms:npcs/guide/here` and `/
 where each should stand (docs/ADMIN.md, "Spawn NPCs"). Until then there are no NPCs at spawn. Place them again
 after a release that changes their text.
 
-### NPCs in claims (the release after 2.9.0)
+### NPCs in claims (2.9.1)
 
 Spawn is a server claim, so up to 2.9.0 Open Parties and Claims answered a player's right-click on the Guide or
 the Town Crier with "You are not allowed to interact with this entity in this chunk (easy_npc:humanoid)"; only
-ops could talk to them. The release ships `"hand$easy_npc:*"` in `forcedEntityProtectionExceptionList` in
+ops could talk to them. 2.9.1 ships `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` in
+`forcedEntityProtectionExceptionList` in
 `defaults/config/openpartiesandclaims-server.toml`: anyone may right-click an Easy NPC with an empty hand in any
 claim (docs/ADMIN.md, "Spawn NPCs"). A deploy doesn't touch the live `config/openpartiesandclaims-server.toml`,
-whose list still reads `["minecraft:minecart"]`. `deploy/npc-claims.sh` adds the entry with one restart and
-skips it when it's already there. Run it as root, `--check` first:
+whose list still reads `["minecraft:minecart"]`. `deploy/npc-claims.sh` adds the entries with one restart and
+skips them when they're already there (only those exact entries count). Run it as root, `--check` first:
 
 ```sh
 sudo sh /srv/realms/repo/deploy/npc-claims.sh --check
@@ -355,7 +356,7 @@ It works like `deploy/shops-claims.sh` ("Shops in claims"): it warns players onl
 the deploy lock, stops the server for about 3 minutes (the mod reads the list only on start), keeps the old file
 as `openpartiesandclaims-server.toml.before-npcs` and starts the server again whatever happens; its log is
 `/var/log/realms-npc-claims.log`. It prints only the `forcedEntityProtectionExceptionList` line. If that list is
-missing or spread over several lines, it changes nothing and says so: add `"hand$easy_npc:*"` to it by hand
+missing or spread over several lines, it changes nothing and says so: add the entries it names to it by hand
 with the server stopped. Nothing to do in game: the NPCs stay where they are.
 
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)

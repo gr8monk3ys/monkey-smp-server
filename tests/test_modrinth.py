@@ -244,6 +244,15 @@ def test_main_check_exits_1_when_behind_and_needs_no_token(repo, monkeypatch):
     assert stop.value.code == 1
 
 
+def test_main_check_exits_2_when_modrinth_errors(repo, capsys):
+    class Down(FakeModrinth):
+        def request(self, method, url, body=None, content_type=None):
+            raise SystemExit(f"Modrinth refused {method} {url}: 503 down")
+    with pytest.raises(SystemExit) as stop:
+        modrinth.main(["--check"], repo, http=Down())
+    assert stop.value.code == 2 and "503" in capsys.readouterr().err
+
+
 def test_a_check_without_a_token_sends_no_authorization(monkeypatch):
     sent = {}
 

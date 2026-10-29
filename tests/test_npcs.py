@@ -124,9 +124,10 @@ def test_players_can_talk_to_npcs_in_any_claim_with_an_empty_hand():
     toml = tomllib.loads((REPO.defaults / "config" / "openpartiesandclaims-server.toml").read_text(encoding="utf-8"))
     forced = toml["serverConfig"]["claims"]["protection"]["forcedEntityProtectionExceptionList"]
     # The mod's own default stays; "hand$" keeps items (a name tag, a lead) off the NPCs; no "break$"/"anything$".
-    assert forced == ["minecraft:minecart", "hand$easy_npc:*"]
+    # Named ids, not "easy_npc:*": the mod documents ids and tags only.
+    assert forced == ["minecraft:minecart", "hand$easy_npc:humanoid", "hand$easy_npc:humanoid_slim"]
     for name in npcs.NPCS:
-        assert PRESETS[name]["data"]["id"].startswith("easy_npc:"), name
+        assert f'hand${PRESETS[name]["data"]["id"]}' in forced, name
 
 
 def test_uuids_are_fixed_and_distinct():

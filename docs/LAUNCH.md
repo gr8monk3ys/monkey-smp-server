@@ -1,11 +1,11 @@
 # Season I launch
 
-The run sheet for opening Season I: **Saturday 31 October 2026 at 5 PM Pacific** (8 PM Eastern, 00:00 UTC
-on Sunday 1 November), with everyone let in at once. It was written on Monday 26 October for a 21 November
-launch; on Thursday 29 October the owners moved the launch to 31 October, so the weeks before it are now two
-days. It runs to T+7 (Saturday 7 November, the first weekly event). Every date below is Pacific time.
-Daylight saving time ends at 2 AM on Sunday 1 November: the launch is at 5 PM daylight time, and everything
-after it is standard time.
+The run sheet for opening Season I: **Saturday 7 November 2026 at 5 PM Pacific** (8 PM Eastern, 01:00 UTC
+on Sunday 8 November), with everyone let in at once. It was written on Monday 26 October for a 21 November
+launch; the owners moved it to 31 October, then on Wednesday 28 October to 7 November, which leaves ten days
+before it and a four-day release freeze. It runs to T+7 (Saturday 14 November,
+the first weekly event). Every date below is Pacific time. Daylight saving time ends at 2 AM on Sunday
+1 November, the week before the launch, so the launch and everything after it is standard time.
 
 Every Discord, Reddit and server-list text here and in docs/PROMOTION.md is a **draft**. Nothing is posted,
 pinned, submitted or sent until an owner has read it and said yes.
@@ -20,14 +20,20 @@ calendar (docs/SEASONS.md) and in the drafts (docs/PROMOTION.md, "Season I launc
 
 | Day | T | What |
 | --- | --- | --- |
-| Mon 26 Oct | T-5 | This kit. Start the store. |
-| Tue 27 Oct | T-4 | Moderator recruitment post (below). |
-| Thu 29 Oct | T-2 | First thing: the Season I world and Chunky. **Last release tagged**: everything for launch is in it. Store submitted to Tebex for review. Launch-date announcement: the founding roster and faction registration open, Reddit post, server-list descriptions get the date. 9 PM: moderator applications close. |
-| Fri 30 Oct | T-1 | The last release deploys at 4-5 AM; the freeze starts. Load test on the VPS; restore drill and launch rehearsal on the home PC. Off-site backups and Uptime Kuma alerts working. Moderators picked, given the rank and onboarded. Build Battle plots built. T-1 announcement. 5 PM: founding roster closes. |
-| Sat 31 Oct | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
-| Sun 1 Nov | T+1 | The clocks go back at 2 AM. Day-1 check. 6 PM Build Battle judging. Launch weekend ends at midnight. |
-| Mon 2 Nov | T+2 | The freeze ends. Day-1 retention. |
-| Sat 7 Nov | T+7 | Day-7 check. 6 PM Faction Raid I, recorded. |
+| Mon 26 Oct | T-12 | This kit. Start the store. |
+| Tue 27 Oct | T-11 | Moderator recruitment post (below). Store submitted to Tebex for review (done). |
+| Thu 29 Oct | T-9 | Launch-date announcement: the founding roster and faction registration open, server-list descriptions get the date. 9 PM: moderator applications close. |
+| Fri 30 Oct | T-8 | Moderators picked and given the rank. |
+| Sat 31 Oct | T-7 | T-7 announcement; Reddit post. By the evening, **the 7 November date released** (a patch on 2.9.0, below). |
+| Sun 1 Nov | T-6 | The clocks go back at 2 AM. The date release deploys at 4-5 AM; place the Town Crier again. Off-site backups and Uptime Kuma alerts working. |
+| Tue 3 Nov | T-4 | **Last release tagged**: everything for launch is in it. |
+| Wed 4 Nov | T-3 | The last release deploys at 4-5 AM; the freeze starts. Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. |
+| Thu 5 Nov | T-2 | Trial decided. Build Battle plots built. Moderators onboarded, and their shadowed evening. |
+| Fri 6 Nov | T-1 | Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
+| Sat 7 Nov | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
+| Sun 8 Nov | T+1 | Day-1 check. 6 PM Build Battle judging. Launch weekend ends at midnight. |
+| Mon 9 Nov | T+2 | The freeze ends. Day-1 retention. |
+| Sat 14 Nov | T+7 | Day-7 check. 6 PM Faction Raid I, recorded. |
 
 ## Before launch
 
@@ -45,12 +51,12 @@ order and the dates.
 - [ ] **Test purchase** of the $5 pass on a staff account. Check that `whitelist add` ran, `rw.months` went up
   by one, and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
-- [ ] **Thu 29 Oct: Submit for Review.** Tebex doesn't say how long review takes. If the store isn't
-  approved by **Fri 30 Oct**, launch with passes by hand (below); the site already says that while
+- [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
+  approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
   `STORE_URL` is empty.
 - [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.js`, then
   `python tools/site_links.py`) and leave it unmerged. It merges **at 5 PM on launch day** (launch day,
-  below), or on Sunday 1 November if the founding roster is over 30. Until it merges the site says passes are
+  below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
   arranged in the Discord, which stays true. Site-only pull requests are fine during the release freeze.
 - [ ] **Keep the storefront's address to staff until it merges.** A pass bought there goes on the whitelist
   within a minute, and that player could walk into the world before everyone else. Staff check the whitelist
@@ -66,7 +72,7 @@ before turning it on for everyone.
   Discord role arrived, and `rw.months` didn't move yet.
 - [ ] **The same day, cancel the trial** on Tebex's payment history page and check `whitelist remove` ran.
   No money changes hands if it's cancelled inside the 7 days.
-- [ ] **Fri 30 Oct: decide.** Trials go on only if all three checks passed. Then add the FAQ answer from
+- [ ] **Thu 5 Nov: decide.** Trials go on only if all three checks passed. Then add the FAQ answer from
   docs/LIVE.md to `site/index.html` in its own small pull request, and add the trial line to the T-1 and
   launch announcements (docs/PROMOTION.md). If the whitelist waited for the first charge, leave trials off
   and plan an open-house evening in December instead (docs/LIVE.md).
@@ -74,20 +80,28 @@ before turning it on for everyone.
 
 ### Release freeze: launch weekend
 
-The 31 October date left no room for seven days. The last release is tagged on **Thursday 29 October** and
-goes live in the 4-5 AM window on **Friday 30 October**. Nothing new deploys until **Monday 2 November**,
+Four days, not the seven the 21 November plan had. The last release is tagged on **Tuesday 3 November** and
+goes live in the 4-5 AM window on **Wednesday 4 November**. Nothing new deploys until **Monday 9 November**,
 after launch weekend.
 
-Why a freeze at all: the load test, the restore drill and the rehearsal (Friday 30 October) run against the
-release players launch on, and Friday is the only day left to roll back or patch a bad one. Anything tagged
+Why a freeze at all: the load test, the restore drill and the rehearsal (Wednesday 4 November) run against the
+release players launch on, and Thursday and Friday are left to roll back or patch a bad one. Anything tagged
 after them would be untested on launch night.
+
+**The date release comes first.** 2.9.0 holds the 31 October calendar: on Monday 2 November it would start
+challenge week 1 and the weeknight supply drops a week early, and on 7 November the launch would fall in
+challenge week 1, not 0, with Founder's Circlet's window running 32 hours of game time, no longer kept to the
+wall clock. So the release with the 7 November date (the data packs, `tools/season_calendar.py` for the VPS
+timers, and the Town Crier) is tagged by Saturday 31 October and deploys on Sunday 1 November at 4-5 AM,
+before the week turns. Place the Crier again after it (docs/ADMIN.md, "Spawn NPCs"). If it misses that
+window, it must still be live before the launch.
 
 How:
 
 - **Hold the tag.** The VPS deploys only the newest `vX.Y.Z` tag (`TRACK=tags`), so no tag means no deploy.
   This is the freeze. Merging to `main` is fine; tagging is not.
 - **Stop the deploy timer as a backstop**, once the last release is live (check with
-  `sh /srv/realms/repo/deploy/realms-deploy.sh --status` on Friday 30 October after 5 AM):
+  `sh /srv/realms/repo/deploy/realms-deploy.sh --status` on Wednesday 4 November after 5 AM):
   `sudo systemctl stop realms-deploy.timer`. An accidental tag then waits. The timer is still enabled, so a
   reboot of the VPS starts it again: after any reboot, `systemctl is-active realms-deploy.timer` and stop it
   again.
@@ -97,50 +111,50 @@ How:
   Leave them.
 - **Exception:** a crash, a dupe or a security hole. Both owners agree, tag a patch release, and deploy it
   with `--now` at a quiet hour after a backup. Nothing else.
-- **Mon 2 Nov:** `sudo systemctl start realms-deploy.timer`. Tagging is open again.
+- **Mon 9 Nov:** `sudo systemctl start realms-deploy.timer`. Tagging is open again.
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
-after that makes launch only if it is in the Thursday 29 October release; whatever misses it waits until Monday
-2 November at the earliest, and its lines come out of the announcements ("Copy that depends on unmerged work",
+after that makes launch only if it is in the Tuesday 3 November release; whatever misses it waits until Monday
+9 November at the earliest, and its lines come out of the announcements ("Copy that depends on unmerged work",
 below).
 
 ### Ops readiness
 
 - [x] **The 2.8.0 world.** Done 2026-10-27: 2.8.0 went live on a new world (docs/LIVE.md, "A new world for
   Season I (2.8.0)"), and Chunky started pre-generating it. Do the load test and the rehearsal on this world.
-- [ ] **Fri 30 Oct: Chunky.** `realms rcon "chunky progress"` (as `realms`, in
+- [ ] **Wed 4 Nov, before the load test: Chunky.** `realms rcon "chunky progress"` (as `realms`, in
   `/srv/realms/TheRealms-Server/docker`; `realms rcon` is short for `docker compose exec realms realms rcon`).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:
   the load test refuses to run before it does.
-- [ ] **By Fri 30 Oct: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
+- [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
   check `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` lists hourly snapshots. The keys go
   in the password manager and `/etc/realms-deploy.env`, nowhere else.
-- [ ] **Fri 30 Oct: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
+- [ ] **Wed 4 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
   restored isn't a backup yet. Without working off-site backups by launch day, copy a backup off the VPS by
   hand that morning, and tell the other owner.
-- [ ] **By Fri 30 Oct: uptime alerts.** Uptime Kuma on the home PC (fleet repo, `services/uptime-kuma.md`)
+- [ ] **By Sun 1 Nov: uptime alerts.** Uptime Kuma on the home PC (fleet repo, `services/uptime-kuma.md`)
   with the Minecraft ping and the map check from docs/LIVE.md, "Monitoring". Use the notification's Test
   button and check the message arrives in the staff channel.
-- [ ] **Fri 30 Oct: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
+- [ ] **Wed 4 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
   Over about 40 ms median at 25 players: follow the decision rule there before launch.
-- [ ] **By Fri 30 Oct: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
+- [ ] **By Wed 4 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/realms/repo/deploy/realms-week.sh --check` (the week timer runs) and
   `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
   docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
-- [ ] **By Fri 30 Oct: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/realms/repo/deploy/realms-drops.sh
+- [ ] **By Wed 4 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/realms/repo/deploy/realms-drops.sh
   --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
   docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
   a release places no NPCs by itself.
-- [ ] **Fri 30 Oct: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
+- [ ] **Wed 4 Nov: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
   launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
   test play's challenges, and the real launch wouldn't open the window again.
-- [ ] **Fri 30 Oct: staff stashes.** Anyone who played in the Season I world before launch leaves no diamond,
+- [ ] **Fri 6 Nov: staff stashes.** Anyone who played in the Season I world before launch leaves no diamond,
   ancient debris, mace or elytra in a chest, ender chest or shulker box: taken out after launch, it could claim
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `realms rcon "whitelist list"`. Before launch it holds staff
@@ -167,10 +181,10 @@ Discord bridge is on, a moderator can then link the name to its member with `/sm
 
 The rules are in docs/SEASONS.md, "Build Battle"; the staff commands in docs/ADMIN.md, "Events".
 
-- [ ] **By Fri 30 Oct:** the showcase area next to spawn, outside the no-PvP spawn claim: equal 32 x 32 plots,
+- [ ] **By Thu 5 Nov:** the showcase area next to spawn, outside the no-PvP spawn claim: equal 32 x 32 plots,
   one per registered faction plus a few spare, built in creative under the spawn rules. Each plot claimed
   for its faction when registration closes (Friday), and the area marked no-PvP while the event runs.
-- [ ] **Fri 30 Oct:** the judges: both owners plus one guest judge, who agrees to be on at 6 PM on Sunday.
+- [ ] **By Fri 6 Nov:** the judges: both owners plus one guest judge, who agrees to be on at 6 PM on Sunday.
 - [ ] **The seed for the wheel is "S1 launch".** It goes in the T-1h announcement, before the spin, so anyone
   can check the draw.
 
@@ -183,23 +197,24 @@ it in their own time zone.
 | When | Where | What |
 | --- | --- | --- |
 | Tue 27 Oct | `#announcements`, `#monkey-smp` | Moderator recruitment (below) |
-| Thu 29 Oct, once an owner says yes (T-2) | `#announcements` | The date; the founding roster and faction registration open; install the pack now (below) |
-| Thu 29 Oct to Sat 31 Oct | the free lists | The launch line in each list's description (docs/PROMOTION.md) |
-| Thu 29 Oct | r/mcservers | One post, after reading the subreddit's current rules |
-| Fri 30 Oct, 5 PM (T-1) | `#announcements`, `#monkey-smp` | Tomorrow: the checklist |
-| Sat 31 Oct, 4 PM (T-1h) | `#monkey-smp` | One hour: open the game now; the wheel's seed |
-| Sat 31 Oct, 5 PM (launch) | `#announcements`, `#monkey-smp` | Open; the wheel's blocks |
-| Sun 1 Nov, 9 AM | the free lists | Swap the launch line for the "Season I is live" one |
+| Thu 29 Oct, once an owner says yes (T-9) | `#announcements` | The date; the founding roster and faction registration open; install the pack now (below) |
+| Thu 29 Oct to Sat 7 Nov | the free lists | The launch line in each list's description (docs/PROMOTION.md) |
+| Sat 31 Oct (T-7) | `#announcements` | One week: what's in Season I |
+| Sat 31 Oct | r/mcservers | One post, after reading the subreddit's current rules |
+| Fri 6 Nov, 5 PM (T-1) | `#announcements`, `#monkey-smp` | Tomorrow: the checklist |
+| Sat 7 Nov, 4 PM (T-1h) | `#monkey-smp` | One hour: open the game now; the wheel's seed |
+| Sat 7 Nov, 5 PM (launch) | `#announcements`, `#monkey-smp` | Open; the wheel's blocks |
+| Sun 8 Nov, 9 AM | the free lists | Swap the launch line for the "Season I is live" one |
 
 Use Front Desk's `/gamenight` for the launch, the Build Battle judging and Faction Raid I, so "Interested" is
 the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekly rhythm"). Mention
-`@everyone` only on the T-2 and launch posts.
+`@everyone` only on the T-9 and launch posts.
 
-## Launch day: Saturday 31 October
+## Launch day: Saturday 7 November
 
 | Time | Who | Step |
 | --- | --- | --- |
-| 9 AM | an owner | `realms-deploy.sh --status`: the release from 29 October is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
+| 9 AM | an owner | `realms-deploy.sh --status`: the release from 3 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
@@ -217,7 +232,7 @@ If the server won't start or falls over at launch: say so in `#announcements` st
 fix it, and run `function realms:rules/launch` only once everyone can join. The launch hour's timer is kept
 with the world, so run it once.
 
-## Launch weekend: Sunday 1 November
+## Launch weekend: Sunday 8 November
 
 - [ ] **9 AM: day-1 check** (below).
 - [ ] **6 PM: Build Battle judging.** Owners and the guest judge score look (10) and idea (10), plus 5 a
@@ -234,8 +249,8 @@ with the world, so run it once.
 
 docs/PROMOTION.md, "Clips from real event nights", has the rules: consent, no player voices, storage. The
 recording setup is the `demo` scenario in the obs-config repo (gr8monk3ys/obs-config; don't change it from
-here). Two nights: **launch night** (Saturday 31 October, 4:45 to 7 PM, the gathering at spawn, 5 PM and
-PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 7 November, 6 PM).
+here). Two nights: **launch night** (Saturday 7 November, 4:45 to 7 PM, the gathering at spawn, 5 PM and
+PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 14 November, 6 PM).
 
 - [ ] The camera is one staff account in spectator mode that doesn't play that night, on the home PC.
 - [ ] `python scripts/obsconf.py launch demo` in the obs-config folder: OBS on the Demo profile, Screen scene,
@@ -254,9 +269,9 @@ PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 7 N
 The VPS's `.env` sets `TZ=America/Los_Angeles` (docs/LIVE.md, "Set up (once)", step 5), so log days are
 Pacific days.
 Retention groups players by the week they first joined, starting Monday: launch night's players are the
-week of `2026-10-26`.
+week of `2026-11-02`.
 
-**Day 1, Sunday 1 November, 9 AM**
+**Day 1, Sunday 8 November, 9 AM**
 
 - [ ] `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs`: how many new
   players joined. D1 is only complete on Monday, once Sunday is over.
@@ -265,12 +280,12 @@ week of `2026-10-26`.
   `python3 /srv/realms/repo/tools/funnel.py ~/payments.csv /srv/realms/TheRealms-Server/server/logs --log-tz America/Los_Angeles`,
   then delete the CSV (it holds emails; never commit it). Without the store: compare the roster sheet with
   the joins. Either way, send everyone who never joined the install help (docs/SHARING.md) that day.
-- [ ] **Monday 2 November:** run retention again for the launch cohort's D1.
+- [ ] **Monday 9 November:** run retention again for the launch cohort's D1.
 
-**Day 7, Saturday 7 November, before the event**
+**Day 7, Saturday 14 November, before the event**
 
-- [ ] Retention again: D1 for the launch cohort, and how many different players the week of `2026-11-02`
-  has had so far. D7 for launch night's players is complete once Saturday is over; run it again on Sunday 8 November.
+- [ ] Retention again: D1 for the launch cohort, and how many different players the week of `2026-11-09`
+  has had so far. D7 for launch night's players is complete once Saturday is over; run it again on Sunday 15 November.
 - [ ] The funnel again (with the store): joined, played 30 minutes, came back.
 - [ ] What to do with it: docs/RETENTION.md, "Reading the numbers". D7 under about 30% means the first days
   aren't landing; fix onboarding before anything else.
@@ -290,10 +305,10 @@ higher on the roster.
 - **Up to 30, because 30 is the server's slot count** (`max-players=30`). If 30 or fewer sign up, there is no
   waitlist and the store opens to everyone at 5 PM.
 
-### The announcement (draft, T-2, Thursday 29 October, `#announcements`)
+### The announcement (draft, T-9, Thursday 29 October, `#announcements`)
 
-> **Monkey SMP Season I opens Saturday 31 October, 5 PM Pacific / 8 PM Eastern** (<t:1793491200:F>, that's
-> <t:1793491200:R>)
+> **Monkey SMP Season I opens Saturday 7 November, 5 PM Pacific / 8 PM Eastern** (<t:1794099600:F>, that's
+> <t:1794099600:R>)
 >
 > Everyone gets in at the same moment. The first hour is peaceful: no PvP, no Nether. Then it's on. The
 > first Build Battle starts the second the server opens.
@@ -333,12 +348,12 @@ Staff steps:
    deletes their message and posts again goes to the back.
 5. **Leaving:** a member who says they can't make it is taken off, and the next on the waitlist moves up and
    is told.
-6. **Fri 30 Oct, 5 PM: the roster closes.** Post the count in `#founding-roster`. Later sign-ups go to the
+6. **Fri 6 Nov, 5 PM: the roster closes.** Post the count in `#founding-roster`. Later sign-ups go to the
    waitlist, or, under 30, simply get a pass and join on the night.
 7. **Over 30 only:** members without a pass arranged by Friday 5 PM get a message: arrange one by Saturday
    12 PM or the place passes on. On Saturday at 12 PM, each empty place goes to the next on the waitlist, who
    gets a message the same evening. Fill places only while the next person can still arrange a pass in time.
-8. **Sat 31 Oct, 12 PM: the roster is final.** Write the add-player line from it (above).
+8. **Sat 7 Nov, 12 PM: the roster is final.** Write the add-player line from it (above).
 9. **Over 30, Saturday night:** message the waitlist that the store opens Sunday morning, and merge the
    `STORE_URL` pull request on Sunday. From then on the slots are first come, first served on the server
    itself, as on any night.
@@ -350,7 +365,7 @@ applies their way in by being first.
 
 ### The post (draft, Tuesday 27 October, `#announcements` and `#monkey-smp`)
 
-> **Monkey SMP is looking for 2 or 3 moderators for Season I** (opens <t:1793491200:F>)
+> **Monkey SMP is looking for 2 or 3 moderators for Season I** (opens <t:1794099600:F>)
 >
 > **What moderators do**
 > - Answer questions and tickets, and help new players get the modpack running.
@@ -360,7 +375,7 @@ applies their way in by being first.
 >
 > **What we ask**
 > - About 3 hours a week, mostly evenings Pacific time, and at least one Saturday event a month.
-> - Launch weekend, Saturday 21 and Sunday 1 November, if you can.
+> - Launch weekend, Saturday 7 and Sunday 8 November, if you can.
 > - Answers to tickets within a day, and knowing the rules well.
 > - Being 16 or older.
 >
@@ -382,7 +397,7 @@ gets anything in the game for it.
 - Read every ticket, answer every one, and talk to the likely ones in voice.
 - Prefer people who have played with the owners before, are on in the evening, and answered the example
   calmly.
-- Give the rank and the Discord Moderator role, then onboard them (below) by Friday 30 October.
+- Give the rank and the Discord Moderator role, then onboard them (below) by Thursday 5 November.
 
 ### Onboarding checklist
 
@@ -407,7 +422,7 @@ The tools are documented once; this list points at them.
 - [ ] **Events:** `begin` and `attend` for attendance, and the arena commands (docs/ADMIN.md, "Events").
 - [ ] **Discord:** the Moderator role, two-factor authentication on (Discord can require it for moderation),
   and the staff channel.
-- [ ] **One shadowed evening** with an owner before launch weekend: Friday 30 October.
+- [ ] **One shadowed evening** with an owner before launch weekend: Thursday 5 November.
 
 ## Copy that depends on unmerged work
 
@@ -417,7 +432,7 @@ posting.
 
 | Work | Where it is mentioned | If it misses the release |
 | --- | --- | --- |
-| Founder skin for playing launch weekend (Sat 31 Oct 5 PM to Sun 1 Nov midnight Pacific) | the roster post, T-7, T-1, launch, Reddit | Cut the line. (Founder's Edge, for anyone who plays in Season I, is already in the wardrobe.) |
+| Founder skin for playing launch weekend (Sat 7 Nov 5 PM to Sun 8 Nov midnight Pacific) | the roster post, T-7, T-1, launch, Reddit | Cut the line. (Founder's Edge, for anyone who plays in Season I, is already in the wardrobe.) |
 | Weekly faction standings and the bounty board (pull request #42) | T-7, Reddit, the long list description | Cut "weekly standings" and "bounty board" |
 | Weekly challenges | T-7, Reddit | Cut the line |
 | Item-priced shop chests | T-7, Reddit | Cut: shelved on 26 October 2026 |

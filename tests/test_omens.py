@@ -238,12 +238,12 @@ def test_main_prints_the_commands_and_the_plan(tmp_path, capsys):
 
 
 def test_ran_reads_the_evenings_back_by_week():
-    scores = {"om": {"#on.20261103": 1, "#on.20261106": 4, "#on.20261110": 3, "#on.20261111": 0, "#key1": 5,
+    scores = {"om": {"#on.20261110": 1, "#on.20261113": 4, "#on.20261117": 3, "#on.20261118": 0, "#key1": 5,
                      "#on.2026112": 2}}
-    assert omens.ran(scores) == {dt.date(2026, 11, 3): "blood_moon", dt.date(2026, 11, 6): "hunted",
-                                 dt.date(2026, 11, 10): "truce"}
-    assert omens.in_week(scores, 1) == {dt.date(2026, 11, 3): "blood_moon", dt.date(2026, 11, 6): "hunted"}
-    assert omens.in_week(scores, 2) == {dt.date(2026, 11, 10): "truce"}
+    assert omens.ran(scores) == {dt.date(2026, 11, 10): "blood_moon", dt.date(2026, 11, 13): "hunted",
+                                 dt.date(2026, 11, 17): "truce"}
+    assert omens.in_week(scores, 1) == {dt.date(2026, 11, 10): "blood_moon", dt.date(2026, 11, 13): "hunted"}
+    assert omens.in_week(scores, 2) == {dt.date(2026, 11, 17): "truce"}
 
 
 def test_the_try_records_the_evening_as_ran_reads_it():

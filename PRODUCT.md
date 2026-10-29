@@ -37,7 +37,7 @@ connects without needing help.
 - Reworked terrain and new dungeons, mobs and magic (Tectonic, Terralith, Incendium, Endercon and others),
   proximity voice chat and a public live 3D map.
 - Seasons: each season is a new world with its own rules and a twist players vote on. Season I opens
-  Saturday 31 October 2026, 5 PM Pacific, everyone let in at once.
+  Saturday 7 November 2026, 5 PM Pacific, everyone let in at once.
 - One price to play, the same for everyone; supporter tiers are cosmetic only, and priority or reserved slots
   are never for sale. Cosmetics are earned by playing too (wardrobe skins, weekly challenges, the Founder's
   Circlet for launch weekend only, never sold).

@@ -64,13 +64,13 @@ def chunk(x: int, z: int) -> tuple[int, int]:
 
 
 def test_drop_nights_are_monday_to_thursday_evenings_pacific_from_season_one():
-    assert drops.night_of(pacific(2026, 11, 2, 18, 0)) == 20261102           # Monday of week 1, 6 PM
-    assert drops.night_of(pacific(2026, 11, 5, 21, 59)) == 20261105          # Thursday, the last minute
-    assert drops.night_of(pacific(2026, 11, 2, 17, 59)) is None
-    assert drops.night_of(pacific(2026, 11, 2, 22, 0)) is None
-    for day in (6, 7, 8):                                                   # Friday, Saturday (events), Sunday
+    assert drops.night_of(pacific(2026, 11, 9, 18, 0)) == 20261109           # Monday of week 1, 6 PM
+    assert drops.night_of(pacific(2026, 11, 12, 21, 59)) == 20261112          # Thursday, the last minute
+    assert drops.night_of(pacific(2026, 11, 9, 17, 59)) is None
+    assert drops.night_of(pacific(2026, 11, 9, 22, 0)) is None
+    for day in (13, 14, 15):                                                 # Friday, Saturday (events), Sunday
         assert drops.night_of(pacific(2026, 11, day, 19, 0)) is None
-    assert drops.night_of(pacific(2026, 10, 26, 19, 0)) is None              # before Season I's first week
+    assert drops.night_of(pacific(2026, 11, 2, 19, 0)) is None               # before Season I's first week
     # (that the first night is week 1's Monday: tests/test_season_calendar.py)
     # UTC in, the Pacific date out: 2 AM UTC Tuesday is 6 PM Monday (PST), 1 AM UTC is 6 PM in summer time.
     assert drops.night_of(dt.datetime(2026, 11, 24, 2, 0, tzinfo=UTC)) == 20261123

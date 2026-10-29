@@ -2,14 +2,14 @@
 
     import season_calendar
     season_calendar.PACIFIC           # the server's time zone (America/Los_Angeles); now() is the time there
-    season_calendar.LAUNCH            # Season I opens: Saturday 31 October 2026, 5 PM Pacific
+    season_calendar.LAUNCH            # Season I opens: Saturday 7 November 2026, 5 PM Pacific
     season_calendar.WEEK_ONE          # the Monday after the launch: week 1 starts there at 12 AM Pacific
     season_calendar.LAUNCH_END        # the launch weekend ends as week 1 starts
     season_calendar.week_at(when)     # the week a moment falls in: 0 (the launch weekend), then 1, 2, ...
     season_calendar.week_start(n)     # the Monday week n starts (week 0: the launch day)
     season_calendar.saturday(n)       # week n's Saturday, event night (week 0: the launch day)
     season_calendar.drop_night(day)   # whether supply drops run that evening: Monday to Thursday from week 1
-    season_calendar.words(when)       # "Saturday 31 October 2026", "5 PM Pacific", "8 PM Eastern"
+    season_calendar.words(when)       # "Saturday 7 November 2026", "5 PM Pacific", "8 PM Eastern"
 
 The one place the tools keep Season I's dates: challenges, drops, npcs, wardrobe, standings and site_links
 all ask it. Every date follows from LAUNCH (Season(launch) works the rest out), so moving the season is one
@@ -83,13 +83,13 @@ class Season:
         return day >= self.week_one and day.weekday() in DROP_NIGHTS
 
 
-SEASON = Season(dt.datetime(2026, 10, 31, 17, 0, tzinfo=PACIFIC))   # Season I: Saturday 31 October, 5 PM
-SEASON_TWO = dt.date(2027, 1, 30)   # proposed (docs/SEASONS.md); the owners confirm it by 2 January
+SEASON = Season(dt.datetime(2026, 11, 7, 17, 0, tzinfo=PACIFIC))   # Season I: Saturday 7 November, 5 PM
+SEASON_TWO = dt.date(2027, 2, 6)   # proposed (docs/SEASONS.md); the owners confirm it by 9 January
 
 LAUNCH = SEASON.launch
 WEEK_ONE = SEASON.week_one
 LAUNCH_END = SEASON.launch_end
-LAUNCH_SECONDS = SEASON.launch_seconds   # 32 hours: the clocks go back at 2 AM on the Sunday
+LAUNCH_SECONDS = SEASON.launch_seconds   # 31 hours: Saturday 5 PM to Monday 12 AM Pacific
 week_at = SEASON.week_at
 week_start = SEASON.week_start
 week_begins = SEASON.week_begins
@@ -110,7 +110,7 @@ MONTHS = ["January", "February", "March", "April", "May", "June", "July", "Augus
 
 
 def day_words(day: dt.date) -> str:
-    """'Saturday 31 October'."""
+    """'Saturday 7 November'."""
     return f"{DAYS[day.weekday()]} {day.day} {MONTHS[day.month - 1]}"
 
 

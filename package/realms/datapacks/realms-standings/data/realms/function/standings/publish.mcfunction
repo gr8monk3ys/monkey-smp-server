@@ -4,5 +4,5 @@ data modify storage realms:standings board set value {text:"",extra:[{text:"Fact
 data modify storage realms:standings board.extra append from storage realms:standings week
 data modify storage realms:standings board.extra append value {text:"\n"}
 data modify storage realms:standings board.extra append from storage realms:standings last
-data modify storage realms:standings board.extra append value {text:"\nScored as Cup 40, land 20, Strength 20, kills this week 20, each as a share of the leader; +5 a bounty.\n/trigger standings shows this in chat.",color:"dark_gray"}
+data modify storage realms:standings board.extra append value {text:"\nScored as Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the leader; +5 a bounty; +1 an hour holding an outpost (at most 20).\n/trigger standings shows this in chat.",color:"dark_gray"}
 scoreboard players add #board st.ver 1

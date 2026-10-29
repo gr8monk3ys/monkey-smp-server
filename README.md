@@ -152,7 +152,7 @@ See [docs/MAINTAINING.md](docs/MAINTAINING.md): updating mods, snapshotting a li
 manifest, cutting a release. Domain terms are in [GLOSSARY.md](GLOSSARY.md), decisions in [docs/adr/](docs/adr/).
 
 ```bash
-pip install pytest ruff
+pip install pytest ruff tzdata   # tzdata: Windows has no time zone database of its own
 python -m pytest -q && python -m ruff check tools tests && python tools/validate.py
 python tools/build.py          # -> dist/
 ```

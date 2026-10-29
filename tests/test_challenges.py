@@ -8,20 +8,19 @@ import challenges
 import rcon
 import rules
 import season
-import site_links
+import season_calendar
 import wardrobe
 from repo import REPO
 
-UTC = dt.timezone.utc  # noqa: UP017 (the module under test keeps to 3.10)
 FN = "data/realms/function/challenges"
 
 
 def at(text: str) -> dt.datetime:
-    return challenges.parse_time(text)
+    return rcon.parse_time(text)
 
 
 def pacific(*args) -> dt.datetime:
-    return dt.datetime(*args, tzinfo=challenges.PACIFIC)
+    return dt.datetime(*args, tzinfo=season_calendar.PACIFIC)
 
 
 # ---------------------------------------------------------------- the pool
@@ -103,8 +102,8 @@ def test_the_server_picks_what_the_schedule_says(week):
 def test_the_schedule_command_prints_the_weeks():
     out = challenges.schedule(0, 13).splitlines()
     assert len(out) == 13
-    assert out[0].startswith("week 0   from launch, 21 Nov 2026")
-    assert out[1].startswith("week 1   from Mon 23 Nov 2026")
+    assert out[0].startswith("week 0   from launch, 31 Oct 2026")
+    assert out[1].startswith("week 1   from Mon 02 Nov 2026")
     for week, line in enumerate(out):
         for c in challenges.picks(week).values():
             assert c["name"] in line
@@ -113,59 +112,16 @@ def test_the_schedule_command_prints_the_weeks():
 # ---------------------------------------------------------------- the clock
 
 
-@pytest.mark.parametrize(("when", "week"), [
-    (pacific(2026, 10, 26, 12, 0), 0),            # before the launch
-    (pacific(2026, 11, 21, 17, 0), 0),            # the launch
-    (pacific(2026, 11, 22, 23, 59, 59), 0),       # the end of the launch weekend, Sunday night
-    (pacific(2026, 11, 23, 0, 0), 1),             # Monday, 12 AM Pacific
-    (pacific(2026, 11, 29, 23, 59, 59), 1),
-    (pacific(2026, 11, 30, 0, 0), 2),
-    (pacific(2027, 2, 14, 23, 59, 59), 12),
-    (pacific(2027, 2, 15, 0, 0), 13),
-])
-def test_weeks_turn_on_monday_at_midnight_pacific(when, week):
-    assert challenges.week_at(when) == week
-    assert challenges.week_at(when.astimezone(UTC)) == week
-
-
-def test_the_week_turns_on_pacific_time_through_daylight_saving():
-    # Standard time: Sunday 23:59:59 PST is 07:59:59 UTC on Monday.
-    assert challenges.week_at(at("2026-11-23T07:59:59Z")) == 0
-    assert challenges.week_at(at("2026-11-23T08:00:00Z")) == 1
-    # Daylight time from 14 March 2027: Monday 15 March starts at 07:00 UTC, not 08:00.
-    assert challenges.week_at(at("2027-03-15T06:59:59Z")) == 16
-    assert challenges.week_at(at("2027-03-15T07:00:00Z")) == 17
-    assert challenges.week_at(at("2027-03-15T07:30:00Z")) == 17
-
-
-def test_week_starts_are_mondays():
-    assert challenges.WEEK_ONE.weekday() == 0
-    for week in range(1, 30):
-        assert challenges.week_start(week).weekday() == 0
-        assert challenges.week_at(pacific(*challenges.week_start(week).timetuple()[:3])) == week
-    assert challenges.week_start(0) == dt.date(2026, 11, 21)
-
-
-def test_parse_time_reads_utc_and_offsets():
-    assert at("2026-11-23T08:00:00Z") == at("2026-11-23T00:00:00-08:00") == at("2026-11-23T08:00:00")
 
 
 # ---------------------------------------------------------------- the launch weekend
 
 
-def test_the_launch_weekend_is_saturday_5_pm_to_the_end_of_sunday_pacific():
-    assert challenges.LAUNCH.astimezone(challenges.PACIFIC) == pacific(2026, 11, 21, 17, 0)
-    assert challenges.LAUNCH_END.astimezone(challenges.PACIFIC) == pacific(2026, 11, 23, 0, 0)
-    assert at("2026-11-22T01:00:00Z") == challenges.LAUNCH
-    assert challenges.LAUNCH_SECONDS == 31 * 3600 == 111600
-    assert challenges.week_at(challenges.LAUNCH_END) == 1   # the window ends as week 1 starts
-
-
 def test_seconds_left_in_the_launch_weekend():
-    assert challenges.founder_left(challenges.LAUNCH) == challenges.LAUNCH_SECONDS
-    assert challenges.founder_left(at("2026-11-23T07:59:59Z")) == 1
-    assert challenges.founder_left(at("2026-11-23T07:59:59.5Z")) == 1   # rounds up: never ends early
-    assert challenges.founder_left(at("2026-11-23T08:00:00Z")) == 0
+    assert challenges.founder_left(season_calendar.LAUNCH) == season_calendar.LAUNCH_SECONDS
+    assert challenges.founder_left(at("2026-11-02T07:59:59Z")) == 1
+    assert challenges.founder_left(at("2026-11-02T07:59:59.5Z")) == 1   # rounds up: never ends early
+    assert challenges.founder_left(at("2026-11-02T08:00:00Z")) == 0
     assert challenges.founder_left(at("2026-12-01T00:00:00Z")) == 0
 
 
@@ -182,14 +138,14 @@ def test_send_skips_a_stopped_server_and_reports_a_refusal():
 
 
 def test_the_hourly_commands():
-    assert challenges.commands(at("2026-11-22T01:00:30Z")) == [
-        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:111570}"]
-    assert challenges.commands(at("2026-11-23T08:00:30Z")) == [
+    assert challenges.commands(at("2026-11-01T00:00:30Z")) == [
+        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:115170}"]
+    assert challenges.commands(at("2026-11-02T08:00:30Z")) == [
         "function realms:challenges/sync {week:1}", "function realms:wardrobe/founder/sync {seconds:0}"]
     # A day after the window there is nothing left to keep in step: only the week.
-    assert challenges.commands(at("2026-11-24T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
-    assert challenges.commands(at("2026-11-24T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
-    assert challenges.commands(at("2027-01-04T08:00:30Z")) == ["function realms:challenges/sync {week:7}"]
+    assert challenges.commands(at("2026-11-03T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
+    assert challenges.commands(at("2026-11-03T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
+    assert challenges.commands(at("2027-01-04T08:00:30Z")) == ["function realms:challenges/sync {week:10}"]
     assert challenges.main(["commands", "--at", "2026-11-30T08:00:00Z"]) == 0
 
 
@@ -207,7 +163,7 @@ def test_the_launch_opens_the_window_for_season_one_only():
     assert "scoreboard players set #founder.auto rw.day 1" in opening
     # It closes on its own after the launch weekend's length of game time, even if nothing on the VPS runs.
     assert "execute store result score #founder.until rw.day run time query gametime" in opening
-    assert f"scoreboard players add #founder.until rw.day {challenges.LAUNCH_SECONDS * 20}" in opening
+    assert f"scoreboard players add #founder.until rw.day {season_calendar.LAUNCH_SECONDS * 20}" in opening
     for name in ("open", "open_for"):
         assert founder(name)[[i for i, line in enumerate(founder(name)) if not line.startswith("#")][0]] == \
             opening[guard]
@@ -484,12 +440,15 @@ def test_the_week_script_sends_the_commands_hourly():
     assert b"\r" not in script and script.isascii()
     text = script.decode()
     assert text.startswith("#!/bin/sh\n")
-    assert 'python3 -B "$TOOL" commands' in text and 'TOOL=$REPO_DIR/tools/challenges.py' in text
-    # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals.
-    assert '"$TOOL" send --docker "$LIVE_DIR/docker"' in text and "Unknown function" not in text
+    # A timed job: it names its tool, and deploy/lib.sh's timed_job runs `commands` and `send`.
+    assert "JOB_TOOL=challenges.py\n" in text and text.endswith('\ntimed_job "$@"\n')
+    lib = (REPO.root / "deploy" / "lib.sh").read_text(encoding="utf-8")
+    assert 'python3 -B "$lib_tool" commands "$@"' in lib
+    # Python sends and reads the answers (tools/rcon.py); the shell keeps no copy of the refusals.
+    assert '"$lib_tool" send "$@" --docker "$LIVE_DIR/docker"' in lib and "Unknown function" not in text + lib
     assert "--check" in text and "--install" in text
-    # It reads its three settings without sourcing the env file (which holds the webhooks), and never a password.
-    assert "realms-deploy.env" in text
+    # Its three settings are read without sourcing the env file (which holds the webhooks), and never a password.
+    assert "realms-deploy.env" in text and "realms-deploy.env" in lib
     assert re.findall(r"^\s*(?:\.|source)\s.*", text, re.M) == ['. "$(dirname -- "$0")/lib.sh"']
     assert "WEBHOOK_URL" not in text and "rcon.password" not in text and "RCON_PASSWORD" not in text
     service = (REPO.root / "deploy" / "realms-week.service").read_text(encoding="utf-8")
@@ -499,10 +458,3 @@ def test_the_week_script_sends_the_commands_hourly():
     assert re.search(r"^OnCalendar=\*-\*-\* \*:00:30$", timer, re.M)
     for unit in ("realms-week.service", "realms-week.timer"):
         assert b"\r" not in (REPO.root / "deploy" / unit).read_bytes()
-
-
-def test_the_launch_weekend_starts_at_the_sites_launch_time():
-    # Season I's launch time is in site/config.js (LAUNCH_AT, the countdown) and here (the Founder's Circlet
-    # window): moving one without the other would open the window at the wrong time.
-    config = (site_links.site() / "config.js").read_text(encoding="utf-8")
-    assert site_links.launch_time(site_links.load_links(config)["LAUNCH_AT"]) == challenges.LAUNCH

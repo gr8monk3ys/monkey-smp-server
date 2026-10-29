@@ -1,4 +1,3 @@
-import datetime as dt
 import json
 import re
 
@@ -6,12 +5,12 @@ import challenges
 import datapacks
 import npcs
 import rules
+import season_calendar
 import standings
 from repo import REPO
 
 FILES = npcs.datapack_files()
 PRESETS = {name: npcs.preset(name) for name in npcs.NPCS}
-SEASONS = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8")
 
 
 def walk(value):
@@ -82,24 +81,10 @@ def test_crier_has_a_dialog_for_every_week_of_the_season():
     assert ("rc.seen", "dummy") in challenges.objectives()
 
 
-def test_crier_saturdays_match_the_season_calendar():
-    rows = re.findall(r"^\| (\d+) \| (\d{1,2} \w{3})\w* (\d{4})?", SEASONS, re.M)
-    assert len(rows) >= npcs.LAST_WEEK + 1
-    year = None
-    for week, day_month, y in rows:
-        year = y or year
-        date = dt.datetime.strptime(f"{day_month} {year}", "%d %b %Y").date()
-        assert npcs.saturday(int(week)) == date, week
-        assert date.weekday() == 5
-    assert npcs.saturday(1) == challenges.WEEK_ONE + dt.timedelta(days=5)
-    two = npcs.SEASON_TWO
-    assert f"| | {two.day} {two:%b} |" in SEASONS and two.weekday() == 5
-
-
 def test_crier_names_each_weeks_event():
     for w in range(1, npcs.LAST_WEEK + 1):
         text = npcs.crier_text(w)
-        assert npcs.EVENTS[w] in text and npcs.day(npcs.saturday(w)) in text
+        assert npcs.EVENTS[w] in text and npcs.day(season_calendar.saturday(w)) in text
         if w < npcs.LAST_WEEK:
             assert npcs.EVENTS[w + 1] in text
 

@@ -54,26 +54,8 @@ IMAGE=realms-loadtest
 # Carpet makes the fake players; it is not part of the pack. The Fabric build for Minecraft 26.3, from Modrinth.
 CARPET_URL=https://cdn.modrinth.com/data/TQTTVgYE/versions/yt9oDFOj/fabric-carpet-26.3%2Bv260915.jar
 CARPET_SHA512=7a479ba69eb5049cb94365d5044bd58c9f970c50b3484861fe3675f1917f7c99c1b1f50a5e01bdd9ded940d76a995539009a3656e05be2f513f20ec14de991a7
-
-# Posts $1 to the webhook $2. The messages are ours (no quotes or backslashes), so printf makes valid JSON.
-discord() {
-    [ -n "$2" ] || return 0
-    printf '{"content":"%s"}' "$1" |
-        curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$2" >/dev/null ||
-        log 'could not post to Discord'
-}
-
-players_online() { rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1; }
-
-wait_for_live() {
-    waited=0
-    while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
-        sleep 15
-        waited=$((waited + 15))
-        if rcon list >/dev/null; then return 0; fi
-    done
-    return 1
-}
+whole_number WARN_MINUTES "$WARN_MINUTES" minutes
+whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 # "field NAME FILE": a number or string from loadtest.py's summary.json.
 field() { sed -n "s/.*\"$1\": \"*\([^\",]*\).*/\1/p" "$2" | head -n 1; }
@@ -176,15 +158,8 @@ copy
 count=0
 for s in $SCENARIOS; do count=$((count + 1)); done
 minutes=$((5 + 10 * count))
-online=$(players_online || true)
 discord "Monkey SMP goes offline for about $minutes minutes for a performance test." "$DISCORD_WEBHOOK_URL"
-if [ "${online:-0}" -gt 0 ]; then
-    log "$online player(s) online; warning them"
-    rcon "say Performance test in $WARN_MINUTES minutes (about $minutes minutes offline)." >/dev/null || true
-    [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
-    rcon 'say Performance test in 1 minute. Find a safe spot.' >/dev/null || true
-    sleep 60
-fi
+warn_players 'Performance test' '' "(about $minutes minutes offline)"
 
 stopped=1
 log 'stopping the live server'

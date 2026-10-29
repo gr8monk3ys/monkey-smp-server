@@ -4,16 +4,17 @@ import io
 import json
 import re
 import shutil
-import struct
 import subprocess
 import urllib.error
 import uuid
 
 import pytest
-from nbt_writer import Ints, Long, nbt
+from fake_world import OVERWORLD, FakeWorld, member, score_rows
+from nbt_writer import nbt
 
 import events
 import rcon
+import recap
 import standings
 from repo import REPO
 
@@ -27,36 +28,11 @@ WEBHOOK = "https://discord.com/api/webhooks/1/made-up-secret-token"
 # ---------------------------------------------------------------- a made-up world
 
 
-
-
 PLAYERS = {name: str(uuid.uuid5(uuid.NAMESPACE_DNS, name)) for name in
            ("AlexFake", "SamFake", "RiaFake", "TomFake", "LoneFake")}
 
 
-def ints(name: str) -> Ints:
-    return Ints(struct.unpack(">4i", uuid.UUID(PLAYERS[name]).bytes))
-
-
-def person(name: str, username: str | None = None) -> dict:
-    return {"uuid": ints(name), "username": username or name, "rank": "MEMBER"}
-
-
-def claim_file(chunks: dict[str, int]) -> dict:
-    return {"username": "x", "confirmedActivity": Long(0), "dimensions": {
-        dim: {"claims": [{"state": {"subConfigIndex": -1}, "positions": [{"x": i, "z": 0} for i in range(n)]}]}
-        for dim, n in chunks.items()}}
-
-
-def scores(*rows):
-    out = []
-    for objective, name, score, *extra in rows:
-        # 26.3 leaves Score out when it is 0
-        out.append({"Objective": objective, "Name": name} | ({"Score": score} if score else {})
-                   | (extra[0] if extra else {}))
-    return out
-
-
-SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": scores(
+SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": score_rows(
     ("ev.cup", "red", 30, {"display": "Red Monkeys"}),
     ("ev.cup", "blue", 10, {"display": {"text": "Blue", "extra": [" Herons"]}}),
     ("ev.cup", "green", 5, {"display": "Green Team"}),
@@ -65,30 +41,24 @@ SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": scores(
     (events.LEVEL, "TomFake", 3), (events.LEVEL, "LoneFake", -2),
     ("ev.strength", "TomFake", 1),   # Tom is in the arena: his own Strength is 1, held at +3 in there
     ("st.kills", "AlexFake", 7), ("st.kills", "SamFake", 2), ("st.kills", "RiaFake", 10),
-    ("st.kills", "LoneFake", 1), ("st.bounty", "SamFake", 1))}}
+    ("st.kills", "LoneFake", 1), ("st.bounty", "SamFake", 1),
+    ("rw.day", "#launched", 1))}}   # realms:rules/launch has run: the recap posts
 BASELINE = {"start": "2026-10-25T19:00:00-07:00", "kills": {"AlexFake": 5, "RiaFake": 4}, "bounty": {}}
 
 
 def make_world(root, scoreboard=SCOREBOARD):
-    world = root / "server" / "world"
-    opac = world / "data" / "openpartiesandclaims"
-    for folder in ("parties", "player-claims", "player-configs"):
-        (opac / folder).mkdir(parents=True)
-    (world / "data" / "minecraft").mkdir(parents=True)
-    (world / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(scoreboard, gzipped=True))
+    fake = FakeWorld(root / "server" / "world").scoreboard(scoreboard)
     parties = {"p-red": ("AlexFake", ["SamFake"]), "p-blue": ("RiaFake", ["TomFake"]), "p-lone": ("LoneFake", [])}
     for pid, (owner, members) in parties.items():
-        data = {"owner": person(owner), "confirmedActivity": Long(1), "invites": [], "allies": [],
-                # the party file still has Sam's old name; usercache has the new one
-                "members": [person(m, "OldSam" if m == "SamFake" else None) for m in members]}
-        (opac / "parties" / f"{pid}.nbt").write_bytes(nbt(data))
+        # the party file still has Sam's old name; usercache has the new one
+        fake.party(pid, member(PLAYERS[owner], owner),
+                   [member(PLAYERS[m], "OldSam" if m == "SamFake" else m) for m in members])
     for owner, name in (("AlexFake", "Red Monkeys"), ("RiaFake", "Blue Herons")):
-        (opac / "player-configs" / f"{PLAYERS[owner]}.toml").write_text(
-            f'[playerConfig]\n\t[playerConfig.parties]\n\t\tname = "{name}"\n\t\tshareLocationWithParty = true\n')
-    for name, chunks in (("AlexFake", {"minecraft:overworld": 4}),
-                         ("SamFake", {"minecraft:overworld": 2, "minecraft:the_nether": 1}),
-                         ("RiaFake", {"minecraft:overworld": 4}), ("LoneFake", {"minecraft:overworld": 1})):
-        (opac / "player-claims" / f"{PLAYERS[name]}.nbt").write_bytes(nbt(claim_file(chunks)))
+        fake.party_name(PLAYERS[owner], name)
+    for name, chunks in (("AlexFake", {OVERWORLD: 4}), ("SamFake", {OVERWORLD: 2, "minecraft:the_nether": 1}),
+                         ("RiaFake", {OVERWORLD: 4}), ("LoneFake", {OVERWORLD: 1})):
+        fake.claims(PLAYERS[name], {dim: [(i, 0) for i in range(n)] for dim, n in chunks.items()})
+    world = fake.path
     (world.parent / "usercache.json").write_text(json.dumps(
         [{"name": n, "uuid": u, "expiresOn": "2026-12-01 00:00:00 -0700"} for n, u in PLAYERS.items()]))
     return world
@@ -114,6 +84,36 @@ def test_reads_parties_names_and_claims(world):
     assert parties["p-lone"].name == "LoneFake's faction"       # no party name set: the owner's
     assert data.claims[PLAYERS["SamFake"]] == 3                 # every dimension counts
     assert data.labels == {"red": "Red Monkeys", "blue": "Blue Herons", "green": "Green Team"}
+
+
+def test_what_the_world_lacks(world, tmp_path, capsys):
+    # A party with no owner is left out, with a warning; a claims file not named by a UUID doesn't count.
+    fake = FakeWorld(world).party("p-ghost", None, [member(PLAYERS["TomFake"], "TomFake")])
+    fake.claims("server-claims", {OVERWORLD: [(0, 0)]})
+    data = standings.read_world(world)
+    assert "p-ghost" not in {p.id for p in data.parties} and "server-claims" not in data.claims
+    assert "p-ghost.nbt has no owner: left out" in capsys.readouterr().err
+    # No parties folder yet: no factions, with a warning. No scoreboard: an error.
+    bare = FakeWorld(tmp_path / "bare" / "world").scores().path
+    assert standings.read_world(bare).parties == []
+    assert "no factions (has a party been made with /openpac?)" in capsys.readouterr().err
+    with pytest.raises(SystemExit, match="no scoreboard at .*: give the world folder"):
+        standings.read_world(tmp_path / "bare")
+
+
+def test_a_claim_saved_oddly_in_another_dimension_still_counts(world):
+    # Claims are counted, not read: a Nether position with no x/z never stops the weekly standings.
+    path = world / f"data/openpartiesandclaims/player-claims/{PLAYERS['LoneFake']}.nbt"
+    path.write_bytes(nbt({"dimensions": {OVERWORLD: {"claims": [{"positions": [{"x": 0, "z": 0}]}]},
+                                         "minecraft:the_nether": {"claims": [{"positions": [{"y": 1}, {}]}]}}}))
+    assert standings.read_world(world).claims[PLAYERS["LoneFake"]] == 3
+
+
+def test_a_party_file_with_a_bad_member_stops_standings_naming_it(world):
+    # As before saved_world.py: a faction can't be ranked without its members, so it stops, now naming the file.
+    FakeWorld(world).party("p-bad", member(PLAYERS["TomFake"], "TomFake"), [{"uuid": "nope", "rank": "MEMBER"}])
+    with pytest.raises(ValueError, match=re.escape(str(world / "data/openpartiesandclaims/parties/p-bad.nbt"))):
+        standings.read_world(world)
 
 
 def test_the_formula(world, capsys):
@@ -148,7 +148,7 @@ def test_a_restarted_counter_counts_in_full(world):
 
 def test_a_bounty_counts_however_staff_cased_the_name(tmp_path):
     board = copy.deepcopy(SCOREBOARD)
-    board["data"]["PlayerScores"].extend(scores(("st.bounty", "alexfake", 1)))
+    board["data"]["PlayerScores"].extend(score_rows(("st.bounty", "alexfake", 1)))
     rows = by_name(standings.table(standings.read_world(make_world(tmp_path, board)), BASELINE))
     assert rows["Red Monkeys"].bounties == 2   # SamFake's, and AlexFake's typed as "alexfake"
     then = {**BASELINE, "bounty": {"ALEXFAKE": 1}}
@@ -259,14 +259,17 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # the next week starts from everyone's kills now
     assert json.loads((state / "week.json").read_text())["kills"]["RiaFake"] == 10
     # the board shows the new week (no kills yet) and the closed one, then it is announced
-    assert rcon.sent[-1] == "function realms:standings/announce"
-    assert rcon.sent[-2] == "function realms:standings/publish"
+    assert rcon.sent[-3] == "function realms:standings/announce"
+    assert rcon.sent[-4] == "function realms:standings/publish"
+    # then the week's wars end (tools/diplomacy.py week_end)
+    assert rcon.sent[-2] == 'data modify storage realms:diplomacy batch set value [{f:"week_over",seq:0}]'
+    assert rcon.sent[-1] == "function realms:diplomacy/batch/run"
     assert "kills 0" in rcon.sent[0] and "kills 4" in rcon.sent[1]
     [(url, kind, body)] = discord.posts
     assert url == WEBHOOK and kind == "application/json"
     assert body["allowed_mentions"] == {"parse": []}
     assert "Red Monkeys" in body["content"] and len(body["content"]) <= 2000
-    assert "week of Sun 25 Oct to Sun 1 Nov" in body["content"]
+    assert "Sun 25 Oct to Sun 1 Nov" in body["content"] and body["content"].startswith("**Monkey SMP Weekly**")
     first = capsys.readouterr()
     assert "board updated and announced in chat" in first.out
     # run again (a retry, a re-run): nothing is closed or posted twice
@@ -320,6 +323,17 @@ def test_discord_message_is_a_table():
     assert len(message) <= standings.DISCORD_LIMIT
     assert message.count("```") == 2 and "and 4 more" in message
     assert "Bounty" in message and standings.FORMULA in message
+
+
+def test_the_recap_carries_the_weeks_war_and_pacts_first():
+    # A week with wars is not "a quiet week": the war and pacts lines come first, then the recap's own lines.
+    week = {"start": None, "end": SUNDAY.isoformat(), "rows": [vars(r) for r in long_rows(3)],
+            "diplomacy": ["- Red Monkeys declared war on Blue Jays"],
+            "recap": [[recap.QUIET], ["**Next Saturday:** Faction Raid I."]]}
+    message = standings.discord_message(week)
+    assert recap.QUIET not in message
+    assert message.index("declared war") < message.index("**Next Saturday:**")
+    assert recap.QUIET in standings.discord_message({**week, "diplomacy": []})
 
 
 def test_main_show(world, capsys):

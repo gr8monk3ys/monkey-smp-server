@@ -2,21 +2,15 @@ import json
 import zipfile
 
 import pytest
-from nbt_writer import nbt
+from fake_world import FakeWorld, score_rows
 
 import datapacks
 import season
 import wardrobe
 
-
-def scores(*rows):
-    # 26.3 leaves Score out when it is 0
-    return [{"Objective": o, "Name": n, "Locked": 1} | ({"Score": s} if s else {}) for o, n, s in rows]
-
-
 SCOREBOARD = {"DataVersion": 5023, "data": {
     "Objectives": [{"Name": "rw.days", "DisplayName": "rw.days"}],
-    "PlayerScores": scores(
+    "PlayerScores": score_rows(
         ("rw.days", "AlexFake", 41), ("rw.months", "AlexFake", 3), ("rw.founder", "AlexFake", 1),
         ("rw.events", "AlexFake", 4), ("rw.hallowtide", "AlexFake", 1), ("rw.months.seen", "AlexFake", 3),
         ("rw.play", "AlexFake", 360000), ("rw.hours", "AlexFake", 5), ("rw.lastday", "AlexFake", 77),
@@ -32,9 +26,7 @@ SCOREBOARD = {"DataVersion": 5023, "data": {
 
 
 def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
-    old, new = tmp_path / "old" / "world", tmp_path / "new" / "world"
-    (old / "data" / "minecraft").mkdir(parents=True)
-    (old / "data" / "minecraft" / "scoreboard.dat").write_bytes(nbt(SCOREBOARD, gzipped=True))
+    old, new = FakeWorld(tmp_path / "old" / "world").scoreboard(SCOREBOARD).path, tmp_path / "new" / "world"
     assert season.main(["carry", str(old), "--into", str(new), "--season", "2"]) == 0
     pack = new / "datapacks" / "realms-carry"
     assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == datapacks.DATA_FORMAT
@@ -59,6 +51,12 @@ def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
     for absent in ("rw.hours", "rw.const", "rw.play ", "ev.cup", "Strength", "in.castle", "#season rw.day 1"):
         assert absent not in text, absent
     assert run[-1] == "say Carried 2 players' wardrobe scores and 2 teams into season 2."
+
+
+def test_carry_wants_the_old_worlds_scoreboard(tmp_path):
+    with pytest.raises(SystemExit, match="no scoreboard at .*scoreboard.dat: give the old world folder"):
+        season.main(["carry", str(tmp_path), "--into", str(tmp_path / "new"), "--season", "2"])
+    assert not (tmp_path / "new").exists()
 
 
 def test_every_wardrobe_score_is_carried():

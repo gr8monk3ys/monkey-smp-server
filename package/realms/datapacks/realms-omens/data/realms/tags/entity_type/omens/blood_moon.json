@@ -1,0 +1,27 @@
+{
+  "values": [
+    "minecraft:zombie",
+    "minecraft:husk",
+    "minecraft:drowned",
+    "minecraft:zombie_villager",
+    "minecraft:skeleton",
+    "minecraft:stray",
+    "minecraft:bogged",
+    "minecraft:creeper",
+    "minecraft:spider",
+    "minecraft:cave_spider",
+    "minecraft:witch",
+    "minecraft:slime",
+    "minecraft:phantom",
+    "minecraft:pillager",
+    "minecraft:vindicator",
+    {
+      "id": "minecraft:parched",
+      "required": false
+    },
+    {
+      "id": "minecraft:camel_husk",
+      "required": false
+    }
+  ]
+}

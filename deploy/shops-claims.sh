@@ -45,8 +45,8 @@ LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
 LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
 WARN_MINUTES=${WARN_MINUTES:-$(setting WARN_MINUTES 5)}
 BOOT_TIMEOUT=${BOOT_TIMEOUT:-$(setting BOOT_TIMEOUT 900)}
-case "$WARN_MINUTES" in '' | *[!0-9]*) WARN_MINUTES=5 ;; esac
-case "$BOOT_TIMEOUT" in '' | *[!0-9]*) BOOT_TIMEOUT=900 ;; esac
+whole_number WARN_MINUTES "$WARN_MINUTES" minutes
+whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 SERVER_DIR=$LIVE_DIR/server
 FILE=$SERVER_DIR/config/openpartiesandclaims-server.toml
@@ -57,28 +57,6 @@ ENTRY="hand\$$BLOCK"  # the same entry as defaults/config/openpartiesandclaims-s
 SERVICE_USER=realms   # the owner of the deploy lock (docs/LIVE.md)
 
 umask 022
-
-wait_for_live() {
-    waited=0
-    while [ "$waited" -lt "$BOOT_TIMEOUT" ]; do
-        sleep 15
-        waited=$((waited + 15))
-        if rcon list >/dev/null; then return 0; fi
-    done
-    return 1
-}
-
-# If players are online, warns them in chat WARN_MINUTES and 1 minute ahead.
-warn_players() {
-    [ "$WARN_MINUTES" -gt 0 ] || return 0
-    online=$(rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1)
-    [ "${online:-0}" -gt 0 ] || return 0
-    log "$online player(s) online; warning them $WARN_MINUTES minutes ahead"
-    rcon "say Server restart in $WARN_MINUTES minutes for a settings update (about 3 minutes offline)." >/dev/null || true
-    [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
-    rcon 'say Server restart in 1 minute. Find a safe spot.' >/dev/null || true
-    sleep 60
-}
 
 # Starts the server again if this script stopped it. Also the exit trap, so an error, Ctrl+C, a dropped SSH
 # connection or `systemctl stop` never leaves it down.
@@ -203,7 +181,7 @@ fi
 take_lock
 was_running=''
 if running; then
-    [ "$MODE" = now ] || warn_players
+    [ "$MODE" = now ] || warn_players 'Server restart' '' 'for a settings update (about 3 minutes offline)'
     was_running=1
     stopped=1
     log 'stopping the server'

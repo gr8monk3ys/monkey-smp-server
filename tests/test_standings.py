@@ -42,7 +42,7 @@ SCOREBOARD = {"DataVersion": 5023, "data": {"PlayerScores": score_rows(
     ("ev.strength", "TomFake", 1),   # Tom is in the arena: his own Strength is 1, held at +3 in there
     ("st.kills", "AlexFake", 7), ("st.kills", "SamFake", 2), ("st.kills", "RiaFake", 10),
     ("st.kills", "LoneFake", 1), ("st.bounty", "SamFake", 1),
-    ("rw.day", "#launched", 1))}}   # realms:rules/launch has run: the recap posts
+    ("rw.day", "#launched", 1))}}   # monkey:rules/launch has run: the recap posts
 BASELINE = {"start": "2026-10-25T19:00:00-07:00", "kills": {"AlexFake": 5, "RiaFake": 4}, "bounty": {}}
 
 
@@ -193,12 +193,12 @@ def test_board_commands_fit_rcon_and_stay_plain_ascii():
     last = {"start": "2026-10-18T19:00:00-07:00", "end": "2026-10-25T19:00:00-07:00",
             "rows": [vars(r) for r in rows]}
     commands = standings.board_commands(rows, BASELINE, last, SUNDAY)
-    assert commands[-1] == "function realms:standings/publish"
+    assert commands[-1] == "function monkey:standings/publish"
     for c in commands:
         assert len(c.encode()) <= rcon.LIMIT
         assert c.isascii() and "\n" not in c and not c.startswith("-")
-    assert commands[0].startswith("data modify storage realms:standings week set value {")
-    assert commands[1].startswith("data modify storage realms:standings last set value {")
+    assert commands[0].startswith("data modify storage monkey:standings week set value {")
+    assert commands[1].startswith("data modify storage monkey:standings last set value {")
     assert "1. Unicode Quoted Fact~: " in commands[0]   # quotes and backslashes never reach SNBT
     assert '\\"' not in commands[0] and "\\\\" not in commands[0]
     assert "since Sun 25 Oct, updated Sun 1 Nov, 7 PM" in commands[0]
@@ -259,11 +259,11 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # the next week starts from everyone's kills now
     assert json.loads((state / "week.json").read_text())["kills"]["RiaFake"] == 10
     # the board shows the new week (no kills yet) and the closed one, then it is announced
-    assert rcon.sent[-3] == "function realms:standings/announce"
-    assert rcon.sent[-4] == "function realms:standings/publish"
+    assert rcon.sent[-3] == "function monkey:standings/announce"
+    assert rcon.sent[-4] == "function monkey:standings/publish"
     # then the week's wars end (tools/diplomacy.py week_end)
-    assert rcon.sent[-2] == 'data modify storage realms:diplomacy batch set value [{f:"week_over",seq:0}]'
-    assert rcon.sent[-1] == "function realms:diplomacy/batch/run"
+    assert rcon.sent[-2] == 'data modify storage monkey:diplomacy batch set value [{f:"week_over",seq:0}]'
+    assert rcon.sent[-1] == "function monkey:diplomacy/batch/run"
     assert "kills 0" in rcon.sent[0] and "kills 4" in rcon.sent[1]
     [(url, kind, body)] = discord.posts
     assert url == WEBHOOK and kind == "application/json"
@@ -275,7 +275,7 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # run again (a retry, a re-run): nothing is closed or posted twice
     assert standings.close(world, state, rcon, SUNDAY + dt.timedelta(minutes=20), WEBHOOK, discord) == 0
     assert len(list((state / "weeks").iterdir())) == 1 and len(discord.posts) == 1
-    assert rcon.sent.count("function realms:standings/announce") == 1
+    assert rcon.sent.count("function monkey:standings/announce") == 1
     out = capsys.readouterr()
     # and it says so, not that it announced again
     assert "already announced in chat" in out.out and "and announced in chat" not in out.out
@@ -369,10 +369,10 @@ def test_the_bounty_title_never_replaces_another_title():
 
 
 def test_the_board_follows_the_storage():
-    assert "tellraw @s {\"nbt\":\"board\",\"storage\":\"realms:standings\",\"interpret\":true}" in fn("use")
-    assert "data modify entity @s text set from storage realms:standings board" in fn("refresh")
+    assert "tellraw @s {\"nbt\":\"board\",\"storage\":\"monkey:standings\",\"interpret\":true}" in fn("use")
+    assert "data modify entity @s text set from storage monkey:standings board" in fn("refresh")
     assert "scoreboard players add #board st.ver 1" in fn("publish")
-    assert "unless score @s st.ver = #board st.ver run function realms:standings/refresh" in fn("second")
+    assert "unless score @s st.ver = #board st.ver run function monkey:standings/refresh" in fn("second")
 
 
 def test_help_lists_only_real_functions():
@@ -383,9 +383,9 @@ def test_help_lists_only_real_functions():
 
 
 DEPLOY = REPO.root / "deploy"
-SCRIPTS = ["realms-standings.sh", "install-standings.sh"]
-UNITS = ["realms-standings.service", "realms-standings.timer", "realms-standings-board.service",
-         "realms-standings-board.timer"]
+SCRIPTS = ["monkey-standings.sh", "install-standings.sh"]
+UNITS = ["monkey-standings.service", "monkey-standings.timer", "monkey-standings-board.service",
+         "monkey-standings-board.timer"]
 
 
 @pytest.mark.parametrize("name", SCRIPTS + UNITS)
@@ -415,12 +415,12 @@ def test_install_script_reads_no_secret():
         assert unit in text
 
 
-def test_units_run_the_script_as_realms_on_sunday_evening():
-    service = (DEPLOY / "realms-standings.service").read_text()
-    assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-standings.sh close" in service
-    assert "OnCalendar=Sun *-*-* 19:00:00 America/Los_Angeles" in (DEPLOY / "realms-standings.timer").read_text()
-    board = (DEPLOY / "realms-standings-board.service").read_text()
-    assert "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-standings.sh board" in board
-    script = (DEPLOY / "realms-standings.sh").read_text()
+def test_units_run_the_script_as_monkey_on_sunday_evening():
+    service = (DEPLOY / "monkey-standings.service").read_text()
+    assert "User=monkey" in service and "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-standings.sh close" in service
+    assert "OnCalendar=Sun *-*-* 19:00:00 America/Los_Angeles" in (DEPLOY / "monkey-standings.timer").read_text()
+    board = (DEPLOY / "monkey-standings-board.service").read_text()
+    assert "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-standings.sh board" in board
+    script = (DEPLOY / "monkey-standings.sh").read_text()
     assert "deploy_lock 1800" in script and "export STANDINGS_WEBHOOK_URL" in script
-    assert "STANDINGS_WEBHOOK_URL=" in (DEPLOY / "realms-deploy.env.example").read_text()
+    assert "STANDINGS_WEBHOOK_URL=" in (DEPLOY / "monkey-deploy.env.example").read_text()

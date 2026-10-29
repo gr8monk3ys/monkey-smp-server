@@ -1,0 +1,10 @@
+# Runs monkey-day.service once a day at midnight UTC (and at boot if a midnight was missed).
+[Unit]
+Description=Monkey SMP: new wardrobe day at midnight UTC
+
+[Timer]
+OnCalendar=*-*-* 00:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

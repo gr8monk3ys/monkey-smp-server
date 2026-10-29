@@ -23,9 +23,9 @@ def fn(path: str) -> str:
 
 
 def storage(world, contents: dict) -> None:
-    """The realms namespace's command storage, laid out as a 26.3 server saves it (data/realms/command_storage.dat,
+    """The monkey namespace's command storage, laid out as a 26.3 server saves it (data/monkey/command_storage.dat,
     gzipped, the paths under data.contents)."""
-    path = world / "data" / "realms" / "command_storage.dat"
+    path = world / "data" / "monkey" / "command_storage.dat"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))
 
@@ -85,7 +85,7 @@ def test_a_sync_sends_only_what_changed_and_never_reuses_a_number():
     at_odds = {**SCORES, "dp.pact": {"#2.3": 1, "#1.2": 1}, "dp.war": {"#1.3": 17}}
     assert diplomacy.sync_changes(FACTIONS, at_odds, missing(3))[:3] == [
         C("dissolve", a=1, b=3), C("dissolve", a=2, b=3), C("sync/gone", n=3)]
-    assert "dissolve_pair with storage realms:diplomacy pair" in fn("dissolve")
+    assert "dissolve_pair with storage monkey:diplomacy pair" in fn("dissolve")
     # Sam leaves Red and makes a party of his own; Blue is renamed; Tom becomes Blue's owner.
     now = [diplomacy.Faction("p-red", "Red Monkeys", ["AlexFake"]),
            diplomacy.Faction("p-blue", "Blue Herons Two", ["TomFake", "RiaFake"]),
@@ -134,23 +134,23 @@ def test_changes_go_many_to_a_command_and_each_has_its_function():
     commands = diplomacy.batch_commands(changes)
     assert len(commands) <= len(changes) / 10   # a first sync of 40 full factions: a few dozen commands, not 280
     for store, run in zip(commands[::2], commands[1::2], strict=True):
-        assert store.startswith("data modify storage realms:diplomacy batch set value [{f:")
+        assert store.startswith("data modify storage monkey:diplomacy batch set value [{f:")
         assert len(store.encode()) <= rcon.LIMIT and store.isascii()
-        assert run == "function realms:diplomacy/batch/run"
+        assert run == "function monkey:diplomacy/batch/run"
     assert sum(c.count("{f:") for c in commands) == len(changes)   # all of them, in order
     assert diplomacy.batch_commands([C("sync/name", n=1, v='Odd "name"')]) == [
-        'data modify storage realms:diplomacy batch set value [{f:"sync/name",n:1,v:"Odd \\"name\\""}]',
-        "function realms:diplomacy/batch/run"]
+        'data modify storage monkey:diplomacy batch set value [{f:"sync/name",n:1,v:"Odd \\"name\\""}]',
+        "function monkey:diplomacy/batch/run"]
     # every function a change names exists, and batch/run makes them in order
     for f in {c["f"] for c in changes} | {"dissolve", "sync/gone", "sync/missing", "sync/found", "sync/reset",
                                           "war_over", "offer_over", "week_over"}:
         assert f"{FN}/{f}.mcfunction" in FILES, f
-    assert fn("batch/one").strip() == "$function realms:diplomacy/$(f) with storage realms:diplomacy batch[0]"
+    assert fn("batch/one").strip() == "$function monkey:diplomacy/$(f) with storage monkey:diplomacy batch[0]"
     run = fn("batch/run")
-    assert run.index("batch/one with storage realms:diplomacy batch[0]") < run.index(
-        "data remove storage realms:diplomacy batch[0]") < run.index("function realms:diplomacy/batch/run")
+    assert run.index("batch/one with storage monkey:diplomacy batch[0]") < run.index(
+        "data remove storage monkey:diplomacy batch[0]") < run.index("function monkey:diplomacy/batch/run")
     assert "$scoreboard players set $(p) $(o) $(v)" in fn("sync/set")
-    assert "names.f$(n).text set from storage realms:diplomacy batch[0].v" in fn("sync/name")
+    assert "names.f$(n).text set from storage monkey:diplomacy batch[0].v" in fn("sync/name")
 
 
 def test_numbers_and_names_read_the_saved_storage(tmp_path):
@@ -161,7 +161,7 @@ def test_numbers_and_names_read_the_saved_storage(tmp_path):
                                  "names": {"f2": {"text": "Red Monkeys"}}}, "standings": {"week": {"text": ""}}})
     assert diplomacy.numbers(world) == {"p-blue": 1, "p-red": 2}
     assert diplomacy.names(world) == {2: "Red Monkeys"}
-    (world / "data" / "realms" / "command_storage.dat").write_bytes(nbt({"data": {"contents": "no"}}))
+    (world / "data" / "monkey" / "command_storage.dat").write_bytes(nbt({"data": {"contents": "no"}}))
     with pytest.raises(ValueError, match="command_storage.dat: not as the server saves it"):
         diplomacy.saved_storage(world)
 
@@ -170,11 +170,11 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
     world = make_world(tmp_path)
     server = rcon.Recorder()
     assert standings.board(world, tmp_path / "state", server, SUNDAY) == 0
-    first_board = next(i for i, c in enumerate(server.sent) if c.startswith("data modify storage realms:standings"))
+    first_board = next(i for i, c in enumerate(server.sent) if c.startswith("data modify storage monkey:standings"))
     synced = "".join(server.sent[:first_board])
     assert '{f:"sync/set",p:"AlexFake",o:"st.faction",v:3}' in synced   # p-blue 1, p-lone 2, p-red 3
     assert '{f:"sync/name",n:2,v:"LoneFake\'s faction"}' in synced
-    assert server.sent[first_board - 1] == "function realms:diplomacy/batch/run" and first_board == 2
+    assert server.sent[first_board - 1] == "function monkey:diplomacy/batch/run" and first_board == 2
     assert "factions in game: " in capsys.readouterr().out
     # Once the world has saved what was sent, the next hour sends nothing for the factions.
     storage(world, {"factions": {"ids": {"f1": "p-blue", "f2": "p-lone", "f3": "p-red"},
@@ -187,23 +187,23 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
                                  "names": {"f1": "Blue Herons", "f2": "LoneFake's faction", "f3": "Red Monkeys"}}})
     server = rcon.Recorder()
     assert standings.board(world, tmp_path / "state", server, SUNDAY) == 0
-    assert server.sent[0].startswith("data modify storage realms:standings week")
+    assert server.sent[0].startswith("data modify storage monkey:standings week")
 
 
 def test_a_failed_sync_never_stops_the_board(tmp_path, capsys):
     # refused by the server
     world = make_world(tmp_path)
-    server = rcon.Recorder({"function realms:diplomacy/batch/run": "Unknown function realms:diplomacy/batch/run"})
+    server = rcon.Recorder({"function monkey:diplomacy/batch/run": "Unknown function monkey:diplomacy/batch/run"})
     assert standings.board(world, tmp_path / "state", server, SUNDAY) == 1
     assert "could not write the factions in game" in capsys.readouterr().err
-    assert server.sent[-1] == "function realms:standings/publish"
+    assert server.sent[-1] == "function monkey:standings/publish"
     # a damaged command storage file (cut short while saving)
-    (world / "data" / "realms").mkdir(parents=True)
-    (world / "data" / "realms" / "command_storage.dat").write_bytes(b"\x1f\x8b\x08\x00broken")
+    (world / "data" / "monkey").mkdir(parents=True)
+    (world / "data" / "monkey" / "command_storage.dat").write_bytes(b"\x1f\x8b\x08\x00broken")
     server = rcon.Recorder()
     assert standings.board(world, tmp_path / "state", server, SUNDAY) == 1
     assert "command_storage.dat" in capsys.readouterr().err
-    assert server.sent[-1] == "function realms:standings/publish" and not any("batch" in c for c in server.sent)
+    assert server.sent[-1] == "function monkey:standings/publish" and not any("batch" in c for c in server.sent)
 
 
 # ---------------------------------------------------------------- the kills column
@@ -313,7 +313,7 @@ def closing(tmp_path, board=None):
 
 
 def batched(sent) -> str:
-    return "".join(c for c in sent if c.startswith("data modify storage realms:diplomacy batch"))
+    return "".join(c for c in sent if c.startswith("data modify storage monkey:diplomacy batch"))
 
 
 def test_close_posts_the_week_of_war_and_ends_the_wars_once(tmp_path, capsys):
@@ -325,8 +325,8 @@ def test_close_posts_the_week_of_war_and_ends_the_wars_once(tmp_path, capsys):
     # the wars and offers running when the world was read, each by its declaration's number, then week_over
     assert closed["war_ends"] == [{"f": "war_over", "lo": 1, "hi": 2, "seq": 3},
                                   {"f": "offer_over", "a": 2, "b": 1, "seq": 5}, {"f": "week_over", "seq": 8}]
-    assert server.sent.index("function realms:standings/announce") < server.sent.index(
-        "function realms:diplomacy/batch/run")
+    assert server.sent.index("function monkey:standings/announce") < server.sent.index(
+        "function monkey:diplomacy/batch/run")
     assert '{f:"war_over",lo:1,hi:2,seq:3}' in batched(server.sent)
     content = discord.posts[0][2]["content"]
     assert "- Red Monkeys declared war on Blue Herons" in content and len(content) <= standings.DISCORD_LIMIT
@@ -341,7 +341,7 @@ def test_close_posts_the_week_of_war_and_ends_the_wars_once(tmp_path, capsys):
 
 def test_the_wars_end_even_when_the_board_fails_and_a_late_retry_ends_only_the_closed_weeks(tmp_path, capsys):
     world, state = closing(tmp_path)
-    server = rcon.Recorder({"function realms:standings/publish": "Unknown function realms:standings/publish"})
+    server = rcon.Recorder({"function monkey:standings/publish": "Unknown function monkey:standings/publish"})
     assert standings.close(world, state, server, SUNDAY, "", FakeDiscord()) == 1
     assert "could not update the in-game board" in capsys.readouterr().err
     assert "week_over" in batched(server.sent)   # the board's failure didn't keep the wars going
@@ -368,7 +368,7 @@ def test_the_wars_end_even_when_the_board_fails_and_a_late_retry_ends_only_the_c
 
 def test_a_damaged_storage_file_never_stops_the_close(tmp_path, capsys):
     world, state = closing(tmp_path)
-    (world / "data" / "realms" / "command_storage.dat").write_bytes(b"\x1f\x8b\x08\x00cut short")
+    (world / "data" / "monkey" / "command_storage.dat").write_bytes(b"\x1f\x8b\x08\x00cut short")
     server, discord = rcon.Recorder(), FakeDiscord()
     assert standings.close(world, state, server, SUNDAY, WEBHOOK, discord) == 0
     assert "left out of the post" in capsys.readouterr().err
@@ -396,10 +396,10 @@ def test_week_over_counts_the_wars_that_ended_and_trims_the_log():
     assert over.index("execute if score #ended dp.state matches 1.. run tellraw @a") < over.index(
         "scoreboard players set #ended dp.state 0")
     assert "#wars" not in "".join(FILES.values())   # peace, staff and a gone faction end wars without a count
-    assert "$scoreboard players set #trim dp.tmp $(seq)" in over and "function realms:diplomacy/trim" in over
+    assert "$scoreboard players set #trim dp.tmp $(seq)" in over and "function monkey:diplomacy/trim" in over
     trim = fn("trim")
     assert trim.index("if score #n dp.tmp > #trim dp.tmp run return 0") < trim.index(
-        "data remove storage realms:diplomacy log[0]") < trim.index("function realms:diplomacy/trim")
+        "data remove storage monkey:diplomacy log[0]") < trim.index("function monkey:diplomacy/trim")
     assert "dp.pact" not in over and "dp.pact" not in fn("war_over")   # pacts stand
 
 
@@ -410,8 +410,8 @@ def test_the_pack_has_no_problems_with_the_standings_pack():
     # with every other pack, as they ship (#launched rw.day is the wardrobe's)
     assert [p for p in datapacks.problems(datapacks.all_files()) if "diplomacy" in p] == []
     tags = standings.datapack_files()
-    assert "realms:diplomacy/load" in tags["data/minecraft/tags/function/load.json"]
-    assert "realms:diplomacy/tick" in tags["data/minecraft/tags/function/tick.json"]
+    assert "monkey:diplomacy/load" in tags["data/minecraft/tags/function/load.json"]
+    assert "monkey:diplomacy/tick" in tags["data/minecraft/tags/function/tick.json"]
 
 
 @pytest.mark.parametrize("n", [1, 42, diplomacy.MAX_FACTIONS])
@@ -425,10 +425,10 @@ def test_a_kill_advancement_per_faction_number(n):
     assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"st.faction": {"min": n, "max": n}}} \
         in terms
     assert '"condition"' not in json.dumps(adv)   # the pre-26 key fails the whole pack
-    assert adv["rewards"] == {"function": f"realms:diplomacy/kill/f{n}"}
+    assert adv["rewards"] == {"function": f"monkey:diplomacy/kill/f{n}"}
     reward = fn(f"kill/f{n}").splitlines()
-    assert reward[1] == f"advancement revoke @s only realms:diplomacy/kill/f{n}"   # first, so the next kill fires
-    assert reward[2] == f"function realms:diplomacy/kill {{b:{n}}}"
+    assert reward[1] == f"advancement revoke @s only monkey:diplomacy/kill/f{n}"   # first, so the next kill fires
+    assert reward[2] == f"function monkey:diplomacy/kill {{b:{n}}}"
 
 
 def test_a_war_kill_counts_only_at_war_outside_the_arena_after_the_launch():
@@ -436,7 +436,7 @@ def test_a_war_kill_counts_only_at_war_outside_the_arena_after_the_launch():
     for gate in ("execute unless score #launched rw.day matches 1 run return 0",
                  "execute if entity @s[tag=ev.arena] run return 0",
                  "execute unless score @s st.faction matches 1.. run return 0"):
-        assert kill.index(gate) < kill.index("function realms:diplomacy/pair")
+        assert kill.index(gate) < kill.index("function monkey:diplomacy/pair")
     war_kill = fn("war_kill").splitlines()
     assert war_kill[0] == "$execute unless score #$(lo).$(hi) dp.war matches 1.. run return 0"
     assert war_kill[1] == "scoreboard players add @s st.warkills 1"
@@ -451,12 +451,12 @@ def test_pair_puts_the_smaller_number_first():
 def test_only_an_owner_acts_and_only_after_the_launch():
     use = fn("use")
     order = ["unless score #launched rw.day matches 1", "unless score @s st.faction matches 1..",
-             "run return run function realms:diplomacy/menu", "unless score @s st.leader matches 1",
-             "if score #a dp.tmp = #b dp.tmp", "unless function realms:diplomacy/known",
-             "if function realms:diplomacy/cooling", "matches 1 run return run function realms:diplomacy/war"]
+             "run return run function monkey:diplomacy/menu", "unless score @s st.leader matches 1",
+             "if score #a dp.tmp = #b dp.tmp", "unless function monkey:diplomacy/known",
+             "if function monkey:diplomacy/cooling", "matches 1 run return run function monkey:diplomacy/war"]
     at = [use.index(s) for s in order]
     assert at == sorted(at)
-    assert "matches ..9 run return run function realms:diplomacy/menu" in use
+    assert "matches ..9 run return run function monkey:diplomacy/menu" in use
 
 
 @pytest.mark.parametrize("action", sorted(diplomacy.ACTIONS))
@@ -473,9 +473,9 @@ def test_no_war_with_a_pact_partner_and_a_pact_ends_a_war():
     war = fn("war")
     # the war's score is its declaration's number in the log (week_end ends that one and no later one)
     assert war.index("$execute if score #$(lo).$(hi) dp.pact matches 1 run return run") < war.index(
-        '$function realms:diplomacy/log {kind:"war",a:$(a),b:$(b)}') < war.index(
+        '$function monkey:diplomacy/log {kind:"war",a:$(a),b:$(b)}') < war.index(
         "$scoreboard players operation #$(lo).$(hi) dp.war = #seq dp.state")
-    assert fn("pact").index('$function realms:diplomacy/log {kind:"offer",a:$(a),b:$(b)}') < fn("pact").index(
+    assert fn("pact").index('$function monkey:diplomacy/log {kind:"offer",a:$(a),b:$(b)}') < fn("pact").index(
         "$scoreboard players operation #$(a).$(b) dp.offer = #seq dp.state")
     accept = fn("accept")
     assert "$scoreboard players reset #$(lo).$(hi) dp.war" in accept
@@ -492,7 +492,7 @@ def test_every_declaration_is_announced_logged_and_cools_down():
                        ("break", "break"), ("staff/end_pair", "end")):
         body = fn(name)
         assert "$tellraw @a " in body, name
-        assert f'$function realms:diplomacy/log {{kind:"{kind}",a:$(a),b:$(b)}}' in body, name
+        assert f'$function monkey:diplomacy/log {{kind:"{kind}",a:$(a),b:$(b)}}' in body, name
     for name in ("war", "pact", "accept", "break"):
         assert "$execute store result score #f$(a) dp.last run time query gametime" in fn(name)
     # breaking a pact names the player who did it
@@ -512,7 +512,7 @@ def test_staff_and_a_gone_faction_end_a_pair_the_same_way():
     assert "$execute if score #$(lo).$(hi) dp.pact matches 1 run scoreboard players remove #f$(a) dp.pacts 1" \
         in end_pair and "$scoreboard players reset #$(lo).$(hi) dp.war" in end_pair
     for caller in ("staff/end_pair", "dissolve_pair"):
-        assert "function realms:diplomacy/end_pair with storage realms:diplomacy pair" in fn(caller), caller
+        assert "function monkey:diplomacy/end_pair with storage monkey:diplomacy pair" in fn(caller), caller
         assert "dp.pacts 1" not in fn(caller), caller
 
 
@@ -524,7 +524,7 @@ def test_a_world_is_marked_once_for_the_sunday_report():
 def test_the_launch_clears_what_came_before_it_once():
     second = fn("second")
     assert ("execute if score #launched rw.day matches 1 unless score #launched dp.state matches 1 run function "
-            "realms:diplomacy/launch") in second
+            "monkey:diplomacy/launch") in second
     launch = fn("launch")
     for o in ("dp.war", "dp.pact", "dp.offer", "dp.pacts", "st.warkills"):
         assert f"scoreboard players reset * {o}" in launch
@@ -534,9 +534,9 @@ def test_the_launch_clears_what_came_before_it_once():
 
 def test_the_menu_lists_every_number_but_your_own():
     menu = fn("menu")
-    assert menu.count("run function realms:diplomacy/row {b:") == diplomacy.MAX_FACTIONS
-    assert ("execute if data storage realms:factions names.f7 unless score @s st.faction matches 7 run function "
-            "realms:diplomacy/row {b:7}") in menu
+    assert menu.count("run function monkey:diplomacy/row {b:") == diplomacy.MAX_FACTIONS
+    assert ("execute if data storage monkey:factions names.f7 unless score @s st.faction matches 7 run function "
+            "monkey:diplomacy/row {b:7}") in menu
     for i in range(len(diplomacy.ROWS)):
         row = fn(f"row/{i}").splitlines()
         assert row[0].startswith("$execute if score @s st.leader matches 1 run return run tellraw @s ")

@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag that matches package/realms/manifest.json "version", e.g.  git tag v1.0.0 && git push --tags
+# Push a tag that matches package/monkey/manifest.json "version", e.g.  git tag v1.0.0 && git push --tags
 on:
   push:
     tags: ["v*.*.*"]

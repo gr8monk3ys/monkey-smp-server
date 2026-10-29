@@ -28,10 +28,10 @@ SCOREBOARD = {"DataVersion": 5023, "data": {
 def test_carry_puts_back_the_wardrobe_and_teams(tmp_path):
     old, new = FakeWorld(tmp_path / "old" / "world").scoreboard(SCOREBOARD).path, tmp_path / "new" / "world"
     assert season.main(["carry", str(old), "--into", str(new), "--season", "2"]) == 0
-    pack = new / "datapacks" / "realms-carry"
+    pack = new / "datapacks" / "monkey-carry"
     assert json.loads((pack / "pack.mcmeta").read_text())["pack"]["min_format"] == datapacks.DATA_FORMAT
-    assert json.loads((pack / "data/minecraft/tags/function/load.json").read_text()) == {"values": ["realms:carry/run"]}
-    run = (pack / "data/realms/function/carry/run.mcfunction").read_text().splitlines()
+    assert json.loads((pack / "data/minecraft/tags/function/load.json").read_text()) == {"values": ["monkey:carry/run"]}
+    run = (pack / "data/monkey/function/carry/run.mcfunction").read_text().splitlines()
     guard = run.index("execute if score #carried rw.day matches 1 run return 0")
     assert run.index("scoreboard players set #season rw.day 2") > guard
     for line in ["scoreboard players set #today rw.day 77", "scoreboard players set AlexFake rw.days 41",
@@ -61,7 +61,7 @@ def test_carry_wants_the_old_worlds_scoreboard(tmp_path):
 
 def test_every_wardrobe_score_is_carried():
     """A wardrobe score left out of the carry would quietly reset every player's progress next season."""
-    load = wardrobe.datapack_files()["data/realms/function/wardrobe/load.mcfunction"]
+    load = wardrobe.datapack_files()["data/monkey/function/wardrobe/load.mcfunction"]
     created = {line.split()[3] for line in load.splitlines() if line.startswith("scoreboard objectives add rw.")}
     assert created - season.NOT_CARRIED >= {"rw.days", "rw.months", "rw.events", "rw.midwinter", "rw.events.seen"}
     assert season.NOT_CARRIED - created <= set()   # nothing named here that the wardrobe doesn't make
@@ -73,10 +73,10 @@ def test_download_keeps_the_world_and_leaves_out_private_files(tmp_path):
     world = tmp_path / "backup" / "world"
     keep = ["level.dat", "dimensions/minecraft/overworld/region/r.0.0.mca", "players/data/a.dat",
             "players/stats/a.json", "data/minecraft/scoreboard.dat", "data/openpartiesandclaims/server-info.nbt",
-            "datapacks/realms-wardrobe/pack.mcmeta"]
+            "datapacks/monkey-wardrobe/pack.mcmeta"]
     drop = ["ledger.sqlite", "session.lock", "level.dat_old", "serverconfig/x.toml", "scripts/a.js",
             "dimensions/minecraft/overworld/data/DistantHorizons.sqlite", "data/baguettelib/player_activity.dat",
-            "data/mezz_config/server-id.txt", "datapacks/realms-carry/pack.mcmeta"]
+            "data/mezz_config/server-id.txt", "datapacks/monkey-carry/pack.mcmeta"]
     for rel in keep + drop:
         (world / rel).parent.mkdir(parents=True, exist_ok=True)
         (world / rel).write_bytes(b"x")
@@ -87,7 +87,7 @@ def test_download_keeps_the_world_and_leaves_out_private_files(tmp_path):
     assert names == {f"Monkey SMP Season I/{rel}" for rel in keep} | {"Monkey SMP Season I/READ ME.txt"}
     readme = zipfile.ZipFile(out).read("Monkey SMP Season I/READ ME.txt").decode()
     assert "version 2.5.0" in readme and "saves/Monkey SMP Season I/level.dat" in readme
-    assert "/function realms:events/season/unlock" in readme   # the world was locked before the backup
+    assert "/function monkey:events/season/unlock" in readme   # the world was locked before the backup
 
 
 def test_download_wants_a_world_folder(tmp_path):

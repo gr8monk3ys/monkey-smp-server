@@ -21,25 +21,25 @@ class Repo:
         return self.root / "package"
 
     @property
-    def realms(self) -> Path:
-        return self.package / "realms"
+    def monkey(self) -> Path:
+        return self.package / "monkey"
 
     @property
     def manifest(self) -> Path:
-        return self.realms / "manifest.json"
+        return self.monkey / "manifest.json"
 
     @property
     def pwsh_lock(self) -> Path:
-        """The portable PowerShell realms.sh installs on Linux and macOS (see pwsh_lock.py)."""
-        return self.realms / "pwsh.lock"
+        """The portable PowerShell monkey.sh installs on Linux and macOS (see pwsh_lock.py)."""
+        return self.monkey / "pwsh.lock"
 
     @property
     def patches(self) -> Path:
-        return self.realms / "patches"
+        return self.monkey / "patches"
 
     @property
     def defaults(self) -> Path:
-        return self.realms / "defaults"
+        return self.monkey / "defaults"
 
     @property
     def client(self) -> Path:

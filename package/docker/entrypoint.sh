@@ -1,10 +1,10 @@
 #!/bin/sh
-# Entrypoint of Monkey SMP Docker image (see Dockerfile and compose.yaml). /realms is the release
-# folder (TheRealms-Server), mounted from the host.
+# Entrypoint of Monkey SMP Docker image (see Dockerfile and compose.yaml). /monkey is the release
+# folder (MonkeySMP-Server), mounted from the host.
 #
-#   realms-entrypoint [server]      install or update, then run the server until docker stop (default)
-#   realms-entrypoint <command>...  any realms.sh command, as the same user as the server
-#   realms <command>...             the same, for: docker compose exec realms realms backup
+#   monkey-entrypoint [server]      install or update, then run the server until docker stop (default)
+#   monkey-entrypoint <command>...  any monkey.sh command, as the same user as the server
+#   monkey <command>...             the same, for: docker compose exec monkey monkey backup
 #
 # Environment (see .env.example):
 #   EULA=TRUE    agree to the Minecraft EULA; without it (and without an earlier agreement in
@@ -14,8 +14,8 @@
 #   PUID, PGID   user and group to run as (else the owner of the release folder)
 set -eu
 
-ROOT=/realms
-REALMS="$ROOT/realms/realms.sh"
+ROOT=/monkey
+MONKEY="$ROOT/monkey/monkey.sh"
 
 say() { printf '[docker] %s\n' "$*"; }
 die() { printf '[docker] ERROR: %s\n' "$1" >&2; exit "${2:-1}"; }
@@ -43,14 +43,14 @@ drop_privileges() {
     [ "$uid" != 0 ] || return 0
     # Give the user a name and home for programs that look them up (Java, PowerShell). The
     # container's /etc is its own, so this never touches the host.
-    getent passwd "$uid" >/dev/null || echo "realms:x:$uid:$gid:Monkey SMP:$HOME:/bin/sh" >>/etc/passwd
-    getent group "$gid" >/dev/null || echo "realms:x:$gid:" >>/etc/group
+    getent passwd "$uid" >/dev/null || echo "monkey:x:$uid:$gid:Monkey SMP:$HOME:/bin/sh" >>/etc/passwd
+    getent group "$gid" >/dev/null || echo "monkey:x:$gid:" >>/etc/group
     exec setpriv --reuid="$uid" --regid="$gid" --clear-groups -- "$0" "$@"
 }
 
 check_folder() {
-    [ -f "$REALMS" ] || die "$ROOT has no realms/realms.sh. compose.yaml mounts the folder above docker/ at $ROOT: run docker compose from TheRealms-Server/docker, inside the unzipped release."
-    [ -w "$ROOT" ] || die "user $(id -u) can't write to the release folder. Give it to that user (sudo chown -R $(id -u):$(id -g) TheRealms-Server) or set PUID and PGID in docker/.env to its owner."
+    [ -f "$MONKEY" ] || die "$ROOT has no monkey/monkey.sh. compose.yaml mounts the folder above docker/ at $ROOT: run docker compose from MonkeySMP-Server/docker, inside the unzipped release."
+    [ -w "$ROOT" ] || die "user $(id -u) can't write to the release folder. Give it to that user (sudo chown -R $(id -u):$(id -g) MonkeySMP-Server) or set PUID and PGID in docker/.env to its owner."
 }
 
 eula_agreed() {
@@ -138,13 +138,13 @@ run_server() {
 
     say "Installing or updating Monkey SMP in the release folder (as user $(id -u))"
     rc=0
-    run_child sh "$REALMS" "$@" || rc=$?
+    run_child sh "$MONKEY" "$@" || rc=$?
     [ -z "$stopping" ] || exit 0
     [ "$rc" = 0 ] || die "the install failed (exit code $rc); see the messages above." "$rc"
 
     if [ -n "$memory" ]; then set -- start -NonInteractive -MemoryGB "$memory"; else set -- start -NonInteractive; fi
     rc=0
-    run_child sh "$REALMS" "$@" || rc=$?
+    run_child sh "$MONKEY" "$@" || rc=$?
     if [ -n "$stopping" ]; then
         # Java exits with 143 after a SIGTERM even when it saved and stopped cleanly.
         say 'Server stopped.'
@@ -156,14 +156,14 @@ run_server() {
 
 drop_privileges "$@"
 case "$(basename "$0")" in
-    realms)
-        [ $# -gt 0 ] || die 'usage: realms <command> [args], e.g.  realms backup | realms add-player Steve | realms rcon "say hi" | realms status'
+    monkey)
+        [ $# -gt 0 ] || die 'usage: monkey <command> [args], e.g.  monkey backup | monkey add-player Steve | monkey rcon "say hi" | monkey status'
         check_folder
-        exec sh "$REALMS" "$@"
+        exec sh "$MONKEY" "$@"
         ;;
 esac
 if [ "${1:-server}" = server ]; then
     run_server
 fi
 check_folder
-exec sh "$REALMS" "$@"
+exec sh "$MONKEY" "$@"

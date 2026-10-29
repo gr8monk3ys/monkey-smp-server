@@ -1,7 +1,7 @@
 """Season Wrapped: at a season's end, a page for every player about their season, for the site.
 
     python tools/wrapped.py start WORLD --out START.json [--force]
-        right after the launch (`function realms:rules/launch`): where everyone's counts stood, so test play
+        right after the launch (`function monkey:rules/launch`): where everyone's counts stood, so test play
         before it and what earlier seasons carried in don't count as this season's. An existing START.json
         is never replaced without --force (which keeps it as START.json.bak)
     python tools/wrapped.py build WORLD --season 1 --standings DIR --start START.json --out site/public/wrapped/season-1
@@ -18,7 +18,7 @@ shows a preview card in Discord with the player's own line ("84 hours over 31 da
 Where it comes from, all read, nothing changed:
   WORLD/data/minecraft/scoreboard.dat        rw.play (play time, ticks), rw.days, rw.events, rw.challenges,
                                               st.kills (PvP kills outside the arena) and every skin's unlock score
-  WORLD/data/realms/command_storage.dat      the Server Firsts (tools/firsts.py's holders())
+  WORLD/data/monkey/command_storage.dat      the Server Firsts (tools/firsts.py's holders())
   DIR/weeks/*.json                           the weekly standings' closed weeks (tools/standings.py close): each
                                               faction's rank and members that week
   START.json                                 the same scores at the launch, from `start`
@@ -593,7 +593,7 @@ def start(world: Path, out: Path, now: dt.datetime, force: bool = False) -> int:
     board = scores(world)
     holder, objective = LAUNCHED.split()
     if board.get(objective, {}).get(holder, 0) != 1:
-        print(f"{world} hasn't launched ({LAUNCHED} isn't 1): run this right after function realms:rules/launch, "
+        print(f"{world} hasn't launched ({LAUNCHED} isn't 1): run this right after function monkey:rules/launch, "
               "and `save-all flush` before it", file=sys.stderr)
         return 1
     snapshot = {"taken": now.isoformat(timespec="seconds"), "scores": kept(board)}
@@ -667,7 +667,7 @@ def main(argv=None) -> int:
     s = sub.add_parser("start", help="right after the launch: where everyone's counts start from")
     s.add_argument("world", type=Path, help="the live world folder (server/world), saved just now")
     s.add_argument("--out", type=Path, required=True,
-                   help="the file to keep (e.g. /srv/realms/seasons/season-I-wrapped-start.json)")
+                   help="the file to keep (e.g. /srv/monkey/seasons/season-I-wrapped-start.json)")
     s.add_argument("--force", action="store_true", help="replace an existing --out (kept as <out>.bak)")
     b = sub.add_parser("build", help="after the finale: the pages")
     b.add_argument("world", type=Path, help="the season's final world folder")

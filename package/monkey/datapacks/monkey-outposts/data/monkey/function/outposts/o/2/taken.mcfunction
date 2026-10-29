@@ -1,0 +1,2 @@
+$tellraw @a ["",{"text":"Outposts: ","color":"gold","bold":true},{"nbt":"names.f$(c)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" took the East outpost at ","color":"yellow"},{"nbt":"at.o2.x","storage":"monkey:outposts","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"at.o2.z","storage":"monkey:outposts","color":"aqua"},{"text":".","color":"yellow"}]
+$function monkey:outposts/log {o:2,f:$(c)}

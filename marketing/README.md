@@ -36,11 +36,11 @@ The big renders live in `D:\DevData\monkey-smp-marketing\out\` (override with `M
 
 The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketing\footage\` (`build`,
 `raid`, `arena`, `cup`, `wardrobe`, each a 1080p30 mp4). It was filmed on the photo server with Carpet
-fake players acting out each event through the real `realms:events` functions, so the bossbar, titles,
+fake players acting out each event through the real `monkey:events` functions, so the bossbar, titles,
 sidebar and wardrobe items are what players will see. It is staged, not a recording of a real event.
 
 Fonts sit in `D:\DevData\monkey-smp-marketing\fonts\`; the screenshots are the full-size originals in
-`D:\DevData\realms-photos\shots\` (override with `MONKEY_SHOTS`; `site/public/img` has smaller copies).
+`D:\DevData\monkey-photos\shots\` (override with `MONKEY_SHOTS`; `site/public/img` has smaller copies).
 
 ## Look
 

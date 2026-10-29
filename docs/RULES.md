@@ -249,42 +249,42 @@ Open items from the owners' draft:
   Fletching turns any potion, splash ones too, into tipped arrows; B1 and B6 still apply to them.
 
 What the server enforces by itself (two data packs from `tools/rules.py`, plus config defaults).
-Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
+Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
 
 - **The short rules.** Players accept `codeofconduct/en_us.txt` (in the server folder) before they join,
   and again whenever it changes (`enable-code-of-conduct=true` in `server.properties`). It quotes the rule
   numbers in this file, so change it when a rule changes. A file edit takes effect at the next restart.
-- **Rule 23, the launch hour.** At launch, run `function realms:rules/launch`. PvP and the Nether close
+- **Rule 23, the launch hour.** At launch, run `function monkey:rules/launch`. PvP and the Nether close
   (the `pvp` and `allow_entering_nether_using_portals` gamerules), and after 3600 seconds of server time
   both open again by themselves. The timer is saved with the world, so a restart doesn't reset it.
   The End is closed from the start: anyone who gets in is sent to the surface at spawn within a second.
   Open it with
-  `function realms:rules/open_end`; `function realms:rules/close_end` closes it again.
-- **Rule 24, no Netherite armor** (pack `realms-no-netherite-armor`). The smithing table won't upgrade
+  `function monkey:rules/open_end`; `function monkey:rules/close_end` closes it again.
+- **Rule 24, no Netherite armor** (pack `monkey-no-netherite-armor`). The smithing table won't upgrade
   diamond armor to Netherite. Netherite armor from mod loot (Incendium, Moog's structures) or from a mob is
   taken off once a second and dropped at the player's feet, so nothing is lost. Netherite tools, weapons
-  and horse armor are untouched. To lift the rule: `datapack disable "file/realms-no-netherite-armor"`.
+  and horse armor are untouched. To lift the rule: `datapack disable "file/monkey-no-netherite-armor"`.
   The world remembers that across restarts and updates. `datapack enable` turns the rule back on.
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
   2500 x 2500, centred on spawn. Since Minecraft 26.3 every dimension has its own border, so the pack also
   gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
   alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
   and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
-- **Rule 26, PvP grace** (pack `realms-rules`). The first time the server sees a player, they get grace
+- **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
   before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
   minute) gets neither. Grace is an invisible
   item in the player's body slot whose enchantment blocks all damage a player causes; it comes back after
   a death and is off while the player is in the event arena. It ends after 48 hours of game time, which
   stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.
-  `function realms:rules/launch` ends everyone's. One player: `execute as <player> run function
-  realms:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
-  `scoreboard players get <player> realms.grace`; `time query gametime` is now.
+  `function monkey:rules/launch` ends everyone's. One player: `execute as <player> run function
+  monkey:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
+  `scoreboard players get <player> monkey.grace`; `time query gametime` is now.
 - **Rule 26, the no-PvP spawn.** An Open Parties and Claims server claim over the 7 x 7 chunks around
   spawn (the vanilla spawn protection and a bit more). With their `playersByPlayers` exception off, server
   claims stop players hurting players, and they keep spawn's blocks safe too (rule 22). An admin sets it up
   once per world from the server console, whose commands run at the world spawn (in Docker:
-  `realms rcon "<command>"`):
+  `monkey rcon "<command>"`):
   `opac server-claims-config set claims.protection.exceptions.playersByPlayers false`, then
   `oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48`. The pack can't do it: Open Parties and
   Claims doesn't let a datapack function claim. Build the event arena outside this square, or nobody can
@@ -298,7 +298,7 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
 - **Rule 35, 2 x 2 chunks per member.** Open Parties and Claims' `maxPlayerClaims` is 4 in the same file,
   and claims belong to players, so a faction's claims add up to 2 x 2 chunks per member. On an older
   server, set it there yourself.
-- **B9, Fire Aspect and Flame** (pack `realms-rules`). They're out of the enchanting table, loot, villager
+- **B9, Fire Aspect and Flame** (pack `monkey-rules`). They're out of the enchanting table, loot, villager
   trades and mob gear. A copy that still turns up (a book in a mod's chest, a mob's weapon) shows as
   "(disabled)", does nothing, and can't be put on an item at an anvil. This replaces vanilla's
   `#minecraft:non_treasure` enchantment tag; if a future mod adds its enchantments to that tag, add them to
@@ -328,11 +328,11 @@ Run the commands from the server console or with `realms.ps1 rcon "<command>"`:
 - **Rules 44 to 46, bedrock** (Breaking Bedrock, no config). Nothing stops a player with a netherite pickaxe
   outside claims and spawn protection, so these are on admins, with Ledger's block log ("Mod settings" in
   `docs/ADMIN.md` has what was tested).
-- **The welcome and the links** (pack `realms-rules`). A first join gets a welcome screen whose one button
+- **The welcome and the links** (pack `monkey-rules`). A first join gets a welcome screen whose one button
   opens the Discord, where `#smp-forum` has the factions that are recruiting. Every player's pause menu
   has a Monkey SMP button with the Discord, the live map, the rules and the store. The addresses are in
   `tools/rules.py` (`DISCORD`, `LINKS`). Show someone the welcome again:
-  `dialog show <player> realms:welcome`.
+  `dialog show <player> monkey:welcome`.
 
 Still on players and admins: everything else, including rule 33 (leaving a faction needs an admin's
 approval; the mod lets players leave a party freely).

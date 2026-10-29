@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Boots an exported hosting bundle (realms.ps1 export-host) the way a VPS would, with docker compose,
+# Boots an exported hosting bundle (monkey.ps1 export-host) the way a VPS would, with docker compose,
 # then checks it reached "Done", loaded cleanly and shut down cleanly.
 #
-#   tests/hosting-smoke.sh exports/TheRealms-2.0.0-hosting.zip [work-dir]
+#   tests/hosting-smoke.sh exports/MonkeySMP-2.0.0-hosting.zip [work-dir]
 #   MEMORY_GB=4 TIMEOUT_MINUTES=25 tests/hosting-smoke.sh ...
 set -euo pipefail
 
@@ -13,8 +13,8 @@ export MEMORY_GB="${MEMORY_GB:-4}"
 
 mkdir -p "$work"
 unzip -q -o "$zip" -d "$work"
-dir=$(find "$work" -mindepth 1 -maxdepth 1 -type d -name 'TheRealms-*-hosting' | head -n 1)
-[ -n "$dir" ] || { echo "no TheRealms-*-hosting folder in $zip"; exit 1; }
+dir=$(find "$work" -mindepth 1 -maxdepth 1 -type d -name 'MonkeySMP-*-hosting' | head -n 1)
+[ -n "$dir" ] || { echo "no MonkeySMP-*-hosting folder in $zip"; exit 1; }
 cd "$dir"
 [ -x start.sh ] || { echo "start.sh lost its executable bit"; exit 1; }
 
@@ -22,14 +22,14 @@ docker compose up -d
 deadline=$(( $(date +%s) + timeout_min * 60 ))
 reached=no
 while [ "$(date +%s)" -lt "$deadline" ]; do
-    if docker compose logs --no-color realms 2>&1 | grep -q 'Done ('; then reached=yes; break; fi
-    if ! docker compose ps --status running --services | grep -qx realms; then echo "container exited early"; break; fi
+    if docker compose logs --no-color monkey 2>&1 | grep -q 'Done ('; then reached=yes; break; fi
+    if ! docker compose ps --status running --services | grep -qx monkey; then echo "container exited early"; break; fi
     sleep 10
 done
 
 # "stop" sends SIGTERM; Minecraft saves the world and shuts down on it.
 docker compose stop -t 180 || true
-docker compose logs --no-color realms > compose.log 2>&1 || true
+docker compose logs --no-color monkey > compose.log 2>&1 || true
 docker compose down || true
 
 fail=0

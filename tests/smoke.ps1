@@ -5,7 +5,7 @@
     and datapack loaded, stop it.
 
 .DESCRIPTION
-    Runs realms.ps1 with the PowerShell that runs this script: Windows PowerShell 5.1 (powershell.exe)
+    Runs monkey.ps1 with the PowerShell that runs this script: Windows PowerShell 5.1 (powershell.exe)
     or PowerShell 7 (pwsh, on Windows, Linux or macOS).
 
     Before it installs and again before it starts, it stops if any of its ports is already in use: the
@@ -14,15 +14,15 @@
 
 .EXAMPLE
     # From an unzipped release (or a copy of package/):
-    .\tests\smoke.ps1 -Root C:\temp\TheRealms-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
-    pwsh tests/smoke.ps1 -Root /tmp/TheRealms-Server -MemoryGB 4
+    .\tests\smoke.ps1 -Root C:\temp\MonkeySMP-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
+    pwsh tests/smoke.ps1 -Root /tmp/MonkeySMP-Server -MemoryGB 4
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string]$Root,
     [int]$Port = 25565,
     [int]$RconPort = 25575,
-    # Simple Voice Chat (UDP) and the BlueMap web map; the defaults are the mods' own (and Realms.psm1's).
+    # Simple Voice Chat (UDP) and the BlueMap web map; the defaults are the mods' own (and Monkey.psm1's).
     [int]$VoicePort = 24454,
     [int]$MapPort = 8100,
     [int]$MemoryGB = 3,
@@ -30,31 +30,31 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path $Root).Path
-$script = Join-Path (Join-Path $Root 'realms') 'realms.ps1'
+$script = Join-Path (Join-Path $Root 'monkey') 'monkey.ps1'
 $server = Join-Path $Root 'server'
 $onWindows = [IO.Path]::DirectorySeparatorChar -eq '\'
-# realms.ps1 runs in a new process of this same PowerShell (powershell.exe, or pwsh on any platform).
+# monkey.ps1 runs in a new process of this same PowerShell (powershell.exe, or pwsh on any platform).
 $shell = if ($PSVersionTable.PSEdition -eq 'Core') { (Get-Process -Id $PID).Path } else { 'powershell.exe' }
 $shellArgs = @('-NoProfile')
 if ($onWindows) { $shellArgs += @('-ExecutionPolicy', 'Bypass') }
 # The package's own module: one server.properties parser for the installer and this test.
-Import-Module (Join-Path (Join-Path $Root 'realms') 'Realms.psm1') -Force
-$manifest = (New-RealmsContext -Root $Root).Manifest
+Import-Module (Join-Path (Join-Path $Root 'monkey') 'Monkey.psm1') -Force
+$manifest = (New-MonkeyContext -Root $Root).Manifest
 $layout = Get-ServerLayout -Manifest $manifest
 $isPaper = $layout.Type -eq 'paper'
 # The plugins (Paper) or mods (Fabric) the manifest pins, and the folder they go in.
 $addOns = @($manifest.($layout.AddOns) | Where-Object { $_ })
 $datapacks = @($manifest.datapacks | Where-Object { $_ })
 # Ranks are whatever LuckPerms groups the Defaults ship, in the server type's LuckPerms storage folder.
-$ranks = @(Get-ChildItem -LiteralPath (Join-Path $Root "realms/defaults/$($layout.LuckPerms)/groups") -Filter *.yml |
+$ranks = @(Get-ChildItem -LiteralPath (Join-Path $Root "monkey/defaults/$($layout.LuckPerms)/groups") -Filter *.yml |
     ForEach-Object { $_.BaseName })
 if (-not $ranks.Count) { throw 'No LuckPerms ranks found in the package Defaults' }
 Write-Host "--- $($manifest.name) $($manifest.version): $($layout.Description), $($addOns.Count) $($layout.AddOns), $($datapacks.Count) datapacks"
 $failures = New-Object System.Collections.Generic.List[string]
 
-function Invoke-Realms([string[]]$Arguments) {
+function Invoke-Monkey([string[]]$Arguments) {
     & $shell @shellArgs -File $script @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "realms.ps1 $($Arguments -join ' ') failed ($LASTEXITCODE)" }
+    if ($LASTEXITCODE -ne 0) { throw "monkey.ps1 $($Arguments -join ' ') failed ($LASTEXITCODE)" }
 }
 
 # Who holds a local port: '' if nobody, else a description ('java pid 1234' where the OS says).
@@ -121,7 +121,7 @@ Write-Host "--- ports free? game $Port, RCON $RconPort, map $MapPort (TCP), voic
 Assert-PortsFree $ports
 
 Write-Host '--- install (non-interactive)'
-Invoke-Realms @('install', '-AcceptEula', '-NonInteractive', '-NoOwner')
+Invoke-Monkey @('install', '-AcceptEula', '-NonInteractive', '-NoOwner')
 
 Write-Host '--- second install must be a no-op'
 $again = & $shell @shellArgs -File $script install -NonInteractive -NoOwner | Out-String
@@ -184,24 +184,24 @@ while ($true) {
 
 try {
     # Paper shortens long replies with "...", so check the count and that nothing was left disabled.
-    $enabled = (Invoke-Realms @('rcon', 'datapack list enabled')) -join "`n"
+    $enabled = (Invoke-Monkey @('rcon', 'datapack list enabled')) -join "`n"
     $count = if ($enabled -match 'There are (\d+) data pack') { [int]$Matches[1] } else { 0 }
     if ($count -lt $datapacks.Count + 1) { $failures.Add("only $count datapacks enabled: $enabled") }
-    $available = (Invoke-Realms @('rcon', 'datapack list available')) -join "`n"
+    $available = (Invoke-Monkey @('rcon', 'datapack list available')) -join "`n"
     if ($available -match 'file/') { $failures.Add("datapacks present but not enabled: $available") }
     if ($isPaper) {
         # Fabric has no plugins command; its mods are checked in the log below.
-        $plugins = (Invoke-Realms @('rcon', 'plugins')) -join "`n"
+        $plugins = (Invoke-Monkey @('rcon', 'plugins')) -join "`n"
         Write-Host $plugins
         if ($plugins -notmatch "Server Plugins \($($addOns.Count)\)") { $failures.Add('not every plugin loaded') }
     }
-    $seed = (Invoke-Realms @('rcon', 'seed')) -join ''
+    $seed = (Invoke-Monkey @('rcon', 'seed')) -join ''
     if ($seed -notmatch [regex]::Escape("[$($manifest.world.seed)]")) { $failures.Add("world seed is not the pinned one: $seed") }
 } finally {
     Write-Host '--- stop'
-    Invoke-Realms @('stop')
+    Invoke-Monkey @('stop')
     if (-not $proc.WaitForExit(120000)) {
-        # PowerShell 7 can kill java (a child of realms.ps1) too; 5.1's .NET Framework can't.
+        # PowerShell 7 can kill java (a child of monkey.ps1) too; 5.1's .NET Framework can't.
         if ($PSVersionTable.PSEdition -eq 'Core') { $proc.Kill($true) } else { $proc.Kill() }
         $failures.Add('server did not exit after stop')
     }

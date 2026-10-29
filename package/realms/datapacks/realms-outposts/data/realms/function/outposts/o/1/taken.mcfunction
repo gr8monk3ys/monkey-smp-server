@@ -1,2 +1,0 @@
-$tellraw @a ["",{"text":"Outposts: ","color":"gold","bold":true},{"nbt":"names.f$(c)","storage":"realms:factions","interpret":true,"color":"white"},{"text":" took the North outpost at ","color":"yellow"},{"nbt":"at.o1.x","storage":"realms:outposts","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"at.o1.z","storage":"realms:outposts","color":"aqua"},{"text":".","color":"yellow"}]
-$function realms:outposts/log {o:1,f:$(c)}

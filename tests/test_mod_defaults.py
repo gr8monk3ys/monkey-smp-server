@@ -1,4 +1,4 @@
-"""The 2.8.0 mod configs in package/realms/defaults keep the rules they were written for.
+"""The 2.8.0 mod configs in package/monkey/defaults keep the rules they were written for.
 
 They are copied onto a server only when the file is missing (Install-Defaults), so these are the
 settings a fresh install and the 2.8.0 upgrade start with (docs/ADMIN.md, "Mod settings").
@@ -7,7 +7,7 @@ import tomllib
 
 from repo import REPO, load_json
 
-CONFIG = REPO.realms / "defaults" / "config"
+CONFIG = REPO.monkey / "defaults" / "config"
 
 # Dungeons and Taverns' own enchantments (namespace nova_structures). Rule B18: event rewards only.
 DNT_ENCHANTMENTS = {
@@ -35,7 +35,7 @@ def test_carry_on_cannot_lift_players_chests_or_server_features():
 
 
 def test_loot_restock_refills_only_emptied_structure_chests_weekly():
-    loot = properties(REPO.realms / "defaults" / "lootrestock.properties")
+    loot = properties(REPO.monkey / "defaults" / "lootrestock.properties")
     assert (loot["reset_time_value"], loot["reset_time_unit"], loot["reset_cron"]) == ("7", "days", "")
     assert loot["only_reset_when_empty"] == "true"
     assert loot["include_barrels"] == loot["include_item_frames"] == loot["include_vaults"] == "false"

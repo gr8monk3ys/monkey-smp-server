@@ -1,0 +1,21 @@
+# Ends the week for the faction standings (monkey-standings.sh close): the final table goes on the in-game board,
+# in chat and in Discord, and a new week starts. Started by monkey-standings.timer; install with
+# deploy/install-standings.sh (docs/LIVE.md). If the board or the post fails (the server down, Discord not
+# answering), it tries again every 10 minutes for about an hour; a retry never closes the week twice.
+[Unit]
+Description=Monkey SMP: weekly faction standings
+After=network-online.target docker.service
+Wants=network-online.target
+StartLimitIntervalSec=2h
+StartLimitBurst=7
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-standings.sh close
+Restart=on-failure
+RestartSec=10min
+# Up to 30 minutes waiting for a deploy, restart or backup, then a few seconds of work.
+TimeoutStartSec=45min
+Nice=10

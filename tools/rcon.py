@@ -6,7 +6,7 @@ too (say, a pack is off), so the answer itself is read (REFUSED). `running()` sa
 to send to, and raises RconError when it can't tell (docker itself failed), so a broken setup isn't taken for
 a stopped server.
 
-    Docker(folder)   the container's own `realms rcon`, through `docker compose` in the release's docker
+    Docker(folder)   the container's own `monkey rcon`, through `docker compose` in the release's docker
                      folder. It finds the RCON password itself, so no secret is read here.
     Recorder(...)    keeps what was sent and answers from a table: what the tests use.
 
@@ -68,13 +68,13 @@ class Docker:
             raise RconError(f"could not run docker compose ({type(e).__name__})") from None
 
     def running(self) -> bool:
-        done = self.compose("ps", "-q", "--status", "running", "realms", timeout=60)
+        done = self.compose("ps", "-q", "--status", "running", "monkey", timeout=60)
         if done.returncode != 0:
             raise RconError(f"docker compose ps failed (exit {done.returncode}): {done.stderr.strip()[-300:]}")
         return bool(done.stdout.strip())
 
     def __call__(self, command: str) -> str:
-        done = self.compose("exec", "-T", "realms", "realms", "rcon", command, timeout=180)
+        done = self.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=180)
         return checked(command, done.stdout.strip(), done.returncode, done.stderr)
 
 

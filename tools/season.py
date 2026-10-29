@@ -9,7 +9,7 @@ server.properties (the RCON password), ops, the whitelist and ban lists and user
 the world folder and never go in; inside it, the Ledger database (who did what, where), mod server
 config, scripts, player-activity times, Distant Horizons' cache and session.lock stay out too.
 
-carry reads the old world's scoreboard and writes a small data pack into the new world, realms-carry,
+carry reads the old world's scoreboard and writes a small data pack into the new world, monkey-carry,
 that puts back every wardrobe score (rw.*: days, months, invites, tiers, founders, events, holidays,
 weekly challenges done, the launch weekend),
 the supporter, title and champion teams, and hours played (as rw.playbase, because the new world's
@@ -30,7 +30,7 @@ from pathlib import Path
 import saved_world
 from datapacks import NS, function_tag, mcmeta
 
-CARRY = "realms-carry"
+CARRY = "monkey-carry"
 # What goes in the download, relative to the world folder; then what is taken back out.
 KEEP = ["level.dat", "dimensions", "data", "players", "datapacks"]
 DROP = ["DistantHorizons*", "session.lock", "data/baguettelib", "data/mezz_config", f"datapacks/{CARRY}"]
@@ -53,7 +53,7 @@ To open it:
 
 You load in as yourself, with your inventory where you left it. The world opens locked, as the server
 left it: adventure mode, no PvP, peaceful. To build or fly around, press Esc, Open to LAN, turn Allow
-Cheats on, start it, then type /function realms:events/season/unlock (or /gamemode creative). Make a
+Cheats on, start it, then type /function monkey:events/season/unlock (or /gamemode creative). Make a
 copy first if you want to keep the original.
 """
 
@@ -146,7 +146,7 @@ def carry(old: Path, new: Path, season: int) -> int:
         (pack / rel).write_text(text, encoding="utf-8", newline="\n")
     run = files[f"data/{NS}/function/carry/run.mcfunction"]
     print(f"wrote {pack}: {run.count(chr(10))} lines. It runs when the new world first loads; check with\n"
-          f'  realms rcon "scoreboard players get #carried rw.day"   (1 once it has run)')
+          f'  monkey rcon "scoreboard players get #carried rw.day"   (1 once it has run)')
     return 0
 
 

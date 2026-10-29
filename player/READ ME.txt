@@ -28,7 +28,7 @@ OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
 OPTION B: MODRINTH APP OR PRISM LAUNCHER (Mac, Linux, or if you already use one)
 ---------------------------------------------------------------------------------
   Install one of them (both free): https://modrinth.com/app or https://prismlauncher.org
-  Import the  TheRealms-Client-....mrpack  file from this folder:
+  Import the  MonkeySMP-Client-....mrpack  file from this folder:
     Modrinth App:      + (Create)  >  Import  >  choose the .mrpack file
     Prism Launcher:    Add Instance  >  Import  >  choose the .mrpack file
   Then launch it and add the server as in step 4 above.

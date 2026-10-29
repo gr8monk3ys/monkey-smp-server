@@ -1,0 +1,3 @@
+$tellraw @a ["",{"text":"Peace: ","color":"green","bold":true},{"nbt":"names.f$(a)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" (","color":"gray"},{"selector":"@s","color":"gray"},{"text":")","color":"gray"},{"text":" and ","color":"green"},{"nbt":"names.f$(b)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" ended their war with a pact.","color":"green"},{"text":" It stands until either side breaks it, and a break is announced.","color":"gray"}]
+execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 0.6 1.2
+$function monkey:diplomacy/log {kind:"peace",a:$(a),b:$(b)}

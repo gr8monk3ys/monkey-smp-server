@@ -11,7 +11,7 @@ Create versions. It is read from the MODRINTH_TOKEN environment variable only (n
 argument, so it stays out of git and shell history) and is sent to api.modrinth.com and nowhere else.
 
 Every step checks before it acts, so a re-run after a failure picks up where it stopped:
-  1. builds dist/TheRealms-Client-<version>.mrpack (the same bytes tools/build.py writes)
+  1. builds dist/MonkeySMP-Client-<version>.mrpack (the same bytes tools/build.py writes)
   2. reads the modpack project (--project) and its versions
   3. uploads the pack as version <version>, unless Modrinth already has that version with the same file, or
      the newest version holds the same pack apart from its version number (the deploy script's rule: a
@@ -249,7 +249,7 @@ def release_checkout_problems(root: Path, version: str) -> list[str]:
     tagged = git("tag", "--points-at", "HEAD").stdout.split()
     if f"v{version}" not in tagged:
         problems.append(f"HEAD isn't the tag v{version} (check it out first: git switch --detach v{version})")
-    if git("status", "--porcelain", "--", "client", "CHANGELOG.md", "package/realms/manifest.json").stdout.strip():
+    if git("status", "--porcelain", "--", "client", "CHANGELOG.md", "package/monkey/manifest.json").stdout.strip():
         problems.append("client/, CHANGELOG.md or the manifest has uncommitted changes")
     return problems
 

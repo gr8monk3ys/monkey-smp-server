@@ -110,13 +110,13 @@ def test_commands_send_the_order_what_it_needs_then_the_try(tmp_path):
                        ("om.streak", "bad name!", 12))
     e = first_evening()
     out = omens.commands(world, e.start)
-    assert out[0] == "data modify storage realms:omens order set value [" + ",".join(f'"{o}"' for o in e.order) + "]"
-    assert out[-1] == f"function realms:omens/try {{night:{e.night},late:0}}"
+    assert out[0] == "data modify storage monkey:omens order set value [" + ",".join(f'"{o}"' for o in e.order) + "]"
+    assert out[-1] == f"function monkey:omens/try {{night:{e.night},late:0}}"
     spots = drops.spots(world, "meteor " + drops.slot_of(e.start))
-    assert spots and "data modify storage realms:omens spots set value [" + ",".join(
+    assert spots and "data modify storage monkey:omens spots set value [" + ",".join(
         f"{{x:{x},z:{z}}}" for x, z in spots) + "]" in out
     # Longest streak first; too short and impossible names left out.
-    assert 'data modify storage realms:omens hunt set value [{name:"Steve"},{name:"Alex"}]' in out
+    assert 'data modify storage monkey:omens hunt set value [{name:"Steve"},{name:"Alex"}]' in out
     for c in out:
         assert c.isascii() and "\n" not in c and len(c.encode()) <= rcon.LIMIT
     # The Meteor's spots are new each slot, as drops' are, and never the supply drop's.
@@ -128,8 +128,8 @@ def test_an_omen_with_nothing_to_work_with_is_left_out(tmp_path):
     e = first_evening()
     out = omens.commands(world, e.start)
     left = [o for o in e.order if o not in ("meteor", "hunted")]
-    assert out == ["data modify storage realms:omens order set value [" + ",".join(f'"{o}"' for o in left) + "]",
-                   f"function realms:omens/try {{night:{e.night},late:0}}"]
+    assert out == ["data modify storage monkey:omens order set value [" + ",".join(f'"{o}"' for o in left) + "]",
+                   f"function monkey:omens/try {{night:{e.night},late:0}}"]
 
 
 def test_no_commands_without_the_secret_or_outside_an_evening(tmp_path):
@@ -164,7 +164,7 @@ def test_a_meteor_late_on_a_drop_night_waits_for_the_nights_drop(tmp_path):
 
     def late_at(hour, minute):
         try_ = omens.commands(world, dt.datetime.combine(e.day, dt.time(hour, minute), season_calendar.PACIFIC))[-1]
-        return int(re.fullmatch(rf"function realms:omens/try \{{night:{e.night},late:([01])\}}", try_)[1])
+        return int(re.fullmatch(rf"function monkey:omens/try \{{night:{e.night},late:([01])\}}", try_)[1])
     # The Meteor and its chest take up to 25 minutes, then the drops' timer asks within 10.
     assert dt.timedelta(minutes=35) == omens.METEOR_LATE
     assert late_at(21, 15) == 0 and late_at(21, 24) == 0
@@ -176,7 +176,7 @@ def test_a_meteor_late_on_a_drop_night_waits_for_the_nights_drop(tmp_path):
     assert "$scoreboard players set #late om $(late)" in try_ and "$scoreboard players set #tonight om $(night)" in try_
     begin = fn("meteor/begin")
     assert begin.index("execute if score #late om matches 1 unless score #night dr = #tonight om run return 0") < (
-        begin.index("function realms:drops/meteor"))
+        begin.index("function monkey:drops/meteor"))
 
 
 def test_hunt_choices_are_the_longest_streaks():
@@ -188,12 +188,12 @@ def test_hunt_choices_are_the_longest_streaks():
 def test_send_logs_what_the_try_returned(tmp_path):
     world = make_world(tmp_path, *KEY)
     e = first_evening()
-    server = rcon.Recorder({"function realms:omens/try": "Function realms:omens/try returned 25"})
+    server = rcon.Recorder({"function monkey:omens/try": "Function monkey:omens/try returned 25"})
     log = []
     assert omens.send(server, world, e.start, log.append) == 0
     assert server.sent == omens.commands(world, e.start)
     assert log[0] == "order sent: ok"
-    assert log[-1] == f"function realms:omens/try {{night:{e.night},late:0}}: {omens.TRY_CODES[25]}"
+    assert log[-1] == f"function monkey:omens/try {{night:{e.night},late:0}}: {omens.TRY_CODES[25]}"
 
 
 def test_send_is_silent_outside_an_evening_and_skips_a_stopped_server(tmp_path):
@@ -214,12 +214,12 @@ def test_the_try_is_not_sent_when_the_order_does_not_arrive(tmp_path):
 
 
 @pytest.mark.parametrize(("answer", "said"), [
-    ("Function realms:omens/try returned 1", omens.TRY_CODES[1]),
-    ("Function realms:omens/try returned 99", "Function realms:omens/try returned 99"),
+    ("Function monkey:omens/try returned 1", omens.TRY_CODES[1]),
+    ("Function monkey:omens/try returned 99", "Function monkey:omens/try returned 99"),
     ("", "ok"),
 ])
 def test_every_try_answer_reads_as_words(answer, said):
-    try_ = "function realms:omens/try {night:1}"
+    try_ = "function monkey:omens/try {night:1}"
     assert omens.meaning(try_, answer) == f"{try_}: {said}"
 
 
@@ -227,7 +227,7 @@ def test_main_prints_the_commands_and_the_plan(tmp_path, capsys):
     world = make_world(tmp_path, *KEY)
     e = first_evening()
     assert omens.main(["commands", str(world), "--at", e.start.astimezone(rcon.UTC).isoformat()]) == 0
-    assert capsys.readouterr().out.splitlines()[-1] == f"function realms:omens/try {{night:{e.night},late:0}}"
+    assert capsys.readouterr().out.splitlines()[-1] == f"function monkey:omens/try {{night:{e.night},late:0}}"
     assert omens.main(["plan", str(world), "--at", e.start.isoformat()]) == 0
     out = capsys.readouterr().out
     assert "season week 1:" in out and omens.NAMES[e.order[0]] in out
@@ -248,10 +248,10 @@ def test_ran_reads_the_evenings_back_by_week():
 
 def test_the_try_records_the_evening_as_ran_reads_it():
     body = fn("try")
-    assert "$data modify storage realms:omens tonight set value {night:$(night)}" in body
+    assert "$data modify storage monkey:omens tonight set value {night:$(night)}" in body
     assert body.index("scoreboard players operation #prev om = #night om") < (
         body.index("scoreboard players operation #night om = #tonight om"))
-    assert "function realms:omens/record with storage realms:omens tonight" in body
+    assert "function monkey:omens/record with storage monkey:omens tonight" in body
     assert "$scoreboard players operation #on.$(night) om = #state om" in fn("record")
     assert "$scoreboard players reset #on.$(night) om" in fn("unrecord")
     assert [omens.STATES[o] for o in omens.OMENS] == [1, 2, 3, 4]
@@ -283,9 +283,9 @@ def test_try_returns_every_code_and_checks_in_order():
 
 def test_pick_tries_each_omen_in_the_order_sent():
     pick = fn("pick")
-    assert "execute store result score #r om run function realms:omens/begin with storage realms:omens next" in pick
-    assert pick.rstrip().endswith("return run function realms:omens/pick")
-    assert fn("begin") == "$return run function realms:omens/$(id)/begin\n"
+    assert "execute store result score #r om run function monkey:omens/begin with storage monkey:omens next" in pick
+    assert pick.rstrip().endswith("return run function monkey:omens/pick")
+    assert fn("begin") == "$return run function monkey:omens/$(id)/begin\n"
     for omen in omens.OMENS:
         assert f"{omens.FN}/{omen}/begin.mcfunction" in FILES
 
@@ -293,15 +293,15 @@ def test_pick_tries_each_omen_in_the_order_sent():
 def test_an_event_ends_an_omen_and_what_it_changed_comes_back():
     second = fn("second")
     for cond in drops.EVENTS_ON:
-        assert f"execute if score {cond} run return run function realms:omens/interrupted" in second
+        assert f"execute if score {cond} run return run function monkey:omens/interrupted" in second
     end = fn("end")
-    assert "execute if score #state om matches 1 run function realms:omens/blood_moon/calm" in end
-    assert "execute if score #state om matches 3 run function realms:omens/truce/restore" in end
+    assert "execute if score #state om matches 1 run function monkey:omens/blood_moon/calm" in end
+    assert "execute if score #state om matches 3 run function monkey:omens/truce/restore" in end
     assert "scoreboard players reset * om.hunt" in end and "scoreboard players set #state om 0" in end
     # Never undo the season lock's Peaceful and no-PvP.
     assert "execute if score #season_locked ev.state matches 1 run return 0" in fn("blood_moon/calm")
     assert "execute if score #season_locked ev.state matches 1 run return 0" in fn("truce/restore")
-    assert "execute if score #launching realms.rules matches 1 run return 0" in fn("truce/restore")
+    assert "execute if score #launching monkey.rules matches 1 run return 0" in fn("truce/restore")
 
 
 def test_blood_moon_waits_for_night_and_gives_back_the_difficulty():
@@ -311,9 +311,9 @@ def test_blood_moon_waits_for_night_and_gives_back_the_difficulty():
     assert "execute store result score #now om run time query minecraft:day" in second
     # It rises at the start of a night only, never just before dawn, and waits longer than a Minecraft day.
     assert ("execute if score #phase om matches 0 if score #now om matches 13000..14000 run return run function "
-            "realms:omens/blood_moon/rise") in second
+            "monkey:omens/blood_moon/rise") in second
     assert omens.BLOOD_WAIT > 20 * 60
-    assert "execute unless score #now om matches 13000..22999 run return run function realms:omens/blood_moon/dawn" in (
+    assert "execute unless score #now om matches 13000..22999 run return run function monkey:omens/blood_moon/dawn" in (
         second)
     rise = fn("blood_moon/rise")
     assert rise.index("execute store result score #diff om run difficulty") < rise.index("difficulty hard")
@@ -325,7 +325,7 @@ def test_blood_moon_waits_for_night_and_gives_back_the_difficulty():
 def test_a_blood_moon_never_turns_peaceful_into_hard():
     rise = fn("blood_moon/rise")
     # Staff set Peaceful after it was announced: it fades at nightfall instead of rising.
-    assert rise.index("execute if score #diff om matches 0 run return run function realms:omens/blood_moon/fade") < (
+    assert rise.index("execute if score #diff om matches 0 run return run function monkey:omens/blood_moon/fade") < (
         rise.index("difficulty hard"))
     calm = fn("blood_moon/calm")
     for n, name in enumerate(("peaceful", "easy", "normal")):
@@ -333,7 +333,7 @@ def test_a_blood_moon_never_turns_peaceful_into_hard():
 
 
 def test_blood_moon_rouses_only_night_mobs_and_gives_nothing_for_a_fight():
-    tag = json.loads(FILES["data/realms/tags/entity_type/omens/blood_moon.json"])["values"]
+    tag = json.loads(FILES["data/monkey/tags/entity_type/omens/blood_moon.json"])["values"]
     names = [v if isinstance(v, str) else v["id"] for v in tag]
     assert "minecraft:warden" not in names and "minecraft:ravager" not in names and "minecraft:player" not in names
     rouse = fn("blood_moon/rouse")
@@ -341,11 +341,11 @@ def test_blood_moon_rouses_only_night_mobs_and_gives_nothing_for_a_fight():
     for item, weight, lo, hi in omens.BLOOD_LOOT:
         assert weight > 0 and 1 <= lo <= hi <= 8 and not any(w in item for w in FORBIDDEN), item
     kill = fn("blood_moon/kill")
-    assert kill.splitlines()[1] == "advancement revoke @s only realms:omens/blood_kill"
+    assert kill.splitlines()[1] == "advancement revoke @s only monkey:omens/blood_kill"
     assert f"execute if score @s om.loot matches {omens.BLOOD_CAP}.. run return 0" in kill
     assert "execute unless score #phase om matches 1 run return 0" in kill
-    adv = json.loads(FILES["data/realms/advancement/omens/blood_kill.json"])
-    assert adv["rewards"]["function"] == "realms:omens/blood_moon/kill"
+    adv = json.loads(FILES["data/monkey/advancement/omens/blood_kill.json"])
+    assert adv["rewards"]["function"] == "monkey:omens/blood_moon/kill"
 
 
 def test_roused_mobs_calm_by_themselves_and_pay_only_at_their_own_moon():
@@ -356,7 +356,7 @@ def test_roused_mobs_calm_by_themselves_and_pay_only_at_their_own_moon():
     assert omens.BLOOD_BUFF <= 5   # given again each second: an unloaded mob keeps a few seconds at most
     assert "scoreboard players operation @s om.blood = #moon om" in rouse
     # Every second while it is up, whether roused before or not.
-    assert ("as @e[type=#realms:omens/blood_moon,distance=..48] run function realms:omens/blood_moon/rouse" in
+    assert ("as @e[type=#monkey:omens/blood_moon,distance=..48] run function monkey:omens/blood_moon/rouse" in
             fn("blood_moon/second"))
     assert "om.roused" not in "\n".join(FILES[p] for p in FUNCTIONS)
     # Each moon has its own number, and a kill pays only for a mob carrying the one up now.
@@ -364,7 +364,7 @@ def test_roused_mobs_calm_by_themselves_and_pay_only_at_their_own_moon():
     rise = fn("blood_moon/rise")
     assert rise.index("scoreboard players add #moon om 1") < rise.index("difficulty hard")
     moon = {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": "#moon"}, "score": "om"}
-    adv = json.loads(FILES["data/realms/advancement/omens/blood_kill.json"])
+    adv = json.loads(FILES["data/monkey/advancement/omens/blood_kill.json"])
     assert adv["criteria"]["kill"]["conditions"]["entity"] == {
         "type": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": moon, "max": moon}}}
 
@@ -375,26 +375,26 @@ FORBIDDEN = ("netherite", "diamond", "emerald", "golden_apple", "enchanted", "po
 
 def test_the_meteor_goes_through_drops():
     begin = fn("meteor/begin")
-    assert "data modify storage realms:drops spots set from storage realms:omens spots" in begin
-    assert "execute store result score #r om run function realms:drops/meteor" in begin
+    assert "data modify storage monkey:drops spots set from storage monkey:omens spots" in begin
+    assert "execute store result score #r om run function monkey:drops/meteor" in begin
     # The omen ends with the drop, once it was announced.
     second = fn("second").splitlines()
     meteor = "execute if score #state om matches 2 "
     announced = meteor + "if score #state dr matches 2.. run scoreboard players set #phase om 1"
     failed = (meteor + "if score #phase om matches 0 unless score #state dr matches 1.. run "
-              "function realms:omens/meteor/failed")
-    ended = meteor + "if score #phase om matches 1 unless score #state dr matches 1.. run function realms:omens/end"
+              "function monkey:omens/meteor/failed")
+    ended = meteor + "if score #phase om matches 1 unless score #state dr matches 1.. run function monkey:omens/end"
     assert second.index(announced) < second.index(failed) < second.index(ended)
 
 
 def test_a_meteor_with_no_dry_ground_gives_the_evening_to_the_next_omen():
     failed = fn("meteor/failed").splitlines()
     assert failed[2:4] == ["scoreboard players set #state om 0", "scoreboard players set #phase om 0"]
-    assert "execute store result score #r om run function realms:omens/pick" in failed
+    assert "execute store result score #r om run function monkey:omens/pick" in failed
     # The next omen that starts is recorded for the evening; with none, the evening is as if nothing was tried.
-    assert ("execute if score #r om matches 1 run return run function realms:omens/record with storage realms:omens "
+    assert ("execute if score #r om matches 1 run return run function monkey:omens/record with storage monkey:omens "
             "tonight") in failed
-    assert failed[-2:] == ["function realms:omens/unrecord with storage realms:omens tonight",
+    assert failed[-2:] == ["function monkey:omens/unrecord with storage monkey:omens tonight",
                            "scoreboard players operation #night om = #prev om"]
     # It never touches what drops.py's own end path resets (#meteor dr, in drops/next).
     assert "#meteor" not in "\n".join(failed)
@@ -403,23 +403,23 @@ def test_a_meteor_with_no_dry_ground_gives_the_evening_to_the_next_omen():
 def test_truce_hour_only_turns_pvp_off_when_it_was_on():
     begin = fn("truce/begin")
     assert begin.index("execute unless score #pvp om matches 1 run return 0") < begin.index("gamerule pvp false")
-    assert "execute if score #launching realms.rules matches 1 run return 0" in begin
+    assert "execute if score #launching monkey.rules matches 1 run return 0" in begin
     assert fn("truce/restore").rstrip().endswith("gamerule pvp true")
 
 
 def test_the_hunts_bounty_is_withdrawn_when_the_hunt_ends_without_a_kill():
-    assert "execute if score #state om matches 4 run function realms:omens/hunted/over" in fn("end")
+    assert "execute if score #state om matches 4 run function monkey:omens/hunted/over" in fn("end")
     over = fn("hunted/over")
     assert "execute if score #phase om matches 1 run return 0" in over and "withdrawn" in over
     kill = fn("hunted/kill")
-    assert kill.index("scoreboard players set #phase om 1") < kill.index("function realms:omens/end")
+    assert kill.index("scoreboard players set #phase om 1") < kill.index("function monkey:omens/end")
     assert "scoreboard players set #phase om 0" in fn("hunted/on")
     assert "it ends with the hunt" in fn("hunted/on")
 
 
 def test_hunted_posts_the_standings_bounty_and_staff_claim_it():
     on = fn("hunted/on")
-    assert '$function realms:standings/bounty/post {target:"$(name)"}' in on
+    assert '$function monkey:standings/bounty/post {target:"$(name)"}' in on
     assert f"{standings.FN}/bounty/post.mcfunction" in standings.datapack_files()
     commands = [line for p in FUNCTIONS for line in FILES[p].splitlines() if not line.startswith("#")]
     assert not any("bounty/claim" in line for line in commands)   # staff check the kill first
@@ -428,7 +428,7 @@ def test_hunted_posts_the_standings_bounty_and_staff_claim_it():
     assert f"$execute unless score $(name) om.streak matches {omens.HUNT_MIN}.. run return 0" in mark
     kill = fn("hunted/kill")
     assert "execute if entity @s[tag=ev.arena] run return 0" in kill
-    adv = json.loads(FILES["data/realms/advancement/omens/hunted_kill.json"])
+    adv = json.loads(FILES["data/monkey/advancement/omens/hunted_kill.json"])
     terms = adv["criteria"]["kill"]["conditions"]["entity"]["terms"]
     assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"om.hunt": {"min": 1}}} in terms
     # Nothing shows where they are.
@@ -442,16 +442,16 @@ def test_kill_streaks_count_from_the_launch_and_outside_the_arena():
             "scoreboard players operation @s om.streak += @s om.pk") in tick
     assert "scoreboard players set @a[scores={om.deaths=1..},tag=!ev.arena] om.streak 0" in tick
     # The hunted player's death is checked before deaths are cleared.
-    assert tick.index("realms:omens/hunted/died") < tick.index("om.deaths 0")
+    assert tick.index("monkey:omens/hunted/died") < tick.index("om.deaths 0")
     assert "execute unless score #launched rw.day matches 1 run scoreboard players reset * om.streak" in fn("second")
 
 
 def test_a_restart_carries_on_and_keeps_the_settings():
     load = fn("load")
-    assert "schedule function realms:omens/second 20t replace" in load
+    assert "schedule function monkey:omens/second 20t replace" in load
     assert "execute unless score #min om matches 1.. run scoreboard players set #min om 4" in load
     assert "execute unless score #auto om matches 0.. run scoreboard players set #auto om 1" in load
-    assert "function realms:omens/end" not in load
+    assert "function monkey:omens/end" not in load
 
 
 def test_staff_starts_never_use_up_the_evening():
@@ -465,7 +465,7 @@ def test_help_lists_every_staff_command():
     help_ = fn("help")
     assert help_.count("suggest_command") == len(omens.HELP)
     for cmd, _ in omens.HELP:
-        assert json.dumps(f"/function realms:omens/{cmd}")[1:-1] in help_
+        assert json.dumps(f"/function monkey:omens/{cmd}")[1:-1] in help_
 
 
 def test_the_generator_is_registered():
@@ -478,21 +478,21 @@ def test_the_generator_is_registered():
 DEPLOY = REPO.root / "deploy"
 
 
-@pytest.mark.parametrize("name", ["realms-omens.sh", "realms-omens.service", "realms-omens.timer"])
+@pytest.mark.parametrize("name", ["monkey-omens.sh", "monkey-omens.service", "monkey-omens.timer"])
 def test_deploy_files_are_plain_ascii_with_lf(name):
     data = (DEPLOY / name).read_bytes()
     assert data.isascii() and b"\r" not in data
 
 
 def test_the_script_is_a_timed_job_that_never_shows_the_plan():
-    text = (DEPLOY / "realms-omens.sh").read_text()
+    text = (DEPLOY / "monkey-omens.sh").read_text()
     assert text.startswith("#!/bin/sh\n") and "set -eu" in text
     assert "JOB_TOOL=omens.py\n" in text and "JOB_WORLD=1\n" in text and text.endswith('\ntimed_job "$@"\n')
     assert "JOB_SHOW" not in text and "JOB_NONE=" in text
 
 
 def test_the_timer_runs_five_minutes_after_the_drops():
-    timer = (DEPLOY / "realms-omens.timer").read_text()
+    timer = (DEPLOY / "monkey-omens.timer").read_text()
     assert "OnCalendar=*-*-* *:05/10:30\n" in timer and "Persistent=false\n" in timer
-    assert "OnCalendar=*-*-* *:00/10:30\n" in (DEPLOY / "realms-drops.timer").read_text()
-    assert "User=realms\n" in (DEPLOY / "realms-omens.service").read_text()
+    assert "OnCalendar=*-*-* *:00/10:30\n" in (DEPLOY / "monkey-drops.timer").read_text()
+    assert "User=monkey\n" in (DEPLOY / "monkey-omens.service").read_text()

@@ -1,0 +1,1 @@
+$tellraw @s ["",{"text":" - South at ","color":"gray"},{"nbt":"at.o3.x","storage":"monkey:outposts","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"at.o3.z","storage":"monkey:outposts","color":"aqua"},{"text":": ","color":"gray"},{"nbt":"names.f$(h)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" hold it","color":"gray"}]

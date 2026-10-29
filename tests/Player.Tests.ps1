@@ -141,7 +141,7 @@ BeforeAll {
         }
         $entries = @{ 'modrinth.index.json' = (ConvertTo-Json -InputObject $index -Depth 10) }
         foreach ($k in $Overrides.Keys) { $entries[$k] = $Overrides[$k] }
-        $path = Join-Path $F.Dir "TheRealms-Client-$Version.mrpack"
+        $path = Join-Path $F.Dir "MonkeySMP-Client-$Version.mrpack"
         New-Zip $path $entries
         return $path
     }
@@ -176,7 +176,7 @@ BeforeAll {
             if ($p.Name -ne 'profiles') { $out["setting $($p.Name)"] = ConvertTo-Json -InputObject $p.Value -Depth 50 -Compress }
         }
         foreach ($p in $o.profiles.PSObject.Properties) {
-            if ($p.Name -ne 'the-realms') { $out["profile $($p.Name)"] = ConvertTo-Json -InputObject $p.Value -Depth 50 -Compress }
+            if ($p.Name -ne 'monkey-smp') { $out["profile $($p.Name)"] = ConvertTo-Json -InputObject $p.Value -Depth 50 -Compress }
         }
         return $out
     }
@@ -225,13 +225,13 @@ Describe 'Install-Client' {
         }
 
         It 'records the installed files in the state file' {
-            $s = Read-Text (Join-Path $F.Game '.realms-client-state.json') | ConvertFrom-Json
+            $s = Read-Text (Join-Path $F.Game '.monkey-client-state.json') | ConvertFrom-Json
             @($s.files) | Should -Be @('mods/alpha-1.0.jar', 'mods/beta [fabric]-2.0.jar', 'resourcepacks/Fancy Pack [1.0].zip')
             $s.version | Should -Be '1.0.0'
         }
 
         It 'adds Monkey SMP profile' {
-            $p = (Get-Profiles $F.Profiles).'the-realms'
+            $p = (Get-Profiles $F.Profiles).'monkey-smp'
             $p.name | Should -Be 'Monkey SMP 1.0.0'
             $p.type | Should -Be 'custom'
             $p.lastVersionId | Should -Be $script:FabricId
@@ -256,7 +256,7 @@ Describe 'Install-Client' {
         }
 
         It 'backs up the original launcher_profiles.json' {
-            [IO.File]::ReadAllBytes("$($F.Profiles).the-realms-backup") | Should -Be $script:original
+            [IO.File]::ReadAllBytes("$($F.Profiles).monkey-smp-backup") | Should -Be $script:original
         }
     }
 
@@ -284,9 +284,9 @@ Describe 'Install-Client' {
         }
 
         It 'updates only the memory when it changes' {
-            $script:created = (Get-Profiles $F.Profiles).'the-realms'.created
+            $script:created = (Get-Profiles $F.Profiles).'monkey-smp'.created
             (Install-Client -Context (New-Context $F $script:pack) -MemoryGB 6).ProfileChanged | Should -BeTrue
-            $p = (Get-Profiles $F.Profiles).'the-realms'
+            $p = (Get-Profiles $F.Profiles).'monkey-smp'
             $p.javaArgs | Should -BeLike '-Xmx6G -Xms6G *'
             $p.created | Should -Be $script:created
         }
@@ -298,7 +298,7 @@ Describe 'Install-Client' {
             Write-Text (Join-Path $F.Game 'mods\my-own-mod.jar') 'mine'
             Write-Text (Join-Path $F.Game 'screenshots\a.png') 'png'
             Write-Text (Join-Path $F.Game 'config\alpha.toml') "speed = 9`n"
-            $script:created = (Get-Profiles $F.Profiles).'the-realms'.created
+            $script:created = (Get-Profiles $F.Profiles).'monkey-smp'.created
             # alpha 1.0 -> 1.1 (renamed), beta dropped, a new config.
             $modA2 = New-PackFile $F 'mods/alpha-1.1.jar' 'alpha one point one'
             $overrides = @{
@@ -316,7 +316,7 @@ Describe 'Install-Client' {
             Get-FileSha (Join-Path $F.Game 'mods\alpha-1.1.jar') | Should -Be $modA2.hashes.sha512
             $script:r2.Removed | Should -Be 2
             $script:r2.Downloaded | Should -Be 1
-            @((Read-Text (Join-Path $F.Game '.realms-client-state.json') | ConvertFrom-Json).files) |
+            @((Read-Text (Join-Path $F.Game '.monkey-client-state.json') | ConvertFrom-Json).files) |
                 Should -Be @('mods/alpha-1.1.jar', 'resourcepacks/Fancy Pack [1.0].zip')
         }
 
@@ -330,12 +330,66 @@ Describe 'Install-Client' {
         }
 
         It 'renames the profile and keeps its created time and the first backup' {
-            $p = (Get-Profiles $F.Profiles).'the-realms'
+            $p = (Get-Profiles $F.Profiles).'monkey-smp'
             $p.name | Should -Be 'Monkey SMP 1.1.0'
             $p.created | Should -Be $script:created
-            [IO.File]::ReadAllBytes("$($F.Profiles).the-realms-backup") | Should -Be $script:original
+            [IO.File]::ReadAllBytes("$($F.Profiles).monkey-smp-backup") | Should -Be $script:original
             @((Get-Profiles $F.Profiles).PSObject.Properties).Count | Should -Be 4
         }
+    }
+}
+
+Describe 'Moving from before 2.10.0' {
+    BeforeEach {
+        $F = New-Fixture
+        $F.Game = Join-Path $F.Dir '.monkey-smp'
+        $script:old = Join-Path $F.Dir '.the-realms'
+        Write-Text (Join-Path $script:old 'saves\Base\level.dat') 'world'
+        Write-Text (Join-Path $script:old 'mods\alpha-1.0.jar') 'stale'
+        Write-Text (Join-Path $script:old '.realms-client-state.json') '{"version":"0.9.0","files":["mods/alpha-1.0.jar"]}'
+        $oldProfile = '"the-realms":{"name":"The Realms 0.9.0","type":"custom","gameDir":"' + $script:old.Replace('\', '\\') + '"},'
+        Write-Text $F.Profiles (Get-LauncherProfilesText).Replace('"profiles":{', '"profiles":{' + $oldProfile)
+        Write-Text "$($F.Profiles).the-realms-backup" 'pristine'
+        $script:pack = New-StandardPack $F
+    }
+
+    It 'moves the old game folder and its state, and drops the old profile' {
+        $r = Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4
+        [IO.Directory]::Exists($script:old) | Should -BeFalse
+        Read-Text (Join-Path $F.Game 'saves\Base\level.dat') | Should -Be 'world'
+        Get-FileSha (Join-Path $F.Game 'mods\alpha-1.0.jar') | Should -Be $F.ModA.hashes.sha512
+        [IO.File]::Exists((Join-Path $F.Game '.realms-client-state.json')) | Should -BeFalse
+        (Read-Text (Join-Path $F.Game '.monkey-client-state.json') | ConvertFrom-Json).version | Should -Be '1.0.0'
+        $profiles = Get-Profiles $F.Profiles
+        $profiles.PSObject.Properties.Name | Should -Not -Contain 'the-realms'
+        $profiles.'monkey-smp'.gameDir | Should -Be $F.Game
+        $r.ProfileName | Should -Be 'Monkey SMP 1.0.0'
+        # The first backup, made before the first install, stays the first backup.
+        Read-Text "$($F.Profiles).monkey-smp-backup" | Should -Be 'pristine'
+        Test-Path -LiteralPath "$($F.Profiles).the-realms-backup" | Should -BeFalse
+    }
+
+    It 'leaves the old folder alone when the new one already exists' {
+        Write-Text (Join-Path $F.Game 'saves\New\level.dat') 'new world'
+        [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
+        Read-Text (Join-Path $script:old 'saves\Base\level.dat') | Should -Be 'world'
+        Read-Text (Join-Path $F.Game 'saves\New\level.dat') | Should -Be 'new world'
+        # It still plays from the old folder, so it stays.
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Contain 'the-realms'
+    }
+
+    It 'never moves a game folder the player picked' {
+        $F.Game = Join-Path $F.Dir 'my folder'
+        [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
+        [IO.Directory]::Exists($script:old) | Should -BeTrue
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Contain 'the-realms'
+    }
+
+    It 'uninstalling removes the old profile too, but never the old folder' {
+        $r = Uninstall-Client -Context (New-Context $F $null)
+        $r.ProfileRemoved | Should -BeTrue
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Not -Contain 'the-realms'
+        [IO.Directory]::Exists($script:old) | Should -BeTrue
     }
 }
 
@@ -443,7 +497,7 @@ Describe 'Unsafe packs' {
     }
 
     It 'rejects a pack that is not a Fabric pack' {
-        $path = Join-Path $F.Dir 'TheRealms-Client-9.mrpack'
+        $path = Join-Path $F.Dir 'MonkeySMP-Client-9.mrpack'
         New-Zip $path @{ 'modrinth.index.json' = '{"formatVersion":1,"game":"minecraft","versionId":"9","files":[],"dependencies":{"minecraft":"1.0","forge":"1"}}' }
         { Read-ClientPack -Path $path } | Should -Throw '*not a Fabric modpack*'
         New-Zip $path @{ 'readme.txt' = 'hi' }
@@ -478,7 +532,7 @@ Describe 'Minecraft Launcher checks' {
         Write-Text $F.Profiles '{"settings":{},"version":3}'
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 3)
         $o = Read-Text $F.Profiles | ConvertFrom-Json
-        $o.'profiles'.'the-realms'.lastVersionId | Should -Be $script:FabricId
+        $o.'profiles'.'monkey-smp'.lastVersionId | Should -Be $script:FabricId
         $o.version | Should -Be 3
     }
 
@@ -486,16 +540,16 @@ Describe 'Minecraft Launcher checks' {
         $store = Join-Path $F.Minecraft 'launcher_profiles_microsoft_store.json'
         Write-Text $store '{"profiles":{"x":{"name":"x","type":"custom","lastVersionId":"1.0"}}}'
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 3)
-        (Get-Profiles $store).'the-realms'.name | Should -Be 'Monkey SMP 1.0.0'
+        (Get-Profiles $store).'monkey-smp'.name | Should -Be 'Monkey SMP 1.0.0'
         (Get-Profiles $store).x.name | Should -Be 'x'
-        (Get-Profiles $F.Profiles).'the-realms'.name | Should -Be 'Monkey SMP 1.0.0'
+        (Get-Profiles $F.Profiles).'monkey-smp'.name | Should -Be 'Monkey SMP 1.0.0'
     }
 
     It 'only warns about a running launcher with -NonInteractive' {
         [void]$F.Running.Add('MinecraftLauncher')
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 3)
         $F.Asked.Count | Should -Be 0
-        (Get-Profiles $F.Profiles).'the-realms' | Should -Not -BeNullOrEmpty
+        (Get-Profiles $F.Profiles).'monkey-smp' | Should -Not -BeNullOrEmpty
     }
 
     It 'asks the player to close the launcher and checks again' {
@@ -529,7 +583,7 @@ Describe 'Uninstall-Client' {
         Test-Path -LiteralPath $F.Game | Should -BeFalse
         # Install + uninstall gives back the launcher's file byte for byte.
         [IO.File]::ReadAllBytes($F.Profiles) | Should -Be $script:original
-        [IO.File]::ReadAllBytes("$($F.Profiles).the-realms-backup") | Should -Be $script:original
+        [IO.File]::ReadAllBytes("$($F.Profiles).monkey-smp-backup") | Should -Be $script:original
         Test-Path -LiteralPath (Join-Path $F.Minecraft "versions\$script:FabricId\$script:FabricId.json") | Should -BeTrue
     }
 
@@ -586,8 +640,8 @@ Describe 'Find-ClientPack' {
     BeforeEach { $dir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $dir | Out-Null }
 
     It 'finds the one pack' {
-        Write-Text (Join-Path $dir 'TheRealms-Client-2.0.0.mrpack') 'x'
-        Find-ClientPack -Folder $dir | Should -Be (Join-Path $dir 'TheRealms-Client-2.0.0.mrpack')
+        Write-Text (Join-Path $dir 'MonkeySMP-Client-2.0.0.mrpack') 'x'
+        Find-ClientPack -Folder $dir | Should -Be (Join-Path $dir 'MonkeySMP-Client-2.0.0.mrpack')
     }
 
     It 'explains a missing pack' {
@@ -595,8 +649,8 @@ Describe 'Find-ClientPack' {
     }
 
     It 'refuses to guess between two packs' {
-        Write-Text (Join-Path $dir 'TheRealms-Client-2.0.0.mrpack') 'x'
-        Write-Text (Join-Path $dir 'TheRealms-Client-2.1.0.mrpack') 'x'
+        Write-Text (Join-Path $dir 'MonkeySMP-Client-2.0.0.mrpack') 'x'
+        Write-Text (Join-Path $dir 'MonkeySMP-Client-2.1.0.mrpack') 'x'
         { Find-ClientPack -Folder $dir } | Should -Throw '*more than one*'
     }
 }

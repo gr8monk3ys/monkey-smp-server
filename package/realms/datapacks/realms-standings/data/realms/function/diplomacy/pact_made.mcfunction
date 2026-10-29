@@ -1,3 +1,0 @@
-$tellraw @a ["",{"text":"Pact: ","color":"green","bold":true},{"nbt":"names.f$(a)","storage":"realms:factions","interpret":true,"color":"white"},{"text":" (","color":"gray"},{"selector":"@s","color":"gray"},{"text":")","color":"gray"},{"text":" and ","color":"green"},{"nbt":"names.f$(b)","storage":"realms:factions","interpret":true,"color":"white"},{"text":" made a pact.","color":"green"},{"text":" No war between them while it stands. It stands until either side breaks it, and a break is announced.","color":"gray"}]
-execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 0.6 1.2
-$function realms:diplomacy/log {kind:"pact",a:$(a),b:$(b)}

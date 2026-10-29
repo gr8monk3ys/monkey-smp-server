@@ -97,7 +97,7 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
 5. WHAT FRIENDS INSTALL (everyone, including you)
 -------------------------------------------------
   Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
-  needs the mods. Send each player the file  TheRealms-Player-(version).zip  from the same
+  needs the mods. Send each player the file  MonkeySMP-Player-(version).zip  from the same
   release as this server. Inside it:
     - "Install for Minecraft Launcher.bat" sets everything up in the normal Minecraft
       Launcher on Windows (they then pick "Monkey SMP" next to the Play button).
@@ -191,9 +191,9 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
      far things tick, and raises them again later ( /servercore status  shows it).
   Memory: the server picks it from the computer's RAM (8 GB with 32 GB, 5 GB with 16 GB).
      8 GB is plenty. To choose yourself on Windows, set it once in a Command Prompt:
-        setx REALMS_MEMORY_GB 8
+        setx MONKEY_MEMORY_GB 8
      then start the server from a new window. On a Mac or Linux, start it with:
-        REALMS_MEMORY_GB=8 sh start.sh
+        MONKEY_MEMORY_GB=8 sh start.sh
   Player slots: 30 (max-players in server\server.properties).
   Build the world ahead of time. New land is the main cause of lag when many people
   explore at once. With nobody online, type in the server window:

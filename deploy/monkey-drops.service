@@ -1,0 +1,11 @@
+# Offers the weeknight supply drop its spots (deploy/monkey-drops.sh, tools/drops.py). Started every 10 minutes
+# by monkey-drops.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-drops.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: weeknight supply drops
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-drops.sh

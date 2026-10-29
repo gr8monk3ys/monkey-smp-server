@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# Boots the server zip's Docker setup (TheRealms-Server/docker) the way a VPS owner would:
+# Boots the server zip's Docker setup (MonkeySMP-Server/docker) the way a VPS owner would:
 # unzip, set EULA in docker/.env, docker compose up -d, wait for "Done", run a console command,
 # docker compose stop, and check it ran as the folder's owner and saved the world on the way down.
 #
-#   tests/docker-smoke.sh dist/TheRealms-Server-2.3.0.zip [work-dir]
+#   tests/docker-smoke.sh dist/MonkeySMP-Server-2.3.0.zip [work-dir]
 #   MEMORY_GB=4 TIMEOUT_MINUTES=30 tests/docker-smoke.sh ...
 #   GAME_PORT=35565 VOICE_PORT=34454 MAP_PORT=38100 tests/docker-smoke.sh ...   (a server already on 25565)
 #
 # Leaves the unzipped folder (with server/logs and compose.log) in work-dir; removes the container,
-# network and image it built. COMPOSE_PROJECT_NAME picks the compose project (default realms-docker-smoke).
+# network and image it built. COMPOSE_PROJECT_NAME picks the compose project (default monkey-docker-smoke).
 set -euo pipefail
 
 zip="$1"
 work="${2:-$(mktemp -d)}"
 timeout_min="${TIMEOUT_MINUTES:-30}"
 memory="${MEMORY_GB:-4}"
-export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-realms-docker-smoke}"
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-monkey-docker-smoke}"
 
 mkdir -p "$work"
 unzip -q -o "$zip" -d "$work"
-root="$work/TheRealms-Server"
-[ -d "$root/docker" ] || { echo "no TheRealms-Server/docker folder in $zip"; exit 1; }
+root="$work/MonkeySMP-Server"
+[ -d "$root/docker" ] || { echo "no MonkeySMP-Server/docker folder in $zip"; exit 1; }
 cd "$root/docker"
 for f in compose.yaml Dockerfile entrypoint.sh .env.example; do
     [ -f "$f" ] || { echo "docker/$f is missing from the zip"; exit 1; }
@@ -35,7 +35,7 @@ docker compose build --quiet
 
 echo "--- without EULA=TRUE it must refuse to start (and install nothing)"
 set +e
-refusal=$(docker compose run --rm -T -e EULA= realms 2>&1)
+refusal=$(docker compose run --rm -T -e EULA= monkey 2>&1)
 code=$?
 set -e
 if [ "$code" -eq 0 ] || ! grep -q 'aka.ms/MinecraftEULA' <<<"$refusal"; then
@@ -50,7 +50,7 @@ if ! grep -qx 'EULA=TRUE' .env || ! grep -qx "MEMORY_GB=$memory" .env; then
 fi
 
 docker compose up -d
-cid=$(docker compose ps -aq realms)
+cid=$(docker compose ps -aq monkey)
 deadline=$(( $(date +%s) + timeout_min * 60 ))
 reached=no
 while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -62,13 +62,13 @@ done
 
 if [ "$reached" = yes ]; then
     echo "--- started: $(grep -m1 'Done (' "$log")"
-    # The exec helper runs realms.sh in the running container, as the server's user, over RCON.
-    if ! reply=$(docker compose exec -T realms realms rcon list 2>&1) || ! grep -q 'players online' <<<"$reply"; then
-        echo "$reply"; echo "rcon through 'docker compose exec realms realms' failed"; fail=1
+    # The exec helper runs monkey.sh in the running container, as the server's user, over RCON.
+    if ! reply=$(docker compose exec -T monkey monkey rcon list 2>&1) || ! grep -q 'players online' <<<"$reply"; then
+        echo "$reply"; echo "rcon through 'docker compose exec monkey monkey' failed"; fail=1
     fi
     # The server must run as the release folder's owner (a plain user on Docker Desktop), never as
     # root for a host user's folder, so its files stay the host user's.
-    java_uid=$(docker compose exec -T realms sh -c \
+    java_uid=$(docker compose exec -T monkey sh -c \
         'for p in /proc/[0-9]*; do [ "$(cat $p/comm 2>/dev/null)" = java ] && stat -c %u "$p"; done; true' | tr -d '\r')
     echo "--- java runs as uid ${java_uid:-?}"
     if [ "$(id -u)" != 0 ] && [ "${java_uid:-0}" = 0 ]; then echo "java runs as root"; fail=1; fi
@@ -82,7 +82,7 @@ started=$(date +%s)
 docker compose stop
 took=$(( $(date +%s) - started ))
 exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$cid")
-docker compose logs --no-color realms > "$root/compose.log" 2>&1 || true
+docker compose logs --no-color monkey > "$root/compose.log" 2>&1 || true
 echo "--- stopped in ${took}s, exit code $exit_code"
 
 [ "$reached" = yes ] || { echo "the server never printed Done"; fail=1; }

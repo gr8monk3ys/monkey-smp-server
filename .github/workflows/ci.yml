@@ -94,7 +94,7 @@ jobs:
         shell: powershell
         run: |
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
-          $files = 'package/realms/realms.ps1', 'package/realms/Realms.psm1', 'tests/smoke.ps1', 'tests/Realms.Tests.ps1',
+          $files = 'package/monkey/monkey.ps1', 'package/monkey/Monkey.psm1', 'tests/smoke.ps1', 'tests/Monkey.Tests.ps1',
                    'player/installer/install-client.ps1', 'player/installer/PlayerInstall.psm1', 'tests/Player.Tests.ps1'
           $issues = $files | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Settings ./PSScriptAnalyzerSettings.psd1 }
           $issues | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
@@ -105,7 +105,7 @@ jobs:
         run: |
           Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
           Import-Module Pester -MinimumVersion 5.5
-          $r = Invoke-Pester -Path tests/Realms.Tests.ps1, tests/Player.Tests.ps1 -Output Detailed -PassThru
+          $r = Invoke-Pester -Path tests/Monkey.Tests.ps1, tests/Player.Tests.ps1 -Output Detailed -PassThru
           if ($r.FailedCount) { exit 1 }
 
       - name: Download the release files built by the tools job
@@ -116,25 +116,25 @@ jobs:
 
       - name: Unzip like a user would
         shell: powershell
-        run: Expand-Archive -Path (Get-Item dist/TheRealms-Server-*.zip) -DestinationPath "$env:RUNNER_TEMP\realms"
+        run: Expand-Archive -Path (Get-Item dist/MonkeySMP-Server-*.zip) -DestinationPath "$env:RUNNER_TEMP\monkey"
 
       - name: Prepare a hosting bundle (installs first, never starts the server)
         shell: powershell
         run: |
-          & "$env:RUNNER_TEMP\realms\TheRealms-Server\realms\realms.ps1" export-host -AcceptEula -NonInteractive -NoOwner
+          & "$env:RUNNER_TEMP\monkey\MonkeySMP-Server\monkey\monkey.ps1" export-host -AcceptEula -NonInteractive -NoOwner
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Upload the hosting bundle for the Linux/Docker test
         uses: actions/upload-artifact@v7
         with:
           name: hosting-bundle
-          path: ${{ runner.temp }}/realms/TheRealms-Server/exports/*.zip
+          path: ${{ runner.temp }}/monkey/MonkeySMP-Server/exports/*.zip
           retention-days: 1
           compression-level: 0
 
       - name: Install, boot, check mods/plugins and datapacks, stop
         shell: powershell
-        run: ./tests/smoke.ps1 -Root "$env:RUNNER_TEMP\realms\TheRealms-Server" -MemoryGB 4
+        run: ./tests/smoke.ps1 -Root "$env:RUNNER_TEMP\monkey\MonkeySMP-Server" -MemoryGB 4
 
       - name: Upload server logs
         if: always()
@@ -142,8 +142,8 @@ jobs:
         with:
           name: server-logs
           path: |
-            ${{ runner.temp }}/realms/TheRealms-Server/server/logs/
-            ${{ runner.temp }}/realms/TheRealms-Server/smoke-console.log*
+            ${{ runner.temp }}/monkey/MonkeySMP-Server/server/logs/
+            ${{ runner.temp }}/monkey/MonkeySMP-Server/smoke-console.log*
           if-no-files-found: ignore
 
   hosting:
@@ -184,7 +184,7 @@ jobs:
     timeout-minutes: 45
     env:
       # Exercise the bootstrap's pinned portable PowerShell, not the runner's own pwsh.
-      REALMS_IGNORE_SYSTEM_PWSH: "1"
+      MONKEY_IGNORE_SYSTEM_PWSH: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
@@ -194,20 +194,20 @@ jobs:
 
       - name: Unzip like a user would
         run: |
-          unzip -q dist/TheRealms-Server-*.zip -d "$RUNNER_TEMP/realms"
-          echo "ROOT=$RUNNER_TEMP/realms/TheRealms-Server" >> "$GITHUB_ENV"
+          unzip -q dist/MonkeySMP-Server-*.zip -d "$RUNNER_TEMP/monkey"
+          echo "ROOT=$RUNNER_TEMP/monkey/MonkeySMP-Server" >> "$GITHUB_ENV"
 
       - name: Launchers kept their executable bit
         working-directory: ${{ env.ROOT }}
         run: |
-          for f in start.sh stop.sh backup.sh add-player.sh prepare-for-hosting.sh 'Start Server.command' realms/realms.sh; do
+          for f in start.sh stop.sh backup.sh add-player.sh prepare-for-hosting.sh 'Start Server.command' monkey/monkey.sh; do
             [ -x "$f" ] || { echo "$f is missing or not executable"; exit 1; }
           done
 
       - name: Install through the bootstrap (downloads the pinned PowerShell, then Java and the mods)
         working-directory: ${{ env.ROOT }}
         run: |
-          ./realms/realms.sh install -AcceptEula -NonInteractive -NoOwner
+          ./monkey/monkey.sh install -AcceptEula -NonInteractive -NoOwner
           find . -type f -name pwsh -perm -u+x | grep -q . || { echo "the bootstrap did not download PowerShell"; exit 1; }
 
       - name: Unit tests (Pester)
@@ -216,7 +216,7 @@ jobs:
         run: |
           Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
           Import-Module Pester -MinimumVersion 5.5
-          $r = Invoke-Pester -Path tests/Realms.Tests.ps1 -Output Detailed -PassThru
+          $r = Invoke-Pester -Path tests/Monkey.Tests.ps1 -Output Detailed -PassThru
           if ($r.FailedCount) { exit 1 }
 
       - name: Boot, check mods and datapacks, stop
@@ -250,14 +250,14 @@ jobs:
         env:
           MEMORY_GB: "4"
           TIMEOUT_MINUTES: "30"
-        run: bash tests/docker-smoke.sh dist/TheRealms-Server-*.zip "$RUNNER_TEMP/docker"
+        run: bash tests/docker-smoke.sh dist/MonkeySMP-Server-*.zip "$RUNNER_TEMP/docker"
       - name: Upload the container and server logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: docker-logs
           path: |
-            ${{ runner.temp }}/docker/TheRealms-Server/compose.log
-            ${{ runner.temp }}/docker/TheRealms-Server/server/logs/
-            ${{ runner.temp }}/docker/TheRealms-Server/server/crash-reports/
+            ${{ runner.temp }}/docker/MonkeySMP-Server/compose.log
+            ${{ runner.temp }}/docker/MonkeySMP-Server/server/logs/
+            ${{ runner.temp }}/docker/MonkeySMP-Server/server/crash-reports/
           if-no-files-found: ignore

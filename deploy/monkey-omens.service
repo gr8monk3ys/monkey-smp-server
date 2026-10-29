@@ -1,0 +1,11 @@
+# Offers the evening's omen (deploy/monkey-omens.sh, tools/omens.py). Started every 10 minutes by
+# monkey-omens.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-omens.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: omens
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-omens.sh

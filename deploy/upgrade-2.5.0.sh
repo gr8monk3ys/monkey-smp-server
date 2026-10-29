@@ -4,8 +4,8 @@
 # timer files and the server has the short rules. Started with systemd-run it carries on if the SSH connection
 # drops while the server is stopped:
 #
-#   systemd-run --unit=realms-upgrade --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/upgrade-2.5.0.sh
-#   journalctl -fu realms-upgrade
+#   systemd-run --unit=monkey-upgrade --collect -p TimeoutStopSec=20min sh /srv/monkey/repo/deploy/upgrade-2.5.0.sh
+#   journalctl -fu monkey-upgrade
 #
 #   sh upgrade-2.5.0.sh --check   says what is still to do, and changes nothing
 #   sh upgrade-2.5.0.sh --now     stops the server without the warning in chat
@@ -22,14 +22,14 @@
 #      *.pre-onboarding as in docs/LIVE.md), and the server started again whatever happens. About 3 minutes
 #      offline.
 #   3. the no-PvP server claim over the 7 x 7 chunks around spawn, through RCON with the server up
-#   4. installs realms-restart.timer and realms-updates.timer from the deployed checkout and starts them
-# The off-site backups (realms-backup.sh) are not here: they need keys the owner makes (docs/LIVE.md).
+#   4. installs monkey-restart.timer and monkey-updates.timer from the deployed checkout and starts them
+# The off-site backups (monkey-backup.sh) are not here: they need keys the owner makes (docs/LIVE.md).
 #
-# It reads only REPO_DIR, LIVE_DIR, LOCK_FILE, WARN_MINUTES and BOOT_TIMEOUT from /etc/realms-deploy.env (or
-# REALMS_DEPLOY_ENV), without sourcing it, so the webhooks are never read. RCON goes through the container's own
-# `realms rcon`, which finds the password itself. Of server.properties it reads and prints only the
+# It reads only REPO_DIR, LIVE_DIR, LOCK_FILE, WARN_MINUTES and BOOT_TIMEOUT from /etc/monkey-deploy.env (or
+# MONKEY_DEPLOY_ENV), without sourcing it, so the webhooks are never read. RCON goes through the container's own
+# `monkey rcon`, which finds the password itself. Of server.properties it reads and prints only the
 # enable-code-of-conduct line, never rcon.password. No secret is read, printed or asked for. What it prints also
-# goes to /var/log/realms-upgrade-2.5.0.log (or UPGRADE_LOG), with the output of apt-get, systemctl and docker.
+# goes to /var/log/monkey-upgrade-2.5.0.log (or UPGRADE_LOG), with the output of apt-get, systemctl and docker.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -45,12 +45,12 @@ case "${1:-}" in
 esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it installs packages and timers and stops the server' >&2; exit 1; }
 
-ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-LOG_TO=${UPGRADE_LOG:-/var/log/realms-upgrade-2.5.0.log}
+ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
+LOG_TO=${UPGRADE_LOG:-/var/log/monkey-upgrade-2.5.0.log}
 
-REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
-LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
-LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
+REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/monkey/repo)}
+LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}
+LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/monkey-deploy.lock)}
 WARN_MINUTES=${WARN_MINUTES:-$(setting WARN_MINUTES 5)}
 BOOT_TIMEOUT=${BOOT_TIMEOUT:-$(setting BOOT_TIMEOUT 900)}
 case "$WARN_MINUTES" in '' | *[!0-9]*) WARN_MINUTES=5 ;; esac
@@ -74,10 +74,10 @@ CLAIM_COMMANDS='opac server-claims-config set claims.protection.exceptions.playe
 oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48'
 # Written once the claim commands went through. The claim belongs to this world: a new world needs it again
 # (the admin notes in docs/RULES.md), and this file doesn't know about that.
-CLAIM_MARK=${CLAIM_MARK:-/var/lib/realms-upgrade/2.5.0-spawn-claim}
-UNITS='realms-restart.service realms-restart.timer realms-updates.service realms-updates.timer'
-TIMERS='realms-restart.timer realms-updates.timer'
-SERVICE_USER=realms  # User= in the two .service files
+CLAIM_MARK=${CLAIM_MARK:-/var/lib/monkey-upgrade/2.5.0-spawn-claim}
+UNITS='monkey-restart.service monkey-restart.timer monkey-updates.service monkey-updates.timer'
+TIMERS='monkey-restart.timer monkey-updates.timer'
+SERVICE_USER=monkey  # User= in the two .service files
 TAB=$(printf '\t')
 
 umask 022
@@ -111,10 +111,10 @@ start_again() {
     [ -n "$stopped" ] || return 0
     stopped=''
     log 'starting the server again'
-    if logged compose up -d realms && wait_for_live; then
+    if logged compose up -d monkey && wait_for_live; then
         log 'the server is back up'
     else
-        log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s: look at docker compose logs realms"
+        log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s: look at docker compose logs monkey"
         return 1
     fi
 }
@@ -141,7 +141,7 @@ done
 cd /
 log "started ($MODE); log: $LOG_TO"
 [ -f "$LIVE_DIR/docker/compose.yaml" ] || die "$LIVE_DIR has no docker/compose.yaml (LIVE_DIR in $ENV_FILE?)"
-for u in $UNITS realms-updates.sh; do
+for u in $UNITS monkey-updates.sh; do
     [ -f "$REPO_DIR/deploy/$u" ] ||
         die "$REPO_DIR/deploy has no $u: the deployed release is older than 2.5.0; run this once 2.5.0 is live"
 done
@@ -313,7 +313,7 @@ else
         [ "$MODE" = now ] || warn_players
         stopped=1
         log 'stopping the server'
-        logged compose stop realms
+        logged compose stop monkey
     else
         log 'the server is not running: changing the files and leaving the server stopped'
     fi

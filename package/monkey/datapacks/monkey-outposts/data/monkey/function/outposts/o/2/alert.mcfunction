@@ -1,0 +1,2 @@
+$tellraw @a[scores={st.faction=$(h)}] ["",{"text":"Outposts: ","color":"gold","bold":true},{"nbt":"names.f$(c)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" are taking your East outpost at ","color":"red"},{"nbt":"at.o2.x","storage":"monkey:outposts","color":"aqua"},{"text":", ","color":"aqua"},{"nbt":"at.o2.z","storage":"monkey:outposts","color":"aqua"},{"text":". 60 seconds alone inside and it's theirs.","color":"red"}]
+$execute as @a[scores={st.faction=$(h)}] at @s run playsound minecraft:block.bell.use master @s ~ ~ ~ 0.8 0.8

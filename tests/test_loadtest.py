@@ -101,9 +101,9 @@ def test_wait_for_spark_url_reads_only_new_lines(tmp_path):
 
 
 def test_planned_parking(tmp_path):
-    (tmp_path / "realms").mkdir()
+    (tmp_path / "monkey").mkdir()
     manifest = {"mods": [{"slug": "silvers_strength-smp-season-4", "file": "strength.jar"}]}
-    (tmp_path / "realms" / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (tmp_path / "monkey" / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     parked = tmp_path / "loadtest" / "parked"
     assert loadtest.planned_parking(tmp_path, ["silvers_strength-smp-season-4"], parked) == [
         (tmp_path / "server" / "mods" / "strength.jar", parked / "strength.jar")]

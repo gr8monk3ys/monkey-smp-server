@@ -6,13 +6,13 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/realms/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
-| `package/realms/pwsh.lock` | the portable PowerShell 7 build per platform that `realms.sh` downloads when `pwsh` is missing | by hand (see below) |
-| `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/realms/realms.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
+| `package/monkey/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
+| `package/monkey/pwsh.lock` | the portable PowerShell 7 build per platform that `monkey.sh` downloads when `pwsh` is missing | by hand (see below) |
+| `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/monkey/monkey.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
-| `package/realms/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/realms/datapacks/realms-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`) | `python tools/datapacks.py` |
-| `package/realms/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
+| `package/monkey/defaults/` | first-run configs, copied only if missing | by hand |
+| `package/monkey/datapacks/monkey-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`) | `python tools/datapacks.py` |
+| `package/monkey/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
 | `player/` | the player installer for the official Minecraft Launcher (shipped whole in the player zip) | by hand |
@@ -30,19 +30,19 @@ lives in a few modules they share:
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
 | `tools/launcher_profile.py` | the Fabric launcher profile: its expected id, checks, and comparing profiles while ignoring their generation time |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
-| `deploy/lib.sh` | what every VPS script in `deploy/` shares, sourced right after `set -eu`: settings from the env file, the log, the server's container (`compose`, `running`, `rcon`), a restart's lifecycle (`players_online`, `warn_players`, `wait_for_live`, and `whole_number`, which stops a script on a WARN_MINUTES or BOOT_TIMEOUT that isn't one), Discord posts (`discord`, the one place that turns a message into a JSON string: quotes, backslashes, newlines, tabs, control characters), the deploy lock (`deploy_lock`), installing a timer's units, and the timed jobs' runner (`timed_job`: `realms-week.sh`, `realms-drops.sh`, `realms-omens.sh` and `realms-day.sh` only say their tool, wording and arguments; a job that gave up posts a staff alert). `tests/test_deploy_lib.py` runs it under dash with fake `docker`, `flock`, `python3`, `curl` and `sleep` |
+| `deploy/lib.sh` | what every VPS script in `deploy/` shares, sourced right after `set -eu`: settings from the env file, the log, the server's container (`compose`, `running`, `rcon`), a restart's lifecycle (`players_online`, `warn_players`, `wait_for_live`, and `whole_number`, which stops a script on a WARN_MINUTES or BOOT_TIMEOUT that isn't one), Discord posts (`discord`, the one place that turns a message into a JSON string: quotes, backslashes, newlines, tabs, control characters), the deploy lock (`deploy_lock`), installing a timer's units, and the timed jobs' runner (`timed_job`: `monkey-week.sh`, `monkey-drops.sh`, `monkey-omens.sh` and `monkey-day.sh` only say their tool, wording and arguments; a job that gave up posts a staff alert). `tests/test_deploy_lib.py` runs it under dash with fake `docker`, `flock`, `python3`, `curl` and `sleep` |
 | `tools/nbt.py` | reading the world's NBT files (level.dat, scoreboard.dat, world_border.dat, Open Parties and Claims' `*.nbt`): `nbt.read(path or bytes)` gives the root compound as plain Python values, gzipped or not. Only `tools/saved_world.py` reads through it; `tests/nbt_writer.py` writes NBT for the tests |
 | `tools/season_calendar.py` | the season calendar: the Pacific time zone, the launch and launch weekend, the start of week N, week N's Saturday, the drop nights, the next season's date, and dates and times in words (the same in any locale). challenges, drops, omens, npcs, wardrobe, standings and site_links ask it. Every date follows from the launch, so moving a season is one edit (the launch) and `python tools/datapacks.py`. Without the time zone database (`tzdata`) it stops with a message saying to install it |
 | `tools/saved_world.py` | the saved world: where each file sits in a world folder and how it is saved, so standings, season, drops, omens and map_border ask it rather than walk the files. `scoreboard(folder)` gives scores by objective and holder (26.3 leaves a score of 0 out), display names and teams; `parties`, `claims(folder, dimension)` (claim file, then that dimension's chunks) and `claim_counts` (chunks per claim file, every dimension) read Open Parties and Claims; `border(folder, dimension)` gives a border's centre, size now and target size; `command_storage(folder, namespace)` gives a namespace's command storage (`data/<namespace>/command_storage.dat` since 26.3), key by key. Callers keep their own rules (which border size counts, ranking). None for a file not saved yet, and each caller decides what that means; a file not shaped as the server saves it is a ValueError naming it; `tests/fake_world.py` builds the tests' made-up worlds |
-| `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, omens, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, the one list of answers that mean the server refused, `coded` (the timer's log line for drops' and omens' try, which returns a code), and a timed job's command line (`job_subcommands`, `run_job`, `job_time`, `parse_time`, the exit codes `NOT_RUNNING` and `GAVE_UP`: `commands [--at]` and `send --docker` in challenges, drops, omens and wardrobe) |
+| `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, omens, standings): the container's own `monkey rcon` behind one adapter, a recording fake for tests, the one list of answers that mean the server refused, `coded` (the timer's log line for drops' and omens' try, which returns a code), and a timed job's command line (`job_subcommands`, `run_job`, `job_time`, `parse_time`, the exit codes `NOT_RUNNING` and `GAVE_UP`: `commands [--at]` and `send --docker` in challenges, drops, omens and wardrobe) |
 | `tools/recap.py` | the Sunday recap, "Monkey SMP Weekly", that `standings.py close` posts: the launch gate (`#launched rw.day`), what a week's sections count from (kept in `week.json`), the sections (each a function in `SECTIONS` that takes the closing `Week` and returns its lines, `[]` when nothing happened or `None` when it can't tell; a new one is one function added there), the week's counters `standings.py` imports (`gained`, `folded`, `KILLS`, `BOUNTY`), and fitting the post under Discord's 2000 characters. The sections are worked out once at the close and kept in the closed week's file, so a retry posts the same words |
-| `tools/firsts.py` | Server Firsts: the milestones, the `realms-firsts` pack, and reading who holds each from the saved world for other tools: `holders(world)` gives every claim in order as `First(id, milestone, player, order, week)`; `claimed_in(firsts, week)` one challenge week's of that list, and `standings`/`champion` the season title (most firsts; a tie goes to whoever reached that number first). Runs on Python 3.10 too (staff run it on the VPS) |
+| `tools/firsts.py` | Server Firsts: the milestones, the `monkey-firsts` pack, and reading who holds each from the saved world for other tools: `holders(world)` gives every claim in order as `First(id, milestone, player, order, week)`; `claimed_in(firsts, week)` one challenge week's of that list, and `standings`/`champion` the season title (most firsts; a tie goes to whoever reached that number first). Runs on Python 3.10 too (staff run it on the VPS) |
 | `tools/wrapped.py` | Season Wrapped: `start` keeps every player's rw.* and st.* scores at the launch, `build` makes `site/public/wrapped/season-<n>/` from the final world (a page per player, an index, the skins' pictures): the season's counts are the end's minus the launch's, the best weekly rank comes from the standings' closed weeks, firsts from `firsts.holders`. Pages are made beside the folder and swapped in, so a failed build leaves the last one; a folder holding anything else is refused |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
 | `tools/checks.py` | the one list of fast checks (ruff, pytest, validate, datapacks, `dash -n`, Pester, the site with bun) that CI and maintainers run, and which of CI's boot jobs a run needs (`--boots`, `boots()`) |
 | `tools/local_ci.py` | CI on a maintainer's machine: checks a PR's head in a temporary worktree with checks.py and posts a `local-ci` commit status through `gh` (see "Tests") |
-| `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the realms namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `realms-standings` pack, and the week's lines for the Sunday post (`report`) |
-| `tools/outposts.py` | outposts (`docs/SEASONS.md`): their spots in the newest border ring from the saved world (as drops picks its spots), the `realms-outposts` pack that checks the ground and runs the captures by faction number, the live map's marker set, and what standings asks of it: a week's `baseline`, `hours` held and their `points`. `recap_lines` is an "outposts this week" section for a Sunday recap. Run hourly by `deploy/realms-outposts.sh`; Python 3.10, no tomllib |
+| `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the monkey namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `monkey-standings` pack, and the week's lines for the Sunday post (`report`) |
+| `tools/outposts.py` | outposts (`docs/SEASONS.md`): their spots in the newest border ring from the saved world (as drops picks its spots), the `monkey-outposts` pack that checks the ground and runs the captures by faction number, the live map's marker set, and what standings asks of it: a week's `baseline`, `hours` held and their `points`. `recap_lines` is an "outposts this week" section for a Sunday recap. Run hourly by `deploy/monkey-outposts.sh`; Python 3.10, no tomllib |
 
 ### The faction number in game
 
@@ -54,21 +54,21 @@ outposts) reads it here rather than asking the parties:
 |---|---|
 | `st.faction` score, by player name | the number (1 to 99) of the player's faction, offline players too. No score: in no faction, or in one made since the last board run |
 | `st.leader` score | 1 for each party's owner, the faction's leader |
-| storage `realms:factions` `names.f<N>` | faction N's name as the board shows it, as a text component: `{text:"Red Monkeys"}` (plain ASCII, no quotes). Show it with `{"nbt":"names.f<N>","storage":"realms:factions","interpret":true}`. Removed when the party is gone from two board runs in a row (a run that reads no parties removes nothing) |
-| storage `realms:factions` `ids.f<N>` | the party id behind number N. Kept after the party is gone, so the number is never given again |
+| storage `monkey:factions` `names.f<N>` | faction N's name as the board shows it, as a text component: `{text:"Red Monkeys"}` (plain ASCII, no quotes). Show it with `{"nbt":"names.f<N>","storage":"monkey:factions","interpret":true}`. Removed when the party is gone from two board runs in a row (a run that reads no parties removes nothing) |
+| storage `monkey:factions` `ids.f<N>` | the party id behind number N. Kept after the party is gone, so the number is never given again |
 
 - A number belongs to one party for the life of the world. A new season's world numbers again from 1.
-- It is only as fresh as the last board run (`deploy/realms-standings.sh board`, hourly), plus the up to
+- It is only as fresh as the last board run (`deploy/monkey-standings.sh board`, hourly), plus the up to
   5 minutes the saved world can be behind. Nothing else writes these, and staff shouldn't by hand.
 - Same faction: `execute if score @s st.faction = <other> st.faction run ...` (no score never matches).
 - From Python, `diplomacy.numbers(world)` (party id to number) and `diplomacy.names(world)` (number to name)
   read it back from the saved world.
 - A pack that keeps a score per faction holds it as `#f<N>` and should end what it holds for a faction whose
-  `names.f<N>` is gone (the sync runs `realms:diplomacy/dissolve` for war and pacts before it removes one).
+  `names.f<N>` is gone (the sync runs `monkey:diplomacy/dissolve` for war and pacts before it removes one).
   Rather than test all the numbers in a function, check the ones it holds (outposts does this for each held
   outpost each minute) or let its Python job reset the rest from the saved storage (outposts' minutes, hourly).
-- The sync sends its changes many to an RCON command: a list in storage `realms:diplomacy batch` that
-  `realms:diplomacy/batch/run` makes in order, each the function `realms:diplomacy/<f>` with its entry.
+- The sync sends its changes many to an RCON command: a list in storage `monkey:diplomacy batch` that
+  `monkey:diplomacy/batch/run` makes in order, each the function `monkey:diplomacy/<f>` with its entry.
 - None of it starts with `rw.`, so `tools/season.py` carries none of it into a new world.
 
 ## Server types: Paper or Fabric
@@ -89,16 +89,16 @@ server itself.
 
 ## Platforms: Java and PowerShell pins
 
-One installer (`realms.ps1` + `Realms.psm1`) runs everywhere: on Windows PowerShell 5.1, and on
-PowerShell 7 on macOS and Linux, where `realms/realms.sh` starts it (ADR-0007). Two kinds of pins
+One installer (`monkey.ps1` + `Monkey.psm1`) runs everywhere: on Windows PowerShell 5.1, and on
+PowerShell 7 on macOS and Linux, where `monkey/monkey.sh` starts it (ADR-0007). Two kinds of pins
 depend on the platform:
 
 | Pin | Where | Platforms |
 |---|---|---|
 | Java (Eclipse Temurin JRE from Adoptium) | `manifest.json` `java`, one build per platform, each with URL + size + hash | Windows x64 (`.zip`), Linux x64 and aarch64, macOS x64 and aarch64 (`.tar.gz`) |
-| PowerShell 7 (portable, from `PowerShell/PowerShell` GitHub releases) | `realms/pwsh.lock`, one line per platform: URL + SHA-256 | Linux x64 and arm64, macOS x64 and arm64 (`.tar.gz`); Windows uses its built-in 5.1 |
+| PowerShell 7 (portable, from `PowerShell/PowerShell` GitHub releases) | `monkey/pwsh.lock`, one line per platform: URL + SHA-256 | Linux x64 and arm64, macOS x64 and arm64 (`.tar.gz`); Windows uses its built-in 5.1 |
 
-`pwsh.lock` is a plain-text file, not JSON, because `realms.sh` reads it with POSIX `sh` before any
+`pwsh.lock` is a plain-text file, not JSON, because `monkey.sh` reads it with POSIX `sh` before any
 PowerShell exists. Bump Java for every platform at once (same release on each), and PowerShell only
 when needed (a security fix, or a feature the installer starts using). After changing either, run
 `python tools/validate.py --online`, which downloads and hash-checks every pin, then let CI boot it on
@@ -137,9 +137,9 @@ folder, then snapshot the server as below; that re-makes the patch against the n
 
 | File | For | Contents |
 |---|---|---|
-| `TheRealms-Server-X.Y.Z.zip` | the host | `package/` under `TheRealms-Server/` (the `.sh` and `.command` launchers marked executable) |
-| `TheRealms-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
-| `TheRealms-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `TheRealms-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
+| `MonkeySMP-Server-X.Y.Z.zip` | the host | `package/` under `MonkeySMP-Server/` (the `.sh` and `.command` launchers marked executable) |
+| `MonkeySMP-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
+| `MonkeySMP-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `MonkeySMP-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
 
 All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files.
 
@@ -147,8 +147,8 @@ Then boot it locally on spare ports (doesn't disturb a server already running on
 
 ```powershell
 python tools/build.py
-Expand-Archive dist\TheRealms-Server-*.zip $env:TEMP\realms-test -Force
-.\tests\smoke.ps1 -Root $env:TEMP\realms-test\TheRealms-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
+Expand-Archive dist\MonkeySMP-Server-*.zip $env:TEMP\monkey-test -Force
+.\tests\smoke.ps1 -Root $env:TEMP\monkey-test\MonkeySMP-Server -Port 25566 -RconPort 25576 -VoicePort 24455 -MapPort 8101
 ```
 
 A server uses four ports: the game (`-Port`, TCP), RCON (`-RconPort`, TCP), Simple Voice Chat (`-VoicePort`,
@@ -168,9 +168,9 @@ To test the Docker setup locally (Linux, or Docker Desktop on Windows/macOS), wi
 
 ```sh
 python tools/build.py
-rm -rf /tmp/realms-docker && mkdir -p /tmp/realms-docker
-unzip -q dist/TheRealms-Server-*.zip -d /tmp/realms-docker
-cd /tmp/realms-docker/TheRealms-Server/docker
+rm -rf /tmp/monkey-docker && mkdir -p /tmp/monkey-docker
+unzip -q dist/MonkeySMP-Server-*.zip -d /tmp/monkey-docker
+cd /tmp/monkey-docker/MonkeySMP-Server/docker
 printf 'EULA=TRUE\nOWNER=YourName\nMEMORY_GB=4\n' > .env
 docker compose up -d --build      # --build picks up Dockerfile changes
 docker compose logs -f            # wait for "Done (", then Ctrl+C
@@ -178,7 +178,7 @@ docker compose down               # must log "All dimensions are saved"
 ```
 
 The world, `java/` (the Linux build) and the downloaded PowerShell end up in
-`/tmp/realms-docker/TheRealms-Server`, exactly where a native run puts them.
+`/tmp/monkey-docker/MonkeySMP-Server`, exactly where a native run puts them.
 
 Open a PR. CI checks every push to it and boots the release on clean runners when the change can break the
 boot (`python tools/checks.py --boots` decides; Windows minutes count double and macOS 10x on this private
@@ -191,7 +191,7 @@ repo, and the included minutes ran out in October 2026):
 | Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
 | Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/`, the build or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
 | Hosting bundle (Docker) | when Windows runs | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
-| macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `realms.sh`, `pwsh.lock` or Java |
+| macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `monkey.sh`, `pwsh.lock` or Java |
 
 Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not) from its next push on, or
 start a manual run to boot it now (adding a label doesn't start a run).
@@ -232,7 +232,7 @@ stays empty, meaning a random seed; a text seed is turned into the number Minecr
 
 A mod or datapack you edited in place is matched against `mod-originals/<same file name>` or
 `datapack-originals/<same file name>` in the server folder, and the changed files become a patch:
-`package/realms/patches/<slug>/` plus `"patch": {"path": "patches/<slug>", "base_sha512": ...}` on
+`package/monkey/patches/<slug>/` plus `"patch": {"path": "patches/<slug>", "base_sha512": ...}` on
 the entry, pinned to the original's hash. (Jars are zips, so mods and datapacks are patched the same
 way.) A file identical to its original simply pins the original, with no patch. A patch may only
 replace files that exist in the upstream file (adding or removing files fails the snapshot), and
@@ -240,11 +240,11 @@ patch folders no mod or datapack uses are deleted. `validate.py` checks that eve
 entry's pinned hash, and `--online` applies each patch to the real download to prove it still fits.
 
 The patch rules (which hash an entry is checked against, the patch id, and replacing files inside a zip) are
-written twice, in `tools/patches.py`/`tools/entries.py` and in the installer's `Realms.psm1`, because the
+written twice, in `tools/patches.py`/`tools/entries.py` and in the installer's `Monkey.psm1`, because the
 installer must stay PowerShell 5.1 (ADR-0003, ADR-0007). One golden fixture pins both:
 `tests/fixtures/patch-golden/` holds a dummy `input.zip`, a patch in the real layout and the answers in
 `expected.json`, which `tests/test_patches.py` and the `Patch rules golden fixture` block of
-`tests/Realms.Tests.ps1` both check. If you change a rule on purpose, change it on both sides, re-record with
+`tests/Monkey.Tests.ps1` both check. If you change a rule on purpose, change it on both sides, re-record with
 `python -I tests/fixtures/patch-golden/record.py` and check that both suites pass. Compression and entry order
 inside the patched zip are not part of the rules: the installer moves replaced files to the end of the zip, while
 the Python tools keep them in place. So a patch must never replace a file whose place in the zip matters, above
@@ -285,12 +285,12 @@ python -I tests/fixtures/record_client_mods.py --jars DIR # or reads them from a
 Plugins, mods and datapacks keep the file name they have on the server. On `check_updates.py --apply`,
 plugins and mods take the new upstream file name, but datapacks keep theirs, because the world refers
 to datapacks by file name (the rule is written down once, in `tools/entries.py`).
-Config defaults are curated by hand: copy changed configs into `package/realms/defaults/` yourself, and
+Config defaults are curated by hand: copy changed configs into `package/monkey/defaults/` yourself, and
 never copy files containing secrets (`server.properties` from a live server has the RCON password).
 
 ## Patches this pack carries
 
-Each one is a whole replaced file under `package/realms/patches/<slug>/`, pinned to the upstream jar it was made
+Each one is a whole replaced file under `package/monkey/patches/<slug>/`, pinned to the upstream jar it was made
 against (ADR-0004). When `check_updates.py` reports a patched mod as "patched - re-snapshot needed", re-make the
 patch against the new upstream file: carry the change below over, then check it is still needed.
 
@@ -338,7 +338,7 @@ start a game client, and a mod on one side only shows up as "registry entries th
 ## Shelved mods
 
 Mods that were in a release and that the owners took out for now. Each keeps its exact manifest entry here, so
-bringing it back is a copy: paste the entries into `mods` in `package/realms/manifest.json` (it's sorted by slug),
+bringing it back is a copy: paste the entries into `mods` in `package/monkey/manifest.json` (it's sorted by slug),
 then run `python tools/validate.py --online`. `check_updates.py` doesn't see them, so look on Modrinth for a newer
 build for the manifest's Minecraft version first.
 
@@ -437,14 +437,14 @@ python tests/fixtures/record.py
 ## Load testing
 
 Before claiming a player count, or after adding a mod that runs every tick, measure it. `tools/loadtest.py`
-starts an installed copy of the package (the one the smoke test above leaves in `$env:TEMP\realms-test`),
+starts an installed copy of the package (the one the smoke test above leaves in `$env:TEMP\monkey-test`),
 spawns fake players with [Carpet](https://modrinth.com/mod/carpet) over RCON and records tick times plus a
 CPU profile of the main thread:
 
 ```powershell
-python tools/loadtest.py $env:TEMP\realms-test\TheRealms-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25
+python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25
 # what one mod costs: the same run without it (and its libraries)
-python tools/loadtest.py $env:TEMP\realms-test\TheRealms-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25 --without silvers_strength-smp-season-4
+python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25 --without silvers_strength-smp-season-4
 ```
 
 Results go to `<copy>\loadtest\<name>\`: `summary.json` (mean and typical tick time, TPS, the slowest ticks, how often the 65,536-commands
@@ -457,14 +457,14 @@ players") came from this harness on an i7-8700K.
 
 ## Releasing
 
-1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
+1. Bump `version` in `package/monkey/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
    pack, the wardrobe, events), date its entry at the top of `site/src/content/changes.mdx` too, in players' words
    (`docs/ADMIN.md`, "Telling players what changed").
 3. Put the new player files on the site, since the GitHub releases are private and players download the pack
    from there: `python tools/build.py`, replace the files in `site/public/pack/` with
-   `dist/TheRealms-Client-X.Y.Z.mrpack` and `dist/TheRealms-Player-X.Y.Z.zip` and point `MODPACK_URL` and
+   `dist/MonkeySMP-Client-X.Y.Z.mrpack` and `dist/MonkeySMP-Player-X.Y.Z.zip` and point `MODPACK_URL` and
    `INSTALLER_URL` in `site/config.json` at them. `validate.py` fails while the site serves another version's pack.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
 4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
@@ -474,7 +474,7 @@ players") came from this harness on an i7-8700K.
    left `client/` alone, and moves the server listing to the newest version.
 
 The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
-`TheRealms-Server-X.Y.Z.zip`, `TheRealms-Client-X.Y.Z.mrpack` and `TheRealms-Player-X.Y.Z.zip`.
+`MonkeySMP-Server-X.Y.Z.zip`, `MonkeySMP-Client-X.Y.Z.mrpack` and `MonkeySMP-Player-X.Y.Z.zip`.
 
 ### Releasing without Actions
 
@@ -500,7 +500,7 @@ no section for the version). `--verify-tag` stops `gh` from making a tag that is
 
 What this skips is CI's boot tests (the server started natively on Windows, Linux and macOS, and in Docker).
 For a release that changes the manifest, the installer or the launchers, boot it first: unzip
-`dist/TheRealms-Server-X.Y.Z.zip` somewhere temporary and run `./tests/smoke.ps1 -Root <that folder>\TheRealms-Server -MemoryGB 4`.
+`dist/MonkeySMP-Server-X.Y.Z.zip` somewhere temporary and run `./tests/smoke.ps1 -Root <that folder>\MonkeySMP-Server -MemoryGB 4`.
 Do it right after pushing the tag: the live server deploys a new tag in its next deploy window (docs/LIVE.md)
 whether or not the release exists, and players need the new pack by then.
 

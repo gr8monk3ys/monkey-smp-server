@@ -1,3 +1,0 @@
-# Macro {id, name, n} from flag/make. One banner only: extra banners in the stack are used up.
-$item modify entity @s weapon.mainhand [{"type":"minecraft:set_count","count":1},{"type":"minecraft:set_components","components":{"minecraft:custom_data":{"realms_flag":{"id":"$(id)","n":$(n)}},"minecraft:custom_name":{"text":"$(name) flag","color":"gold","italic":false},"minecraft:lore":[{"text":"Official flag no. $(n)","color":"gray","italic":false},{"text":"Monkey SMP Faction Raid","color":"dark_gray","italic":false}],"minecraft:enchantment_glint_override":true}}]
-$tellraw @s {"text":"Official flag no. $(n) for $(name).","color":"green"}

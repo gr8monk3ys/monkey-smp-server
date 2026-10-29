@@ -4,8 +4,8 @@
 #
 #   . "$(dirname -- "$0")/lib.sh"
 #
-# The scripts run from the deployed checkout (/srv/realms/repo/deploy), so this is always the copy that came with
-# them. realms-deploy.sh sources it before it touches the checkout; a deploy's git checkout replaces files rather
+# The scripts run from the deployed checkout (/srv/monkey/repo/deploy), so this is always the copy that came with
+# them. monkey-deploy.sh sources it before it touches the checkout; a deploy's git checkout replaces files rather
 # than writing into them, so the copy a running script loaded is unaffected.
 #
 # Whether the server accepted an RCON command is read in Python (tools/rcon.py): `rcon` here is for say, list and
@@ -32,7 +32,7 @@ log() {
     printf '%s\n' "$lib_line"
 }
 # "die WORDS...": logs `ERROR: WORDS` on stderr, so a die inside $(...) still shows, and exits 1. DIED keeps WORDS
-# for an EXIT trap (realms-backup.sh posts it).
+# for an EXIT trap (monkey-backup.sh posts it).
 DIED=''
 die() { DIED=$*; log "ERROR: $*" >&2; exit 1; }
 # "logged CMD...": runs CMD with its output going to LOG_TO only.
@@ -55,17 +55,17 @@ python_ok() { python3 -c "import sys; sys.exit(sys.version_info < (3, $1))" 2>/d
 absolute() { case $1 in /*) printf '%s\n' "$1" ;; *) printf '%s\n' "$PWD/$1" ;; esac; }
 
 # The server's container, through the release's docker folder in LIVE_DIR. Run from /: docker compose stats the
-# working directory, and a hand run as realms from root's home (`runuser -u realms -- sh ...` in /root) would
+# working directory, and a hand run as monkey from root's home (`runuser -u monkey -- sh ...` in /root) would
 # otherwise fail every call, so `running` would say no and the deploy skip the backup. A relative LIVE_DIR is
 # taken from the caller's folder, before the cd.
 compose() {
     lib_live=$(absolute "$LIVE_DIR")
     (cd / && docker compose --project-directory "$lib_live/docker" -f "$lib_live/docker/compose.yaml" "$@")
 }
-running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
-# "rcon CMD": the server's answer on stdout; fails when docker or RCON did. The container's own `realms rcon`
+running() { [ -n "$(compose ps -q --status running monkey 2>/dev/null)" ]; }
+# "rcon CMD": the server's answer on stdout; fails when docker or RCON did. The container's own `monkey rcon`
 # finds the password itself, so no secret is read here.
-rcon() { compose exec -T realms realms rcon "$1" </dev/null 2>/dev/null; }
+rcon() { compose exec -T monkey monkey rcon "$1" </dev/null 2>/dev/null; }
 
 # "players_online": how many players are online, from `list` ("There are 3 of a max of 20 players online: ...");
 # nothing when the server didn't answer.
@@ -131,7 +131,7 @@ discord() {
 }
 
 # "deploy_lock SECONDS [FILE]": waits up to SECONDS (0: not at all) for the deploy lock, FILE (default LOCK_FILE,
-# else /tmp/realms-deploy.lock), and holds it on fd 9 until the script exits; returns 1 only when it wasn't free in
+# else /tmp/monkey-deploy.lock), and holds it on fd 9 until the script exits; returns 1 only when it wasn't free in
 # time. A lock file it can't create or open is a die, so a caller's "busy, skipping" never hides it.
 # Deploys, the daily restart, off-site backups, the standings and the timed jobs take it, so none of
 # them runs while another restarts or saves the server. Root opens it read-only, after creating it as the live
@@ -139,7 +139,7 @@ discord() {
 # user's file in /tmp for writing (fs.protected_regular), and flock works on any open file. Root creates it with
 # noclobber (O_EXCL: never through a link someone else left at that name) and opens only a plain file.
 deploy_lock() {
-    lib_lock=${2:-${LOCK_FILE:-/tmp/realms-deploy.lock}}
+    lib_lock=${2:-${LOCK_FILE:-/tmp/monkey-deploy.lock}}
     # `command exec`: a failed redirection returns here instead of ending the script on the shell's own error.
     if [ "$(id -u)" = 0 ]; then
         if [ ! -e "$lib_lock" ] && [ ! -L "$lib_lock" ]; then
@@ -215,12 +215,12 @@ install_timer() {
 # With no option it waits up to 30 minutes for the deploy lock, so it never lands while a deploy, the daily
 # restart or an off-site backup has the server stopped or not saving, sends, and logs each line the tool prints;
 # any failure is an error, so systemd's retry or the next run tries again. A tool that gave up posts a staff
-# alert and returns 4 (realms-day.service's RestartPreventExitStatus), so the next timer run starts afresh.
+# alert and returns 4 (monkey-day.service's RestartPreventExitStatus), so the next timer run starts afresh.
 # --check prints the commands for now, the timer's state and whether the server is running, and changes
 # nothing. --install (root) copies the units from the deployed checkout to /etc/systemd/system (only those that
 # changed) and starts the timer.
 #
-# It reads only REPO_DIR, LIVE_DIR and LOCK_FILE from /etc/realms-deploy.env (or REALMS_DEPLOY_ENV), without
+# It reads only REPO_DIR, LIVE_DIR and LOCK_FILE from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV), without
 # sourcing it; the staff webhook (STAFF_WEBHOOK_URL, else DISCORD_WEBHOOK_URL) only to post that a job gave up.
 # No secret is printed or asked for.
 timed_job() {
@@ -230,10 +230,10 @@ timed_job() {
         --install) lib_mode=install ;;
         *) echo "usage: sh $0 [--check | --install]" >&2; return 2 ;;
     esac
-    ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
-    REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/realms/repo)}
-    LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
-    LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}
+    ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
+    REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/monkey/repo)}
+    LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/monkey-deploy.lock)}
+    LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}
     lib_units="$LOG_NAME.service $LOG_NAME.timer"
     if [ "$lib_mode" = install ]; then
         [ "$(id -u)" = 0 ] || die 'run as root: it installs systemd units'

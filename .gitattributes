@@ -14,5 +14,5 @@ package/docker/** text eol=lf
 # Run by sh on Linux and macOS: always LF, whatever the checkout.
 *.sh text eol=lf
 *.command text eol=lf
-package/realms/pwsh.lock text eol=lf
+package/monkey/pwsh.lock text eol=lf
 *.class binary

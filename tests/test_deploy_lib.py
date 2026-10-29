@@ -17,7 +17,7 @@ SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p not in (LIB, CLAIMS))
 DASH = shutil.which("dash")
 needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
 COMPOSE = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
-RCON = f"{COMPOSE} exec -T realms realms rcon"
+RCON = f"{COMPOSE} exec -T monkey monkey rcon"
 # The 2.5.0 upgrade is a one-shot kept as it ran: its own wait_for_live and warn_players predate lib.sh's.
 OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live", "warn_players"}}
 
@@ -43,7 +43,7 @@ def test_every_deploy_script_loads_lib_once_and_keeps_no_copy_of_it(script):
     head = text[:text.index(SOURCE)]
     assert "set -eu\n" in head and re.search(r"^LOG_NAME=[\w.-]+\n\Z", head, re.M)
     assert functions(text) & functions(LIB.read_text()) == OWN_COPIES.get(script.name, set())
-    # The deploy lock is fd 9, opened only by deploy_lock (realms-backup.sh's own lock is fd 8).
+    # The deploy lock is fd 9, opened only by deploy_lock (monkey-backup.sh's own lock is fd 8).
     assert "$COMPOSE" not in text and not re.search(r'flock -[nw]( \d+)? 9|exec 9[<>]+ *"', text)
     if DASH:
         subprocess.run([DASH, "-n", str(script)], check=True)
@@ -51,7 +51,7 @@ def test_every_deploy_script_loads_lib_once_and_keeps_no_copy_of_it(script):
 
 def test_the_deploy_loads_lib_before_it_touches_the_checkout():
     """The deploy checks out the new release at the end; whatever it sources after that would be the new copy."""
-    lines = (DEPLOY / "realms-deploy.sh").read_text().splitlines()
+    lines = (DEPLOY / "monkey-deploy.sh").read_text().splitlines()
     code = [(i, line) for i, line in enumerate(lines) if not line.lstrip().startswith("#")]
     first_git = next(i for i, line in code if re.search(r"\bgit\b", line))
     assert lines.index(SOURCE) < first_git
@@ -125,8 +125,8 @@ def test_a_lock_that_cannot_be_opened_is_an_error_not_busy(sh, tmp_path):
 
 def test_root_makes_a_missing_lock_as_the_service_user_or_itself_before_there_is_one(sh, tmp_path):
     lock = tmp_path / "lock"
-    code, _, calls = sh("deploy_lock 0", FAKE_ID="0", SERVICE_USER="realms")
-    assert code == 0 and lock.exists() and calls == [f"runuser -u realms -- touch {lock.as_posix()}", "flock -n 9"]
+    code, _, calls = sh("deploy_lock 0", FAKE_ID="0", SERVICE_USER="monkey")
+    assert code == 0 and lock.exists() and calls == [f"runuser -u monkey -- touch {lock.as_posix()}", "flock -n 9"]
     lock.unlink()
     code, _, calls = sh("deploy_lock 0", FAKE_ID="0", LIVE_DIR=(tmp_path / "not-yet").as_posix())
     assert code == 0 and lock.exists() and calls == ["flock -n 9"]
@@ -147,12 +147,12 @@ def test_deploy_lock_waits_on_fd_9(sh, seconds, flag):
 def test_rcon_and_running_go_through_the_release_compose(sh):
     code, out, calls = sh("running && log up; rcon list", FAKE_OUT_docker=r"3f2a\n")
     assert code == 0 and out == ["[t] up", "3f2a"]
-    assert calls == [f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]
+    assert calls == [f"{COMPOSE} ps -q --status running monkey", f"{RCON} list"]
     assert sh("running || log down")[1] == ["[t] down"]
 
 
 def test_compose_runs_from_the_root_whatever_the_callers_folder(sh, tmp_path):
-    """docker compose stats its working directory: run as realms from /root it failed every call (2.9.0's deploy)."""
+    """docker compose stats its working directory: run as monkey from /root it failed every call (2.9.0's deploy)."""
     assert sh(f'cd "{tmp_path.as_posix()}"; docker() {{ pwd; }}; compose ps')[1] == ["/"]
 
 
@@ -164,14 +164,14 @@ def test_compose_takes_a_relative_live_dir_from_the_callers_folder(sh, tmp_path)
 
 @needs_dash
 @pytest.mark.parametrize(("script", "sent", "retry"), [
-    ("realms-week.sh", "send --docker", "the next hour tries again"),
-    ("realms-drops.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
-    ("realms-omens.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
-    ("realms-day.sh", "send --docker", "realms-day.service tries again in 10 minutes"),
+    ("monkey-week.sh", "send --docker", "the next hour tries again"),
+    ("monkey-drops.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
+    ("monkey-omens.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
+    ("monkey-day.sh", "send --docker", "monkey-day.service tries again in 10 minutes"),
 ])
 def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, script, sent, retry):
-    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function realms:x: ok\n")
-    assert code == 0 and logged == ["function realms:x: ok"]
+    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function monkey:x: ok\n")
+    assert code == 0 and logged == ["function monkey:x: ok"]
     send = calls.index("flock -w 1800 9") + 1
     assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(f"{sent} /srv/live/docker")
     # Only drops and omens (JOB_NONE: often nothing to send) ask for the commands first; the others start one
@@ -190,21 +190,21 @@ def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, s
 def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(sh, tmp_path):
     env = tmp_path / "env"
     env.write_text("DISCORD_WEBHOOK_URL=https://hook/public\nSTAFF_WEBHOOK_URL=https://hook/staff\n")
-    code, logged, calls = job(sh, tmp_path, "realms-day.sh", FAKE_OUT_python3=r"gave up: the day for 20261028\n",
-                              FAKE_RC_send="4", REALMS_DEPLOY_ENV=env.as_posix())
+    code, logged, calls = job(sh, tmp_path, "monkey-day.sh", FAKE_OUT_python3=r"gave up: the day for 20261028\n",
+                              FAKE_RC_send="4", MONKEY_DEPLOY_ENV=env.as_posix())
     assert code == 4 and logged == ["gave up: the day for 20261028", "gave up; the timer's next run starts afresh"]
     assert calls[-2:] == ["curl -fsS -m 15 -H Content-Type: application/json -d @- https://hook/staff",
-                          '{"content":"Monkey SMP: realms-day gave up on the wardrobe\'s day job after retrying. '
-                          'Check: journalctl -u realms-day"}']
+                          '{"content":"Monkey SMP: monkey-day gave up on the wardrobe\'s day job after retrying. '
+                          'Check: journalctl -u monkey-day"}']
     env.write_text("DISCORD_WEBHOOK_URL=https://hook/public\n")   # no staff channel: the public webhook
-    assert job(sh, tmp_path, "realms-day.sh", FAKE_RC_send="4", REALMS_DEPLOY_ENV=env.as_posix())[2][-2].endswith(
+    assert job(sh, tmp_path, "monkey-day.sh", FAKE_RC_send="4", MONKEY_DEPLOY_ENV=env.as_posix())[2][-2].endswith(
         " https://hook/public")
-    code, logged, calls = job(sh, tmp_path, "realms-day.sh", FAKE_RC_send="4")
+    code, logged, calls = job(sh, tmp_path, "monkey-day.sh", FAKE_RC_send="4")
     assert code == 4 and "no webhook in the settings; not posting" in logged
     assert not any(c.startswith("curl") for c in calls)
 
 
-OFTEN_NONE = ("realms-drops.sh", "realms-omens.sh")
+OFTEN_NONE = ("monkey-drops.sh", "monkey-omens.sh")
 
 
 @pytest.mark.parametrize("script", OFTEN_NONE)
@@ -219,18 +219,18 @@ def job(sh, tmp_path, script, *args, **env):
     for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py"):
         (tmp_path / "repo" / "tools" / name).write_text("")
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
-                          **{"REALMS_DEPLOY_ENV": "/nonexistent", **env})
+                          **{"MONKEY_DEPLOY_ENV": "/nonexistent", **env})
     tag = f"[{script[:-3]}] "
     return code, [line[len(tag):] for line in out if line.startswith(tag)], calls
 
 
 @needs_dash
-@pytest.mark.parametrize(("script", "first"), [("realms-week.sh", []), ("realms-day.sh", []),
-                                               ("realms-drops.sh", ["function realms:x"]),   # drops' spots
-                                               ("realms-omens.sh", [])])   # never the week's plan
+@pytest.mark.parametrize(("script", "first"), [("monkey-week.sh", []), ("monkey-day.sh", []),
+                                               ("monkey-drops.sh", ["function monkey:x"]),   # drops' spots
+                                               ("monkey-omens.sh", [])])   # never the week's plan
 def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh, tmp_path, script, first):
-    code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function realms:x\n")
-    assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function realms:x"]
+    code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function monkey:x\n")
+    assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function monkey:x"]
     assert logged[-3].startswith(f"timer: {script[:-3]}.timer ") and logged[-2:] == [
         "server: running", "check finished: nothing was changed"]
     assert not any(c.startswith("flock") for c in calls)
@@ -239,16 +239,16 @@ def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh,
 
 @needs_dash
 def test_check_says_why_there_may_be_no_commands_and_what_a_stopped_server_means(sh, tmp_path):
-    code, logged, _ = job(sh, tmp_path, "realms-drops.sh", "--check", FAKE_RC_python3="1")
+    code, logged, _ = job(sh, tmp_path, "monkey-drops.sh", "--check", FAKE_RC_python3="1")
     assert code == 1 and logged == ["ERROR: tools/drops.py commands failed"]
-    _, logged, _ = job(sh, tmp_path, "realms-drops.sh", "--check")
+    _, logged, _ = job(sh, tmp_path, "monkey-drops.sh", "--check")
     assert logged[:2] == ["commands for now:", "  none (outside drop hours, or no spot)"]
-    _, logged, _ = job(sh, tmp_path, "realms-day.sh", "--check", FAKE_OUT_python3=r"function realms:x\n")
+    _, logged, _ = job(sh, tmp_path, "monkey-day.sh", "--check", FAKE_OUT_python3=r"function monkey:x\n")
     assert logged[-2] == "server: running"
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["realms-week.sh", "realms-drops.sh", "realms-omens.sh", "realms-day.sh"])
+@pytest.mark.parametrize("script", ["monkey-week.sh", "monkey-drops.sh", "monkey-omens.sh", "monkey-day.sh"])
 def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" --now')
     assert code == 2 and out == [f"usage: sh {(DEPLOY / script).as_posix()} [--check | --install]"] and calls == []
@@ -259,15 +259,15 @@ def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp
                                              f"{JOB_FOR[script]} deployed?")
 
 
-JOB_FOR = {"realms-week.sh": "the weekly challenges", "realms-drops.sh": "supply drops",
-           "realms-omens.sh": "omens", "realms-day.sh": "the wardrobe's day job"}
+JOB_FOR = {"monkey-week.sh": "the weekly challenges", "monkey-drops.sh": "supply drops",
+           "monkey-omens.sh": "omens", "monkey-day.sh": "the wardrobe's day job"}
 
 
 def test_the_day_runs_its_job_and_systemd_retries_it_until_it_gives_up():
-    unit = (DEPLOY / "realms-day.service").read_text()
-    assert "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-day.sh\n" in unit
+    unit = (DEPLOY / "monkey-day.service").read_text()
+    assert "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-day.sh\n" in unit
     assert "Restart=on-failure\nRestartSec=10min\nRestartPreventExitStatus=4\n" in unit
-    assert "StateDirectory=realms-day\n" in unit and "docker compose" not in unit   # wardrobe.py's --pending
+    assert "StateDirectory=monkey-day\n" in unit and "docker compose" not in unit   # wardrobe.py's --pending
 
 
 LIST = r"There are 2 of a max of 20 players online: a, b\n"
@@ -344,10 +344,10 @@ def test_a_setting_that_is_not_a_whole_number_stops_before_anything_happens(sh, 
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh", "npc-claims.sh"])
+@pytest.mark.parametrize("script", ["monkey-deploy.sh", "monkey-loadtest.sh", "shops-claims.sh", "npc-claims.sh"])
 def test_the_restarting_scripts_check_their_minutes_before_they_do_anything(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}"', WARN_MINUTES="5m", FAKE_ID="0",
-                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix(),
+                          MONKEY_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix(),
                           NPCS_LOG=(tmp_path / "npcs.log").as_posix())
     assert code == 1 and out[-1].endswith("ERROR: WARN_MINUTES must be a whole number of minutes, not '5m'")
     assert not [c for c in calls if c.split()[0] in ("docker", "flock", "curl", "sleep")]
@@ -364,7 +364,7 @@ def test_npc_claims_adds_the_easy_npc_entry_once_and_keeps_the_old_file(sh, tmp_
     before = '[serverConfig]\n\t\t\tforcedEntityProtectionExceptionList = ["minecraft:minecart"]\n\t\t\tother = 1\n'
     toml.write_text(before, newline="\n")
     script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
-    env = {"FAKE_ID": "0", "REALMS_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
+    env = {"FAKE_ID": "0", "MONKEY_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
            "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
     code, out, calls = sh(f"{script} --check", **env)
     assert code == 0 and out[-1].endswith("nothing was changed") and toml.read_text() == before
@@ -390,7 +390,7 @@ def test_npc_claims_counts_only_the_exact_entries_as_done(sh, tmp_path):
     toml.parent.mkdir()
     before = '\tforcedEntityProtectionExceptionList = ["break$easy_npc:humanoid", "hand$easy_npc:humanoid"]\n'
     toml.write_text(before, newline="\n")
-    env = {"FAKE_ID": "0", "REALMS_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
+    env = {"FAKE_ID": "0", "MONKEY_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
            "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
     script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
     code, out, _ = sh(f"{script} --check", **env)
@@ -409,6 +409,6 @@ def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):
 
 def test_wait_for_live_while_running_gives_up_when_the_container_stops(sh):
     code, out, calls = sh("wait_for_live --while-running || log 'gave up'")
-    assert out == ["[t] gave up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running realms"]
+    assert out == ["[t] gave up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running monkey"]
     code, out, calls = sh("wait_for_live --while-running && log up", FAKE_OUT_docker=r"3f2a\n")
-    assert out == ["[t] up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]
+    assert out == ["[t] up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running monkey", f"{RCON} list"]

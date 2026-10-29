@@ -102,7 +102,7 @@ def test_a_1x_manifest_without_mods_still_validates_and_builds(paper_repo, tmp_p
     assert validate.main([], repo=paper_repo) == 0
     assert paper_repo.load_manifest()["mods"] == []  # readers see an empty group
     names = zipfile.ZipFile(build.build_server(raw["version"], paper_repo, tmp_path)).namelist()
-    assert "TheRealms-Server/realms/manifest.json" in names
+    assert "MonkeySMP-Server/monkey/manifest.json" in names
 
 
 # --- the package: defaults template and launchers ----------------------------------------------------
@@ -148,7 +148,7 @@ def test_validate_package_requires_ascii_player_scripts(fabric_repo, name):
     assert errors == [f"player/{name} {validate.ASCII_NOTE}"]
 
 
-@pytest.mark.parametrize("name", ["package/READ ME FIRST.txt", "player/READ ME.txt", "package/realms/Realms.psm1",
+@pytest.mark.parametrize("name", ["package/READ ME FIRST.txt", "player/READ ME.txt", "package/monkey/Monkey.psm1",
                                   "CHANGELOG.md", "docs/ADMIN.md"])
 def test_validate_package_rejects_control_characters_in_texts(fabric_repo, name):
     fake_player(fabric_repo)
@@ -300,13 +300,13 @@ def test_verify_online_catches_a_patch_that_no_longer_fits(online):
 
 # --- Linux and macOS: the sh launchers and pwsh.lock ------------------------------------------------
 
-@pytest.mark.parametrize("name", ["start.sh", "Start Server.command", "realms/realms.sh", "realms/pwsh.lock"])
+@pytest.mark.parametrize("name", ["start.sh", "Start Server.command", "monkey/monkey.sh", "monkey/pwsh.lock"])
 def test_validate_package_requires_the_unix_launchers(paper_repo, name):
     (paper_repo.package / name).unlink()
     assert f"package/{name} is missing" in validate.validate_package(paper_repo)
 
 
-@pytest.mark.parametrize("name", ["stop.sh", "Start Server.command", "realms/realms.sh"])
+@pytest.mark.parametrize("name", ["stop.sh", "Start Server.command", "monkey/monkey.sh"])
 def test_validate_package_rejects_crlf_in_sh_scripts(paper_repo, name):
     path = paper_repo.package / name
     path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
@@ -378,6 +378,6 @@ def test_verify_online_downloads_every_java_build(capsys):
 
 
 def test_a_stale_generated_pack_fails_validation(monkeypatch, capsys):
-    monkeypatch.setattr(validate.datapacks, "differences", lambda repo: ["package/realms/datapacks/realms-x/a"])
+    monkeypatch.setattr(validate.datapacks, "differences", lambda repo: ["package/monkey/datapacks/monkey-x/a"])
     assert validate.main([]) == 1
-    assert "realms-x/a is out of date (run python tools/datapacks.py)" in capsys.readouterr().out
+    assert "monkey-x/a is out of date (run python tools/datapacks.py)" in capsys.readouterr().out

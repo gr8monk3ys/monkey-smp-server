@@ -1,2 +1,0 @@
-# Macro {season:"I"}, run as the winner: one event book (B18), frost_walker 2.
-$give @s minecraft:enchanted_book[stored_enchantments={"minecraft:frost_walker":2},lore=[{text:"Monkey SMP event reward, Season $(season)",color:"gold",italic:false}],custom_data={realms_event_book:{season:"$(season)"}}]

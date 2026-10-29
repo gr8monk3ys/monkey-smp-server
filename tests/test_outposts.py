@@ -32,8 +32,8 @@ def fn(path: str) -> str:
 
 
 def put_storage(world, contents: dict) -> None:
-    """The realms namespace's command storage as 26.3 saves it (as tests/test_diplomacy.py writes it)."""
-    path = world / "data" / "realms" / "command_storage.dat"
+    """The monkey namespace's command storage as 26.3 saves it (as tests/test_diplomacy.py writes it)."""
+    path = world / "data" / "monkey" / "command_storage.dat"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))
 
@@ -77,7 +77,7 @@ def test_nothing_before_the_launch_while_locked_or_while_the_border_grows(tmp_pa
 def test_the_first_run_places_four_outposts_one_in_each_quarter_of_the_ring(tmp_path):
     world = make_world(tmp_path, claims=[BASE])
     out, why = outposts.plan(world, NOON)
-    assert why == "" and len(out) == 1 and survey_of(out) == "function realms:outposts/survey {ring:2500,fresh:1}"
+    assert why == "" and len(out) == 1 and survey_of(out) == "function monkey:outposts/survey {ring:2500,fresh:1}"
     assert all(c.isascii() and len(c.encode()) <= rcon.LIMIT for c in out)
     found = cands(out)
     inner, outer = drops.ring(map_border.Border(*SPAWN, 2500.0))
@@ -140,23 +140,23 @@ def test_a_claim_close_to_one_outpost_moves_only_that_one_and_a_missing_one_is_t
     near_east = [(744 // 16 + 2, 424 // 16)]                 # 2 chunks from the East outpost
     world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=spots, claims=[near_east])
     out, _ = outposts.plan(world, NOON)
-    assert survey_of(out) == "function realms:outposts/survey {ring:2500,fresh:0}"
+    assert survey_of(out) == "function monkey:outposts/survey {ring:2500,fresh:0}"
     assert {c["i"] for c in cands(out)} == {2, 4}
 
 
 def test_a_finished_border_act_places_them_all_again(tmp_path):
     world = make_world(tmp_path, size=4000.0, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
     out, _ = outposts.plan(world, NOON)
-    assert survey_of(out) == "function realms:outposts/survey {ring:4000,fresh:1}"
+    assert survey_of(out) == "function monkey:outposts/survey {ring:4000,fresh:1}"
     inner, _ = drops.ring(map_border.Border(*SPAWN, 4000.0))
     assert inner == 1250 and all(max(abs(c["x"] - SPAWN[0]), abs(c["z"] - SPAWN[1])) >= inner for c in cands(out))
 
 
 def test_the_survey_answer_is_logged_in_words():
-    survey = "function realms:outposts/survey {ring:2500,fresh:1,cands:[{i:1,x:8,z:-632}]}"
-    assert outposts.meaning(survey, "Function realms:outposts/survey returned 13") == (
-        "function realms:outposts/survey: already placed for this border")
-    assert outposts.meaning(survey, "Function realms:outposts/survey returned 1").endswith("checking the ground at "
+    survey = "function monkey:outposts/survey {ring:2500,fresh:1,cands:[{i:1,x:8,z:-632}]}"
+    assert outposts.meaning(survey, "Function monkey:outposts/survey returned 13") == (
+        "function monkey:outposts/survey: already placed for this border")
+    assert outposts.meaning(survey, "Function monkey:outposts/survey returned 1").endswith("checking the ground at "
                                                                                            "the spots")
     reset = "scoreboard players reset #f3 op.min"
     assert outposts.meaning(reset, "") == f"{reset}: ok"
@@ -166,7 +166,7 @@ def test_the_survey_answer_is_logged_in_words():
 
 def test_a_running_survey_keeps_its_spots_and_the_spots_come_with_the_survey():
     survey = fn("survey").splitlines()
-    put = survey.index("$data modify storage realms:outposts cands set value $(cands)")
+    put = survey.index("$data modify storage monkey:outposts cands set value $(cands)")
     for check in ("return 10", "return 11", "return 12", "return 13", "return 14", "return 15"):
         assert next(n for n, line in enumerate(survey) if line.endswith(check)) < put
     assert put < next(n for n, line in enumerate(survey) if line.endswith("set #busy op 1"))
@@ -181,7 +181,7 @@ def map_conf(world):
     maps = world.parent / map_border.MAPS
     maps.mkdir(parents=True, exist_ok=True)
     for name in ("world.conf", "world_the_nether.conf"):
-        shutil.copy(REPO.realms / "defaults" / map_border.MAPS / name, maps / name)
+        shutil.copy(REPO.monkey / "defaults" / map_border.MAPS / name, maps / name)
     return maps
 
 
@@ -198,7 +198,7 @@ def test_send_writes_the_map_marker_set_once_then_only_the_survey(tmp_path):
     assert (maps / "world_the_nether.conf").read_text(encoding="utf-8") == nether
     assert outposts.commands(world, NOON) == []                 # in step: no reload every hour
     # The marker set comes out whole when there are no outposts (a new season's world).
-    assert outposts.with_markers(conf, {}) == (REPO.realms / "defaults" / map_border.MAPS / "world.conf").read_text(
+    assert outposts.with_markers(conf, {}) == (REPO.monkey / "defaults" / map_border.MAPS / "world.conf").read_text(
         encoding="utf-8")
 
 
@@ -294,7 +294,7 @@ def test_a_new_launch_counts_every_minute_since_it():
     assert outposts.hours({"op.min": {"#f1": 130}}, {"minutes": {"#f1": 60}}, 1) == 2   # no epoch on either side
     launch = fn("launch")
     assert "execute store result score #epoch op run random value 1..1000000000" in launch
-    assert "execute store result storage realms:outposts epoch int 1 run scoreboard players get #epoch op" in launch
+    assert "execute store result storage monkey:outposts epoch int 1 run scoreboard players get #epoch op" in launch
 
 
 def test_the_standings_table_adds_outpost_hours_as_a_bonus_like_bounties(tmp_path):
@@ -344,7 +344,7 @@ def test_the_recap_section_names_who_held_longest_and_the_weeks_captures():
 
 def test_the_capture_log_keeps_its_newest_entries():
     log = fn("log")
-    assert f"if data storage realms:outposts log[{outposts.LOG_KEEP}] run data remove storage realms:outposts log[0]" \
+    assert f"if data storage monkey:outposts log[{outposts.LOG_KEEP}] run data remove storage monkey:outposts log[0]" \
         in log
     assert log.index("log[-1].n") < log.index(f"log[{outposts.LOG_KEEP}]")
 
@@ -363,24 +363,24 @@ def test_only_faction_players_in_survival_outside_the_arena_capture():
     for part in ("type=minecraft:player", "gamemode=survival", "tag=!ev.arena", "scores={st.faction=1..}",
                  f"dx={outposts.ZONE - 1}"):
         assert part in zone
-    assert f"matches {outposts.CAPTURE_SECONDS}.. run function realms:outposts/o/1/captured" in second
+    assert f"matches {outposts.CAPTURE_SECONDS}.. run function monkey:outposts/o/1/captured" in second
     assert "contested" in second
 
 
 def test_nothing_runs_before_the_launch_and_test_play_is_cleared_once():
     second = fn("second")
     assert second.index("unless score #launched rw.day matches 1 run return 0") < second.index("o/1/second")
-    assert "unless score #launched op matches 1 run function realms:outposts/launch" in second
+    assert "unless score #launched op matches 1 run function monkey:outposts/launch" in second
     assert second.index("#season_locked ev.state matches 1 run return 0") < second.index("o/1/second")
     launch = fn("launch")
     for objective in ("op.hold", "op.by", "op.prog", "op.min", "op.id"):
         assert f"scoreboard players reset * {objective}" in launch
-    assert "data remove storage realms:outposts at" in launch and "set #launched op 1" in launch
+    assert "data remove storage monkey:outposts at" in launch and "set #launched op 1" in launch
 
 
 def test_hours_count_only_while_a_rival_is_online_and_a_gone_faction_keeps_nothing():
     credit = fn("o/3/credit")
-    assert "unless data storage realms:factions names.f$(h) run return run function realms:outposts/o/3/gone" in credit
+    assert "unless data storage monkey:factions names.f$(h) run return run function monkey:outposts/o/3/gone" in credit
     assert "unless score #all op > #mine op run return 0" in credit
     minute = fn("minute")
     assert "names.f" not in minute and len(minute.splitlines()) < 12     # no poll of all 99 numbers a minute
@@ -404,12 +404,12 @@ def test_a_survey_stops_cleanly_when_outposts_go_off_or_the_season_locks():
     assert "unless score #auto op matches 1 run return 1" in stopped
     assert "if score #season_locked ev.state matches 1 run return 1" in stopped and stopped.endswith("return 0\n")
     pick, check = fn("pick").splitlines(), fn("check").splitlines()
-    assert pick[1] == "execute if function realms:outposts/stopped run return run function realms:outposts/done"
-    assert check.index("execute if function realms:outposts/stopped run return run function realms:outposts/abort") \
+    assert pick[1] == "execute if function monkey:outposts/stopped run return run function monkey:outposts/done"
+    assert check.index("execute if function monkey:outposts/stopped run return run function monkey:outposts/abort") \
         < next(n for n, line in enumerate(check) if "check_at" in line)
     abort = fn("abort")
-    assert "function realms:outposts/unload with storage realms:outposts cand" in abort
-    assert "function realms:outposts/done" in abort and "tellraw" not in abort
+    assert "function monkey:outposts/unload with storage monkey:outposts cand" in abort
+    assert "function monkey:outposts/done" in abort and "tellraw" not in abort
 
 
 def test_centres_are_right_for_negative_coordinates_too():
@@ -426,7 +426,7 @@ def test_a_moved_outposts_old_label_goes_before_one_label_is_kept():
     stale = near.index("execute as @e[type=minecraft:text_display,tag=op.l2] unless score @s op.id = #o2 op.id run "
                        "kill @s")
     summon = next(n for n, line in enumerate(near) if "summon minecraft:text_display" in line)
-    dedupe = near.index("execute if score #lc op matches 2.. run function realms:outposts/o/2/one_label")
+    dedupe = near.index("execute if score #lc op matches 2.. run function monkey:outposts/o/2/one_label")
     assert stale < summon < dedupe
     one = fn("o/2/one_label")
     assert "tag @e[type=minecraft:text_display,tag=op.l2,limit=1] add op.keep" in one
@@ -438,7 +438,7 @@ def test_only_a_new_label_gets_its_text_each_second_and_held_ones_refresh_each_m
     assert "execute as @e[type=minecraft:text_display,tag=op.l1] run data modify entity" not in near
     assert "execute as @e[type=minecraft:text_display,tag=op.new] run data modify entity @s text" in near
     minute = fn("o/1/minute")
-    assert "function realms:outposts/o/1/label" in minute
+    assert "function monkey:outposts/o/1/label" in minute
     assert "execute as @e[type=minecraft:text_display,tag=op.l1] run data modify entity @s text" in minute
 
 
@@ -446,26 +446,26 @@ def test_nothing_is_given_and_restarts_keep_state():
     every = "\n".join(FILES.values())
     assert not re.search(r"\b(give|effect give|loot give|item replace|xp add)\b", every)
     load = fn("load")
-    assert "reset" not in load and "schedule function realms:outposts/check" in load
+    assert "reset" not in load and "schedule function monkey:outposts/check" in load
 
 
 def test_the_help_lists_real_functions():
     help_ = fn("help")
     for cmd, _ in outposts.HELP:
-        assert f"/function realms:outposts/{cmd}" in help_
+        assert f"/function monkey:outposts/{cmd}" in help_
 
 
 def test_generated_like_the_other_packs():
     assert "outposts" in datapacks.GENERATORS
-    assert set(outposts.packs(REPO)) == {REPO.realms / "datapacks" / outposts.DATAPACK}
+    assert set(outposts.packs(REPO)) == {REPO.monkey / "datapacks" / outposts.DATAPACK}
 
 
 # ---------------------------------------------------------------- the VPS scripts
 
 
 DEPLOY = REPO.root / "deploy"
-SCRIPT = "realms-outposts.sh"
-UNITS = ["realms-outposts.service", "realms-outposts.timer"]
+SCRIPT = "monkey-outposts.sh"
+UNITS = ["monkey-outposts.service", "monkey-outposts.timer"]
 
 
 @pytest.mark.parametrize("name", [SCRIPT, *UNITS])
@@ -481,9 +481,9 @@ def test_the_script_is_a_timed_job_and_the_timer_runs_hourly():
     assert text.endswith('\ntimed_job "$@"\n')
     for unit in UNITS:
         assert unit in text
-    service = (DEPLOY / "realms-outposts.service").read_text()
-    assert "User=realms" in service and "ExecStart=/bin/sh /srv/realms/repo/deploy/realms-outposts.sh\n" in service
-    assert "OnCalendar=*-*-* *:45:00" in (DEPLOY / "realms-outposts.timer").read_text()
+    service = (DEPLOY / "monkey-outposts.service").read_text()
+    assert "User=monkey" in service and "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-outposts.sh\n" in service
+    assert "OnCalendar=*-*-* *:45:00" in (DEPLOY / "monkey-outposts.timer").read_text()
     shell = shutil.which("dash")
     if shell:
         subprocess.run([shell, "-n", str(DEPLOY / SCRIPT)], check=True)
@@ -498,7 +498,7 @@ def test_status_runs_on_a_fresh_world(tmp_path, capsys):
 
 @pytest.fixture
 def outposts_job(request, tmp_path):
-    """test_deploy_lib's job() for deploy/realms-outposts.sh: (exit code, its logged lines, calls)."""
+    """test_deploy_lib's job() for deploy/monkey-outposts.sh: (exit code, its logged lines, calls)."""
     run = request.getfixturevalue("sh")
     (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
     (tmp_path / "repo" / "tools" / "outposts.py").write_text("")

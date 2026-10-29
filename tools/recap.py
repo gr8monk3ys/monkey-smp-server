@@ -1,7 +1,7 @@
 """The Sunday recap, "Monkey SMP Weekly": the week's final standings, then a few short lines on the week.
 
     import recap
-    recap.launched(world)        whether the season has launched (#launched rw.day, set by realms:rules/launch)
+    recap.launched(world)        whether the season has launched (#launched rw.day, set by monkey:rules/launch)
     recap.baseline(world)        what a new week starts from, for the sections (kept in STATE/week.json)
     recap.blocks(week)           every section's lines for a closing Week, worked out once, at the close
     recap.message(head, table, blocks, footer, limit)
@@ -10,7 +10,7 @@
 tools/standings.py close is the only caller: it works the sections out when the week closes and keeps their
 lines in the closed week's file (STATE/weeks/<date>.json, "recap"), so a retry posts the same words even
 though the world has moved on. Before the launch it keeps no recap and posts nothing. The week the launch
-falls in began in test play (Week.test_play: it began before season_calendar.LAUNCH): realms:rules/launch
+falls in began in test play (Week.test_play: it began before season_calendar.LAUNCH): monkey:rules/launch
 clears test play's challenges, so those count from the launch, but not its kills, bounties, claims or events,
 so those sections wait a week.
 
@@ -55,7 +55,7 @@ LISTED = 5                   # names in a list (bounty hunters) before "and N mo
 KILLS, BOUNTY = "st.kills", "st.bounty"   # the standings' kills and bounties, with their starting points in week.json
 CHALLENGES, SEEN = "rw.challenges", "ev.seen"
 COUNTERS = (CHALLENGES,)           # scores whose starting point baseline() keeps
-EVENT = "#event"                    # events begun so far, in ev.state (realms:events/begin)
+EVENT = "#event"                    # events begun so far, in ev.state (monkey:events/begin)
 
 
 # ---------------------------------------------------------------- counting a week
@@ -76,7 +76,7 @@ def folded(scores: dict[str, int]) -> dict[str, int]:
 
 
 def launched(world) -> bool:
-    """Whether realms:rules/launch has run on this world: test play before it never posts."""
+    """Whether monkey:rules/launch has run on this world: test play before it never posts."""
     holder, objective = LAUNCHED.split()
     return world.scores.get(objective, {}).get(holder, 0) >= 1
 
@@ -309,7 +309,7 @@ def challenges(week: Week) -> list[str] | None:
 
 
 def turnout(week: Week) -> list[str] | None:
-    """Events begun this week (realms:events/begin), and how many came to the last one (ev.seen holds the last
+    """Events begun this week (monkey:events/begin), and how many came to the last one (ev.seen holds the last
     event each player came to)."""
     base = week.start.get("recap")
     if not base or week.test_play:

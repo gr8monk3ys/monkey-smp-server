@@ -3,10 +3,10 @@
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
 
 It writes one generated folder (edit this file, not it):
-  package/realms/datapacks/realms-events/
+  package/monkey/datapacks/monkey-events/
 
 docs/SEASONS.md says what each event is and why its rules are what they are; docs/ADMIN.md lists the
-commands staff type. Everything here is run by staff with `/function realms:events/...`, except the
+commands staff type. Everything here is run by staff with `/function monkey:events/...`, except the
 arena, which players join and leave with `/trigger arena`.
 
 Scores (all in the data pack's load function):
@@ -22,7 +22,7 @@ from pathlib import Path
 from datapacks import NS, function_tag, lines, mcmeta, refuse, say, text
 from repo import Repo
 
-DATAPACK = "realms-events"
+DATAPACK = "monkey-events"
 FN = f"data/{NS}/function/events"
 STORE = f"{NS}:events"   # the command storage that holds the arena's points and the flag being made
 # Read by other packs (tools/rules.py, standings.py, drops.py, challenges.py): import these, don't copy the
@@ -39,8 +39,8 @@ CUP = "ev.cup"
 LEVEL = "Strength_SMP+Strength_Level"
 WITHDRAW = "Withdraw_Strength"
 STRENGTH_ITEM = '*[custom_data~{"Strength_SMP+Item":{}}]'
-KIT_ITEM = "*[custom_data~{realms_kit:{}}]"
-NOT_KIT_ITEM = "*[!custom_data~{realms_kit:{}}]"
+KIT_ITEM = "*[custom_data~{monkey_kit:{}}]"
+NOT_KIT_ITEM = "*[!custom_data~{monkey_kit:{}}]"
 ARENA_LEVEL = 3   # the level every player starts with
 # The player-death-corpses mod (a data pack in a jar) turns keep_inventory on and, the tick after a death,
 # moves the dead player's gear onto a mannequin tagged player_corpses.corpse. A timer text_display with the
@@ -106,7 +106,7 @@ def item(name: str) -> str:
 
 def kit_item(name: str) -> str:
     """A kit item, marked so it is cleared wherever it turns up outside the arena."""
-    return f"minecraft:{name}[custom_data={{realms_kit:{{}}}}]"
+    return f"minecraft:{name}[custom_data={{monkey_kit:{{}}}}]"
 
 
 def at_point(prefix: str) -> str:
@@ -158,7 +158,7 @@ def datapack_files() -> dict[str, str]:
         f"execute if entity @s[tag=ev.arena] run function {NS}:events/arena/leave with storage {STORE} arena",
         "# A flag carried out of a raid by logging out goes back to its faction.",
         "execute unless score #raid ev.state matches 1.. run return 0",
-        "execute store result score #taken ev.state run clear @s *[custom_data~{realms_flag:{}}]",
+        "execute store result score #taken ev.state run clear @s *[custom_data~{monkey_flag:{}}]",
         "execute if score #taken ev.state matches 1.. run tellraw @a " + text(
             {"selector": "@s", "color": "yellow"},
             {"text": " logged out with a flag. It goes back to its faction; staff will return it.",
@@ -252,7 +252,7 @@ def arena_files() -> dict[str, str]:
         "# off in the arena and gives it back outside).",
         *(f"execute if items entity @s {slots} run " + refuse(
             "Empty your inventory, armor and offhand first: you fight with the round's kit, not your gear.")
-          for slots in ("container.* *", "armor.* *[!custom_data~{realms_grace:{}}]", "weapon.offhand *")),
+          for slots in ("container.* *", "armor.* *[!custom_data~{monkey_grace:{}}]", "weapon.offhand *")),
         "# Leaving strips kit gear from the ender chest's slots, but not from inside a bundle kept there.",
         "execute if items entity @s enderchest.* #minecraft:bundles run " + refuse(
             "Take the bundles out of your ender chest first."),
@@ -389,7 +389,7 @@ def timer_files() -> dict[str, str]:
     f[f"{FN}/anarchy/over.mcfunction"] = lines(
         "# The ceasefire is over: normal rules again, and the banned items go.",
         "scoreboard players set #anarchy ev.state 0",
-        "bossbar remove realms:anarchy",
+        "bossbar remove monkey:anarchy",
         *(f"clear @a {item(c)}" for c in CONTRABAND),
         "tellraw @a " + text({"text": "The ceasefire is over and the normal rules are back. Totems, end crystals "
                                       "and enchanted golden apples were cleared; any found later fall under the "
@@ -397,7 +397,7 @@ def timer_files() -> dict[str, str]:
     )
     f[f"{FN}/raid/over.mcfunction"] = lines(
         "scoreboard players set #raid ev.state 0",
-        "bossbar remove realms:raid",
+        "bossbar remove monkey:raid",
         "title @a title " + text({"text": "Raid over", "color": "yellow"}),
         "tellraw @a " + text({"text": "The raid is over. Stop fighting: staff are counting the flags in every "
                                       "yard.", "color": "yellow"}),
@@ -421,7 +421,7 @@ def flag_files() -> dict[str, str]:
     stamp = [
         {"type": "minecraft:set_count", "count": 1},
         {"type": "minecraft:set_components", "components": {
-            "minecraft:custom_data": {"realms_flag": {"id": "$(id)", "n": 0}},
+            "minecraft:custom_data": {"monkey_flag": {"id": "$(id)", "n": 0}},
             "minecraft:custom_name": {"text": "$(name) flag", "color": "gold", "italic": False},
             "minecraft:lore": [{"text": "Official flag no. $(n)", "color": "gray", "italic": False},
                                {"text": "Monkey SMP Faction Raid", "color": "dark_gray", "italic": False}],
@@ -458,7 +458,7 @@ def book_files() -> dict[str, str]:
     for ench, level in MAX_LEVEL.items():
         components = (f'stored_enchantments={{"minecraft:{ench}":{level}}},'
                       'lore=[{text:"Monkey SMP event reward, Season $(season)",color:"gold",italic:false}],'
-                      'custom_data={realms_event_book:{season:"$(season)"}}')
+                      'custom_data={monkey_event_book:{season:"$(season)"}}')
         f[f"{FN}/book/{ench}.mcfunction"] = lines(
             f"# Macro {{season:\"I\"}}, run as the winner: one event book (B18), {ench} {level}.",
             f"$give @s minecraft:enchanted_book[{components}]",
@@ -554,4 +554,4 @@ def help_function(files: dict[str, str]) -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}

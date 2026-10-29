@@ -54,7 +54,7 @@ def frozen_repo(root: Path, name: str) -> Repo:
     frozen = MANIFESTS / name
 
     def skip_pins(folder, names):
-        return {"manifest.json", "patches"} if Path(folder) == REPO.realms else set()
+        return {"manifest.json", "patches"} if Path(folder) == REPO.monkey else set()
 
     shutil.copytree(REPO.package, root / "package", ignore=skip_pins)
     repo = Repo(root)

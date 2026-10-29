@@ -41,19 +41,19 @@ def test_event_and_holiday_skins_are_never_sold():
 
 def test_every_unlock_score_exists_and_announces_itself():
     data = wardrobe.datapack_files()
-    load = data["data/realms/function/wardrobe/load.mcfunction"]
-    second = data["data/realms/function/wardrobe/second.mcfunction"]
+    load = data["data/monkey/function/wardrobe/load.mcfunction"]
+    second = data["data/monkey/function/wardrobe/second.mcfunction"]
     for _, _, s in wardrobe.skins():
         objective, n = s["unlock"]
         assert f"scoreboard objectives add {objective} " in load
         if objective in wardrobe.NOTIFY:
-            notice = data[f"data/realms/function/wardrobe/notice/{objective[3:]}.mcfunction"]
+            notice = data[f"data/monkey/function/wardrobe/notice/{objective[3:]}.mcfunction"]
             assert f"matches {n}.. unless score @s {objective}.seen matches {n}.. run tellraw" in notice
-            assert f"{objective}.seen" in load and f"function realms:wardrobe/notice/{objective[3:]}" in second
+            assert f"{objective}.seen" in load and f"function monkey:wardrobe/notice/{objective[3:]}" in second
 
 
 def test_hours_include_play_carried_from_earlier_worlds():
-    second = wardrobe.datapack_files()["data/realms/function/wardrobe/second.mcfunction"].splitlines()
+    second = wardrobe.datapack_files()["data/monkey/function/wardrobe/second.mcfunction"].splitlines()
     play = second.index("execute as @a run scoreboard players operation @s rw.hours = @s rw.play")
     assert second[play + 1] == "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase"
     assert second[play + 2] == "scoreboard players operation @a rw.hours /= #hour rw.const"
@@ -63,14 +63,14 @@ def chat_lines(data: dict, function: str) -> int:
     """How many chat lines a function prints for one player: a tellraw is a line (plus one per newline in it), a
     skin's owned/locked pair is one, and a function it calls counts what that prints."""
     shown = 0
-    for line in data[f"data/realms/function/{function}.mcfunction"].splitlines():
+    for line in data[f"data/monkey/function/{function}.mcfunction"].splitlines():
         if line.startswith("execute unless ") and " run tellraw @s " in line:
             continue   # the other half of an if/unless pair
         if " tellraw @s " in f" {line}":
             shown += 1 + line.split(" tellraw @s ", 1)[-1].count("\\n")
-        elif line.startswith("function realms:"):
+        elif line.startswith("function monkey:"):
             shown += chat_lines(data, line.split(":", 1)[1])
-        elif line.startswith("execute if score #") and " run function realms:challenges/line/" in line:
+        elif line.startswith("execute if score #") and " run function monkey:challenges/line/" in line:
             shown += 0   # one challenge per kind is on: counted below, by kind
     return shown
 
@@ -79,12 +79,12 @@ def test_each_menu_page_fits_open_chat():
     """Open chat shows 20 lines. Each page prints a header (two lines), the counts, one title per item kind, one
     line per skin and two footer lines; the challenges page also prints one line per challenge that is on."""
     data = wardrobe.datapack_files()
-    use = data["data/realms/function/wardrobe/use.mcfunction"]
+    use = data["data/monkey/function/wardrobe/use.mcfunction"]
     pages = {1: "menu", wardrobe.MENU_SUPPORT: "menu_support", wardrobe.MENU_CHALLENGES: "menu_challenges"}
     assert set(pages) == set(wardrobe.MENUS)
     for number, name in pages.items():
-        assert f"matches {number} run function realms:wardrobe/{name}" in use
-        menu = data[f"data/realms/function/wardrobe/{name}.mcfunction"]
+        assert f"matches {number} run function monkey:wardrobe/{name}" in use
+        menu = data[f"data/monkey/function/wardrobe/{name}.mcfunction"]
         on_page = [(kind, s) for _, kind, s in wardrobe.skins() if wardrobe.page(s["unlock"]) == number]
         for _, s in on_page:
             assert f'"text":"[{s["name"]}]"' in menu
@@ -103,10 +103,10 @@ def test_the_challenge_and_launch_skins_are_on_the_challenges_page():
     for _, _, s in wardrobe.skins():
         if s["unlock"][0] in ("rw.challenges", "rw.launch"):
             assert wardrobe.page(s["unlock"]) == wardrobe.MENU_CHALLENGES
-    assert "function realms:challenges/lines" in data["data/realms/function/wardrobe/menu_challenges.mcfunction"]
-    assert "function realms:wardrobe/menu_challenges" in data["data/realms/function/challenges/use.mcfunction"]
-    assert "execute as @a[scores={challenges=1..}] run function realms:challenges/use" in data[
-        "data/realms/function/wardrobe/tick.mcfunction"]
+    assert "function monkey:challenges/lines" in data["data/monkey/function/wardrobe/menu_challenges.mcfunction"]
+    assert "function monkey:wardrobe/menu_challenges" in data["data/monkey/function/challenges/use.mcfunction"]
+    assert "execute as @a[scores={challenges=1..}] run function monkey:challenges/use" in data[
+        "data/monkey/function/wardrobe/tick.mcfunction"]
 
 
 def test_the_challenge_ladder():
@@ -134,18 +134,18 @@ def test_the_docs_list_every_skin():
 def test_every_skin_is_wired_end_to_end():
     data = wardrobe.datapack_files()
     res = wardrobe.resourcepack_files()
-    use = data["data/realms/function/wardrobe/use.mcfunction"]
+    use = data["data/monkey/function/wardrobe/use.mcfunction"]
     for value, kind, s in wardrobe.skins():
         sid = s["id"]
-        assert f"matches {value} run function realms:wardrobe/skin/{sid}" in use
-        assert f"realms:wardrobe/{sid}" in data[f"data/realms/function/wardrobe/skin/{sid}.mcfunction"]
-        assert f"data/realms/item_modifier/wardrobe/{sid}.json" in data
-        assert f"assets/realms/items/{sid}.json" in res
-        assert f"assets/realms/models/item/{sid}.json" in res
-        assert png_size(res[f"assets/realms/textures/item/{sid}.png"]) == (16, 16)
+        assert f"matches {value} run function monkey:wardrobe/skin/{sid}" in use
+        assert f"monkey:wardrobe/{sid}" in data[f"data/monkey/function/wardrobe/skin/{sid}.mcfunction"]
+        assert f"data/monkey/item_modifier/wardrobe/{sid}.json" in data
+        assert f"assets/monkey/items/{sid}.json" in res
+        assert f"assets/monkey/models/item/{sid}.json" in res
+        assert png_size(res[f"assets/monkey/textures/item/{sid}.png"]) == (16, 16)
         if kind == "helm":
-            assert f"assets/realms/equipment/{sid}.json" in res
-            assert png_size(res[f"assets/realms/textures/entity/equipment/humanoid/{sid}.png"]) == (64, 32)
+            assert f"assets/monkey/equipment/{sid}.json" in res
+            assert png_size(res[f"assets/monkey/textures/entity/equipment/humanoid/{sid}.png"]) == (64, 32)
 
 
 def test_skins_change_the_look_and_nothing_else():
@@ -154,7 +154,7 @@ def test_skins_change_the_look_and_nothing_else():
     data = wardrobe.datapack_files()
     modifiers = {path for path in data if "/item_modifier/" in path}
     # Every skin, the new ones included, goes through this check: no skin may apply anything but a modifier.
-    assert {f"data/realms/item_modifier/wardrobe/{s['id']}.json" for _, _, s in wardrobe.skins()} <= modifiers
+    assert {f"data/monkey/item_modifier/wardrobe/{s['id']}.json" for _, _, s in wardrobe.skins()} <= modifiers
     for path, text in data.items():
         if "/function/" in path:
             used = commands(text)
@@ -172,11 +172,11 @@ def test_skins_change_the_look_and_nothing_else():
 
 def test_reset_covers_every_item_a_skin_can_go_on():
     data = wardrobe.datapack_files()
-    blades = json.loads(data["data/realms/tags/item/wardrobe_blades.json"])["values"]
-    helms = json.loads(data["data/realms/tags/item/wardrobe_helms.json"])["values"]
+    blades = json.loads(data["data/monkey/tags/item/wardrobe_blades.json"])["values"]
+    helms = json.loads(data["data/monkey/tags/item/wardrobe_helms.json"])["values"]
     for item in blades + helms:
         name = item.split(":")[1]
-        assert f"data/realms/item_modifier/wardrobe/reset/{name}.json" in data
+        assert f"data/monkey/item_modifier/wardrobe/reset/{name}.json" in data
 
 
 def commands(function: str) -> set[str]:
@@ -201,7 +201,7 @@ def test_challenge_and_launch_rewards_are_scores_and_skins_only():
     data = wardrobe.datapack_files()
     allowed = {"scoreboard", "tellraw", "playsound", "advancement", "function", "execute", "time"}
     found = [p for p in data
-             if p.startswith(("data/realms/function/challenges/", "data/realms/function/wardrobe/founder/"))]
+             if p.startswith(("data/monkey/function/challenges/", "data/monkey/function/wardrobe/founder/"))]
     assert len(found) > 40
     for path in found:
         assert commands(data[path]) <= allowed, (path, commands(data[path]) - allowed)
@@ -236,7 +236,7 @@ def png_size(data: bytes) -> tuple[int, int]:
 
 
 MIDNIGHT = dt.datetime(2026, 10, 28, tzinfo=rcon.UTC)
-DAY_ONCE = "function realms:wardrobe/day_once {stamp:20261028}"
+DAY_ONCE = "function monkey:wardrobe/day_once {stamp:20261028}"
 
 
 def test_the_day_is_one_dated_command_and_a_stopped_server_fails_it(capsys):
@@ -250,19 +250,19 @@ def test_the_day_is_one_dated_command_and_a_stopped_server_fails_it(capsys):
     assert log == ["server not running: the day isn't started yet"]
     server = rcon.Recorder()
     assert wardrobe.send_day(server, MIDNIGHT, log=log.append) == 0 and server.sent == [DAY_ONCE]
-    refusing = rcon.Recorder({DAY_ONCE: "Unknown function realms:wardrobe/day_once"})
+    refusing = rcon.Recorder({DAY_ONCE: "Unknown function monkey:wardrobe/day_once"})
     assert wardrobe.send_day(refusing, MIDNIGHT, log=log.append) == 1
 
 
 def test_a_date_starts_one_day_however_often_it_is_sent():
-    """realms-day.service retries after a timeout that may have reached the server: the pack keeps the date."""
+    """monkey-day.service retries after a timeout that may have reached the server: the pack keeps the date."""
     files = wardrobe.datapack_files()
-    once = files["data/realms/function/wardrobe/day_once.mcfunction"].splitlines()
+    once = files["data/monkey/function/wardrobe/day_once.mcfunction"].splitlines()
     body = [line for line in once if not line.startswith("#")]
     assert body == ["$execute if score #day.sent rw.day matches $(stamp) run return 0",
                     "$scoreboard players set #day.sent rw.day $(stamp)",
-                    "function realms:wardrobe/day"]
-    assert "scoreboard players add #today rw.day 1" in files["data/realms/function/wardrobe/day.mcfunction"]
+                    "function monkey:wardrobe/day"]
+    assert "scoreboard players add #today rw.day 1" in files["data/monkey/function/wardrobe/day.mcfunction"]
 
 
 def test_the_day_gives_up_a_date_after_6_hours_of_tries(tmp_path):
@@ -288,7 +288,7 @@ def test_the_day_gives_up_a_date_after_6_hours_of_tries(tmp_path):
 def test_the_day_keeps_its_first_try_in_systemds_state_directory(monkeypatch):
     given = []
     monkeypatch.setattr(wardrobe, "send_day", lambda server, when, pending: given.append(pending) or 0)
-    monkeypatch.setenv("STATE_DIRECTORY", "/var/lib/realms-day")
-    assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given == [Path("/var/lib/realms-day/pending")]
+    monkeypatch.setenv("STATE_DIRECTORY", "/var/lib/monkey-day")
+    assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given == [Path("/var/lib/monkey-day/pending")]
     monkeypatch.delenv("STATE_DIRECTORY")
     assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given[-1] is None   # run by hand: no limit

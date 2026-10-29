@@ -41,13 +41,13 @@ class Check:
 def sh_scripts(root: Path) -> list[Path]:
     """The scripts that must stay POSIX sh (CLAUDE.md): the deploy scripts and the host's launchers."""
     found = [*sorted((root / "deploy").glob("*.sh")), *sorted((root / "package").glob("*.sh")),
-             root / "package" / "realms" / "realms.sh", root / "package" / "Start Server.command"]
+             root / "package" / "monkey" / "monkey.sh", root / "package" / "Start Server.command"]
     return [p for p in found if p.is_file()]
 
 
 def pester_files(root: Path) -> list[str]:
     # Player.Tests.ps1 covers the Windows-only player installer; CI runs it on Windows only.
-    names = ["tests/Realms.Tests.ps1", *(["tests/Player.Tests.ps1"] if WINDOWS else [])]
+    names = ["tests/Monkey.Tests.ps1", *(["tests/Player.Tests.ps1"] if WINDOWS else [])]
     return [n for n in names if (root / n).is_file()]
 
 
@@ -180,9 +180,9 @@ SERVER_PATHS = ("package/", "tests/smoke.ps1", "tests/docker-smoke.sh", "tests/h
                 ".github/workflows/ci.yml")
 # ... and these also need the Windows boot (with PSScriptAnalyzer and the player installer's tests) and the
 # hosting bundle it makes. The build (build.py and the repo.py it imports) makes the zip every boot unzips.
-WINDOWS_PATHS = ("package/realms/realms.ps1", "package/realms/Realms.psm1", "package/realms/manifest.json",
-                 "package/realms/pwsh.lock", "package/docker/", "player/", "tools/build.py", "tools/repo.py",
-                 "tests/smoke.ps1", "tests/hosting-smoke.sh", "tests/Realms.Tests.ps1", "tests/Player.Tests.ps1",
+WINDOWS_PATHS = ("package/monkey/monkey.ps1", "package/monkey/Monkey.psm1", "package/monkey/manifest.json",
+                 "package/monkey/pwsh.lock", "package/docker/", "player/", "tools/build.py", "tools/repo.py",
+                 "tests/smoke.ps1", "tests/hosting-smoke.sh", "tests/Monkey.Tests.ps1", "tests/Player.Tests.ps1",
                  "PSScriptAnalyzerSettings.psd1", ".github/workflows/ci.yml")
 BOOT_LABEL = "boot"
 

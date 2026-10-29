@@ -17,9 +17,9 @@
 # the missing entries, and starts the server again whatever happens. About 3 minutes offline. A list it can't edit
 # safely (missing, or spread over several lines) is left for you to set by hand.
 #
-# It reads only LIVE_DIR, LOCK_FILE, WARN_MINUTES and BOOT_TIMEOUT from /etc/realms-deploy.env (or
-# REALMS_DEPLOY_ENV), without sourcing it, so the webhooks are never read. RCON goes through the container's own
-# `realms rcon`, which finds the password itself. No secret is read, printed or asked for. What it prints also
+# It reads only LIVE_DIR, LOCK_FILE, WARN_MINUTES and BOOT_TIMEOUT from /etc/monkey-deploy.env (or
+# MONKEY_DEPLOY_ENV), without sourcing it, so the webhooks are never read. RCON goes through the container's own
+# `monkey rcon`, which finds the password itself. No secret is read, printed or asked for. What it prints also
 # goes to LOG_TO, with the output of docker.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
@@ -32,10 +32,10 @@ case "${1:-}" in
 esac
 [ "$(id -u)" = 0 ] || { echo 'run as root: it stops the server and edits its files as their owner' >&2; exit 1; }
 
-ENV_FILE=${REALMS_DEPLOY_ENV:-/etc/realms-deploy.env}
+ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
 
-LIVE_DIR=$(absolute "${LIVE_DIR:-$(setting LIVE_DIR /srv/realms/TheRealms-Server)}")
-LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/realms-deploy.lock)}
+LIVE_DIR=$(absolute "${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}")
+LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/monkey-deploy.lock)}
 WARN_MINUTES=${WARN_MINUTES:-$(setting WARN_MINUTES 5)}
 BOOT_TIMEOUT=${BOOT_TIMEOUT:-$(setting BOOT_TIMEOUT 900)}
 whole_number WARN_MINUTES "$WARN_MINUTES" minutes
@@ -44,7 +44,7 @@ whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 SERVER_DIR=$LIVE_DIR/server
 FILE=$SERVER_DIR/config/openpartiesandclaims-server.toml
 BACKUP=$FILE.$KEEP_AS
-SERVICE_USER=realms   # the owner of the deploy lock (docs/LIVE.md)
+SERVICE_USER=monkey   # the owner of the deploy lock (docs/LIVE.md)
 
 umask 022
 
@@ -55,10 +55,10 @@ start_again() {
     [ -n "$stopped" ] || return 0
     stopped=''
     log 'starting the server again'
-    if logged compose up -d realms && wait_for_live; then
+    if logged compose up -d monkey && wait_for_live; then
         log 'the server is back up'
     else
-        log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s: look at docker compose logs realms"
+        log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s: look at docker compose logs monkey"
         return 1
     fi
 }
@@ -186,7 +186,7 @@ if running; then
     was_running=1
     stopped=1
     log 'stopping the server'
-    logged compose stop realms
+    logged compose stop monkey
 else
     log 'the server is not running: changing the file and leaving the server stopped'
 fi

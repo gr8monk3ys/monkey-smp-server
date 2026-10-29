@@ -112,7 +112,7 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
     pinned = repo.load_manifest()["version"]
     if served != pinned:
         return [f"site: site/public/{url.lstrip('/')} is the {served} client pack, but the manifest is {pinned}: "
-                f"copy TheRealms-Client-{pinned}.mrpack and TheRealms-Player-{pinned}.zip into site/public/pack/ "
+                f"copy MonkeySMP-Client-{pinned}.mrpack and MonkeySMP-Player-{pinned}.zip into site/public/pack/ "
                 "and point MODPACK_URL and INSTALLER_URL in site/config.json at them (docs/MAINTAINING.md, Releasing)"]
     return []
 

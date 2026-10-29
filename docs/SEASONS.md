@@ -91,7 +91,7 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 | 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
 | 4 | **Arena Glory I** | Kit duels (1v1) for individuals, then the 4v4 faction bracket. |
-| 5 | **Netherite age** | Netherite armor is allowed (rule 24): `datapack disable "file/realms-no-netherite-armor"`. Announced a week ahead. |
+| 5 | **Netherite age** | Netherite armor is allowed (rule 24): `datapack disable "file/monkey-no-netherite-armor"`. Announced a week ahead. |
 | 6 | **Faction Raid II** | Flags again, now with Netherite and bigger bases. |
 | 7 | **Build Battle II** | A shorter one: one evening, one spin, at spawn plots. |
 | 8 | **The border breaks again** | 4000 to 6000, and the live map with it. |
@@ -202,8 +202,8 @@ the factions share the rank. Strength below zero counts as zero.
 - Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
   board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
 
-`tools/standings.py` works it out, the `realms-standings` data pack counts kills and holds the board, and
-`deploy/realms-standings.sh` runs it on the VPS (docs/LIVE.md); staff commands are in docs/ADMIN.md.
+`tools/standings.py` works it out, the `monkey-standings` data pack counts kills and holds the board, and
+`deploy/monkey-standings.sh` runs it on the VPS (docs/LIVE.md); staff commands are in docs/ADMIN.md.
 
 Between events, three **weekly challenges** (one solo, one faction, one explore) give everyone something to
 do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
@@ -242,7 +242,7 @@ record who is with whom.
   party made a minute ago can't take part yet. When a party is gone from two board runs in a row (so about
   an hour after it goes), its wars and pacts end, announced, and its pact partners get the slot back.
 
-`tools/diplomacy.py` makes it, inside the `realms-standings` data pack. It needs no timer of its own: the
+`tools/diplomacy.py` makes it, inside the `monkey-standings` data pack. It needs no timer of its own: the
 standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
 
 ### Outposts
@@ -275,7 +275,7 @@ Four capture points out in the newest land, so factions have somewhere to meet b
 - **Feeding** an outpost to a friendly faction, or trading one back and forth for hours, is exploit B13, as
   feeding kills is: staff free it and take the hours back (docs/ADMIN.md, "Outposts").
 
-`tools/outposts.py` places them and makes the `realms-outposts` data pack; `deploy/realms-outposts.sh` runs
+`tools/outposts.py` places them and makes the `monkey-outposts` data pack; `deploy/monkey-outposts.sh` runs
 every hour on the VPS (docs/LIVE.md). Staff commands are in docs/ADMIN.md.
 
 ### The pillar events
@@ -383,7 +383,7 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
 
 #### Anarchy (when the End opens)
 
-Staff open the End in the event slot in week 3 (`function realms:rules/open_end`, docs/RULES.md), and a 90-minute countdown starts (a boss bar for
+Staff open the End in the event slot in week 3 (`function monkey:rules/open_end`, docs/RULES.md), and a 90-minute countdown starts (a boss bar for
 everyone). The dragon fight happens in the middle of it.
 
 **Off for the 90 minutes:** the combat rules (2 to 6, 9, 11 to 19), KOS limits in territory (34, 35
@@ -522,7 +522,7 @@ A Strength server gets harder to join every week, so catching up has to be built
 - The Cup is a faction score, so a newcomer who joins a faction adds to its total from their first event.
 - Factions need members (rule 29 caps them at four, but most start smaller). Point newcomers at
   `#smp-forum` recruitment on their first day. The welcome screen a first join gets does this.
-- A 48-hour PvP grace period for a first join (rule 26), built into the `realms-rules` data pack
+- A 48-hour PvP grace period for a first join (rule 26), built into the `monkey-rules` data pack
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
 
 ### Telling players what changed
@@ -535,8 +535,8 @@ trust faster than one that never changes.
 ## Ending a season
 
 The runbook for weeks 11 to 13, written before Season I's week 12 so the last weeks run from a checklist.
-Paths are the live server's (`docs/LIVE.md`): commands run in `/srv/realms/TheRealms-Server/docker`, and
-`realms rcon "..."` is short for `docker compose exec realms realms rcon "..."`. Season I and season 2
+Paths are the live server's (`docs/LIVE.md`): commands run in `/srv/monkey/MonkeySMP-Server/docker`, and
+`monkey rcon "..."` is short for `docker compose exec monkey monkey rcon "..."`. Season I and season 2
 are the example; change the numbers.
 
 **Two weeks before the end**
@@ -544,37 +544,37 @@ are the example; change the numbers.
 1. Announce the end date again (it was announced on day one), the finale, and what carries over (above).
    Say too that every player gets a Season Wrapped page after the finale (below) and that anyone who
    doesn't want one tells staff; keep their names, one a line, in
-   `/srv/realms/seasons/season-I-opt-out.txt` (create it empty if no one asks).
+   `/srv/monkey/seasons/season-I-opt-out.txt` (create it empty if no one asks).
 2. Open the vote on next season's twist in Discord, and set the next start date.
 3. Pick the next seed: try a few in singleplayer with the modpack, then put the winner in
-   `package/realms/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
+   `package/monkey/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
    matches the live world.
 
 **After the finale (end of week 11)**
 
 4. Post the final Cup standings and crown the champion: its title team ("The season champion", above).
    Then the Pioneer title, for the most Server Firsts (a tie goes to whoever reached that number first):
-   `python3 /srv/realms/repo/tools/firsts.py champion /srv/realms/TheRealms-Server/server/world --season 1`
-   names the player and prints the four `team` commands; run them with `realms rcon`. A player shows one team at a
+   `python3 /srv/monkey/repo/tools/firsts.py champion /srv/monkey/MonkeySMP-Server/server/world --season 1`
+   names the player and prints the four `team` commands; run them with `monkey rcon`. A player shows one team at a
    time, so one who already shows a title or supporter color picks which to keep (`team join` moves them).
    The team's name starts with `title_`, so the carry (step 13) keeps it into the next season.
-5. Lock the world: `realms rcon "function realms:events/season/lock"`. Players in survival switch to
+5. Lock the world: `monkey rcon "function monkey:events/season/lock"`. Players in survival switch to
    adventure (they can look around and use doors, but not build or break; claims still guard
    containers), PvP is off and the difficulty is peaceful. It stays locked across restarts, and players who log in during the off-season
-   are locked too. Staff in creative are not affected. `function realms:events/season/unlock` undoes it.
-6. Back it up: `docker compose exec realms realms backup`. The backup folder keeps only the newest 14, so
+   are locked too. Staff in creative are not affected. `function monkey:events/season/unlock` undoes it.
+6. Back it up: `docker compose exec monkey monkey backup`. The backup folder keeps only the newest 14, so
    copy this one out of the rotation:
-   `mkdir -p /srv/realms/seasons && cp -a ../backups/<newest> /srv/realms/seasons/season-I`. Keep a copy
+   `mkdir -p /srv/monkey/seasons && cp -a ../backups/<newest> /srv/monkey/seasons/season-I`. Keep a copy
    off the machine too: the off-site backups in `docs/LIVE.md` copy `backups/` only, so add
-   `/srv/realms/seasons` to that job or upload the folder by hand.
+   `/srv/monkey/seasons` to that job or upload the folder by hand.
 7. Make the download:
 
    ```sh
-   python3 /srv/realms/repo/tools/season.py download /srv/realms/seasons/season-I/world \
-       --season I --modpack 2.5.0 --out "/srv/realms/seasons/Monkey SMP Season I.zip"
+   python3 /srv/monkey/repo/tools/season.py download /srv/monkey/seasons/season-I/world \
+       --season I --modpack 2.5.0 --out "/srv/monkey/seasons/Monkey SMP Season I.zip"
    ```
 
-   `--modpack` is the release that is live (`realms-deploy.sh --status`). The zip holds the map, every
+   `--modpack` is the release that is live (`monkey-deploy.sh --status`). The zip holds the map, every
    player's inventory and stats, and the data packs, with a READ ME on opening it. It leaves out the Ledger
    database, server config and everything outside the world folder (the RCON password, ops, whitelist).
    Open it in singleplayer once before posting it.
@@ -586,9 +586,9 @@ Then the Season Wrapped pages, a page per player about their season (hours, days
 events, their faction's best weekly rank, Server Firsts and skins), from step 6's world:
 
 ```sh
-python3 /srv/realms/repo/tools/wrapped.py build /srv/realms/seasons/season-I/world --season 1 \
-    --standings /srv/realms/standings --start /srv/realms/seasons/season-I-wrapped-start.json \
-    --opt-out /srv/realms/seasons/season-I-opt-out.txt --out /srv/realms/seasons/season-I-wrapped
+python3 /srv/monkey/repo/tools/wrapped.py build /srv/monkey/seasons/season-I/world --season 1 \
+    --standings /srv/monkey/standings --start /srv/monkey/seasons/season-I-wrapped-start.json \
+    --opt-out /srv/monkey/seasons/season-I-opt-out.txt --out /srv/monkey/seasons/season-I-wrapped
 ```
 
 `season-I-wrapped-start.json` is the starting point `wrapped.py start` kept at the launch (`docs/LAUNCH.md`);
@@ -609,56 +609,56 @@ renewals keep counting: the store's commands still reach the old world, and the 
 **Starting the next season**
 
 9. Release the update that opens the season (the new seed, the season's skin, the twist) and let it
-   deploy. Then pause deploys for the switch: `sudo systemctl stop realms-deploy.timer`.
+   deploy. Then pause deploys for the switch: `sudo systemctl stop monkey-deploy.timer`.
 10. Stop the server: `docker compose stop`.
-11. Move the old world out: `mv ../server/world /srv/realms/seasons/season-I/world-end`. This is the final
+11. Move the old world out: `mv ../server/world /srv/monkey/seasons/season-I/world-end`. This is the final
     state, off-season renewals included; the carry reads it.
 12. Set the new seed in the live `../server/server.properties` (`level-seed=...`). Nothing else changes.
 13. Carry the wardrobe over, before the first start:
 
     ```sh
-    python3 /srv/realms/repo/tools/season.py carry /srv/realms/seasons/season-I/world-end \
-        --into /srv/realms/TheRealms-Server/server/world --season 2
+    python3 /srv/monkey/repo/tools/season.py carry /srv/monkey/seasons/season-I/world-end \
+        --into /srv/monkey/MonkeySMP-Server/server/world --season 2
     ```
 
-    It writes one small data pack, `realms-carry`, into the new world folder. It holds every player's
+    It writes one small data pack, `monkey-carry`, into the new world folder. It holds every player's
     wardrobe scores (days, months, invites, events, holidays, weekly challenges done, tier, founder and
     the launch weekend), their hours played, and the
     supporter, title and champion teams. It runs by itself at the new world's first load, once, and sets
     the season to 2, so no one gets Founder's Edge in the new world.
 14. Start it: `docker compose up -d`. The world generates, the installer adds the Monkey SMP data packs, and
     the console says "Carried N players' wardrobe scores and K teams into season 2." Within the hour,
-    `realms-week.timer` tells the new world the challenge week (it keeps the rotation going; this week's
+    `monkey-week.timer` tells the new world the challenge week (it keeps the rotation going; this week's
     progress starts from zero).
-15. Check: `realms rcon "scoreboard players get #carried rw.day"` gives 1,
-    `realms rcon "scoreboard players get #season rw.day"` gives 2, and one regular's
+15. Check: `monkey rcon "scoreboard players get #carried rw.day"` gives 1,
+    `monkey rcon "scoreboard players get #season rw.day"` gives 2, and one regular's
     `scoreboard players get NAME rw.days` matches the old world.
-16. Clear the old world off the live map (`realms rcon "bluemap purge world"`, and the same for
+16. Clear the old world off the live map (`monkey rcon "bluemap purge world"`, and the same for
     `world_the_nether` and `world_the_end`, BlueMap's map ids), then pre-generate the new one as on the
     first setup (`docs/LIVE.md`, step 6).
-17. Turn deploys back on: `sudo systemctl start realms-deploy.timer`. Launch as in week 0, with
-    `function realms:rules/launch` (`docs/RULES.md`). Right after it, keep Season Wrapped's starting point:
-    `realms rcon "save-all flush"`, then
-    `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out
-    /srv/realms/seasons/season-2-wrapped-start.json`. Note the launch time: that season's `build` needs it as
+17. Turn deploys back on: `sudo systemctl start monkey-deploy.timer`. Launch as in week 0, with
+    `function monkey:rules/launch` (`docs/RULES.md`). Right after it, keep Season Wrapped's starting point:
+    `monkey rcon "save-all flush"`, then
+    `python3 /srv/monkey/repo/tools/wrapped.py start /srv/monkey/MonkeySMP-Server/server/world --out
+    /srv/monkey/seasons/season-2-wrapped-start.json`. Note the launch time: that season's `build` needs it as
     `--launch` (for example `--launch 2027-02-20T17:00-08:00`), since only Season I's is in the calendar.
 
-The new world starts unlocked; the lock lives in the old world. The `realms-carry` pack can stay (it
+The new world starts unlocked; the lock lives in the old world. The `monkey-carry` pack can stay (it
 won't run twice). Delete its folder at the next restart to tidy up.
 
 ## What is built and what isn't
 
 Built:
 - The wardrobe and Founder's Edge.
-- Weekly challenges (`tools/challenges.py`, in the `realms-wardrobe` data pack): three a week from a pool
+- Weekly challenges (`tools/challenges.py`, in the `monkey-wardrobe` data pack): three a week from a pool
   that rotates every Monday at 12 AM Pacific, `/trigger challenges`, and their skins at 3, 9 and 18
-  challenges done (Trailblazer, the Vanguard Helm, Pinnacle). `realms-week.timer` sends the week.
+  challenges done (Trailblazer, the Vanguard Helm, Pinnacle). `monkey-week.timer` sends the week.
 - Founder's Circlet, for 10 minutes online on Season I's launch weekend: opened by `rules/launch`, closed
   at the end of Sunday, Pacific.
 - The season counter (`#season rw.day`).
 - `/gamenight` and the Town Hall in Front Desk.
 - `tools/retention.py`.
-- The event tooling, in the `realms-events` data pack (`tools/events.py`; commands in `docs/ADMIN.md`):
+- The event tooling, in the `monkey-events` data pack (`tools/events.py`; commands in `docs/ADMIN.md`):
   - Arena functions: join (empty inventory, armor and offhand, at the entrance), leave, five kits that
     follow the bans, Strength saved and held at +3 (withdrawals blocked), drops cleaned every tick, and a
     player who logs out or is teleported out of the radius taken out with their Strength back. Kit gear
@@ -673,7 +673,7 @@ Built:
   - Event books (lore-tagged, vanilla max level, none for banned enchantments) and the `ev.cup` sidebar.
   - The attendance counter (`rw.events`, once per event), and its skins at 3 and 10 events (Rallier, the
     Plumed Helm).
-  - The season lock (`function realms:events/season/lock` and `unlock`).
+  - The season lock (`function monkey:events/season/lock` and `unlock`).
 - The holiday skins (Gravelight, Midwinter Cap, Solstice) and the tenure ladder at 1, 2 and 3 months.
 - The season-end runbook ("Ending a season") and `tools/season.py`: the world download, and carrying
   the wardrobe, hours played and title teams into the next world.
@@ -681,31 +681,31 @@ Built:
 - The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
   block, built from the game's data reports) with a published seed, so anyone can check the draw.
 - The first-join welcome, the pause menu's links and the 48-hour PvP grace (rule 26), in the
-  `realms-rules` data pack (`tools/rules.py`). Grace is off in the arena, and fighting there doesn't end
+  `monkey-rules` data pack (`tools/rules.py`). Grace is off in the arena, and fighting there doesn't end
   it.
-- The weekly standings ("Weekly standings"): `tools/standings.py`, the `realms-standings` data pack (the
+- The weekly standings ("Weekly standings"): `tools/standings.py`, the `monkey-standings` data pack (the
   week's kills, the board at spawn, `/trigger standings`, the bounty commands and the Bounty Hunter title)
-  and the Sunday timer on the VPS (`deploy/realms-standings.sh`, set up with `deploy/install-standings.sh`).
+  and the Sunday timer on the VPS (`deploy/monkey-standings.sh`, set up with `deploy/install-standings.sh`).
   Seen in game on a test server on 26 October 2026 (2.6.0, Carpet fake players): the four columns, the board
   and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
-  run of `deploy/realms-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
+  run of `deploy/monkey-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
 - The Sunday recap ("Where it shows", above): `tools/recap.py`, posted by the same Sunday close to the same
-  webhook. `realms-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
+  webhook. `monkey-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
   not yet seen in Discord or run on the VPS.
 
-- War and pacts ("War and pacts"): `tools/diplomacy.py`, in the `realms-standings` data pack:
+- War and pacts ("War and pacts"): `tools/diplomacy.py`, in the `monkey-standings` data pack:
   `/trigger diplomacy`, war kills counted twice, the Sunday post's lines and the wars' end at the close, and
   each faction's number in game (`st.faction`), written by the hourly board run for other features to use
   (docs/MAINTAINING.md, "The faction number in game"). Checked by the unit tests and the generated packs'
   checks only: not yet tried in game.
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
-  `realms-drops` data pack and `deploy/realms-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
+  `monkey-drops` data pack and `deploy/monkey-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat
   give the coordinates 10 minutes ahead, then 1 chest per 4 players online (at most 3) lands in the newest
   border ring, 6 or more chunks from every claim, and despawns after 20 minutes. Modest loot (food, iron,
   arrows, wood): nothing Strength, no netherite, diamonds or emeralds. Tried on a test server: the pack
   loads, the chests land, scale and despawn, and a drop survives a restart.
-- Server Firsts (docs/ADMIN.md, "Server Firsts"): `tools/firsts.py` and the `realms-firsts` data pack. The
+- Server Firsts (docs/ADMIN.md, "Server Firsts"): `tools/firsts.py` and the `monkey-firsts` data pack. The
   first player to each of 14 milestones is announced to everyone and keeps it for the season;
   `/trigger firsts` lists them, and the most firsts earns the season's Pioneer title ("Ending a season",
   step 4). Not yet tried in game.
@@ -713,13 +713,13 @@ Built:
   season for the site, from the final world, the standings' closed weeks and a starting point kept at the
   launch, with an opt-out list. Tried on made-up worlds only, not a real season's.
 
-- Outposts ("Outposts"): `tools/outposts.py`, the `realms-outposts` data pack and `deploy/realms-outposts.sh`
+- Outposts ("Outposts"): `tools/outposts.py`, the `monkey-outposts` data pack and `deploy/monkey-outposts.sh`
   with its hourly timer. Four capture points in the newest border ring, 6 or more chunks from every claim, 60
   seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
   the live map. Checked by the unit tests and the generated packs' checks only: not yet tried in game.
 
-- Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `realms-omens` data
-  pack and `deploy/realms-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),
+- Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `monkey-omens` data
+  pack and `deploy/monkey-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),
   each from a start time between 6:00 and 8:50 PM Pacific until 10 PM, the first time 4 or more are online,
   the season has launched and no event or supply drop is on. The week's evenings, times and omens come from
   a secret the pack draws in game and keeps in the world, so nobody can work them out from the repo. Blood
@@ -732,7 +732,7 @@ Not built:
 | --- | --- |
 | Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
 | Champion helm and Hall of Banners | One helm and a build at each new spawn |
-| Border acts | `worldborder set` over RCON on the date, for the Overworld and the Nether (1:8), then fit the live map to it and render it again with `tools/map_border.py` (docs/ADMIN.md, "The live map"). The `realms-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
+| Border acts | `worldborder set` over RCON on the date, for the Overworld and the Nether (1:8), then fit the live map to it and render it again with `tools/map_border.py` (docs/ADMIN.md, "The live map"). The `monkey-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
 | KOTH | Run by staff by hand at first. Automate only if events are weekly and well attended (supply drops are built: above) |
 | Faction sign-up form | A form (Front Desk, in the Discord repo) for the name, members, banner and charter; a forum post works until then |
 | Base of the Month role | A Discord role, handed out by hand |

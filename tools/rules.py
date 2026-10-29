@@ -4,10 +4,10 @@
 
 It writes two folders, both generated (edit this file, not them). Rule numbers are docs/RULES.md's.
 
-  package/realms/datapacks/realms-rules/
+  package/monkey/datapacks/monkey-rules/
       Rule 25: a 2500 x 2500 world border centred on spawn (and the Nether's at 1:8), set once.
-      Rule 23: the launch hour. `function realms:rules/launch` closes PvP and the Nether for an hour,
-               then opens both; the End stays closed until `function realms:rules/open_end`.
+      Rule 23: the launch hour. `function monkey:rules/launch` closes PvP and the Nether for an hour,
+               then opens both; the End stays closed until `function monkey:rules/open_end`.
       Rule 26: a first join gets 48 hours of PvP grace: other players can't hurt them. Attacking a player
                ends it, and so does `/trigger end_grace`. Nobody gets it during the launch hour.
       Ban B9:  Fire Aspect and Flame are disabled. They're out of the enchanting table, loot and trades,
@@ -17,10 +17,10 @@ It writes two folders, both generated (edit this file, not them). Rule numbers a
                are recruiting, on the Discord), and a Monkey SMP button in the pause menu with the
                Discord, map, rules and store links.
 
-  package/realms/datapacks/realms-no-netherite-armor/
+  package/monkey/datapacks/monkey-no-netherite-armor/
       Rule 24: no Netherite armor. The smithing table won't make it, and armor found in loot is taken off
                (it drops at the player's feet, nothing is lost). Netherite tools and weapons are fine.
-      The owners lift the rule with `datapack disable "file/realms-no-netherite-armor"`; the world
+      The owners lift the rule with `datapack disable "file/monkey-no-netherite-armor"`; the world
       remembers that across restarts and updates.
 
 The installer copies both into the world on every install (Install-PackageDatapacks).
@@ -33,12 +33,12 @@ from datapacks import NS, function_tag, lines, mcmeta
 from events import ARENA_TAG
 from repo import Repo
 
-RULES_PACK = "realms-rules"
-NETHERITE_PACK = "realms-no-netherite-armor"
+RULES_PACK = "monkey-rules"
+NETHERITE_PACK = "monkey-no-netherite-armor"
 
 BORDER = 2500          # rule 25: the border's full width in blocks, centred on spawn
 LAUNCH_SECONDS = 3600  # rule 23: how long PvP and the Nether stay closed after launch
-OBJECTIVE = "realms.rules"
+OBJECTIVE = "monkey.rules"
 # Rule 24's pack stamps the game time here every second while it is on, so other packs can tell it is
 # (tools/firsts.py: full Netherite counts only once it is off). Disabling a pack runs nothing, so a stamp it is.
 NETHERITE_BEAT = "#netherite_rule"
@@ -49,15 +49,15 @@ NETHERITE_BEAT = "#netherite_rule"
 # grace runs out.
 GRACE_HOURS = 48
 GRACE_TICKS = GRACE_HOURS * 72_000  # game time, which stops while the server is empty
-GRACE = "realms.grace"               # each player's grace end, in game time
+GRACE = "monkey.grace"               # each player's grace end, in game time
 END_GRACE = "end_grace"              # the trigger players end their own grace with
-WELCOME = "realms.welcome"           # seconds until the welcome shows (a first join is still loading)
+WELCOME = "monkey.welcome"           # seconds until the welcome shows (a first join is still loading)
 WELCOME_DELAY = 3
-JOINED = "realms.joined"             # tag: seen before, so no welcome and no grace
-GRACE_ITEM = "*[custom_data~{realms_grace:{}}]"
+JOINED = "monkey.joined"             # tag: seen before, so no welcome and no grace
+GRACE_ITEM = "*[custom_data~{monkey_grace:{}}]"
 # A player's body slot only takes an item that is equippable there. Only the pack puts it on: a stray copy
 # can't be put on by hand, by a dispenser or on a horse.
-GRACE_STACK = ('minecraft:paper[custom_data={realms_grace:{}},enchantments={"realms:pvp_grace":1},'
+GRACE_STACK = ('minecraft:paper[custom_data={monkey_grace:{}},enchantments={"monkey:pvp_grace":1},'
                'equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"},'
                'item_name="PvP grace"]')
 # The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
@@ -159,7 +159,7 @@ def rules_files() -> dict[str, str]:
         "$execute in minecraft:the_nether run worldborder center $(x) $(z)",
     )
     f[f"{fn}/second.mcfunction"] = lines(
-        "# Once a second. The End is closed until an admin runs realms:rules/open_end (rule 23).",
+        "# Once a second. The End is closed until an admin runs monkey:rules/open_end (rule 23).",
         f"execute unless score #end_open {OBJECTIVE} matches 1 in minecraft:the_end as @a[distance=0..] "
         f"run function {NS}:rules/leave_end",
         "# The welcome, a few seconds after a first join so the loading screen doesn't swallow it.",
@@ -220,7 +220,7 @@ def rules_files() -> dict[str, str]:
         "tellraw @s " + text({"text": "Your PvP grace is over: other players can hurt you now.", "color": "red"}),
     )
     f[f"{fn}/grace_attack.mcfunction"] = lines(
-        "# A player with grace hurt a player (advancement realms:rules/grace_attack). Fights in the event",
+        "# A player with grace hurt a player (advancement monkey:rules/grace_attack). Fights in the event",
         "# arena don't count.",
         f"advancement revoke @s only {NS}:rules/grace_attack",
         f"execute unless entity @s[tag={ARENA_TAG}] run function {NS}:rules/grace_end",
@@ -359,7 +359,7 @@ def netherite_files() -> dict[str, str]:
     for item in NETHERITE_ARMOR:
         f[f"data/minecraft/recipe/{item}_smithing.json"] = js(never(item))
     f[f"{fn}/load.mcfunction"] = lines(
-        "# Generated by tools/rules.py. Lift rule 24 with: datapack disable \"file/realms-no-netherite-armor\"",
+        "# Generated by tools/rules.py. Lift rule 24 with: datapack disable \"file/monkey-no-netherite-armor\"",
         f"scoreboard objectives add {OBJECTIVE} dummy",
         f"schedule function {NS}:netherite/second 20t replace",
     )
@@ -378,9 +378,9 @@ def netherite_files() -> dict[str, str]:
     f[f"{fn}/take_off.mcfunction"] = lines(*take_off)
     for slot in ARMOR_SLOTS:
         f[f"{fn}/drop_{slot}.mcfunction"] = lines(
-            'summon minecraft:item ~ ~ ~ {Item:{id:"minecraft:stone"},PickupDelay:40,Tags:["realms.netherite"]}',
-            f"item replace entity @n[type=minecraft:item,tag=realms.netherite] contents from entity @s armor.{slot}",
-            "tag @n[type=minecraft:item,tag=realms.netherite] remove realms.netherite",
+            'summon minecraft:item ~ ~ ~ {Item:{id:"minecraft:stone"},PickupDelay:40,Tags:["monkey.netherite"]}',
+            f"item replace entity @n[type=minecraft:item,tag=monkey.netherite] contents from entity @s armor.{slot}",
+            "tag @n[type=minecraft:item,tag=monkey.netherite] remove monkey.netherite",
             f"item replace entity @s armor.{slot} with minecraft:air",
         )
     return f
@@ -390,6 +390,6 @@ def netherite_files() -> dict[str, str]:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / RULES_PACK: rules_files(),
-            repo.realms / "datapacks" / NETHERITE_PACK: netherite_files()}
+    return {repo.monkey / "datapacks" / RULES_PACK: rules_files(),
+            repo.monkey / "datapacks" / NETHERITE_PACK: netherite_files()}
 

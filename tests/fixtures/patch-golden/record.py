@@ -4,9 +4,9 @@
   python -I tests/fixtures/patch-golden/record.py --input  # first rebuild input.zip from INPUT below
 
 The patch rules live twice, on purpose: tools/patches.py and tools/entries.py for the maintainer tools,
-and Realms.psm1 (Get-ExpectedHash, Get-PatchId, Invoke-ZipPatch, Install-PatchedArtifact) for the
+and Monkey.psm1 (Get-ExpectedHash, Get-PatchId, Invoke-ZipPatch, Install-PatchedArtifact) for the
 installer, which has to stay Windows PowerShell 5.1 (ADR-0003, ADR-0007). Both are tested against this
-one fixture: tests/test_patches.py checks the Python side and tests/Realms.Tests.ps1 the PowerShell side.
+one fixture: tests/test_patches.py checks the Python side and tests/Monkey.Tests.ps1 the PowerShell side.
 
 Only re-record when a rule changes on purpose, then check that both test suites pass. The fixture holds
 only dummy text files (never a real jar or datapack):
@@ -113,7 +113,7 @@ def golden(folder: Path = HERE) -> dict:
     entry = {"file": "input.zip", "url": URL, "size": len(data), "hashes": {"sha512": sha512},
              "patch": patches.reference(GOLDEN.split("/")[1], sha512)}
     return {
-        "_about": "Pinned by tests/test_patches.py (Python) and tests/Realms.Tests.ps1 (PowerShell). "
+        "_about": "Pinned by tests/test_patches.py (Python) and tests/Monkey.Tests.ps1 (PowerShell). "
                   "Re-record with: python -I tests/fixtures/patch-golden/record.py",
         "input": {"file": "input.zip", "sha256": sha256(data), "entries": zip_entries(data)},
         "patch": {"path": GOLDEN, "files": {rel: sha256(b) for rel, b in patch.items()}, "id": patch_id(patch)},

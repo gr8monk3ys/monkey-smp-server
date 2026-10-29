@@ -2,7 +2,7 @@
 
     python tools/news.py found WORLD                  every news item the saved world holds now; changes nothing
     python tools/news.py preview WORLD --state DIR    what the next run would post, and what waits; changes nothing
-    python tools/news.py post WORLD --state DIR       posts what is due to NEWS_WEBHOOK_URL (deploy/realms-news.sh)
+    python tools/news.py post WORLD --state DIR       posts what is due to NEWS_WEBHOOK_URL (deploy/monkey-news.sh)
 
 What gets posted, at most once a season each (docs/ADMIN.md, "Monkey SMP news"):
   - a Server First from FIRST_LINES (tools/firsts.py's milestones, not all of them): "Steve killed the Ender
@@ -16,7 +16,7 @@ What gets posted, at most once a season each (docs/ADMIN.md, "Monkey SMP news"):
 
 Everything comes from the files the server saves (every 5 minutes, ServerCore's autosave-interval-seconds), so a
 post lands 5 to 25 minutes after the moment. Nothing posts before the launch (`#launched rw.day`, set by
-realms:rules/launch). No RCON and no log: the firsts pack announces in game with tellraw, which never reaches
+monkey:rules/launch). No RCON and no log: the firsts pack announces in game with tellraw, which never reaches
 the server log, and the saved files are the record the pack and the season already keep.
 
 The rules that keep it rare, all in LIMITS and the constants below it: per kind and in all, at most so many posts
@@ -34,7 +34,7 @@ news doesn't post as new. The file is written whole before and after each post; 
 was killed mid-post), or one Discord may have taken without answering, counts as posted: a post can be lost
 that way, never made twice.
 
-The webhook is NEWS_WEBHOOK_URL in the environment (deploy/realms-news.sh reads it from /etc/realms-deploy.env);
+The webhook is NEWS_WEBHOOK_URL in the environment (deploy/monkey-news.sh reads it from /etc/monkey-deploy.env);
 it is never printed. Posts ping nobody. Stdlib only, Python 3.11 or newer (party names are TOML).
 """
 import argparse

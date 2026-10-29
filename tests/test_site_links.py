@@ -11,8 +11,8 @@ SETTINGS = {
     "ADDRESS": "play.example.com",
     "DISCORD_INVITE": "https://discord.gg/abc",
     "STORE_URL": "",
-    "MODPACK_URL": "pack/TheRealms-Client-1.2.3.mrpack",
-    "INSTALLER_URL": "pack/TheRealms-Player-1.2.3.zip",
+    "MODPACK_URL": "pack/MonkeySMP-Client-1.2.3.mrpack",
+    "INSTALLER_URL": "pack/MonkeySMP-Player-1.2.3.zip",
     "MAP_URL": "https://map.example.com/?a=1&b=2",
     "LAUNCH_AT": LAUNCH,
 }
@@ -132,7 +132,7 @@ def fake_site(tmp_path, pack_version="1.2.3", manifest_version="1.2.3", settings
     (site / "src" / "app").mkdir(parents=True)
     (site / "config.json").write_text(json.dumps(settings or SETTINGS), encoding="utf-8")
     (site / "src" / "app" / "style.css").write_text("body { color: green; }\n", encoding="utf-8")
-    with zipfile.ZipFile(site / "public" / "pack" / "TheRealms-Client-1.2.3.mrpack", "w") as z:
+    with zipfile.ZipFile(site / "public" / "pack" / "MonkeySMP-Client-1.2.3.mrpack", "w") as z:
         z.writestr("modrinth.index.json", json.dumps({"versionId": pack_version}))
     repo.manifest.parent.mkdir(parents=True)
     repo.manifest.write_text(json.dumps({"version": manifest_version}), encoding="utf-8")
@@ -163,14 +163,14 @@ def test_the_served_pack_must_be_the_pinned_version(tmp_path):
 def test_a_missing_pack_is_reported(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)
-    (tmp_path / "site" / "public" / "pack" / "TheRealms-Client-1.2.3.mrpack").unlink()
-    assert site_links.problems(repo) == ["site: MODPACK_URL is pack/TheRealms-Client-1.2.3.mrpack, but "
-                                         "site/public/pack/TheRealms-Client-1.2.3.mrpack doesn't exist"]
+    (tmp_path / "site" / "public" / "pack" / "MonkeySMP-Client-1.2.3.mrpack").unlink()
+    assert site_links.problems(repo) == ["site: MODPACK_URL is pack/MonkeySMP-Client-1.2.3.mrpack, but "
+                                         "site/public/pack/MonkeySMP-Client-1.2.3.mrpack doesn't exist"]
 
 
 def test_a_pack_served_elsewhere_is_not_looked_for(tmp_path):
     repo = fake_site(tmp_path, settings=links(MODPACK_URL="https://modrinth.com/modpack/monkeysmp"))
-    (tmp_path / "site" / "public" / "pack" / "TheRealms-Client-1.2.3.mrpack").unlink()
+    (tmp_path / "site" / "public" / "pack" / "MonkeySMP-Client-1.2.3.mrpack").unlink()
     site_links.main([], repo=repo)
     assert site_links.problems(repo) == []
 

@@ -22,7 +22,7 @@ from repo import REPO, Repo
 
 MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
 DATA_FORMAT = 121
-NS = "realms"
+NS = "monkey"
 # challenges writes into wardrobe's
 GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens")
 

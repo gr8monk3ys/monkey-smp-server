@@ -23,7 +23,7 @@ more kills; still tied, they share the rank. docs/SEASONS.md, "Weekly standings"
                                                          posts the Sunday recap to Discord (after the launch)
     python tools/standings.py preview WORLD --state DIR  the Sunday recap as it would post if the week closed
                                                          now (changes nothing)
-    python tools/datapacks.py                            regenerates the realms-standings data pack (with the others)
+    python tools/datapacks.py                            regenerates the monkey-standings data pack (with the others)
 
 WORLD is the live world folder (server/world). Everything is read from the files the server saves (every 5
 minutes, and when it stops), never from RCON, which can't list parties or scores:
@@ -31,16 +31,16 @@ minutes, and when it stops), never from RCON, which can't list parties or scores
   data/openpartiesandclaims/player-claims/*.nbt    each player's claimed chunks
   data/openpartiesandclaims/player-configs/*.toml  the party name (the owner's parties.name setting)
   data/minecraft/scoreboard.dat                     ev.cup, Strength, st.kills, st.warkills and st.bounty
-  data/realms/command_storage.dat                    the faction numbers and the week's war and pacts
+  data/monkey/command_storage.dat                    the faction numbers and the week's war and pacts
   ../usercache.json                                  players' current names
 Kills and bounties count from a snapshot the week starts with (STATE/week.json); each closed week is kept
-in STATE/weeks/. RCON is used only to write the board, through the container's own `realms rcon` (it finds
+in STATE/weeks/. RCON is used only to write the board, through the container's own `monkey rcon` (it finds
 the password itself) in DIR, the release's docker folder. The Discord webhook is STANDINGS_WEBHOOK_URL in the
 environment, else DISCORD_WEBHOOK_URL; it is never printed. The post is the Sunday recap, "Monkey SMP Weekly":
 the table, then a few lines on the week (tools/recap.py). A week that closes before the launch (no
-#launched rw.day yet: test play) is kept but never posted. deploy/realms-standings.sh runs this on the VPS.
+#launched rw.day yet: test play) is kept but never posted. deploy/monkey-standings.sh runs this on the VPS.
 
-The data pack (package/realms/datapacks/realms-standings/, generated: edit this file, not it) counts PvP
+The data pack (package/monkey/datapacks/monkey-standings/, generated: edit this file, not it) counts PvP
 kills outside the event arena (st.kills), holds claimed bounties (st.bounty), shows the board in chat with
 /trigger standings and on text displays staff place at spawn, and has the staff bounty commands
 (docs/ADMIN.md). Stdlib only (Python 3.11 or newer, for tomllib).
@@ -67,7 +67,7 @@ from rcon import LIMIT, Docker, RconError
 from recap import BOUNTY, DISCORD_LIMIT, KILLS, folded, gained  # one copy, so the recap counts a week as we do
 from repo import Repo
 
-DATAPACK = "realms-standings"
+DATAPACK = "monkey-standings"
 FN = f"data/{NS}/function/standings"
 STORE = f"{NS}:standings"   # command storage: week, last (written by this tool) and board (built from them)
 
@@ -225,7 +225,7 @@ def match_cup(world: World, warn) -> tuple[dict[str, int], list[Row]]:
         elif points:
             why = "matches no faction's name" if not hits else "matches more than one faction"
             warn(f'Cup entry {holder} ("{label}") {why}: listed on its own. Name it as the faction is named '
-                 f'in /openpac (function realms:events/cup/faction).')
+                 f'in /openpac (function monkey:events/cup/faction).')
             loose.append(Row(label, cup=points))
     return matched, loose
 
@@ -752,7 +752,7 @@ def help_function(files: dict[str, str]) -> str:
 
 
 def packs(repo: Repo) -> dict[Path, dict[str, str]]:
-    return {repo.realms / "datapacks" / DATAPACK: datapack_files()}
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- main

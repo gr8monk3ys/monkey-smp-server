@@ -1,6 +1,0 @@
-# PowerShell 7.6.6 (LTS) for realms.sh on Linux and macOS: <platform> <url> <sha256>.
-# Re-pin with `python tools/check_updates.py --apply`; check with `python tools/validate.py --online`.
-linux-x64 https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-x64.tar.gz ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc
-linux-aarch64 https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-arm64.tar.gz 924829e54c983648f6f1419a2dc7f9433c861b2fb5bd57736ff096c24f133729
-mac-x64 https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-osx-x64.tar.gz e325ed9f666894eb39a5ea52800b602da2fb4242bbe9747ceddb39cdc66de805
-mac-aarch64 https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-osx-arm64.tar.gz 6df833d094ebac1c1a74340d7b3437f4aaf5e03ce640484a1c4359f3ce8b3db1

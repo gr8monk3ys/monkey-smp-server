@@ -1,0 +1,34 @@
+# Runs as a player who just used /trigger wardrobe.
+execute if score @s wardrobe matches 1 run function monkey:wardrobe/menu
+execute if score @s wardrobe matches 2 run function monkey:wardrobe/reset_blade
+execute if score @s wardrobe matches 3 run function monkey:wardrobe/reset_helm
+execute if score @s wardrobe matches 4 run function monkey:wardrobe/menu_support
+execute if score @s wardrobe matches 5 run function monkey:wardrobe/menu_challenges
+execute if score @s wardrobe matches 101 run function monkey:wardrobe/skin/wayfarer
+execute if score @s wardrobe matches 102 run function monkey:wardrobe/skin/emberfang
+execute if score @s wardrobe matches 103 run function monkey:wardrobe/skin/frostbite
+execute if score @s wardrobe matches 104 run function monkey:wardrobe/skin/verdant
+execute if score @s wardrobe matches 105 run function monkey:wardrobe/skin/starfall
+execute if score @s wardrobe matches 106 run function monkey:wardrobe/skin/rallier
+execute if score @s wardrobe matches 107 run function monkey:wardrobe/skin/founders_edge
+execute if score @s wardrobe matches 108 run function monkey:wardrobe/skin/gravelight
+execute if score @s wardrobe matches 109 run function monkey:wardrobe/skin/solstice
+execute if score @s wardrobe matches 110 run function monkey:wardrobe/skin/oath_i
+execute if score @s wardrobe matches 111 run function monkey:wardrobe/skin/oath_ii
+execute if score @s wardrobe matches 112 run function monkey:wardrobe/skin/oath_iii
+execute if score @s wardrobe matches 113 run function monkey:wardrobe/skin/old_guard
+execute if score @s wardrobe matches 114 run function monkey:wardrobe/skin/lantern
+execute if score @s wardrobe matches 115 run function monkey:wardrobe/skin/standard
+execute if score @s wardrobe matches 116 run function monkey:wardrobe/skin/regalia
+execute if score @s wardrobe matches 117 run function monkey:wardrobe/skin/trailblazer
+execute if score @s wardrobe matches 118 run function monkey:wardrobe/skin/pinnacle
+execute if score @s wardrobe matches 201 run function monkey:wardrobe/skin/laurel
+execute if score @s wardrobe matches 202 run function monkey:wardrobe/skin/horned
+execute if score @s wardrobe matches 203 run function monkey:wardrobe/skin/plumed
+execute if score @s wardrobe matches 204 run function monkey:wardrobe/skin/midwinter_cap
+execute if score @s wardrobe matches 205 run function monkey:wardrobe/skin/wanderers_hood
+execute if score @s wardrobe matches 206 run function monkey:wardrobe/skin/crown
+execute if score @s wardrobe matches 207 run function monkey:wardrobe/skin/vanguard
+execute if score @s wardrobe matches 208 run function monkey:wardrobe/skin/founders_circlet
+scoreboard players set @s wardrobe 0
+scoreboard players enable @s wardrobe

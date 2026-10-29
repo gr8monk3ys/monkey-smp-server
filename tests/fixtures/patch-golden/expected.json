@@ -1,5 +1,5 @@
 {
-  "_about": "Pinned by tests/test_patches.py (Python) and tests/Realms.Tests.ps1 (PowerShell). Re-record with: python -I tests/fixtures/patch-golden/record.py",
+  "_about": "Pinned by tests/test_patches.py (Python) and tests/Monkey.Tests.ps1 (PowerShell). Re-record with: python -I tests/fixtures/patch-golden/record.py",
   "input": {
     "file": "input.zip",
     "sha256": "eb381b85e3f77aecfa4eee5201864cb0554c8f786cc275e8db53239cf1bcec98",

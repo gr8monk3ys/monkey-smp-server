@@ -54,7 +54,7 @@ def row(name, rank, members):
 def season_files(tmp_path, *, opt_out="Kai  # asked in #help\n\n"):
     start_world = FakeWorld(tmp_path / "launch" / "world").scores(*launch_scores()).path
     assert wrapped.main(["start", str(start_world), "--out", str(tmp_path / "start.json")]) == 0
-    world = FakeWorld(tmp_path / "world").scores(*end_scores()).storage("realms", {"firsts": {"held": {
+    world = FakeWorld(tmp_path / "world").scores(*end_scores()).storage("monkey", {"firsts": {"held": {
         "nether": {"name": "Alex", "order": 1, "week": 0}, "dragon": {"name": "Kai", "order": 2, "week": 3},
         "elytra": {"name": "Alex", "order": 3, "week": 3}}}}).path
     weeks = tmp_path / "standings" / "weeks"

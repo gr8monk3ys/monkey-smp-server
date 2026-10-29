@@ -24,16 +24,16 @@
    address, **Done**, **Join Server**.
 
 Can't find the pack on Modrinth? It is waiting for Modrinth's review. Until it's up, get
-`TheRealms-Client-<version>.mrpack` from the host and import it instead: in the app, **+ > Import**, choose
+`MonkeySMP-Client-<version>.mrpack` from the host and import it instead: in the app, **+ > Import**, choose
 the file. If your host runs an older release than the newest one, install the matching version from the
 pack's **Versions** tab, or import that release's `.mrpack`.
 
 ### B. Windows: the normal Minecraft Launcher
 
-If you'd rather keep the normal launcher, get **`TheRealms-Player-<version>.zip`** from the host.
+If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`** from the host.
 
 1. Start the Minecraft Launcher once, sign in, then **close it**.
-2. Unzip `TheRealms-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
+2. Unzip `MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
    It downloads about 560 MB (mods, resource packs, shaders) from their official websites and checks
    every file, and sets the game's memory from your computer's RAM. When it's done, press a key to close
@@ -43,7 +43,7 @@ If you'd rather keep the normal launcher, get **`TheRealms-Player-<version>.zip`
 4. **Multiplayer > Add Server**, type the address from the host, **Done**, **Join Server**.
 
 Your normal Minecraft isn't touched: Monkey SMP keeps its own mods, settings and worlds in a separate
-folder (`%APPDATA%\.the-realms`). To remove it, double-click **`Uninstall Monkey SMP.bat`**.
+folder (`%APPDATA%\.monkey-smp`). To remove it, double-click **`Uninstall Monkey SMP.bat`**.
 
 ### C. Prism Launcher
 

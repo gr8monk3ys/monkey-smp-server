@@ -102,9 +102,9 @@ How:
 - **Hold the tag.** The VPS deploys only the newest `vX.Y.Z` tag (`TRACK=tags`), so no tag means no deploy.
   This is the freeze. Merging to `main` is fine; tagging is not.
 - **Stop the deploy timer as a backstop**, once the last release is live (check with
-  `sh /srv/realms/repo/deploy/realms-deploy.sh --status` on Wednesday 4 November after 5 AM):
-  `sudo systemctl stop realms-deploy.timer`. An accidental tag then waits. The timer is still enabled, so a
-  reboot of the VPS starts it again: after any reboot, `systemctl is-active realms-deploy.timer` and stop it
+  `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` on Wednesday 4 November after 5 AM):
+  `sudo systemctl stop monkey-deploy.timer`. An accidental tag then waits. The timer is still enabled, so a
+  reboot of the VPS starts it again: after any reboot, `systemctl is-active monkey-deploy.timer` and stop it
   again.
 - **`DEPLOY_WINDOW` stays 04:00-05:00.** It can't express a date range, so it isn't the freeze, but it keeps
   any deploy far from the evening.
@@ -112,7 +112,7 @@ How:
   Leave them.
 - **Exception:** a crash, a dupe or a security hole. Both owners agree, tag a patch release, and deploy it
   with `--now` at a quiet hour after a backup. Nothing else.
-- **Mon 9 Nov:** `sudo systemctl start realms-deploy.timer`. Tagging is open again.
+- **Mon 9 Nov:** `sudo systemctl start monkey-deploy.timer`. Tagging is open again.
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
@@ -124,13 +124,13 @@ below).
 
 - [x] **The 2.8.0 world.** Done 2026-10-27: 2.8.0 went live on a new world (docs/LIVE.md, "A new world for
   Season I (2.8.0)"), and Chunky started pre-generating it. Do the load test and the rehearsal on this world.
-- [ ] **Wed 4 Nov, before the load test: Chunky.** `realms rcon "chunky progress"` (as `realms`, in
-  `/srv/realms/TheRealms-Server/docker`; `realms rcon` is short for `docker compose exec realms realms rcon`).
+- [ ] **Wed 4 Nov, before the load test: Chunky.** `monkey rcon "chunky progress"` (as `monkey`, in
+  `/srv/monkey/MonkeySMP-Server/docker`; `monkey rcon` is short for `docker compose exec monkey monkey rcon`).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:
   the load test refuses to run before it does.
 - [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
-  check `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` lists hourly snapshots. The keys go
-  in the password manager and `/etc/realms-backup.env` (root only), nowhere else.
+  check `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots` lists hourly snapshots. The keys go
+  in the password manager and `/etc/monkey-backup.env` (root only), nowhere else.
 - [ ] **Wed 4 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
   restored isn't a backup yet. Without working off-site backups by launch day, copy a backup off the VPS by
@@ -142,15 +142,15 @@ below).
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
   Over about 40 ms median at 25 players: follow the decision rule there before launch.
 - [ ] **By Wed 4 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
-  do: `sh /srv/realms/repo/deploy/realms-week.sh --check` (the week timer runs) and
-  `sudo sh /srv/realms/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
+  do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
+  `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
   docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
-- [ ] **By Wed 4 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/realms/repo/deploy/realms-drops.sh
+- [ ] **By Wed 4 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/monkey/repo/deploy/monkey-drops.sh
   --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
   docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
   a release places no NPCs by itself.
-- [ ] **Wed 4 Nov: rehearse on the drill copy**, never the live world: `function realms:rules/launch`,
+- [ ] **Wed 4 Nov: rehearse on the drill copy**, never the live world: `function monkey:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
   launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
@@ -158,7 +158,7 @@ below).
 - [ ] **Fri 6 Nov: staff stashes.** Anyone who played in the Season I world before launch leaves no diamond,
   ancient debris, mace or elytra in a chest, ender chest or shulker box: taken out after launch, it could claim
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
-- [ ] **Daily until launch: the whitelist.** `realms rcon "whitelist list"`. Before launch it holds staff
+- [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
   only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
 
 ### Passes and the whitelist by hand
@@ -169,8 +169,8 @@ each one in the roster sheet (below). Nobody goes on the whitelist before
 launch: at 5 PM on launch day, staff add every founding-roster member with a pass in one go.
 
 ```sh
-cd /srv/realms/TheRealms-Server/docker
-for n in Name1 Name2 Name3; do docker compose exec -T realms realms add-player "$n"; done
+cd /srv/monkey/MonkeySMP-Server/docker
+for n in Name1 Name2 Name3; do docker compose exec -T monkey monkey add-player "$n"; done
 ```
 
 Prepare that line at noon on launch day from the final roster, so on the day it is one paste. After launch, a pass
@@ -215,13 +215,13 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 
 | Time | Who | Step |
 | --- | --- | --- |
-| 9 AM | an owner | `realms-deploy.sh --status`: the release from 3 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
+| 9 AM | an owner | `monkey-deploy.sh --status`: the release from 3 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
 | 4:45 PM | the camera | Recording starts (below). |
-| 5:00 PM | an owner | Paste the whitelist line. In the console: `function realms:rules/launch`. Merge the `STORE_URL` pull request (if the roster is 30 or under and the store is approved). Post the launch announcement. |
-| 5:00 PM | an owner | Season Wrapped's starting point, on the VPS: `realms rcon "save-all flush"`, then `python3 /srv/realms/repo/tools/wrapped.py start /srv/realms/TheRealms-Server/server/world --out /srv/realms/seasons/season-I-wrapped-start.json`. It says how many players' counts it kept; it refuses before `rules/launch`, and to replace the file (a rerun needs `--force`). Without it, Season Wrapped counts staff test play (docs/SEASONS.md, "Ending a season"). |
+| 5:00 PM | an owner | Paste the whitelist line. In the console: `function monkey:rules/launch`. Merge the `STORE_URL` pull request (if the roster is 30 or under and the store is approved). Post the launch announcement. |
+| 5:00 PM | an owner | Season Wrapped's starting point, on the VPS: `monkey rcon "save-all flush"`, then `python3 /srv/monkey/repo/tools/wrapped.py start /srv/monkey/MonkeySMP-Server/server/world --out /srv/monkey/seasons/season-I-wrapped-start.json`. It says how many players' counts it kept; it refuses before `rules/launch`, and to replace the file (a rerun needs `--force`). Without it, Season Wrapped counts staff test play (docs/SEASONS.md, "Ending a season"). |
 | 5:00 PM | an owner | `python tools/block_wheel.py "S1 launch"` on the maintainer's computer; paste its `tellraw` into the console and the three blocks into `#monkey-smp`. |
 | 5:00 to 6 PM | moderators | The launch hour (rule 23): PvP and the Nether are closed, the End stays closed. Answer install questions in `#help` and tickets. The hourly backup runs at 5:00 and takes a minute or two; a short stutter then is that. |
 | 5:10 PM | an owner | `spark tps` in the console: under 50 ms a tick holds 20 TPS. Then every half hour. |
@@ -230,7 +230,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | 10 PM | an owner | Post the first night's notes in the staff channel: online peak, problems, who couldn't join. |
 
 If the server won't start or falls over at launch: say so in `#announcements` straight away with a new time,
-fix it, and run `function realms:rules/launch` only once everyone can join. The launch hour's timer is kept
+fix it, and run `function monkey:rules/launch` only once everyone can join. The launch hour's timer is kept
 with the world, so run it once.
 
 ## Launch weekend: Sunday 8 November
@@ -238,11 +238,11 @@ with the world, so run it once.
 - [ ] **9 AM: day-1 check** (below).
 - [ ] **6 PM: Build Battle judging.** Owners and the guest judge score look (10) and idea (10), plus 5 a
   visible wheel block (docs/SEASONS.md). Players' Discord vote breaks ties. Then
-  `/function realms:events/cup/add {id:"...",points:30,why:"Build Battle, 1st"}` and so on, `begin` and
+  `/function monkey:events/cup/add {id:"...",points:30,why:"Build Battle, 1st"}` and so on, `begin` and
   `attend` for everyone who built (docs/ADMIN.md, "Attendance"), and the result in `#monkey-smp`.
-- [ ] **Midnight:** launch weekend ends, and with it Founder's Circlet's window: `realms-week.timer` closes it
-  at 12:00:30 AM. Then `realms rcon "scoreboard players get #founder.open rw.day"` should say 0; if it says
-  1, `realms rcon "function realms:wardrobe/founder/close"`.
+- [ ] **Midnight:** launch weekend ends, and with it Founder's Circlet's window: `monkey-week.timer` closes it
+  at 12:00:30 AM. Then `monkey rcon "scoreboard players get #founder.open rw.day"` should say 0; if it says
+  1, `monkey rcon "function monkey:wardrobe/founder/close"`.
 - [ ] **Roster over 30:** merge the `STORE_URL` pull request in the morning, after the waitlist has had its
   message the night before (founding roster, below).
 
@@ -274,11 +274,11 @@ week of `2026-11-02`.
 
 **Day 1, Sunday 8 November, 9 AM**
 
-- [ ] `python3 /srv/realms/repo/tools/retention.py /srv/realms/TheRealms-Server/server/logs`: how many new
+- [ ] `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs`: how many new
   players joined. D1 is only complete on Monday, once Sunday is over.
 - [ ] Who has a pass but never joined. With the store: export the payments (Payments, Export as CSV), copy
   them to the VPS and run
-  `python3 /srv/realms/repo/tools/funnel.py ~/payments.csv /srv/realms/TheRealms-Server/server/logs --log-tz America/Los_Angeles`,
+  `python3 /srv/monkey/repo/tools/funnel.py ~/payments.csv /srv/monkey/MonkeySMP-Server/server/logs --log-tz America/Los_Angeles`,
   then delete the CSV (it holds emails; never commit it). Without the store: compare the roster sheet with
   the joins. Either way, send everyone who never joined the install help (docs/SHARING.md) that day.
 - [ ] **Monday 9 November:** run retention again for the launch cohort's D1.

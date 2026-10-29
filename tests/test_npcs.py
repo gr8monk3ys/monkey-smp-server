@@ -53,7 +53,7 @@ def test_every_named_dialog_exists_and_labels_fit():
 
 
 def test_buttons_set_triggers_the_data_packs_answer():
-    tick = (REPO.realms / "datapacks/realms-wardrobe/data/realms/function/wardrobe/tick.mcfunction").read_text()
+    tick = (REPO.monkey / "datapacks/monkey-wardrobe/data/monkey/function/wardrobe/tick.mcfunction").read_text()
     answered = set(re.findall(r"scores=\{(\w+)=1\.\.\}", tick))
     answered |= set(re.findall(r"scores=\{(\w+)=1\.\.\}", "".join(standings.datapack_files().values())))
     used = {a["Cmd"].split(":")[1] for name in PRESETS for a in actions(name) if a["Type"] == "SCOREBOARD"}
@@ -95,7 +95,6 @@ def test_copy_is_plain_and_says_monkey_smp():
     texts += [t for name in PRESETS for d in walk(PRESETS[name]) for t in d.get("Texts", []) if isinstance(t, str)]
     assert any("Monkey SMP" in t for t in texts)
     for t in texts:
-        assert "Realms" not in t and "realms" not in t, t
         # Easy NPC reads <tags> as formatting: only line breaks are used.
         assert set(re.findall(r"<(/?\w+)>", t)) <= {"br"}, t
     # Every Discord channel named is one the rulebook names.
@@ -155,11 +154,11 @@ def test_placing_replaces_the_npc_and_turns_the_entity():
 
 def test_here_places_through_a_marker_so_the_npc_has_no_owner():
     spot = FILES[f"{npcs.FN}/spot.mcfunction"]
-    assert "$function realms:npcs/$(name)/place with storage" in spot and "kill @s[type=minecraft:marker]" in spot
+    assert "$function monkey:npcs/$(name)/place with storage" in spot and "kill @s[type=minecraft:marker]" in spot
     for name in npcs.NPCS:
         here = FILES[f"{npcs.FN}/{name}/here.mcfunction"]
         assert f'place.name set value "{name}"' in here
-        assert "summon minecraft:marker run function realms:npcs/spot with storage" in here
+        assert "summon minecraft:marker run function monkey:npcs/spot with storage" in here
         assert f"npcs/{name}/place with" not in here   # run as the admin, the import would make them its owner
 
 

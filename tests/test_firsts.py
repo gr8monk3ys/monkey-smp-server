@@ -10,13 +10,13 @@ import rules
 import saved_world
 from repo import REPO
 
-FN = "data/realms/function/firsts"
+FN = "data/monkey/function/firsts"
 FILES = firsts.datapack_files()
 BANNED = ("totem", "end_crystal", "ender_pearl", "enchanted_golden_apple", "fire_aspect", "flame")
 
 
 def advancement(fid: str) -> dict:
-    return json.loads(FILES[f"data/realms/advancement/firsts/{fid}.json"])
+    return json.loads(FILES[f"data/monkey/advancement/firsts/{fid}.json"])
 
 
 def terms(fid: str) -> list[dict]:
@@ -48,7 +48,7 @@ def test_each_milestone_has_its_advancement_and_functions():
     for m in firsts.MILESTONES:
         fid = m["id"]
         adv = advancement(fid)
-        assert adv["rewards"] == {"function": f"realms:firsts/got/{fid}"}
+        assert adv["rewards"] == {"function": f"monkey:firsts/got/{fid}"}
         assert "display" not in adv   # hidden: no toast, no advancement screen entry
         (criterion,) = adv["criteria"].values()
         assert criterion["trigger"] == f"minecraft:{m['trigger']}"
@@ -65,12 +65,12 @@ def test_nothing_fires_before_the_launch_or_once_claimed():
         assert (f"#{m['id']}", "rf", {"max": 0}) in checks
         got = FILES[f"{FN}/got/{m['id']}.mcfunction"].splitlines()
         body = [line for line in got if not line.startswith("#")]
-        assert body[0] == f"advancement revoke @s only realms:firsts/{m['id']}"
+        assert body[0] == f"advancement revoke @s only monkey:firsts/{m['id']}"
         assert f"execute if score #{m['id']} rf matches 1.. run return 0" in body
         assert "execute unless score #launched rw.day matches 1 run return 0" in body
         assert "execute if entity @s[tag=ev.arena] run return 0" in body
         assert "execute unless entity @s[gamemode=!creative,gamemode=!spectator] run return 0" in body
-        assert body[-1] == f"function realms:firsts/claim/{m['id']}"
+        assert body[-1] == f"function monkey:firsts/claim/{m['id']}"
 
 
 def test_the_end_counts_only_while_open_and_netherite_only_after_rule_24():
@@ -80,11 +80,11 @@ def test_the_end_counts_only_while_open_and_netherite_only_after_rule_24():
     got = FILES[f"{FN}/got/netherite.mcfunction"]
     assert f"scoreboard players operation #age rf -= {rules.NETHERITE_BEAT} {rules.OBJECTIVE}" in got
     assert f"execute if score #age rf matches ..{firsts.NETHERITE_STALE} run return 0" in got
-    assert got.index("#age rf matches") < got.index("function realms:firsts/claim/netherite")
+    assert got.index("#age rf matches") < got.index("function monkey:firsts/claim/netherite")
     # The no-Netherite pack stamps the game time every second while it is on.
-    second = rules.netherite_files()["data/realms/function/netherite/second.mcfunction"]
+    second = rules.netherite_files()["data/monkey/function/netherite/second.mcfunction"]
     assert f"execute store result score {rules.NETHERITE_BEAT} {rules.OBJECTIVE} run time query gametime" in second
-    assert "schedule function realms:netherite/second 20t replace" in second
+    assert "schedule function monkey:netherite/second 20t replace" in second
     # Worn, not just carried: all four armor slots.
     equipment = terms("netherite")[-1]["predicate"]["minecraft:equipment"]
     assert set(equipment) == {"head", "chest", "legs", "feet"}
@@ -96,11 +96,11 @@ def test_a_claim_is_kept_in_storage_and_scores_and_announced_to_everyone():
     assert body[0] == "execute if score #dragon rf matches 1.. run return 0"
     assert body[1] == "scoreboard players set #dragon rf 1"
     for line in ("scoreboard players add #claimed rf 1", "scoreboard players operation @s rf.dragon = #claimed rf",
-                 "function realms:firsts/name",
-                 "data modify storage realms:firsts held.dragon.name set from storage realms:firsts name",
-                 "execute store result storage realms:firsts held.dragon.order int 1 run "
+                 "function monkey:firsts/name",
+                 "data modify storage monkey:firsts held.dragon.name set from storage monkey:firsts name",
+                 "execute store result storage monkey:firsts held.dragon.order int 1 run "
                  "scoreboard players get #claimed rf",
-                 "execute store result storage realms:firsts held.dragon.week int 1 run "
+                 "execute store result storage monkey:firsts held.dragon.week int 1 run "
                  "scoreboard players get #week rc.week"):
         assert line in body
     said = next(line for line in body if line.startswith("tellraw @a "))
@@ -113,25 +113,25 @@ def test_a_claim_is_kept_in_storage_and_scores_and_announced_to_everyone():
 
 def test_the_name_is_read_from_a_player_head_and_never_left_over():
     name = [line for line in FILES[f"{FN}/name.mcfunction"].splitlines() if not line.startswith("#")]
-    assert name[0] == 'data modify storage realms:firsts name set value ""'
+    assert name[0] == 'data modify storage monkey:firsts name set value ""'
     assert name[-1].startswith("kill @e[type=minecraft:item_display,tag=rf.name]")
     assert 'item.components."minecraft:profile".name' in name[3]
-    table = json.loads(FILES["data/realms/loot_table/firsts/head.json"])
+    table = json.loads(FILES["data/monkey/loot_table/firsts/head.json"])
     (entry,) = table["pools"][0]["entries"]
     assert entry["name"] == "minecraft:player_head"
     assert entry["modifier"] == {"type": "minecraft:fill_player_head", "entity": "this"}
 
 
 def test_the_first_launch_clears_test_play_and_a_later_one_nothing():
-    launch = rules.rules_files()["data/realms/function/rules/launch.mcfunction"]
-    assert launch.index("function realms:firsts/launch") < launch.index("function realms:challenges/launch")
+    launch = rules.rules_files()["data/monkey/function/rules/launch.mcfunction"]
+    assert launch.index("function monkey:firsts/launch") < launch.index("function monkey:challenges/launch")
     ours = [line for line in FILES[f"{FN}/launch.mcfunction"].splitlines() if not line.startswith("#")]
-    assert ours == ["execute if score #launched rw.day matches 1 run return 0", "function realms:firsts/clear",
-                    "function realms:firsts/clean"]
+    assert ours == ["execute if score #launched rw.day matches 1 run return 0", "function monkey:firsts/clear",
+                    "function monkey:firsts/clean"]
     clear = FILES[f"{FN}/clear.mcfunction"]
-    assert "data remove storage realms:firsts held" in clear and "scoreboard players set #claimed rf 0" in clear
+    assert "data remove storage monkey:firsts held" in clear and "scoreboard players set #claimed rf 0" in clear
     for m in firsts.MILESTONES:
-        assert f"function realms:firsts/reopen/{m['id']}" in clear
+        assert f"function monkey:firsts/reopen/{m['id']}" in clear
         reopen = FILES[f"{FN}/reopen/{m['id']}.mcfunction"]
         assert f"scoreboard players set #{m['id']} rf 0" in reopen
         assert f"scoreboard players reset * rf.{m['id']}" in reopen
@@ -143,11 +143,11 @@ def test_load_keeps_claims_and_the_trigger_lists_every_milestone():
     for m in firsts.MILESTONES:
         assert f"scoreboard players add #{m['id']} rf 0" in load        # never set: a claim survives a reload
         assert f"scoreboard players set #{m['id']} rf" not in load
-    assert "execute as @a[scores={firsts=1..}] run function realms:firsts/use" in FILES[f"{FN}/tick.mcfunction"]
+    assert "execute as @a[scores={firsts=1..}] run function monkey:firsts/use" in FILES[f"{FN}/tick.mcfunction"]
     assert "scoreboard players enable @a firsts" in FILES[f"{FN}/second.mcfunction"]
     use = FILES[f"{FN}/use.mcfunction"]
     for m in firsts.MILESTONES:
-        assert f"function realms:firsts/show/{m['id']}" in use
+        assert f"function monkey:firsts/show/{m['id']}" in use
 
 
 def test_nothing_counts_once_the_season_is_locked():
@@ -155,13 +155,13 @@ def test_nothing_counts_once_the_season_is_locked():
         assert ("#season_locked", "ev.state", {"max": 0}) in [fixed(t) for t in terms(m["id"])]
         got = FILES[f"{FN}/got/{m['id']}.mcfunction"]
         assert "execute if score #season_locked ev.state matches 1 run return 0" in got
-        assert got.index("#season_locked") < got.index(f"function realms:firsts/claim/{m['id']}")
+        assert got.index("#season_locked") < got.index(f"function monkey:firsts/claim/{m['id']}")
 
 
 def test_the_reward_checks_the_end_is_open_too():
     got = FILES[f"{FN}/got/end.mcfunction"]
     assert f"execute unless score #end_open {rules.OBJECTIVE} matches 1.. run return 0" in got
-    assert got.index("#end_open") < got.index("function realms:firsts/claim/end")
+    assert got.index("#end_open") < got.index("function monkey:firsts/claim/end")
     assert all("#end_open" not in FILES[f"{FN}/got/{m['id']}.mcfunction"]
                for m in firsts.MILESTONES if m["id"] != "end")
 
@@ -178,14 +178,14 @@ def test_an_item_kept_from_test_play_never_claims_its_first():
             assert f"unless items entity @s {slot} minecraft:{item}" in line
         got = FILES[f"{FN}/got/{fid}.mcfunction"]
         assert f"execute unless entity @s[tag=rf.clean.{fid}] run return 0" in got
-        assert got.index("rf.clean.") < got.index(f"function realms:firsts/claim/{fid}")
+        assert got.index("rf.clean.") < got.index(f"function monkey:firsts/claim/{fid}")
     for m in firsts.MILESTONES:
         if not m.get("item"):
             assert "rf.clean." not in FILES[f"{FN}/got/{m['id']}.mcfunction"]
     # Marked at the first launch (after the clear) for whoever is online, and every second after the launch.
     launch = [line for line in FILES[f"{FN}/launch.mcfunction"].splitlines() if not line.startswith("#")]
-    assert launch[-2:] == ["function realms:firsts/clear", "function realms:firsts/clean"]
-    assert ("execute if score #launched rw.day matches 1 run function realms:firsts/clean"
+    assert launch[-2:] == ["function monkey:firsts/clear", "function monkey:firsts/clean"]
+    assert ("execute if score #launched rw.day matches 1 run function monkey:firsts/clean"
             in FILES[f"{FN}/second.mcfunction"])
 
 
@@ -193,11 +193,11 @@ def test_the_menu_reads_a_first_as_holders_does():
     show = [line for line in FILES[f"{FN}/show/vault.mcfunction"].splitlines() if not line.startswith("#")]
     assert show[0].startswith("execute unless score #vault rf matches 1.. run return run tellraw @s ")
     assert '"text":"  open"' in show[0]
-    assert "execute if data storage realms:firsts held.vault{name:\"\"} run scoreboard players set #named rf 0" in show
-    assert "execute if data storage realms:firsts held.vault{week:-1} run scoreboard players set #dated rf 0" in show
+    assert "execute if data storage monkey:firsts held.vault{name:\"\"} run scoreboard players set #named rf 0" in show
+    assert "execute if data storage monkey:firsts held.vault{week:-1} run scoreboard players set #dated rf 0" in show
     lines = show[5:]
     assert len(lines) == 6 and not lines[-1].startswith("execute")   # the last one: no name, no week
-    named = '{"storage":"realms:firsts","nbt":"held.vault.name","color":"yellow"}'
+    named = '{"storage":"monkey:firsts","nbt":"held.vault.name","color":"yellow"}'
     online = '{"selector":"@a[scores={rf.vault=1..}]","color":"yellow"}'
     week = '"nbt":"held.vault.week"'
     for line in lines:
@@ -237,7 +237,7 @@ def claim(name, order, week):
 
 
 def world_with(tmp_path, held, scores=()):
-    w = FakeWorld(tmp_path / "world").storage("realms", {"firsts": {"held": held, "name": "Alex"}})
+    w = FakeWorld(tmp_path / "world").storage("monkey", {"firsts": {"held": held, "name": "Alex"}})
     if scores:
         w.scores(*scores)
     return w.path
@@ -287,13 +287,13 @@ def test_the_champion_has_most_firsts_and_a_tie_goes_to_who_reached_it_first(tmp
 
 def test_command_storage_reads_26_3s_file_and_refuses_a_bad_one(tmp_path):
     w = FakeWorld(tmp_path / "w")
-    assert saved_world.command_storage(w.path, "realms") is None
-    w.storage("realms", {"firsts": {"held": {}}, "drops": {"night": 3}})
-    assert saved_world.command_storage(w.path, "realms") == {"firsts": {"held": {}}, "drops": {"night": 3}}
+    assert saved_world.command_storage(w.path, "monkey") is None
+    w.storage("monkey", {"firsts": {"held": {}}, "drops": {"night": 3}})
+    assert saved_world.command_storage(w.path, "monkey") == {"firsts": {"held": {}}, "drops": {"night": 3}}
     assert saved_world.command_storage(w.path, "other") is None
-    w.storage("realms", {"firsts": Ints([1, 2])})
+    w.storage("monkey", {"firsts": Ints([1, 2])})
     with pytest.raises(ValueError, match="command_storage.dat"):
-        saved_world.command_storage(w.path, "realms")
+        saved_world.command_storage(w.path, "monkey")
 
 
 # ---------------------------------------------------------------- the command line

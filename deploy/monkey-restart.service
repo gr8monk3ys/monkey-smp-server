@@ -1,0 +1,13 @@
+# Restarts the server once (monkey-deploy.sh --restart). Started by monkey-restart.timer; install with docs/LIVE.md.
+[Unit]
+Description=Monkey SMP: daily restart
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-deploy.sh --restart
+# Up to 30 minutes waiting for a deploy or backup, the 5-minute warning, then the start.
+TimeoutStartSec=60min

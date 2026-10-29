@@ -87,6 +87,38 @@
     }, { threshold: 0.5 }).observe(trailer);
   }
 
+  // The blocks of a [data-place] list that start below the fold drop into place as they scroll into view, a
+  // few at a time (.unplaced and .placed in style.css). The ones on screen at load are left alone, and so is
+  // everything for visitors who asked for less motion. Printing shows them all.
+  var places = document.querySelectorAll("[data-place]");
+  if (places.length && !calm && "IntersectionObserver" in window) {
+    var waiting = [];
+    places.forEach(function (list) {
+      Array.prototype.forEach.call(list.children, function (block) {
+        if (block.getBoundingClientRect().top > window.innerHeight) {
+          block.classList.add("unplaced");
+          waiting.push(block);
+        }
+      });
+    });
+    var placer = new IntersectionObserver(function (entries) {
+      var n = 0;
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var block = entry.target;
+        placer.unobserve(block);
+        setTimeout(function () {
+          block.classList.remove("unplaced");
+          block.classList.add("placed");
+        }, Math.min(n++ * 60, 300));
+      });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    waiting.forEach(function (block) { placer.observe(block); });
+    window.addEventListener("beforeprint", function () {
+      waiting.forEach(function (block) { block.classList.remove("unplaced"); });
+    });
+  }
+
   // Copy puts the address on the clipboard; where the browser won't allow that, it selects the address so
   // the visitor can copy it themselves.
   var copy = document.getElementById("copy");

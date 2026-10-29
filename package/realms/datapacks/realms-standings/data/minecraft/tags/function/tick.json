@@ -1,5 +1,6 @@
 {
   "values": [
-    "realms:standings/tick"
+    "realms:standings/tick",
+    "realms:diplomacy/tick"
   ]
 }

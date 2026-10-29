@@ -14,6 +14,7 @@ from nbt_writer import nbt
 
 import events
 import rcon
+import recap
 import standings
 from repo import REPO
 
@@ -258,8 +259,11 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # the next week starts from everyone's kills now
     assert json.loads((state / "week.json").read_text())["kills"]["RiaFake"] == 10
     # the board shows the new week (no kills yet) and the closed one, then it is announced
-    assert rcon.sent[-1] == "function realms:standings/announce"
-    assert rcon.sent[-2] == "function realms:standings/publish"
+    assert rcon.sent[-3] == "function realms:standings/announce"
+    assert rcon.sent[-4] == "function realms:standings/publish"
+    # then the week's wars end (tools/diplomacy.py week_end)
+    assert rcon.sent[-2] == 'data modify storage realms:diplomacy batch set value [{f:"week_over",seq:0}]'
+    assert rcon.sent[-1] == "function realms:diplomacy/batch/run"
     assert "kills 0" in rcon.sent[0] and "kills 4" in rcon.sent[1]
     [(url, kind, body)] = discord.posts
     assert url == WEBHOOK and kind == "application/json"
@@ -319,6 +323,17 @@ def test_discord_message_is_a_table():
     assert len(message) <= standings.DISCORD_LIMIT
     assert message.count("```") == 2 and "and 4 more" in message
     assert "Bounty" in message and standings.FORMULA in message
+
+
+def test_the_recap_carries_the_weeks_war_and_pacts_first():
+    # A week with wars is not "a quiet week": the war and pacts lines come first, then the recap's own lines.
+    week = {"start": None, "end": SUNDAY.isoformat(), "rows": [vars(r) for r in long_rows(3)],
+            "diplomacy": ["- Red Monkeys declared war on Blue Jays"],
+            "recap": [[recap.QUIET], ["**Next Saturday:** Faction Raid I."]]}
+    message = standings.discord_message(week)
+    assert recap.QUIET not in message
+    assert message.index("declared war") < message.index("**Next Saturday:**")
+    assert recap.QUIET in standings.discord_message({**week, "diplomacy": []})
 
 
 def test_main_show(world, capsys):

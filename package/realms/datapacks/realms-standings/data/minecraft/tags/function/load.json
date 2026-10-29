@@ -1,5 +1,6 @@
 {
   "values": [
-    "realms:standings/load"
+    "realms:standings/load",
+    "realms:diplomacy/load"
   ]
 }

@@ -588,6 +588,28 @@ the week's kills and holds the board; the VPS works the standings out and posts 
   (changes nothing). Kills or a bounty you take back after the close stay in that week's recap; take them back
   before Sunday 7 PM Pacific. Events count in its turnout line only when begun with `events/begin`.
 
+**War and pacts.** Faction leaders (party owners) declare war and make pacts with `/trigger diplomacy`
+(`docs/SEASONS.md`, "War and pacts"). The hourly board run gives each party its faction number in game; a
+party made since can't take part until the next run. `/function realms:diplomacy/help` lists these:
+
+```
+/function realms:diplomacy/staff/factions          # every faction's number and name
+/function realms:diplomacy/staff/end {a:3,b:7}      # ends the war or pact between factions 3 and 7, announced
+```
+
+- **Ending one by hand.** Use `staff/end` when a war or pact breaks the rules (a pact that is really a
+  confederation, rule 31) or was made by mistake. Everyone is told it was staff, and it goes in the Sunday
+  post.
+- **Taking back fed war kills (B13)**, over RCON: `scoreboard players remove NAME st.warkills 3`, as well
+  as `st.kills` (above). A war kill counts in both.
+- **Before the launch** nobody can declare. The first second after `rules/launch`, every war, pact, offer
+  and war kill from before it is cleared.
+- Wars and offers end at Sunday's close; pacts stand. The close ends the ones running when the world last
+  saved, so a war declared in the last few minutes before it runs to the next close. If the close couldn't
+  reach the server, its next run ends those same ones, never a war declared since.
+- **"faction N (name) is missing from the parties read"** in the board run's log: one read didn't find the party. If the
+  next run still doesn't, its wars and pacts end. A run that reads no parties at all ends nothing and says so.
+
 **Attendance.** `/function realms:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function realms:events/attend` for everyone who came (joining the arena counts
 on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and

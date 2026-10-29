@@ -1,0 +1,3 @@
+$tellraw @s ["",{"text":"War and pacts","color":"gold","bold":true},{"text":"  your faction: ","color":"gray"},{"nbt":"names.f$(a)","storage":"realms:factions","interpret":true,"color":"white"}]
+tellraw @s {"text":"A war: kills between the two count double in the weekly standings until Sunday's close (7 PM Pacific); declare again to go on. A pact: no war between the two until one side breaks it. Claims and the rules stay the same (no teaming, rule 41).","color":"gray"}
+execute unless score @s st.leader matches 1 run tellraw @s {"text":"Only your faction's leader (its party owner) can declare.","color":"gray"}

@@ -5,7 +5,7 @@ Each column gives the faction a share of its weight, in proportion to the column
     Cup points (ev.cup, the whole season so far)     40
     land (chunks its members have claimed)           20
     Strength (its members' levels added up)          20
-    PvP kills by its members this week               20
+    PvP kills by its members this week               20   (a war enemy's count twice: tools/diplomacy.py)
     + 5 for each bounty a member claimed this week
 
 so the leader of every column would have 100 (plus bounties). Ties on points go to more Cup points, then
@@ -15,7 +15,8 @@ more kills; still tied, they share the rank. docs/SEASONS.md, "Weekly standings"
     python tools/standings.py start WORLD --state DIR    starts the first week, if none is running
     python tools/standings.py board WORLD --state DIR --docker DIR
                                                          this week so far and last week's final table on
-                                                         the in-game board
+                                                         the in-game board, and each faction's number in
+                                                         game (tools/diplomacy.py)
     python tools/standings.py close WORLD --state DIR --docker DIR
                                                          ends the week: keeps its final table, starts the
                                                          next, updates the board, says so in chat and
@@ -29,7 +30,8 @@ minutes, and when it stops), never from RCON, which can't list parties or scores
   data/openpartiesandclaims/parties/*.nbt          each party: its owner and members
   data/openpartiesandclaims/player-claims/*.nbt    each player's claimed chunks
   data/openpartiesandclaims/player-configs/*.toml  the party name (the owner's parties.name setting)
-  data/minecraft/scoreboard.dat                     ev.cup, Strength, st.kills and st.bounty
+  data/minecraft/scoreboard.dat                     ev.cup, Strength, st.kills, st.warkills and st.bounty
+  data/realms/command_storage.dat                    the faction numbers and the week's war and pacts
   ../usercache.json                                  players' current names
 Kills and bounties count from a snapshot the week starts with (STATE/week.json); each closed week is kept
 in STATE/weeks/. RCON is used only to write the board, through the container's own `realms rcon` (it finds
@@ -54,6 +56,7 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import diplomacy
 import recap
 import saved_world
 import season_calendar
@@ -73,7 +76,8 @@ MIN_WEEK_DAYS = 3     # close leaves a week younger than this alone: it was clos
 TOP = 10              # factions on the board and in the Discord post
 LAST_TOP = 5          # factions in last week's table on the board
 NAME_LIMIT = 20       # characters of a faction's name on the board
-FORMULA = "Cup 40, land 20, Strength 20, kills this week 20, each as a share of the leader; +5 a bounty."
+FORMULA = ("Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the "
+           "leader; +5 a bounty.")
 
 
 # ---------------------------------------------------------------- reading the world
@@ -222,6 +226,7 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
     base = baseline or {}
     scores = world.scores
     kills, kills_then = scores.get(KILLS, {}), base.get("kills", {})
+    war, war_then = scores.get(diplomacy.WARKILLS, {}), base.get("warkills", {})
     bounty, bounty_then = folded(scores.get(BOUNTY, {})), folded(base.get("bounty", {}))
     cup, rows = match_cup(world, warn)
     for p in world.parties:
@@ -231,6 +236,7 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
             arena = scores.get(STRENGTH, {})
             row.strength += arena[name] if name in arena else scores.get(LEVEL, {}).get(name, 0)
             row.kills += gained(kills.get(name, 0), kills_then.get(name, 0))
+            row.kills += gained(war.get(name, 0), war_then.get(name, 0))   # a war enemy's kill counts twice
             row.bounties += gained(bounty.get(name.lower(), 0), bounty_then.get(name.lower(), 0))
         rows.append(row)
     return rank(rows)
@@ -281,9 +287,11 @@ def write_json(path: Path, data: dict) -> None:
 
 
 def snapshot(world: World, now: dt.datetime) -> dict:
-    """A new week's starting point: every player's kills and bounties so far, and what the recap counts from."""
+    """A new week's starting point: every player's kills (and war kills) and bounties so far, and what the recap
+    counts from."""
     return {"start": now.isoformat(timespec="seconds"),
             "kills": dict(sorted(world.scores.get(KILLS, {}).items())),
+            "warkills": dict(sorted(world.scores.get(diplomacy.WARKILLS, {}).items())),
             "bounty": dict(sorted(world.scores.get(BOUNTY, {}).items())),
             "recap": recap.baseline(world)}
 
@@ -382,8 +390,13 @@ def discord_message(week: dict) -> str:
     """The Sunday recap (tools/recap.py): a closed week's table, then the lines its close kept. A week closed
     before the recap existed has none, so it posts the table alone."""
     rows = [Row(**r) for r in week["rows"]]
-    return recap.message(recap.heading(week), lambda n: table_text(rows, n), week.get("recap", []),
-                         f"Scored as {FORMULA} `/trigger standings` shows the board in game.", DISCORD_LIMIT)
+    head, foot = recap.heading(week), f"Scored as {FORMULA} `/trigger standings` shows the board in game."
+    bare = recap.message(head, lambda n: table_text(rows, n), [], foot, DISCORD_LIMIT)
+    # The week's war and pacts come first of the sections, in the room the table leaves (cut short with MORE).
+    wars = diplomacy.discord_lines(week, DISCORD_LIMIT - recap.size(bare) - 1)
+    sections = [b for b in week.get("recap", []) if not (wars and b == [recap.QUIET])]   # not quiet: it had wars
+    return recap.message(head, lambda n: table_text(rows, n), [wars, *sections] if wars else sections, foot,
+                         DISCORD_LIMIT)
 
 
 def webhook() -> str:
@@ -436,27 +449,53 @@ def start(world: Path, state: Path, now: dt.datetime) -> int:
     return 0
 
 
+def sync_factions(rcon, folder: Path, data: World) -> int:
+    """Each faction's number, owner and name in game (tools/diplomacy.py), from the parties as read. A party file
+    read_parties left out (no owner) is one diplomacy can't tell about, so it keeps what it has in game."""
+    factions = [diplomacy.Faction(p.id, board_name(p.name) or board_name(p.owner) or p.id[:8], p.members)
+                for p in data.parties]
+    unsure = frozenset(p.id for p in saved_world.parties(folder) or [] if p.owner is None)
+    return diplomacy.sync(rcon, factions, data.scores, folder, warn, unsure)
+
+
 def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
     week = read_json(week_file(state))
     last_path = latest_week(state)
+    data = read_world(world)
+    status = 0
+    try:   # never in the board's way: the board goes up whatever happens here
+        sent = sync_factions(rcon, world, data)
+        if sent:
+            print(f"factions in game: {sent} change(s) sent")
+    except (RconError, OSError, ValueError) as e:
+        print(f"could not write the factions in game: {e}", file=sys.stderr)
+        status = 1
     try:
-        update_board(rcon, table(read_world(world), week, warn), week, read_json(last_path) if last_path else None,
-                     now)
+        update_board(rcon, table(data, week, warn), week, read_json(last_path) if last_path else None, now)
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         return 1
     print(f"board updated ({clock(now)})")
-    return 0
+    return status
 
 
 def closing(world: Path, data: World, rows: list[Row], week: dict | None, state: Path, now: dt.datetime,
             assume_launched: bool = False) -> dict:
-    """The closed week's file: its final table and, after the launch, the recap's lines (worked out now, from
-    the world as it is, so a retry posts the same). Before the launch it is marked so and never posted.
+    """The closed week's file: its final table, the week's war and pacts, and, after the launch, the recap's
+    lines (worked out now, from the world as it is, so a retry posts the same). Before the launch it is marked
+    so and never posted.
     assume_launched (preview): before the launch, the recap's lines as if the week had begun after it."""
+    before = latest_week(state)
+    try:
+        storage = diplomacy.saved_storage(world)
+    except (OSError, ValueError) as e:   # the war and pacts lines are extra: the close goes on without them
+        warn(f"{e}: this week's war and pacts are left out of the post (the next one has them)")
+        storage = None
+    said = diplomacy.report(storage, data.scores, (read_json(before) or {}) if before else {})
     closed = {"start": week.get("start") if week else None, "end": now.isoformat(timespec="seconds"),
               "formula": FORMULA, "rows": [asdict(r) for r in rows], "announced": False, "posted": False,
-              "launched": recap.launched(data)}
+              "launched": recap.launched(data), **said, "wars_ended": False,
+              "war_ends": diplomacy.week_end(data.scores, said["diplomacy_seq"])}
     if closed["launched"] or assume_launched:
         closed["recap"] = recap.blocks(recap.Week(closed["rows"], data, week or {}, last_launched(state), now, world,
                                                   assume_launched=assume_launched and not closed["launched"]), warn)
@@ -523,6 +562,16 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         status = 1
+    if not last.get("wars_ended", True):   # a week closed before diplomacy has no wars to end
+        try:   # the closed week's own wars (war_ends), so a late retry never ends one of the new week
+            for command in diplomacy.batch_commands(last.get("war_ends") or []):
+                rcon(command)
+            last["wars_ended"] = True
+            write_json(path, last)
+            print("the week's wars are over")
+        except RconError as e:
+            print(f"could not end the week's wars: {e}", file=sys.stderr)
+            status = 1
     if last.get("posted"):
         print("already posted to Discord")
     elif last.get("launched") is False:
@@ -559,9 +608,10 @@ HELP = [("place", "stand where the board goes, at spawn"), ("remove", "next to t
 
 def datapack_files() -> dict[str, str]:
     f: dict[str, str] = {}
-    f["pack.mcmeta"] = mcmeta("Monkey SMP weekly faction standings and bounties (generated by tools/standings.py)")
-    f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:standings/load")
-    f["data/minecraft/tags/function/tick.json"] = function_tag(f"{NS}:standings/tick")
+    f["pack.mcmeta"] = mcmeta("Monkey SMP weekly faction standings, bounties, war and pacts (generated by "
+                              "tools/standings.py and tools/diplomacy.py)")
+    f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:standings/load", f"{NS}:diplomacy/load")
+    f["data/minecraft/tags/function/tick.json"] = function_tag(f"{NS}:standings/tick", f"{NS}:diplomacy/tick")
     team, color, prefix = TITLE
     f[f"{FN}/load.mcfunction"] = lines(
         "# Generated by tools/standings.py. Scores, storage and the team are kept across restarts.",
@@ -633,6 +683,7 @@ def datapack_files() -> dict[str, str]:
         f"kill @e[type={DISPLAY},tag={BOARD_TAG},distance=..5]",
     )
     f.update(bounty_files())
+    f.update(diplomacy.datapack_files())
     f[f"{FN}/help.mcfunction"] = help_function(f)
     return {k: v if v.endswith("\n") else v + "\n" for k, v in f.items()}
 

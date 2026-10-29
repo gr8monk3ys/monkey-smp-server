@@ -148,3 +148,25 @@ _Avoid_: bot, villager
 **Sunday recap**:
 "Monkey SMP Weekly", the Discord post the weekly standings close makes on Sunday evening: the final table, then one line per section (biggest mover, top fighter, bounties, land, challenges, event turnout, next Saturday). `tools/recap.py` keeps the sections; nothing posts before the launch.
 _Avoid_: newsletter, digest, weekly report
+
+## Factions
+
+**Faction**:
+A group of up to 4 players: an Open Parties and Claims party. Its name is the party's name, or "NAME's faction" after its owner.
+_Avoid_: team, clan, party (alone: that is the mod's word)
+
+**Faction leader**:
+The owner of a faction's party, the one player who declares war and makes pacts for it (`st.leader`).
+_Avoid_: owner (that is the admin account), chief
+
+**Faction number**:
+The number from 1 to 99 a party gets in game for the life of a world, so data packs can tell factions apart (`st.faction`, `realms:factions`). `tools/diplomacy.py` gives it.
+_Avoid_: faction id (that is the party's id), team number
+
+**War**:
+Declared by one faction's leader on another faction, until Sunday's close: kills between the two count twice in the weekly standings. It changes the score, not the rules.
+_Avoid_: raid (that is the event), feud
+
+**Pact**:
+An agreement between two factions, made in game, that neither declares war on the other until one leader breaks it. At most 2 per faction. Not an Open Parties and Claims ally: allies share claims, a pact doesn't.
+_Avoid_: alliance (rule 31's word, for the relationship itself), treaty

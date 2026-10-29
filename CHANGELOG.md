@@ -22,6 +22,14 @@
   and their skins, rarest first. A shared link shows their own line in Discord. Anyone can ask staff for no
   page. Made by a maintainer tool, `tools/wrapped.py`, which also keeps a starting point at the launch so test
   play doesn't count. Not yet tried on a real season's world.
+- **War and pacts** (docs/SEASONS.md, "War and pacts"): a faction's leader declares war or makes a pact with
+  `/trigger diplomacy`, from the launch on. A kill between two factions at war counts twice in the weekly
+  Kills column until Sunday's close, when every war ends. A pact stands until either side breaks it, at most 2
+  each, and every declaration is announced in chat and listed in Sunday's Discord post. Claims and the rules
+  don't change. In the `realms-standings` data pack (`tools/diplomacy.py`).
+- Each faction now has a number in game (`st.faction`, `st.leader`, storage `realms:factions`), written by
+  the standings' hourly board run, for packs that need to tell factions apart (docs/MAINTAINING.md, "The
+  faction number in game").
 
 ### Changed
 

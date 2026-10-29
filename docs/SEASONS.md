@@ -166,7 +166,7 @@ faction that never wins an event still has a column it can lead.
 | Cup | The faction's Season Cup points so far (`ev.cup`) | 40 |
 | Land | Chunks its members have claimed (Open Parties and Claims) | 20 |
 | Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
-| Kills | PvP kills by its members this week, outside the event arena | 20 |
+| Kills | PvP kills by its members this week, outside the event arena; a war enemy's count twice (War and pacts, below) | 20 |
 | Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
 
 Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
@@ -211,6 +211,39 @@ the Saturday event, and each one done counts toward three wardrobe skins (`docs/
 challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
 launch weekend is challenge week 0, and week 1 starts on Monday 2 November 2026. See what runs when with
 `python tools/challenges.py schedule`.
+
+### War and pacts
+
+Factions can declare war and make pacts in game. It gives the weekly Kills column a reason, and it puts on
+record who is with whom.
+
+- **Who decides.** A faction's leader, the owner of its party, types `/trigger diplomacy`. Anyone in a
+  faction can open it to see how theirs stands with every other faction; only the leader gets the buttons.
+  It opens at the launch, so nothing from test play counts.
+- **War.** A leader declares war on another faction. Everyone online is told, with a raid horn. Until
+  Sunday's close (7 pm Pacific), a kill between the two factions counts twice in the weekly Kills column,
+  for both sides. The close ends every war; a leader declares again to go on. (A war declared in the last
+  few minutes before the close, after the world last saved, runs on to the next close.) Claims still protect, and the
+  griefing rules and rule 41 still apply: a war changes the score, not what is allowed. Arena kills don't
+  count, as for the Kills column.
+- **Pacts.** A leader offers a pact and the other leader accepts it from their own menu. An offer lasts until
+  Sunday's close. Accepting ends a war between the two. While a pact stands, neither can declare war on the
+  other. It stands until either leader breaks it, and the break is announced with the faction and the player
+  who broke it; 2 minutes later that leader can declare war. A faction holds at most 2 pacts (rule 31:
+  alliances, not confederations). A pact is not an Open Parties and Claims ally: allies share claims, a pact
+  shares nothing.
+- **Limits.** One declaration (war, offer, acceptance or break) per faction every 2 minutes, so chat isn't
+  flooded.
+- **Where it shows.** In chat at once. Sunday's standings post in Discord adds the week's wars, pacts, peace
+  and broken pacts (at most 10, then "and N more") and the pacts still standing. Offers stay out of it.
+- **Feeding kills** to a war enemy is exploit B13, as with any kill: staff take both counts back
+  (docs/ADMIN.md, "War and pacts").
+- **New and gone factions.** The hourly board run gives each new party its faction number in game, so a
+  party made a minute ago can't take part yet. When a party is gone from two board runs in a row (so about
+  an hour after it goes), its wars and pacts end, announced, and its pact partners get the slot back.
+
+`tools/diplomacy.py` makes it, inside the `realms-standings` data pack. It needs no timer of its own: the
+standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
 
 ### The pillar events
 
@@ -625,6 +658,12 @@ Built:
 - The Sunday recap ("Where it shows", above): `tools/recap.py`, posted by the same Sunday close to the same
   webhook. `realms-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
   not yet seen in Discord or run on the VPS.
+
+- War and pacts ("War and pacts"): `tools/diplomacy.py`, in the `realms-standings` data pack:
+  `/trigger diplomacy`, war kills counted twice, the Sunday post's lines and the wars' end at the close, and
+  each faction's number in game (`st.faction`), written by the hourly board run for other features to use
+  (docs/MAINTAINING.md, "The faction number in game"). Checked by the unit tests and the generated packs'
+  checks only: not yet tried in game.
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `realms-drops` data pack and `deploy/realms-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat

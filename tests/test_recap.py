@@ -13,9 +13,9 @@ import season_calendar
 import standings
 
 PACIFIC = season_calendar.PACIFIC
-BEFORE = dt.datetime(2026, 11, 15, 19, 0, tzinfo=PACIFIC)     # the Sunday before the launch: test play
-LAUNCH_SUNDAY = dt.datetime(2026, 11, 22, 19, 0, tzinfo=PACIFIC)   # the first close after it: week 0
-WEEK_ONE = dt.datetime(2026, 11, 29, 19, 0, tzinfo=PACIFIC)
+BEFORE = dt.datetime(2026, 10, 25, 19, 0, tzinfo=PACIFIC)     # the Sunday before the launch: test play
+LAUNCH_SUNDAY = dt.datetime(2026, 11, 1, 19, 0, tzinfo=PACIFIC)   # the first close after it: week 0
+WEEK_ONE = dt.datetime(2026, 11, 8, 19, 0, tzinfo=PACIFIC)
 WEBHOOK = "https://discord.com/api/webhooks/1/made-up-secret-token"
 LAUNCHED = ("rw.day", "#launched", 1)
 SEASON_ONE = ("rw.day", "#season", 1)
@@ -81,13 +81,13 @@ def season(tmp_path):
 def test_week_zero_reads_sensibly(season):
     _, state, posts = season
     week0 = posts[0]
-    assert week0.startswith("**Monkey SMP Weekly**, the launch weekend: Sun 15 Nov to Sun 22 Nov\n```\n")
+    assert week0.startswith("**Monkey SMP Weekly**, the launch weekend: Sun 25 Oct to Sun 1 Nov\n```\n")
     assert "Red Monkeys" in week0 and standings.FORMULA in week0
     # No last week to move up from. The week began in test play, which the launch cleared of challenges only:
     # both done since the launch count, and the kill (it may be test play's) isn't told.
     assert "Biggest mover" not in week0 and "Top fighter" not in week0
     assert f"```\n{recap.LAUNCH}\n**Challenges:** 2 done, by 1 player.\n" in week0
-    assert "**Next Saturday:** Faction Raid I, Saturday 28 November, 6 PM Pacific (9 PM Eastern)." in week0
+    assert "**Next Saturday:** Faction Raid I, Saturday 7 November, 6 PM Pacific (9 PM Eastern)." in week0
     assert closed_week(state, LAUNCH_SUNDAY)["launched"] is True
 
 
@@ -95,7 +95,7 @@ def test_a_busy_week(season):
     _, state, posts = season
     week1 = posts[1]
     lines = week1.splitlines()
-    assert lines[0] == "**Monkey SMP Weekly**, week 1: Sun 22 Nov to Sun 29 Nov"
+    assert lines[0] == "**Monkey SMP Weekly**, week 1: Sun 1 Nov to Sun 8 Nov"
     after = lines[lines.index("```", 2) + 1:]
     assert after == [
         "**Biggest mover:** Blue Herons, up 1 place to 2nd.",
@@ -104,7 +104,7 @@ def test_a_busy_week(season):
         "**Land:** 5 chunks claimed, the most by Blue Herons (+5).",
         "**Challenges:** 3 done, by 2 players.",
         "**Event turnout:** 2 players came.",
-        "**Next Saturday:** The border breaks, from 2500 to 4000 blocks, Saturday 5 December, 6 PM Pacific "
+        "**Next Saturday:** The border breaks, from 2500 to 4000 blocks, Saturday 14 November, 6 PM Pacific "
         "(9 PM Eastern).",
         f"Scored as {standings.FORMULA} `/trigger standings` shows the board in game.",
     ]
@@ -186,7 +186,7 @@ def test_a_retry_posts_what_the_close_worked_out(tmp_path):
 
 
 def test_a_week_closed_before_the_recap_posts_its_table_alone():
-    old = {"start": "2026-11-22T19:00:00-08:00", "end": "2026-11-29T19:00:00-08:00", "rows": [
+    old = {"start": "2026-11-01T19:00:00-08:00", "end": "2026-11-08T19:00:00-08:00", "rows": [
         vars(r) for r in standings.rank([standings.Row("Red Monkeys", ["AlexFake"], cup=30)])]}
     lines = standings.discord_message(old).splitlines()
     assert lines[0].startswith("**Monkey SMP Weekly**, week 1") and lines[-1].startswith("Scored as")
@@ -257,7 +257,7 @@ def test_a_broken_section_is_left_out(monkeypatch):
 def test_next_saturday_after_the_last_week():
     end = dt.datetime.combine(season_calendar.saturday(12) + dt.timedelta(days=1), dt.time(19), PACIFIC)
     week = recap.Week([], standings.World([], {}, {}, {}), {}, None, end)
-    assert recap.next_saturday(week) == ["**Next:** Season II is planned for Saturday 20 February."]
+    assert recap.next_saturday(week) == ["**Next:** Season II is planned for Saturday 30 January."]
 
 
 def test_ordinals_and_lists():
@@ -291,11 +291,11 @@ def test_an_old_closed_week_from_test_play_is_no_last_week(tmp_path):
     weeks = state / "weeks"
     weeks.mkdir(parents=True)
     old = {"start": None, "end": BEFORE.isoformat(), "rows": []}   # closed by the old code: no "launched"
-    (weeks / "2026-11-15.json").write_text(json.dumps(old))
+    (weeks / "2026-10-25.json").write_text(json.dumps(old))
     assert standings.last_launched(state) is None
-    (weeks / "2026-11-22.json").write_text(json.dumps({**old, "end": LAUNCH_SUNDAY.isoformat()}))
+    (weeks / "2026-11-01.json").write_text(json.dumps({**old, "end": LAUNCH_SUNDAY.isoformat()}))
     assert standings.last_launched(state)["end"] == LAUNCH_SUNDAY.isoformat()
-    (weeks / "2026-11-29.json").write_text(json.dumps({**old, "end": WEEK_ONE.isoformat(), "launched": False}))
+    (weeks / "2026-11-08.json").write_text(json.dumps({**old, "end": WEEK_ONE.isoformat(), "launched": False}))
     assert standings.last_launched(state) is None
 
 
@@ -344,12 +344,12 @@ def test_land_counts_chunks_claimed_not_the_net_change(tmp_path):
 
 
 def test_a_late_close_names_the_week_that_closed():
-    late = dt.datetime(2026, 11, 30, 1, 30, tzinfo=PACIFIC)   # week 1's close, run after Monday 12 AM
+    late = dt.datetime(2026, 11, 9, 1, 30, tzinfo=PACIFIC)   # week 1's close, run after Monday 12 AM
     week = recap.Week([], empty_world(), {"start": LAUNCH_SUNDAY.isoformat()}, None, late)
     assert week.number == 1 and recap.next_saturday(week)[0].endswith(
-        "Saturday 5 December, 6 PM Pacific (9 PM Eastern).")
+        "Saturday 14 November, 6 PM Pacific (9 PM Eastern).")
     closed = {"start": LAUNCH_SUNDAY.isoformat(), "end": late.isoformat()}
-    assert recap.heading(closed) == "**Monkey SMP Weekly**, week 1: Sun 22 Nov to Mon 30 Nov"
+    assert recap.heading(closed) == "**Monkey SMP Weekly**, week 1: Sun 1 Nov to Mon 9 Nov"
     assert recap.heading({"start": None, "end": late.isoformat()}).startswith("**Monkey SMP Weekly**, week 1:")
 
 

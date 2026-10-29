@@ -395,6 +395,13 @@ function realms:npcs/crier/remove                              # near it
 - **Placing again** moves it and resets it to this release's version: each has a fixed UUID, so there is only
   ever one. Do it after a release that changes their text, for example when an event moves (the changelog says
   so). If the old spot is far away and nobody is near it, run `remove` there first, or the old one can stay.
+- **Talking to them in a claim.** Spawn is a server claim, and Open Parties and Claims protects entities in a
+  claim too. `forcedEntityProtectionExceptionList` in `server\config\openpartiesandclaims-server.toml` holds
+  `"hand$easy_npc:*"`: anyone may right-click an Easy NPC in any claim with an empty hand. With an item in the
+  hand the click is refused (the mod says to try an empty hand), so nobody can put a name tag or a lead on
+  one. The entry applies after a restart. A server installed before it shipped keeps its old file: add the
+  entry with the server stopped, or on the live VPS run `deploy/npc-claims.sh` (`docs/LIVE.md`, "NPCs in
+  claims"). Without it only ops can talk to them.
 - **Who can change them.** They have no owner. Easy NPC lets ops, and anyone in creative mode, edit, move or
   delete any NPC. No rank can switch to creative by itself, so that is ops plus anyone an op has put in creative
   (a builder at work, say); moderators and players can't. That creative override is built into Easy NPC and no

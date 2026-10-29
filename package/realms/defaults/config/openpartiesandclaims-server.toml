@@ -14,6 +14,13 @@
 			#the click place blocks inside the claim. "minecraft:crafting_table" is the mod's own default.
 			#Blocks to partially exclude from chunk protection. Supports block tags.
 			forcedBlockProtectionExceptionList = ["minecraft:crafting_table", "hand$universal_shops:trade_block"]
+			#Monkey SMP: anyone may right-click an Easy NPC (the Guide and the Town Crier at spawn) in any claim,
+			#spawn's server claim included, with an empty hand ("hand$"). Without it the spawn claim answers players
+			#with "You are not allowed to interact with this entity in this chunk". An item in the hand would also let
+			#it be used on the NPC (a name tag, a lead); hitting them stays protected. "minecraft:minecart" is the
+			#mod's own default.
+			#Entities to partially exclude from chunk protection. Supports entity type tags.
+			forcedEntityProtectionExceptionList = ["minecraft:minecart", "hand$easy_npc:*"]
 	[serverConfig.parties]
 		#The maximum number of members in a party. Existing members are not removed if the limit is reduced.
 		maxPartyMembers = 4

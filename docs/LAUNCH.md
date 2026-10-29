@@ -42,7 +42,8 @@ calendar (docs/SEASONS.md) and in the drafts (docs/PROMOTION.md, "Season I launc
 docs/LIVE.md, "Payments and Discord" and "The store", has the packages, prices and commands. This is the
 order and the dates.
 
-- [ ] **Mon 26 Oct to Thu 29 Oct: build the storefront** at `monkeysmp.tebex.io`. The packages exactly as in
+- [ ] **Mon 26 Oct to Thu 29 Oct: build the storefront** (not `monkeysmp.tebex.io`, which is another server's;
+  read the store's address off the Tebex panel once it is approved). The packages exactly as in
   the table in docs/LIVE.md (prices can't change on a subscription once sold, docs/adr/0008). Commands from
   docs/RETENTION.md. The Discord integration for the paid role. Link the payout wallet (Link Wallet).
 - [ ] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
@@ -129,7 +130,7 @@ below).
   the load test refuses to run before it does.
 - [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
   check `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` lists hourly snapshots. The keys go
-  in the password manager and `/etc/realms-deploy.env`, nowhere else.
+  in the password manager and `/etc/realms-backup.env` (root only), nowhere else.
 - [ ] **Wed 4 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
   restored isn't a backup yet. Without working off-site backups by launch day, copy a backup off the VPS by

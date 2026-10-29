@@ -105,34 +105,39 @@ are a plan, not a contract. What is promised is the end date.
 
 #### Season I calendar
 
-Season I opens on **Saturday 21 November 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
+Season I opens on **Saturday 31 October 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
 `site/config.js`, and the run sheet in docs/LAUNCH.md). Week N's event is the Saturday N weeks later at
-6 PM Pacific, 9 PM Eastern. Daylight saving time ends on 1 November 2026 and starts again on 14 March 2027,
-so every Season I time is standard time.
+6 PM Pacific, 9 PM Eastern. Daylight saving time ends at 2 AM on Sunday 1 November 2026, the night of the
+launch, and starts again on 14 March 2027: the launch is at 5 PM daylight time, and every Season I time
+after it is standard time.
 
 | Week | Saturday | The event | Also that week |
 | --- | --- | --- | --- |
-| 0 | 21 Nov 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 22 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 22 Nov |
-| 1 | 28 Nov | Faction Raid I | Thanksgiving is Thursday 26 Nov |
-| 2 | 5 Dec | The border breaks: 2500 to 4000 | Town Hall (first Saturday). Midwinter announced. |
-| 3 | 12 Dec | **Dragon Night**: the End opens, Anarchy for 90 minutes | Midwinter decorating at spawn starts |
-| 4 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | Netherite age announced |
-| 5 | 26 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter comes down. The day after Christmas: expect a thin crowd. |
-| 6 | 2 Jan 2027 | Faction Raid II | Town Hall. The first Base of the Month (entries by 25 Dec). |
-| 7 | 9 Jan | Build Battle II | |
-| 8 | 16 Jan | The border breaks again: 4000 to 6000 | |
-| 9 | 23 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
-| 10 | 30 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
-| 11 | 6 Feb | **The finale**. The world locks after it. | Town Hall. Base of the Month (entries by 25 Jan). |
-| 12 | 13 Feb | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 19 Feb |
-| | 20 Feb | Season II opens (proposed; owners confirm it by 23 Jan) | |
+| 0 | 31 Oct 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 1 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 1 Nov. Launch night is Hallowtide (below). |
+| 1 | 7 Nov | Faction Raid I | Town Hall (first Saturday) |
+| 2 | 14 Nov | The border breaks: 2500 to 4000 | |
+| 3 | 21 Nov | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
+| 4 | 28 Nov | Faction Raid II | Thanksgiving is Thursday 26 Nov. Netherite age announced. |
+| 5 | 5 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Town Hall. Midwinter announced. |
+| 6 | 12 Dec | Build Battle II | Midwinter decorating at spawn starts |
+| 7 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | |
+| 8 | 26 Dec | The border breaks again: 4000 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
+| 9 | 2 Jan 2027 | Arena Glory II | Town Hall. The first Base of the Month (entries by 25 Dec). "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
+| 10 | 9 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
+| 11 | 16 Jan | **The finale**. The world locks after it. | The second Base of the Month (entries by 10 Jan) |
+| 12 | 23 Jan | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 29 Jan |
+| | 30 Jan | Season II opens (proposed; owners confirm it by 2 Jan) | |
 
-- **The end date to announce on day one:** Season I ends with the finale on Saturday 6 February 2027. The
-  world stays up, locked, through the off-season week, and Season II is planned for Saturday 20 February.
-- **Holidays in the season:** only Midwinter (19 Dec). Hallowtide (31 Oct 2026) comes before launch, while
-  the world is still closed, so Gravelight waits for Hallowtide 2027 (30 Oct). Midsummer (19 Jun 2027) is
-  after Season I.
-- **No Base of the Month in December.** Bases are four days old on 25 November.
+- **The end date to announce on day one:** Season I ends with the finale on Saturday 16 January 2027. The
+  world stays up, locked, through the off-season week, and Season II is planned for Saturday 30 January.
+- **The calendar moved with the launch** (21 November to 31 October, decided 29 October). The season is
+  still 12 weeks; the holidays stay on their own dates, so Arena Glory I (Midwinter) moved from week 4 to
+  week 7, Faction Raid II to week 4 and Build Battle II to week 6.
+- **Holidays in the season:** Hallowtide (31 Oct 2026) is launch night, and Midwinter is 19 Dec. The launch is
+  Hallowtide's event this year (pumpkins and soul lanterns at spawn if staff have the time, no boss night or
+  maze), so Gravelight waits for Hallowtide 2027 (30 Oct) unless the owners decide to give it for being on
+  that night. Midsummer (19 Jun 2027) is after Season I.
+- **No Base of the Month in December.** Bases are under four weeks old on 25 November.
 
 ### A weekly rhythm
 
@@ -190,7 +195,7 @@ Between events, three **weekly challenges** (one solo, one faction, one explore)
 do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
 the Saturday event, and each one done counts toward three wardrobe skins (`docs/RETENTION.md`, "Weekly
 challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
-launch weekend is challenge week 0, and week 1 starts on Monday 23 November 2026. See what runs when with
+launch weekend is challenge week 0, and week 1 starts on Monday 2 November 2026. See what runs when with
 `python tools/challenges.py schedule`.
 
 ### The pillar events

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Season I opens on Saturday 31 October 2026 at 5 PM Pacific, three weeks earlier than 21 November. Week 1
+  starts on Monday 2 November, the finale is on 16 January 2027 and Season II is proposed for 30 January. The
+  launch weekend (Founder's Circlet) is 32 hours, because the clocks go back that night. The holidays keep
+  their dates, so Arena Glory I (Midwinter, 19 December) moves to week 7, Faction Raid II to week 4 and
+  Build Battle II to week 6; the Town Crier says so. On the live server, place the Crier again after this
+  release (docs/ADMIN.md, "Spawn NPCs").
+
 ## [2.8.0] - 2026-10-27
 
 A sync with the updated shared mod folder: a new End, new structures, Carry On, breakable

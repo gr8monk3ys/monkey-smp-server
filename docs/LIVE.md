@@ -250,7 +250,7 @@ sh /srv/realms/repo/deploy/realms-week.sh --check
 sudo sh /srv/realms/repo/deploy/realms-week.sh --install
 ```
 
-Do it before the launch (Saturday 21 November 2026, 5 PM Pacific): without the timer the challenge week never
+Do it before the launch (Saturday 31 October 2026, 5 PM Pacific): without the timer the challenge week never
 turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
 It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
 `LIVE_DIR` from `/etc/realms-deploy.env`.

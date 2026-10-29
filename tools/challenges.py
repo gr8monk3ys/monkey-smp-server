@@ -6,7 +6,7 @@
 
 Three challenges a week, one of each kind (solo, faction, explore), from POOL below: the one place to edit
 them (docs/ADMIN.md, "Weekly challenges"). Week N runs challenge N mod (how many there are of that kind),
-in the order listed. Week 1 starts on Monday 23 November 2026 at 12 AM Pacific; the launch weekend before it
+in the order listed. Week 1 starts on Monday 2 November 2026 at 12 AM Pacific; the launch weekend before it
 is week 0, and a new week starts every Monday at 12 AM Pacific, which is Sunday night, after the Saturday
 event.
 
@@ -29,8 +29,8 @@ How progress is counted, so that it can't be farmed:
   events         the events pack's attendance: any event begun this week counts (ev.seen).
 Water- or vehicle-driven movement and player kills never count.
 
-The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 21 November 2026, 5 PM Pacific,
-to the end of Sunday 22 November, Pacific. `function realms:rules/launch` opens it; on the server it then
+The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 31 October 2026, 5 PM Pacific,
+to the end of Sunday 1 November, Pacific. `function realms:rules/launch` opens it; on the server it then
 lasts LAUNCH_SECONDS of game time, which stops while the server is empty, so `commands` also sends the
 seconds left on the wall clock and the server ends it on time.
 
@@ -55,10 +55,10 @@ ADVANCEMENT = f"data/{NS}/advancement/challenges"
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 PACIFIC = ZoneInfo("America/Los_Angeles")
-WEEK_ONE = dt.date(2026, 11, 23)   # a Monday: week 1 starts at 12 AM Pacific; everything before it is week 0
-LAUNCH = dt.datetime(2026, 11, 22, 1, 0, tzinfo=UTC)       # Saturday 21 November, 5 PM Pacific
-LAUNCH_END = dt.datetime(2026, 11, 23, 8, 0, tzinfo=UTC)   # Monday 23 November, 12 AM Pacific
-LAUNCH_SECONDS = int((LAUNCH_END - LAUNCH).total_seconds())   # 31 hours
+WEEK_ONE = dt.date(2026, 11, 2)   # a Monday: week 1 starts at 12 AM Pacific; everything before it is week 0
+LAUNCH = dt.datetime(2026, 11, 1, 0, 0, tzinfo=UTC)       # Saturday 31 October, 5 PM Pacific (PDT)
+LAUNCH_END = dt.datetime(2026, 11, 2, 8, 0, tzinfo=UTC)   # Monday 2 November, 12 AM Pacific (PST)
+LAUNCH_SECONDS = int((LAUNCH_END - LAUNCH).total_seconds())   # 32 hours: the clocks go back at 2 AM on Sunday
 FOUNDER_MINUTES = 10   # online this long in the launch weekend earns Founder's Circlet
 # What test play before Season I's launch may have earned; the first realms:rules/launch clears it.
 TEST_PLAY = ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime")
@@ -173,7 +173,7 @@ def of_kind(kind: str) -> list[dict]:
 
 
 def week_at(when: dt.datetime) -> int:
-    """The challenge week at a moment: 0 until Monday 23 November 2026, 12 AM Pacific, then 1, 2, ..."""
+    """The challenge week at a moment: 0 until Monday 2 November 2026, 12 AM Pacific, then 1, 2, ..."""
     day = when.astimezone(PACIFIC).date()
     return max(0, (day - WEEK_ONE).days // 7 + 1)
 

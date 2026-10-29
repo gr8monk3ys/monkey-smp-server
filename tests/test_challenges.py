@@ -103,8 +103,8 @@ def test_the_server_picks_what_the_schedule_says(week):
 def test_the_schedule_command_prints_the_weeks():
     out = challenges.schedule(0, 13).splitlines()
     assert len(out) == 13
-    assert out[0].startswith("week 0   from launch, 21 Nov 2026")
-    assert out[1].startswith("week 1   from Mon 23 Nov 2026")
+    assert out[0].startswith("week 0   from launch, 31 Oct 2026")
+    assert out[1].startswith("week 1   from Mon 02 Nov 2026")
     for week, line in enumerate(out):
         for c in challenges.picks(week).values():
             assert c["name"] in line
@@ -115,13 +115,13 @@ def test_the_schedule_command_prints_the_weeks():
 
 @pytest.mark.parametrize(("when", "week"), [
     (pacific(2026, 10, 26, 12, 0), 0),            # before the launch
-    (pacific(2026, 11, 21, 17, 0), 0),            # the launch
-    (pacific(2026, 11, 22, 23, 59, 59), 0),       # the end of the launch weekend, Sunday night
-    (pacific(2026, 11, 23, 0, 0), 1),             # Monday, 12 AM Pacific
-    (pacific(2026, 11, 29, 23, 59, 59), 1),
-    (pacific(2026, 11, 30, 0, 0), 2),
-    (pacific(2027, 2, 14, 23, 59, 59), 12),
-    (pacific(2027, 2, 15, 0, 0), 13),
+    (pacific(2026, 10, 31, 17, 0), 0),            # the launch
+    (pacific(2026, 11, 1, 23, 59, 59), 0),       # the end of the launch weekend, Sunday night
+    (pacific(2026, 11, 2, 0, 0), 1),             # Monday, 12 AM Pacific
+    (pacific(2026, 11, 8, 23, 59, 59), 1),
+    (pacific(2026, 11, 9, 0, 0), 2),
+    (pacific(2027, 1, 24, 23, 59, 59), 12),
+    (pacific(2027, 1, 25, 0, 0), 13),
 ])
 def test_weeks_turn_on_monday_at_midnight_pacific(when, week):
     assert challenges.week_at(when) == week
@@ -130,12 +130,12 @@ def test_weeks_turn_on_monday_at_midnight_pacific(when, week):
 
 def test_the_week_turns_on_pacific_time_through_daylight_saving():
     # Standard time: Sunday 23:59:59 PST is 07:59:59 UTC on Monday.
-    assert challenges.week_at(at("2026-11-23T07:59:59Z")) == 0
-    assert challenges.week_at(at("2026-11-23T08:00:00Z")) == 1
+    assert challenges.week_at(at("2026-11-02T07:59:59Z")) == 0
+    assert challenges.week_at(at("2026-11-02T08:00:00Z")) == 1
     # Daylight time from 14 March 2027: Monday 15 March starts at 07:00 UTC, not 08:00.
-    assert challenges.week_at(at("2027-03-15T06:59:59Z")) == 16
-    assert challenges.week_at(at("2027-03-15T07:00:00Z")) == 17
-    assert challenges.week_at(at("2027-03-15T07:30:00Z")) == 17
+    assert challenges.week_at(at("2027-03-15T06:59:59Z")) == 19
+    assert challenges.week_at(at("2027-03-15T07:00:00Z")) == 20
+    assert challenges.week_at(at("2027-03-15T07:30:00Z")) == 20
 
 
 def test_week_starts_are_mondays():
@@ -143,7 +143,7 @@ def test_week_starts_are_mondays():
     for week in range(1, 30):
         assert challenges.week_start(week).weekday() == 0
         assert challenges.week_at(pacific(*challenges.week_start(week).timetuple()[:3])) == week
-    assert challenges.week_start(0) == dt.date(2026, 11, 21)
+    assert challenges.week_start(0) == dt.date(2026, 10, 31)
 
 
 def test_parse_time_reads_utc_and_offsets():
@@ -154,18 +154,18 @@ def test_parse_time_reads_utc_and_offsets():
 
 
 def test_the_launch_weekend_is_saturday_5_pm_to_the_end_of_sunday_pacific():
-    assert challenges.LAUNCH.astimezone(challenges.PACIFIC) == pacific(2026, 11, 21, 17, 0)
-    assert challenges.LAUNCH_END.astimezone(challenges.PACIFIC) == pacific(2026, 11, 23, 0, 0)
-    assert at("2026-11-22T01:00:00Z") == challenges.LAUNCH
-    assert challenges.LAUNCH_SECONDS == 31 * 3600 == 111600
+    assert challenges.LAUNCH.astimezone(challenges.PACIFIC) == pacific(2026, 10, 31, 17, 0)
+    assert challenges.LAUNCH_END.astimezone(challenges.PACIFIC) == pacific(2026, 11, 2, 0, 0)
+    assert at("2026-11-01T00:00:00Z") == challenges.LAUNCH
+    assert challenges.LAUNCH_SECONDS == 32 * 3600 == 115200
     assert challenges.week_at(challenges.LAUNCH_END) == 1   # the window ends as week 1 starts
 
 
 def test_seconds_left_in_the_launch_weekend():
     assert challenges.founder_left(challenges.LAUNCH) == challenges.LAUNCH_SECONDS
-    assert challenges.founder_left(at("2026-11-23T07:59:59Z")) == 1
-    assert challenges.founder_left(at("2026-11-23T07:59:59.5Z")) == 1   # rounds up: never ends early
-    assert challenges.founder_left(at("2026-11-23T08:00:00Z")) == 0
+    assert challenges.founder_left(at("2026-11-02T07:59:59Z")) == 1
+    assert challenges.founder_left(at("2026-11-02T07:59:59.5Z")) == 1   # rounds up: never ends early
+    assert challenges.founder_left(at("2026-11-02T08:00:00Z")) == 0
     assert challenges.founder_left(at("2026-12-01T00:00:00Z")) == 0
 
 
@@ -182,14 +182,14 @@ def test_send_skips_a_stopped_server_and_reports_a_refusal():
 
 
 def test_the_hourly_commands():
-    assert challenges.commands(at("2026-11-22T01:00:30Z")) == [
-        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:111570}"]
-    assert challenges.commands(at("2026-11-23T08:00:30Z")) == [
+    assert challenges.commands(at("2026-11-01T00:00:30Z")) == [
+        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:115170}"]
+    assert challenges.commands(at("2026-11-02T08:00:30Z")) == [
         "function realms:challenges/sync {week:1}", "function realms:wardrobe/founder/sync {seconds:0}"]
     # A day after the window there is nothing left to keep in step: only the week.
-    assert challenges.commands(at("2026-11-24T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
-    assert challenges.commands(at("2026-11-24T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
-    assert challenges.commands(at("2027-01-04T08:00:30Z")) == ["function realms:challenges/sync {week:7}"]
+    assert challenges.commands(at("2026-11-03T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
+    assert challenges.commands(at("2026-11-03T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
+    assert challenges.commands(at("2027-01-04T08:00:30Z")) == ["function realms:challenges/sync {week:10}"]
     assert challenges.main(["commands", "--at", "2026-11-30T08:00:00Z"]) == 0
 
 

@@ -58,10 +58,10 @@ EVENTS = {
     1: "Faction Raid I",
     2: "the border breaks, from 2500 to 4000 blocks",
     3: "Dragon Night: the End opens, then 90 minutes of Anarchy",
-    4: "Arena Glory I, for Midwinter",
+    4: "Faction Raid II",
     5: "the Netherite age begins, with a small event",
-    6: "Faction Raid II",
-    7: "Build Battle II",
+    6: "Build Battle II",
+    7: "Arena Glory I, for Midwinter",
     8: "the border breaks again, from 4000 to 6000 blocks",
     9: "Arena Glory II",
     10: "Faction Raid III",
@@ -69,7 +69,7 @@ EVENTS = {
     12: "the off-season weekend in the locked world",
 }
 LAST_WEEK = max(EVENTS)
-SEASON_TWO = dt.date(2027, 2, 20)   # proposed (SEASONS.md); the owners confirm it by 23 January
+SEASON_TWO = dt.date(2027, 1, 30)   # proposed (SEASONS.md); the owners confirm it by 2 January
 TIME = "6 PM Pacific (9 PM Eastern)"
 EVERY_WEEK = ("Every event is in the Discord's events list: press Interested there for a reminder. "
               "New challenges every Monday.")

@@ -147,6 +147,11 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
     assert sh("running || log down")[1] == ["[t] down"]
 
 
+def test_compose_runs_from_the_root_whatever_the_callers_folder(sh, tmp_path):
+    """docker compose stats its working directory: run as realms from /root it failed every call (2.9.0's deploy)."""
+    assert sh(f'cd "{tmp_path.as_posix()}"; docker() {{ pwd; }}; compose ps')[1] == ["/"]
+
+
 @needs_dash
 @pytest.mark.parametrize(("script", "sent", "retry"), [
     ("realms-week.sh", "send --docker", "the next hour tries again"),

@@ -35,9 +35,10 @@ import zlib
 from pathlib import Path
 
 import challenges
-from challenges import FOUNDER_MINUTES, LAUNCH_SECONDS
+from challenges import FOUNDER_MINUTES
 from datapacks import NS, function_tag, mcmeta, text
 from repo import Repo
+from season_calendar import LAUNCH_SECONDS
 
 RESOURCE_FORMAT = 97
 DATAPACK = "realms-wardrobe"

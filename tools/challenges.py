@@ -1,14 +1,14 @@
 """Weekly challenges, and the clock the server can't read: which week it is and when the launch weekend ends.
 
     python tools/challenges.py schedule [--from WEEK] [--weeks 12]   which challenges run in which week
-    python tools/challenges.py commands [--at 2026-11-23T08:00:00Z]  the RCON commands that put the server
+    python tools/challenges.py commands [--at 2026-11-02T08:00:00Z]  the RCON commands that put the server
                                                                      on the clock (deploy/realms-week.sh)
 
 Three challenges a week, one of each kind (solo, faction, explore), from POOL below: the one place to edit
 them (docs/ADMIN.md, "Weekly challenges"). Week N runs challenge N mod (how many there are of that kind),
-in the order listed. Week 1 starts on Monday 2 November 2026 at 12 AM Pacific; the launch weekend before it
-is week 0, and a new week starts every Monday at 12 AM Pacific, which is Sunday night, after the Saturday
-event.
+in the order listed. The weeks are tools/season_calendar.py's: week 1 starts on Monday 2 November 2026 at
+12 AM Pacific; the launch weekend before it is week 0, and a new week starts every Monday at 12 AM Pacific,
+which is Sunday night, after the Saturday event.
 
 Minecraft has no wall clock, so the week number comes from outside: `function realms:challenges/sync
 {week:N}` starts week N unless it is already running. The week is a score, so restarts keep it.
@@ -31,7 +31,7 @@ Water- or vehicle-driven movement and player kills never count.
 
 The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 31 October 2026, 5 PM Pacific,
 to the end of Sunday 1 November, Pacific. `function realms:rules/launch` opens it; on the server it then
-lasts LAUNCH_SECONDS of game time, which stops while the server is empty, so `commands` also sends the
+lasts season_calendar.LAUNCH_SECONDS of game time, which stops while the server is empty, so `commands` also sends the
 seconds left on the wall clock and the server ends it on time.
 
 Stdlib only, no imports from the other tools, and Python 3.10 or newer, so the VPS runs it straight from the
@@ -43,9 +43,9 @@ import json
 import math
 import sys
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import rcon as server
+import season_calendar
 from datapacks import NS, lines, text
 from events import STATE
 
@@ -54,11 +54,6 @@ LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules
 ADVANCEMENT = f"data/{NS}/advancement/challenges"
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-PACIFIC = ZoneInfo("America/Los_Angeles")
-WEEK_ONE = dt.date(2026, 11, 2)   # a Monday: week 1 starts at 12 AM Pacific; everything before it is week 0
-LAUNCH = dt.datetime(2026, 11, 1, 0, 0, tzinfo=UTC)       # Saturday 31 October, 5 PM Pacific (PDT)
-LAUNCH_END = dt.datetime(2026, 11, 2, 8, 0, tzinfo=UTC)   # Monday 2 November, 12 AM Pacific (PST)
-LAUNCH_SECONDS = int((LAUNCH_END - LAUNCH).total_seconds())   # 32 hours: the clocks go back at 2 AM on Sunday
 FOUNDER_MINUTES = 10   # online this long in the launch weekend earns Founder's Circlet
 # What test play before Season I's launch may have earned; the first realms:rules/launch clears it.
 TEST_PLAY = ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime")
@@ -172,17 +167,6 @@ def of_kind(kind: str) -> list[dict]:
 # ---------------------------------------------------------------- the clock
 
 
-def week_at(when: dt.datetime) -> int:
-    """The challenge week at a moment: 0 until Monday 2 November 2026, 12 AM Pacific, then 1, 2, ..."""
-    day = when.astimezone(PACIFIC).date()
-    return max(0, (day - WEEK_ONE).days // 7 + 1)
-
-
-def week_start(week: int) -> dt.date:
-    """The Monday a week starts (week 0, the launch weekend, starts at launch)."""
-    return LAUNCH.astimezone(PACIFIC).date() if week <= 0 else WEEK_ONE + dt.timedelta(weeks=week - 1)
-
-
 def picks(week: int) -> dict[str, dict]:
     """The week's three challenges, by kind. The server works out the same with %= (pick.mcfunction)."""
     return {kind: of_kind(kind)[max(week, 0) % len(of_kind(kind))] for kind in KINDS}
@@ -190,13 +174,13 @@ def picks(week: int) -> dict[str, dict]:
 
 def founder_left(when: dt.datetime) -> int:
     """Seconds left in the launch weekend on the wall clock (0 once it is over)."""
-    return max(0, math.ceil((LAUNCH_END - when).total_seconds()))
+    return max(0, math.ceil((season_calendar.LAUNCH_END - when).total_seconds()))
 
 
 def commands(when: dt.datetime) -> list[str]:
     """What deploy/realms-week.sh sends over RCON. Both are no-ops when nothing changed, so it runs hourly."""
-    out = [f"function {NS}:challenges/sync {{week:{week_at(when)}}}"]
-    if when < LAUNCH_END + dt.timedelta(days=1):   # after that there is no window left to keep in step
+    out = [f"function {NS}:challenges/sync {{week:{season_calendar.week_at(when)}}}"]
+    if when < season_calendar.LAUNCH_END + dt.timedelta(days=1):   # after that there is no window left to keep in step
         out.append(f"function {NS}:wardrobe/founder/sync {{seconds:{founder_left(when)}}}")
     return out
 
@@ -444,7 +428,7 @@ def parse_time(value: str) -> dt.datetime:
 def schedule(first: int, weeks: int) -> str:
     out = []
     for week in range(first, first + weeks):
-        start = week_start(week)
+        start = season_calendar.week_start(week)
         label = f"week {week:<3} {'from launch,' if week == 0 else 'from Mon'} {start:%d %b %Y}"
         out.append(f"{label:<28} " + " | ".join(f"{KINDS[k]}: {c['name']}" for k, c in picks(week).items()))
     return "\n".join(out)
@@ -465,7 +449,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     now = dt.datetime.now(UTC)
     if args.command == "schedule":
-        print(schedule(week_at(now) if args.first is None else args.first, args.weeks))
+        print(schedule(season_calendar.week_at(now) if args.first is None else args.first, args.weeks))
         return 0
     if args.command == "send":
         return send(server.Docker(args.docker), args.at or now)

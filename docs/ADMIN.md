@@ -627,7 +627,7 @@ Minecraft update with `--pool <data reports folder>`.
 Three challenges a week, from the pool in `tools/challenges.py`, with skins at 3, 9 and 18 done (players'
 side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `realms-wardrobe` data pack. A new week
 starts every Monday at 12 AM Pacific; week 1 is the week of Monday 2 November 2026, and the launch
-weekend before it is week 0.
+weekend before it is week 0. The dates are `tools/season_calendar.py`'s, shared with the drops and the Crier.
 
 What runs when, on the maintainer's computer or the VPS:
 

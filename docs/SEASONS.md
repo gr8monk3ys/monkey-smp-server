@@ -106,7 +106,9 @@ are a plan, not a contract. What is promised is the end date.
 #### Season I calendar
 
 Season I opens on **Saturday 31 October 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
-`site/config.js`, and the run sheet in docs/LAUNCH.md). Week N's event is the Saturday N weeks later at
+`site/config.js`, and the run sheet in docs/LAUNCH.md). The tools keep these dates in one place,
+`tools/season_calendar.py` (the weeks, the Saturdays, the drop nights and the launch weekend); a test checks it
+against `LAUNCH_AT` and this table. Week N's event is the Saturday N weeks later at
 6 PM Pacific, 9 PM Eastern. Daylight saving time ends at 2 AM on Sunday 1 November 2026, the night of the
 launch, and starts again on 14 March 2027: the launch is at 5 PM daylight time, and every Season I time
 after it is standard time.

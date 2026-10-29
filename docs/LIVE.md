@@ -121,9 +121,15 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
+Logged in as root, become `realms` for these, for example
+`runuser -u realms -- sh /srv/realms/repo/deploy/realms-deploy.sh --now`. As root the deploy stops at
+"cannot create /tmp/realms-deploy.lock: Permission denied": the lock belongs to `realms`, and the kernel's
+`fs.protected_regular` keeps even root from opening another user's file in `/tmp`.
+
 If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previous release back, restarts
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
-before the update is the newest folder in `backups/`.
+before the update is the newest folder in `backups/`. To try a skipped commit again (say, once the cause is
+fixed), delete `.deploy-failed` in `/srv/realms/TheRealms-Server` and run the deploy with `--now`.
 
 ## One-off steps when upgrading
 

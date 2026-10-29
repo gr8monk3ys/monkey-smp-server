@@ -75,6 +75,8 @@ def sh(tmp_path):
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")  # root only when asked
     (bin_dir / "runuser").write_text('#!/bin/sh\necho "runuser $*" >>"$FAKE_CALLS"\n'
                                      'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n', newline="\n")
+    for fake in bin_dir.iterdir():  # Linux's PATH lookup skips files without the execute bit (Git Bash doesn't)
+        fake.chmod(0o755)
 
     def run(snippet, *args, **env):
         environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
@@ -145,6 +147,11 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
     assert code == 0 and out == ["[t] up", "3f2a"]
     assert calls == [f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]
     assert sh("running || log down")[1] == ["[t] down"]
+
+
+def test_compose_runs_from_the_root_whatever_the_callers_folder(sh, tmp_path):
+    """docker compose stats its working directory: run as realms from /root it failed every call (2.9.0's deploy)."""
+    assert sh(f'cd "{tmp_path.as_posix()}"; docker() {{ pwd; }}; compose ps')[1] == ["/"]
 
 
 @needs_dash

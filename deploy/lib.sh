@@ -51,8 +51,10 @@ log_each() {
 # "python_ok MINOR": python3 is installed and 3.MINOR or newer.
 python_ok() { python3 -c "import sys; sys.exit(sys.version_info < (3, $1))" 2>/dev/null; }
 
-# The server's container, through the release's docker folder in LIVE_DIR.
-compose() { docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"; }
+# The server's container, through the release's docker folder in LIVE_DIR. Run from /: docker compose stats the
+# working directory, and a hand run as realms from root's home (`runuser -u realms -- sh ...` in /root) would
+# otherwise fail every call, so `running` would say no and the deploy skip the backup.
+compose() { (cd / && docker compose --project-directory "$LIVE_DIR/docker" -f "$LIVE_DIR/docker/compose.yaml" "$@"); }
 running() { [ -n "$(compose ps -q --status running realms 2>/dev/null)" ]; }
 # "rcon CMD": the server's answer on stdout; fails when docker or RCON did. The container's own `realms rcon`
 # finds the password itself, so no secret is read here.

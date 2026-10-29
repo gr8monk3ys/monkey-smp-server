@@ -6,11 +6,13 @@ data/minecraft/advancement/, the firsts' claims as the realms-firsts pack stores
 UUIDs and factions are made up.
 """
 import datetime as dt
+import http.client
 import json
 import os
 import re
 import shutil
 import subprocess
+import urllib.error
 import uuid
 
 import pytest
@@ -55,19 +57,21 @@ def world(tmp_path, *, launched=True, season=1, held=None, advancements=None, pa
     return fake.path
 
 
-class Discord:
-    """A fake urlopen: records each post's JSON body; `fail` posts answer HTTP 500."""
+def http_error(code):
+    return urllib.error.HTTPError(URL, code, "no", {}, None)
 
-    def __init__(self, fail=0):
-        self.posts, self.fail = [], fail
+
+class Discord:
+    """A fake urlopen: records each post's JSON body; each of `fail` in turn is raised instead of answering."""
+
+    def __init__(self, fail=()):
+        self.posts, self.fail = [], list(fail)
 
     def __call__(self, request, timeout):
         assert request.full_url == URL and request.get_method() == "POST"
         body = json.loads(request.data)
         if self.fail:
-            self.fail -= 1
-            import urllib.error
-            raise urllib.error.HTTPError(URL, 500, "no", {}, None)
+            raise self.fail.pop(0)
         self.posts.append(body)
 
         class Answer:
@@ -86,8 +90,22 @@ class Discord:
         return [p["content"] for p in self.posts]
 
 
-def run(folder, state, now, discord, launch=LAUNCH):
-    return news.post(folder, state, now, launch, URL, urlopen=discord, sleep=lambda s: None)
+def armed(state, now, season=1):
+    """The season's file as the runs before its launch leave it: the last one saw the world unlaunched five
+    minutes before the launch (season 1: the calendar's, when `now` is after it) or before `now`."""
+    before = (min(now, LAUNCH) if season == 1 else now) - dt.timedelta(minutes=5)
+    kept = news.new_state(season, before)
+    kept.update(unlaunched=news.iso(before), last_run=news.iso(before))
+    state.mkdir(parents=True, exist_ok=True)
+    (state / f"season-{season}.json").write_text(json.dumps(kept))
+
+
+def run(folder, state, now, discord, arm=True):
+    """One timer run. `arm`: the feed was on before the launch (the season's file is made as its runs make it)."""
+    season = news.read_saved(folder).season
+    if arm and not (state / f"season-{season}.json").exists():
+        armed(state, now, season)
+    return news.post(folder, state, now, URL, urlopen=discord, sleep=lambda s: None)
 
 
 def saved(state, season=1):
@@ -146,7 +164,7 @@ def test_the_first_finish_is_the_earliest_since_the_launch_whoever_was_saved_fir
         "SamFake": {MONSTERS: LAUNCH + dt.timedelta(hours=3), DIET: LAUNCH - dt.timedelta(hours=2)},   # test play
         "TomFake": {DIET: LAUNCH + dt.timedelta(hours=9)},
     })
-    items = {i.key: i for i in news.challenge_items(folder, LAUNCH)}
+    items = {i.key: i for i in news.challenge_items(folder, LAUNCH, news.read_saved(folder))}
     assert items[f"challenge:{MONSTERS}"].text == "SamFake completed Monsters Hunted. First this season."
     assert items[f"challenge:{DIET}"].text == "TomFake completed A Balanced Diet. First this season."
     assert items[f"challenge:{DIET}"].at == (LAUNCH + dt.timedelta(hours=9)).astimezone(dt.UTC).isoformat()
@@ -156,23 +174,27 @@ def test_names_are_escaped_and_a_player_without_a_name_is_passed_over(tmp_path):
     folder = world(tmp_path, held={"dragon": ("Alex_Fake", 1)}, advancements={"RinFake": {MONSTERS: AFTER}})
     cache = folder.parent / "usercache.json"
     cache.write_text(json.dumps([e for e in json.loads(cache.read_text()) if e["name"] != "RinFake"]))
-    assert [i.text for i in news.first_items(folder)] == [r"Alex\_Fake killed the Ender Dragon. First this season."]
-    assert news.challenge_items(folder, LAUNCH) == []
+    saved_now = news.read_saved(folder)
+    assert [i.text for i in news.first_items(folder, saved_now)] == [
+        r"Alex\_Fake killed the Ender Dragon. First this season."]
+    assert news.challenge_items(folder, LAUNCH, saved_now) == []
 
 
 # ---------------------------------------------------------------- posting
 
 
-def test_nothing_posts_or_is_kept_before_the_launch(tmp_path):
+def test_runs_before_the_launch_post_nothing_and_note_the_world_unlaunched(tmp_path):
     folder = world(tmp_path, launched=False, held={"dragon": ("SamFake", 1)})
     state, discord = tmp_path / "news", Discord()
-    assert run(folder, state, AFTER, discord) == 0
-    assert discord.posts == [] and not state.exists()
+    assert run(folder, state, LAUNCH - dt.timedelta(minutes=5), discord, arm=False) == 0
+    kept = saved(state)
+    assert discord.posts == [] and kept["launched"] is None and kept["items"] == {}
+    assert kept["unlaunched"] == news.iso(LAUNCH - dt.timedelta(minutes=5))
 
 
-def test_no_webhook_posts_nothing_and_keeps_nothing(tmp_path, capsys):
+def test_no_webhook_posts_nothing_and_keeps_nothing(tmp_path):
     folder, state = world(tmp_path, held={"dragon": ("SamFake", 1)}), tmp_path / "news"
-    assert news.post(folder, state, AFTER, LAUNCH, "") == 0 and not state.exists()
+    assert news.post(folder, state, AFTER, "") == 0 and not state.exists()
 
 
 def test_a_launch_night_run_posts_firsts_and_factions_and_never_the_same_twice(tmp_path):
@@ -189,12 +211,13 @@ def test_a_launch_night_run_posts_firsts_and_factions_and_never_the_same_twice(t
     assert len(discord.posts) == 2   # still settling
     assert run(folder, state, AFTER + news.SETTLE, discord) == 0
     assert discord.lines[2:] == ["SamFake completed Monsters Hunted. First this season."]
-    for minutes in (40, 50, 600):
+    for minutes in (40, 50, 60):
         assert run(folder, state, AFTER + dt.timedelta(minutes=minutes), discord) == 0
     assert len(discord.posts) == 3
     kept = saved(state)
     assert {k: e["status"] for k, e in kept["items"].items()} == {
         "first:nether": "posted", "faction:p-red": "posted", f"challenge:{MONSTERS}": "posted"}
+    assert kept["late"] is False and kept["sending"] is None
     assert URL not in (state / "season-1.json").read_text()
 
 
@@ -272,34 +295,55 @@ def test_new_factions_found_together_share_one_line(tmp_path):
     assert all(p["allowed_mentions"] == {"parse": []} for p in discord.posts)
 
 
-def test_a_run_killed_mid_post_counts_it_as_posted(tmp_path, capsys):
-    folder, state, discord = world(tmp_path, held={"dragon": ("SamFake", 1)}), tmp_path / "news", Discord()
-    real = news.standings.post_discord
+def test_a_run_killed_mid_post_counts_it_as_posted_and_against_the_limits(tmp_path, capsys, monkeypatch):
+    held = {"nether": ("Alex_Fake", 1), "raid": ("SamFake", 2), "beacon": ("TomFake", 3), "mace": ("RinFake", 4),
+            "wither": ("SamFake", 5)}
+    folder, state, discord = world(tmp_path, held=held), tmp_path / "news", Discord()
+    run(folder, state, AFTER, discord)   # nether and raid
+    real = news.send
 
     def killed(*a, **k):
         raise KeyboardInterrupt   # the run dies after the state was written "sending"
-    news.standings.post_discord = killed
-    try:
-        with pytest.raises(KeyboardInterrupt):
-            run(folder, state, AFTER, discord)
-    finally:
-        news.standings.post_discord = real
-    assert saved(state)["items"]["first:dragon"]["status"] == "sending"
-    assert run(folder, state, AFTER + dt.timedelta(minutes=10), discord) == 0
-    assert discord.posts == [] and saved(state)["items"]["first:dragon"]["status"] == "posted"
+    monkeypatch.setattr(news, "send", killed)
+    with pytest.raises(KeyboardInterrupt):
+        run(folder, state, AFTER + dt.timedelta(minutes=10), discord)
+    assert saved(state)["sending"]["keys"] == ["first:beacon"]
+    monkeypatch.setattr(news, "send", real)
+    run(folder, state, AFTER + dt.timedelta(minutes=20), discord)
     assert "counted as posted, not sent again" in capsys.readouterr().out
+    kept = saved(state)
+    assert kept["items"]["first:beacon"]["status"] == "posted" and kept["sending"] is None
+    # The lost post still counts: four firsts in the day are nether, raid, beacon and mace, so the Wither waits.
+    assert [p["keys"] for p in kept["posts"]] == [["first:nether"], ["first:raid"], ["first:beacon"], ["first:mace"]]
+    assert discord.lines[2:] == ["RinFake got a mace. First this season."]
+    assert kept["items"]["first:wither"]["status"] == "pending"
 
 
-def test_a_failed_post_waits_for_the_next_run_and_never_shows_the_url(tmp_path, capsys):
+def test_a_refused_post_waits_for_the_next_run_and_never_shows_the_url(tmp_path, capsys):
     folder, state = world(tmp_path, held={"dragon": ("SamFake", 1), "end": ("TomFake", 2)}), tmp_path / "news"
-    discord = Discord(fail=1)
-    assert run(folder, state, AFTER, discord) == 1
-    out = capsys.readouterr()
-    assert "HTTP 500" in out.err and "secret-token" not in out.out + out.err
-    assert {e["status"] for e in saved(state)["items"].values()} == {"pending"} and saved(state)["posts"] == []
+    for refusal in (http_error(429), urllib.error.URLError(ConnectionRefusedError("refused"))):
+        discord = Discord(fail=[refusal])
+        assert run(folder, state, AFTER, discord) == 1
+        out = capsys.readouterr()
+        assert "the next run tries again" in out.err and "secret-token" not in out.out + out.err
+        assert {e["status"] for e in saved(state)["items"].values()} == {"pending"} and saved(state)["posts"] == []
     assert run(folder, state, AFTER + dt.timedelta(minutes=10), discord) == 0
     assert discord.lines == ["SamFake killed the Ender Dragon. First this season.",
                              "TomFake entered the End. First this season."]
+
+
+@pytest.mark.parametrize("lost", [TimeoutError("timed out"), ConnectionResetError("reset"),
+                                  http.client.RemoteDisconnected("closed"), http_error(503)],
+                         ids=["timeout", "reset", "disconnected", "http-503"])
+def test_a_post_whose_answer_is_lost_counts_as_posted_never_sent_twice(tmp_path, capsys, lost):
+    folder, state = world(tmp_path, held={"dragon": ("SamFake", 1)}), tmp_path / "news"
+    discord = Discord(fail=[lost])
+    assert run(folder, state, AFTER, discord) == 1
+    out = capsys.readouterr()
+    assert "counted as posted, never sent again" in out.err and "secret-token" not in out.out + out.err
+    kept = saved(state)
+    assert kept["items"]["first:dragon"]["status"] == "posted" and len(kept["posts"]) == 1
+    assert run(folder, state, AFTER + dt.timedelta(minutes=10), discord) == 0 and discord.posts == []
 
 
 def test_firsts_post_in_the_order_they_were_claimed(tmp_path):
@@ -310,14 +354,15 @@ def test_firsts_post_in_the_order_they_were_claimed(tmp_path):
                              "SamFake killed the Ender Dragon. First this season."]
 
 
-def test_an_unreadable_source_on_the_first_run_makes_no_file(tmp_path, capsys):
+def test_an_unreadable_source_at_the_launch_waits_and_later_only_skips_itself(tmp_path):
     folder = world(tmp_path, held={"dragon": ("SamFake", 1)})
     (folder / "players" / "advancements").mkdir(parents=True)
     (folder / "players" / "advancements" / f"{PLAYERS['TomFake']}.json").write_text("{")
     state, discord = tmp_path / "news", Discord()
-    assert run(folder, state, AFTER, discord) == 1 and not state.exists() and discord.posts == []
+    assert run(folder, state, AFTER, discord) == 1 and discord.posts == [] and saved(state)["launched"] is None
     (folder / "players" / "advancements" / f"{PLAYERS['TomFake']}.json").unlink()
     assert run(folder, state, AFTER + dt.timedelta(minutes=10), discord) == 0 and len(discord.posts) == 1
+    assert saved(state)["late"] is False
     # Later, a bad file only skips that source for the run.
     (folder / "players" / "advancements" / f"{PLAYERS['TomFake']}.json").write_text("{")
     FakeWorld(folder).party("p-1", member(PLAYERS["RinFake"], "RinFake"), [member(PLAYERS["RinFake"], "RinFake")])
@@ -325,7 +370,24 @@ def test_an_unreadable_source_on_the_first_run_makes_no_file(tmp_path, capsys):
     assert discord.lines[1:] == ["New faction: RinFake's faction."]
 
 
-# ---------------------------------------------------------------- seasons and late starts
+@pytest.mark.parametrize("error", [FileNotFoundError("party gone"), PermissionError("denied"),
+                                   ModuleNotFoundError("No module named 'tomllib'")],
+                         ids=["gone", "denied", "no-tomllib"])
+def test_a_file_error_or_missing_module_skips_only_that_source(tmp_path, monkeypatch, capsys, error):
+    folder = world(tmp_path, held={"dragon": ("SamFake", 1)}, parties=[("p-1", "Alex_Fake", "Red Wolves")])
+    state, discord = tmp_path / "news", Discord()
+    run(folder, state, AFTER, discord)
+    world(tmp_path, held={"dragon": ("SamFake", 1), "end": ("TomFake", 2)})
+
+    def broken(_world):
+        raise error
+    monkeypatch.setattr(news.saved_world, "parties", broken)
+    assert run(folder, state, AFTER + dt.timedelta(minutes=10), discord) == 1
+    assert discord.lines[2:] == ["TomFake entered the End. First this season."]
+    assert f"could not read the factions: {type(error).__name__}" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- seasons, late starts and gaps
 
 
 def test_a_late_start_keeps_what_is_already_there_as_baseline(tmp_path):
@@ -333,7 +395,7 @@ def test_a_late_start_keeps_what_is_already_there_as_baseline(tmp_path):
                    advancements={"TomFake": {MONSTERS: LAUNCH + dt.timedelta(days=2)}})
     state, discord = tmp_path / "news", Discord()
     later = LAUNCH + dt.timedelta(days=4)
-    assert run(folder, state, later, discord) == 0 and discord.posts == []
+    assert run(folder, state, later, discord, arm=False) == 0 and discord.posts == []
     kept = saved(state)
     assert kept["late"] is True and {e["status"] for e in kept["items"].values()} == {"baseline"}
     # A challenge done before the feed started never counts; new news after it does.
@@ -344,39 +406,88 @@ def test_a_late_start_keeps_what_is_already_there_as_baseline(tmp_path):
     assert discord.lines == ["RinFake completed A Balanced Diet. First this season."]
 
 
-def test_installed_before_the_launch_is_on_time(tmp_path):
+def test_a_late_start_that_finds_nothing_still_posts_what_comes_next(tmp_path):
+    folder, state, discord = world(tmp_path), tmp_path / "news", Discord()
+    later = LAUNCH + dt.timedelta(days=4)
+    run(folder, state, later, discord, arm=False)
+    assert saved(state)["late"] is True and saved(state)["items"] == {}
+    world(tmp_path, held={"dragon": ("SamFake", 1)})
+    run(folder, state, later + dt.timedelta(minutes=10), discord)
+    assert discord.lines == ["SamFake killed the Ender Dragon. First this season."]
+
+
+def test_the_launch_is_dated_by_the_runs_not_the_calendar(tmp_path):
+    # The calendar says 31 October, but the launch runs a week later: runs every 10 minutes before it saw the
+    # world unlaunched, so it is on time, and test play before it doesn't count.
+    real = LAUNCH + dt.timedelta(days=7)
     folder, state, discord = world(tmp_path, launched=False), tmp_path / "news", Discord()
-    run(folder, state, LAUNCH - dt.timedelta(days=1), discord)
-    folder = world(tmp_path, held={"dragon": ("SamFake", 1)})
-    run(folder, state, LAUNCH + dt.timedelta(minutes=2, hours=2), discord)
-    assert saved(state)["late"] is False and discord.lines == ["SamFake killed the Ender Dragon. First this season."]
+    for minutes in (30, 20, 10):
+        run(folder, state, real - dt.timedelta(minutes=minutes), discord, arm=False)
+    world(tmp_path, held={"dragon": ("SamFake", 1)}, advancements={
+        "TomFake": {DIET: real - dt.timedelta(hours=2)},                 # test play
+        "RinFake": {MONSTERS: real + dt.timedelta(minutes=1)}})
+    run(folder, state, real + dt.timedelta(minutes=5), discord, arm=False)
+    kept = saved(state)
+    assert kept["late"] is False and kept["launched"] == news.iso(real + dt.timedelta(minutes=5))
+    assert news.parse(kept["since"]) == real - dt.timedelta(minutes=10) - news.SAVE_LAG
+    run(folder, state, real + dt.timedelta(minutes=25), discord, arm=False)
+    assert discord.lines == ["SamFake killed the Ender Dragon. First this season.",
+                             "RinFake completed Monsters Hunted. First this season."]
+    assert f"challenge:{DIET}" not in kept["items"]
+
+
+def test_the_feed_turned_back_on_mid_season_keeps_what_happened_meanwhile_as_baseline(tmp_path):
+    folder = world(tmp_path, season=2, held={"dragon": ("SamFake", 1)})
+    state, discord = tmp_path / "news", Discord()
+    run(folder, state, AFTER, discord)
+    # The webhook was emptied for a week; the timer ran nothing. Then a first, and back on.
+    world(tmp_path, season=2, held={"dragon": ("SamFake", 1), "end": ("TomFake", 2)})
+    back = AFTER + dt.timedelta(days=7)
+    assert run(folder, state, back, discord) == 0
+    assert discord.lines == ["SamFake killed the Ender Dragon. First this season."]
+    assert saved(state, 2)["items"]["first:end"]["status"] == "baseline"
+    world(tmp_path, season=2, held={"dragon": ("SamFake", 1), "end": ("TomFake", 2), "elytra": ("RinFake", 3)})
+    run(folder, state, back + dt.timedelta(minutes=10), discord)
+    assert discord.lines[1:] == ["RinFake found an elytra. First this season."]
+
+
+def test_a_later_season_turned_on_mid_season_is_late_even_with_last_seasons_file(tmp_path):
+    state, discord = tmp_path / "news", Discord()
+    run(world(tmp_path / "s1", held={"dragon": ("SamFake", 1)}), state, AFTER, discord)
+    mid = LAUNCH + dt.timedelta(days=120)
+    run(world(tmp_path / "s2", season=2, held={"dragon": ("TomFake", 1)}), state, mid, discord, arm=False)
+    assert saved(state, 2)["late"] is True and len(discord.posts) == 1
 
 
 def test_a_new_season_is_a_new_file_and_its_firsts_post_again(tmp_path):
     state, discord = tmp_path / "news", Discord()
     run(world(tmp_path / "s1", held={"dragon": ("SamFake", 1)}), state, AFTER, discord)
     season_two = LAUNCH + dt.timedelta(days=90)
-    run(world(tmp_path / "s2", season=2, held={"dragon": ("TomFake", 1)},
-              advancements={"Alex_Fake": {MONSTERS: season_two - dt.timedelta(minutes=5)}}),
-        state, season_two + dt.timedelta(minutes=5), discord)
+    s2 = world(tmp_path / "s2", season=2, launched=False)
+    run(s2, state, season_two - dt.timedelta(minutes=5), discord, arm=False)
+    world(tmp_path / "s2", season=2, held={"dragon": ("TomFake", 1)},
+          advancements={"Alex_Fake": {MONSTERS: season_two + dt.timedelta(minutes=1)}})
+    run(s2, state, season_two + dt.timedelta(minutes=5), discord, arm=False)
+    run(s2, state, season_two + dt.timedelta(minutes=25), discord, arm=False)
     assert discord.lines == ["SamFake killed the Ender Dragon. First this season.",
-                             "TomFake killed the Ender Dragon. First this season."]
+                             "TomFake killed the Ender Dragon. First this season.",
+                             "Alex\\_Fake completed Monsters Hunted. First this season."]
     assert saved(state, 2)["late"] is False and saved(state, 1)["items"]["first:dragon"]["status"] == "posted"
-    # Without last season's file a later season's first run is a late start: its launch isn't in the calendar.
-    other = tmp_path / "other"
-    run(world(tmp_path / "s3", season=2, held={"dragon": ("TomFake", 1)}), other, season_two, discord)
-    assert saved(other, 2)["late"] is True and len(discord.posts) == 2
 
 
 def test_preview_and_found_change_nothing(tmp_path, capsys):
     folder = world(tmp_path, held={"dragon": ("SamFake", 1)}, parties=[("p-1", "Alex_Fake", None)])
     state = tmp_path / "news"
-    assert news.preview(folder, state, AFTER, LAUNCH) == 0
+    armed(state, AFTER)
+    before = (state / "season-1.json").read_text()
+    assert news.preview(folder, state, AFTER) == 0
     out = capsys.readouterr().out
     assert "SamFake killed the Ender Dragon" in out and "New faction: Alex\\_Fake's faction." in out
-    assert not state.exists()
-    assert news.show_found(folder, LAUNCH) == 0
-    assert "first:dragon" in capsys.readouterr().out and not state.exists()
+    assert (state / "season-1.json").read_text() == before
+    assert news.preview(folder, tmp_path / "none", AFTER) == 0   # no file: a late start, everything baseline
+    assert "kept as baseline" in capsys.readouterr().out and not (tmp_path / "none").exists()
+    assert news.show_found(folder) == 0
+    assert "first:dragon" in capsys.readouterr().out
     assert news.main(["preview", str(tmp_path / "missing")]) == 2
 
 
@@ -423,15 +534,18 @@ def test_units_run_it_as_realms_every_ten_minutes_clear_of_the_other_jobs():
 @pytest.fixture
 def script(tmp_path):
     """Runs realms-news.sh under dash with fake python3, flock, id, stat, install and systemctl first on PATH;
-    each records its arguments (and python3 whether NEWS_WEBHOOK_URL reached it) in `calls`."""
+    each records its arguments (and python3 whether NEWS_WEBHOOK_URL reached it) in `calls`. python3's version
+    check (python_ok) answers FAKE_RC_version and isn't recorded."""
     if not DASH:
         pytest.skip("needs dash")
     bin_dir, calls = tmp_path / "bin", tmp_path / "calls"
     bin_dir.mkdir()
     for name in ("python3", "flock", "install", "systemctl", "stat"):
+        first = ('case "$1" in -c) exit "${FAKE_RC_version:-0}" ;; --version) echo "Python 3.9.2"; exit 0 ;; esac\n'
+                 if name == "python3" else "")
         extra = 'echo "webhook ${NEWS_WEBHOOK_URL:+given}" >>"$FAKE_CALLS"\n' if name == "python3" else ""
         out = 'echo realms\n' if name == "stat" else ""
-        (bin_dir / name).write_text(f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n{extra}{out}'
+        (bin_dir / name).write_text(f'#!/bin/sh\n{first}echo "{name} $*" >>"$FAKE_CALLS"\n{extra}{out}'
                                     f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")
     repo = tmp_path / "repo"
@@ -492,3 +606,16 @@ def test_install_makes_the_news_folder_and_starts_the_timer_as_root_only(script)
     assert code == 0 and f"install -d -m 755 -o realms -g realms {script.news.as_posix()}" in calls
     assert any(c.startswith("systemctl enable --now realms-news.timer") for c in calls)
     assert script("--bogus")[0] == 2
+
+
+def test_the_script_refuses_a_python3_older_than_3_11(script):
+    code, out, calls = script(settings=f"NEWS_WEBHOOK_URL={URL}\n", FAKE_RC_version="1")
+    assert code == 1 and "python3 is older than 3.11" in out[-1] and "Python 3.9.2" in out[-1]
+    assert calls == []
+    assert script("--check", settings=f"NEWS_WEBHOOK_URL={URL}\n", FAKE_RC_version="1")[0] == 1
+
+
+def test_check_fails_when_the_preview_does(script):
+    code, out, calls = script("--check", settings=f"NEWS_WEBHOOK_URL={URL}\n", FAKE_RC_python3="1")
+    assert code == 1 and "the preview failed (exit 1): a source couldn't be read, see above" in out
+    assert out[-1] == "check finished: nothing was changed"

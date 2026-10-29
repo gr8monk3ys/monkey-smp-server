@@ -165,18 +165,20 @@ class First:
     week: int | None   # the challenge week it was claimed in (tools/season_calendar.py's); None when unknown
 
 
-def holders(world: Path) -> list[First]:
+def holders(world: Path, scores: dict[str, dict[str, int]] | None = None) -> list[First]:
     """Every first claimed in the saved world, in the order they were claimed (empty before any).
 
     Read from command storage realms:firsts held.<id> ({name, order, week}); a holder whose name isn't there
     (storage not saved yet, or the in-game name lookup failed) is taken from the scores rf.<id>. A file not
-    shaped as the server saves it is a ValueError (saved_world's)."""
+    shaped as the server saves it is a ValueError (saved_world's). `scores`: the saved scoreboard's scores, when
+    the caller has read them already."""
     storage = saved_world.command_storage(world, NS) or {}
     claims = storage.get(KEY, {}).get("held", {})
     if not isinstance(claims, dict):
         claims = {}
-    board = saved_world.scoreboard(world)
-    scores = board.scores if board else {}
+    if scores is None:
+        board = saved_world.scoreboard(world)
+        scores = board.scores if board else {}
     ids = [m["id"] for m in MILESTONES] + sorted(set(claims) - {m["id"] for m in MILESTONES})
     found = []
     for first_id in ids:

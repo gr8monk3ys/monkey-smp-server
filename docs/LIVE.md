@@ -319,11 +319,13 @@ sh /srv/realms/repo/deploy/realms-news.sh --check
 It runs every 10 minutes (2 minutes past, clear of the drops and omens) as `realms`, reads `REPO_DIR`,
 `LIVE_DIR`, `LOCK_FILE`, `NEWS_DIR` (default `/srv/realms/news`) and `NEWS_WEBHOOK_URL` from
 `/etc/realms-deploy.env`, and only the saved world (no RCON). `--check` says whether the webhook is set, never
-its value. Install it before the launch, so launch night posts: nothing posts before `realms:rules/launch`,
-and a season's first run more than 3 hours after the launch (or with the webhook added later) keeps what is
-already in the world as baseline and posts only what is new. To stop it, empty `NEWS_WEBHOOK_URL` (or
-`sudo systemctl disable --now realms-news.timer`). A new season needs nothing: a new world is a new
-`season-<n>.json` in `NEWS_DIR`, so every first is news again.
+its value. Install it, webhook set, before the launch, so launch night posts: nothing posts before
+`realms:rules/launch`, and the runs before it are what date the launch (no calendar date is used). A season
+whose first launched run had no run in the 3 hours before it (the webhook added mid-season), or a gap of more
+than 3 hours between runs (the webhook emptied for a while, the VPS down), keeps what turned up meanwhile as
+baseline and posts only what is new after it. To stop it, empty `NEWS_WEBHOOK_URL` (or
+`sudo systemctl disable --now realms-news.timer`). A new season needs nothing as long as the webhook stays set
+across it: a new world is a new `season-<n>.json` in `NEWS_DIR`, so every first is news again.
 
 ### The day timer as a job (the release with `deploy/realms-day.sh`)
 

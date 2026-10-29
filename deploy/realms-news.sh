@@ -54,17 +54,20 @@ fi
 
 TOOL=$REPO_DIR/tools/news.py
 WORLD=$LIVE_DIR/server/world
-command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/install-standings.sh installs it)'
+python_ok 11 || die "python3 is older than 3.11 (party names are TOML): $(python3 --version 2>&1)"
 [ -r "$TOOL" ] || die "$TOOL is missing: is the release with the news deployed?"
 NEWS_WEBHOOK_URL=${NEWS_WEBHOOK_URL:-$(setting NEWS_WEBHOOK_URL)}
 
 if [ "$MODE" = check ]; then
     if [ -n "$NEWS_WEBHOOK_URL" ]; then log 'webhook: set'; else log 'webhook: not set (NEWS_WEBHOOK_URL): nothing posts'; fi
-    python3 -B "$TOOL" preview "$WORLD" --state "$NEWS_DIR" 2>&1 | while IFS= read -r l; do log "$l"; done
+    rc=0
+    log_each python3 -B "$TOOL" preview "$WORLD" --state "$NEWS_DIR" || rc=$?
     # shellcheck disable=SC2086
     timer_state realms-news.timer $UNITS
+    [ "$rc" = 0 ] || log "the preview failed (exit $rc): a source couldn't be read, see above"
     log 'check finished: nothing was changed'
-    exit 0
+    exit "$rc"
 fi
 
 # Root would make a news file realms can't change, and a lock file realms-deploy.sh can't open.

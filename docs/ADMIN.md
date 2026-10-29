@@ -848,15 +848,18 @@ The limits, in `LIMITS` and below it in `tools/news.py`: in any 24 hours at most
 2 faction lines, 6 in all, and 2 a run. What is over a limit waits for a later run, in the order it happened,
 and is dropped once it has waited 3 days. A challenge waits 15 minutes first, in case an earlier finish is
 still to be saved. Each season keeps `NEWS_DIR/season-<n>.json`: every item seen and whether it was posted.
-It is written before and after each post, so a run killed mid-post loses that line rather than ever posting
-it twice. To change what is news, edit `FIRST_LINES` or `CHALLENGES` (an advancement id from the game's own
+It is written before and after each post, so a run killed mid-post, or a post Discord took without
+answering (a timeout, a dropped connection, a 5xx), loses that line rather than ever posting it twice; only a
+refusal (a 4xx) or a failure to connect is tried again. The runs before the launch date the season, so it
+counts from the launch whenever that is; turned on mid-season, or back on after more than 3 hours off, it keeps
+what turned up meanwhile as baseline and posts only what is new. To change what is news, edit `FIRST_LINES` or `CHALLENGES` (an advancement id from the game's own
 files) and release.
 
 On the VPS (changes nothing):
 
 ```sh
 sh /srv/realms/repo/deploy/realms-news.sh --check      # what the next run would post, and what waits
-python3 /srv/realms/repo/tools/news.py found /srv/realms/TheRealms-Server/server/world   # everything that counts
+python3 /srv/realms/repo/tools/news.py found /srv/realms/TheRealms-Server/server/world   # all in the world, test play too
 ```
 
 To leave one out (a first taken by an exploit and reopened before it posted, say), set its item's `"status"`

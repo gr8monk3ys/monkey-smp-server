@@ -1,0 +1,6 @@
+/* Tailwind v4, for anything new. Only its theme and utilities: no preflight, so it resets nothing, and style.css
+ * (the design system, DESIGN.md) stays the source of truth for every page. Utilities are in a layer, so a rule
+ * in style.css wins over one; reach for them only where style.css has nothing. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);

@@ -44,16 +44,18 @@ connects without needing help.
 
 ## Operating Context
 
-- Static HTML, CSS and a small script; no build step. Deployed on Vercel from `site/` (`site/README.md`).
-- `site/config.js` holds every link, the server address and the launch time. `tools/site_links.py` writes
-  them into the pages so they work without JavaScript, and the checks fail when the pages drift. Elements with
-  `data-link`, `data-store` ("open" or "soon") and `data-launch` must keep those attributes; `app.js` relies
-  on the ids `address`, `copy`, `countdown`, `launch-label` and `trailer`.
+- Next.js (the same stack as lscaturchio.xyz) built as a static site with bun; every page reads in full
+  without JavaScript. Deployed on Vercel from `site/` (`site/README.md`).
+- `site/config.json` holds every link, the server address and the launch time. The build writes them into
+  the pages, and `tools/site_links.py --built` fails when a built page drifts from it. Links keep `data-link`
+  and launch times `data-launch` for that check; the page scripts (`site/src/components/`) rely on the ids
+  `address`, `copy`, `countdown`, `launch-label` and `trailer`.
 - While `STORE_URL` is empty, every buy button points at the Discord and the pages say passes are arranged
   there by hand; once the Tebex store opens the "open" copy shows instead.
-- The modpack (`.mrpack`, about 560 MB) and the Windows installer zip are served from `site/pack/`, versioned
-  with each release. `site/changes.html` gets a players' entry with each release (tests check its shape).
-- Pages: `index.html` (the server), `changes.html` (what changed), `creators.html` (creator codes).
+- The modpack (`.mrpack`, about 560 MB) and the Windows installer zip are served from `site/public/pack/`,
+  versioned with each release. `site/src/content/changes.mdx` gets a players' entry with each release (tests check its shape).
+- Pages: `/` (the server), `/guide` (how it works), `/changes` (what changed), `/creators` (creator codes),
+  in `site/src/app/`.
 
 ## Capabilities and Constraints
 
@@ -69,20 +71,20 @@ connects without needing help.
 ## Brand Commitments
 
 - The name is Monkey SMP (players' name; internal names keep `realms`, see `GLOSSARY.md`).
-- The logo: a pixel-art monkey on a green tile beside the words MONKEY SMP (`site/kit/`, `site/favicon.svg`).
+- The logo: a pixel-art monkey on a green tile beside the words MONKEY SMP (`site/public/kit/`, `site/public/favicon.svg`).
 - The site gets its own identity built from the server (owner, 2026-10-26). It no longer matches
   lscaturchio.xyz's "Field Notebook" look.
 - Voice: plain, direct, specific; second person; facts over hype. No exclamation marks or superlatives.
 
 ## Evidence on Hand
 
-- Six screenshots from the server's own world, taken with the pack's shaders (`site/img/*-800.webp` and
-  `-1600.webp`): the Painted Mountains, a Nether castle, an End citadel, a fortified village, a floating
+- Six screenshots from the server's own world, taken with the pack's shaders (`site/public/img/*-800.webp`
+  and `-1600.webp`): the Painted Mountains, a Nether castle, an End citadel, a fortified village, a floating
   island, a mage tower.
-- A one-minute trailer (`site/media/trailer-720p.mp4`, poster `trailer-poster.webp`); its event scenes are
+- A one-minute trailer (`site/public/media/trailer-720p.mp4`, poster `trailer-poster.webp`); its event scenes are
   staged on a test server with stand-in players, and the caption says so.
-- Logo, stacked logo, mark, server-list banner and Discord banner (`site/kit/`); the link-preview image
-  `site/img/og.jpg`.
+- Logo, stacked logo, mark, server-list banner and Discord banner (`site/public/kit/`); the link-preview
+  image `site/public/img/og.jpg`.
 - Absent, never to be invented: player counts, reviews or testimonials, press, uptime figures, player names
   beyond the hosts. Season I hasn't opened yet.
 

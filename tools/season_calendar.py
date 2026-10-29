@@ -13,7 +13,7 @@
 
 The one place the tools keep Season I's dates: challenges, drops, npcs, wardrobe, standings and site_links
 all ask it. Every date follows from LAUNCH (Season(launch) works the rest out), so moving the season is one
-edit here, then `python tools/datapacks.py`. site/config.js's LAUNCH_AT is the website's copy; a test checks
+edit here, then `python tools/datapacks.py`. site/config.json's LAUNCH_AT is the website's copy; a test checks
 they agree. Week 1 starts on the Monday after the launch at 12 AM Pacific, and a new week every Monday at
 12 AM Pacific (Sunday night, after the Saturday event); everything before week 1 is week 0.
 

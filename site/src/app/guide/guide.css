@@ -1,0 +1,85 @@
+/* A field guide: short sections to read once, then the week as a row of stone days, then every command
+ * by rank as rows to look up: the command in mono on the left, what it does beside it. */
+main > section + section { padding-top: 0; }
+.hero { padding-bottom: 72px; }   /* the front page's hero runs into its trailer; this one ends */
+.prose { max-width: var(--measure); }
+.prose ul { margin: 0 0 1em; padding-left: 1.1em; }
+.prose li { margin-bottom: 0.5em; }
+.prose li::marker { color: var(--sage); }
+.prose h3 { margin-top: 1.6em; }
+.prose strong { color: var(--bone); }
+
+/* On this page: the sections and the ranks, as plain links in two rows. */
+/* Beside the lede in the front page's launch slot; on a phone, under it (that slot comes first there). */
+.toc { grid-area: launch; display: grid; gap: 14px; max-width: 48rem; }
+.toc p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; }
+.toc b { flex: 0 0 100%; color: var(--sage); font-size: 0.95rem; }
+.toc a { font-weight: 700; }
+
+/* The week: Monday to Friday across the top with the omen band under them, Saturday and Sunday standing
+ * the full height at the end. On a phone the days stack in order. */
+.week {
+  list-style: none; margin: 40px 0 0; padding: 0; display: grid; gap: 12px;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto auto;
+}
+.week li {
+  --ring: var(--ink);
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 16px; color: var(--ink);
+  background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+}
+.week h3 { margin: 0; color: var(--ink); font-size: 1.25rem; }
+.week p { margin: 0; font-size: 0.95rem; line-height: 1.45; }
+.week .at { display: block; font: 700 1.5rem/1.1 var(--display); color: var(--ink); }
+.week .quiet { color: var(--ink-2); }
+.week .sat, .week .sun { grid-row: 1 / span 2; }
+.week .omens {
+  grid-column: 1 / span 5; grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  color: var(--bone-2); background: var(--shade) padding-box; border-image-source: var(--frame-shade);
+}
+.week .omens h3 { color: var(--bone); }
+.week .omens p { flex: 1 1 24rem; }
+.week + .small { max-width: var(--measure); margin-top: 14px; }
+
+/* What each rank can do, one row a rank; the rank leads in the display face. */
+.ranks { margin: 32px 0 0; max-width: 52rem; }
+.ranks div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 2px solid var(--leaf-2); }
+.ranks div:last-child { border-bottom: 2px solid var(--leaf-2); }
+.ranks dt { font: 700 1.25rem/1.2 var(--display); color: var(--bone); }
+.ranks dt a { color: inherit; text-decoration: none; }
+.ranks dt a:hover { color: var(--gold-hi); text-decoration: underline; }
+.ranks dd { margin: 0; }
+
+/* Commands, by rank: one heading a rank, one group of rows per job. */
+.role { margin-top: 72px; }
+.role > h3 { font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 0.35em; }
+.role > p { max-width: var(--measure); }
+.role h4 { margin: 32px 0 8px; font: 700 1rem/1.3 var(--body); color: var(--sage); }
+.cmds { margin: 0; max-width: 60rem; }
+.cmds div {
+  display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 6px 28px; align-items: baseline;
+  padding: 12px 0; border-top: 2px solid var(--leaf-2);
+}
+.cmds div:last-child { border-bottom: 2px solid var(--leaf-2); }
+.cmds dt code { font-size: 1rem; color: var(--bone); overflow-wrap: anywhere; }
+.cmds dt kbd {
+  display: inline-block; min-width: 2em; padding: 0 6px; font: 700 0.95rem/1.5 var(--body); color: var(--ink); text-align: center;
+  background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+}
+.cmds dd { margin: 0; }
+.cmds dd code { font-size: 0.94em; }
+.role + .role { margin-top: 88px; }
+
+@media (max-width: 960px) {
+  .week { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .week .sat, .week .sun, .week .omens { grid-row: auto; grid-column: auto; }
+  .week li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  .week h3 { flex: 0 0 7rem; }
+  .week p { flex: 1 1 14rem; }
+  .week .at { display: inline; font-size: 1.25rem; margin-right: 6px; }
+}
+@media (max-width: 760px) {
+  .hero .toc { grid-area: trailer; margin-top: 32px; }
+  .cmds div, .ranks div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .week h3 { flex-basis: 100%; }
+  .role, .role + .role { margin-top: 64px; }
+}

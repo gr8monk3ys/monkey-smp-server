@@ -1,0 +1,7 @@
+# bun.lock is the lockfile; don't let a stray npm install add another
+package-lock.json
+/node_modules
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo

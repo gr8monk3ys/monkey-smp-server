@@ -106,7 +106,7 @@ are a plan, not a contract. What is promised is the end date.
 #### Season I calendar
 
 Season I opens on **Saturday 7 November 2026 at 5 PM Pacific** (8 PM Eastern; `LAUNCH_AT` in
-`site/config.js`, and the run sheet in docs/LAUNCH.md). The tools keep these dates in one place,
+`site/config.json`, and the run sheet in docs/LAUNCH.md). The tools keep these dates in one place,
 `tools/season_calendar.py` (the weeks, the Saturdays, the drop nights and the launch weekend); a test checks it
 against `LAUNCH_AT` and this table. Week N's event is the Saturday N weeks later at
 6 PM Pacific, 9 PM Eastern. Daylight saving time ended at 2 AM on Sunday 1 November 2026, the week before the
@@ -527,8 +527,8 @@ A Strength server gets harder to join every week, so catching up has to be built
 
 ### Telling players what changed
 
-Every rule, mod or config change players will notice goes in the player changelog, `site/changes.html`
-on the site (`docs/ADMIN.md`, "Telling players what changed"), and the same lines go in Discord's
+Every rule, mod or config change players will notice goes in the player changelog, `site/src/content/changes.mdx`
+(`/changes` on the site; `docs/ADMIN.md`, "Telling players what changed"), and the same lines go in Discord's
 `#changelog` channel the day it goes live. A season that changes a rule mid-way without saying so loses
 trust faster than one that never changes.
 
@@ -595,11 +595,11 @@ python3 /srv/realms/repo/tools/wrapped.py build /srv/realms/seasons/season-I/wor
 it sits beside `season-I/`, not in it, so step 6's `cp` makes that folder. Without it Season I counts staff
 test play before the launch too, and a later season can't be made. It warns if it was kept well away from
 the launch (a rehearsal's file, say), and `start` never replaces one without `--force`. Copy
-the folder into a checkout as `site/wrapped/season-1/` (`scp -r` to the maintainer's computer), open
+the folder into a checkout as `site/public/wrapped/season-1/` (`scp -r` to the maintainer's computer), open
 `index.html` and a page or two, and merge it in a pull request: the site deploys it at
 `/wrapped/season-1/`. Post that link in `#monkey-smp`. The pages are left out of search engines. A player who
 asks later to be taken down: add the name to the list, build again into an empty folder, and replace
-`site/wrapped/season-1/` with it.
+`site/public/wrapped/season-1/` with it.
 
 **Off-season (week 12)**
 
@@ -677,7 +677,7 @@ Built:
 - The holiday skins (Gravelight, Midwinter Cap, Solstice) and the tenure ladder at 1, 2 and 3 months.
 - The season-end runbook ("Ending a season") and `tools/season.py`: the world download, and carrying
   the wardrobe, hours played and title teams into the next world.
-- The player changelog page, `site/changes.html`.
+- The player changelog page, `site/src/content/changes.mdx`.
 - The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
   block, built from the game's data reports) with a published seed, so anyone can check the draw.
 - The first-join welcome, the pause menu's links and the 48-hour PvP grace (rule 26), in the

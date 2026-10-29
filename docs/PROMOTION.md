@@ -48,9 +48,9 @@ would be disappointed.
 
 **Version:** Java 26.3. **Country:** United States. **Max players:** 30.
 
-**Banner** (468 × 60, the size every list takes): `site/kit/server-list-468x60.png`, also served at
+**Banner** (468 × 60, the size every list takes): `site/public/kit/server-list-468x60.png`, also served at
 https://monkeysmp.lscaturchio.xyz/kit/server-list-468x60.png. **Icon** (64 × 64): `marketing/server-icon.png`.
-The logo and the Discord banner are in `site/kit/` too.
+The logo and the Discord banner are in `site/public/kit/` too.
 
 **Links:** website https://monkeysmp.lscaturchio.xyz, Discord https://discord.gg/C25hy9Ca9W, map
 https://map.monkeysmp.lscaturchio.xyz.

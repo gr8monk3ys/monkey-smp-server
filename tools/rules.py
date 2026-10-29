@@ -63,7 +63,7 @@ GRACE_STACK = ('minecraft:paper[custom_data={realms_grace:{}},enchantments={"rea
 # The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
 CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
 
-# The welcome and the pause menu's links. The Discord invite is site/config.js's.
+# The welcome and the pause menu's links. The Discord invite and the map are site/config.json's.
 DISCORD = "https://discord.gg/C25hy9Ca9W"
 SITE = "https://monkeysmp.lscaturchio.xyz"
 MAP = "https://map.monkeysmp.lscaturchio.xyz"

@@ -17,6 +17,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
 | `player/` | the player installer for the official Minecraft Launcher (shipped whole in the player zip) | by hand |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
+| `tests/fixtures/patch-golden/expected.json` | the patch rules' answers for one fixed zip and patch, checked by both the Python and the PowerShell tests | `tests/fixtures/patch-golden/record.py` |
 
 The command-line tools (`snapshot`, `check_updates`, `validate`, `build`, `modrinth`) are thin; the knowledge
 lives in a few modules they share:
@@ -196,6 +197,19 @@ way.) A file identical to its original simply pins the original, with no patch. 
 replace files that exist in the upstream file (adding or removing files fails the snapshot), and
 patch folders no mod or datapack uses are deleted. `validate.py` checks that every patch matches its
 entry's pinned hash, and `--online` applies each patch to the real download to prove it still fits.
+
+The patch rules (which hash an entry is checked against, the patch id, and replacing files inside a zip) are
+written twice, in `tools/patches.py`/`tools/entries.py` and in the installer's `Realms.psm1`, because the
+installer must stay PowerShell 5.1 (ADR-0003, ADR-0007). One golden fixture pins both:
+`tests/fixtures/patch-golden/` holds a dummy `input.zip`, a patch in the real layout and the answers in
+`expected.json`, which `tests/test_patches.py` and the `Patch rules golden fixture` block of
+`tests/Realms.Tests.ps1` both check. If you change a rule on purpose, change it on both sides, re-record with
+`python -I tests/fixtures/patch-golden/record.py` and check that both suites pass. Compression and entry order
+inside the patched zip are not part of the rules: the installer moves replaced files to the end of the zip, while
+the Python tools keep them in place. So a patch must never replace a file whose place in the zip matters, above
+all `META-INF/MANIFEST.MF` (Java's `JarInputStream` only finds it as the first or second entry); `snapshot.py`
+and `validate.py` refuse one (`ORDER_SENSITIVE` in `tools/patches.py`). The patch id sorts paths ordinally, so it
+is the same on every platform.
 
 `snapshot.py client` also pins `client/fabric-profile.json`: Fabric meta's launcher profile for the
 client pack's Minecraft and loader versions (the `minecraft` and `fabric-loader` dependencies in

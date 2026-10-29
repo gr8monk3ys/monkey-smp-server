@@ -43,17 +43,14 @@ import argparse
 import datetime as dt
 import json
 import os
-import struct
 import sys
-import tomllib
 import unicodedata
 import urllib.error
 import urllib.request
-import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-import nbt
+import saved_world
 from datapacks import NS, function_tag, lines, mcmeta, text
 from events import ARENA_TAG, CUP, LEVEL, STRENGTH
 from rcon import LIMIT, Docker, RconError
@@ -74,30 +71,9 @@ LAST_TOP = 5          # factions in last week's table on the board
 NAME_LIMIT = 20       # characters of a faction's name on the board
 DISCORD_LIMIT = 2000
 FORMULA = "Cup 40, land 20, Strength 20, kills this week 20, each as a share of the leader; +5 a bounty."
-OPAC = Path("data") / "openpartiesandclaims"
 
 
 # ---------------------------------------------------------------- reading the world
-
-
-def uuid_text(value) -> str:
-    """A UUID as Minecraft saves it (four ints, two longs or text) in its usual 8-4-4-4-12 form."""
-    if isinstance(value, list) and len(value) == 4:
-        return str(uuid.UUID(bytes=struct.pack(">4i", *value)))
-    if isinstance(value, list) and len(value) == 2:
-        return str(uuid.UUID(bytes=struct.pack(">2q", *value)))
-    return str(uuid.UUID(str(value)))
-
-
-def plain(component) -> str:
-    """The text of a text component as saved in NBT (a string, a compound or a list)."""
-    if isinstance(component, str):
-        return component
-    if isinstance(component, list):
-        return "".join(plain(c) for c in component)
-    if isinstance(component, dict):
-        return plain(component.get("text", "")) + plain(component.get("extra", []))
-    return ""
 
 
 def norm(text: str) -> str:
@@ -133,66 +109,39 @@ def usernames(world: Path) -> dict[str, str]:
     return {str(e["uuid"]).lower(): e["name"] for e in entries if isinstance(e, dict) and "uuid" in e and "name" in e}
 
 
-def party_name(world: Path, owner_uuid: str) -> str:
-    path = world / OPAC / "player-configs" / f"{owner_uuid}.toml"
-    try:
-        config = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return ""
-    name = config.get("playerConfig", {}).get("parties", {}).get("name", "")
-    return name.strip() if isinstance(name, str) else ""
-
-
 def read_parties(world: Path, names: dict[str, str]) -> list[Party]:
+    found = saved_world.parties(world)
+    if found is None:
+        warn(f"no {world / saved_world.PARTIES}: no factions (has a party been made with /openpac?)")
+        return []
     parties = []
-    folder = world / OPAC / "parties"
-    if not folder.is_dir():
-        warn(f"no {folder}: no factions (has a party been made with /openpac?)")
-    for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        data = nbt.read(path)
-        if not isinstance(data.get("owner"), dict):
-            warn(f"{path.name} has no owner: left out")
+    for p in found:
+        if p.owner is None:
+            warn(f"{p.id}.nbt has no owner: left out")
             continue
-        people = [data["owner"], *data.get("members", [])]
-        uuids, members = [], []
-        for p in people:
-            u = uuid_text(p["uuid"])
-            if u not in uuids:
-                uuids.append(u)
-                members.append(names.get(u, p.get("username") or u[:8]))
+        members = [names.get(m.uuid, m.username or m.uuid[:8]) for m in p.members]
         owner = members[0]
-        parties.append(Party(path.stem, party_name(world, uuids[0]) or f"{owner}'s faction", owner, members, uuids))
+        parties.append(Party(p.id, p.name or f"{owner}'s faction", owner, members, [m.uuid for m in p.members]))
     return parties
 
 
 def read_claims(world: Path) -> dict[str, int]:
+    """Chunks claimed by each player, in every dimension; a claims file not named by a UUID is left out."""
     claims = {}
-    folder = world / OPAC / "player-claims"
-    for path in sorted(folder.glob("*.nbt")) if folder.is_dir() else []:
-        data = nbt.read(path)
-        chunks = sum(len(c.get("positions", [])) for dim in data.get("dimensions", {}).values()
-                     for c in dim.get("claims", []))
+    for name, chunks in saved_world.claim_counts(world).items():
         try:
-            claims[uuid_text(path.stem)] = chunks
+            claims[saved_world.uuid_text(name)] = chunks
         except ValueError:
             continue
     return claims
 
 
 def read_scoreboard(world: Path) -> tuple[dict[str, dict[str, int]], dict[str, str]]:
-    path = world / "data" / "minecraft" / "scoreboard.dat"
-    if not path.is_file():
-        raise SystemExit(f"no scoreboard at {path}: give the world folder (server/world)")
-    data = nbt.read(path)
-    data = data.get("data", data)
-    scores: dict[str, dict[str, int]] = {}
-    labels = {}
-    for s in data.get("PlayerScores", []):
-        # 26.3 leaves Score out when it is 0.
-        scores.setdefault(s["Objective"], {})[s["Name"]] = s.get("Score", 0)
-        if s["Objective"] == CUP and (s.get("display") or s.get("Display")):
-            labels[s["Name"]] = plain(s.get("display") or s.get("Display")).strip()
-    return scores, labels
+    board = saved_world.scoreboard(world)
+    if board is None:
+        raise SystemExit(f"no scoreboard at {saved_world.scoreboard_path(world)}: give the world folder (server/world)")
+    labels = {holder: name.strip() for holder, name in board.displays.get(CUP, {}).items()}
+    return board.scores, labels
 
 
 def read_world(world: Path) -> World:

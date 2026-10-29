@@ -92,15 +92,14 @@
   // everything for visitors who asked for less motion. Printing shows them all.
   var places = document.querySelectorAll("[data-place]");
   if (places.length && !calm && "IntersectionObserver" in window) {
+    // Measure every block first, then hide: one layout, not one per block.
     var waiting = [];
     places.forEach(function (list) {
       Array.prototype.forEach.call(list.children, function (block) {
-        if (block.getBoundingClientRect().top > window.innerHeight) {
-          block.classList.add("unplaced");
-          waiting.push(block);
-        }
+        if (block.getBoundingClientRect().top > window.innerHeight) waiting.push(block);
       });
     });
+    waiting.forEach(function (block) { block.classList.add("unplaced"); });
     var placer = new IntersectionObserver(function (entries) {
       var n = 0;
       entries.forEach(function (entry) {

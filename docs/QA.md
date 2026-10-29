@@ -16,6 +16,9 @@ would open Founder's Circlet's window early and wipe the test play it's meant to
 the real launch wouldn't open the window again. `challenges/sync` clears the week's progress, and
 `firsts/clear` reopens every Server First. On a test copy all of that is fine; that's what it's for.
 
+The one exception is war, pacts and outposts (below), which only the live server can run. There you only
+watch and read status: no staff commands that change anything.
+
 ## Set up a test server (about 15 minutes)
 
 1. From the [releases page](https://github.com/gr8monk3ys/monkey-smp-server/releases), download the release
@@ -81,11 +84,17 @@ away `/function realms:npcs/crier/here`.
 
 On the test server only, as admin, run `function realms:rules/launch`.
 
-- [ ] Chat announces the launch; the Nether and PvP are closed and open again an hour later.
+- [ ] Chat announces the launch; the Nether and PvP are closed and open again an hour later. Nobody gets grace
+  in that hour (rule 23).
 - [ ] `scoreboard players get #founder.open rw.day` says 1: Founder's Circlet's window is open.
 - [ ] After 10 minutes online, `/trigger wardrobe` shows Founder's Circlet unlocked.
   (`scoreboard players get NAME rw.launchtime` counts the seconds.)
-- [ ] New players get 48 hours of grace; `/trigger end_grace` ends it early, and it says so.
+- [ ] After the hour, an account joining for the first time gets 48 hours of grace; `/trigger end_grace` ends it
+  early, and it says so.
+
+The challenges, standings and drops below work during the launch hour. Wait for PvP and the Nether to open
+before the omens and the Server Firsts: Truce Hour won't start while PvP is already off, a Hunted kill can't
+land, and the Nether portal stays shut.
 
 ## The week
 
@@ -108,8 +117,10 @@ On the test server only, as admin, run `function realms:rules/launch`.
 
 - [ ] `function realms:omens/start/truce`: a boss bar, and players can't hurt each other for the hour.
   `function realms:omens/stop` ends it and PvP comes back.
-- [ ] `function realms:omens/start/blood_moon`, then `time set 13000`: "The moon is coming up red", a title,
-  the game goes to Hard; mobs are faster. At dawn (`time set 0`) the difficulty goes back.
+- [ ] In the afternoon (`time set 9000`), `function realms:omens/start/blood_moon`: "The moon is coming up red
+  tonight". Let the sun set by itself (about 3 minutes; jumping the clock may skip the nightfall it waits for):
+  a title, the game goes to Hard, and mobs near you are faster. At dawn, or after 15 minutes, the difficulty
+  goes back.
 - [ ] With a second player: `function realms:omens/hunt {name:"THEIRNAME"}` puts a title and boss bar on them
   and posts a bounty; killing them names you in chat.
 
@@ -119,17 +130,17 @@ On the test server only, as admin, run `function realms:rules/launch`.
 - [ ] `/trigger firsts` lists the 14 firsts and who holds each.
 - [ ] Doing it again, or a second player doing it, announces nothing.
 
-**War, pacts and outposts: on the VPS drill copy, with an owner.** A faction's number, which war, pacts and
-outpost captures all need, comes from the hourly standings run on the VPS, and outposts are placed by another
-hourly VPS timer, so a home test server never gets either. On the drill copy (docs/LAUNCH.md), with two parties
-(`/oparties create` each) and an hour for the runs:
+**War, pacts and outposts: on the live server after the launch, with an owner.** A faction's number, which
+war, pacts and outpost captures all need, comes from the hourly standings run, and outposts are placed by
+another hourly timer. Both run only on the VPS, against the live world, so a home test server (or the owners'
+restore drill copy) never gets either. Check these in the first evening after the launch, once two real
+factions exist and an hour has passed. Read and watch only: real players' wars and outposts are at stake.
 
 - [ ] `function realms:diplomacy/staff/factions` lists both factions with their numbers.
-- [ ] As a party owner, `/trigger diplomacy` offers war or a pact on the other faction; the other leader can
-  accept a pact.
-- [ ] `function realms:diplomacy/staff/end {a:1,b:2}` (the numbers from that list) ends it, announced.
-- [ ] `function realms:outposts/status` lists four outposts; standing in one alone for 60 seconds captures it,
-  and two factions in it at once stops the count.
+- [ ] A faction leader's `/trigger diplomacy` shows buttons for war and a pact; a plain member's shows only
+  how things stand.
+- [ ] `function realms:outposts/status` lists four outposts, and the live map shows them. When a faction takes
+  one, chat says so and `status` names the holder.
 
 ## Saturday events
 
@@ -146,4 +157,4 @@ you expected and what happened, plus a screenshot. Post it in the staff channel 
 [GitHub issue](https://github.com/gr8monk3ys/monkey-smp-server/issues). If it passed, a tick in the staff channel
 ("2.9.1: NPCs OK as a plain player") is enough, and the "never tried in game" notes in ADMIN.md can go.
 
-Shut the test server down when you're done (`stop`): it uses the map's port 8100, the same one a drill copy uses.
+Shut the test server down when you're done (`stop`), and use a new folder for the next release.

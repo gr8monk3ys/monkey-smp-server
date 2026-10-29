@@ -56,7 +56,6 @@ LOOT_TABLE = f"{NS}:drops/supply"
 BAR = f"{NS}:drop"
 OBJ = "dr"
 
-UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 HOURS = (18, 22)            # from 6 PM up to 10 PM Pacific, on season_calendar's drop nights
 SLOT_MINUTES = 10           # how often deploy/realms-drops.timer asks
 
@@ -136,11 +135,6 @@ HELP = [
 
 
 # ---------------------------------------------------------------- when
-
-
-def parse_time(value: str) -> dt.datetime:
-    when = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return when if when.tzinfo else when.replace(tzinfo=UTC)
 
 
 def night_of(when: dt.datetime) -> int | None:
@@ -612,24 +606,13 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Supply drops: the spots, the timer's commands, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
-    for name, about in (("spots", "the spots a drop would try now, and why"),
-                        ("commands", "the RCON commands for now (changes nothing)"),
-                        ("send", "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)")):
-        p = sub.add_parser(name, help=about)
-        p.add_argument("world", type=Path, help="the world folder (server/world)")
-        p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
-        if name == "send":
-            p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+    server.job_subcommands(sub, "sends them to the running server (deploy/realms-drops.sh, every 10 minutes)",
+                           world=True, others=[("spots", "the spots a drop would try now, and why")])
     args = ap.parse_args(argv)
-    now = args.at or dt.datetime.now(UTC)
     if args.command == "spots":
-        return show_spots(args.world, now)
-    if args.command == "send":
-        return send(server.Docker(args.docker), args.world, now)
-    out = commands(args.world, now)
-    if out:
-        print("\n".join(out))
-    return 0
+        return show_spots(args.world, server.job_time(args))
+    return server.run_job(args, lambda when: commands(args.world, when),
+                          lambda rcon, when: send(rcon, args.world, when))
 
 
 if __name__ == "__main__":

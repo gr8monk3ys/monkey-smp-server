@@ -107,15 +107,6 @@ mkdir -p "$STATE_DIR"
 
 # ---------------------------------------------------------------- helpers
 
-discord() {
-    [ -n "$WEBHOOK" ] || return 0
-    # Our own words, minus any quote or backslash, so plain printf makes valid JSON.
-    msg=$(printf '%s' "$1" | tr -d '"\\')
-    printf '{"content":"%s"}' "$msg" |
-        curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$WEBHOOK" >/dev/null ||
-        log 'could not post to Discord'
-}
-
 save_on() {
     [ -e "$STATE_DIR/saving-off" ] || return 0
     if rcon save-on >/dev/null; then
@@ -137,11 +128,11 @@ on_exit() {
     if [ -n "$ok" ]; then
         if [ -e "$STATE_DIR/failing" ]; then
             rm -f "$STATE_DIR/failing"
-            discord 'Monkey SMP off-site backups work again.'
+            discord 'Monkey SMP off-site backups work again.' "$WEBHOOK"
         fi
     elif [ "$rc" != 0 ] && [ ! -e "$STATE_DIR/failing" ]; then
         touch "$STATE_DIR/failing"
-        discord "Monkey SMP off-site backup FAILED: ${DIED:-see the log}. It tries again every hour. Check: journalctl -u realms-backup"
+        discord "Monkey SMP off-site backup FAILED: ${DIED:-see the log}. It tries again every hour. Check: journalctl -u realms-backup" "$WEBHOOK"
     fi
 }
 trap on_exit EXIT

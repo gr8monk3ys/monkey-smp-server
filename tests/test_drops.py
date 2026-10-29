@@ -84,11 +84,6 @@ def test_a_slot_is_ten_minutes():
     assert drops.slot_of(pacific(2026, 11, 23, 18, 0)) != drops.slot_of(pacific(2026, 11, 24, 18, 0))
 
 
-def test_parse_time_assumes_utc():
-    assert drops.parse_time("2026-11-24T02:00:00") == dt.datetime(2026, 11, 24, 2, tzinfo=UTC)
-    assert drops.parse_time("2026-11-24T02:00:00Z") == dt.datetime(2026, 11, 24, 2, tzinfo=UTC)
-
-
 # ---------------------------------------------------------------- where
 
 
@@ -435,11 +430,18 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
     text = (DEPLOY / SCRIPT).read_text()
     assert text.startswith("#!/bin/sh\n") and "set -eu" in text
     assert ". \"$ENV_FILE\"" not in text and "rcon.password" not in text and "WEBHOOK" not in text
-    assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
-    assert 'python3 -B "$TOOL" commands "$WORLD"' in text and "WORLD=$LIVE_DIR/server/world" in text
-    # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals or codes.
-    assert '"$TOOL" send "$WORLD" --docker "$LIVE_DIR/docker"' in text
-    assert "returned" not in text and "Unknown function" not in text
+    # A timed job: deploy/lib.sh's timed_job reads three settings and gives the tool the world first.
+    assert "JOB_TOOL=drops.py\n" in text and "JOB_WORLD=1\n" in text and text.endswith('\ntimed_job "$@"\n')
+    lib = (DEPLOY / "lib.sh").read_text()
+    job = lib[lib.index("timed_job() {"):]
+    # The webhooks only for a job that gave up (the day; drops never does).
+    gave_up = job[job.index("            4) ;;"):]
+    assert set(re.findall(r"\$\(setting (\w+)", job[:len(job) - len(gave_up)])) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
+    assert set(re.findall(r"\$\(setting (\w+)", gave_up)) == {"STAFF_WEBHOOK_URL", "DISCORD_WEBHOOK_URL"}
+    assert 'set -- "$LIVE_DIR/server/world"' in job and 'python3 -B "$lib_tool" commands "$@"' in job
+    # Python sends and reads the answers (tools/rcon.py); the shell keeps no copy of the refusals or codes.
+    assert '"$lib_tool" send "$@" --docker "$LIVE_DIR/docker"' in job
+    assert "returned" not in text + job and "Unknown function" not in text + job
     for unit in UNITS:
         assert unit in text
     shell = shutil.which("dash")

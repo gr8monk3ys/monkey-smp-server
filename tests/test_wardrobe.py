@@ -1,9 +1,12 @@
+import datetime as dt
 import json
 import struct
+from pathlib import Path
 
 import pytest
 
 import challenges as challenges_module
+import rcon
 import wardrobe
 from repo import REPO
 
@@ -230,3 +233,62 @@ def test_enable_in_options_without_a_resource_pack_line(tmp_path):
 def png_size(data: bytes) -> tuple[int, int]:
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
     return struct.unpack(">II", data[16:24])
+
+
+MIDNIGHT = dt.datetime(2026, 10, 28, tzinfo=rcon.UTC)
+DAY_ONCE = "function realms:wardrobe/day_once {stamp:20261028}"
+
+
+def test_the_day_is_one_dated_command_and_a_stopped_server_fails_it(capsys):
+    assert wardrobe.main(["commands", "--at", "2026-10-28T00:00:00Z"]) == 0
+    assert capsys.readouterr().out.splitlines() == [DAY_ONCE]
+    # The UTC date, whatever the offset: 5 PM Pacific on the 27th is already the 28th.
+    assert wardrobe.day_commands(dt.datetime(2026, 10, 27, 17, tzinfo=dt.timezone(-dt.timedelta(hours=7)))) == [
+        DAY_ONCE]
+    log = []
+    assert wardrobe.send_day(rcon.Recorder(running=False), MIDNIGHT, log=log.append) == rcon.NOT_RUNNING
+    assert log == ["server not running: the day isn't started yet"]
+    server = rcon.Recorder()
+    assert wardrobe.send_day(server, MIDNIGHT, log=log.append) == 0 and server.sent == [DAY_ONCE]
+    refusing = rcon.Recorder({DAY_ONCE: "Unknown function realms:wardrobe/day_once"})
+    assert wardrobe.send_day(refusing, MIDNIGHT, log=log.append) == 1
+
+
+def test_a_date_starts_one_day_however_often_it_is_sent():
+    """realms-day.service retries after a timeout that may have reached the server: the pack keeps the date."""
+    files = wardrobe.datapack_files()
+    once = files["data/realms/function/wardrobe/day_once.mcfunction"].splitlines()
+    body = [line for line in once if not line.startswith("#")]
+    assert body == ["$execute if score #day.sent rw.day matches $(stamp) run return 0",
+                    "$scoreboard players set #day.sent rw.day $(stamp)",
+                    "function realms:wardrobe/day"]
+    assert "scoreboard players add #today rw.day 1" in files["data/realms/function/wardrobe/day.mcfunction"]
+
+
+def test_the_day_gives_up_a_date_after_6_hours_of_tries(tmp_path):
+    pending, log = tmp_path / "pending", []
+    down = rcon.Recorder(running=False)
+    assert wardrobe.send_day(down, MIDNIGHT, pending, log.append) == rcon.NOT_RUNNING
+    assert pending.read_text() == f"20261028 {int(MIDNIGHT.timestamp())}\n"   # the first failed try
+    later = MIDNIGHT + wardrobe.GIVE_UP - dt.timedelta(minutes=10)
+    assert wardrobe.send_day(rcon.Recorder({DAY_ONCE: "Unknown function x"}), later, pending, log.append) == 1
+    assert pending.read_text() == f"20261028 {int(MIDNIGHT.timestamp())}\n"   # still counted from the first
+    log.clear()
+    assert wardrobe.send_day(down, MIDNIGHT + wardrobe.GIVE_UP, pending, log.append) == rcon.GAVE_UP
+    assert log[-1] == "gave up: the day for 20261028 didn't start in 6 hours of tries" and not pending.exists()
+    # A success clears it, and another date's pending try doesn't count against this one.
+    wardrobe.send_day(down, MIDNIGHT, pending, log.append)
+    assert wardrobe.send_day(rcon.Recorder(), MIDNIGHT, pending, log.append) == 0 and not pending.exists()
+    pending.write_text("20261027 0\n")
+    assert wardrobe.send_day(down, MIDNIGHT + wardrobe.GIVE_UP, pending, log.append) == rcon.NOT_RUNNING
+    assert pending.read_text().startswith("20261028 ")
+    assert wardrobe.send_day(down, MIDNIGHT + 2 * wardrobe.GIVE_UP, None, log.append) == rcon.NOT_RUNNING  # by hand
+
+
+def test_the_day_keeps_its_first_try_in_systemds_state_directory(monkeypatch):
+    given = []
+    monkeypatch.setattr(wardrobe, "send_day", lambda server, when, pending: given.append(pending) or 0)
+    monkeypatch.setenv("STATE_DIRECTORY", "/var/lib/realms-day")
+    assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given == [Path("/var/lib/realms-day/pending")]
+    monkeypatch.delenv("STATE_DIRECTORY")
+    assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given[-1] is None   # run by hand: no limit

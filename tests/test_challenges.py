@@ -16,7 +16,7 @@ FN = "data/realms/function/challenges"
 
 
 def at(text: str) -> dt.datetime:
-    return challenges.parse_time(text)
+    return rcon.parse_time(text)
 
 
 def pacific(*args) -> dt.datetime:
@@ -112,8 +112,6 @@ def test_the_schedule_command_prints_the_weeks():
 # ---------------------------------------------------------------- the clock
 
 
-def test_parse_time_reads_utc_and_offsets():
-    assert at("2026-11-23T08:00:00Z") == at("2026-11-23T00:00:00-08:00") == at("2026-11-23T08:00:00")
 
 
 # ---------------------------------------------------------------- the launch weekend
@@ -442,12 +440,15 @@ def test_the_week_script_sends_the_commands_hourly():
     assert b"\r" not in script and script.isascii()
     text = script.decode()
     assert text.startswith("#!/bin/sh\n")
-    assert 'python3 -B "$TOOL" commands' in text and 'TOOL=$REPO_DIR/tools/challenges.py' in text
-    # Python sends and reads the answers (tools/rcon.py); the script keeps no copy of the refusals.
-    assert '"$TOOL" send --docker "$LIVE_DIR/docker"' in text and "Unknown function" not in text
+    # A timed job: it names its tool, and deploy/lib.sh's timed_job runs `commands` and `send`.
+    assert "JOB_TOOL=challenges.py\n" in text and text.endswith('\ntimed_job "$@"\n')
+    lib = (REPO.root / "deploy" / "lib.sh").read_text(encoding="utf-8")
+    assert 'python3 -B "$lib_tool" commands "$@"' in lib
+    # Python sends and reads the answers (tools/rcon.py); the shell keeps no copy of the refusals.
+    assert '"$lib_tool" send "$@" --docker "$LIVE_DIR/docker"' in lib and "Unknown function" not in text + lib
     assert "--check" in text and "--install" in text
-    # It reads its three settings without sourcing the env file (which holds the webhooks), and never a password.
-    assert "realms-deploy.env" in text
+    # Its three settings are read without sourcing the env file (which holds the webhooks), and never a password.
+    assert "realms-deploy.env" in text and "realms-deploy.env" in lib
     assert re.findall(r"^\s*(?:\.|source)\s.*", text, re.M) == ['. "$(dirname -- "$0")/lib.sh"']
     assert "WEBHOOK_URL" not in text and "rcon.password" not in text and "RCON_PASSWORD" not in text
     service = (REPO.root / "deploy" / "realms-week.service").read_text(encoding="utf-8")

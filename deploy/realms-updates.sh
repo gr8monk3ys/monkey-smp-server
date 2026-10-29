@@ -28,21 +28,15 @@ STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# Posts $1, with the file $2 attached when given. The messages are ours (no quotes or backslashes), so
-# plain printf makes valid JSON.
+# Posts $1 to the staff channel, with the file $2 attached when given.
 post() {
     if [ -z "$STAFF_WEBHOOK_URL" ]; then
         log 'no webhook in the settings; not posting'
         return 0
     fi
-    if [ $# -gt 1 ]; then
-        curl -fsS -m 30 --form-string "payload_json={\"content\":\"$1\"}" -F "files[0]=@$2;type=text/markdown" \
-            "$STAFF_WEBHOOK_URL" >/dev/null || log 'could not post to Discord'
-    else
-        printf '{"content":"%s"}' "$1" |
-            curl -fsS -m 15 -H 'Content-Type: application/json' -d @- "$STAFF_WEBHOOK_URL" >/dev/null ||
-            log 'could not post to Discord'
-    fi
+    msg=$1
+    shift
+    discord "$msg" "$STAFF_WEBHOOK_URL" "$@"
 }
 
 release=$(git -C "$REPO_DIR" describe --tags --always 2>/dev/null || echo 'the live release')

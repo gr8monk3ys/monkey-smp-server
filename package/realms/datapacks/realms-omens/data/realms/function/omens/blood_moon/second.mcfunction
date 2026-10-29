@@ -1,5 +1,5 @@
 scoreboard players remove #timer om 1
-execute store result score #now om run time query daytime
+execute store result score #now om run time query minecraft:day
 # It rises at nightfall only, so it never comes up just before dawn.
 execute if score #phase om matches 0 if score #now om matches 13000..14000 run return run function realms:omens/blood_moon/rise
 execute if score #phase om matches 0 if score #timer om matches ..0 run return run function realms:omens/blood_moon/fade

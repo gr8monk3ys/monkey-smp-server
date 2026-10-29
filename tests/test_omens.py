@@ -308,7 +308,7 @@ def test_blood_moon_waits_for_night_and_gives_back_the_difficulty():
     begin = fn("blood_moon/begin")
     assert "execute if score #diff om matches 0 run return 0" in begin   # Peaceful: no mobs
     second = fn("blood_moon/second")
-    assert "execute store result score #now om run time query daytime" in second
+    assert "execute store result score #now om run time query minecraft:day" in second
     # It rises at the start of a night only, never just before dawn, and waits longer than a Minecraft day.
     assert ("execute if score #phase om matches 0 if score #now om matches 13000..14000 run return run function "
             "realms:omens/blood_moon/rise") in second

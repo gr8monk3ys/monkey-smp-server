@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How it works - Monkey SMP</title>
+  <meta name="description" content="How Monkey SMP works: the first hour, factions and land, a week of challenges, drops and events, and every command by rank, from player to admin.">
+  <meta name="theme-color" content="#1f6142">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/pixelify-sans-monkey-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/atkinson-next-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* A field guide: short sections to read once, then the week as a row of stone days, then every command
+     * by rank as rows to look up: the command in mono on the left, what it does beside it. */
+    main > section + section { padding-top: 0; }
+    .hero { padding-bottom: 72px; }   /* the front page's hero runs into its trailer; this one ends */
+    .prose { max-width: var(--measure); }
+    .prose ul { margin: 0 0 1em; padding-left: 1.1em; }
+    .prose li { margin-bottom: 0.5em; }
+    .prose li::marker { color: var(--sage); }
+    .prose h3 { margin-top: 1.6em; }
+    .prose strong { color: var(--bone); }
+
+    /* On this page: the sections and the ranks, as plain links in two rows. */
+    /* Beside the lede in the front page's launch slot; on a phone, under it (that slot comes first there). */
+    .toc { grid-area: launch; display: grid; gap: 14px; max-width: 48rem; }
+    .toc p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; }
+    .toc b { flex: 0 0 100%; color: var(--sage); font-size: 0.95rem; }
+    .toc a { font-weight: 700; }
+
+    /* The week: Monday to Friday across the top with the omen band under them, Saturday and Sunday standing
+     * the full height at the end. On a phone the days stack in order. */
+    .week {
+      list-style: none; margin: 40px 0 0; padding: 0; display: grid; gap: 12px;
+      grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto auto;
+    }
+    .week li {
+      --ring: var(--ink);
+      display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 16px; color: var(--ink);
+      background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+    }
+    .week h3 { margin: 0; color: var(--ink); font-size: 1.25rem; }
+    .week p { margin: 0; font-size: 0.95rem; line-height: 1.45; }
+    .week .at { display: block; font: 700 1.5rem/1.1 var(--display); color: var(--ink); }
+    .week .quiet { color: var(--ink-2); }
+    .week .sat, .week .sun { grid-row: 1 / span 2; }
+    .week .omens {
+      grid-column: 1 / span 5; grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+      color: var(--bone-2); background: var(--shade) padding-box; border-image-source: var(--frame-shade);
+    }
+    .week .omens h3 { color: var(--bone); }
+    .week .omens p { flex: 1 1 24rem; }
+    .week + .small { max-width: var(--measure); margin-top: 14px; }
+
+    /* What each rank can do, one row a rank; the rank leads in the display face. */
+    .ranks { margin: 32px 0 0; max-width: 52rem; }
+    .ranks div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 2px solid var(--leaf-2); }
+    .ranks div:last-child { border-bottom: 2px solid var(--leaf-2); }
+    .ranks dt { font: 700 1.25rem/1.2 var(--display); color: var(--bone); }
+    .ranks dt a { color: inherit; text-decoration: none; }
+    .ranks dt a:hover { color: var(--gold-hi); text-decoration: underline; }
+    .ranks dd { margin: 0; }
+
+    /* Commands, by rank: one heading a rank, one group of rows per job. */
+    .role { margin-top: 72px; }
+    .role > h3 { font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 0.35em; }
+    .role > p { max-width: var(--measure); }
+    .role h4 { margin: 32px 0 8px; font: 700 1rem/1.3 var(--body); color: var(--sage); }
+    .cmds { margin: 0; max-width: 60rem; }
+    .cmds div {
+      display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 6px 28px; align-items: baseline;
+      padding: 12px 0; border-top: 2px solid var(--leaf-2);
+    }
+    .cmds div:last-child { border-bottom: 2px solid var(--leaf-2); }
+    .cmds dt code { font-size: 1rem; color: var(--bone); overflow-wrap: anywhere; }
+    .cmds dt kbd {
+      display: inline-block; min-width: 2em; padding: 0 6px; font: 700 0.95rem/1.5 var(--body); color: var(--ink); text-align: center;
+      background: var(--stone) padding-box; border: 6px solid transparent; border-image: var(--frame-stone) 6 fill / 6px;
+    }
+    .cmds dd { margin: 0; }
+    .cmds dd code { font-size: 0.94em; }
+    .role + .role { margin-top: 88px; }
+
+    @media (max-width: 960px) {
+      .week { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+      .week .sat, .week .sun, .week .omens { grid-row: auto; grid-column: auto; }
+      .week li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+      .week h3 { flex: 0 0 7rem; }
+      .week p { flex: 1 1 14rem; }
+      .week .at { display: inline; font-size: 1.25rem; margin-right: 6px; }
+    }
+    @media (max-width: 760px) {
+      .hero .toc { grid-area: trailer; margin-top: 32px; }
+      .cmds div, .ranks div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+      .week h3 { flex-basis: 100%; }
+      .role, .role + .role { margin-top: 64px; }
+    }
+  </style>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="canopy">
+    <a class="brand" href="./"><img src="kit/logo-1392w.png" alt="Monkey SMP" width="261" height="48"></a>
+    <nav aria-label="Site">
+      <a href="./#join">Join</a>
+      <a href="./#rules">Rules</a>
+      <a href="#week">The week</a>
+      <a href="#commands">Commands</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <h1>How the server works</h1>
+      <p class="lede">What happens when you join, how factions and land work, what a week brings, and every command
+        you can type, by rank. New here? Read the first two parts. The rest is for when you need it.</p>
+      <nav class="toc" aria-label="On this page">
+        <p><b>The server</b><a href="#first-hour">Your first hour</a><a href="#factions">Factions and land</a><a href="#week">A week on the server</a></p>
+        <p><b>Commands by rank</b><a href="#players">Players</a><a href="#leaders">Faction leaders</a><a href="#supporters">Supporters</a><a href="#moderators">Moderators</a><a href="#admins">Admins</a></p>
+      </nav>
+    </section>
+
+    <section id="first-hour">
+      <div class="prose">
+        <h2>Your first hour</h2>
+        <p>Get a pass and the modpack first (<a href="./#join">how to join</a>). Then:</p>
+        <ul>
+          <li><strong>Talk to the Guide</strong> at spawn: right-click it with an empty hand. It has the short rules,
+            how to find a faction, and buttons for this week's challenges, the faction standings and your wardrobe.
+            The <strong>Town Crier</strong> next to it has this week's Saturday event and next week's.</li>
+          <li><strong>You're safe for 48 hours</strong> after your first join: other players can't hurt you. Attacking
+            someone ends it early, and so does <code>/trigger end_grace</code>. Grace is for settling in, not for
+            scouting or carrying loot for a faction.</li>
+          <li><strong>Spawn is safe.</strong> Nobody can fight in the 7 &times; 7 chunks around it, and nobody but
+            admins can build within 48 blocks of it. PvP is on everywhere else.</li>
+          <li><strong>Dying</strong> drops your things where you died, as in plain Minecraft.</li>
+          <li><strong>Voice chat</strong> works by distance: press <kbd>V</kbd> for its settings. <kbd>M</kbd> opens
+            the world map, and the <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">live map</a>
+            shows the world in your browser (not where players are).</li>
+        </ul>
+        <h3>On launch night</h3>
+        <p>Season I opens on <time data-launch="{date} at {pacific} ({eastern})" datetime="2026-11-08T01:00:00Z">Saturday 7 November 2026 at 5 PM Pacific (8 PM Eastern)</time>.
+          For the first hour PvP, the Nether and the End are closed; then PvP and the Nether open. The End opens on
+          the night the Town Crier announces. Netherite armor stays off until staff say so (Netherite tools and
+          weapons are fine). Be online for 10 minutes on launch weekend and you keep the Founder's Circlet skin.</p>
+      </div>
+    </section>
+
+    <section id="factions">
+      <div class="prose">
+        <h2>Factions and land</h2>
+        <p>A faction is a party of up to four players under its own banner. Once you join one you stay in it for the
+          season; leaving needs an admin's approval.</p>
+        <ul>
+          <li><strong>Claim land</strong> on the world map: press <kbd>M</kbd> and right-click chunks, or stand in a
+            chunk and type <code>/oclaims claim</code>. Outsiders can't break, build or open anything in your claim.
+            The claims screen shows how many chunks you have left.</li>
+          <li><strong>Allies</strong> share claims. Alliances are fine; a group of more than four that always plays
+            together is a confederation and breaks rule 32.</li>
+          <li><strong>War and pacts.</strong> Your faction's leader can declare war on another faction: until Sunday
+            at 7 PM Pacific, kills between the two count twice in the weekly standings. Or offer a pact: no war
+            between you until one side breaks it (two pacts at most). Neither changes what claims protect or what the
+            rules allow.</li>
+          <li><strong>Trading</strong> is by hand, items for items: there's no money, shop or auction house. Lying
+            about a trade is a scam and breaks the rules.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="week">
+      <h2>A week on the server</h2>
+      <p class="note">The same rhythm every week of the season. Times are Pacific.</p>
+      <ol class="week" data-place>
+        <li><h3>Monday</h3><p><span class="at">12 AM</span>Three new challenges: one solo, one for factions, one exploring.</p><p><span class="at">6&ndash;10 PM</span>A supply drop, once 4 or more are on.</p></li>
+        <li><h3>Tuesday</h3><p><span class="at">6&ndash;10 PM</span>A supply drop, once 4 or more are on.</p></li>
+        <li><h3>Wednesday</h3><p><span class="at">6&ndash;10 PM</span>A supply drop, once 4 or more are on.</p></li>
+        <li><h3>Thursday</h3><p><span class="at">6&ndash;10 PM</span>A supply drop, once 4 or more are on.</p></li>
+        <li><h3>Friday</h3><p class="quiet">No drop. Build, trade, get ready for Saturday.</p></li>
+        <li class="omens"><h3>Omens</h3><p>One or two weekday evenings, with no warning: a Blood Moon, a Meteor, a Truce Hour or a Hunted player.</p></li>
+        <li class="sat"><h3>Saturday</h3><p><span class="at">6 PM</span>The week's event: a Faction Raid, Arena Glory, a Build Battle, or the border breaking open.</p></li>
+        <li class="sun"><h3>Sunday</h3><p><span class="at">7 PM</span>The week's faction standings close and go up in the Discord. Wars end.</p></li>
+      </ol>
+      <p class="small">The Town Crier at spawn has the next two Saturday events.</p>
+
+      <div class="prose">
+        <h3>Supply drops</h3>
+        <p>Chat gives the coordinates and a boss bar counts down 10 minutes. Then chests of food, iron, arrows and
+          the like land out in the newest land, away from every claim, and vanish 20 minutes later. The usual rules
+          apply out there.</p>
+        <h3>Omens</h3>
+        <ul>
+          <li><strong>Blood Moon:</strong> a night on Hard, with tougher mobs that drop a little extra.</li>
+          <li><strong>Meteor:</strong> a richer supply drop, with 5 minutes' warning.</li>
+          <li><strong>Truce Hour:</strong> no PvP anywhere for an hour.</li>
+          <li><strong>Hunted:</strong> the player on the longest kill streak gets a bounty for 30 minutes.</li>
+        </ul>
+        <h3>Standings and outposts</h3>
+        <p>Every faction gets a rank each week from four things: event wins (the Cup), land claimed, its members'
+          Strength and its kills. Bounties and outposts add points on top.</p>
+        <p>Four <strong>outposts</strong> stand in the newest land, one each to the north, east, south and west.
+          Stand in one with your faction, and nobody else's, for 60 seconds to take it. Each hour you hold it while
+          another faction is online is a point, up to 20 a week. <code>/trigger outposts</code> shows where they are
+          and who holds them.</p>
+        <h3>Firsts and skins</h3>
+        <p>The first player to reach each of 14 milestones (the first diamond, the first into the Nether, the first
+          to slay the dragon and so on) is announced to everyone and keeps it all season: <code>/trigger firsts</code>.
+          Skins for swords and helmets unlock as you play, come to events, finish challenges and stay on. They only
+          change how an item looks, never what it does: <code>/trigger wardrobe</code>.</p>
+        <h3>The season</h3>
+        <p>A season lasts about 12 weeks. The world border starts at 2500 &times; 2500 and breaks open twice; the
+          End opens on Dragon Night; a finale ends it, and then the world locks.</p>
+      </div>
+    </section>
+
+    <section id="commands">
+      <h2>Commands by rank</h2>
+      <p class="note">Each rank can do everything the ranks above it can. Supporters and faction leaders are players
+        with a few extras, not staff.</p>
+      <dl class="ranks">
+        <div><dt><a href="#players">Player</a></dt><dd>Play, claim land, join a faction, use voice chat, open the menus below.</dd></div>
+        <div><dt><a href="#leaders">Faction leader</a></dt><dd>The owner of a faction's party: invites members and allies, declares war and makes pacts.</dd></div>
+        <div><dt><a href="#supporters">Supporter</a></dt><dd>Ember, Banner or Crown: a name color, a title and skins. No commands of their own.</dd></div>
+        <div><dt>Builder</dt><dd>A player staff trust with build jobs. An admin switches them to creative for a job and back after.</dd></div>
+        <div><dt><a href="#moderators">Moderator</a></dt><dd>Warns, mutes, kicks and bans; watches quietly; checks and undoes griefing.</dd></div>
+        <div><dt><a href="#admins">Admin</a></dt><dd>Everything: ranks, the whitelist, events, and the server's own commands.</dd></div>
+      </dl>
+
+      <div class="role" id="players">
+        <h3>Players</h3>
+        <p>Menus open in chat; click a line to use it. Type the start of a command and press <kbd>Tab</kbd> to see the rest.</p>
+        <h4>Menus</h4>
+        <dl class="cmds">
+          <div><dt><code>/trigger wardrobe</code></dt><dd>Your skins: the ones you've unlocked, and how to unlock the rest.</dd></div>
+          <div><dt><code>/trigger challenges</code></dt><dd>This week's three challenges and how far you've got. Hover one for what counts.</dd></div>
+          <div><dt><code>/trigger standings</code></dt><dd>This week's faction standings so far.</dd></div>
+          <div><dt><code>/trigger diplomacy</code></dt><dd>How your faction stands with every other: wars, pacts, offers.</dd></div>
+          <div><dt><code>/trigger outposts</code></dt><dd>The four outposts: where, who holds them, and your faction's hours.</dd></div>
+          <div><dt><code>/trigger firsts</code></dt><dd>The season's Server Firsts and who holds each.</dd></div>
+          <div><dt><code>/trigger end_grace</code></dt><dd>Ends your 48 hours of safety now. There's no getting it back.</dd></div>
+        </dl>
+        <h4>Factions and land</h4>
+        <dl class="cmds">
+          <div><dt><code>/oparties create</code></dt><dd>Starts a party: your faction. You're its leader.</dd></div>
+          <div><dt><code>/oparties join &lt;leader&gt;</code></dt><dd>Joins the party that invited you, named by its leader.</dd></div>
+          <div><dt><code>/oclaims claim</code></dt><dd>Claims the chunk you're standing in. Or press <kbd>M</kbd> and right-click chunks.</dd></div>
+          <div><dt><code>/opac</code></dt><dd>Your party and claims settings. <code>/oclaims</code> and <code>/oparties</code> with <kbd>Tab</kbd> list everything else.</dd></div>
+        </dl>
+        <h4>Events</h4>
+        <dl class="cmds">
+          <div><dt><code>/trigger arena set 1</code></dt><dd>Joins Arena Glory while it's open: stand by the entrance, in survival, with an empty inventory, armor and offhand.</dd></div>
+          <div><dt><code>/trigger arena set 2</code></dt><dd>Leaves the arena. You come out with what you went in with.</dd></div>
+        </dl>
+        <h4>Keys</h4>
+        <dl class="cmds">
+          <div><dt><kbd>V</kbd></dt><dd>Voice chat settings.</dd></div>
+          <div><dt><kbd>M</kbd></dt><dd>The world map, where you claim land.</dd></div>
+          <div><dt>Sneak + right-click</dt><dd>With both hands empty: picks up a passive animal or a block like an enchanting table. Right-click to put it down. Nothing that stores items, and nothing in someone else's claim.</dd></div>
+        </dl>
+      </div>
+
+      <div class="role" id="leaders">
+        <h3>Faction leaders</h3>
+        <p>The player who made the party leads it. Everything players can do, plus:</p>
+        <dl class="cmds">
+          <div><dt><code>/oparties member invite &lt;player&gt;</code></dt><dd>Invites a player. Four is the most a faction can have.</dd></div>
+          <div><dt><code>/oparties ally add &lt;leader&gt;</code></dt><dd>Makes another party an ally. Allies share claims.</dd></div>
+          <div><dt><code>/trigger diplomacy</code></dt><dd>For a leader it has buttons: declare war, offer a pact, accept one, break one. One move every 2 minutes. Wars and offers end at Sunday's close; pacts stand until broken.</dd></div>
+        </dl>
+      </div>
+
+      <div class="role" id="supporters">
+        <h3>Supporters</h3>
+        <p>Nothing to type. Your name color shows by itself, and your skins appear in <code>/trigger wardrobe</code>
+          with an "Unlocked" line in chat. Banner and Crown supporters tell staff the title they want, and staff
+          set it.</p>
+      </div>
+
+      <div class="role" id="moderators">
+        <h3>Moderators</h3>
+        <p>Typed in game, without the <code>/</code> where shown. Every punishment needs a reason, which the player
+          sees and the next moderator can look up. Start the reason with <code>-s</code> to keep it out of public
+          chat. Durations look like <code>30m</code>, <code>12h</code>, <code>3d</code> or <code>1d12h</code>.</p>
+        <h4>Punishments, in the rules' order</h4>
+        <dl class="cmds">
+          <div><dt><code>/warn NAME reason</code></dt><dd>Step 1. Five warnings ban a player for 5 hours by themselves.</dd></div>
+          <div><dt><code>/tempban NAME 3d reason</code></dt><dd>Step 2: a ban of 1 to 7 days.</dd></div>
+          <div><dt><code>/ban NAME reason</code></dt><dd>Step 3, or straight away for cheating, hate or doxxing.</dd></div>
+          <div><dt><code>/tempmute NAME 1h reason</code></dt><dd>No chat or private messages for a while. <code>/mute</code> is for good. Voice chat isn't covered: ask an admin.</dd></div>
+          <div><dt><code>/kick NAME reason</code></dt><dd>Out of the server, free to come back.</dd></div>
+          <div><dt><code>/unban NAME</code></dt><dd>Also <code>/unmute</code> and <code>/unwarn</code>.</dd></div>
+        </dl>
+        <h4>Watching quietly</h4>
+        <dl class="cmds">
+          <div><dt><code>/vanish</code></dt><dd>Hides you from players, the tab list and the server list until you run it again.</dd></div>
+          <div><dt><code>/view inv NAME</code></dt><dd>Looks into a player's inventory; <code>/view echest NAME</code> their ender chest. Look only.</dd></div>
+          <div><dt><code>/mtrack check NAME</code></dt><dd>A player's mining alerts. Lucky players set it off too, so look before you act. <code>/mtrack reset NAME</code> clears them.</dd></div>
+        </dl>
+        <h4>Griefing</h4>
+        <dl class="cmds">
+          <div><dt><code>/ledger inspect</code></dt><dd>Turns inspect on or off; then click a block to see who changed it.</dd></div>
+          <div><dt><code>/ledger search source:NAME range:30 after:2h</code></dt><dd>What NAME did in the last 2 hours within 30 blocks.</dd></div>
+          <div><dt><code>/ledger rollback source:NAME range:30 after:2h</code></dt><dd>Undoes it. <code>/ledger restore</code> with the same words redoes it.</dd></div>
+          <div><dt><code>/ledger tp minecraft:overworld X Y Z</code></dt><dd>Takes you to a spot (the Nether is <code>minecraft:the_nether</code>). Or click "Click to teleport" in Ledger's results.</dd></div>
+        </dl>
+        <p class="small">Moderators can't teleport to a player, move someone else, change game modes or whitelist anyone:
+          those need an admin.</p>
+      </div>
+
+      <div class="role" id="admins">
+        <h3>Admins</h3>
+        <p>Every mod's commands, plus Minecraft's own (<code>/tp</code>, <code>/gamemode</code>, <code>/give</code>,
+          <code>/whitelist</code> and the rest), which need op as well as the rank.</p>
+        <h4>People</h4>
+        <dl class="cmds">
+          <div><dt><code>/lp user NAME parent set moderator</code></dt><dd>Makes NAME a moderator. <code>parent remove moderator</code> takes it back.</dd></div>
+          <div><dt><code>/lp user NAME permission settemp voicechat.speak false 1d</code></dt><dd>Mutes NAME's voice for a day.</dd></div>
+          <div><dt><code>/ban-ip</code></dt><dd>Admins only: an address is often a whole household.</dd></div>
+          <div><dt><code>/gamemode creative NAME</code></dt><dd>Puts a builder in creative for a job; <code>/gamemode survival NAME</code> when it's done.</dd></div>
+          <div><dt><code>/view inv NAME</code></dt><dd>For an admin, items can be taken out too.</dd></div>
+        </dl>
+        <h4>The season's systems</h4>
+        <p class="small">Each one lists its own commands in chat, clickable.</p>
+        <dl class="cmds">
+          <div><dt><code>/function realms:events/help</code></dt><dd>Events: the arena, Anarchy, the Faction Raid, flags, books and the Cup.</dd></div>
+          <div><dt><code>/function realms:standings/help</code></dt><dd>The standings board and bounties.</dd></div>
+          <div><dt><code>/function realms:diplomacy/help</code></dt><dd>Faction numbers, and ending a war or pact by hand.</dd></div>
+          <div><dt><code>/function realms:drops/help</code></dt><dd>Supply drops: status, a drop now, on and off.</dd></div>
+          <div><dt><code>/function realms:omens/help</code></dt><dd>Omens: status, start, stop, on and off.</dd></div>
+          <div><dt><code>/function realms:outposts/help</code></dt><dd>Outposts: status, freeing one, on and off.</dd></div>
+        </dl>
+        <h4>Building</h4>
+        <dl class="cmds">
+          <div><dt><code>//wand</code></dt><dd>WorldEdit's selection wand; <code>//pos1</code> and <code>//pos2</code> set the corners, <code>//undo</code> takes a change back.</dd></div>
+          <div><dt><code>/lp user NAME permission set worldedit.* true</code></dt><dd>Lends WorldEdit to a builder; <code>permission unset worldedit.*</code> takes it back.</dd></div>
+        </dl>
+        <h4>Testing a release</h4>
+        <p>Try each release on your own test server first, never on the live world: the
+          <a href="https://github.com/gr8monk3ys/monkey-smp-server/blob/main/docs/QA.md">staff test checklist</a>
+          says how to set one up, what to try as a player and as an admin, and what you should see.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="crown">
+    <p><a href="./">Monkey SMP</a> &middot; <a data-link="DISCORD_INVITE" href="https://discord.gg/C25hy9Ca9W">Discord</a> &middot; <a href="./#rules">Rules</a> &middot; <a data-link="MAP_URL" href="https://map.monkeysmp.lscaturchio.xyz">Live map</a> &middot; <a href="changes.html">What changed</a></p>
+    <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+  </footer>
+</body>
+</html>

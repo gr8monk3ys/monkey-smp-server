@@ -5,19 +5,19 @@
 
 @font-face {
   font-family: "Pixelify Sans Monkey";
-  src: url("fonts/pixelify-sans-monkey-bold.woff2") format("woff2");
+  src: url("/fonts/pixelify-sans-monkey-bold.woff2") format("woff2");
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: "Atkinson Hyperlegible Next";
-  src: url("fonts/atkinson-next-latin.woff2") format("woff2");
+  src: url("/fonts/atkinson-next-latin.woff2") format("woff2");
   font-weight: 200 800;
   font-display: swap;
 }
 @font-face {
   font-family: "Atkinson Hyperlegible Mono";
-  src: url("fonts/atkinson-mono-latin.woff2") format("woff2");
+  src: url("/fonts/atkinson-mono-latin.woff2") format("woff2");
   font-weight: 200 800;
   font-display: swap;
 }
@@ -133,7 +133,7 @@ h3 { font: 700 1.3rem/1.2 var(--display); }
 }
 .canopy::after, .crown::before {
   content: ""; position: absolute; left: 0; right: 0; height: 48px; pointer-events: none;
-  background: url("img/canopy.svg") 0 0 / 256px 48px repeat-x;
+  background: url("/img/canopy.svg") 0 0 / 256px 48px repeat-x;
 }
 .canopy::after { top: 100%; }
 .brand { display: block; line-height: 0; }
@@ -185,6 +185,16 @@ main > section, footer { padding: 112px var(--gutter); }
 .counter .cell:nth-child(2) i.drop { animation-delay: 80ms; }
 .counter .cell:nth-child(3) i.drop { animation-delay: 160ms; }
 @keyframes drop { from { transform: translateY(-100%); } }
+
+/* The same move on scroll: a block of a [data-place] list that starts below the fold waits out of sight
+ * (.unplaced, set by the Place component) and drops into place in three steps as it comes into view (.placed). In-page
+ * links scroll there instead of jumping. Neither happens for visitors who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .unplaced { opacity: 0; }
+  .placed { animation: place 240ms steps(3, end) backwards; }
+}
+@keyframes place { from { transform: translateY(-18px); } }
 
 .ways { grid-area: ways; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; margin-top: 36px; }
 .plaque {
@@ -357,8 +367,12 @@ footer .small { margin: 0; }
   .trailer { margin-top: 48px; }
 }
 
+/* The front page's seven links stay on one line down to a 360 px phone. */
+@media (max-width: 420px) {
+  .canopy nav a { padding-inline: 3px; }
+}
 @media (max-width: 380px) {
-  .canopy nav a { font-size: 0.9375rem; }
+  .canopy nav a { font-size: 0.875rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

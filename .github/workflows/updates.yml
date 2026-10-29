@@ -24,14 +24,32 @@ jobs:
       - name: Verify every pinned download
         id: verify
         continue-on-error: true
+        # An explicit bash adds pipefail (the default shell doesn't), so tee can't hide a failure.
+        shell: bash
         run: python tools/validate.py --online | tee verify.txt
 
       - name: Look for newer builds
         id: updates
         run: python tools/check_updates.py --out report.md
 
+      # Exit 1 when the pack on Modrinth isn't this one (a release whose modrinth job had no token); exit 2 when
+      # the check itself failed (Modrinth down, a bad token). The code goes to outputs.code.
+      - name: Does Modrinth have this client pack?
+        id: modrinth
+        continue-on-error: true
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          python tools/modrinth.py --check > modrinth.txt 2>&1
+          code=$?
+          cat modrinth.txt
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
       - name: Open or update the tracking issue
-        if: steps.updates.outputs.count != '0' || steps.verify.outcome == 'failure'
+        if: steps.updates.outputs.count != '0' || steps.verify.outcome == 'failure' || steps.modrinth.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -39,6 +57,11 @@ jobs:
             cat report.md
             if [ "${{ steps.verify.outcome }}" = "failure" ]; then
               echo; echo "### Broken downloads"; echo '```'; grep ERROR verify.txt; echo '```'
+            fi
+            if [ "${{ steps.modrinth.outputs.code }}" = "1" ]; then
+              echo; echo "### Modrinth is behind"; echo; cat modrinth.txt
+            elif [ "${{ steps.modrinth.outcome }}" = "failure" ]; then
+              echo; echo "### Modrinth check failed"; echo; cat modrinth.txt
             fi
             echo; echo "_Updated by [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})._"
           } > body.md

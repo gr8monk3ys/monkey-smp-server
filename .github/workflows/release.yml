@@ -30,3 +30,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --title "Monkey SMP $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+
+  # Releasing step 5 (docs/MAINTAINING.md): the client pack on Modrinth, so players who install from there get
+  # what the server expects. Uploads nothing when the release left the pack alone. Needs the repo secret
+  # MODRINTH_TOKEN (docs/MODRINTH.md); without it the job only warns, and the weekly update check keeps asking.
+  modrinth:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Publish the client pack on Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -z "$MODRINTH_TOKEN" ]; then
+            echo "::warning::No MODRINTH_TOKEN secret, so Modrinth still has the previous pack: run python tools/modrinth.py from this tag (docs/MODRINTH.md)"
+            exit 0
+          fi
+          python tools/modrinth.py

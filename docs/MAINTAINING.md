@@ -37,9 +37,9 @@ lives in a few modules they share:
 | `tools/rcon.py` | sending console commands to the running server for the VPS jobs (challenges, drops, omens, standings): the container's own `realms rcon` behind one adapter, a recording fake for tests, the one list of answers that mean the server refused, `coded` (the timer's log line for drops' and omens' try, which returns a code), and a timed job's command line (`job_subcommands`, `run_job`, `job_time`, `parse_time`, the exit codes `NOT_RUNNING` and `GAVE_UP`: `commands [--at]` and `send --docker` in challenges, drops, omens and wardrobe) |
 | `tools/recap.py` | the Sunday recap, "Monkey SMP Weekly", that `standings.py close` posts: the launch gate (`#launched rw.day`), what a week's sections count from (kept in `week.json`), the sections (each a function in `SECTIONS` that takes the closing `Week` and returns its lines, `[]` when nothing happened or `None` when it can't tell; a new one is one function added there), the week's counters `standings.py` imports (`gained`, `folded`, `KILLS`, `BOUNTY`), and fitting the post under Discord's 2000 characters. The sections are worked out once at the close and kept in the closed week's file, so a retry posts the same words |
 | `tools/firsts.py` | Server Firsts: the milestones, the `realms-firsts` pack, and reading who holds each from the saved world for other tools: `holders(world)` gives every claim in order as `First(id, milestone, player, order, week)`; `claimed_in(firsts, week)` one challenge week's of that list, and `standings`/`champion` the season title (most firsts; a tie goes to whoever reached that number first). Runs on Python 3.10 too (staff run it on the VPS) |
-| `tools/wrapped.py` | Season Wrapped: `start` keeps every player's rw.* and st.* scores at the launch, `build` makes `site/wrapped/season-<n>/` from the final world (a page per player, an index, the skins' pictures): the season's counts are the end's minus the launch's, the best weekly rank comes from the standings' closed weeks, firsts from `firsts.holders`. Pages are made beside the folder and swapped in, so a failed build leaves the last one; a folder holding anything else is refused |
+| `tools/wrapped.py` | Season Wrapped: `start` keeps every player's rw.* and st.* scores at the launch, `build` makes `site/public/wrapped/season-<n>/` from the final world (a page per player, an index, the skins' pictures): the season's counts are the end's minus the launch's, the best weekly rank comes from the standings' closed weeks, firsts from `firsts.holders`. Pages are made beside the folder and swapped in, so a failed build leaves the last one; a folder holding anything else is refused |
 | `tools/datapacks.py` | the generated packs: the Minecraft version and pack format they target, writing and checking them, and the cross-pack checks (every function called exists, every scoreboard objective read is created, macros are marked); each generator only says what its packs hold (`packs(repo)`) |
-| `tools/checks.py` | the one list of fast checks (ruff, pytest, validate, datapacks, `dash -n`, Pester) that CI and maintainers run, and which of CI's boot jobs a run needs (`--boots`, `boots()`) |
+| `tools/checks.py` | the one list of fast checks (ruff, pytest, validate, datapacks, `dash -n`, Pester, the site with bun) that CI and maintainers run, and which of CI's boot jobs a run needs (`--boots`, `boots()`) |
 | `tools/local_ci.py` | CI on a maintainer's machine: checks a PR's head in a temporary worktree with checks.py and posts a `local-ci` commit status through `gh` (see "Tests") |
 | `tools/diplomacy.py` | the in-game faction identity (below) and war and pacts (`docs/SEASONS.md`): numbering parties and writing the number in game over RCON, diffed against the saved world so a run sends only what changed (`sync`, called by `standings.py board`), reading the realms namespace's command storage (`saved_storage`, `numbers`, `names`), the war and pact functions and the kill advancements it adds to the `realms-standings` pack, and the week's lines for the Sunday post (`report`) |
 | `tools/outposts.py` | outposts (`docs/SEASONS.md`): their spots in the newest border ring from the saved world (as drops picks its spots), the `realms-outposts` pack that checks the ground and runs the captures by faction number, the live map's marker set, and what standings asks of it: a week's `baseline`, `hours` held and their `points`. `recap_lines` is an "outposts this week" section for a Sunday recap. Run hourly by `deploy/realms-outposts.sh`; Python 3.10, no tomllib |
@@ -186,7 +186,7 @@ repo, and the included minutes ran out in October 2026):
 
 | Job | Runs on | What |
 |---|---|---|
-| Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
+| Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7, the site: bun install, lint, typecheck, build), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
 | Linux (native) | PRs out of draft that touch `package/`, the build (`build.py`, `repo.py`) or the boot tests; pushes to `main` that do; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
 | Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
 | Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/`, the build or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
@@ -382,16 +382,16 @@ To bring shops back:
    `"hand$universal_shops:trade_block"` (dormant without the mod; a test boot with it on 26 October 2026 was clean).
 3. Put the shop wording back, as it was before they were shelved (`git show aa9a7a5:<file>`): rule 43 in
    `docs/RULES.md` (the owners adopt it again), "Shops" under "Playing" in `docs/PLAYERS.md`, the "Fair trades" rule
-   and "How does trading work?" in `site/index.html`, and the shop lines in `docs/PROMOTION.md`'s drafts. Drop the
-   "shelved" notes in `docs/ADMIN.md` ("Shops") and `docs/LIVE.md` ("Shops in claims").
-4. Add a `site/changes.html` entry for players, and once that release is live, run `deploy/shops-claims.sh` on the
-   VPS (`docs/LIVE.md`, "Shops in claims").
+   (`site/src/content/rules.tsx`) and "How does trading work?" (`site/src/content/front.tsx`) on the site, and
+   the shop lines in `docs/PROMOTION.md`'s drafts. Drop the "shelved" notes in `docs/ADMIN.md` ("Shops") and `docs/LIVE.md` ("Shops in claims").
+4. Add a `site/src/content/changes.mdx` entry for players, and once that release is live, run
+   `deploy/shops-claims.sh` on the VPS (`docs/LIVE.md`, "Shops in claims").
 
 ## Tests
 
 ```bash
 pip install pytest ruff tzdata   # tzdata: Windows has no time zone database of its own
-python tools/checks.py            # ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester
+python tools/checks.py            # ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester, site
 python tools/checks.py pytest     # just one; --list says what each runs
 ```
 
@@ -460,15 +460,16 @@ players") came from this harness on an i7-8700K.
 1. Bump `version` in `package/realms/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
-   pack, the wardrobe, events), date its entry at the top of `site/changes.html` too, in players' words
+   pack, the wardrobe, events), date its entry at the top of `site/src/content/changes.mdx` too, in players' words
    (`docs/ADMIN.md`, "Telling players what changed").
 3. Put the new player files on the site, since the GitHub releases are private and players download the pack
-   from there: `python tools/build.py`, replace the files in `site/pack/` with `dist/TheRealms-Client-X.Y.Z.mrpack`
-   and `dist/TheRealms-Player-X.Y.Z.zip`, point `MODPACK_URL` and `INSTALLER_URL` in `site/config.js` at them
-   and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
+   from there: `python tools/build.py`, replace the files in `site/public/pack/` with
+   `dist/TheRealms-Client-X.Y.Z.mrpack` and `dist/TheRealms-Player-X.Y.Z.zip` and point `MODPACK_URL` and
+   `INSTALLER_URL` in `site/config.json` at them. `validate.py` fails while the site serves another version's pack.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
 4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. Put the client pack on Modrinth: `python tools/modrinth.py` from a checkout of the tag, with the token in
+5. Put the client pack on Modrinth. The Release workflow's `modrinth` job does it when the repo secret
+   `MODRINTH_TOKEN` is set; otherwise run `python tools/modrinth.py` from a checkout of the tag, with the token in
    `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
    left `client/` alone, and moves the server listing to the newest version.
 

@@ -150,8 +150,10 @@ def test_players_from_before_the_pack_get_no_welcome_or_grace():
 
 def test_welcome_points_at_the_discord_and_the_pause_menu_has_the_links():
     data = rules.rules_files()
-    config = (REPO.root / "site" / "config.js").read_text(encoding="utf-8")
-    assert f'DISCORD_INVITE: "{rules.DISCORD}"' in config and f'MAP_URL: "{rules.MAP}"' in config
+    config = json.loads((REPO.root / "site" / "config.json").read_text(encoding="utf-8"))
+    assert (config["DISCORD_INVITE"], config["MAP_URL"]) == (rules.DISCORD, rules.MAP)
+    site_config = (REPO.root / "site" / "src" / "lib" / "config.ts").read_text(encoding="utf-8")
+    assert f'SITE_URL = "{rules.SITE}"' in site_config
     welcome = json.loads(data["data/realms/dialog/welcome.json"])
     assert welcome["type"] == "minecraft:notice"
     assert welcome["action"]["action"] == {"type": "minecraft:open_url", "url": rules.DISCORD}

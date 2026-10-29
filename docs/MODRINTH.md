@@ -30,12 +30,20 @@ yet: it waits for Modrinth's answer on paid access (below), and the owner hasn't
 6. **The server listing.** Once that's settled, create it from [The server listing](#the-server-listing). The next
    `tools/modrinth.py` run points it at the newest version.
 
-Then set `MODPACK_URL` in `site/config.js` to `https://modrinth.com/modpack/monkeysmp` once the project is
+Then set `MODPACK_URL` in `site/config.json` to `https://modrinth.com/modpack/monkeysmp` once the project is
 approved (a draft page is a 404 for everyone else).
 
 ## Publishing a version
 
-After the GitHub release (docs/MAINTAINING.md, "Releasing"), from a clean checkout of the release tag:
+**Automatically.** With the repository secret `MODRINTH_TOKEN` set (Settings > Secrets and variables >
+Actions > New repository secret, the token from step 3), the Release workflow's `modrinth` job runs
+`tools/modrinth.py` from the tag after the GitHub release. Without the secret it only warns. Either way the
+weekly "Check for updates" run calls `python tools/modrinth.py --check`, which fails (and says so in the
+"Server updates available" issue) while Modrinth's newest version holds a different pack from main's. A
+release that didn't touch `client/` doesn't count. Run the check by hand any time; it needs no token once the
+project is public.
+
+**By hand**, e.g. a release cut without Actions: after the GitHub release (docs/MAINTAINING.md, "Releasing"), from a clean checkout of the release tag:
 
 ```bash
 git switch --detach vX.Y.Z
@@ -131,7 +139,7 @@ Run by Diego and Lorenzo Scaturchio.
 
 ### Gallery
 
-From `site/img/` (in-game screenshots, the site's captions). The first is the banner image.
+From `site/public/img/` (in-game screenshots, the site's captions). The first is the banner image.
 
 | File | Title | Description |
 |---|---|---|

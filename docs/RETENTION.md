@@ -69,7 +69,7 @@ Why these counters:
   the first wave is in (see below) so that the edge stays rare. If nobody does, the next season's carry
   sets `#season` to 2 in the new world.
 - **Launch weekend.** Founder's Circlet is for being there at the start: 10 minutes online between the
-  launch (Saturday 31 October 2026, 5 PM Pacific) and the end of Sunday 1 November, Pacific. It is never
+  launch (Saturday 7 November 2026, 5 PM Pacific) and the end of Sunday 8 November, Pacific. It is never
   sold and never comes back. See "The launch weekend" below.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
@@ -99,7 +99,7 @@ the three. Finishing one plays a sound and says so in chat, and every finished c
 A new week starts every **Monday at 12 AM Pacific** (Sunday night, after the Saturday event). The
 challenges rotate in a fixed order from a pool in `tools/challenges.py`, so anyone can see what is coming:
 `python tools/challenges.py schedule` (`docs/ADMIN.md`, "Weekly challenges", also covers editing the pool).
-The launch weekend is week 0 and runs the first of each kind; week 1 starts on Monday 2 November 2026.
+The launch weekend is week 0 and runs the first of each kind; week 1 starts on Monday 9 November 2026.
 `rules/launch` starts the week's progress from zero, and in Season I challenges done before the launch (test
 play) don't count; later seasons keep the count they carried.
 
@@ -125,8 +125,8 @@ and deploys keep it. Without the timer the week never turns over.
 ### The launch weekend
 
 Founder's Circlet is the one skin tied to a date. `function realms:rules/launch` (rule 23, the launch hour)
-opens the window, and it closes by itself at the end of Sunday, Pacific: 32 hours of game time from the
-Season I launch (the clocks go back that night), kept to the wall clock by `realms-week.timer` (game time stops while the server is empty). Every
+opens the window, and it closes by itself at the end of Sunday, Pacific: 31 hours of game time from the
+Season I launch, kept to the wall clock by `realms-week.timer` (game time stops while the server is empty). Every
 second a player is online while it is open counts, so players who join hours after the launch hour get it
 the same way; at 10 minutes in all it unlocks. Their seconds online (`rw.launchtime`) are not carried; the
 skin (`rw.launch`) is. It works in Season I only. Staff fallbacks are in `docs/ADMIN.md`, "Weekly
@@ -284,7 +284,7 @@ close to". At $12 (20% off) the three-month pass stretched that reading and earn
 passes: about $10.80, or $3.60 a month. Tebex can't change the price of a subscription already sold, so
 the prices were settled before the first sale (docs/adr/0008-pass-prices-settled-before-the-first-sale.md).
 
-A creator code (site/creators.html) pays its creator 20% of a three-month pass, and Tebex takes 1% more on
+A creator code (the site's /creators page) pays its creator 20% of a three-month pass, and Tebex takes 1% more on
 payments made with a code, which leaves about $9.70 ($3.24 a month). Codes are for finding players, not
 for paying the server.
 

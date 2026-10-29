@@ -199,6 +199,80 @@ def test_an_empty_server_skips_the_listing(repo, tmp_path):
     assert ("GET", SERVER_URL) not in http.calls
 
 
+
+# --- check -------------------------------------------------------------------------------------------------
+
+def check(repo, http, tmp_path):
+    log = []
+    return modrinth.check(repo, http, modrinth.PACK_PROJECT, tmp_path / "dist", log=log.append), log
+
+
+def test_check_passes_when_the_newest_version_is_this_one(repo, tmp_path):
+    http = FakeModrinth([remote_version("V2", VERSION, built_pack(repo, tmp_path), "2026-10-01T00:00:00Z")])
+    ok, log = check(repo, http, tmp_path)
+    assert ok and "same pack" in log[0]
+
+
+def test_check_passes_when_only_the_version_number_moved(repo, tmp_path):
+    old = built_pack(repo, tmp_path, "1.9.0")
+    ok, _ = check(repo, FakeModrinth([remote_version("V19", "1.9.0", old, "2026-09-01T00:00:00Z")], [old]), tmp_path)
+    assert ok
+
+
+def test_check_fails_when_the_pack_changed_since_the_newest_version(repo, tmp_path):
+    old = built_pack(repo, tmp_path, "1.9.0")
+    http = FakeModrinth([remote_version("V19", "1.9.0", old, "2026-09-01T00:00:00Z")], [old])
+    (repo.client / "overrides" / "options.txt").write_text("renderDistance:8\n", encoding="utf-8")
+    ok, log = check(repo, http, tmp_path)
+    assert not ok and "isn't 2.0.0's" in log[0] and http.uploads == []
+
+
+def test_check_fails_with_no_versions_and_passes_while_the_project_is_hidden(repo, tmp_path):
+    assert check(repo, FakeModrinth(), tmp_path)[0] is False
+
+    class Hidden(FakeModrinth):
+        def request(self, method, url, body=None, content_type=None):
+            raise NotFound(url)
+    ok, log = check(repo, Hidden(), tmp_path)
+    assert ok and "isn't public" in log[0]
+
+
+def test_main_check_exits_1_when_behind_and_needs_no_token(repo, monkeypatch):
+    monkeypatch.delenv(modrinth.TOKEN_ENV, raising=False)
+    with pytest.raises(SystemExit) as stop:
+        modrinth.main(["--check"], repo, http=FakeModrinth())
+    assert stop.value.code == 1
+
+
+def test_main_check_exits_2_when_modrinth_errors(repo, capsys):
+    class Down(FakeModrinth):
+        def request(self, method, url, body=None, content_type=None):
+            raise SystemExit(f"Modrinth refused {method} {url}: 503 down")
+    with pytest.raises(SystemExit) as stop:
+        modrinth.main(["--check"], repo, http=Down())
+    assert stop.value.code == 2 and "503" in capsys.readouterr().err
+
+
+def test_a_check_without_a_token_sends_no_authorization(monkeypatch):
+    sent = {}
+
+    class Reply:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    def urlopen(req, timeout):
+        sent.update(req.headers)
+        return Reply()
+    monkeypatch.setattr(modrinth.urllib.request, "urlopen", urlopen)
+    modrinth.ModrinthHttp("").request("GET", f"{MODRINTH}/project/x")
+    assert "Authorization" not in sent
+
 # --- the command line and the token -------------------------------------------------------------------------
 
 def test_publishing_needs_the_token(repo, monkeypatch):

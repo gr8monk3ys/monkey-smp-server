@@ -11,7 +11,9 @@ from repo import REPO
 DEPLOY = REPO.root / "deploy"
 LIB = DEPLOY / "lib.sh"
 SOURCE = '. "$(dirname -- "$0")/lib.sh"'
-SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p != LIB)
+# claims-exception.sh is sourced too, by npc-claims.sh and shops-claims.sh after lib.sh.
+CLAIMS = DEPLOY / "claims-exception.sh"
+SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p not in (LIB, CLAIMS))
 DASH = shutil.which("dash")
 needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
 COMPOSE = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
@@ -75,6 +77,8 @@ def sh(tmp_path):
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")  # root only when asked
     (bin_dir / "runuser").write_text('#!/bin/sh\necho "runuser $*" >>"$FAKE_CALLS"\n'
                                      'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n', newline="\n")
+    for fake in bin_dir.iterdir():  # Linux's PATH lookup skips files without the execute bit (Git Bash doesn't)
+        fake.chmod(0o755)
 
     def run(snippet, *args, **env):
         environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
@@ -145,6 +149,17 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
     assert code == 0 and out == ["[t] up", "3f2a"]
     assert calls == [f"{COMPOSE} ps -q --status running realms", f"{RCON} list"]
     assert sh("running || log down")[1] == ["[t] down"]
+
+
+def test_compose_runs_from_the_root_whatever_the_callers_folder(sh, tmp_path):
+    """docker compose stats its working directory: run as realms from /root it failed every call (2.9.0's deploy)."""
+    assert sh(f'cd "{tmp_path.as_posix()}"; docker() {{ pwd; }}; compose ps')[1] == ["/"]
+
+
+def test_compose_takes_a_relative_live_dir_from_the_callers_folder(sh, tmp_path):
+    _, out, calls = sh(f'cd "{tmp_path.as_posix()}"; pwd; compose ps', LIVE_DIR="live")
+    here = out[0]   # the shell's spelling of tmp_path (/tmp/... under Git Bash)
+    assert calls == [f"docker compose --project-directory {here}/live/docker -f {here}/live/docker/compose.yaml ps"]
 
 
 @needs_dash
@@ -329,12 +344,60 @@ def test_a_setting_that_is_not_a_whole_number_stops_before_anything_happens(sh, 
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh"])
+@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh", "npc-claims.sh"])
 def test_the_restarting_scripts_check_their_minutes_before_they_do_anything(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}"', WARN_MINUTES="5m", FAKE_ID="0",
-                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix())
+                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix(),
+                          NPCS_LOG=(tmp_path / "npcs.log").as_posix())
     assert code == 1 and out[-1].endswith("ERROR: WARN_MINUTES must be a whole number of minutes, not '5m'")
     assert not [c for c in calls if c.split()[0] in ("docker", "flock", "curl", "sleep")]
+
+
+def test_npc_claims_adds_the_easy_npc_entry_once_and_keeps_the_old_file(sh, tmp_path):
+    live = tmp_path / "live"
+    (live / "docker").mkdir(parents=True)
+    (live / "docker" / "compose.yaml").write_text("")
+    (live / "server" / "mods").mkdir(parents=True)
+    (live / "server" / "mods" / "easy_npc-fabric-26.3-7.17.1.jar").write_text("")
+    toml = live / "server" / "config" / "openpartiesandclaims-server.toml"
+    toml.parent.mkdir()
+    before = '[serverConfig]\n\t\t\tforcedEntityProtectionExceptionList = ["minecraft:minecart"]\n\t\t\tother = 1\n'
+    toml.write_text(before, newline="\n")
+    script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
+    env = {"FAKE_ID": "0", "REALMS_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
+           "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
+    code, out, calls = sh(f"{script} --check", **env)
+    assert code == 0 and out[-1].endswith("nothing was changed") and toml.read_text() == before
+    assert not [c for c in calls if c.startswith(("docker compose stop", "flock"))]
+    # The server isn't running (the fake docker lists nothing), so the file changes and it stays stopped.
+    code, out, _ = sh(f"{script} --now", **env)
+    assert code == 0, out
+    assert toml.read_text() == before.replace(
+        '"minecraft:minecart"]', '"minecraft:minecart", "hand$easy_npc:humanoid", "hand$easy_npc:humanoid_slim"]')
+    assert (toml.parent / "openpartiesandclaims-server.toml.before-npcs").read_text() == before
+    code, out, _ = sh(script, **env)
+    assert code == 0 and any("NPCs in claims: already set" in line for line in out)
+
+
+def test_npc_claims_counts_only_the_exact_entries_as_done(sh, tmp_path):
+    """Another prefix, or one of the two ids, doesn't make it done: it adds what is missing."""
+    live = tmp_path / "live"
+    (live / "docker").mkdir(parents=True)
+    (live / "docker" / "compose.yaml").write_text("")
+    (live / "server" / "mods").mkdir(parents=True)
+    (live / "server" / "mods" / "easy_npc-fabric-26.3-7.17.1.jar").write_text("")
+    toml = live / "server" / "config" / "openpartiesandclaims-server.toml"
+    toml.parent.mkdir()
+    before = '\tforcedEntityProtectionExceptionList = ["break$easy_npc:humanoid", "hand$easy_npc:humanoid"]\n'
+    toml.write_text(before, newline="\n")
+    env = {"FAKE_ID": "0", "REALMS_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
+           "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
+    script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
+    code, out, _ = sh(f"{script} --check", **env)
+    assert code == 0 and any("NPCs in claims: to do" in line for line in out)
+    code, out, _ = sh(f"{script} --now", **env)
+    assert code == 0, out
+    assert toml.read_text() == before.replace('humanoid"]', 'humanoid", "hand$easy_npc:humanoid_slim"]')
 
 
 def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):

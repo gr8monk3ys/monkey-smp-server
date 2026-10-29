@@ -173,7 +173,8 @@ The same world serves three pages. The front page (persuade) uses all of it: can
 - Pixel frames on every object: 14 × 14 SVG `border-image` frames sliced at 6 px, two-step corners, filled at the padding box.
 - Gold fill only on things you press; stone only on reference material.
 - Numbers as structure, set in the pixel display face.
-- Stepped motion only, and none under reduced motion.
+- Stepped motion only, and none under reduced motion. The one glide is the browser's own smooth scroll to
+  an in-page link (owner's call, 29 October 2026), also off under reduced motion.
 - No shadows, glows, blurs, gradients, rounded corners or pills.
 
 ## Colors
@@ -283,6 +284,12 @@ A stone block holding the "Server address" label in ink-soft, the address in mon
 ### Countdown
 Three shade blocks with ink-framed edges, each holding two gold digits in the display face, with a sage unit label below. When a digit changes it drops in from above in four steps over 320 ms, the hours and minutes delayed by 80 ms and 160 ms. Under reduced motion the digits just change.
 
+### Placed blocks
+The countdown's move, on scroll. The blocks of a list marked `data-place` (the gallery, the steps, the plans,
+the rules, the kit, the changes, the week) that start below the fold wait out of sight, then drop 18 px into
+place in three steps over 240 ms as they come into view, 60 ms apart, never more than 300 ms behind the first.
+Blocks on screen at load never move. Under reduced motion, without JavaScript and in print, everything is simply there.
+
 ### Rule tablets
 Stone blocks with an ink title in the display face, ink body text and ink links, a moss strip along the top. On the front page they flow in columns; on the creator page they sit in a two-column grid with the first one across the top.
 
@@ -312,6 +319,7 @@ Rows separated by 2 px canopy-leaf lines. The summary is bone body text at 1.125
 - **Don't** round corners or use pill shapes.
 - **Don't** give a gold fill to anything that isn't an action, or use the ghost button for the main action of a section.
 - **Don't** draw a second solid pricing block; optional tiers stay an outline.
-- **Don't** ease or glide: no smooth scrolling, no transitions on buttons, no fades.
+- **Don't** ease or glide: no transitions on buttons, no fades, nothing that slides in from the side. Smooth
+  scrolling to in-page links is the one exception.
 - **Don't** set the display face at any weight but 700, transform it to uppercase or add letter-spacing.
 - **Don't** put the moss strip or the canopy fringe on everything: moss tops stone tablets only; the fringe hangs from the header and from crowned sections only (pricing and the footer).

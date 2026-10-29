@@ -30,3 +30,8 @@ package/docker/.env
 # Impeccable's one-off direction roll and review screenshots (5 MB, retaken for each review)
 .impeccable/questions/
 .impeccable/review/
+
+# the site's dependencies and build output (site/README.md; site/.gitignore lists them too)
+site/node_modules/
+site/.next/
+site/out/

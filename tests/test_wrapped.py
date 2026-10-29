@@ -14,7 +14,7 @@ from repo import REPO
 
 PACIFIC = season_calendar.PACIFIC
 HOUR = wrapped.TICKS_AN_HOUR
-LAUNCHED_AT = dt.datetime(2026, 10, 31, 17, 5, tzinfo=PACIFIC)
+LAUNCHED_AT = dt.datetime(2026, 11, 7, 17, 5, tzinfo=PACIFIC)
 
 
 def launch_scores():
@@ -58,8 +58,8 @@ def season_files(tmp_path, *, opt_out="Kai  # asked in #help\n\n"):
         "nether": {"name": "Alex", "order": 1, "week": 0}, "dragon": {"name": "Kai", "order": 2, "week": 3},
         "elytra": {"name": "Alex", "order": 3, "week": 3}}}}).path
     weeks = tmp_path / "standings" / "weeks"
-    sunday = dt.datetime(2026, 11, 8, 19, 0, tzinfo=PACIFIC)
-    closed(weeks, dt.datetime(2026, 10, 25, 19, 0, tzinfo=PACIFIC), [row("Test", 1, ["Alex"])])   # before launch
+    sunday = dt.datetime(2026, 11, 15, 19, 0, tzinfo=PACIFIC)
+    closed(weeks, dt.datetime(2026, 11, 1, 19, 0, tzinfo=PACIFIC), [row("Test", 1, ["Alex"])])   # before launch
     closed(weeks, sunday, [row("Red <Monkeys>", 3, ["Alex", "Mod"]), row("Blue", 1, []), row("Gold", 2, [])])
     closed(weeks, sunday + dt.timedelta(weeks=3), [row("Red <Monkeys>", 2, ["Alex"]), row("Blue", 1, [])])
     closed(weeks, sunday + dt.timedelta(weeks=4), [row("Herons", 2, ["Alex"]), row("Blue", 1, [])])
@@ -138,7 +138,7 @@ def test_build_writes_the_index_a_page_each_and_the_pictures(tmp_path):
                   "4 events attended", "Herons. Best weekly rank: 2nd of 2 , week 4, with Red <Monkeys>",
                   "2 bounties claimed", "Enter the Nether the launch weekend, the season's 1st first",
                   "Find an elytra week 3, the season's 3rd first", "Emberfang New this season only them",
-                  "Founder's Edge New this season 3 of 3", "31 October 2026 to 16 January 2027"):
+                  "Founder's Edge New this season 3 of 3", "7 November 2026 to 23 January 2027"):
         assert words in alex.replace("&#x27;", "'").replace("&lt;", "<").replace("&gt;", ">"), words
     page = (out / "alex.html").read_text(encoding="utf-8")
     assert "Red &lt;Monkeys&gt;" in page and "<Monkeys>" not in page        # a faction's name is escaped
@@ -209,13 +209,19 @@ def test_a_later_season_takes_its_dates_from_its_launch_not_the_start(tmp_path, 
 
 
 def test_the_pages_point_at_the_sites_own_files():
+    # The pages sit in site/public/wrapped/season-<n>/: two folders up is what the site serves, a file from
+    # site/public/ or one of its pages, built as <page>.html (site/src/app/<page>/page.tsx), so the links work on
+    # any static server as well as on Vercel, where clean URLs redirect them.
     site = REPO.root / "site"
-    index = (site / "index.html").read_text(encoding="utf-8")
-    assert f'<meta property="og:url" content="{wrapped.SITE}/">' in index
+    config = (site / "src" / "lib" / "config.ts").read_text(encoding="utf-8")
+    assert f'SITE_URL = "{wrapped.SITE}"' in config
     page = wrapped.head("t", "d", "u") + wrapped.foot({}, dt.date(2027, 1, 17))
-    for ref in re.findall(r'(?:href|src)="\.\./\.\./([^"#]*)', page):
-        assert (site / ref).exists() if ref else True, ref
-    assert (site / "img" / "og.jpg").is_file()
+    refs = re.findall(r'(?:href|src)="\.\./\.\./([^"#]*)', page)
+    assert "wrapped/site.css" in refs and "changes.html" in refs
+    for ref in refs:
+        page = site / "src" / "app" / ref.removesuffix(".html") / "page.tsx"
+        assert (site / "public" / ref).is_file() or page.is_file(), ref
+    assert (site / "public" / "img" / "og.jpg").is_file()
     assert wrapped.slug("Steve_01") == "steve_01" and wrapped.slug(".bedrock").startswith("player-")
     assert [wrapped.ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101)] == [
         "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]
@@ -225,8 +231,8 @@ def test_a_start_kept_away_from_the_launch_is_flagged(tmp_path, capsys):
     world = season_files(tmp_path)
     start = tmp_path / "start.json"
     snap = json.loads(start.read_text(encoding="utf-8"))
-    for taken, flagged in (("2026-10-25T17:01:00-07:00", True), ("2026-10-31T17:02:00-07:00", False),
-                           ("2026-11-02T09:00:00-08:00", True)):
+    for taken, flagged in (("2026-11-01T17:01:00-08:00", True), ("2026-11-07T17:02:00-08:00", False),
+                           ("2026-11-09T09:00:00-08:00", True)):
         start.write_text(json.dumps(snap | {"taken": taken}), encoding="utf-8")
         build(tmp_path, world)
         assert ("not at the launch" in capsys.readouterr().err) is flagged, taken
@@ -234,10 +240,10 @@ def test_a_start_kept_away_from_the_launch_is_flagged(tmp_path, capsys):
 
 def test_a_damaged_closed_week_is_left_out(tmp_path, capsys):
     weeks = tmp_path / "weeks"
-    sunday = dt.datetime(2026, 11, 8, 19, 0, tzinfo=PACIFIC)
+    sunday = dt.datetime(2026, 11, 15, 19, 0, tzinfo=PACIFIC)
     closed(weeks, sunday, [row("Red", 1, ["Alex"]), row("Blue", None, ["Kai"]), "junk"])
-    (weeks / "2026-11-15.json").write_text('{"end": "2026-11-15T19:00:00", "rows": []}', encoding="utf-8")
-    (weeks / "2026-11-22.json").write_text("not json", encoding="utf-8")
+    (weeks / "2026-11-22.json").write_text('{"end": "2026-11-22T19:00:00", "rows": []}', encoding="utf-8")
+    (weeks / "2026-11-29.json").write_text("not json", encoding="utf-8")
     found = wrapped.closed_weeks(tmp_path, season_calendar.SEASON)
     assert [len(w["rows"]) for w in found] == [1]
     assert capsys.readouterr().err.count("left out") == 2
@@ -283,7 +289,7 @@ def test_start_never_replaces_the_launchs_file_without_force(tmp_path, capsys):
 def test_a_late_close_counts_for_the_week_it_closed(tmp_path):
     weeks = tmp_path / "weeks"
     season = season_calendar.SEASON
-    sunday = dt.datetime(2026, 11, 8, 19, 0, tzinfo=PACIFIC)                 # week 1's close
+    sunday = dt.datetime(2026, 11, 15, 19, 0, tzinfo=PACIFIC)                 # week 1's close
     finale = sunday + dt.timedelta(weeks=wrapped.FINALE_WEEK - 1)              # week 11's, Sunday 7 PM
     late = dt.timedelta(hours=5, minutes=30)                                    # Monday 12:30 AM, after a reboot
 
@@ -338,7 +344,7 @@ def test_a_build_that_fails_part_way_leaves_the_earlier_pages(tmp_path, monkeypa
 
 def test_a_start_without_a_utc_offset_is_refused(tmp_path):
     start = tmp_path / "start.json"
-    start.write_text(json.dumps({"taken": "2026-10-31T17:02:00", "scores": {}}), encoding="utf-8")
+    start.write_text(json.dumps({"taken": "2026-11-07T17:02:00", "scores": {}}), encoding="utf-8")
     with pytest.raises(SystemExit, match="is not a file `wrapped.py start` wrote .*no UTC offset"):
         wrapped.read_start(start)
 

@@ -121,9 +121,15 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Backup log (as root) | `journalctl -u realms-backup -n 50` |
 | Off-site snapshots (as root) | `sh /srv/realms/repo/deploy/realms-backup.sh --restic snapshots` |
 
+Logged in as root, become `realms` for these, for example
+`runuser -u realms -- sh /srv/realms/repo/deploy/realms-deploy.sh --now`. As root the deploy stops at
+"cannot create /tmp/realms-deploy.lock: Permission denied": the lock belongs to `realms`, and the kernel's
+`fs.protected_regular` keeps even root from opening another user's file in `/tmp`.
+
 If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previous release back, restarts
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
-before the update is the newest folder in `backups/`.
+before the update is the newest folder in `backups/`. To try a skipped commit again (say, once the cause is
+fixed), delete `.deploy-failed` in `/srv/realms/TheRealms-Server` and run the deploy with `--now`.
 
 ## One-off steps when upgrading
 
@@ -180,7 +186,8 @@ As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`real
 1. Let 2.8.0 deploy as usual. The deploy backs the world up first, so the newest folder in `../backups/` from
    before the update is the old world as 2.7.0 left it. Keep it out of the rotation:
    `mkdir -p /srv/realms/seasons/pre-season && cp -a ../backups/<that folder> /srv/realms/seasons/pre-season/backup-2.7`.
-   The off-site backups copy `backups/` only, so add `/srv/realms/seasons` to that job or keep a copy by hand.
+   The off-site backups copy `server/` only (not `backups/` or `/srv/realms/seasons`), so keep a copy of
+   `/srv/realms/seasons` off the VPS by hand.
 2. Pause deploys: `sudo systemctl stop realms-deploy.timer`.
 3. Warn and stop: `realms rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
    `docker compose stop`.
@@ -252,7 +259,7 @@ sh /srv/realms/repo/deploy/realms-week.sh --check
 sudo sh /srv/realms/repo/deploy/realms-week.sh --install
 ```
 
-Do it before the launch (Saturday 31 October 2026, 5 PM Pacific): without the timer the challenge week never
+Do it before the launch (Saturday 7 November 2026, 5 PM Pacific): without the timer the challenge week never
 turns over, and the launch weekend's window ends on game time alone, which stops while the server is empty.
 It needs python3 3.10 or newer (`deploy/upgrade-2.5.0.sh` installs it) and reads only `REPO_DIR` and
 `LIVE_DIR` from `/etc/realms-deploy.env`.
@@ -354,6 +361,30 @@ The release adds the `realms-npcs` data pack but places no one. Once it is live,
 the Town Crier at spawn once, in game: `/function realms:npcs/guide/here` and `/function realms:npcs/crier/here`
 where each should stand (docs/ADMIN.md, "Spawn NPCs"). Until then there are no NPCs at spawn. Place them again
 after a release that changes their text.
+
+### NPCs in claims (2.9.1)
+
+Spawn is a server claim, so up to 2.9.0 Open Parties and Claims answered a player's right-click on the Guide or
+the Town Crier with "You are not allowed to interact with this entity in this chunk (easy_npc:humanoid)"; only
+ops could talk to them. 2.9.1 ships `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` in
+`forcedEntityProtectionExceptionList` in
+`defaults/config/openpartiesandclaims-server.toml`: anyone may right-click an Easy NPC with an empty hand in any
+claim (docs/ADMIN.md, "Spawn NPCs"). A deploy doesn't touch the live `config/openpartiesandclaims-server.toml`,
+whose list still reads `["minecraft:minecart"]`. `deploy/npc-claims.sh` adds the entries with one restart and
+skips them when they're already there (only those exact entries count). Run it as root, `--check` first:
+
+```sh
+sudo sh /srv/realms/repo/deploy/npc-claims.sh --check
+sudo systemd-run --unit=realms-npcs --collect -p TimeoutStopSec=20min sh /srv/realms/repo/deploy/npc-claims.sh
+journalctl -fu realms-npcs
+```
+
+It works like `deploy/shops-claims.sh` ("Shops in claims"): it warns players online (`--now` skips that), takes
+the deploy lock, stops the server for about 3 minutes (the mod reads the list only on start), keeps the old file
+as `openpartiesandclaims-server.toml.before-npcs` and starts the server again whatever happens; its log is
+`/var/log/realms-npc-claims.log`. It prints only the `forcedEntityProtectionExceptionList` line. If that list is
+missing or spread over several lines, it changes nothing and says so: add the entries it names to it by hand
+with the server stopped. Nothing to do in game: the NPCs stay where they are.
 
 ### Distant Horizons stops sending its own LODs (the release after 2.4.2)
 
@@ -635,18 +666,19 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
   it is cancelled, and `rw.months` mustn't count the trial's first charge twice. If the whitelist waits for
   the first charge, leave trials off and run open-house evenings instead: the whitelist off for one
   announced evening a month with staff online, listed in docs/SEASONS.md and on the site. Once trials are
-  on, add this to the site's FAQ (`site/index.html`), under "Refunds?":
+  on, add this to the site's FAQ (`faq` in `site/src/content/front.tsx`), under "Refunds?":
   "**Can I try it first?** Yes: the monthly pass starts with 7 free days. Tebex asks for a card and charges
   the first month when the 7 days end, unless you cancel before then on its payment history page."
 - **Creator codes** (Creator Codes in the Tebex panel): a 20% revenue share, no customer discount, limited
   to the 3-month pass if Tebex offers that. Tebex pays a code's share only on a subscription's first
   payment, takes 1% more on payments made with a code, and settles the creator's Tebex Wallet after 30
-  working days. The public terms are `site/creators.html`; finding creators is in docs/PROMOTION.md.
-- **The site.** Put the webstore's address in `STORE_URL` in `site/config.js` and run
-  `python tools/site_links.py`, which writes it into the pages. Do it only once a test purchase has
-  whitelisted someone: while `STORE_URL` is empty the pages say passes are arranged in the Discord and
-  staff whitelist buyers by hand, and setting it switches them to the store's wording ("on the whitelist
-  within a minute or two"), marked `data-store="open"` and `"soon"` in the HTML.
+  working days. The public terms are the site's `/creators` page (`terms` in `site/src/content/rules.tsx`);
+  finding creators is in docs/PROMOTION.md.
+- **The site.** Put the webstore's address in `STORE_URL` in `site/config.json`; the site's next build writes
+  it into the pages. Do it only once a test purchase has whitelisted someone: while `STORE_URL` is empty the
+  pages say passes are arranged in the Discord and staff whitelist buyers by hand, and setting it switches them
+  to the store's wording ("on the whitelist within a minute or two"), the `<Store when="open">` and
+  `when="soon"` text in `site/src/app/page.tsx`.
 
 ## Monitoring, the daily restart and the update check
 

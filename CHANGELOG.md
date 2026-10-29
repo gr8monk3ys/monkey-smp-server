@@ -12,6 +12,44 @@
   Off until the owner adds `NEWS_WEBHOOK_URL` on the VPS and installs the timer (docs/LIVE.md, "The news
   timer"). Not yet run against a live server.
 
+## [2.9.1] - 2026-10-29
+
+Season I's new date: it opens on Saturday 7 November, a week later. This must be live before Monday
+2 November, when 2.9.0's calendar would start week 1 and the supply drops. The client pack's mods are the
+same as 2.9.0's, so players don't need to update it. After it deploys, place the Town Crier again
+(docs/ADMIN.md, "Spawn NPCs") and run `deploy/npc-claims.sh` once (docs/LIVE.md, "NPCs in claims").
+
+### Added
+
+- The Release workflow publishes the client pack on Modrinth after the GitHub release when the repo secret
+  `MODRINTH_TOKEN` is set (it uploads nothing when `client/` didn't change, and only warns without the
+  secret). The weekly update check runs `tools/modrinth.py --check` and says in its issue when Modrinth's
+  newest version holds a different pack from main's.
+
+### Changed
+
+- Season I opens on Saturday 7 November 2026 at 5 PM Pacific (8 PM Eastern), a week later than 31 October.
+  Week 1 starts on Monday 9 November, the finale is on 23 January 2027 and Season II is proposed for
+  6 February. The launch weekend (Founder's Circlet) is 31 hours again: the clocks go back on 1 November, the
+  week before. The holidays keep their dates, so Arena Glory I (Midwinter, 19 December) moves to week 6, the
+  second border break to week 7 (26 December) and Build Battle II to week 8; the Town Crier says so. Release
+  this before Monday 2 November, when 2.9.0 would start week 1, and place the Crier again after it
+  (docs/ADMIN.md, "Spawn NPCs").
+
+### Fixed
+
+- Players can talk to the Guide and the Town Crier again. Spawn's server claim also protected the NPCs, so a
+  right-click got Open Parties and Claims' "You are not allowed to interact with this entity in this chunk";
+  only ops could use them. `defaults/config/openpartiesandclaims-server.toml` now adds
+  `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` to `forcedEntityProtectionExceptionList`: anyone may right-click an Easy NPC in any claim with an empty hand,
+  while the claim still protects its blocks and nobody can hit the NPCs or use items on them. On the live
+  server, run `deploy/npc-claims.sh` once (one restart; docs/LIVE.md, "NPCs in claims"). Not yet tried in game.
+- The update check's "Verify every pinned download" step piped into `tee` without `pipefail`, so a broken
+  download never reached its issue. It runs under `bash` now.
+- docs: LAUNCH.md put the R2 keys in `/etc/realms-deploy.env` (the backup reads `/etc/realms-backup.env`) and
+  the store at `monkeysmp.tebex.io` (another server's); LIVE.md said the off-site copy covers `backups/` (it
+  sends `server/` only).
+
 ## [2.9.0] - 2026-10-29
 
 Season I's release: the season opens on Saturday 31 October (below), with six new season features. The

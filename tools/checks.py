@@ -8,9 +8,10 @@
     python tools/checks.py --boots       which of CI's boot jobs this run needs (ci.yml; see boots())
 
 The checks: ruff, pytest, validate.py, the generated packs (datapacks.py --check), `dash -n` on every POSIX sh
-script, and Pester. None of them boots the server; that is CI's boot jobs and tests/smoke.ps1. On Windows,
-Git for Windows' own dash is used when dash isn't on PATH, for `dash -n` and for the pytest tests that run
-deploy/lib.sh under dash. Exit status 1 if any check failed.
+script, Pester, and the site (in site/, with bun: install from the lockfile, lint, typecheck and build, then
+tools/site_links.py --built checks the built pages against site/config.json). None of them boots the server;
+that is CI's boot jobs and tests/smoke.ps1. On Windows, Git for Windows' own dash is used when dash isn't on
+PATH, for `dash -n` and for the pytest tests that run deploy/lib.sh under dash. Exit status 1 if any check failed.
 """
 import argparse
 import json
@@ -34,6 +35,7 @@ class Check:
     needs: str                                   # the program it runs, "" for this Python, "module:X" for a module
     command: Callable[[Path], list[list[str]]]   # the commands, given the checkout
     about: str
+    cwd: str = ""                                # where they run, from the checkout's root
 
 
 def sh_scripts(root: Path) -> list[Path]:
@@ -56,6 +58,17 @@ def pester(root: Path) -> list[list[str]]:
     return [[shell, "-NoProfile", "-NonInteractive", "-Command", script] for shell in powershells()]
 
 
+def site() -> list[list[str]]:
+    """The site's own checks, run in site/ (site/README.md), then its built pages against config.json."""
+    return [["bun", "install", "--frozen-lockfile"],
+            *(["bun", "run", script] for script in ("lint", "typecheck", "build")),
+            [sys.executable, "-X", "utf8", "../tools/site_links.py", "--check", "--built", "out"]]
+
+
+# What to say when a program a check runs isn't installed.
+WHERE = {"bun": "bun, which builds the site (https://bun.sh)"}
+
+
 def powershells() -> list[str]:
     """Every PowerShell the tests must pass on here (ADR-0003): on Windows, Windows PowerShell 5.1 and pwsh too
     when it is installed; elsewhere pwsh."""
@@ -74,6 +87,7 @@ CHECKS = (
     Check("sh", "dash", lambda root: [["dash", "-n", str(p)] for p in sh_scripts(root)],
           "dash -n on every POSIX sh script"),
     Check("pester", "powershell", pester, "the PowerShell unit tests (Pester 5)"),
+    Check("site", "bun", lambda root: site(), "the site: install, lint, typecheck, build, and its built pages", "site"),
 )
 NAMES = [c.name for c in CHECKS]
 
@@ -108,7 +122,7 @@ def missing(check: Check, env: dict[str, str]) -> str:
     if check.needs == "powershell":
         lacking = [s for s in powershells() if not shutil.which(s, path=env.get("PATH")) or not _has_pester(s)]
         return f"Pester 5.5+ in {' and '.join(lacking)}" if lacking else ""
-    return "" if shutil.which(check.needs, path=env.get("PATH")) else check.needs
+    return "" if shutil.which(check.needs, path=env.get("PATH")) else WHERE.get(check.needs, check.needs)
 
 
 def _has_pester(shell: str) -> bool:
@@ -139,7 +153,7 @@ def run(names: list[str], root: Path, strict: bool, out=sys.stdout) -> list[Resu
             # Windows looks a program up on this process's PATH, not the one in env, so find it here.
             program = shutil.which(command[0], path=env.get("PATH")) or command[0]
             try:
-                done = subprocess.run([program, *command[1:]], cwd=root, env=env, stdout=subprocess.PIPE,
+                done = subprocess.run([program, *command[1:]], cwd=root / check.cwd, env=env, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
             except OSError as e:
                 print(f"could not run {command[0]}: {e}", file=out, flush=True)
@@ -232,6 +246,11 @@ def main(argv=None) -> int:
     if unknown := [n for n in args.checks if n not in NAMES]:
         parser.error(f"no check named {', '.join(unknown)} (the checks: {' '.join(NAMES)})")
     root = args.root.resolve()
+    # The tools print what they like (Next's build prints check marks); a console that can't show a character
+    # gets a stand-in rather than stopping the run.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     if args.boots:
         print(boot_plan(root, dict(os.environ)), end="")
         return 0

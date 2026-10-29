@@ -1,6 +1,8 @@
 import gzip
 import struct
+import subprocess
 import zlib
+from pathlib import Path
 
 import migrate_names as mn
 import pytest
@@ -37,9 +39,10 @@ def chunks_of(data: bytes) -> dict[int, dict]:
 
 
 def test_swap_keeps_case_length_and_vanilla_names():
-    text = b"The Realms TheRealms the-realms the_realms REALMS_X Realms realms:rules realmsNotifications"
+    kept = b" realmsNotifications realms_main"
+    text = b"The Realms TheRealms the-realms the_realms REALMS_X Realms realms:rules" + kept
     new = mn.swap(text)
-    assert new == b"Monkey SMP MonkeySMP monkey-smp monkey_smp MONKEY_X Monkey monkey:rules realmsNotifications"
+    assert new == b"Monkey SMP MonkeySMP monkey-smp monkey_smp MONKEY_X Monkey monkey:rules" + kept
     assert len(new) == len(text)
     assert mn.swap(new) == new
 
@@ -151,3 +154,28 @@ def test_a_damaged_file_stops_before_writing(tmp_path, capsys):
     assert mn.main([str(root), "--apply"]) == 1
     assert "broken.dat" in capsys.readouterr().err
     assert (root / "server" / "world" / "datapacks" / OLD_PACK).is_dir()
+
+
+# The places that still have to know the old name: this tool, its tests, the player installer's move of the
+# old game folder, and the glossary's "Formerly" line. Everywhere else it stays gone (CLAUDE.md).
+KNOWS_THE_OLD_NAME = {"tools/migrate_names.py", "tests/test_migrate_names.py", "player/installer/PlayerInstall.psm1",
+                      "tests/Player.Tests.ps1", "GLOSSARY.md"}
+
+
+def test_the_old_name_is_gone_from_the_repo():
+    root = Path(__file__).resolve().parent.parent
+    files = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True).stdout.split(b"\0")
+    found = []
+    for name in (f.decode() for f in files if f):
+        if name in KNOWS_THE_OLD_NAME:
+            continue
+        if mn.swap_name(name) != name:
+            found.append(name)
+        data = (root / name).read_bytes()
+        if b"\0" in data[:8192]:
+            continue   # binary: the release builds remake the downloads
+        for k in mn.KEEP:
+            data = data.replace(k, b"")
+        if mn.OLD in data.lower():
+            found.append(name)
+    assert not found, f"the old name is back in: {found}"

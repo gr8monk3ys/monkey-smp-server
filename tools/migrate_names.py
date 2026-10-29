@@ -34,7 +34,7 @@ from pathlib import Path
 # Order matters: the longer, specific forms first. Every pair is the same length.
 PAIRS = [(b"TheRealms", b"MonkeySMP"), (b"The Realms", b"Monkey SMP"), (b"the-realms", b"monkey-smp"),
          (b"the_realms", b"monkey_smp"), (b"REALMS", b"MONKEY"), (b"Realms", b"Monkey"), (b"realms", b"monkey")]
-KEEP = [b"realmsNotifications"]   # vanilla Minecraft's own option, not ours
+KEEP = [b"realmsNotifications", b"realms_main"]   # vanilla Minecraft's Realms (an option, EaseGUI's screen id)
 OLD = b"realms"
 
 SKIP_DIRS = {"logs", "crash-reports", "backups", "java", "libraries", "versions", ".fabric", "cache", ".cache",

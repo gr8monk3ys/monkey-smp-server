@@ -38,6 +38,10 @@ $script:Utf8 = New-Object System.Text.UTF8Encoding $false
 $script:ProfileKey = 'monkey-smp'
 $script:StateFileName = '.monkey-client-state.json'
 $script:BackupSuffix = '.monkey-smp-backup'
+# The names before 2.10.0 (The Realms): an update moves the old game folder and drops the old profile.
+$script:OldGameFolder = '.the-realms'
+$script:OldStateFileName = '.realms-client-state.json'
+$script:OldProfileKey = 'the-realms'
 # The Microsoft Store / Xbox app launcher keeps its profiles in the second file. Both are updated if present.
 $script:ProfileFiles = @('launcher_profiles.json', 'launcher_profiles_microsoft_store.json')
 $script:LauncherProcesses = @('MinecraftLauncher', 'Minecraft')
@@ -191,9 +195,13 @@ function New-PlayerContext {
     if ($game -eq $mc) {
         throw "The game folder can't be the Minecraft Launcher's own folder ($mc). Pick a separate folder for Monkey SMP."
     }
+    # Only the default game folder moves from the old default; a folder the player picked stays theirs.
+    $oldGame = $null
+    if ((Split-Path $game -Leaf) -eq '.monkey-smp') { $oldGame = Join-Path (Split-Path $game -Parent) $script:OldGameFolder }
     return [pscustomobject]@{
         MinecraftDir      = $mc
         GameDir           = $game
+        OldGameDir        = $oldGame
         StateFile         = Join-Path $game $script:StateFileName
         Pack              = $Pack
         FabricProfile     = $FabricProfile
@@ -374,12 +382,12 @@ function Wait-LauncherClosed {
 }
 
 # Every value of a launcher_profiles.json except our profile, serialized, so a change can be detected.
-function Get-OtherSettings($Data) {
+function Get-OtherSettings($Data, [string]$Key = $script:ProfileKey) {
     $snap = @{}
     foreach ($k in @($Data.Keys)) { if ($k -ne 'profiles') { $snap["setting $k"] = ConvertTo-JsonText $Data[$k] } }
     $profiles = Get-Field $Data 'profiles'
     if (Test-JsonObject $profiles) {
-        foreach ($k in @($profiles.Keys)) { if ($k -ne $script:ProfileKey) { $snap["profile $k"] = ConvertTo-JsonText $profiles[$k] } }
+        foreach ($k in @($profiles.Keys)) { if ($k -ne $Key) { $snap["profile $k"] = ConvertTo-JsonText $profiles[$k] } }
     }
     return $snap
 }
@@ -395,19 +403,20 @@ function Get-LauncherTimestamp { return (Get-Date).ToUniversalTime().ToString("y
 <#
 .SYNOPSIS
     Sets (or with -Remove, deletes) our profile in one launcher_profiles.json and keeps every other
-    key exactly as it was. The first change makes <file>.monkey-smp-backup. Returns $true if the file changed.
+    key exactly as it was. -Key picks another profile to remove (the one from before 2.10.0). The first change makes <file>.monkey-smp-backup. Returns $true if the file changed.
 .PARAMETER Fields
     The profile fields to set. Other fields of an existing profile (e.g. a resolution the player set) are kept.
 #>
 function Edit-LauncherProfile {
-    param([Parameter(Mandatory)] [string]$Path, [Collections.IDictionary]$Fields, [switch]$Remove)
+    param([Parameter(Mandatory)] [string]$Path, [Collections.IDictionary]$Fields, [switch]$Remove,
+        [string]$Key = $script:ProfileKey)
     if (-not $Remove -and -not $Fields) { throw 'Edit-LauncherProfile needs -Fields or -Remove.' }
     $original = Read-TextFile $Path
     try { $data = ConvertFrom-JsonText $original } catch { $data = $null }
     if (-not (Test-JsonObject $data)) {
         throw "$Path is damaged (not valid JSON). Start the Minecraft Launcher once so it repairs it, close it, then run this again."
     }
-    $before = Get-OtherSettings $data
+    $before = Get-OtherSettings $data $Key
     $profiles = Get-Field $data 'profiles'
     if ($null -eq $profiles) {
         if ($Remove) { return $false }
@@ -418,10 +427,10 @@ function Edit-LauncherProfile {
     }
 
     if ($Remove) {
-        if (-not $profiles.ContainsKey($script:ProfileKey)) { return $false }
-        [void]$profiles.Remove($script:ProfileKey)
+        if (-not $profiles.ContainsKey($Key)) { return $false }
+        [void]$profiles.Remove($Key)
     } else {
-        $p = Get-Field $profiles $script:ProfileKey
+        $p = Get-Field $profiles $Key
         if (-not (Test-JsonObject $p)) { $p = [Collections.Generic.Dictionary[string, object]]::new() }
         $same = $true
         foreach ($k in $Fields.Keys) { if ((Get-Field $p $k) -cne $Fields[$k]) { $same = $false } }
@@ -432,17 +441,17 @@ function Edit-LauncherProfile {
         if (-not (Get-Field $p 'created')) { $p['created'] = $now }
         # Newest lastUsed: the launcher (sorted by last played) shows it next to the Play button.
         $p['lastUsed'] = $now
-        $profiles[$script:ProfileKey] = $p.psobject.BaseObject
+        $profiles[$Key] = $p.psobject.BaseObject
     }
 
     $text = ConvertTo-JsonText $data
     if ($text -ceq $original) { return $false }
     # Re-parse what would be written: every other setting and profile must be unchanged.
     $check = ConvertFrom-JsonText $text
-    if (-not (Test-SameSettings $before (Get-OtherSettings $check))) {
+    if (-not (Test-SameSettings $before (Get-OtherSettings $check $Key))) {
         throw "Changing $Path would also change other launcher settings, so nothing was changed. Please report this."
     }
-    $mine = Get-Field (Get-Field $check 'profiles') $script:ProfileKey
+    $mine = Get-Field (Get-Field $check 'profiles') $Key
     if ($Remove -eq ($null -ne $mine)) { throw "Couldn't update the profile in $Path. Nothing was changed." }
 
     $backup = $Path + $script:BackupSuffix
@@ -626,6 +635,25 @@ function Install-FabricVersion($Context, $Fabric) {
 
 <#
 .SYNOPSIS
+    Moves the game folder from before 2.10.0 (%APPDATA%\.the-realms) to the new one, so an update keeps the
+    player's worlds, screenshots and settings. Only when the new folder doesn't exist yet. Returns $true if it moved.
+#>
+function Move-OldGameFolder($Context) {
+    $old = $Context.OldGameDir
+    if (-not $old -or -not [IO.Directory]::Exists($old)) { return $false }
+    if ([IO.Directory]::Exists($Context.GameDir)) {
+        Write-Note "Both $old and $($Context.GameDir) exist; using the second. Move anything you want to keep across by hand."
+        return $false
+    }
+    [IO.Directory]::Move($old, $Context.GameDir)
+    $oldState = Join-Path $Context.GameDir $script:OldStateFileName
+    if ([IO.File]::Exists($oldState)) { [IO.File]::Move($oldState, $Context.StateFile) }
+    Write-Ok "Moved your game folder from $old to $($Context.GameDir) (Monkey SMP's new name)."
+    return $true
+}
+
+<#
+.SYNOPSIS
     Install or update: makes the launcher profile, the Fabric version and the game folder match the
     pack. Idempotent. Returns a summary (Downloaded, Removed, Total, OverridesCopied, VersionChanged,
     ProfileChanged, ProfileName, VersionId).
@@ -645,6 +673,7 @@ function Install-Client {
     $versionChanged = Install-FabricVersion $Context $fabric
     if ($versionChanged) { Write-Ok "Fabric added to the launcher ($($fabric.Id))." } else { Write-Ok "Fabric is already in the launcher ($($fabric.Id))." }
 
+    $null = Move-OldGameFolder $Context
     New-Item -ItemType Directory -Force -Path $Context.GameDir | Out-Null
     $sync = Sync-ClientFiles -Context $Context -Pack $pack
 
@@ -657,6 +686,7 @@ function Install-Client {
     $profileChanged = $false
     foreach ($file in $profileFiles) {
         if (Edit-LauncherProfile -Path $file -Fields $fields) { $profileChanged = $true }
+        if (Edit-LauncherProfile -Path $file -Remove -Key $script:OldProfileKey) { Write-Ok "Removed the old profile from $file." }
     }
     if ($profileChanged) { Write-Ok "Profile '$($fields.name)' saved ($MemoryGB GB memory)." } else { Write-Ok "Profile '$($fields.name)' is already up to date." }
 

@@ -2,7 +2,7 @@
 
 A Minecraft factions server packaged so that anyone can host it on Windows, macOS or Linux from a single download, and kept reproducible by pinning everything it runs.
 
-Formerly **Monkey SMP**. Only the name players see changed: code, folders, the `monkey` command, the `monkey:` data pack namespace, the `MonkeySMP-*` download names and the `.monkey-smp` game folder keep the old name so existing installs and the live deploy keep working.
+Formerly **The Realms**. Since 2.10.0 every name is Monkey SMP: the `monkey` command, the `monkey:` data pack namespace, the `MonkeySMP-*` download names and the `.monkey-smp` game folder. `tools/migrate_names.py` moves an old server folder and its world over; the player installer moves an old game folder.
 
 ## People
 

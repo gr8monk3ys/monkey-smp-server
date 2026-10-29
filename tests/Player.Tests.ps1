@@ -339,6 +339,46 @@ Describe 'Install-Client' {
     }
 }
 
+Describe 'Moving from before 2.10.0' {
+    BeforeEach {
+        $F = New-Fixture
+        $F.Game = Join-Path $F.Dir '.monkey-smp'
+        $script:old = Join-Path $F.Dir '.the-realms'
+        Write-Text (Join-Path $script:old 'saves\Base\level.dat') 'world'
+        Write-Text (Join-Path $script:old 'mods\alpha-1.0.jar') 'stale'
+        Write-Text (Join-Path $script:old '.realms-client-state.json') '{"version":"0.9.0","files":["mods/alpha-1.0.jar"]}'
+        $text = (Get-LauncherProfilesText).Replace('"profiles":{', '"profiles":{"the-realms":{"name":"The Realms 0.9.0","type":"custom"},')
+        Write-Text $F.Profiles $text
+        $script:pack = New-StandardPack $F
+    }
+
+    It 'moves the old game folder and its state, and drops the old profile' {
+        $r = Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4
+        [IO.Directory]::Exists($script:old) | Should -BeFalse
+        Read-Text (Join-Path $F.Game 'saves\Base\level.dat') | Should -Be 'world'
+        Get-FileSha (Join-Path $F.Game 'mods\alpha-1.0.jar') | Should -Be $F.ModA.hashes.sha512
+        [IO.File]::Exists((Join-Path $F.Game '.realms-client-state.json')) | Should -BeFalse
+        (Read-Text (Join-Path $F.Game '.monkey-client-state.json') | ConvertFrom-Json).version | Should -Be '1.0.0'
+        $profiles = Get-Profiles $F.Profiles
+        $profiles.PSObject.Properties.Name | Should -Not -Contain 'the-realms'
+        $profiles.'monkey-smp'.gameDir | Should -Be $F.Game
+        $r.ProfileName | Should -Be 'Monkey SMP 1.0.0'
+    }
+
+    It 'leaves the old folder alone when the new one already exists' {
+        Write-Text (Join-Path $F.Game 'saves\New\level.dat') 'new world'
+        [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
+        Read-Text (Join-Path $script:old 'saves\Base\level.dat') | Should -Be 'world'
+        Read-Text (Join-Path $F.Game 'saves\New\level.dat') | Should -Be 'new world'
+    }
+
+    It 'never moves a game folder the player picked' {
+        $F.Game = Join-Path $F.Dir 'my folder'
+        [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
+        [IO.Directory]::Exists($script:old) | Should -BeTrue
+    }
+}
+
 Describe 'Downloads' {
     BeforeEach {
         $F = New-Fixture

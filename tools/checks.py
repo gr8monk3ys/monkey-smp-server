@@ -13,6 +13,7 @@ Git for Windows' own dash is used when dash isn't on PATH, for `dash -n` and for
 deploy/lib.sh under dash. Exit status 1 if any check failed.
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -30,7 +31,7 @@ WINDOWS = os.name == "nt"
 @dataclass(frozen=True)
 class Check:
     name: str
-    needs: str                                   # the program it runs, "" for this Python
+    needs: str                                   # the program it runs, "" for this Python, "module:X" for a module
     command: Callable[[Path], list[list[str]]]   # the commands, given the checkout
     about: str
 
@@ -52,18 +53,19 @@ def pester(root: Path) -> list[list[str]]:
     files = ", ".join(f"'{n}'" for n in pester_files(root))
     script = (f"Import-Module Pester -MinimumVersion 5.5; $r = Invoke-Pester -Path {files} -Output Minimal "
               "-PassThru; if ($r.FailedCount -or $r.Result -ne 'Passed') { exit 1 }")
-    return [[powershell(), "-NoProfile", "-NonInteractive", "-Command", script]]
+    return [[shell, "-NoProfile", "-NonInteractive", "-Command", script] for shell in powershells()]
 
 
-def powershell() -> str:
-    """pwsh where it is installed; Windows PowerShell 5.1 otherwise (both must pass, ADR-0003)."""
-    return "pwsh" if shutil.which("pwsh") or not WINDOWS else "powershell"
+def powershells() -> list[str]:
+    """Every PowerShell the tests must pass on here (ADR-0003): on Windows, Windows PowerShell 5.1 and pwsh too
+    when it is installed; elsewhere pwsh."""
+    return ["powershell", *(["pwsh"] if shutil.which("pwsh") else [])] if WINDOWS else ["pwsh"]
 
 
 CHECKS = (
-    Check("ruff", "", lambda root: [[sys.executable, "-m", "ruff", "check", "tools", "tests"]],
+    Check("ruff", "module:ruff", lambda root: [[sys.executable, "-m", "ruff", "check", "tools", "tests"]],
           "lint the tools and tests"),
-    Check("pytest", "", lambda root: [[sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]],
+    Check("pytest", "module:pytest", lambda root: [[sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]],
           "the unit tests"),
     Check("validate", "", lambda root: [[sys.executable, "-X", "utf8", "tools/validate.py"]],
           "the manifest, package, client pack and site agree"),
@@ -94,21 +96,24 @@ def environment() -> dict[str, str]:
     return env
 
 
-def available(check: Check, env: dict[str, str]) -> bool:
+def missing(check: Check, env: dict[str, str]) -> str:
+    """What this machine lacks to run the check ("" when nothing). A module check runs `python -m X`, so only
+    this Python having the module counts, not a program of that name on PATH."""
     if check.needs == "":
-        return check.name != "ruff" or _has_module("ruff", env)
-    program = powershell() if check.needs == "powershell" else check.needs
-    return shutil.which(program, path=env.get("PATH")) is not None and (check.name != "pester" or _has_pester())
+        return ""
+    if check.needs.startswith("module:"):
+        name = check.needs.removeprefix("module:")
+        found = subprocess.run([sys.executable, "-c", f"import {name}"], env=env, capture_output=True)
+        return "" if found.returncode == 0 else f"the {name} module"
+    if check.needs == "powershell":
+        lacking = [s for s in powershells() if not shutil.which(s, path=env.get("PATH")) or not _has_pester(s)]
+        return f"Pester 5.5+ in {' and '.join(lacking)}" if lacking else ""
+    return "" if shutil.which(check.needs, path=env.get("PATH")) else check.needs
 
 
-def _has_module(name: str, env: dict[str, str]) -> bool:
-    found = subprocess.run([sys.executable, "-c", f"import {name}"], env=env, capture_output=True)
-    return found.returncode == 0 or shutil.which(name, path=env.get("PATH")) is not None
-
-
-def _has_pester() -> bool:
+def _has_pester(shell: str) -> bool:
     ask = "if (Get-Module -ListAvailable Pester | Where-Object Version -ge '5.5') { exit 0 } else { exit 1 }"
-    found = subprocess.run([powershell(), "-NoProfile", "-NonInteractive", "-Command", ask], capture_output=True)
+    found = subprocess.run([shell, "-NoProfile", "-NonInteractive", "-Command", ask], capture_output=True)
     return found.returncode == 0
 
 
@@ -124,17 +129,22 @@ def run(names: list[str], root: Path, strict: bool, out=sys.stdout) -> list[Resu
     env = environment()
     results = []
     for check in (c for c in CHECKS if c.name in names):
-        if not available(check, env):
-            needs = "the ruff module" if check.name == "ruff" else ("Pester 5.5+" if check.name == "pester"
-                                                                     else check.needs)
+        if needs := missing(check, env):
             results.append(Result(check.name, "failed" if strict else "skipped", 0.0, f"needs {needs}"))
             print(f"== {check.name}: {results[-1].state} (needs {needs})", file=out, flush=True)
             continue
         print(f"== {check.name}: {check.about}", file=out, flush=True)
         began, ok = time.monotonic(), True
         for command in check.command(root):
-            done = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  text=True, encoding="utf-8", errors="replace")
+            # Windows looks a program up on this process's PATH, not the one in env, so find it here.
+            program = shutil.which(command[0], path=env.get("PATH")) or command[0]
+            try:
+                done = subprocess.run([program, *command[1:]], cwd=root, env=env, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+            except OSError as e:
+                print(f"could not run {command[0]}: {e}", file=out, flush=True)
+                ok = False
+                continue
             if done.stdout:
                 print(done.stdout.rstrip(), file=out, flush=True)
             ok = ok and done.returncode == 0
@@ -152,14 +162,14 @@ def summary(results: list[Result]) -> str:
 
 # CI's boot jobs cost far more than these checks (Windows minutes count double), so a run boots only what its
 # change can break. A path that starts with one of these needs the Linux boots (native and Docker) ...
-SERVER_PATHS = ("package/", "tools/build.py", "tests/smoke.ps1", "tests/docker-smoke.sh", "tests/hosting-smoke.sh",
+SERVER_PATHS = ("package/", "tests/smoke.ps1", "tests/docker-smoke.sh", "tests/hosting-smoke.sh",
                 ".github/workflows/ci.yml")
 # ... and these also need the Windows boot (with PSScriptAnalyzer and the player installer's tests) and the
-# hosting bundle it makes.
+# hosting bundle it makes. The build (build.py and the repo.py it imports) makes the zip every boot unzips.
 WINDOWS_PATHS = ("package/realms/realms.ps1", "package/realms/Realms.psm1", "package/realms/manifest.json",
-                 "package/realms/pwsh.lock", "package/docker/", "player/", "tests/smoke.ps1", "tests/hosting-smoke.sh",
-                 "tests/Realms.Tests.ps1", "tests/Player.Tests.ps1", "PSScriptAnalyzerSettings.psd1",
-                 ".github/workflows/ci.yml")
+                 "package/realms/pwsh.lock", "package/docker/", "player/", "tools/build.py", "tools/repo.py",
+                 "tests/smoke.ps1", "tests/hosting-smoke.sh", "tests/Realms.Tests.ps1", "tests/Player.Tests.ps1",
+                 "PSScriptAnalyzerSettings.psd1", ".github/workflows/ci.yml")
 BOOT_LABEL = "boot"
 
 
@@ -195,10 +205,19 @@ def changed_paths(root: Path, base: str, head: str) -> list[str] | None:
     return names.splitlines()
 
 
+def labels(given: str) -> list[str]:
+    """The PR's label names from ci.yml's LABELS, a JSON list (a name can hold spaces); [] for a push."""
+    try:
+        names = json.loads(given or "[]")
+    except ValueError:
+        return []
+    return [n for n in names if isinstance(n, str)] if isinstance(names, list) else []
+
+
 def boot_plan(root: Path, env: dict[str, str]) -> str:
     """`linux=` and `windows=` lines for $GITHUB_OUTPUT, from the variables ci.yml's plan step sets."""
     plan = boots(env.get("EVENT", ""), env.get("REF", ""), env.get("DRAFT") == "true",
-                 env.get("LABELS", "").split(), changed_paths(root, env.get("BASE", ""), env.get("HEAD", "HEAD")))
+                 labels(env.get("LABELS", "")), changed_paths(root, env.get("BASE", ""), env.get("HEAD", "HEAD")))
     return "".join(f"{job}={str(on).lower()}\n" for job, on in plan.items())
 
 

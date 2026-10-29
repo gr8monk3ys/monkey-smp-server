@@ -18,6 +18,7 @@ worktree of the clone shares them and nothing lands in the repo). One run at a t
 straight away. A status the tool left pending for over two hours (a run that was cut off) counts as none.
 """
 import argparse
+import contextlib
 import datetime as dt
 import json
 import os
@@ -27,8 +28,14 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 from repo import REPO
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 CONTEXT = "local-ci"
 CHECKS = Path(__file__).resolve().with_name("checks.py")
@@ -66,9 +73,9 @@ def repo_name(gh: Gh) -> str:
 
 def has_result(gh: Gh, repo: str, sha: str, now: dt.datetime) -> bool:
     """Whether the commit already has a local-ci result: a finished one, or a run still going (pending under
-    two hours old). GitHub lists a commit's statuses newest first."""
-    statuses = json.loads(gh(["api", f"repos/{repo}/commits/{sha}/statuses", "--paginate"]))
-    mine = [s for s in statuses if s.get("context") == CONTEXT]
+    two hours old). The combined status holds each context's latest status, one per context."""
+    combined = json.loads(gh(["api", f"repos/{repo}/commits/{sha}/status?per_page=100"]))
+    mine = [s for s in combined.get("statuses", []) if s.get("context") == CONTEXT]
     if not mine:
         return False
     latest = mine[0]
@@ -101,7 +108,8 @@ def check_commit(number: int, sha: str) -> Outcome:
     folder = Path(tempfile.mkdtemp(prefix=f"local-ci-{number}-"))
     try:
         git("worktree", "add", "--quiet", "--detach", str(folder), sha)
-        done = subprocess.run([sys.executable, str(CHECKS), "--root", str(folder)], cwd=folder,
+        # --strict: a check this machine can't run fails, so success always means every check ran
+        done = subprocess.run([sys.executable, str(CHECKS), "--strict", "--root", str(folder)], cwd=folder,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
                               errors="replace")
         lines = done.stdout.strip().splitlines()
@@ -117,54 +125,73 @@ def common_dir() -> Path:
 
 def ci(numbers: list[int], gh: Gh, check: Callable[[int, str], Outcome], logs: Path, force: bool, dry_run: bool,
        now: Callable[[], dt.datetime] = lambda: dt.datetime.now(UTC), say=print) -> int:
-    """Checks each PR, posting local-ci statuses. Returns how many PRs failed their checks."""
+    """Checks each PR, posting local-ci statuses. Returns how many PRs failed their checks or couldn't be
+    checked; a PR that can't be (gh or git failed) is said and counted, and the rest are still checked."""
     repo, failed = repo_name(gh), 0
     for number in numbers:
-        head = pr(gh, number)
-        if head.from_fork:
-            say(f"#{number}: from a fork, not run")
-            continue
-        if not force and has_result(gh, repo, head.sha, now()):
-            say(f"#{number} {head.sha[:7]}: already has a {CONTEXT} result")
-            continue
-        say(f"#{number} {head.sha[:7]}: checking")
-        if not dry_run:
-            post(gh, repo, head.sha, "pending", "checks.py is running on a maintainer's machine")
         try:
-            result = check(number, head.sha)
-        except (OSError, subprocess.CalledProcessError) as e:
-            result = Outcome(False, f"could not check it out: {e}", str(e))
-        (logs / CONTEXT).mkdir(parents=True, exist_ok=True)
-        (logs / CONTEXT / f"{head.sha}.log").write_text(result.output, encoding="utf-8")
-        line = f"{now():%Y-%m-%d %H:%M} #{number} {head.sha[:7]} {'success' if result.ok else 'failure'}: " \
-               f"{result.summary}"
-        with (logs / f"{CONTEXT}.log").open("a", encoding="utf-8") as log:
-            log.write(line + "\n")
-        say(line)
-        if not dry_run:
-            post(gh, repo, head.sha, "success" if result.ok else "failure", result.summary)
-        failed += not result.ok
+            failed += check_pr(number, repo, gh, check, logs, force, dry_run, now, say) is False
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as e:
+            say(f"#{number}: stopped: {e}")
+            failed += 1
     return failed
 
 
-def one_at_a_time(logs: Path, now: dt.datetime) -> Path | None:
-    """Takes the run lock, a file that names when it was taken; None if another run holds it. A lock over
-    two hours old is from a run that was cut off and is taken over."""
-    lock = logs / f"{CONTEXT}.lock"
+def check_pr(number: int, repo: str, gh: Gh, check: Callable[[int, str], Outcome], logs: Path, force: bool,
+             dry_run: bool, now: Callable[[], dt.datetime], say) -> bool | None:
+    """Whether the PR passed (None: not run). Once its pending status is posted, a run that stops for any
+    reason first posts an error, so the status never stays pending."""
+    head = pr(gh, number)
+    if head.from_fork:
+        say(f"#{number}: from a fork, not run")
+        return None
+    if not force and has_result(gh, repo, head.sha, now()):
+        say(f"#{number} {head.sha[:7]}: already has a {CONTEXT} result")
+        return None
+    say(f"#{number} {head.sha[:7]}: checking")
+    if dry_run:
+        return run_checks(number, head.sha, check, logs, now, say).ok
+    post(gh, repo, head.sha, "pending", "checks.py is running on a maintainer's machine")
     try:
-        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
-        try:
-            taken = dt.datetime.fromisoformat(lock.read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            taken = now - STALE
-        if now - taken < STALE:
-            return None
-        lock.unlink(missing_ok=True)
-        return one_at_a_time(logs, now)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(now.isoformat())
-    return lock
+        result = run_checks(number, head.sha, check, logs, now, say)
+        post(gh, repo, head.sha, "success" if result.ok else "failure", result.summary)
+    except BaseException:
+        with contextlib.suppress(Exception):
+            post(gh, repo, head.sha, "error", "the local-ci run stopped before it finished")
+        raise
+    return result.ok
+
+
+def run_checks(number: int, sha: str, check: Callable[[int, str], Outcome], logs: Path,
+               now: Callable[[], dt.datetime], say) -> Outcome:
+    try:
+        result = check(number, sha)
+    except (OSError, subprocess.CalledProcessError) as e:
+        result = Outcome(False, f"could not check it out: {e}", str(e))
+    (logs / CONTEXT).mkdir(parents=True, exist_ok=True)
+    (logs / CONTEXT / f"{sha}.log").write_text(result.output, encoding="utf-8")
+    line = f"{now():%Y-%m-%d %H:%M} #{number} {sha[:7]} {'success' if result.ok else 'failure'}: {result.summary}"
+    with (logs / f"{CONTEXT}.log").open("a", encoding="utf-8") as log:
+        log.write(line + "\n")
+    say(line)
+    return result
+
+
+def one_at_a_time(logs: Path) -> IO[bytes] | None:
+    """Takes the run lock: an OS lock on local-ci.lock, held while the returned file is open. The OS lets go
+    of it when the run ends, however it ends, so a run that was cut off never leaves it held. None if another
+    run holds it."""
+    f = (logs / f"{CONTEXT}.lock").open("a+b")
+    try:
+        if os.name == "nt":
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
 
 
 def main(argv=None) -> int:
@@ -177,15 +204,13 @@ def main(argv=None) -> int:
     if bool(args.prs) == args.open:
         parser.error("name PRs or pass --open (not both)")
     logs = common_dir()
-    lock = one_at_a_time(logs, dt.datetime.now(UTC))
+    lock = one_at_a_time(logs)
     if lock is None:
-        print("another local-ci run is going (see .git/local-ci.lock); not starting a second")
+        print("another local-ci run is going (it holds .git/local-ci.lock); not starting a second")
         return 2
-    try:
+    with lock:
         numbers = open_prs(real_gh) if args.open else args.prs
         return 1 if ci(numbers, real_gh, check_commit, logs, args.force, args.dry_run) else 0
-    finally:
-        lock.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

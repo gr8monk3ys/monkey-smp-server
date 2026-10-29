@@ -152,13 +152,14 @@ repo, and the included minutes ran out in October 2026):
 | Job | Runs on | What |
 |---|---|---|
 | Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
-| Linux (native) | PRs out of draft that touch `package/`, the build or the boot tests; pushes to `main` that do; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
+| Linux (native) | PRs out of draft that touch `package/`, the build (`build.py`, `repo.py`) or the boot tests; pushes to `main` that do; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
 | Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
-| Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/` or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
+| Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/`, the build or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
 | Hosting bundle (Docker) | when Windows runs | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
 | macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `realms.sh`, `pwsh.lock` or Java |
 
-Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not), or start a manual run.
+Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not) from its next push on, or
+start a manual run to boot it now (adding a label doesn't start a run).
 
 ## Capturing changes from a live server
 
@@ -348,7 +349,8 @@ python tools/checks.py pytest     # just one; --list says what each runs
 
 `tools/checks.py` is the one list of checks a change needs before review; CI runs the same file
 (`--strict`, so a tool missing on the runner fails instead of being skipped). Locally a missing tool is
-skipped and said: Pester needs PowerShell with Pester 5.5+, `sh` needs `dash` (on Windows, Git for Windows'
+skipped and said: Pester needs Pester 5.5+ in every PowerShell it runs on (on Windows, Windows PowerShell 5.1
+and pwsh too when it's installed, since both must pass; elsewhere pwsh), `sh` needs `dash` (on Windows, Git for Windows'
 own dash is found from `git`, which also lets the pytest tests of `deploy/lib.sh` run).
 
 ### CI on this machine (local CI)
@@ -361,7 +363,8 @@ python tools/local_ci.py --open     # every open PR whose head commit has no loc
 ```
 
 It checks each PR's head in a temporary worktree with this checkout's `tools/checks.py` (so a PR made before
-checks.py existed is checked the same way), needs an authenticated `gh`, never runs a PR from a fork, and keeps
+checks.py existed is checked the same way) with `--strict`, so `success` means every check ran on this machine.
+It needs an authenticated `gh`, never runs a PR from a fork, posts `error` if a run stops partway, and keeps
 each run's output in `.git/local-ci/<sha>.log`. It doesn't boot the server: for a PR that changes the
 manifest, the installer or the launchers, run `tests/smoke.ps1` too (see "Releasing without Actions").
 
@@ -434,7 +437,7 @@ gets in:
 git fetch origin --tags
 git worktree add --detach ../release-vX.Y.Z vX.Y.Z
 cd ../release-vX.Y.Z
-python tools/checks.py   # Pester runs on pwsh, or Windows PowerShell 5.1 when pwsh is missing
+python tools/checks.py   # on Windows, Pester runs on Windows PowerShell 5.1 and on pwsh when it's installed
 GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md
 gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
 python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)

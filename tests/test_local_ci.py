@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import subprocess
 
 import local_ci
 
@@ -10,8 +11,8 @@ REPO_NAME = "owner/repo"
 class FakeGh:
     """Answers the gh calls local_ci makes and records every status it posts."""
 
-    def __init__(self, prs, statuses=None):
-        self.prs, self.statuses, self.posted = prs, statuses or {}, []
+    def __init__(self, prs, statuses=None, fail_on=None):
+        self.prs, self.statuses, self.posted, self.fail_on = prs, statuses or {}, [], fail_on
 
     def __call__(self, args):
         if args[:2] == ["repo", "view"]:
@@ -22,11 +23,17 @@ class FakeGh:
             return json.dumps({"number": number, "headRefOid": sha, "isCrossRepository": fork})
         if args[:2] == ["pr", "list"]:
             return json.dumps([{"number": n} for n in self.prs])
-        if args[0] == "api" and args[1].endswith("/statuses"):
-            return json.dumps(self.statuses.get(args[1].split("/")[4], []))
+        if args[0] == "api" and "/status?" in args[1]:
+            # the combined status: each context's latest status only (the lists here are newest first)
+            latest = {}
+            for status in self.statuses.get(args[1].split("/")[4], []):
+                latest.setdefault(status["context"], status)
+            return json.dumps({"statuses": list(latest.values())})
         if args[:3] == ["api", "-X", "POST"]:
             fields = dict(a.split("=", 1) for a in args[5::2])
             self.posted.append((args[3].split("/")[-1], fields["state"], fields["description"]))
+            if fields["state"] == self.fail_on:
+                raise subprocess.CalledProcessError(1, ["gh", *args])
             assert fields["context"] == "local-ci" and len(fields["description"]) <= 140
             return "{}"
         raise AssertionError(f"unexpected gh call {args}")
@@ -102,8 +109,29 @@ def test_a_long_summary_is_cut_to_what_github_takes(tmp_path):
 
 
 def test_one_run_at_a_time(tmp_path):
-    lock = local_ci.one_at_a_time(tmp_path, NOW)
+    lock = local_ci.one_at_a_time(tmp_path)
     assert lock is not None
-    assert local_ci.one_at_a_time(tmp_path, NOW + dt.timedelta(minutes=30)) is None
-    # a lock from a run that was cut off over two hours ago is taken over
-    assert local_ci.one_at_a_time(tmp_path, NOW + dt.timedelta(hours=3)) == lock
+    assert local_ci.one_at_a_time(tmp_path) is None
+    # the OS lets go when the run ends, however it ends: nothing to time out or take over
+    lock.close()
+    again = local_ci.one_at_a_time(tmp_path)
+    assert again is not None
+    again.close()
+
+
+def test_a_post_that_fails_leaves_an_error_not_pending_and_the_next_pr_still_runs(tmp_path):
+    gh = FakeGh({68: ("a" * 40, False), 70: ("b" * 40, False)}, fail_on="success")
+    failed, checked, said = run(gh, [68, 70], tmp_path)
+    assert checked == [(68, "a" * 40), (70, "b" * 40)] and failed == 2
+    assert [state for sha, state, _ in gh.posted if sha == "a" * 40] == ["pending", "success", "error"]
+    assert any(line.startswith("#68: stopped:") for line in said)
+
+
+def test_a_pr_is_checked_strictly(monkeypatch, tmp_path):
+    # a check this machine can't run must fail the status, never pass as "skipped"
+    calls = []
+    monkeypatch.setattr(local_ci, "git", lambda *args, **kw: "")
+    monkeypatch.setattr(local_ci.subprocess, "run",
+                        lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "all passed\n"))
+    assert local_ci.check_commit(68, "a" * 40).summary == "all passed"
+    assert "--strict" in next(cmd for cmd in calls if str(local_ci.CHECKS) in cmd)

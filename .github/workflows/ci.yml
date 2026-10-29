@@ -9,7 +9,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    # not `labeled`: any label (triage ones too) would start a run and cancel the one going. The `boot` label
+    # takes effect from the next push; to boot now, run the workflow by hand on the branch.
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
     inputs:
       macos:
@@ -70,7 +72,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
           DRAFT: ${{ github.event.pull_request.draft }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}   # JSON: a label name can hold spaces
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python tools/checks.py --boots | tee -a "$GITHUB_OUTPUT"

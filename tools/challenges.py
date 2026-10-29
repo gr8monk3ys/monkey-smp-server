@@ -6,7 +6,7 @@
 
 Three challenges a week, one of each kind (solo, faction, explore), from POOL below: the one place to edit
 them (docs/ADMIN.md, "Weekly challenges"). Week N runs challenge N mod (how many there are of that kind),
-in the order listed. The weeks are tools/season_calendar.py's: week 1 starts on Monday 2 November 2026 at
+in the order listed. The weeks are tools/season_calendar.py's: week 1 starts on Monday 9 November 2026 at
 12 AM Pacific; the launch weekend before it is week 0, and a new week starts every Monday at 12 AM Pacific,
 which is Sunday night, after the Saturday event.
 
@@ -29,8 +29,8 @@ How progress is counted, so that it can't be farmed:
   events         the events pack's attendance: any event begun this week counts (ev.seen).
 Water- or vehicle-driven movement and player kills never count.
 
-The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 31 October 2026, 5 PM Pacific,
-to the end of Sunday 1 November, Pacific. `function realms:rules/launch` opens it; on the server it then
+The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 7 November 2026, 5 PM Pacific,
+to the end of Sunday 8 November, Pacific. `function realms:rules/launch` opens it; on the server it then
 lasts season_calendar.LAUNCH_SECONDS of game time, which stops while the server is empty, so `commands` also sends the
 seconds left on the wall clock and the server ends it on time.
 

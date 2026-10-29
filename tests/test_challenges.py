@@ -102,8 +102,8 @@ def test_the_server_picks_what_the_schedule_says(week):
 def test_the_schedule_command_prints_the_weeks():
     out = challenges.schedule(0, 13).splitlines()
     assert len(out) == 13
-    assert out[0].startswith("week 0   from launch, 31 Oct 2026")
-    assert out[1].startswith("week 1   from Mon 02 Nov 2026")
+    assert out[0].startswith("week 0   from launch, 07 Nov 2026")
+    assert out[1].startswith("week 1   from Mon 09 Nov 2026")
     for week, line in enumerate(out):
         for c in challenges.picks(week).values():
             assert c["name"] in line
@@ -119,9 +119,9 @@ def test_the_schedule_command_prints_the_weeks():
 
 def test_seconds_left_in_the_launch_weekend():
     assert challenges.founder_left(season_calendar.LAUNCH) == season_calendar.LAUNCH_SECONDS
-    assert challenges.founder_left(at("2026-11-02T07:59:59Z")) == 1
-    assert challenges.founder_left(at("2026-11-02T07:59:59.5Z")) == 1   # rounds up: never ends early
-    assert challenges.founder_left(at("2026-11-02T08:00:00Z")) == 0
+    assert challenges.founder_left(at("2026-11-09T07:59:59Z")) == 1
+    assert challenges.founder_left(at("2026-11-09T07:59:59.5Z")) == 1   # rounds up: never ends early
+    assert challenges.founder_left(at("2026-11-09T08:00:00Z")) == 0
     assert challenges.founder_left(at("2026-12-01T00:00:00Z")) == 0
 
 
@@ -138,14 +138,14 @@ def test_send_skips_a_stopped_server_and_reports_a_refusal():
 
 
 def test_the_hourly_commands():
-    assert challenges.commands(at("2026-11-01T00:00:30Z")) == [
-        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:115170}"]
-    assert challenges.commands(at("2026-11-02T08:00:30Z")) == [
+    assert challenges.commands(at("2026-11-08T01:00:30Z")) == [
+        "function realms:challenges/sync {week:0}", "function realms:wardrobe/founder/sync {seconds:111570}"]
+    assert challenges.commands(at("2026-11-09T08:00:30Z")) == [
         "function realms:challenges/sync {week:1}", "function realms:wardrobe/founder/sync {seconds:0}"]
     # A day after the window there is nothing left to keep in step: only the week.
-    assert challenges.commands(at("2026-11-03T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
-    assert challenges.commands(at("2026-11-03T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
-    assert challenges.commands(at("2027-01-04T08:00:30Z")) == ["function realms:challenges/sync {week:10}"]
+    assert challenges.commands(at("2026-11-10T07:59:59Z"))[1:] == ["function realms:wardrobe/founder/sync {seconds:0}"]
+    assert challenges.commands(at("2026-11-10T08:00:00Z")) == ["function realms:challenges/sync {week:1}"]
+    assert challenges.commands(at("2027-01-11T08:00:30Z")) == ["function realms:challenges/sync {week:10}"]
     assert challenges.main(["commands", "--at", "2026-11-30T08:00:00Z"]) == 0
 
 

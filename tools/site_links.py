@@ -11,9 +11,9 @@ one that doesn't apply while STORE_URL is empty (or once it is set) gets the hid
 modpack is served from the site itself (site/pack/), the check also makes sure that file is there and is
 the pack of the version the manifest pins, since a player with another version's pack can't join.
 
-The season's launch time is LAUNCH_AT, an ISO 8601 time with its offset ("2026-11-22T01:00:00Z"). An element
+The season's launch time is LAUNCH_AT, an ISO 8601 time with its offset ("2026-11-08T01:00:00Z"). An element
 with data-launch="..." gets that attribute as a template for its text (for a <meta>, its content), with
-{date} the day in Pacific time ("Saturday 21 November 2026"), {pacific} the time there ("5 PM Pacific") and
+{date} the day in Pacific time ("Saturday 7 November 2026"), {pacific} the time there ("5 PM Pacific") and
 {eastern} the time in Eastern ("8 PM Eastern", with the weekday when it falls on the next day); a <time>
 also gets datetime="LAUNCH_AT". The element must hold only text. app.js adds the visitor's own time and the
 countdown on top.

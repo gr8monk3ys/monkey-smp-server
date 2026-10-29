@@ -73,7 +73,7 @@ MIN_PLAYERS = 4
 
 BLOOD_WAIT = 21 * 60         # seconds a Blood Moon waits for nightfall: a Minecraft day is 20 minutes
 BLOOD_MAX = 15 * 60          # and lasts at most, though a night is shorter (about 8 minutes)
-RISE = (13000, 14000)        # it rises only at the start of a night (`time query minecraft:day`), never just before dawn
+RISE = (13000, 14000)        # it rises only as a night starts (`time query minecraft:day`), never just before dawn
 BLOOD_BUFF = 3               # seconds of Speed and Resistance, given again each second while the moon is up
 BLOOD_REACH = 48             # blocks around a survival player in the Overworld where mobs are roused
 BLOOD_CAP = 20               # bonus drops per player in one Blood Moon

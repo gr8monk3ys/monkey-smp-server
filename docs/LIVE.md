@@ -186,7 +186,8 @@ As `realms` (`sudo -iu realms`), in `/srv/realms/TheRealms-Server/docker` (`real
 1. Let 2.8.0 deploy as usual. The deploy backs the world up first, so the newest folder in `../backups/` from
    before the update is the old world as 2.7.0 left it. Keep it out of the rotation:
    `mkdir -p /srv/realms/seasons/pre-season && cp -a ../backups/<that folder> /srv/realms/seasons/pre-season/backup-2.7`.
-   The off-site backups copy `backups/` only, so add `/srv/realms/seasons` to that job or keep a copy by hand.
+   The off-site backups copy `server/` only (not `backups/` or `/srv/realms/seasons`), so keep a copy of
+   `/srv/realms/seasons` off the VPS by hand.
 2. Pause deploys: `sudo systemctl stop realms-deploy.timer`.
 3. Warn and stop: `realms rcon "say The server restarts in 1 minute for the new world."`, wait a minute,
    `docker compose stop`.

@@ -10,6 +10,9 @@
   their dates, so Arena Glory I (Midwinter, 19 December) moves to week 7, Faction Raid II to week 4 and
   Build Battle II to week 6; the Town Crier says so. On the live server, place the Crier again after this
   release (docs/ADMIN.md, "Spawn NPCs").
+- Maintainers: `tools/checks.py` runs every fast check (CI runs the same file), `tools/local_ci.py` checks PRs on a
+  maintainer's machine and posts a `local-ci` status when Actions can't run, and CI boots the server only when a
+  change can break the boot (none for draft PRs). Nothing changes for hosts or players.
 
 ## [2.8.0] - 2026-10-27
 

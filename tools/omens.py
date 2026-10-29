@@ -73,11 +73,11 @@ MIN_PLAYERS = 4
 
 BLOOD_WAIT = 21 * 60         # seconds a Blood Moon waits for nightfall: a Minecraft day is 20 minutes
 BLOOD_MAX = 15 * 60          # and lasts at most, though a night is shorter (about 8 minutes)
-RISE = (13000, 14000)        # it rises only at the start of a night (`time query daytime`), never just before dawn
+RISE = (13000, 14000)        # it rises only as a night starts (`time query minecraft:day`), never just before dawn
 BLOOD_BUFF = 3               # seconds of Speed and Resistance, given again each second while the moon is up
 BLOOD_REACH = 48             # blocks around a survival player in the Overworld where mobs are roused
 BLOOD_CAP = 20               # bonus drops per player in one Blood Moon
-NIGHT = (13000, 22999)       # `time query daytime` from dusk to dawn
+NIGHT = (13000, 22999)       # `time query minecraft:day` from dusk to dawn
 TRUCE_MINUTES = 60
 HUNT_MIN = 3                 # kills without dying to be hunted
 HUNT_MINUTES = 30
@@ -435,7 +435,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{bm}/second.mcfunction"] = lines(
         f"scoreboard players remove #timer {OBJ} 1",
-        f"execute store result score #now {OBJ} run time query daytime",
+        f"execute store result score #now {OBJ} run time query minecraft:day",
         "# It rises at nightfall only, so it never comes up just before dawn.",
         f"execute if score #phase {OBJ} matches 0 if score #now {OBJ} matches {rise} run return run "
         f"function {NS}:omens/blood_moon/rise",

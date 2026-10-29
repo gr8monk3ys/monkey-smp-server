@@ -2,6 +2,7 @@
 
   python tools/modrinth.py --dry-run    build the .mrpack and print what would be uploaded (no token, no network)
   python tools/modrinth.py              upload it, then point the server listing at it (needs MODRINTH_TOKEN)
+  python tools/modrinth.py --check      does Modrinth's newest version hold this checkout's pack? (exit 1 if not)
 
 Run it from a clean checkout of the release tag, after the GitHub release (docs/MAINTAINING.md, "Releasing").
 The token is a Modrinth personal access token with the scopes Read projects, Write projects, Read versions and
@@ -63,7 +64,9 @@ class ModrinthHttp:
         """The JSON reply (None for 204 No Content). Raises NotFound for 404, SystemExit for other errors."""
         if not url.startswith(("https://api.modrinth.com/", "https://staging-api.modrinth.com/")):
             raise ValueError(f"the token only goes to Modrinth's API, not {url}")
-        headers = {"User-Agent": USER_AGENT, "Authorization": self.token}
+        headers = {"User-Agent": USER_AGENT}
+        if self.token:  # --check reads a public project without one
+            headers["Authorization"] = self.token
         if content_type:
             headers["Content-Type"] = content_type
         req = urllib.request.Request(url, data=body, method=method, headers=headers)
@@ -195,6 +198,31 @@ def publish(repo, http, project: str, server: str | None, dist: Path | None = No
     return target["id"]
 
 
+def check(repo, http, project: str, dist: Path | None = None, log=print) -> bool:
+    """Whether Modrinth's newest version holds this checkout's pack (its version number aside), so players who
+    install from Modrinth get what the server expects. A project Modrinth doesn't show (still under review, and
+    no token) has nothing to compare yet: that passes, with a note."""
+    version = repo.load_manifest()["version"]
+    payload = build_pack(repo, version, dist).read_bytes()
+    try:
+        project_id = http.request("GET", f"{MODRINTH}/project/{project}")["id"]
+    except NotFound:
+        log(f"{project} isn't public on Modrinth yet (under review?): nothing to compare. "
+            f"With {TOKEN_ENV} set, the check reads it anyway")
+        return True
+    newest = _newest(http.request("GET", f"{MODRINTH}/project/{project_id}/version"))
+    if newest is None:
+        log(f"{project} has no versions on Modrinth: publish {version} with tools/modrinth.py")
+        return False
+    if (_primary_file(newest)["hashes"]["sha512"] == hashlib.sha512(payload).hexdigest()
+            or pack_contents(http.download(_primary_file(newest)["url"])) == pack_contents(payload)):
+        log(f"{project} {newest['version_number']} on Modrinth holds the same pack as {version}")
+        return True
+    log(f"{project}'s newest version on Modrinth is {newest['version_number']}, and its pack isn't {version}'s: "
+        f"publish it with tools/modrinth.py from the tag v{version} (docs/MODRINTH.md)")
+    return False
+
+
 def point_server(http, server: str, version_id: str, log=print) -> None:
     """Make the server listing's linked modpack `version_id` (API v3; other server settings stay as they are)."""
     try:
@@ -232,6 +260,8 @@ def main(argv=None, repo=REPO, http=None) -> None:
                    help=f"server listing slug or id to point at the new version (default {SERVER_PROJECT}; '' skips)")
     p.add_argument("--dry-run", action="store_true", help="build and print the upload; no token, no network")
     p.add_argument("--force", action="store_true", help="upload even if the newest version holds the same pack")
+    p.add_argument("--check", action="store_true",
+                   help="exit 1 unless Modrinth's newest version holds this checkout's pack; token optional")
     p.add_argument("--any-checkout", action="store_true", help="skip the check that HEAD is the release tag")
     args = p.parse_args(argv)
     version = repo.load_manifest()["version"]
@@ -242,6 +272,9 @@ def main(argv=None, repo=REPO, http=None) -> None:
         print(json.dumps(data, indent=2, ensure_ascii=False))
         print(f"{mrpack}  {mrpack.stat().st_size / 1e6:.1f} MB")
         return
+    if args.check:
+        ok = check(repo, http or ModrinthHttp(os.environ.get(TOKEN_ENV, "").strip()), args.project)
+        raise SystemExit(0 if ok else 1)
     if http is None:
         token = os.environ.get(TOKEN_ENV, "").strip()
         if not token:

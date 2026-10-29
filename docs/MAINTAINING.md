@@ -468,7 +468,8 @@ players") came from this harness on an i7-8700K.
    and run `python tools/site_links.py`. `validate.py` fails while the site serves another version's pack.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
 4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. Put the client pack on Modrinth: `python tools/modrinth.py` from a checkout of the tag, with the token in
+5. Put the client pack on Modrinth. The Release workflow's `modrinth` job does it when the repo secret
+   `MODRINTH_TOKEN` is set; otherwise run `python tools/modrinth.py` from a checkout of the tag, with the token in
    `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
    left `client/` alone, and moves the server listing to the newest version.
 

@@ -75,6 +75,8 @@ def sh(tmp_path):
     (bin_dir / "id").write_text('#!/bin/sh\necho "${FAKE_ID:-1000}"\n', newline="\n")  # root only when asked
     (bin_dir / "runuser").write_text('#!/bin/sh\necho "runuser $*" >>"$FAKE_CALLS"\n'
                                      'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n', newline="\n")
+    for fake in bin_dir.iterdir():  # Linux's PATH lookup skips files without the execute bit (Git Bash doesn't)
+        fake.chmod(0o755)
 
     def run(snippet, *args, **env):
         environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),

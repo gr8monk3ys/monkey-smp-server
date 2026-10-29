@@ -75,7 +75,7 @@ def test_the_plan_is_the_same_for_a_secret_and_another_for_another():
 
 def test_no_omens_before_week_one():
     assert omens.plan(SECRET, 0) == [] and omens.plan(SECRET, -1) == []
-    launch_weekend = pacific(2026, 11, 22, 19, 0)
+    launch_weekend = pacific(2026, 11, 1, 19, 0)
     assert season_calendar.week_at(launch_weekend) == 0
     assert omens.evening_of(SECRET, launch_weekend) is None
 
@@ -149,8 +149,8 @@ def test_the_saved_world_is_only_read_in_an_evenings_hours(tmp_path, monkeypatch
     monkeypatch.setattr(saved_world, "scoreboard", unread)
     e = first_evening()
     for when in (e.start.replace(hour=17, minute=50), e.start.replace(hour=22, minute=0),
-                 pacific(2026, 11, 28, 19, 0),    # a Saturday
-                 pacific(2026, 11, 18, 19, 0)):   # before week 1
+                 pacific(2026, 11, 7, 19, 0),     # a Saturday
+                 pacific(2026, 10, 28, 19, 0)):   # before week 1
         assert omens.commands(tmp_path, when) == []
 
 
@@ -238,12 +238,12 @@ def test_main_prints_the_commands_and_the_plan(tmp_path, capsys):
 
 
 def test_ran_reads_the_evenings_back_by_week():
-    scores = {"om": {"#on.20261124": 1, "#on.20261127": 4, "#on.20261201": 3, "#on.20261202": 0, "#key1": 5,
+    scores = {"om": {"#on.20261103": 1, "#on.20261106": 4, "#on.20261110": 3, "#on.20261111": 0, "#key1": 5,
                      "#on.2026112": 2}}
-    assert omens.ran(scores) == {dt.date(2026, 11, 24): "blood_moon", dt.date(2026, 11, 27): "hunted",
-                                 dt.date(2026, 12, 1): "truce"}
-    assert omens.in_week(scores, 1) == {dt.date(2026, 11, 24): "blood_moon", dt.date(2026, 11, 27): "hunted"}
-    assert omens.in_week(scores, 2) == {dt.date(2026, 12, 1): "truce"}
+    assert omens.ran(scores) == {dt.date(2026, 11, 3): "blood_moon", dt.date(2026, 11, 6): "hunted",
+                                 dt.date(2026, 11, 10): "truce"}
+    assert omens.in_week(scores, 1) == {dt.date(2026, 11, 3): "blood_moon", dt.date(2026, 11, 6): "hunted"}
+    assert omens.in_week(scores, 2) == {dt.date(2026, 11, 10): "truce"}
 
 
 def test_the_try_records_the_evening_as_ran_reads_it():

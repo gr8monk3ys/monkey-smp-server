@@ -456,6 +456,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | --- | --- | --- |
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. Built: one comes by itself on weeknight evenings once 4 or more are on, and staff can start one any time (docs/ADMIN.md, "Supply drops"). | Exploration, small fights, new players |
+| **Omens** | Short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM Pacific, 4 or more online, never Saturday or during a drop): a Blood Moon (harder mobs for a night, a little extra loot), a Meteor (one richer supply drop, 5 minutes' warning), Truce Hour (no PvP for an hour) or Hunted (a bounty on the longest kill streak). Built (docs/ADMIN.md, "Omens"). | Surprise on quiet evenings, the players who are on |
 | **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
@@ -717,6 +718,14 @@ Built:
   with its hourly timer. Four capture points in the newest border ring, 6 or more chunks from every claim, 60
   seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
   the live map. Checked by the unit tests and the generated packs' checks only: not yet tried in game.
+
+- Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `realms-omens` data
+  pack and `deploy/realms-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),
+  each from a start time between 6:00 and 8:50 PM Pacific until 10 PM, the first time 4 or more are online,
+  the season has launched and no event or supply drop is on. The week's evenings, times and omens come from
+  a secret the pack draws in game and keeps in the world, so nobody can work them out from the repo. Blood
+  Moon, Meteor (through `tools/drops.py`), Truce Hour and Hunted (through the standings' bounty commands;
+  staff claim the bounty as for any other). Not yet tried in game.
 
 Not built:
 

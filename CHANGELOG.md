@@ -36,6 +36,14 @@
   is +1 weekly standings point, at most 20 a week, on top of the usual columns. Nothing is given. They move out
   after each border act, and show on the live map. `/trigger outposts` lists them. From the launch on, in the
   new `realms-outposts` data pack (`tools/outposts.py`), placed by a new hourly timer on the VPS.
+- Omens: short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM
+  Pacific, 4 or more online, never Saturday, never during an event or a supply drop). A Blood Moon (Hard and
+  roused mobs for a night, a little extra loot per kill), a Meteor (one richer supply drop with 5 minutes'
+  warning, and the night's own drop still comes), Truce Hour (no PvP for an hour) or Hunted (a 30-minute
+  bounty on the longest kill streak, claimed through staff as any bounty and withdrawn when the hunt ends).
+  `tools/omens.py` generates the new `realms-omens` data pack and plans each week from a secret the pack keeps in the world; `realms-omens.timer` offers the evening's omen every 10
+  minutes. Install it once with `deploy/realms-omens.sh --install` (docs/LIVE.md). Staff commands:
+  docs/ADMIN.md, "Omens".
 
 ### Changed
 

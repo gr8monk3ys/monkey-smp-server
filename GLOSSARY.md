@@ -103,7 +103,7 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Timed job**:
-A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops (every 10 minutes), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/realms-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
 
 ## Lifecycle
@@ -115,6 +115,10 @@ _Avoid_: setup, sync, deploy
 **Managed file**:
 A file an install placed in the server folder and may later replace or remove; every other file belongs to the host.
 _Avoid_: installed file, tracked file
+
+**Omen**:
+A short world event the server starts by itself, unannounced, on one or two weekday evenings a week: Blood Moon, Meteor, Truce Hour or Hunted (`tools/omens.py`, docs/ADMIN.md, "Omens"). Unlike an event, no staff run it and nobody knows the evening ahead.
+_Avoid_: random event, world event (alone)
 
 **Saved world**:
 What the tools read from a world folder's files (scores, parties and claims, each dimension's border), as the server last saved them (every few minutes, and when it stops), never asked of the running server. `tools/saved_world.py` reads it.

@@ -151,6 +151,7 @@ def test_rcon_and_running_go_through_the_release_compose(sh):
 @pytest.mark.parametrize(("script", "sent", "retry"), [
     ("realms-week.sh", "send --docker", "the next hour tries again"),
     ("realms-drops.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
+    ("realms-omens.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
     ("realms-day.sh", "send --docker", "realms-day.service tries again in 10 minutes"),
 ])
 def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, script, sent, retry):
@@ -158,8 +159,9 @@ def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, s
     assert code == 0 and logged == ["function realms:x: ok"]
     send = calls.index("flock -w 1800 9") + 1
     assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(f"{sent} /srv/live/docker")
-    # Only drops (JOB_NONE: often nothing to send) asks for the commands first; the others start one python3.
-    assert len([c for c in calls if c.startswith("python3")]) == (2 if script == "realms-drops.sh" else 1)
+    # Only drops and omens (JOB_NONE: often nothing to send) ask for the commands first; the others start one
+    # python3.
+    assert len([c for c in calls if c.startswith("python3")]) == (2 if script in OFTEN_NONE else 1)
     code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_flock="1")
     assert code == 1 and logged[-1] == f"ERROR: the deploy lock was taken for 30 minutes ({retry})"
     assert calls[-1] == "flock -w 1800 9"
@@ -187,15 +189,19 @@ def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(
     assert not any(c.startswith("curl") for c in calls)
 
 
-def test_drops_outside_drop_hours_takes_no_lock(sh, tmp_path):
-    code, logged, calls = job(sh, tmp_path, "realms-drops.sh")
+OFTEN_NONE = ("realms-drops.sh", "realms-omens.sh")
+
+
+@pytest.mark.parametrize("script", OFTEN_NONE)
+def test_drops_and_omens_with_nothing_to_send_take_no_lock(sh, tmp_path, script):
+    code, logged, calls = job(sh, tmp_path, script)
     assert code == 0 and logged == [] and len(calls) == 1 and " commands " in calls[0]
 
 
 def job(sh, tmp_path, script, *args, **env):
     """Runs a timed job's script against a made-up checkout; returns (exit code, its logged lines, calls)."""
     (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
-    for name in ("challenges.py", "drops.py", "wardrobe.py"):
+    for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py"):
         (tmp_path / "repo" / "tools" / name).write_text("")
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
                           **{"REALMS_DEPLOY_ENV": "/nonexistent", **env})
@@ -205,7 +211,8 @@ def job(sh, tmp_path, script, *args, **env):
 
 @needs_dash
 @pytest.mark.parametrize(("script", "first"), [("realms-week.sh", []), ("realms-day.sh", []),
-                                               ("realms-drops.sh", ["function realms:x"])])   # drops' spots
+                                               ("realms-drops.sh", ["function realms:x"]),   # drops' spots
+                                               ("realms-omens.sh", [])])   # never the week's plan
 def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh, tmp_path, script, first):
     code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function realms:x\n")
     assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function realms:x"]
@@ -226,7 +233,7 @@ def test_check_says_why_there_may_be_no_commands_and_what_a_stopped_server_means
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["realms-week.sh", "realms-drops.sh", "realms-day.sh"])
+@pytest.mark.parametrize("script", ["realms-week.sh", "realms-drops.sh", "realms-omens.sh", "realms-day.sh"])
 def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" --now')
     assert code == 2 and out == [f"usage: sh {(DEPLOY / script).as_posix()} [--check | --install]"] and calls == []
@@ -238,7 +245,7 @@ def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp
 
 
 JOB_FOR = {"realms-week.sh": "the weekly challenges", "realms-drops.sh": "supply drops",
-           "realms-day.sh": "the wardrobe's day job"}
+           "realms-omens.sh": "omens", "realms-day.sh": "the wardrobe's day job"}
 
 
 def test_the_day_runs_its_job_and_systemd_retries_it_until_it_gives_up():

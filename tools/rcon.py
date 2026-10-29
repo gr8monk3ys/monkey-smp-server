@@ -26,6 +26,7 @@ run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
 import datetime as dt
+import re
 import subprocess
 import sys
 from collections.abc import Callable, Iterable
@@ -116,6 +117,19 @@ def send(rcon, commands: Iterable[str], log: Callable[[str], None] = print,
                     log(f"not sent after it: {len(commands) - i - 1} command(s)")
                 break
     return ok
+
+
+def coded(call: str, codes: dict[int, str]) -> Callable[[str, str], str]:
+    """A describe for send(), for a job whose last command is a function returning why it did nothing (drops'
+    and omens' try): that call's answer reads as its code in words (`codes`), storage sent before it as "<key>
+    sent", and anything else as the start of the command."""
+    def describe(command: str, answer: str) -> str:
+        if not command.startswith(call):
+            m = re.match(r"data modify storage \S+ (\w+) set value", command)
+            return f"{m[1] + ' sent' if m else command[:60]}: {answer or 'ok'}"
+        m = re.search(r" returned (\d+)$", answer)
+        return f"{command}: {codes.get(int(m[1]), answer) if m else answer or 'ok'}"
+    return describe
 
 
 def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = print, skipped: str = "",

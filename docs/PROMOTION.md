@@ -301,7 +301,7 @@ modded-survival videos, or who run roleplay or faction series and need a server 
 here every week for a season is worth more than one big video. Not: channels aimed at young children, or
 anyone whose recent videos are drama about other servers.
 
-The terms are on https://monkeysmp.lscaturchio.xyz/creators.html: 20% of each 3-month pass bought with their
+The terms are on https://monkeysmp.lscaturchio.xyz/creators: 20% of each 3-month pass bought with their
 code, no discount for the buyer, and the #ad disclosure. Send them the page, don't restate it.
 
 Message template (Discord DM, email from the channel's About page, or a reply on their Discord; one message,
@@ -312,7 +312,7 @@ no follow-up spam):
 >
 > I liked VIDEO. If you're looking for a server for a series, you'd be welcome to play here for free, and you
 > can have a creator code that pays you 20% of each 3-month pass your viewers buy with it. The terms are
-> here: https://monkeysmp.lscaturchio.xyz/creators.html
+> here: https://monkeysmp.lscaturchio.xyz/creators
 >
 > No pressure either way. If it's not for you, no reply needed.
 

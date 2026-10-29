@@ -5,7 +5,7 @@ you should see. Most of it is things the automated checks can't do: they boot th
 file, but they can't right-click an NPC or pick up a cow. Each item marked **(never tried in game)** has only
 been checked on paper so far; those come first when time is short.
 
-How players see the same things: the site's [How it works](https://monkeysmp.lscaturchio.xyz/guide.html) page.
+How players see the same things: the site's [How it works](https://monkeysmp.lscaturchio.xyz/guide) page.
 Commands for staff, in full: [ADMIN.md](ADMIN.md).
 
 ## The one rule: never on the live world

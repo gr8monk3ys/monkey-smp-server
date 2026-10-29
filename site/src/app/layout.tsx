@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { preload } from "react-dom";
-import { Motion } from "@/components/motion";
 import { SITE_URL } from "@/lib/config";
 import "./tailwind.css";
 import "./style.css";
@@ -29,7 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Motion>{children}</Motion>
+        {children}
       </body>
     </html>
   );

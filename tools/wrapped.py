@@ -333,7 +333,7 @@ def head(title: str, description: str, url: str) -> str:
     <nav aria-label="Site">
       <a href="./">Everyone</a>
       <a href="{ROOT}#rules">Rules</a>
-      <a href="{ROOT}changes">What changed</a>
+      <a href="{ROOT}changes.html">What changed</a>
     </nav>
   </header>
 

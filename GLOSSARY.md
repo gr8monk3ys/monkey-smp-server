@@ -132,6 +132,10 @@ _Avoid_: schedule (that is the challenge rotation), season dates
 Being the first player on the server, this season, to reach one of the milestones in `tools/firsts.py` (enter the Nether, slay the dragon...). It is announced to everyone and held for the season; the most firsts earns the Pioneer title. A first is claimed; staff can reopen one.
 _Avoid_: achievement, advancement (the game's own; a first is server-wide and only one player holds it), record
 
+**News**:
+A single plain line in the public Discord channel when something notable happens on the live server: a Server First from a short list, the first on the server this season to finish a rare advancement, or new factions (`tools/news.py`, docs/ADMIN.md, "Monkey SMP news"). A few a week at most, each at most once a season, read from the saved world.
+_Avoid_: announcement (the in-game one), feed, notification, the advancement log
+
 **Season Wrapped**:
 A player's page about their season on the site (`/wrapped/season-<n>/`), made after the finale by `tools/wrapped.py`: hours and days played, PvP kills, challenges, events, their faction's best weekly rank, their Server Firsts and skins. Counted from the launch, so test play doesn't show. A player can opt out.
 _Avoid_: recap (the weekly post), stats page, profile

@@ -4,6 +4,7 @@ path there fails the tests).
 
     folder = FakeWorld(tmp_path / "world").scores(("ev.cup", "red", 30)).claims(UUID, {OVERWORLD: [(0, 0)]}).path
 """
+import json
 import struct
 import uuid
 from pathlib import Path
@@ -94,6 +95,16 @@ class FakeWorld:
         data = {k: float(v) for k, v in data.items()} | {"lerp_time": Long(0), "warning_blocks": 5}
         return self._write(f"dimensions/{namespace}/{name}/data/minecraft/world_border.dat",
                            nbt({"DataVersion": 5023, "data": data}, gzipped=True))
+
+    def advancements(self, player_uuid: str, done: dict[str, str], undone: dict[str, str] | None = None,
+                     ) -> "FakeWorld":
+        """A player's players/advancements/<uuid>.json as 26.3 writes it (pretty JSON, DataVersion last; seen on
+        a 26.3 test server on 2026-10-25): advancement -> {"criteria": {name: "2026-10-25 21:12:32 -0700"},
+        "done": bool}. `done` and `undone` map an advancement to its one criterion's time."""
+        data = {adv: {"criteria": {"requirement": when}, "done": True} for adv, when in done.items()}
+        data |= {adv: {"criteria": {"requirement": when}, "done": False} for adv, when in (undone or {}).items()}
+        return self._write(f"players/advancements/{player_uuid}.json",
+                           json.dumps(data | {"DataVersion": 5023}, indent=2).encode())
 
     def storage(self, namespace: str, contents: dict) -> "FakeWorld":
         """A namespace's command storage as 26.3 saves it: data/<namespace>/command_storage.dat, key -> compound."""

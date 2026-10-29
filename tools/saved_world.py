@@ -10,6 +10,7 @@
     saved_world.claim_counts(folder)                    # claim file -> chunks claimed in every dimension
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
     saved_world.command_storage(folder, "realms")       # `data ... storage realms:<key>`: key -> compound (None)
+    saved_world.advancements(folder, {"minecraft:end/kill_dragon"})   # player UUID -> advancement -> when done
 
 The files, relative to the world folder:
   data/minecraft/scoreboard.dat                                 scores, display names and teams
@@ -18,6 +19,7 @@ The files, relative to the world folder:
   data/openpartiesandclaims/player-claims/<player>.nbt          each player's claimed chunks
   dimensions/<namespace>/<name>/data/minecraft/world_border.dat  a dimension's border (since 26.3)
   data/<namespace>/command_storage.dat                          a namespace's command storage (since 26.3)
+  players/advancements/<player uuid>.json                       each player's advancements (JSON, not NBT)
 
 This module says where things are and how they are saved (26.3 leaves a score of 0 out; the scoreboard sits
 under "data"; a UUID is four ints); callers keep their own rules (ranking, where drops land, map masks).
@@ -29,6 +31,8 @@ what changed since.
 Stdlib only, and Python 3.10 or newer: tools/drops.py runs it on the VPS (so tomllib, 3.11, is imported
 only where a party name is read).
 """
+import datetime as dt
+import json
 import struct
 import uuid
 from collections.abc import Iterator
@@ -43,6 +47,7 @@ OPAC = Path("data") / "openpartiesandclaims"
 PARTIES = OPAC / "parties"
 PLAYER_CONFIGS = OPAC / "player-configs"
 PLAYER_CLAIMS = OPAC / "player-claims"
+ADVANCEMENTS = Path("players") / "advancements"
 OVERWORLD = "minecraft:overworld"
 
 
@@ -258,3 +263,36 @@ def command_storage(folder: Path, namespace: str) -> dict[str, dict] | None:
         if not isinstance(contents, dict) or not all(isinstance(v, dict) for v in contents.values()):
             raise TypeError("contents is not a compound of compounds")
         return contents
+
+
+# ---------------------------------------------------------------- advancements
+
+
+ADVANCEMENT_TIME = "%Y-%m-%d %H:%M:%S %z"   # a criterion's time as saved: "2026-10-25 21:12:32 -0700"
+
+
+def advancements(folder: Path, wanted: set[str]) -> dict[str, dict[str, dt.datetime]]:
+    """Of the advancements in `wanted`, the ones each player has done: player UUID (the file's name) -> advancement
+    -> when it was done, the time of its last criterion (an aware time). A player with none of them is left out;
+    no players/advancements folder: nobody.
+
+    26.3 saves a player's advancements as JSON in players/advancements/<uuid>.json, on the autosave and when they
+    leave: advancement -> {"criteria": {name: time}, "done": true|false}, plus a "DataVersion" number. A file that
+    isn't that JSON (cut short mid-write, say) is a ValueError naming it."""
+    where = folder / ADVANCEMENTS
+    found: dict[str, dict[str, dt.datetime]] = {}
+    for path in sorted(where.glob("*.json")) if where.is_dir() else []:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise ValueError(f"{path}: not as the server saves it ({type(e).__name__}: {e})") from None
+        done = {}
+        with _shaped(path):
+            for name in wanted & set(data):
+                entry = data[name]
+                if entry.get("done") is True and entry["criteria"]:
+                    done[name] = max(dt.datetime.strptime(when, ADVANCEMENT_TIME)
+                                     for when in entry["criteria"].values())
+        if done:
+            found[path.stem] = done
+    return found

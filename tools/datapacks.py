@@ -23,7 +23,8 @@ from repo import REPO, Repo
 MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
 DATA_FORMAT = 121
 NS = "realms"
-GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops")   # challenges writes into wardrobe's
+# challenges writes into wardrobe's
+GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts")
 
 # Objectives the generated packs read but another data pack or mod creates.
 EXTERNAL_OBJECTIVES = {
@@ -51,6 +52,14 @@ def say(*parts) -> str:
 
 def refuse(msg: str) -> str:
     return "return run " + say({"text": msg, "color": "red"})
+
+
+def score_check(holder: str, objective: str, least: int | None = None, most: int | None = None) -> dict:
+    """A predicate condition (26.x shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
+    test = {k: v for k, v in (("min", least), ("max", most)) if v is not None}
+    return {"type": "minecraft:int_value_check", "test": test,
+            "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": holder},
+                      "score": objective}}
 
 
 def mcmeta(description: str, fmt: int = DATA_FORMAT) -> str:

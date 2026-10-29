@@ -14,4 +14,7 @@ tellraw @a [{"text":"[Monkey SMP] ","color":"gold"},{"text":"Welcome to Season I
 # opens it: challenges/launch sets #launched, and a launch run again by mistake after the weekend would
 # open a window that no wall-clock sync closes any more.
 execute unless score #launched rw.day matches 1 run function realms:wardrobe/founder/open
+# Server Firsts (tools/firsts.py): a first claimed before the first launch is cleared. Before
+# challenges/launch, which sets #launched.
+function realms:firsts/launch
 function realms:challenges/launch

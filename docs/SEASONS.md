@@ -483,6 +483,11 @@ are the example; change the numbers.
 **After the finale (end of week 11)**
 
 4. Post the final Cup standings and crown the champion: its title team ("The season champion", above).
+   Then the Pioneer title, for the most Server Firsts (a tie goes to whoever reached that number first):
+   `python3 /srv/realms/repo/tools/firsts.py champion /srv/realms/TheRealms-Server/server/world --season 1`
+   names the player and prints the four `team` commands; run them with `realms rcon`. A player shows one team at a
+   time, so one who already shows a title or supporter color picks which to keep (`team join` moves them).
+   The team's name starts with `title_`, so the carry (step 13) keeps it into the next season.
 5. Lock the world: `realms rcon "function realms:events/season/lock"`. Players in survival switch to
    adventure (they can look around and use doors, but not build or break; claims still guard
    containers), PvP is off and the difficulty is peaceful. It stays locked across restarts, and players who log in during the off-season
@@ -601,6 +606,10 @@ Built:
   border ring, 6 or more chunks from every claim, and despawns after 20 minutes. Modest loot (food, iron,
   arrows, wood): nothing Strength, no netherite, diamonds or emeralds. Tried on a test server: the pack
   loads, the chests land, scale and despawn, and a drop survives a restart.
+- Server Firsts (docs/ADMIN.md, "Server Firsts"): `tools/firsts.py` and the `realms-firsts` data pack. The
+  first player to each of 14 milestones is announced to everyone and keeps it for the season;
+  `/trigger firsts` lists them, and the most firsts earns the season's Pioneer title ("Ending a season",
+  step 4). Not yet tried in game.
 
 Not built:
 

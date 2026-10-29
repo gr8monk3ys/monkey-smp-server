@@ -45,7 +45,7 @@ import sys
 
 import rcon as server
 import season_calendar
-from datapacks import NS, lines, text
+from datapacks import NS, lines, score_check, text
 from events import STATE
 
 FN = f"data/{NS}/function/challenges"
@@ -403,9 +403,7 @@ def visit_advancement(c: dict, group: str, structures: list[str]) -> dict:
     and only until this kind counted, so it costs nothing the rest of the time."""
     index = of_kind(c["kind"]).index(c)
     player = {"type": "minecraft:all_of", "terms": [
-        {"type": "minecraft:int_value_check", "test": {"min": index, "max": index},
-         "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": f"#{c['kind']}"},
-                   "score": "rc.week"}},
+        score_check(f"#{c['kind']}", "rc.week", least=index, most=index),
         {"type": "minecraft:inverted", "term": {
             "type": "minecraft:entity_scores", "entity": "this", "scores": {f"rc.{c['id']}.{group}": {"min": 1}}}},
         {"type": "minecraft:entity_properties", "entity": "this",

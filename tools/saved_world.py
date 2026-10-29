@@ -9,6 +9,7 @@
     saved_world.claims(folder, saved_world.OVERWORLD)   # claim file -> one dimension's claimed chunks [(x, z)]
     saved_world.claim_counts(folder)                    # claim file -> chunks claimed in every dimension
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
+    saved_world.command_storage(folder, "realms")       # `data ... storage realms:<key>`: key -> compound (None)
 
 The files, relative to the world folder:
   data/minecraft/scoreboard.dat                                 scores, display names and teams
@@ -16,6 +17,7 @@ The files, relative to the world folder:
   data/openpartiesandclaims/player-configs/<player>.toml        a party's name (its owner's parties.name)
   data/openpartiesandclaims/player-claims/<player>.nbt          each player's claimed chunks
   dimensions/<namespace>/<name>/data/minecraft/world_border.dat  a dimension's border (since 26.3)
+  data/<namespace>/command_storage.dat                          a namespace's command storage (since 26.3)
 
 This module says where things are and how they are saved (26.3 leaves a score of 0 out; the scoreboard sits
 under "data"; a UUID is four ints); callers keep their own rules (ranking, where drops land, map masks).
@@ -233,3 +235,26 @@ def border(folder: Path, dimension: str = OVERWORLD) -> SavedBorder | None:
     with _shaped(path):
         data = root["data"]
         return SavedBorder(data["center_x"], data["center_z"], data["size"], data.get("lerp_target", data["size"]))
+
+
+# ---------------------------------------------------------------- command storage
+
+
+def command_storage_path(folder: Path, namespace: str) -> Path:
+    """Since 26.3 a namespace's storage is data/<namespace>/command_storage.dat (it was
+    data/command_storage_<namespace>.dat)."""
+    return folder / "data" / namespace / "command_storage.dat"
+
+
+def command_storage(folder: Path, namespace: str) -> dict[str, dict] | None:
+    """A namespace's command storage, as `data modify storage <namespace>:<key> ...` left it: key -> its
+    compound, as plain values (tools/nbt.py's). None when the world has none saved for that namespace."""
+    path = command_storage_path(folder, namespace)
+    if not path.is_file():
+        return None
+    root = nbt.read(path)
+    with _shaped(path):
+        contents = root.get("data", root)["contents"]
+        if not isinstance(contents, dict) or not all(isinstance(v, dict) for v in contents.values()):
+            raise TypeError("contents is not a compound of compounds")
+        return contents

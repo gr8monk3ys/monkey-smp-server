@@ -6,7 +6,8 @@
 `read` gives the root compound as plain Python values: compounds are dicts, lists and the byte, int and long
 arrays are lists, strings are str (a byte that isn't UTF-8 becomes U+FFFD), and numbers are int or float. The
 file may be gzipped or not. Whatever is wrong with a file (not gzip or NBT, cut short, a negative length, an
-unknown tag) is a ValueError naming it. It only reads: nothing in tools/ writes NBT.
+unknown tag) is a ValueError naming it. It only reads; the one tool that writes NBT is
+tools/migrate_names.py, which swaps same-length names inside the strings and leaves the rest byte for byte.
 Stdlib only, and Python 3.10 or newer: tools/drops.py runs it on the VPS.
 """
 import gzip

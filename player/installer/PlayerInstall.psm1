@@ -42,6 +42,7 @@ $script:BackupSuffix = '.monkey-smp-backup'
 $script:OldGameFolder = '.the-realms'
 $script:OldStateFileName = '.realms-client-state.json'
 $script:OldProfileKey = 'the-realms'
+$script:OldBackupSuffix = '.the-realms-backup'
 # The Microsoft Store / Xbox app launcher keeps its profiles in the second file. Both are updated if present.
 $script:ProfileFiles = @('launcher_profiles.json', 'launcher_profiles_microsoft_store.json')
 $script:LauncherProcesses = @('MinecraftLauncher', 'Minecraft')
@@ -645,11 +646,32 @@ function Move-OldGameFolder($Context) {
         Write-Note "Both $old and $($Context.GameDir) exist; using the second. Move anything you want to keep across by hand."
         return $false
     }
-    [IO.Directory]::Move($old, $Context.GameDir)
+    try {
+        [IO.Directory]::Move($old, $Context.GameDir)
+    } catch {
+        throw "Couldn't move $old to $($Context.GameDir): $($_.Exception.Message) Close Minecraft (and anything else using files in that folder), then run this again."
+    }
     $oldState = Join-Path $Context.GameDir $script:OldStateFileName
     if ([IO.File]::Exists($oldState)) { [IO.File]::Move($oldState, $Context.StateFile) }
     Write-Ok "Moved your game folder from $old to $($Context.GameDir) (Monkey SMP's new name)."
     return $true
+}
+
+<#
+.SYNOPSIS
+    Before 2.10.0 the launcher profile was 'the-realms'. It goes once the folder it plays from has moved (or is
+    gone); a profile with a folder that is still there stays, with a note.
+#>
+function Remove-OldProfile($Context, [string]$File) {
+    try { $data = ConvertFrom-JsonText (Read-TextFile $File) } catch { return }
+    $old = Get-Field (Get-Field $data 'profiles') $script:OldProfileKey
+    if (-not (Test-JsonObject $old)) { return }
+    $dir = [string](Get-Field $old 'gameDir')
+    if ($dir -and [IO.Directory]::Exists($dir)) {
+        Write-Note "The old 'The Realms' profile still plays from $dir; delete it in the launcher once you've moved anything you want over."
+        return
+    }
+    if (Edit-LauncherProfile -Path $File -Remove -Key $script:OldProfileKey) { Write-Ok "Removed the old profile from $File." }
 }
 
 <#
@@ -685,8 +707,13 @@ function Install-Client {
     $fields = Get-ProfileField -Context $Context -Pack $pack -VersionId $fabric.Id -MemoryGB $MemoryGB
     $profileChanged = $false
     foreach ($file in $profileFiles) {
+        # The first backup, made before the first install, keeps being the first backup under its new name.
+        $oldBackup = $file + $script:OldBackupSuffix
+        if ([IO.File]::Exists($oldBackup) -and -not [IO.File]::Exists($file + $script:BackupSuffix)) {
+            [IO.File]::Move($oldBackup, $file + $script:BackupSuffix)
+        }
         if (Edit-LauncherProfile -Path $file -Fields $fields) { $profileChanged = $true }
-        if (Edit-LauncherProfile -Path $file -Remove -Key $script:OldProfileKey) { Write-Ok "Removed the old profile from $file." }
+        Remove-OldProfile $Context $file
     }
     if ($profileChanged) { Write-Ok "Profile '$($fields.name)' saved ($MemoryGB GB memory)." } else { Write-Ok "Profile '$($fields.name)' is already up to date." }
 
@@ -723,6 +750,8 @@ function Uninstall-Client {
         Wait-LauncherClosed $Context
         foreach ($file in $files) {
             if (Edit-LauncherProfile -Path $file -Remove) { $profileRemoved = $true }
+            # The profile from before 2.10.0 is Monkey SMP's too.
+            if (Edit-LauncherProfile -Path $file -Remove -Key $script:OldProfileKey) { $profileRemoved = $true }
         }
     }
     if ($profileRemoved) { Write-Ok 'Removed Monkey SMP from the Minecraft Launcher.' } else { Write-Ok 'The Minecraft Launcher has no Monkey SMP profile.' }
@@ -749,6 +778,9 @@ function Uninstall-Client {
                 Write-Ok "Kept $($Context.GameDir)"
             }
         }
+    }
+    if ($Context.OldGameDir -and [IO.Directory]::Exists($Context.OldGameDir)) {
+        Write-Note "Not deleting $($Context.OldGameDir), the game folder from before 2.10.0; delete it by hand if you don't need it."
     }
     return [pscustomobject]@{ ProfileRemoved = $profileRemoved; GameDirRemoved = $gameRemoved }
 }

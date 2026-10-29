@@ -14,13 +14,16 @@ pack, a small download (only the wardrobe's resource pack changed).
   `MonkeySMP-Client` and `MonkeySMP-Player` downloads, and on the live VPS `/srv/monkey`, the `monkey` user,
   `/etc/monkey-deploy.env` and the `monkey-*` timers. The Docker Compose project is `monkey-smp`.
 - The player installer moves an existing game folder from the old name to `%APPDATA%\.monkey-smp`, keeping
-  worlds, screenshots and settings, and replaces the old launcher profile with the "Monkey SMP" one.
+  worlds, screenshots and settings, and replaces the old launcher profile with the "Monkey SMP" one. A game
+  folder the player picked stays where it is, and so does its old profile.
 
 ### Added
 
 - `tools/migrate_names.py` moves a server folder from before 2.10.0 over: it renames the old-named files and
   folders and swaps the names inside the world's saved data (scheduled functions, scores, tags, command storage,
-  the NPCs, every chunk) and the configs. Stop the server, back it up, then run it on the server package folder
+  the NPCs, every chunk) and the configs. Only our identifiers' shapes change and only inside NBT strings, so
+  players' names and their own words (signs, books, party names) stay as written. Stop the server, back it
+  up, then run it on the server package folder
   (`--apply`; without it, it only lists what it would change). docs/LIVE.md, "Monkey SMP names (2.10.0)", has the
   live VPS's steps.
 

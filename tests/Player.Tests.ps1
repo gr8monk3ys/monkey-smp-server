@@ -347,8 +347,9 @@ Describe 'Moving from before 2.10.0' {
         Write-Text (Join-Path $script:old 'saves\Base\level.dat') 'world'
         Write-Text (Join-Path $script:old 'mods\alpha-1.0.jar') 'stale'
         Write-Text (Join-Path $script:old '.realms-client-state.json') '{"version":"0.9.0","files":["mods/alpha-1.0.jar"]}'
-        $text = (Get-LauncherProfilesText).Replace('"profiles":{', '"profiles":{"the-realms":{"name":"The Realms 0.9.0","type":"custom"},')
-        Write-Text $F.Profiles $text
+        $oldProfile = '"the-realms":{"name":"The Realms 0.9.0","type":"custom","gameDir":"' + $script:old.Replace('\', '\\') + '"},'
+        Write-Text $F.Profiles (Get-LauncherProfilesText).Replace('"profiles":{', '"profiles":{' + $oldProfile)
+        Write-Text "$($F.Profiles).the-realms-backup" 'pristine'
         $script:pack = New-StandardPack $F
     }
 
@@ -363,6 +364,9 @@ Describe 'Moving from before 2.10.0' {
         $profiles.PSObject.Properties.Name | Should -Not -Contain 'the-realms'
         $profiles.'monkey-smp'.gameDir | Should -Be $F.Game
         $r.ProfileName | Should -Be 'Monkey SMP 1.0.0'
+        # The first backup, made before the first install, stays the first backup.
+        Read-Text "$($F.Profiles).monkey-smp-backup" | Should -Be 'pristine'
+        Test-Path -LiteralPath "$($F.Profiles).the-realms-backup" | Should -BeFalse
     }
 
     It 'leaves the old folder alone when the new one already exists' {
@@ -370,11 +374,21 @@ Describe 'Moving from before 2.10.0' {
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
         Read-Text (Join-Path $script:old 'saves\Base\level.dat') | Should -Be 'world'
         Read-Text (Join-Path $F.Game 'saves\New\level.dat') | Should -Be 'new world'
+        # It still plays from the old folder, so it stays.
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Contain 'the-realms'
     }
 
     It 'never moves a game folder the player picked' {
         $F.Game = Join-Path $F.Dir 'my folder'
         [void](Install-Client -Context (New-Context $F $script:pack) -MemoryGB 4)
+        [IO.Directory]::Exists($script:old) | Should -BeTrue
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Contain 'the-realms'
+    }
+
+    It 'uninstalling removes the old profile too, but never the old folder' {
+        $r = Uninstall-Client -Context (New-Context $F $null)
+        $r.ProfileRemoved | Should -BeTrue
+        (Get-Profiles $F.Profiles).PSObject.Properties.Name | Should -Not -Contain 'the-realms'
         [IO.Directory]::Exists($script:old) | Should -BeTrue
     }
 }

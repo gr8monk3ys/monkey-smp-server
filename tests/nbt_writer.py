@@ -1,4 +1,4 @@
-"""A tiny NBT writer for made-up worlds in the tests (tools/ only reads NBT: tools/nbt.py).
+"""A tiny NBT writer for made-up worlds in the tests (tools/nbt.py only reads NBT).
 
 dicts are compounds, Ints int arrays, other lists lists, str strings, float TAG_Double, Long TAG_Long and any
 other int TAG_Int.

@@ -1,0 +1,28 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { guidePage, pages } from "@/content/guide/pages";
+
+/** The title and description a guide page gives search engines and link previews. */
+export function guideMetadata(href: string): Metadata {
+  const page = guidePage(href);
+  return { title: `${page.title} - Monkey SMP guide`, description: page.description };
+}
+
+/** One page of the guide: its title, an optional lede, the page itself, then the pages before and after it. */
+export function GuidePage({ href, lede, children }: { href: string; lede?: ReactNode; children: ReactNode }) {
+  const at = pages.findIndex((p) => p.href === href);
+  const page = pages[at];
+  const prev = pages[at - 1];
+  const next = pages[at + 1];
+  return (
+    <article className="doc">
+      <h1>{page.title}</h1>
+      {lede && <p className="lede">{lede}</p>}
+      {children}
+      <nav className="pager" aria-label="Previous and next">
+        {prev && <a className="prev" href={prev.href}><span>Previous</span>{prev.title}</a>}
+        {next && <a className="next" href={next.href}><span>Next</span>{next.title}</a>}
+      </nav>
+    </article>
+  );
+}

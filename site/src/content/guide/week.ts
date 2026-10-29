@@ -3,7 +3,7 @@
 // tools/season_calendar.py, tools/drops.py and tools/omens.py.
 export type Day = {
   name: string;
-  /** "omens", "sat" or "sun": where the block sits in the week's grid (guide.css). */
+  /** "omens" sets the block in the shade (guide.css); "sat" and "sun" mark the weekend. */
   place?: "omens" | "sat" | "sun";
   lines: { at?: string; text: string; quiet?: boolean }[];
 };

@@ -34,7 +34,7 @@ from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
 KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "LAUNCH_AT")
-PAGES = ("index.html", "changes.html", "creators.html", "guide.html")
+PAGES = ("index.html", "changes.html", "creators.html", "guide.html", "guide/commands/players.html")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 
@@ -206,8 +206,8 @@ def built_problems(out: Path, links: dict[str, str]) -> list[str]:
     """What in a build (site/out) is missing or out of step with config.json."""
     errors = [f"{out}: no {name} (is next.config.mjs's output still 'export'?)" for name in PAGES
               if not (out / name).is_file()]
-    for page in sorted(out.glob("*.html")):
-        errors += [f"{out.name}/{page.name}: {e}"
+    for page in sorted(out.rglob("*.html")):  # the guide's pages sit in out/guide/
+        errors += [f"{out.name}/{page.relative_to(out).as_posix()}: {e}"
                    for e in page_problems(page.read_text(encoding="utf-8"), links)]
     return errors
 

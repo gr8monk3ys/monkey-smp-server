@@ -31,7 +31,7 @@ runs it with the other checks.
 | The look | `src/app/style.css`, the one stylesheet (`DESIGN.md` at the repo root says why it looks as it does). `/guide` and `/changes` add `src/app/guide/guide.css` and `src/app/changes/changes.css` |
 | The front page's copy | `src/app/page.tsx`; its lists (the world, gallery, pass, supporter tiers, invite ladder, FAQ) in `src/content/front.tsx` |
 | The rules (front page) and creator terms | `src/content/rules.tsx` |
-| The guide | `src/app/guide/page.tsx`; its prose in `src/content/guide/*.mdx`, the week in `week.ts`, commands by rank in `commands.tsx` |
+| The guide | A docs layout: `src/app/guide/layout.tsx` puts the sidebar (`src/components/guide-nav.tsx`) beside each page under `src/app/guide/`. The pages, their order and sidebar headings are in `src/content/guide/pages.ts`; the prose in `src/content/guide/*.mdx`, the week in `week.ts`, commands by rank in `commands.tsx` (one page per rank) |
 | The player changelog | `src/content/changes.mdx`, newest first (docs/ADMIN.md, "Telling players what changed") |
 | The creator code page | `src/app/creators/page.tsx` |
 | The header and footer | `src/components/chrome.tsx` |

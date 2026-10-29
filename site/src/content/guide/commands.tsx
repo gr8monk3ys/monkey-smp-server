@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-// Commands by rank (the guide's #commands). Each rank can do everything the ranks above it can.
+// Commands by rank: /guide/commands lists the ranks, and each rank with an `id` has its own page,
+// /guide/commands/<id> (pages.ts lists them). Each rank can do everything the ranks above it can.
 
 /** A rank in the summary at the top; `id` links it to its own commands below. */
 export const ranks: { name: string; id?: string; does: string }[] = [

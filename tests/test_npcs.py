@@ -1,5 +1,6 @@
 import json
 import re
+import tomllib
 
 import challenges
 import datapacks
@@ -115,6 +116,17 @@ def test_npcs_are_protected_and_kept():
         assert data["Invulnerable"] == 1 and data["PersistenceRequired"] == 1, name
         assert "Owner" not in json.dumps(data), name
         assert "access" not in preset["PresetMetadata"], name   # INTERNAL presets can't be imported by command
+
+
+def test_players_can_talk_to_npcs_in_any_claim_with_an_empty_hand():
+    # Spawn is a server claim: without this Open Parties and Claims answers a right-click on the Guide or the
+    # Town Crier with "You are not allowed to interact with this entity in this chunk (easy_npc:humanoid)".
+    toml = tomllib.loads((REPO.defaults / "config" / "openpartiesandclaims-server.toml").read_text(encoding="utf-8"))
+    forced = toml["serverConfig"]["claims"]["protection"]["forcedEntityProtectionExceptionList"]
+    # The mod's own default stays; "hand$" keeps items (a name tag, a lead) off the NPCs; no "break$"/"anything$".
+    assert forced == ["minecraft:minecart", "hand$easy_npc:*"]
+    for name in npcs.NPCS:
+        assert PRESETS[name]["data"]["id"].startswith("easy_npc:"), name
 
 
 def test_uuids_are_fixed_and_distinct():

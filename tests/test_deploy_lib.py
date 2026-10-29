@@ -336,12 +336,38 @@ def test_a_setting_that_is_not_a_whole_number_stops_before_anything_happens(sh, 
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh"])
+@pytest.mark.parametrize("script", ["realms-deploy.sh", "realms-loadtest.sh", "shops-claims.sh", "npc-claims.sh"])
 def test_the_restarting_scripts_check_their_minutes_before_they_do_anything(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}"', WARN_MINUTES="5m", FAKE_ID="0",
-                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix())
+                          REALMS_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix(),
+                          NPCS_LOG=(tmp_path / "npcs.log").as_posix())
     assert code == 1 and out[-1].endswith("ERROR: WARN_MINUTES must be a whole number of minutes, not '5m'")
     assert not [c for c in calls if c.split()[0] in ("docker", "flock", "curl", "sleep")]
+
+
+def test_npc_claims_adds_the_easy_npc_entry_once_and_keeps_the_old_file(sh, tmp_path):
+    live = tmp_path / "live"
+    (live / "docker").mkdir(parents=True)
+    (live / "docker" / "compose.yaml").write_text("")
+    (live / "server" / "mods").mkdir(parents=True)
+    (live / "server" / "mods" / "easy_npc-fabric-26.3-7.17.1.jar").write_text("")
+    toml = live / "server" / "config" / "openpartiesandclaims-server.toml"
+    toml.parent.mkdir()
+    before = '[serverConfig]\n\t\t\tforcedEntityProtectionExceptionList = ["minecraft:minecart"]\n\t\t\tother = 1\n'
+    toml.write_text(before, newline="\n")
+    script = f'sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
+    env = {"FAKE_ID": "0", "REALMS_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
+           "LIVE_DIR": live.as_posix()}
+    code, out, calls = sh(f"{script} --check", **env)
+    assert code == 0 and out[-1].endswith("nothing was changed") and toml.read_text() == before
+    assert not [c for c in calls if c.startswith(("docker compose stop", "flock"))]
+    # The server isn't running (the fake docker lists nothing), so the file changes and it stays stopped.
+    code, out, _ = sh(f"{script} --now", **env)
+    assert code == 0, out
+    assert toml.read_text() == before.replace('"minecraft:minecart"]', '"minecraft:minecart", "hand$easy_npc:*"]')
+    assert (toml.parent / "openpartiesandclaims-server.toml.before-npcs").read_text() == before
+    code, out, _ = sh(script, **env)
+    assert code == 0 and any("NPCs in claims: already set" in line for line in out)
 
 
 def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):

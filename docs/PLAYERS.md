@@ -128,7 +128,7 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
 
 ## Playing
 
-- **New here?** Right-click the **Guide** at spawn for the short rules, how to find a faction, and this week's
+- **New here?** Right-click the **Guide** at spawn, with an empty hand, for the short rules, how to find a faction, and this week's
   challenges. The **Town Crier**, also at spawn, has this week's Saturday event.
 - **Parties, allies and land claims** come from *Open Parties and Claims*:
   - Claim land on the map: open Xaero's World Map (**M**) or the minimap, then right-click chunks to claim them.

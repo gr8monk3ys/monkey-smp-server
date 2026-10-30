@@ -1,5 +1,6 @@
 import json
 
+import respawn
 import wanted
 
 import standings
@@ -75,6 +76,14 @@ def test_the_victim_is_marked_before_the_killer_claims():
     assert "advancement revoke @s only monkey:wanted/slain" in fn("slain")
     assert "advancement revoke @s only monkey:wanted/kill" in fn("kill")
     assert "tag @a remove wt.victim" in fn("kill") and "tag @a[tag=wt.victim] remove wt.victim" in fn("second")
+
+
+def test_a_victim_who_respawned_under_ten_minutes_ago_claims_nothing():
+    # rule 5: neither the victim's advancement nor the killer's fires, so the bounty stays
+    slain = json.loads(FILES["data/monkey/advancement/wanted/slain.json"])
+    kill = json.loads(FILES["data/monkey/advancement/wanted/kill.json"])
+    assert respawn.fresh_victim_excluded() in slain["criteria"]["slain"]["conditions"]["player"]["terms"]
+    assert respawn.fresh_victim_excluded() in kill["criteria"]["kill"]["conditions"]["entity"]["terms"]
 
 
 def test_the_menu_buttons_name_players_by_number():

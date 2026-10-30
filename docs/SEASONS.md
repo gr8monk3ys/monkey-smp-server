@@ -523,7 +523,8 @@ Players put bounties on rivals themselves, on top of the staff bounties above. O
 - **Claiming.** Kill a wanted player in a fair fight outside the event arena and every bounty on them is
   yours, by itself: chat announces it and you get the Bounty Hunter title (unless you show another title or
   supporter color, which is never replaced). A kill by a faction mate or a pact partner claims nothing, and the
-  bounty stays. After a claim, nobody can post on that player for 6 hours.
+  bounty stays. So does a kill on a player who respawned less than 10 minutes ago (rule 5; their online time,
+  `tools/respawn.py`). After a claim, nobody can post on that player for 6 hours.
 - **What it gives.** The title and the line in chat, nothing else: no items, no standings points, no currency.
   The +5 standings points stay with the bounties staff post and check, because a kill that claims itself
   can't tell a fair fight from a fed one. Feeding kills to claim a bounty is exploit B13 as always: staff take

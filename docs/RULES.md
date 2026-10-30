@@ -28,6 +28,8 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
    - A naked player is one who has freshly respawned and has nothing on them (seeds and filler items
      don't count).
    - Naked players trying to retrieve loot can be killed if they are actively trying to steal your loot.
+   - A kill on a player who respawned less than 10 minutes ago never counts toward a war's score or claims a
+     bounty.
 6. No hovering in fights as a naked player. If you do, you can be slain.
 7. No loopholes.
    - If you have a question about whether something is legit, contact an admin to confirm before you do it.
@@ -77,6 +79,9 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       together.
     - Grace is for settling in. Using it to scout, carry loot, block a fight, hold a spot for a faction, or
       fight by other means (pets, lava, fire, traps) is a loophole (rule 7), and an admin will end it.
+    - Late joiners get longer: when the catch-up kit is on, a player whose first join is in week 4 or later
+      keeps this grace for their first 8 hours of play (online time), or the 48 hours if that is longer. It
+      ends early the same ways, and the same loophole rule applies.
     - Spawn is a no-PvP zone.
 
 ## Strength rules

@@ -20,6 +20,8 @@ The rules that keep it from being farmed:
   - Never on yourself. One bounty a player every POST_HOURS; the same player can't stack theirs on one target.
   - A player whose bounty was just claimed can't get a new one for REST_HOURS.
   - No claims in the event arena (either side tagged ev.arena), and none before the launch (#launched rw.day).
+  - No claim on a victim who respawned less than 10 minutes ago (rule 5, tools/respawn.py): neither advancement
+    fires for them, so the bounty stays.
 Hours are game time, which runs while the server does.
 
 Scores (all in the monkey-standings data pack, which this goes in, as tools/diplomacy.py does):
@@ -37,6 +39,8 @@ tagged player. Minecraft runs both in that order inside one death, so two kills 
 Stdlib only.
 """
 import json
+
+import respawn
 
 from challenges import LAUNCHED
 from datapacks import NS, lines, refuse, text
@@ -214,7 +218,9 @@ def datapack_files() -> dict[str, str]:
     # ------------------------------------------------ claims
     f[f"{ADVANCEMENT}/slain.json"] = json.dumps({
         "criteria": {"slain": {"trigger": "minecraft:entity_killed_player", "conditions": {
-            "player": {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
+            "player": {"type": "minecraft:all_of", "terms": [
+                {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
+                respawn.fresh_victim_excluded()]},   # rule 5: freshly respawned, no claim
             "entity": {"type": "minecraft:entity_properties", "entity": "this",
                        "predicate": {"minecraft:entity_type": "minecraft:player"}}}}},
         "rewards": {"function": f"{NS}:wanted/slain"}}, indent=2)
@@ -223,7 +229,8 @@ def datapack_files() -> dict[str, str]:
             "entity": {"type": "minecraft:all_of", "terms": [
                 {"type": "minecraft:entity_properties", "entity": "this",
                  "predicate": {"minecraft:entity_type": "minecraft:player"}},
-                {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}}]}}}},
+                {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
+                respawn.fresh_victim_excluded()]}}}},
         "rewards": {"function": f"{NS}:wanted/kill"}}, indent=2)
     f[f"{FN}/slain.mcfunction"] = lines(
         "# As a wanted player killed by a player (it fires before the killer's): marks them for the killer's claim,",

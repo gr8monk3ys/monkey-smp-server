@@ -15,6 +15,7 @@ scoreboard players add @a rw.challenges 0
 scoreboard players add @a rw.launch 0
 scoreboard players add @a rw.s2 0
 scoreboard players add @a rw.champion 0
+scoreboard players add @a rw.kin 0
 execute as @a run scoreboard players operation @s rw.hours = @s rw.play
 execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase
 scoreboard players operation @a rw.hours /= #hour rw.const
@@ -32,4 +33,5 @@ execute as @a unless score @s rw.challenges.seen = @s rw.challenges run function
 execute as @a unless score @s rw.launch.seen = @s rw.launch run function monkey:wardrobe/notice/launch
 execute as @a unless score @s rw.s2.seen = @s rw.s2 run function monkey:wardrobe/notice/s2
 execute as @a unless score @s rw.champion.seen = @s rw.champion run function monkey:wardrobe/notice/champion
+execute as @a unless score @s rw.kin.seen = @s rw.kin run function monkey:wardrobe/notice/kin
 schedule function monkey:wardrobe/second 20t replace

@@ -45,6 +45,7 @@ friends, or by supporting:
 | Founder's Circlet | helm | played 10 minutes on Season I's launch weekend | `rw.launch 1` |
 | Twinmoon | blade | played in Season II | `rw.s2 1` |
 | Champion's Helm | helm | in the season champion's faction | `rw.champion 1` |
+| Kindred Band | helm | a referral: a friend bought a pass with your code, or you with theirs | `rw.kin 1` |
 | Lantern | blade | Ember supporter | `rw.tier 1` |
 | Standard | blade | Banner supporter | `rw.tier 2` |
 | Regalia | blade | Crown supporter | `rw.tier 3` |
@@ -82,6 +83,11 @@ Why these counters:
   never sold, and like every `rw.*` score it carries into the next season. Its locked line also waits for
   Season II.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
+- **Referrals.** The Kindred Band is for both players of a referral: a member's `/referral` code (Front Desk,
+  the Discord bot) on a new buyer's Tebex purchase. It also counts one `rw.invites` for the code's owner, so
+  referrals climb the invite ladder too. Never sold and no discount: the bot reads the code from the
+  purchase's webhook and gives the skin, nothing else. It has no locked line in the menu, so it shows only to
+  players who own it. Off until the owner turns it on (discord-server, `docs/TEBEX_WEBHOOK.md`, "Referrals").
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
 `monkey-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
@@ -159,6 +165,8 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | A monthly pass renews | `scoreboard players add {username} rw.months 1` |
 | A 3-month pass is bought | `scoreboard players add {username} rw.months 3` |
 | A friend they invited buys a pass (staff) | `scoreboard players add NAME rw.invites 1` |
+| A referral (Front Desk posts these in the mod channel, or sends them itself) | `scoreboard players set BUYER rw.kin 1`, `scoreboard players set NAME rw.kin 1`, `scoreboard players add NAME rw.invites 1` |
+| That purchase is refunded or charged back (only if staff decide to) | `scoreboard players remove NAME rw.invites 1`, `scoreboard players reset BUYER rw.kin` (the referrer keeps theirs) |
 | Season 1 ends (once) | `scoreboard players set #season rw.day 2` |
 
 Skins already applied stay on the item when a tier expires; the menu just stops offering locked ones.

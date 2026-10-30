@@ -1,5 +1,6 @@
 import json
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -185,15 +186,52 @@ def test_a_broken_config_is_reported_before_anything_else(tmp_path):
     assert "LAUNCH_AT" in error
 
 
+def sitemap(*paths):
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "".join(f"<url>\n<loc>https://example.com{p}</loc>\n</url>\n" for p in paths) + "</urlset>\n")
+
+
+def built_paths():
+    return [site_links.page_path(Path("out"), Path("out") / name) for name in site_links.PAGES]
+
+
+def write_build(out, listed=None):
+    """Every page the build must have, with a sitemap.xml that lists `listed` (every page by default)."""
+    for name in site_links.PAGES:
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
+        (out / name).write_text(GOOD_LINKS + GOOD_LAUNCH, encoding="utf-8")
+    (out / "sitemap.xml").write_text(sitemap(*(built_paths() if listed is None else listed)), encoding="utf-8")
+
+
+def test_a_page_is_served_at_its_clean_address():
+    out = Path("out")
+    assert site_links.page_path(out, out / "index.html") == "/"
+    assert site_links.page_path(out, out / "changes.html") == "/changes"
+    assert site_links.page_path(out, out / "guide" / "commands" / "players.html") == "/guide/commands/players"
+
+
+def test_the_sitemap_must_list_every_built_page_but_the_404(tmp_path):
+    out = tmp_path / "out"
+    write_build(out)
+    (out / "404.html").write_text("", encoding="utf-8")
+    (out / "_not-found.html").write_text("", encoding="utf-8")
+    assert site_links.sitemap_problems(out) == []
+    write_build(out, [p for p in built_paths() if p != "/guide/week"] + ["/guide/gone"])
+    assert site_links.sitemap_problems(out) == [
+        "out/sitemap.xml: no /guide/week (add it to site/src/app/sitemap.ts)",
+        "out/sitemap.xml: lists /guide/gone, which the build doesn't have",
+    ]
+    (out / "sitemap.xml").unlink()
+    assert site_links.sitemap_problems(out) == ["out/sitemap.xml: missing (site/src/app/sitemap.ts)"]
+
+
 def test_built_checks_every_page(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)
     out = tmp_path / "site" / "out"
     out.mkdir()
     assert site_links.main(["--check", "--built", str(out)], repo=repo) == 1
-    for name in site_links.PAGES:
-        (out / name).parent.mkdir(parents=True, exist_ok=True)
-        (out / name).write_text(GOOD_LINKS + GOOD_LAUNCH, encoding="utf-8")
+    write_build(out)
     assert site_links.main(["--check", "--built", str(out)], repo=repo) == 0
     (out / "guide.html").write_text(GOOD_LINKS.replace("discord.gg/abc", "discord.gg/old"), encoding="utf-8")
     [error] = site_links.problems(repo, built=out)
@@ -204,9 +242,7 @@ def test_built_checks_pages_in_folders_too(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)
     out = tmp_path / "site" / "out"
-    for name in site_links.PAGES:
-        (out / name).parent.mkdir(parents=True, exist_ok=True)
-        (out / name).write_text(GOOD_LINKS + GOOD_LAUNCH, encoding="utf-8")
+    write_build(out)
     (out / "guide" / "week.html").write_text(GOOD_LINKS.replace("discord.gg/abc", "discord.gg/old"), encoding="utf-8")
     [error] = site_links.problems(repo, built=out)
     assert error.startswith("out/guide/week.html: data-link=\"STORE_URL\" goes to https://discord.gg/old")

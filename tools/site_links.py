@@ -18,7 +18,9 @@ With --built DIR, the built pages are checked too: every data-link anchor goes w
 whose URL is empty points at the Discord with a "coming soon" title) and every data-launch element says the
 launch as tools/season_calendar.py does ({date} the day in Pacific time, "Saturday 7 November 2026"; {pacific}
 "5 PM Pacific"; {eastern} "8 PM Eastern", with the weekday when it falls on the next day), with a <time>'s
-datetime set to LAUNCH_AT. The site works those out in TypeScript; this is what keeps the two in step.
+datetime set to LAUNCH_AT. The site works those out in TypeScript; this is what keeps the two in step. And
+sitemap.xml (site/src/app/sitemap.ts, a list kept by hand) must name every built page but the 404 page, and
+nothing that isn't one.
 """
 import argparse
 import datetime as dt
@@ -38,6 +40,9 @@ KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL"
 GUIDE = ("guide", "guide/factions", "guide/week", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
 PAGES = ("index.html", "changes.html", "creators.html", *(f"{page}.html" for page in GUIDE))
+# The page for a missing address (and Next's own copy of it): never in the sitemap.
+NOT_FOUND = ("404.html", "_not-found.html")
+SITEMAP_LOC = re.compile(r"<loc>\s*https?://[^/<]+(/[^<]*?)\s*</loc>")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 
@@ -205,6 +210,26 @@ def page_problems(page: str, links: dict[str, str]) -> list[str]:
     return errors
 
 
+def page_path(out: Path, page: Path) -> str:
+    """The address a built page is served at (cleanUrls): index.html is "/", guide/week.html "/guide/week"."""
+    path = "/" + page.relative_to(out).with_suffix("").as_posix()
+    return "/" if path == "/index" else path
+
+
+def sitemap_problems(out: Path) -> list[str]:
+    """What sitemap.xml leaves out of the build's pages, or lists that the build doesn't have."""
+    sitemap = out / "sitemap.xml"
+    if not sitemap.is_file():
+        return [f"{out.name}/sitemap.xml: missing (site/src/app/sitemap.ts)"]
+    listed = {m.group(1) for m in SITEMAP_LOC.finditer(sitemap.read_text(encoding="utf-8"))}
+    built = {page_path(out, page) for page in out.rglob("*.html")
+             if page.relative_to(out).as_posix() not in NOT_FOUND}
+    return ([f"{out.name}/sitemap.xml: no {path} (add it to site/src/app/sitemap.ts)"
+             for path in sorted(built - listed)]
+            + [f"{out.name}/sitemap.xml: lists {path}, which the build doesn't have"
+               for path in sorted(listed - built)])
+
+
 def built_problems(out: Path, links: dict[str, str]) -> list[str]:
     """What in a build (site/out) is missing or out of step with config.json."""
     errors = [f"{out}: no {name} (is next.config.mjs's output still 'export'?)" for name in PAGES
@@ -212,7 +237,7 @@ def built_problems(out: Path, links: dict[str, str]) -> list[str]:
     for page in sorted(out.rglob("*.html")):  # the guide's pages sit in out/guide/
         errors += [f"{out.name}/{page.relative_to(out).as_posix()}: {e}"
                    for e in page_problems(page.read_text(encoding="utf-8"), links)]
-    return errors
+    return errors + sitemap_problems(out)
 
 
 def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:

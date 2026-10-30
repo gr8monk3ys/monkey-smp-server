@@ -74,10 +74,18 @@ export const shots: { name: string; where: string; alt: string; caption: ReactNo
   },
 ];
 
+/** The game the server runs: the page's description and its lede both name it. */
+export const GAME = "Minecraft Java 26.3";
+
+/** The pass's monthly price in US dollars: the price shown, the page's description and the launch event's offer
+ * (src/lib/seo.ts) all come from it. */
+const PASS_USD = 5;
+
 /** The Server Pass (#pricing): one price to play, the same for everyone. */
 export const pass = {
   name: "Server Pass",
-  price: "$5",
+  usd: PASS_USD,
+  price: `$${PASS_USD}`,
   per: "/ month",
   alt: "or $14 for 3 months",
   needs: "Needs Minecraft Java Edition on a PC (Windows, macOS or Linux) with 16 GB of RAM. If the pack won't run "

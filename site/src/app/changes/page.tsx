@@ -3,14 +3,19 @@ import { ChangeLine, Entry } from "@/components/changes";
 import { Canopy, Footer } from "@/components/chrome";
 import { Place } from "@/components/place";
 import Changes from "@/content/changes.mdx";
+import { preloadMono } from "@/lib/fonts";
+import { pageMetadata } from "@/lib/seo";
 import "./changes.css";
 
-export const metadata: Metadata = {
-  title: "What changed - Monkey SMP",
-  description: "Every change to Monkey SMP's rules, mods and wardrobe that players notice, newest first.",
-};
+export const metadata: Metadata = pageMetadata({
+  title: "What changed: Monkey SMP patch notes",
+  description: "Monkey SMP's patch notes: every change to the server's rules, mods, modpack and wardrobe that "
+    + "players notice, newest first.",
+  path: "/changes",
+});
 
 export default function WhatChanged() {
+  preloadMono(); // commands in the prose
   return (
     <>
       <Canopy label="Site" items={[

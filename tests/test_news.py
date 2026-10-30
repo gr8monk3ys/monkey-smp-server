@@ -24,7 +24,7 @@ import saved_world
 import season_calendar
 from repo import REPO
 
-LAUNCH = season_calendar.LAUNCH                       # Saturday 31 October 2026, 5 PM Pacific
+LAUNCH = season_calendar.LAUNCH                       # Saturday 7 November 2026, 5 PM Pacific
 AFTER = LAUNCH + dt.timedelta(minutes=10)              # the first run after the launch
 URL = "https://discord.com/api/webhooks/1/secret-token"
 NAMES = ["Alex_Fake", "SamFake", "TomFake", "RinFake"]
@@ -417,7 +417,7 @@ def test_a_late_start_that_finds_nothing_still_posts_what_comes_next(tmp_path):
 
 
 def test_the_launch_is_dated_by_the_runs_not_the_calendar(tmp_path):
-    # The calendar says 31 October, but the launch runs a week later: runs every 10 minutes before it saw the
+    # The launch runs a week later than the calendar says: runs every 10 minutes before it saw the
     # world unlaunched, so it is on time, and test play before it doesn't count.
     real = LAUNCH + dt.timedelta(days=7)
     folder, state, discord = world(tmp_path, launched=False), tmp_path / "news", Discord()

@@ -243,6 +243,7 @@ def siege_items(saved: Saved) -> list[Item]:
     closed, now = sg.get("#closed"), sg.get("#now")
     if sg.get("#open") != 1 and closed and now is not None and 0 <= now - closed <= CLOSE_FRESH:
         items.append(Item(f"{SIEGE}:closed:{closed}", SIEGE, SIEGE_CLOSED))
+    return items
 
 
 def event_items(world: Path, saved: Saved) -> list[Item]:

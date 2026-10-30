@@ -613,7 +613,17 @@ party made since can't take part until the next run. `/function monkey:diplomacy
 ```
 /function monkey:diplomacy/staff/factions          # every faction's number and name
 /function monkey:diplomacy/staff/end {a:3,b:7}      # ends the war or pact between factions 3 and 7, announced
+/function monkey:diplomacy/staff/wars_on            # declarations are 7-day wars from now (off by default)
+/function monkey:diplomacy/staff/wars_off           # back to wars until Sunday's close; running 7-day wars go on
+/function monkey:diplomacy/staff/wars               # on or off, the 7-day wars running, and the game's clock
 ```
+
+- **7-day wars** (`docs/SEASONS.md`, "7-day wars") need the sieges timer (`docs/LIVE.md`): without its clock a
+  leader is told the time isn't set yet. A staff `end`, peace and a faction gone end one early. To move a
+  war's end by hand: `scoreboard players set #3.7 dp.until <minute>` (the lower faction number first; the
+  minute is Unix time / 60, as `staff/wars` shows the clock). A faction can declare again 48 hours after
+  its last declaration (`#f3 dp.next`; `scoreboard players reset #f3 dp.next` lifts it). A kill on a player
+  who respawned less than 10 minutes ago doesn't count (rule 5).
 
 - **Ending one by hand.** Use `staff/end` when a war or pact breaks the rules (a pact that is really a
   confederation, rule 31) or was made by mistake. Everyone is told it was staff, and it goes in the Sunday
@@ -627,6 +637,22 @@ party made since can't take part until the next run. `/function monkey:diplomacy
   reach the server, its next run ends those same ones, never a war declared since.
 - **"faction N (name) is missing from the parties read"** in the board run's log: one read didn't find the party. If the
   next run still doesn't, its wars and pacts end. A run that reads no parties at all ends nothing and says so.
+
+**Outpost sieges.** Twice a week the outposts are the prize (`docs/SEASONS.md`, "Outpost sieges"): a capture
+during a window earns a bonus hour held, once per outpost per window. Faction claims are never opened. Off by
+default. `/function monkey:sieges/help` lists these:
+
+```
+/function monkey:sieges/staff/on        # outpost sieges on (a window due now opens within a second)
+/function monkey:sieges/staff/off       # off, and a window open now closes at once
+/function monkey:sieges/staff/status    # on or off, open or not, and the next window
+```
+
+- A window opens and closes by itself on the sieges timer's clock (`docs/LIVE.md`); without the timer
+  nothing opens.
+- Each siege is a staff event: rule 41's exemption holds inside an outpost's square while the window is open,
+  and nowhere else. Every other rule holds; a claim griefed during a siege is rolled back as always (rule 42).
+- To take back a bonus given by mistake: `scoreboard players remove #f3 op.min 60` (faction 3).
 
 **Attendance.** `/function monkey:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function monkey:events/attend` for everyone who came (joining the arena counts

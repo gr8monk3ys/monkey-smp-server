@@ -370,6 +370,21 @@ daily restart the file says offline, which is true. Before the launch it writes 
 are on). `python3 /srv/monkey/repo/tools/status.py schedule` prints the dates it counts down to; they come from
 `tools/season_calendar.py` and the event names from `tools/status.py`'s `SCHEDULE` (a copy of the Season I table
 in docs/SEASONS.md, kept in step by a test). A new season needs its rows there.
+### The sieges timer (the release with outpost sieges and 7-day wars)
+
+Once that release is live, install `monkey-sieges.timer` (`docs/SEASONS.md`, "Outpost sieges" and "7-day
+wars"):
+
+```sh
+sh /srv/monkey/repo/deploy/monkey-sieges.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install
+```
+
+It runs every 5 minutes (40 seconds past 2, 7, 12... minutes) as `monkey` and sends one command, the time
+and the next siege window, whether or not windows are on: the game has no calendar, and 7-day wars and the
+windows count from it. It reads only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env` and no world
+files. `--check` lists the coming windows. It changes nothing in game by itself: outpost sieges and 7-day wars
+stay off until staff turn them on (`docs/ADMIN.md`, "Outpost sieges").
 
 ### The news timer (the release with Monkey SMP news)
 

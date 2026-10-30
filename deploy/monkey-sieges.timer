@@ -1,0 +1,12 @@
+# Runs monkey-sieges.service every 5 minutes, 2 minutes 40 seconds past. The pack counts the seconds between
+# runs, so a window opens on time whichever run comes first; the server's own time zone doesn't matter. No
+# catching up at boot: the next run sets the clock.
+[Unit]
+Description=Monkey SMP: siege windows and the clock, every 5 minutes
+
+[Timer]
+OnCalendar=*-*-* *:02/5:40
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -38,14 +38,16 @@ def saved_time(when: dt.datetime) -> str:
     return when.astimezone(season_calendar.PACIFIC).strftime("%Y-%m-%d %H:%M:%S %z")
 
 
-def world(tmp_path, *, launched=True, season=1, held=None, advancements=None, parties=(), extra_scores=()):
+def world(tmp_path, *, launched=True, season=1, held=None, advancements=None, parties=(), extra_scores=(),
+          storage=None):
     """A saved world: the launch and season scores, firsts claims {id: (name, order)}, advancements {player:
-    {adv: when}}, parties [(party id, owner name, faction name or None)] and the usercache with every player."""
+    {adv: when}}, parties [(party id, owner name, faction name or None)], more of the monkey storage (diplomacy,
+    factions) and the usercache with every player."""
     rows = [("rw.day", "#launched", 1 if launched else 0), ("rw.day", "#season", season), *extra_scores]
     fake = FakeWorld(tmp_path / "server" / "world").scores(*rows)
-    if held:
-        fake.storage("monkey", {"firsts": {"held": {
-            k: {"name": name, "order": order, "week": 0} for k, (name, order) in held.items()}}})
+    if held or storage:
+        fake.storage("monkey", {**(storage or {}), "firsts": {"held": {
+            k: {"name": name, "order": order, "week": 0} for k, (name, order) in (held or {}).items()}}})
     for name, done in (advancements or {}).items():
         fake.advancements(PLAYERS[name], {adv: saved_time(when) for adv, when in done.items()})
     for party_id, owner, faction in parties:
@@ -180,6 +182,74 @@ def test_names_are_escaped_and_a_player_without_a_name_is_passed_over(tmp_path):
     assert news.challenge_items(folder, LAUNCH, saved_now) == []
 
 
+FACTION_NAMES = {"names": {"f1": {"text": "Red_Monkeys"}, "f2": {"text": "Blue Herons"}}}
+WARS = {"factions": FACTION_NAMES, "diplomacy": {"log": [{"kind": "declare", "a": 1, "b": 2, "n": 4}]}}
+
+
+def test_a_seven_day_war_posts_when_declared_and_when_it_ends(tmp_path):
+    log = [{"kind": "war", "a": 1, "b": 2, "n": 1},   # a war until Sunday's close stays in game and the recap
+           {"kind": "declare", "a": 1, "b": 2, "n": 4},
+           {"kind": "war_end", "a": 1, "b": 9, "n": 5, "how": "time", "ka": 3, "kb": 7},
+           {"kind": "war_end", "a": 1, "b": 2, "n": 6, "how": "peace", "ka": 2, "kb": 1},
+           {"kind": "war_end", "a": 1, "b": 2, "n": 7, "how": "staff", "ka": 0, "kb": 0}]
+    folder = world(tmp_path, storage={"factions": FACTION_NAMES,
+                                      "diplomacy": {"log": log, "gone": {"f9": {"text": "Gold Lemurs"}}}})
+    items = news.war_items(folder)
+    assert [(i.key, i.text) for i in items] == [
+        ("war:4", r"War: Red\_Monkeys declared a 7-day war on Blue Herons."),
+        ("war:5", r"Gold Lemurs won its war with Red\_Monkeys, 7 kills to 3."),   # a gone faction keeps its name
+        ("war:6", r"Red\_Monkeys and Blue Herons ended their war with a pact, 2 kills to 1."),
+    ]
+
+
+def test_a_war_post_waits_out_the_limits_even_after_the_close_trims_the_log(tmp_path):
+    folder = world(tmp_path, storage=WARS)
+    state, discord = tmp_path / "news", Discord()
+    entry = {"kind": news.WAR, "text": "x", "at": None, "order": 4, "seen": news.iso(AFTER), "status": news.PENDING}
+    st = news.new_state(1, AFTER)
+    st["items"]["war:4"] = entry
+    news.merge(st, [], AFTER, [], False)   # the log no longer has it
+    assert not entry.get("gone")
+    run(folder, state, AFTER, discord)
+    assert discord.lines == [r"War: Red\_Monkeys declared a 7-day war on Blue Herons."]
+
+
+def siege_rows(on=1, open_=0, opened=None, closed=None, now=None):
+    rows = [("sg", "#on", on), ("sg", "#open", open_)]
+    rows += [("sg", k, v) for k, v in (("#opened", opened), ("#closed", closed), ("#now", now)) if v is not None]
+    return rows
+
+
+OPENED = int(season_calendar.LAUNCH.timestamp()) // 60 + 4 * 24 * 60 + 2 * 60   # Wed 11 Nov, 7 PM Pacific
+
+
+def test_a_siege_window_posts_when_it_opens_and_when_it_closes_and_nothing_while_off(tmp_path):
+    def items(**kw):
+        return [(i.key, i.text) for i in news.siege_items(news.read_saved(world(tmp_path, extra_scores=siege_rows(
+            **kw))))]
+    assert items(open_=1, opened=OPENED, now=OPENED + 3) == [
+        (f"siege:open:{OPENED}", "Outpost siege open until 9 PM Pacific: capture an outpost for a bonus hour "
+                                 "held. Faction claims stay protected. `/trigger sieges` in game.")]
+    closed = OPENED + 120
+    assert items(opened=OPENED, closed=closed, now=closed + 10) == [
+        (f"siege:closed:{closed}", "The outpost siege is over: captures earn no bonus until the next one.")]
+    assert items(opened=OPENED, closed=closed, now=closed + news.CLOSE_FRESH + 1) == []   # old news
+    assert items(on=0, open_=1, opened=OPENED, now=OPENED) == []
+    assert items(on=0, closed=closed, now=closed) == []
+
+
+def test_an_open_post_that_missed_its_window_is_never_posted(tmp_path):
+    state, discord = tmp_path / "news", Discord()
+    rows = siege_rows(open_=1, opened=OPENED, now=OPENED)
+    run(world(tmp_path, extra_scores=rows), state, AFTER, discord)
+    assert discord.lines == [news.SIEGE_OPEN.format(end="9 PM")]
+    # the close is a new item; an open item no longer in the world is "gone" and waits, never posted late
+    shutil.rmtree(tmp_path / "server")
+    run(world(tmp_path, extra_scores=siege_rows(opened=OPENED, closed=OPENED + 120, now=OPENED + 125)), state,
+        AFTER + dt.timedelta(minutes=10), discord)
+    assert discord.lines[-1] == news.SIEGE_CLOSED
+
+
 # ---------------------------------------------------------------- posting
 
 
@@ -275,7 +345,7 @@ def test_every_kind_together_stays_under_the_daily_cap(tmp_path):
     held = {k: (NAMES[i % 4], i + 1) for i, k in enumerate(["nether", "raid", "beacon", "mace"])}
     advs = {"Alex_Fake": {adv: AFTER for adv in list(news.CHALLENGES)[:3]}}
     parties = [("p-a", "SamFake", "A Team")]
-    folder = world(tmp_path, held=held, advancements=advs, parties=parties)
+    folder = world(tmp_path, held=held, advancements=advs, parties=parties, storage=WARS)
     state, discord = tmp_path / "news", Discord()
     for minutes in range(0, 24 * 60, 10):
         run(folder, state, AFTER + dt.timedelta(minutes=minutes), discord)

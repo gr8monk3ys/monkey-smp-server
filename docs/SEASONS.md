@@ -252,6 +252,56 @@ record who is with whom.
 `tools/diplomacy.py` makes it, inside the `monkey-standings` data pack. It needs no timer of its own: the
 standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
 
+#### 7-day wars (off until staff turn them on)
+
+With `function monkey:diplomacy/staff/wars_on`, a declaration is a formal 7-day war instead of a war until
+Sunday's close. Off by default; `staff/wars_off` goes back (wars already declared run on to their end), and
+`staff/wars` lists the wars running (by faction number) and the game's clock.
+
+- **Declaring.** The leader picks War in `/trigger diplomacy` and gets a confirmation line first ("Declare war
+  on X?", what it means, and a Confirm button); nothing happens until they click it. Refused, with the reason: a
+  pact partner (break the pact first, which everyone is told; the 2-minute limit still applies), a faction
+  already at war with them, before the game knows the time (the siege timer's clock, below), and a faction
+  that declared a war in the last 48 hours (it says how many hours are left).
+- **Announced** in game with a raid horn, and in the public Discord channel by the news job.
+- **The score.** Each side's kills of the other, outside the event arena, the same kills the Kills column
+  counts (they still count twice there). A kill on a player who respawned less than 10 minutes ago (of their
+  own online time) doesn't count, neither in the score nor twice in the column (rule 5; `tools/respawn.py`). The killer sees the score in the action bar; `/trigger diplomacy`
+  shows it to everyone, in the "at war (7 days)" row.
+- **The end.** Exactly 7 days after the declaration (by the game's clock, within about a minute): the
+  faction with more kills wins, and everyone is told; equal kills is a draw. A pact accepted in between ends it
+  early, as peace; so does staff/end, and a faction that stops being one (its name is kept). Sunday's close
+  doesn't end a 7-day war. Every end goes in Sunday's standings post ("Blue Herons won its war with Red
+  Monkeys, 12 kills to 9"), and the result in the news channel.
+- **The clock.** The game has no calendar, so `deploy/monkey-sieges.sh` sends the time every 5 minutes, and
+  the game counts the minutes in between. That timer must run for 7-day wars even when outpost sieges are
+  off.
+
+### Outpost sieges (off until staff turn them on)
+
+Twice a week, at fixed hours, the four neutral outposts ("Outposts", below) are the prize: **Wednesday 7 to 9
+PM and Sunday 3 to 5 PM Pacific** (clear of Saturday's event and Sunday's 7 PM close). Faction claims are never
+opened: no feature touches Open Parties and Claims' protection, so rules 37, 39 and 42 hold during a siege as
+at any other time, and so does every combat rule (lava included, rule 18).
+
+- **The prize.** A faction that captures an outpost while a window is open gets a bonus 60 minutes held
+  (one standings point), on top of the minutes it then holds it. Once per outpost per window for each
+  faction: retaking the same outpost in the same window earns nothing more. It counts toward the outposts'
+  weekly cap (20 points), so a siege can't outweigh a column.
+- **A staff event.** Each siege is an official staff event, so rule 41's exemption applies inside an outpost's
+  square (the 25 x 25 capture zone) while the window is open: anyone can fight anyone there. Outside the
+  squares, and once the window closes, rule 41 applies again.
+- **Off by default.** `function monkey:sieges/staff/on` turns them on; `staff/off` turns them off (and closes
+  a window that is open); `staff/status` says the state. The hours are `WINDOWS` and `LENGTH` in
+  `tools/sieges.py`; change them there and run `python tools/datapacks.py`. The outposts must be on too
+  (`function monkey:outposts/on`, the default).
+- **Announced:** warnings in chat 30 and 5 minutes before a window opens; at the open, a title, a raid horn and
+  a chat line saying when it closes; at the close, a chat line. The news job posts both to the public Discord
+  channel. `/trigger sieges` says whether a window is open, or when the next one opens. The Town Crier names
+  the hours and says to check `/trigger sieges`.
+- **Needs** the siege timer (`deploy/monkey-sieges.sh --install`, docs/LIVE.md) and the launch
+  (`#launched rw.day`): nothing opens before it.
+
 ### Outposts
 
 Four capture points out in the newest land, so factions have somewhere to meet between events.
@@ -918,6 +968,11 @@ Built:
   offer and accept, no war on a partner, peace, a break, the limit of 2 pacts both ways, staff/end, and a
   deleted party missing on one run and gone on the next, its pact and war dissolved. Fixed then: a faction
   gone by the close was "faction N" in the post; it now keeps its name there. Not yet with real players.
+- 7-day wars and outpost sieges ("7-day wars", "Outpost sieges"): `tools/diplomacy.py` (the `monkey-standings`
+  pack), `tools/sieges.py` (the `monkey-sieges` pack), the capture bonus in `tools/outposts.py`, rule 5's guard
+  in `tools/respawn.py`, and `deploy/monkey-sieges.sh` with its 5-minute timer. Both off by default. A first
+  version opened every faction's claims during a window; it broke rules 18, 37, 39 and 42 and was replaced by
+  outpost sieges before it merged. What was tried in game is in the pull request (#96).
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `monkey-drops` data pack and `deploy/monkey-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat

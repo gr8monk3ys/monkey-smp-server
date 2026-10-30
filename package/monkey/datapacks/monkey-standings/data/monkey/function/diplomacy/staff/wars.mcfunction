@@ -1,0 +1,2 @@
+# The 7-day wars running: their factions' numbers (staff/factions has the names), and the clock.
+tellraw @s ["",{"text":"7-day wars on: ","color":"gold"},{"score":{"name":"#formal","objective":"dp.state"},"color":"yellow"},{"text":", running: ","color":"gray"},{"nbt":"wars","storage":"monkey:diplomacy","color":"white"},{"text":", clock (minute): ","color":"gray"},{"score":{"name":"#now","objective":"sg"},"color":"yellow"}]

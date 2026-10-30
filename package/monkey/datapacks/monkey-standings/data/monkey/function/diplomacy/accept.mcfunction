@@ -3,6 +3,7 @@ $scoreboard players reset #$(a).$(b) dp.offer
 $scoreboard players reset #$(b).$(a) dp.offer
 scoreboard players set #peace dp.tmp 0
 $execute if score #$(lo).$(hi) dp.war matches 1.. run scoreboard players set #peace dp.tmp 1
+$function monkey:diplomacy/wars/ended {lo:$(lo),hi:$(hi),how:"peace"}
 $scoreboard players reset #$(lo).$(hi) dp.war
 $scoreboard players set #$(lo).$(hi) dp.pact 1
 $scoreboard players add #f$(a) dp.pacts 1

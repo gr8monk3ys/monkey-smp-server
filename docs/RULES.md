@@ -132,6 +132,8 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       block them, heal them or take the loot.
     - Events are exempt. At KOTH, in the arena and at other staff events anyone can fight anyone; the rule
       applies again once you leave the event area.
+    - Outpost sieges are staff events: while a siege window is open, an outpost's square is the event area.
+      Sieges never open a faction's claims or territory.
     - First offense: a 2-day ban. Second: 5 days. Third: 14 days. Offenses count for the current season.
 42. Admins roll back griefing of a territory (rules 37 and 39) and an insider's damage (rule 40). A legal
     raid, on anything outside a territory's perimeter, isn't rolled back.

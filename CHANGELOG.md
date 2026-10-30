@@ -24,6 +24,20 @@
 - **The catch-up kit** (`tools/catchup.py`, off until `function monkey:catchup/on`): a first join from week 4
   gets iron tools, food, a bed and torches once, and a protection bubble (rule 26's grace) for 8 hours of play
   or until they hurt a player, shown on the action bar. Rule 26 now says so.
+- **Outpost sieges** (off until staff turn them on): two fixed windows a week, Wednesday 7 to 9 PM and Sunday
+  3 to 5 PM Pacific, when the neutral outposts are the prize: a capture earns a bonus hour held, once per
+  outpost per window. Each siege is a staff event (rule 41's exemption inside an outpost's square only).
+  Faction claims are never opened. Warnings 30 and 5 minutes ahead, announcements in game and in the news
+  channel, `/trigger sieges`, and a Town Crier line. `tools/sieges.py`, the `monkey-sieges` data pack and
+  `deploy/monkey-sieges.sh` with a 5-minute timer, which also gives the game the time. Staff:
+  `monkey:sieges/staff/on`, `off`, `status`.
+- **7-day wars** (off until staff turn them on with `monkey:diplomacy/staff/wars_on`): a leader confirms a
+  declaration, which then lasts 7 days; the faction with more kills of the other wins. No war on a pact
+  partner, one declaration per faction every 48 hours, the score in `/trigger diplomacy`, the winner
+  announced in game, in the news channel and in Sunday's standings post.
+- **Rule 5's guard** (`tools/respawn.py`): a kill on a player who respawned less than 10 minutes ago doesn't
+  count toward a war's score or count twice in the Kills column.
+- The news job posts at most 8 items a day (was 6), to make room for wars and sieges.
 
 ## [2.10.0] - 2026-10-29
 

@@ -47,6 +47,15 @@
   `/trigger monument`, Discord votes (by hand, docs/ADMIN.md), and the winner is announced in game and in the
   recap and kept in a hall of monuments that `tools/season.py carry` takes into the next season for warps.
 - Both ship **off**; staff switch them on (docs/SEASONS.md, "Switches").
+- Clip markers (`monkey-clips`, off until `function monkey:clips/on`): a Server First, a supply drop or Meteor
+  landing, the Hunted player's kill and an outpost taken each write a `MONKEY-CLIP` line in the server log, with
+  the players, their factions, the place and a title. `python3 tools/clips.py markers logs/ --world world/` prints them
+  as JSON for the clips tool, leaving out lines without the world's secret key (docs/ADMIN.md, "Clip markers").
+- The creator camera (`monkey-camera`, off until `function monkey:camera/on`): creators staff approve, in no
+  faction, toggle spectator with `/trigger camera` during an announced camera window, with camera warps (spawn,
+  the board, the outposts, the event on now), a 64-block leash in the Overworld checked every tick,
+  always starting at spawn, a 5-minute stream delay in its rules, and back where they were when
+  they stop (docs/ADMIN.md, "Creator camera").
 
 ## [2.10.0] - 2026-10-29
 

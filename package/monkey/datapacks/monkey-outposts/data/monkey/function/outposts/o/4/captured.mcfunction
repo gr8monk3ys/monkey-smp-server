@@ -6,4 +6,6 @@ execute as @e[type=minecraft:text_display,tag=op.l4] run data modify entity @s t
 execute store result storage monkey:outposts tmp.c int 1 run scoreboard players get #c op
 function monkey:outposts/o/4/taken with storage monkey:outposts tmp
 execute if score #open sg matches 1 run function monkey:outposts/o/4/siege with storage monkey:outposts tmp
+# A clip marker as the taker nearest the outpost's label (in the middle; no capture while contested).
+execute at @e[type=minecraft:text_display,tag=op.l4,limit=1] as @a[distance=..25,limit=1,sort=nearest,scores={st.faction=1..}] at @s run function monkey:clips/mark {kind:"outpost",title:"The West outpost is taken",other:""}
 execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.4 1.4

@@ -11,7 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/monkey/monkey.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/monkey/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/monkey/datapacks/monkey-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`) | `python tools/datapacks.py` |
+| `package/monkey/datapacks/monkey-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`, `clips.py`, `camera.py`) | `python tools/datapacks.py` |
 | `package/monkey/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
 | `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |

@@ -43,6 +43,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+import clips
 import saved_world
 from challenges import LAUNCHED
 from datapacks import NS, function_tag, lines, mcmeta, score_check, text
@@ -338,6 +339,7 @@ def claim_function(m: dict) -> str:
                                     {"text": f": {m['name']}", "color": "white"}),
         "title @a title " + text({"text": "Server First", "color": "gold", "bold": True}),
         "execute as @a at @s run playsound minecraft:ui.toast.challenge_complete master @s ~ ~ ~ 0.8 1",
+        clips.mark("first", f"Server First: {m['name']}"),
     )
 
 

@@ -1,0 +1,8 @@
+tellraw @s [{"text":"status","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/status"}},{"text":"  switch, window, who","color":"gray"}]
+tellraw @s [{"text":"on","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/on"}},{"text":"  ","color":"gray"}]
+tellraw @s [{"text":"off","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/off"}},{"text":"  ","color":"gray"}]
+tellraw @s [{"text":"set_spawn","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/set_spawn"}},{"text":"  stand at spawn","color":"gray"}]
+tellraw @s [{"text":"open {minutes:120}","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/open {minutes:120}"}},{"text":"  announced camera window","color":"gray"}]
+tellraw @s [{"text":"close","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/close"}},{"text":"  ","color":"gray"}]
+tellraw @s [{"text":"approve {name:\"Steve\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/approve {name:\"Steve\"}"}},{"text":"  staff only grant","color":"gray"}]
+tellraw @s [{"text":"revoke {name:\"Steve\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:camera/revoke {name:\"Steve\"}"}},{"text":"  ","color":"gray"}]

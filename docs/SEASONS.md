@@ -690,14 +690,21 @@ Built:
   and `/trigger standings`, bounties posted and claimed (one offline) with the Bounty Hunter title, and a Sunday
   run of `deploy/monkey-standings.sh` against a stand-in for docker. Not yet with real players or on the VPS.
 - The Sunday recap ("Where it shows", above): `tools/recap.py`, posted by the same Sunday close to the same
-  webhook. `monkey-standings.sh preview` prints it as it would post now. Tested with made-up worlds only:
-  not yet seen in Discord or run on the VPS.
+  webhook. `monkey-standings.sh preview` prints it as it would post now. Run on a test server on 30 October
+  2026 (Carpet fake players, no webhook): `monkey-standings.sh preview`, and a `close` of a backdated week,
+  which put the table on the board, ended the wars and trimmed the log. A week begun before the launch gets
+  the launch-weekend recap; a copy of the state dated after it showed the fighter, bounty and land lines.
+  Not yet seen in Discord or run on the VPS.
 
 - War and pacts ("War and pacts"): `tools/diplomacy.py`, in the `monkey-standings` data pack:
   `/trigger diplomacy`, war kills counted twice, the Sunday post's lines and the wars' end at the close, and
   each faction's number in game (`st.faction`), written by the hourly board run for other features to use
-  (docs/MAINTAINING.md, "The faction number in game"). Checked by the unit tests and the generated packs'
-  checks only: not yet tried in game.
+  (docs/MAINTAINING.md, "The faction number in game"). Tried on a test server on 30 October 2026 (Carpet
+  fake players, parties written into the world, the board run against a stand-in for docker): numbers and
+  leaders, nothing before the launch, members refused, war, the cooldown, a war kill counted twice, pact
+  offer and accept, no war on a partner, peace, a break, the limit of 2 pacts both ways, staff/end, and a
+  deleted party missing on one run and gone on the next, its pact and war dissolved. Fixed then: a faction
+  gone by the close was "faction N" in the post; it now keeps its name there. Not yet with real players.
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `monkey-drops` data pack and `deploy/monkey-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat
@@ -708,7 +715,11 @@ Built:
 - Server Firsts (docs/ADMIN.md, "Server Firsts"): `tools/firsts.py` and the `monkey-firsts` data pack. The
   first player to each of 14 milestones is announced to everyone and keeps it for the season;
   `/trigger firsts` lists them, and the most firsts earns the season's Pioneer title ("Ending a season",
-  step 4). Not yet tried in game.
+  step 4). Tried on a test server on 30 October 2026 (Carpet fake players): diamonds, the Nether and the End
+  claimed once each, repeats claim nothing, the End only once it opens, `firsts.py list` and `champion`.
+  Fixed then: the End's claim fires as the player changes dimension, where the name can't be read yet, so it
+  was kept with no name; the pack now fills the name in from the holder within a second. Not yet with real
+  players, and the other 11 milestones only through the unit tests.
 - Season Wrapped ("Ending a season", after step 8): `tools/wrapped.py` makes a page per player about their
   season for the site, from the final world, the standings' closed weeks and a starting point kept at the
   launch, with an opt-out list. Tried on made-up worlds only, not a real season's.
@@ -716,7 +727,11 @@ Built:
 - Outposts ("Outposts"): `tools/outposts.py`, the `monkey-outposts` data pack and `deploy/monkey-outposts.sh`
   with its hourly timer. Four capture points in the newest border ring, 6 or more chunks from every claim, 60
   seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
-  the live map. Checked by the unit tests and the generated packs' checks only: not yet tried in game.
+  the live map. Tried on a test server on 30 October 2026 (Carpet fake players, the tool against a stand-in
+  for docker): the survey placed 3 of 4 (every West candidate was ocean; the hourly run tries new ones), the
+  marker set written and BlueMap reloaded, a capture in 60 seconds, a second faction pausing it, minutes held
+  and the standings' Hold column, a new claim nearby marking it to move (no dry spot came up that hour, so it
+  stayed, still held), and `release`. Not yet with real players or on the VPS.
 
 - Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `monkey-omens` data
   pack and `deploy/monkey-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),
@@ -724,7 +739,11 @@ Built:
   the season has launched and no event or supply drop is on. The week's evenings, times and omens come from
   a secret the pack draws in game and keeps in the world, so nobody can work them out from the repo. Blood
   Moon, Meteor (through `tools/drops.py`), Truce Hour and Hunted (through the standings' bounty commands;
-  staff claim the bounty as for any other). Not yet tried in game.
+  staff claim the bounty as for any other). Tried on a test server on 30 October 2026 (Carpet fake players):
+  `omens.py plan`, and `send` at a faked evening, which started a Meteor that landed with its loot; Truce
+  Hour turning PvP off and `stop` turning it back on; a Blood Moon rising at nightfall on Hard, rousing a
+  zombie, a bonus drop for the kill and Normal back at dawn; and a Hunted player killed, ending the hunt.
+  Not yet with real players or on the VPS's timer.
 
 Not built:
 

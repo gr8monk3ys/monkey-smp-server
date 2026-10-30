@@ -137,6 +137,31 @@ def test_the_first_launch_clears_test_play_and_a_later_one_nothing():
         assert f"scoreboard players reset * rf.{m['id']}" in reopen
 
 
+def test_a_claim_whose_name_read_failed_is_named_later_where_its_holder_stands():
+    # Play-tested 2026-10-30: the End claim fires as the player changes dimension, where no chunk is loaded
+    # yet, so the head read gave "" and the board showed no holder. second retries at the holder.
+    claim = FILES[f"{FN}/claim/end.mcfunction"]
+    assert 'execute if data storage monkey:firsts held.end{name:""} run scoreboard players set #unnamed rf 1' in claim
+    assert claim.index("held.end.name set from") < claim.index("set #unnamed")
+    second = FILES[f"{FN}/second.mcfunction"].splitlines()   # every 10 seconds: a holder may be offline for days
+    assert ("execute if score #wait rf matches 10.. if score #unnamed rf matches 1.. run function monkey:firsts/rename"
+            in second)
+    assert "execute if score #wait rf matches 10.. run scoreboard players set #wait rf 0" in second
+    # A claim stored as {name:""} by an older pack never set #unnamed: load has rename check every first once.
+    assert "scoreboard players set #unnamed rf 1" in FILES[f"{FN}/load.mcfunction"]
+    rename = FILES[f"{FN}/rename.mcfunction"].splitlines()
+    assert rename[2] == "scoreboard players set #unnamed rf 0"                # cleared first, set again by one
+    assert rename[3:] == [f'function monkey:firsts/rename/one {{id:"{m["id"]}"}}' for m in firsts.MILESTONES]
+    one = FILES[f"{FN}/rename/one.mcfunction"].splitlines()
+    assert one[1] == '$execute unless data storage monkey:firsts held.$(id){name:""} run return 0'
+    # The name is cleared before the read, so an offline holder's first never gets another player's name.
+    assert one.index('data modify storage monkey:firsts name set value ""') < one.index(
+        "$execute as @a[scores={rf.$(id)=1..},limit=1] at @s run function monkey:firsts/name")
+    assert one[-2:] == ["$data modify storage monkey:firsts held.$(id).name set from storage monkey:firsts name",
+                        '$execute if data storage monkey:firsts held.$(id){name:""} run scoreboard players set '
+                        "#unnamed rf 1"]
+
+
 def test_load_keeps_claims_and_the_trigger_lists_every_milestone():
     load = FILES[f"{FN}/load.mcfunction"]
     assert "scoreboard objectives add firsts trigger" in load

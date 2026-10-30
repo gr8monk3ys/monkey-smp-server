@@ -292,3 +292,33 @@ def test_the_day_keeps_its_first_try_in_systemds_state_directory(monkeypatch):
     assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given == [Path("/var/lib/monkey-day/pending")]
     monkeypatch.delenv("STATE_DIRECTORY")
     assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given[-1] is None   # run by hand: no limit
+
+
+def test_season_skins_come_from_the_season_number_and_keep_every_trigger_value():
+    """Season II's blade is everyone's who plays while #season is 2, as Founder's Edge is Season I's. It and the
+    champion's helm were added at the end of their lists, so no Season I skin's trigger value moved."""
+    data = wardrobe.datapack_files()
+    second = data["data/monkey/function/wardrobe/second.mcfunction"]
+    assert "execute if score #season rw.day matches 2 run scoreboard players set @a rw.s2 1" in second
+    values = {s["id"]: value for value, _, s in wardrobe.skins()}
+    assert (values["pinnacle"], values["twinmoon"]) == (118, 119)
+    assert (values["founders_circlet"], values["champions_helm"]) == (208, 209)
+    for objective in (*wardrobe.SEASON_SKINS, wardrobe.CHAMPION):
+        assert objective not in wardrobe.SOLD and objective in wardrobe.NOTIFY
+        assert wardrobe.page((objective, 1)) == wardrobe.MENU_CHALLENGES
+    assert wardrobe.how_to_unlock(("rw.s2", 1)) == "Played during Season II"
+    assert wardrobe.earned_for((wardrobe.CHAMPION, 1)) == "winning the season"
+
+
+def test_later_season_skins_stay_out_of_season_ones_menu_until_owned():
+    """Season I's menu doesn't change: a skin with shown_from shows locked only from that season, and owned
+    whenever its score says so (the champion's helm is set in Season I's world, after the finale)."""
+    menu = wardrobe.datapack_files()["data/monkey/function/wardrobe/menu_challenges.mcfunction"].splitlines()
+    gated = [s for _, _, s in wardrobe.skins() if "shown_from" in s]
+    assert {s["id"] for s in gated} == {"twinmoon", "champions_helm"}
+    for s in gated:
+        objective, n = s["unlock"]
+        locked = [line for line in menu if line.startswith(f"execute unless score @s {objective} matches {n}.. ")]
+        owned = [line for line in menu if line.startswith(f"execute if score @s {objective} matches {n}.. run ")]
+        assert len(locked) == 1 and f" if score #season rw.day matches {s['shown_from']}.. run tellraw" in locked[0]
+        assert len(owned) == 1

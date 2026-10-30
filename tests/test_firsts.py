@@ -137,6 +137,27 @@ def test_the_first_launch_clears_test_play_and_a_later_one_nothing():
         assert f"scoreboard players reset * rf.{m['id']}" in reopen
 
 
+def test_a_claim_whose_name_read_failed_is_named_later_where_its_holder_stands():
+    # Play-tested 2026-10-30: the End claim fires as the player changes dimension, where no chunk is loaded
+    # yet, so the head read gave "" and the board showed no holder. second retries at the holder.
+    claim = FILES[f"{FN}/claim/end.mcfunction"]
+    assert 'execute if data storage monkey:firsts held.end{name:""} run scoreboard players set #unnamed rf 1' in claim
+    assert claim.index("held.end.name set from") < claim.index("set #unnamed")
+    assert ("execute if score #unnamed rf matches 1.. run function monkey:firsts/rename"
+            in FILES[f"{FN}/second.mcfunction"])
+    rename = FILES[f"{FN}/rename.mcfunction"].splitlines()
+    assert rename[2] == "scoreboard players set #unnamed rf 0"                # cleared first, set again below
+    for m in firsts.MILESTONES:
+        fid = m["id"]
+        assert (f'execute if data storage monkey:firsts held.{fid}{{name:""}} as @a[scores={{rf.{fid}=1..}},'
+                f"limit=1] at @s run function monkey:firsts/rename/{fid}") in rename
+        assert (f'execute if data storage monkey:firsts held.{fid}{{name:""}} run scoreboard players set #unnamed rf 1'
+                in rename)
+        assert FILES[f"{FN}/rename/{fid}.mcfunction"].splitlines() == [
+            "function monkey:firsts/name",
+            f"data modify storage monkey:firsts held.{fid}.name set from storage monkey:firsts name"]
+
+
 def test_load_keeps_claims_and_the_trigger_lists_every_milestone():
     load = FILES[f"{FN}/load.mcfunction"]
     assert "scoreboard objectives add firsts trigger" in load

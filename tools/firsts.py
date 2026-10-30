@@ -58,7 +58,8 @@ FN = f"data/{NS}/function/firsts"
 ADVANCEMENT = f"data/{NS}/advancement/firsts"
 STORE = f"{NS}:firsts"
 KEY = "firsts"              # STORE's key in the namespace's command storage file
-OBJ = "rf"                  # #<id>: 1 once claimed; #claimed: how many claims so far this season
+OBJ = "rf"                  # #<id>: 1 once claimed; #claimed: how many claims so far this season;
+                            # #unnamed: 1 while a claim waits for its holder's name
 TRIGGER = "firsts"
 NAME_TAG = "rf.name"        # the item display that reads a holder's name for a moment
 NETHERITE_STALE = 100       # ticks: an older stamp means the no-Netherite-armor pack is off
@@ -312,6 +313,8 @@ def claim_function(m: dict) -> str:
         f"data modify storage {STORE} held.{fid}.name set from storage {STORE} name",
         f"execute store result storage {STORE} held.{fid}.order int 1 run scoreboard players get #claimed {OBJ}",
         f"execute store result storage {STORE} held.{fid}.week int 1 run scoreboard players get #week rc.week",
+        "# The name can't be read where no chunk is loaded (as the player changes dimension): second fills it in.",
+        f"execute if data storage {STORE} held.{fid}{{name:\"\"}} run scoreboard players set #unnamed {OBJ} 1",
         "tellraw @a " + text("", {"text": "Server First! ", "color": "gold", "bold": True},
                              {"selector": "@s", "color": "yellow"},
                              {"text": " is the first on the server to ", "color": "gold"},
@@ -385,8 +388,23 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/second.mcfunction"] = lines(
         f"scoreboard players enable @a {TRIGGER}",
         f"execute if score {LAUNCHED} matches 1 run function {NS}:firsts/clean",
+        f"execute if score #unnamed {OBJ} matches 1.. run function {NS}:firsts/rename",
         f"schedule function {NS}:firsts/second 20t replace",
     )
+    f[f"{FN}/rename.mcfunction"] = lines(
+        "# A first claimed without its holder's name (the read failed): read it again where the holder stands",
+        "# once they are online, and keep #unnamed set while any is still missing.",
+        f"scoreboard players set #unnamed {OBJ} 0",
+        *(f"execute if data storage {STORE} held.{m['id']}{{name:\"\"}} as @a[scores={{{OBJ}.{m['id']}=1..}},"
+          f"limit=1] at @s run function {NS}:firsts/rename/{m['id']}" for m in MILESTONES),
+        *(f"execute if data storage {STORE} held.{m['id']}{{name:\"\"}} run scoreboard players set #unnamed {OBJ} 1"
+          for m in MILESTONES),
+    )
+    for m in MILESTONES:
+        f[f"{FN}/rename/{m['id']}.mcfunction"] = lines(
+            f"function {NS}:firsts/name",
+            f"data modify storage {STORE} held.{m['id']}.name set from storage {STORE} name",
+        )
     f[f"{FN}/tick.mcfunction"] = lines(f"execute as @a[scores={{{TRIGGER}=1..}}] run function {NS}:firsts/use")
     f[f"{FN}/name.mcfunction"] = lines(
         f"# Puts this player's name in storage {STORE} name (\"\" if it can't), through a player head of them",

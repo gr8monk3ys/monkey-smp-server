@@ -11,7 +11,8 @@ RCON, through sync() here. That is the in-game faction identity other features b
                       component {text:"Red Monkeys"} (plain ASCII, no quotes; show it with
                       {"nbt":"names.f<N>","storage":"monkey:factions","interpret":true}, as the board's text is);
                       ids.f<N>, the party's id. names.f<N> goes when the party does (missing from two runs
-                      in a row, so one bad read ends nothing); ids.f<N> stays.
+                      in a row, so one bad read ends nothing); ids.f<N> stays, and the name it had is kept
+                      in monkey:diplomacy gone.f<N> for the Sunday post's lines about it.
 
 A number belongs to one party for the life of the world and is never given to another; a new season's world
 numbers its factions again from 1. It is only as fresh as the last board run: up to an hour behind, plus the 5
@@ -283,9 +284,11 @@ def report(storage: dict | None, scores: dict[str, dict[str, int]], before: dict
     log = [e for e in storage.get("diplomacy", {}).get("log", []) if isinstance(e, dict)]
     newest = max((int(e.get("n", 0)) for e in log), default=0)
     known = saved_names(storage)
+    gone = {n: name_text(v) for key, v in storage.get("diplomacy", {}).get("gone", {}).items()
+            if (n := number_of(key))}
 
     def name(n) -> str:
-        return discord_name(known.get(int(n), f"faction {n}"))
+        return discord_name(known.get(int(n)) or gone.get(int(n)) or f"faction {n}")
     week = [e for e in sorted(log, key=lambda e: int(e.get("n", 0))) if int(e.get("n", 0)) > since]
     events = [SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0))) for e in week
               if e.get("kind") in SAID]
@@ -686,7 +689,9 @@ def datapack_files() -> dict[str, str]:
         f"$data remove storage {STORE} missing.f$(n)",
     )
     f[f"{FN}/sync/gone.mcfunction"] = lines(
-        "# Missing on two runs in a row: the faction is gone (its war and pacts were dissolved just before).",
+        "# Missing on two runs in a row: the faction is gone (its war and pacts were dissolved just before). Its",
+        "# name is kept apart, for the Sunday post's lines about its week (report()).",
+        f"$data modify storage {STORE} gone.f$(n) set from storage {FACTIONS} names.f$(n)",
         f"$data remove storage {FACTIONS} names.f$(n)",
         f"$data remove storage {STORE} missing.f$(n)",
     )

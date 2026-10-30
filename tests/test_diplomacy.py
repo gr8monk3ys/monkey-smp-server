@@ -255,6 +255,16 @@ def test_the_report_has_this_weeks_declarations_and_the_pacts_standing():
     ]
 
 
+def test_a_faction_gone_by_the_close_keeps_its_name_in_the_post():
+    # Play-tested 2026-10-30: a party deleted midweek was "faction 1" in the post. sync/gone keeps the name aside.
+    gone = fn("sync/gone").splitlines()
+    keep = "$data modify storage monkey:diplomacy gone.f$(n) set from storage monkey:factions names.f$(n)"
+    assert gone.index(keep) < gone.index("$data remove storage monkey:factions names.f$(n)")
+    got = diplomacy.report({"diplomacy": {"log": LOG, "gone": {"f9": {"text": "Gold_Lemurs"}, "f3": "Old Name"}},
+                            "factions": {"names": NAMES}}, {}, {"diplomacy_seq": 7})
+    assert got["diplomacy"][1] == "- Gold\\_Lemurs and Red Monkeys made peace, and a pact"   # a live name wins
+
+
 def test_a_quiet_week_reports_nothing_and_a_new_world_starts_the_count_again():
     assert diplomacy.report({}, {}, {}) == {"diplomacy": [], "diplomacy_seq": 0, "diplomacy_world": None}
     here = {"dp.state": {"#world": 5}}

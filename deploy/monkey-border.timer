@@ -1,0 +1,12 @@
+# Runs monkey-border.service every hour at 1 past, so an act at 6 PM Pacific lands at 6:01, clear of the drops'
+# and omens' 10-minute slots, the challenges clock (30 seconds past) and the outposts (45 past). Catches up at
+# boot: an act missed while the machine was off still happens.
+[Unit]
+Description=Monkey SMP: border acts, every hour
+
+[Timer]
+OnCalendar=*-*-* *:01:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

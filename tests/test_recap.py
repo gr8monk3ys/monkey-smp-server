@@ -336,6 +336,25 @@ def test_the_biggest_mover_is_matched_by_party_id():
     assert recap.mover(week) == ["**Biggest mover:** Herons, up 2 places to 1st."]
 
 
+def test_the_player_of_the_week_is_the_top_factions_best_from_season_two():
+    rows = [{"id": "p-red", "name": "Red Monkeys", "rank": 1, "members": ["AlexFake", "SamFake"]},
+            {"id": "p-blue", "name": "Blue Herons", "rank": 2, "members": ["RiaFake"]}]
+    scores = {"rw.day": {"#season": 2}, "st.kills": {"AlexFake": 2, "SamFake": 2, "RiaFake": 9},
+              "rw.challenges": {"AlexFake": 4, "SamFake": 5}}
+    start = {"start": WEEK_ONE.isoformat(), "kills": {}, "recap": {"launched": True, "scores": {"rw.challenges": {}}}}
+    week = recap.Week(rows, standings.World([], {}, scores, {}), start, None, WEEK_ONE + dt.timedelta(weeks=1))
+    # Ria has the most kills, but Blue isn't first: Red's two are tied on kills, and Sam did more challenges.
+    assert recap.player_of_the_week(week) == [
+        "**Player of the Week:** SamFake (Red Monkeys, 1st), 2 PvP kills and 5 challenges."]
+    scores["st.kills"] = {"RiaFake": 9}
+    scores["rw.challenges"] = {}
+    assert recap.player_of_the_week(week) == []   # nobody in the top faction did either
+    scores["rw.day"]["#season"] = 1
+    scores["st.kills"] = {"AlexFake": 3}
+    assert recap.player_of_the_week(week) == []   # Season I: never
+    assert recap.player_of_the_week in recap.SECTIONS
+
+
 def test_land_counts_chunks_claimed_not_the_net_change(tmp_path):
     then = {PLAYERS["AlexFake"]: 4, PLAYERS["RiaFake"]: 1}
     world = standings.read_world(make_world(tmp_path, LAUNCHED, land={"AlexFake": 1, "RiaFake": 4}))

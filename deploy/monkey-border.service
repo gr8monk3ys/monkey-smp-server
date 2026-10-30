@@ -1,0 +1,12 @@
+# Grows the world border on the season's border acts and fits the live map to it (deploy/monkey-border.sh,
+# tools/border.py). Started every hour by monkey-border.timer; install with
+# `sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: border acts
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-border.sh

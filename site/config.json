@@ -5,5 +5,6 @@
   "MODPACK_URL": "pack/MonkeySMP-Client-2.10.0.mrpack",
   "INSTALLER_URL": "pack/MonkeySMP-Player-2.10.0.zip",
   "MAP_URL": "https://map.monkeysmp.lscaturchio.xyz",
+  "STATUS_URL": "https://map.monkeysmp.lscaturchio.xyz/status.json",
   "LAUNCH_AT": "2026-11-08T01:00:00Z"
 }

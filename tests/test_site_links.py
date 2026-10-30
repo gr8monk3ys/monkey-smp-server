@@ -14,6 +14,7 @@ SETTINGS = {
     "MODPACK_URL": "pack/MonkeySMP-Client-1.2.3.mrpack",
     "INSTALLER_URL": "pack/MonkeySMP-Player-1.2.3.zip",
     "MAP_URL": "https://map.example.com/?a=1&b=2",
+    "STATUS_URL": "https://map.example.com/status.json",
     "LAUNCH_AT": LAUNCH,
 }
 

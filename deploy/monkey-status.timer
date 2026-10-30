@@ -1,0 +1,11 @@
+# Runs monkey-status.service every 2 minutes, 15 seconds past (the website's status says when it was checked, and
+# Caddy lets browsers keep the file for a minute). No catching up at boot: a missed run is just the next one.
+[Unit]
+Description=Monkey SMP: website status, every 2 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/2:15
+Persistent=false
+
+[Install]
+WantedBy=timers.target

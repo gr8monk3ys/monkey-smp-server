@@ -30,6 +30,10 @@
 .doc h2 { margin: 56px 0 14px; font: 700 1.6rem/1.15 var(--display); color: var(--bone); }
 .doc h3 { margin: 36px 0 10px; font: 700 1rem/1.3 var(--body); color: var(--sage); }
 .doc > .lede + h2, .doc > .lede + .prose > h2:first-child { margin-top: 0; }
+/* The guide hub's status line (components/status.tsx) sits under the lede, and the first heading after it. */
+.doc > .lede:has(+ .status-line) { margin-bottom: 16px; }
+.doc > .status-line { margin: 0 0 40px; max-width: var(--measure); }
+.doc > .status-line + .prose > h2:first-child { margin-top: 0; }
 .doc > .small { max-width: var(--measure); }
 .doc .after { margin-top: 28px; }
 .prose { max-width: var(--measure); }

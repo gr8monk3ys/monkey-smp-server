@@ -1,0 +1,2 @@
+execute if score @s rq.guide matches 1.. run return run tellraw @s [" ",{"text":"Talk to the Guide at spawn","color":"green","hover_event":{"action":"show_text","value":"Right-click the Guide, the gold name at spawn."}},{"text":"  done","color":"green"}]
+tellraw @s [" ",{"text":"Talk to the Guide at spawn","color":"white","hover_event":{"action":"show_text","value":"Right-click the Guide, the gold name at spawn."}},{"text":"  (hover: how)","color":"dark_gray"}]

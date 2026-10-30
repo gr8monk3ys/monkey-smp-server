@@ -1,0 +1,47 @@
+{
+  "criteria": {
+    "bed": {
+      "trigger": "minecraft:any_block_use",
+      "conditions": {
+        "player": {
+          "type": "minecraft:all_of",
+          "terms": [
+            {
+              "type": "minecraft:entity_scores",
+              "entity": "this",
+              "scores": {
+                "rq.state": {
+                  "min": 1,
+                  "max": 1
+                }
+              }
+            },
+            {
+              "type": "minecraft:inverted",
+              "term": {
+                "type": "minecraft:entity_scores",
+                "entity": "this",
+                "scores": {
+                  "rq.home": {
+                    "min": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "location": {
+          "type": "minecraft:location_check",
+          "predicate": {
+            "block": {
+              "blocks": "#minecraft:beds"
+            }
+          }
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "monkey:quest/reward/home"
+  }
+}

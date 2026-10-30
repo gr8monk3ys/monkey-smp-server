@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **First-week quest**: five steps for a player new this season (talk to the Guide, set your spawn at a bed,
+  join or start a faction, claim a chunk, visit an outpost), shown with `/trigger quest` or the Guide's "Your
+  first week", with the Pathfinder blade at the end. Veterans are never signed up; [Hide] stops it. Each step
+  reads a score another pack already keeps (docs/RETENTION.md, "The first week"). The Guide must be placed
+  again, and players need the new client pack for the blade.
+- **Weekly server goal**: one shared target a week from vanilla statistics (logs, mobs, diamonds, fish, trades,
+  breeding, ancient debris), shown under the week's challenges, announced at half way and at the target, with
+  a title and fireworks over the standings board at spawn. It is in the Sunday recap (docs/RETENTION.md, "The
+  weekly server goal"; `python tools/goal.py schedule`).
+- Both ship on and stay dormant until the launch; staff switch them with `function monkey:quest/off` and
+  `function monkey:goal/off` (docs/SEASONS.md, "Switches").
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

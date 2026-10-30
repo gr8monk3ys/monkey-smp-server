@@ -23,6 +23,7 @@ execute if score @s wardrobe matches 116 run function monkey:wardrobe/skin/regal
 execute if score @s wardrobe matches 117 run function monkey:wardrobe/skin/trailblazer
 execute if score @s wardrobe matches 118 run function monkey:wardrobe/skin/pinnacle
 execute if score @s wardrobe matches 119 run function monkey:wardrobe/skin/twinmoon
+execute if score @s wardrobe matches 120 run function monkey:wardrobe/skin/pathfinder
 execute if score @s wardrobe matches 201 run function monkey:wardrobe/skin/laurel
 execute if score @s wardrobe matches 202 run function monkey:wardrobe/skin/horned
 execute if score @s wardrobe matches 203 run function monkey:wardrobe/skin/plumed

@@ -11,3 +11,4 @@ scoreboard players operation #explore rc.week = #week rc.week
 execute if score #explore rc.week matches ..-1 run scoreboard players set #explore rc.week 0
 scoreboard players set #count rc.week 4
 scoreboard players operation #explore rc.week %= #count rc.week
+function monkey:goal/pick

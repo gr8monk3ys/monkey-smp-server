@@ -43,6 +43,8 @@ import zlib
 from pathlib import Path
 
 import challenges
+import goal
+import quest
 import rcon as server
 from challenges import FOUNDER_MINUTES
 from datapacks import NS, function_tag, mcmeta, text
@@ -77,7 +79,8 @@ SEASON_SKINS = {"rw.s2": (2, "II")}
 CHAMPION = "rw.champion"
 # Scores that can jump while a player is online (the store, staff, an event): crossing a skin's threshold
 # says so in chat. Days say so in new_day; hours and tiers don't.
-NOTIFY = ["rw.months", "rw.events", *HOLIDAYS, "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION]
+NOTIFY = ["rw.months", "rw.events", *HOLIDAYS, "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION,
+          quest.REWARD]
 # The scores the Tebex store sets (docs/RETENTION.md). Event, holiday, challenge and launch skins must never
 # use them.
 SOLD = {"rw.months", "rw.tier"}
@@ -128,6 +131,11 @@ BLADES = [
     # the season its locked line first shows in the menu, so Season I's menu stays as it was.
     dict(id="twinmoon", name="Twinmoon", unlock=("rw.s2", 1), broad=True, runes=(8, 12), shown_from=2,
          pal="o0d1226 Ldfe8ff M8fa3d6 D4a5a8f Rfff6d0 Gc0c8d8 g7d8699 H2a2f52 h1a1d36 Pfff6d0"),
+    # The first-week quest's (tools/quest.py), added at the end so no other skin's trigger value moves. shown_if:
+    # its locked line shows only to players taking the quest, so veterans' menus stay as they were.
+    dict(id="pathfinder", name="Pathfinder", unlock=(quest.REWARD, 1), runes=(9, 12),
+         shown_if=f"score @s {quest.STATE} matches {quest.ON}..",
+         pal="o14200f Le8f5d0 M9cc46a D5b8a35 Rffe9a0 G8a5a2b g5c3a1a H3d5a2a h26391a Pffe9a0"),
 ]
 
 # Helm icons are drawn as text; '.' is clear, and an outline is added around everything else.
@@ -522,6 +530,8 @@ def how_to_unlock(unlock) -> str:
         return f"Played during Season {SEASON_SKINS[objective][1]}"
     if objective == CHAMPION:
         return "The season champion's faction"
+    if objective == quest.REWARD:
+        return "Finished the first-week quest (/trigger quest)"
     if objective in HOLIDAYS:
         name, when = HOLIDAYS[objective]
         return f"From the {name} event ({when})"
@@ -539,6 +549,8 @@ def earned_for(unlock) -> str:
         return f"playing in Season {SEASON_SKINS[objective][1]}"
     if objective == CHAMPION:
         return "winning the season"
+    if objective == quest.REWARD:
+        return "finishing your first week"
     one, many = SCORES[objective]
     return f"{n} {one if n == 1 else many}"
 
@@ -574,7 +586,7 @@ def datapack_files() -> dict[str, str]:
     objectives = ["wardrobe trigger", "rw.play minecraft.custom:minecraft.play_time", "rw.hours dummy",
                   "rw.days dummy", "rw.lastday dummy", "rw.months dummy", "rw.invites dummy", "rw.tier dummy",
                   "rw.founder dummy", "rw.day dummy", "rw.const dummy", "rw.events dummy", "rw.playbase dummy",
-                  "rw.challenges dummy", "rw.launch dummy", "rw.launchtime dummy",
+                  "rw.challenges dummy", "rw.launch dummy", "rw.launchtime dummy", f"{quest.REWARD} dummy",
                   *(f"{o} dummy" for o in HOLIDAYS), *(f"{o} dummy" for o in SEASON_SKINS),
                   f"{CHAMPION} dummy", *(f"{o}.seen dummy" for o in NOTIFY)]
     f[f"{fn}/load.mcfunction"] = "\n".join([
@@ -585,18 +597,22 @@ def datapack_files() -> dict[str, str]:
         "scoreboard players add #today rw.day 0",
         "# The first season runs until staff set #season to 2; everyone who plays in it is a founder.",
         "execute unless score #season rw.day matches -2147483648.. run scoreboard players set #season rw.day 1",
+        f"function {NS}:quest/load",
+        "# Before challenges/load, which picks the week's goal (goal/pick) with its scores.",
+        f"function {NS}:goal/load",
         f"function {NS}:challenges/load",
         f"schedule function {NS}:wardrobe/second 20t replace",
     ]) + "\n"
     f[f"{fn}/tick.mcfunction"] = (f"execute as @a[scores={{wardrobe=1..}}] run function {NS}:wardrobe/use\n"
-                                  f"execute as @a[scores={{challenges=1..}}] run function {NS}:challenges/use\n")
+                                  f"execute as @a[scores={{challenges=1..}}] run function {NS}:challenges/use\n"
+                                  f"execute as @a[scores={{{quest.TRIGGER}=1..}}] run function {NS}:quest/use\n")
     f[f"{fn}/second.mcfunction"] = "\n".join([
         "# Once a second: let everyone use the trigger, count days and hours, mark founders, keep the launch",
         "# weekend's window and the weekly challenges going, announce unlocks.",
         "scoreboard players enable @a wardrobe",
         *(f"scoreboard players add @a {o} 0" for o in (
             "rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder", "rw.events", *HOLIDAYS, "rw.playbase",
-            "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION)),
+            "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION, quest.REWARD)),
         "execute as @a run scoreboard players operation @s rw.hours = @s rw.play",
         "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase",
         "scoreboard players operation @a rw.hours /= #hour rw.const",
@@ -606,6 +622,8 @@ def datapack_files() -> dict[str, str]:
         f"execute as @a unless score @s rw.lastday = #today rw.day run function {NS}:wardrobe/new_day",
         f"function {NS}:wardrobe/founder/second",
         f"function {NS}:challenges/second",
+        f"function {NS}:quest/second",
+        f"function {NS}:goal/second",
         *(f"execute as @a unless score @s {o}.seen = @s {o} run function {NS}:wardrobe/notice/{o[3:]}"
           for o in NOTIFY),
         f"schedule function {NS}:wardrobe/second 20t replace",
@@ -679,6 +697,7 @@ def datapack_files() -> dict[str, str]:
                 "tellraw @s " + text(*line)]
         if number == MENU_CHALLENGES:
             menu.append(f"function {NS}:challenges/lines")
+            menu.append(f"function {NS}:goal/line")
         last = None
         for value, kind, s in skins():
             if page(s["unlock"]) != number:
@@ -696,6 +715,7 @@ def datapack_files() -> dict[str, str]:
                 {"text": f"  {how}", "color": "dark_gray"}))
             # A later season's skin is hidden until that season, unless owned (the champion's, set after a finale).
             shown = f" if score #season rw.day matches {s['shown_from']}.." if "shown_from" in s else ""
+            shown += f" if {s['shown_if']}" if "shown_if" in s else ""
             menu.append(f"execute unless {condition(s['unlock'])}{shown} run tellraw @s " + text(
                 " ", {"text": s["name"], "color": "gray",
                       "hover_event": {"action": "show_text", "value": f"Locked: {how}"}},
@@ -716,6 +736,8 @@ def datapack_files() -> dict[str, str]:
 
     f.update(founder_files())
     f.update(challenges.datapack_files())
+    f.update(quest.datapack_files())
+    f.update(goal.datapack_files())
 
     def refuse(msg):
         return "return run tellraw @s " + text({"text": msg, "color": "red"})

@@ -24,6 +24,10 @@
         ],
         ON_INTERACTION:[
           {
+            Cmd:"set:rq.guide:1",
+            Type:"SCOREBOARD"
+          },
+          {
             Type:"OPEN_DEFAULT_DIALOG"
           }
         ]
@@ -57,6 +61,23 @@
               ],
               Label:"default_factions",
               Name:"Find a faction"
+            },
+            {
+              Actions:[
+                {
+                  Type:"CLOSE_DIALOG"
+                },
+                {
+                  Cmd:"set:rq.guide:1",
+                  Type:"SCOREBOARD"
+                },
+                {
+                  Cmd:"set:quest:1",
+                  Type:"SCOREBOARD"
+                }
+              ],
+              Label:"default_quest",
+              Name:"Your first week"
             },
             {
               Actions:[
@@ -103,7 +124,7 @@
           Priority:10,
           Texts:[
             {
-              Text:"Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open this week's challenges, the faction standings and your wardrobe."
+              Text:"Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your wardrobe."
             }
           ]
         },

@@ -468,7 +468,27 @@ def sync_factions(rcon, folder: Path, data: World) -> int:
     factions = [diplomacy.Faction(p.id, board_name(p.name) or board_name(p.owner) or p.id[:8], p.members)
                 for p in data.parties]
     unsure = frozenset(p.id for p in saved_world.parties(folder) or [] if p.owner is None)
-    return diplomacy.sync(rcon, factions, data.scores, folder, warn, unsure)
+    # In the same batch: who has claimed land (the first-week quest's step), so an hour costs no extra command.
+    changes = (diplomacy.sync_changes(factions, data.scores, diplomacy.saved_storage(folder), warn, unsure)
+               + claimed_changes(data, usernames(folder)))
+    for command in diplomacy.batch_commands(changes):
+        rcon(command)
+    return len(changes)
+
+
+CLAIMED = "st.claimed"   # 1: the player has claimed land (the first-week quest's step, tools/quest.py)
+
+
+def claimed_changes(data: World, names: dict[str, str]) -> list[dict]:
+    """st.claimed 1 for each player who holds claimed chunks and doesn't have it in game yet. Never set back to
+    0: giving land up later takes the step back from nobody. A UUID with no name in usercache is left out."""
+    have = data.scores.get(CLAIMED, {})
+    out = []
+    for uuid, chunks in sorted(data.claims.items()):
+        name = names.get(uuid)
+        if chunks > 0 and name and have.get(name) != 1:
+            out.append(diplomacy.change("sync/set", p=name, o=CLAIMED, v=1))
+    return out
 
 
 def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
@@ -633,6 +653,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard objectives add {BOUNTY} dummy",
         "scoreboard objectives add st.ver dummy",
         "scoreboard objectives add standings trigger",
+        f"scoreboard objectives add {CLAIMED} dummy",
         "# The bounty title: a team, like the supporter titles (docs/RETENTION.md). It lasts the season.",
         f"team add {team}",
         f"team modify {team} color {color}",

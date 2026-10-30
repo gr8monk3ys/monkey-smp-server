@@ -77,7 +77,8 @@ def chat_lines(data: dict, function: str) -> int:
 
 def test_each_menu_page_fits_open_chat():
     """Open chat shows 20 lines. Each page prints a header (two lines), the counts, one title per item kind, one
-    line per skin and two footer lines; the challenges page also prints one line per challenge that is on."""
+    line per skin and two footer lines; the challenges page also prints one line per challenge that is on, and
+    the weekly server goal's line (counted by chat_lines: goal/line)."""
     data = wardrobe.datapack_files()
     use = data["data/monkey/function/wardrobe/use.mcfunction"]
     pages = {1: "menu", wardrobe.MENU_SUPPORT: "menu_support", wardrobe.MENU_CHALLENGES: "menu_challenges"}
@@ -89,8 +90,9 @@ def test_each_menu_page_fits_open_chat():
         for _, s in on_page:
             assert f'"text":"[{s["name"]}]"' in menu
         challenges = len(challenges_module.KINDS) if number == wardrobe.MENU_CHALLENGES else 0
+        server_goal = 1 if number == wardrobe.MENU_CHALLENGES else 0
         assert chat_lines(data, f"wardrobe/{name}") + challenges == (
-            2 + 1 + challenges + len({kind for kind, _ in on_page}) + len(on_page) + 2)
+            2 + 1 + challenges + server_goal + len({kind for kind, _ in on_page}) + len(on_page) + 2)
         assert chat_lines(data, f"wardrobe/{name}") + challenges <= 20, name
         for other in set(pages) - {number}:   # every page links to the other two
             assert f'"command":"/trigger wardrobe set {other}"' in menu.splitlines()[-1]

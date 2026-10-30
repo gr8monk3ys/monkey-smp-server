@@ -2,6 +2,7 @@
 tellraw @s ["",{"text":"\nWeekly challenges","color":"gold","bold":true},{"text":"  new every Monday, 12 AM Pacific","color":"gray"}]
 tellraw @s [{"text":"","color":"gray"},{"score":{"name":"@s","objective":"rw.challenges"},"color":"white"}," challenges done in all seasons"]
 function monkey:challenges/lines
+function monkey:goal/line
 tellraw @s {"text":"Blades (hold the sword)","color":"gold"}
 execute if score @s rw.founder matches 1.. run tellraw @s [" ",{"text":"[Founder's Edge]","color":"green","click_event":{"action":"run_command","command":"/trigger wardrobe set 107"},"hover_event":{"action":"show_text","value":"Put Founder's Edge on the sword in your hand"}},{"text":"  Played during the first season","color":"dark_gray"}]
 execute unless score @s rw.founder matches 1.. run tellraw @s [" ",{"text":"Founder's Edge","color":"gray","hover_event":{"action":"show_text","value":"Locked: Played during the first season"}},{"text":"  Played during the first season","color":"dark_gray"}]

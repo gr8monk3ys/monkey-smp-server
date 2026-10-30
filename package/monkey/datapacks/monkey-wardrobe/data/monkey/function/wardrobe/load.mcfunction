@@ -15,6 +15,7 @@ scoreboard objectives add rw.playbase dummy
 scoreboard objectives add rw.challenges dummy
 scoreboard objectives add rw.launch dummy
 scoreboard objectives add rw.launchtime dummy
+scoreboard objectives add rw.quest dummy
 scoreboard objectives add rw.hallowtide dummy
 scoreboard objectives add rw.midwinter dummy
 scoreboard objectives add rw.midsummer dummy
@@ -29,10 +30,14 @@ scoreboard objectives add rw.challenges.seen dummy
 scoreboard objectives add rw.launch.seen dummy
 scoreboard objectives add rw.s2.seen dummy
 scoreboard objectives add rw.champion.seen dummy
+scoreboard objectives add rw.quest.seen dummy
 scoreboard players set #hour rw.const 72000
 scoreboard players set #second rw.const 20
 scoreboard players add #today rw.day 0
 # The first season runs until staff set #season to 2; everyone who plays in it is a founder.
 execute unless score #season rw.day matches -2147483648.. run scoreboard players set #season rw.day 1
+function monkey:quest/load
+# Before challenges/load, which picks the week's goal (goal/pick) with its scores.
+function monkey:goal/load
 function monkey:challenges/load
 schedule function monkey:wardrobe/second 20t replace

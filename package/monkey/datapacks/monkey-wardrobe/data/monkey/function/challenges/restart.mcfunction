@@ -86,3 +86,5 @@ scoreboard players reset * rc.rare.done
 # Events begun from now on count for the event challenge.
 scoreboard players operation #firstevent rc.week = #event ev.state
 scoreboard players add #firstevent rc.week 1
+# The weekly server goal (tools/goal.py) starts from zero with the week.
+function monkey:goal/restart

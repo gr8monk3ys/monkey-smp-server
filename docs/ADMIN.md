@@ -732,6 +732,30 @@ window. The first `rules/launch` in Season I clears what test play earned (chall
 `rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
 clears nothing and doesn't open the window again (use `founder/open` above if it has to).
 
+## First-week quest and server goal
+
+Players' side: `docs/RETENTION.md`, "The first week" and "The weekly server goal". The on and off switches
+are in `docs/SEASONS.md`, "Switches". Both live in the `monkey-wardrobe` data pack, and nothing in them
+runs before `rules/launch`; the first launch clears what test play did.
+
+```
+scoreboard players get NAME rq.state                # quest: unset not seen yet, 0 not taking part, 1 on, 2 done, 3 hidden
+scoreboard players get NAME rq                      # quest: steps done
+scoreboard players set NAME rq.state 1              # sign a player up by hand (a returning friend, say)
+function monkey:goal/target {n:3000}                # this week's goal target, until the week turns
+scoreboard players get #total rg                    # this week's goal total so far (#target rg: the target)
+python tools/goal.py schedule                       # which goal runs in which week
+```
+
+The Guide's "Talk to the Guide" step and its "Your first week" button come with its preset: after a release
+that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above). The
+Pathfinder blade needs the new client pack.
+
+**Editing the goal pool.** `POOL` in `tools/goal.py`, as the challenges' pool: an `id` (it names the goal's
+scores, so don't rename the one that is on), a `name` (at most 24 characters), a `target` for about 20 to 30
+active players, an `about`, and `mine` (blocks, mined minus placed) or `stat` (a `minecraft.custom` statistic
+that takes real play: never distance or time online). Week N runs entry N mod how many.
+
 ## Supply drops
 
 On weeknight evenings, once enough people are on, chests of supplies land outside every territory

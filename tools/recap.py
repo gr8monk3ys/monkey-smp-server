@@ -339,9 +339,9 @@ def next_saturday(week: Week) -> list[str]:
 
 
 def player_of_the_week(week: Week) -> list[str] | None:
-    """From Season II on (#season rw.day 2 or more): from the faction at the top of the week's table, the member
-    with the most PvP kills this week, then the most challenges done this week, then by name (docs/SEASONS.md,
-    "Player of the Week"). Nobody in that faction with either: no line."""
+    """From Season II on (#season rw.day 2 or more): from the faction at the top of the week's table (every
+    faction sharing 1st, when tied), the member with the most PvP kills this week, then the most challenges done
+    this week, then by name (docs/SEASONS.md, "Player of the Week"). Nobody there with either: no line."""
     if week.scores("rw.day").get("#season", 0) < 2 or not week.rows:
         return []
     kills = None if week.test_play else week.gains(KILLS)
@@ -349,12 +349,13 @@ def player_of_the_week(week: Week) -> list[str] | None:
     if kills is None and done is None:
         return None
     kills, done = kills or {}, done or {}
-    top = week.rows[0]
-    picks = sorted(((kills.get(m, 0), done.get(m, 0), m) for m in top.get("members", [])),
+    first = week.rows[0]["rank"]
+    picks = sorted(((kills.get(m, 0), done.get(m, 0), m, row) for row in week.rows if row["rank"] == first
+                    for m in row.get("members", [])),
                    key=lambda p: (-p[0], -p[1], p[2].casefold()))
     if not picks or picks[0][:2] == (0, 0):
         return []
-    k, c, name = picks[0]
+    k, c, name, top = picks[0]
     did = " and ".join(part for part in (count(k, "PvP kill") if k else "", count(c, "challenge") if c else "") if part)
     return [f"**Player of the Week:** {md(name)} ({md(top['name'])}, 1st), {did}."]
 

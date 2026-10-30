@@ -25,8 +25,10 @@ What the timer does, from the saved world (the server saves every 5 minutes, so 
   listed for the next run. So the map follows an act about two hours later, and is never fitted to the finale's
   shrinking border (the land outside was open all season).
 
-The timer is installed for Season II (docs/SEASONS.md, "Season II"). Season I's acts are here too, so it does
-the same as staff would by hand if it is installed sooner. Stdlib only (plus tools/), Python 3.10 or newer.
+The timer is installed for Season II (docs/SEASONS.md, "Season II"). Season I has no acts here: staff grow its
+border by hand (docs/LIVE.md), and a timer installed early must not repeat a hand act it reads from a save made
+before it (that would start the growth again and announce it twice). Stdlib only (plus tools/), Python 3.10 or
+newer.
 """
 import argparse
 import datetime as dt
@@ -43,8 +45,8 @@ from challenges import LAUNCHED
 from events import STATE
 
 # Each season's acts: (week, the Overworld border's new width). The Nether's is 1:8 of it.
+# Season I (weeks 2 and 7, by hand) is left out on purpose: the timer does nothing in a Season I world.
 ACTS = {
-    1: ((2, 4000), (7, 6000)),   # Season I: 21 November and 26 December 2026 (week 7 moved for Midwinter)
     2: ((2, 4000), (8, 6000)),   # Season II, proposed: 20 February and 3 April 2027
 }
 NETHER_SCALE = 8
@@ -133,10 +135,11 @@ def read_run(world: Path, when: dt.datetime) -> Run:
     if scores.get(STATE, {}).get(LOCKED) == 1:
         run.why = "the season is locked"
         return run
-    due = [a for a in acts(run.season) if a.at <= when]
-    if not acts(run.season):
+    season_acts = acts(run.season)
+    if not season_acts:
         run.why = f"no border acts for season {run.season}"
         return run
+    due = [a for a in season_acts if a.at <= when]
     if not due:
         run.why = "no border act yet"
         return run
@@ -182,7 +185,8 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
         if run.commands or run.maps or run.purges:
             log("server not running: nothing sent (the next hour tries again)")
         return 0
-    ok = server.send(rcon, run.commands, log) if run.commands else True
+    # stop: a failed `worldborder set` must not let the record after it through, or the act never runs again.
+    ok = server.send(rcon, run.commands, log, stop=True) if run.commands else True
     if run.maps:
         for fit in run.maps:
             fit.conf.write_text(fit.fitted, encoding="utf-8", newline="")   # in place: keeps the owner
@@ -232,8 +236,8 @@ def status(world: Path, when: dt.datetime) -> int:
 def plan(season: int) -> str:
     out = []
     for act in acts(season):
-        out.append(f"Season {season}, act {act.number} (week {act.week}): "
-                   f"{season_calendar.words(act.at)['date']}, {season_calendar.words(act.at)['pacific']}: "
+        said = season_calendar.words(act.at)
+        out.append(f"Season {season}, act {act.number} (week {act.week}): {said['date']}, {said['pacific']}: "
                    f"{act.size} wide, the Nether {width(act.nether)}")
     return "\n".join(out) or f"no border acts for season {season}"
 

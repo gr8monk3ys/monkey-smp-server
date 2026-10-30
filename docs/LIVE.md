@@ -317,7 +317,8 @@ are no outposts: the pack waits for spots.
 ### The border timer (Season II)
 
 Install `monkey-border.timer` once Season II has launched (docs/SEASONS.md, "Season II checklist"; it can
-go in sooner, it sends nothing for a season it has no acts for, or before the launch):
+go in sooner: it sends nothing before the launch or for a season it has no acts for, and Season I has none,
+since staff grow Season I's border by hand):
 
 ```sh
 sh /srv/monkey/repo/deploy/monkey-border.sh --check

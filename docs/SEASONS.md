@@ -200,9 +200,9 @@ the factions share the rank. Strength below zero counts as zero.
   events, so that recap has the table, the challenges done since the launch, a line saying the season is
   open, and next Saturday; the rest start the week after.
 - **Player of the Week** (from Season II; nothing changes in Season I). One more line in the Sunday recap,
-  picked from the final table: from the faction ranked first that week, the member with the most PvP kills
-  this week (outside the arena, as the Kills column counts them), then the most weekly challenges done this
-  week, then by name. "**Player of the Week:** NAME (FACTION, 1st), 3 PvP kills and 2 challenges." When
+  picked from the final table: from the faction ranked first that week (any of them, when tied), the member
+  with the most PvP kills this week (outside the arena, as the Kills column counts them), then the most
+  weekly challenges done this week, then by name. "**Player of the Week:** NAME (FACTION, 1st), 3 PvP kills and 2 challenges." When
   nobody in that faction has a kill or a challenge, there is no line. It gives nothing but the mention, so
   there is nothing to farm; feeding kills to win it is exploit B13 as always. `player_of_the_week` in
   `tools/recap.py`, switched on by the world's season number (`#season rw.day` 2 or more).
@@ -870,8 +870,9 @@ Built:
 - Border acts ("Season II"): `tools/border.py` and `deploy/monkey-border.sh` with its hourly timer grow the
   Overworld's and the Nether's (1:8) borders on the season's dates, once each, never shrinking one, then fit
   the live map with `tools/map_border.py`, reload BlueMap and purge the changed maps. Installed for Season II;
-  Season I's acts are by hand (docs/LIVE.md), unless the owners install it sooner. Checked by the unit tests
-  only: not yet run against a real server.
+  Season I's acts stay by hand (docs/LIVE.md): `ACTS` has none for Season I, so the timer sends nothing in a
+  Season I world even if it is installed sooner. Checked by the unit tests only: not yet run against a real
+  server.
 - Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
 
 Not built:

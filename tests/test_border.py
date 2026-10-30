@@ -38,21 +38,40 @@ def make_server(tmp_path, overworld, nether, *scores):
 
 
 def test_the_acts_follow_the_season_calendar():
-    one, two = border.acts(1), border.acts(2)
-    assert [(a.at.date(), a.size, a.nether) for a in one] == [
-        (dt.date(2026, 11, 21), 4000, 500), (dt.date(2026, 12, 26), 6000, 750)]
-    assert [(a.at.date(), a.size) for a in two] == [(dt.date(2027, 2, 20), 4000), (dt.date(2027, 4, 3), 6000)]
-    assert all(a.at.astimezone(PACIFIC).hour == 18 for a in one + two)
-    assert border.acts(3) == []
+    two = border.acts(2)
+    assert [(a.at.date(), a.size, a.nether) for a in two] == [
+        (dt.date(2027, 2, 20), 4000, 500), (dt.date(2027, 4, 3), 6000, 750)]
+    assert all(a.at.astimezone(PACIFIC).hour == 18 for a in two)
+    # 3 April is after daylight saving time starts (14 March 2027): still 6 PM Pacific, an hour earlier in UTC.
+    assert [a.at.astimezone(season_calendar.UTC).hour for a in two] == [2, 1]
+    assert border.acts(1) == [] and border.acts(3) == []
     assert "Saturday 20 February 2027, 6 PM Pacific: 4000 wide, the Nether 500" in border.plan(2)
 
 
-def test_season_ones_acts_are_its_calendars_border_breaks():
-    season_one, season_two = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8").split("\n## Season II\n")
+def test_season_twos_acts_are_its_calendars_border_breaks():
+    season_two = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8").split("\n## Season II\n")[1]
     row = r"^\| (\d+) \| [^|]+ \| The border breaks[^|]*?(\d{4}) to (\d{4})"
-    for text, season in ((season_one, 1), (season_two, 2)):
-        breaks = re.findall(row, text, re.M)
-        assert [(int(w), int(new)) for w, _, new in breaks] == list(border.ACTS[season])
+    breaks = re.findall(row, season_two, re.M)
+    assert [(int(w), int(new)) for w, _, new in breaks] == list(border.ACTS[2])
+
+
+def test_season_one_is_left_to_staff(tmp_path):
+    """Season I's acts are by hand: a timer installed early sends nothing in a Season I world, even an hour after
+    staff grew the border, when the last save still shows the old one (it would start the growth again)."""
+    assert 1 not in border.ACTS
+    world = make_server(tmp_path, 2500, 312.5, ("rw.day", "#season", 1), LAUNCHED)
+    for when in (dt.datetime(2026, 11, 21, 18, 1, tzinfo=PACIFIC), dt.datetime(2026, 12, 26, 18, 1, tzinfo=PACIFIC)):
+        run = border.read_run(world, when)
+        assert run.commands == [] and run.maps == [] and run.why == "no border acts for season 1"
+        assert border.commands(world, when) == []
+
+
+def test_a_failed_set_is_not_recorded_so_the_next_hour_tries_again(tmp_path):
+    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
+    log, server = [], rcon.Recorder(fail=1)
+    assert border.send(server, world, ACT_ONE, log.append) == 1
+    assert server.sent == [] and "not sent after it: 3 command(s)" in log
+    assert border.commands(world, ACT_ONE)[:2] == [SET_4000, SET_500]   # still due
 
 
 def test_nothing_before_the_launch_the_act_or_in_a_locked_world(tmp_path):

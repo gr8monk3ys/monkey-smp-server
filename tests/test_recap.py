@@ -355,6 +355,16 @@ def test_the_player_of_the_week_is_the_top_factions_best_from_season_two():
     assert recap.player_of_the_week in recap.SECTIONS
 
 
+def test_the_player_of_the_week_comes_from_every_faction_sharing_first():
+    rows = [{"id": "p-red", "name": "Red Monkeys", "rank": 1, "members": ["AlexFake"]},
+            {"id": "p-blue", "name": "Blue Herons", "rank": 1, "members": ["RiaFake"]},
+            {"id": "p-gold", "name": "Gold Apes", "rank": 3, "members": ["SamFake"]}]
+    scores = {"rw.day": {"#season": 2}, "st.kills": {"AlexFake": 1, "RiaFake": 4, "SamFake": 9}}
+    start = {"start": WEEK_ONE.isoformat(), "kills": {}, "recap": {"launched": True, "scores": {"rw.challenges": {}}}}
+    week = recap.Week(rows, standings.World([], {}, scores, {}), start, None, WEEK_ONE + dt.timedelta(weeks=1))
+    assert recap.player_of_the_week(week) == ["**Player of the Week:** RiaFake (Blue Herons, 1st), 4 PvP kills."]
+
+
 def test_land_counts_chunks_claimed_not_the_net_change(tmp_path):
     then = {PLAYERS["AlexFake"]: 4, PLAYERS["RiaFake"]: 1}
     world = standings.read_world(make_world(tmp_path, LAUNCHED, land={"AlexFake": 1, "RiaFake": 4}))

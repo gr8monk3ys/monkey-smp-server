@@ -495,6 +495,8 @@ The tool prints the `purge` lines for the maps it changed; `--check` changes not
 is off. `bluemap reload` answers before BlueMap has finished loading: if a `purge` says "BlueMap is still
 loading", run it again a few seconds later. A border still growing after `worldborder set` counts at its final size, so run it straight after.
 No need to fit it to the finale's shrinking border: the land outside was open all season.
+From Season II the border timer (`deploy/monkey-border.sh`, docs/LIVE.md) grows the border and does this fit,
+the reload and the purges by itself.
 
 The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. Incendium
 makes the Nether 192 tall, so BlueMap's own cut (y 90 to 127) left the bedrock roof covering the map. Where

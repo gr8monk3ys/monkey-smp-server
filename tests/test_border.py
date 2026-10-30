@@ -3,12 +3,12 @@ import re
 import shutil
 import subprocess
 
+import border
 import pytest
 from fake_world import FakeWorld
 from test_deploy_lib import job, needs_dash, sh  # noqa: F401 (sh is test_deploy_lib's fixture)
 from test_map_border import DEFAULT_MAPS, NETHER_CENTRE, SPAWN
 
-import border
 import map_border
 import rcon
 import season_calendar
@@ -29,7 +29,8 @@ def make_server(tmp_path, overworld, nether, *scores):
     around the pinned spawn, and these scores."""
     shutil.copytree(DEFAULT_MAPS, tmp_path / map_border.MAPS, dirs_exist_ok=True)
     fake = FakeWorld(tmp_path / "world").scores(*scores)
-    for dim, centre, size in (("minecraft:overworld", SPAWN, overworld), ("minecraft:the_nether", NETHER_CENTRE, nether)):
+    dims = (("minecraft:overworld", SPAWN, overworld), ("minecraft:the_nether", NETHER_CENTRE, nether))
+    for dim, centre, size in dims:
         now, target = size if isinstance(size, tuple) else (size, size)
         fake.border(dim, *centre, now, target)
     fake.border("minecraft:the_end", 0.0, 0.0, map_border.NO_BORDER)
@@ -47,9 +48,11 @@ def test_the_acts_follow_the_season_calendar():
 
 
 def test_season_ones_acts_are_its_calendars_border_breaks():
-    seasons = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8")
-    breaks = re.findall(r"^\| (\d+) \| [^|]+ \| The border breaks[^|]*?(\d{4}) to (\d{4})", seasons, re.M)
-    assert [(int(w), int(new)) for w, _, new in breaks] == list(border.ACTS[1])
+    season_one, season_two = (REPO.root / "docs" / "SEASONS.md").read_text(encoding="utf-8").split("\n## Season II\n")
+    row = r"^\| (\d+) \| [^|]+ \| The border breaks[^|]*?(\d{4}) to (\d{4})"
+    for text, season in ((season_one, 1), (season_two, 2)):
+        breaks = re.findall(row, text, re.M)
+        assert [(int(w), int(new)) for w, _, new in breaks] == list(border.ACTS[season])
 
 
 def test_nothing_before_the_launch_the_act_or_in_a_locked_world(tmp_path):

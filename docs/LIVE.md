@@ -112,7 +112,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/monkey/MonkeySMP-Server/docker && docker compose attach monkey` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec monkey monkey rcon "say hi"` |
 | Let a player in by hand | `docker compose exec monkey monkey add-player NAME` |
-| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map" |
+| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
 | Store or staff grants (wardrobe) | `docker compose exec monkey monkey rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs` |
 | Joins per join address | `python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs` (docs/PROMOTION.md) |
@@ -313,6 +313,23 @@ spot, and reads only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, pl
 scores and storage from the world. It also writes the "Outposts" marker set into the Overworld map's config
 under `server/config/bluemap/maps/` and sends `bluemap reload` when that changed. Without the timer there
 are no outposts: the pack waits for spots.
+
+### The border timer (Season II)
+
+Install `monkey-border.timer` once Season II has launched (docs/SEASONS.md, "Season II checklist"; it can
+go in sooner, it sends nothing for a season it has no acts for, or before the launch):
+
+```sh
+sh /srv/monkey/repo/deploy/monkey-border.sh --check
+sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install
+```
+
+It runs every hour at 1 past as `monkey`. On an act's date (6 PM Pacific) it grows the Overworld's and the
+Nether's (1:8) borders over 10 minutes with a line in chat, once, and never shrinks one; an hour later it fits
+the live map's masks with `tools/map_border.py` and sends `bluemap reload`; the hour after, `bluemap purge` for
+each changed map. `python3 tools/border.py plan --season 2` prints the dates. It reads `REPO_DIR` and
+`LIVE_DIR` from `/etc/monkey-deploy.env`, the saved borders and scores, and writes only the map configs and
+`server/config/bluemap/monkey-map-purge.txt`.
 
 ### The omens' timer (the release with omens)
 

@@ -199,6 +199,13 @@ the factions share the rank. Strength below zero counts as zero.
   time) began in test play, and the launch clears test play's challenges but not its kills, claims or
   events, so that recap has the table, the challenges done since the launch, a line saying the season is
   open, and next Saturday; the rest start the week after.
+- **Player of the Week** (from Season II; nothing changes in Season I). One more line in the Sunday recap,
+  picked from the final table: from the faction ranked first that week, the member with the most PvP kills
+  this week (outside the arena, as the Kills column counts them), then the most weekly challenges done this
+  week, then by name. "**Player of the Week:** NAME (FACTION, 1st), 3 PvP kills and 2 challenges." When
+  nobody in that faction has a kill or a challenge, there is no line. It gives nothing but the mention, so
+  there is nothing to farm; feeding kills to win it is exploit B13 as always. `player_of_the_week` in
+  `tools/recap.py`, switched on by the world's season number (`#season rw.day` 2 or more).
 - Everything is read from the world's own saved files, which the server writes every 5 minutes, so the
   board can be a few minutes behind. A kill just before the close counts in the next week; none is lost.
 
@@ -442,8 +449,42 @@ the next season, because a prize that resets with the world is forgotten in a we
   and a player shows one team at a time. A champion who is also a supporter picks the title or the
   supporter color; the supporter skins stay either way. The store's expiry command (`team leave`) also
   drops the title, so put the player back with `team join champion_s1 NAME`.
-- **The banner and the helm** (above): the banner in the Hall of Banners at the next spawn, and a
-  champion helm in the wardrobe. Neither is built yet.
+- **The helm.** Everyone on that roster gets the Champion's Helm, a gold helm with a laurel, in the
+  wardrobe (`rw.champion`, set with the title in "Ending a season", step 4). It carries into every later
+  season like every wardrobe score, and is never sold. Its locked line only shows in the menu from Season II.
+- **The banner** hangs in the Hall of Banners at the next season's spawn (below).
+
+#### The Hall of Banners
+
+A hall at each new season's spawn, with one bay per past season: the champion's banner and a sign saying
+who won. It is built by hand, in creative, before the season opens (spawn rules, 22, don't stop staff), and
+copied into each new world's spawn, because the world resets and the hall is what carries the seasons.
+
+- **Where.** Inside the spawn safe zone, on the path from where new players appear, so a newcomer walks past
+  the champions on the first day. About 9 wide and 5 tall a bay; leave room for at least 8 bays.
+- **A bay.** The champion's banner on the back wall at eye height, with an item frame of their Cup trophy or
+  the dragon egg if they want one placed, and a sign: "Season I champion", the faction's name, its roster and
+  its Cup points. A lantern each side. The current season's bay stays empty, with a sign "Season II
+  champion: to be decided on 24 April".
+- **The banner itself** is the champion's official flag (Faction Raid, above), read out of the old world
+  before it is moved away. In the locked world after the finale, a staff member holds one of the champion's
+  official flags and runs, in the console,
+
+  ```
+  data get entity NAME SelectedItem
+  ```
+
+  The answer has the banner's item (its base color, `minecraft:red_banner`) and its
+  `"minecraft:banner_patterns"`. Write them into the Champions table below as a `give` command, for example
+  `give @s minecraft:red_banner[minecraft:banner_patterns=[{pattern:"minecraft:stripe_top",color:"black"}]]`,
+  and in the new world run it in creative and place the banner. A faction whose flag is gone gets the banner
+  from its sign-up post (Registering a faction), made again at a loom.
+- **No data pack.** One banner a season, placed by hand in creative, doesn't need one: the record that has
+  to last is the table below, kept in this repo, so a lost world doesn't lose the hall.
+
+| Season | Champion | Roster | Cup points | Banner |
+| --- | --- | --- | --- | --- |
+| I | (after the finale, 23 January 2027) | | | |
 
 ### The event catalog
 
@@ -552,7 +593,10 @@ are the example; change the numbers.
 
 **After the finale (end of week 11)**
 
-4. Post the final Cup standings and crown the champion: its title team ("The season champion", above).
+4. Post the final Cup standings and crown the champion: its title team ("The season champion", above),
+   its Champion's Helm (`monkey rcon "scoreboard players set NAME rw.champion 1"` for each member; they see
+   "Unlocked Champion's Helm" in chat, or at their next login) and its banner for the Hall of Banners (read it
+   out now, while the world is still here, and fill in the Champions table above).
    Then the Pioneer title, for the most Server Firsts (a tie goes to whoever reached that number first):
    `python3 /srv/monkey/repo/tools/firsts.py champion /srv/monkey/MonkeySMP-Server/server/world --season 1`
    names the player and prints the four `team` commands; run them with `monkey rcon`. A player shows one team at a
@@ -646,6 +690,98 @@ renewals keep counting: the store's commands still reach the old world, and the 
 The new world starts unlocked; the lock lives in the old world. The `monkey-carry` pack can stay (it
 won't run twice). Delete its folder at the next restart to tidy up.
 
+## Season II
+
+Season II is planned for **Saturday 6 February 2027 at 5 PM Pacific**, two weeks after Season I's finale
+(the off-season week in between). It is 12 weeks like Season I, from the plan in "The acts of a season".
+Nothing is decided until the owners confirm the date by 9 January (Season I's week 9); everything below
+follows from that one date, `SEASON_II` in `tools/season_calendar.py`.
+
+### Season II calendar
+
+Week N's event is the Saturday N weeks after the launch, at 6 PM Pacific. **Daylight saving time starts on
+Sunday 14 March 2027**, in week 5: from then 6 PM Pacific is 9 PM Eastern as before, but an hour earlier in UTC
+(1 AM UTC, not 2 AM). The tools work in Pacific time, so nothing moves.
+
+| Week | Saturday | The event | Also that week |
+| --- | --- | --- | --- |
+| 0 | Sat 6 Feb 2027, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 7 Feb, 6 PM. | Twinmoon for everyone who plays this season. The first Saturday of February, so no Town Hall: launch night takes its place. |
+| 1 | Sat 13 Feb | Faction Raid I | |
+| 2 | Sat 20 Feb | The border breaks: 2500 to 4000 (by itself at 6:01 PM, `monkey-border.timer`) | |
+| 3 | Sat 27 Feb | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
+| 4 | Sat 6 Mar | Arena Glory I | Town Hall (first Saturday). Netherite age announced. No Base of the Month: bases are under three weeks old on 25 February. |
+| 5 | Sat 13 Mar | Netherite age (rule 24 lifted), plus a small event from the catalog | Clocks go forward on Sunday 14 March |
+| 6 | Sat 20 Mar | Faction Raid II | |
+| 7 | Sat 27 Mar | Build Battle II | Easter is Sunday 28 March |
+| 8 | Sat 3 Apr | The border breaks again: 4000 to 6000 (by itself at 6:01 PM) | Town Hall. Base of the Month (entries by 25 March). |
+| 9 | Sat 10 Apr | Arena Glory II | Two weeks before the end: the end date again, the twist vote opens, Season III's date set |
+| 10 | Sat 17 Apr | Faction Raid III | The Cup standings set the finale's spawn order |
+| 11 | Sat 24 Apr | **The finale**. The world locks after it. | |
+| 12 | Sat 1 May | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | Base of the Month (entries by 25 April), in the locked world |
+| | Sat 8 May | Season III opens (proposed) | |
+
+- **The end date to announce on day one:** Season II ends with the finale on Saturday 24 April 2027.
+- **No holiday falls in Season II.** Midwinter is before it and Midsummer (19 June 2027) after it.
+- **The border acts are the plan's weeks 2 and 8** (Season I moved its second to week 7 for Midwinter). Their
+  sizes and weeks are `ACTS` in `tools/border.py`; `python tools/border.py plan --season 2` prints the dates.
+
+### Season II checklist
+
+Season I's runbook ("Ending a season") does the switch; this is what is new for Season II, in order.
+
+**By 9 January 2027 (Season I, week 9)**
+
+1. The owners confirm the date. If it moves, change `SEASON_II` in `tools/season_calendar.py` and this
+   calendar, run `python tools/datapacks.py`, and `python tools/checks.py`: the border acts move with it.
+2. Name the season skin. Twinmoon (a silver-blue blade with two moons) is a placeholder: change its `name` and
+   colors in `BLADES` in `tools/wardrobe.py`, its row in `docs/RETENTION.md`, and run `python tools/datapacks.py`.
+   Never move it within `BLADES`: a skin's place is its trigger value.
+3. Pick the twist's options for the vote, and the seed (Ending a season, steps 2 and 3). A twist that changes
+   the border ("a smaller world") changes `ACTS` and `BORDER` in `tools/rules.py` too.
+
+**After Season I's finale (23 January)**
+
+4. Ending a season, steps 4 to 8, with the Champion's Helm and the banner (step 4). Fill in the Champions
+   table (The Hall of Banners) before the world is moved away.
+
+**The release that opens Season II** (Ending a season, step 9). It ships Twinmoon and the Champion's Helm in
+the client pack, so players update it.
+
+5. Point the tools at Season II: in `tools/season_calendar.py`, set `SEASON = SEASON_II` (challenges, drops,
+   omens, the standings and the Sunday recap then count Season II's weeks), and `LAUNCH_AT` in
+   `site/config.json` to the same time (a test checks they agree).
+6. Update what still speaks of Season I's weeks: the Town Crier's events (`EVENTS` in `tools/npcs.py`) from the
+   calendar above, the recap's and the Crier's "Season II is planned for ..." line (it becomes Season III's),
+   `tests/test_season_calendar.py`'s Season I checks, and the launch posts in `docs/LAUNCH.md`. Founder's Circlet
+   and Founder's Edge need nothing: they only work while `#season` is 1.
+7. Put the new seed in `package/monkey/manifest.json` (`world.seed`).
+
+**The switch** (Ending a season, steps 10 to 17, with `--season 2`)
+
+8. Build the Hall of Banners at the new spawn in creative before the launch, with Season I's banner.
+9. After the launch (step 17), turn on the border acts:
+
+   ```sh
+   sh /srv/monkey/repo/deploy/monkey-border.sh --check      # the acts' dates, the borders, nothing due yet
+   sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install
+   ```
+
+10. Check the season skin: once a player has logged in, `monkey rcon "scoreboard players get NAME rw.s2"` gives
+    1 and their wardrobe's challenges page (`/trigger wardrobe set 5`) shows Twinmoon. A champion's
+    `rw.champion` came over with the carry.
+
+**During Season II**
+
+- The border breaks by itself on 20 February and 3 April at 6:01 PM Pacific (a 10-minute growth, announced in
+  chat), and the live map follows within about two hours: fitted, reloaded, then purged and rendered again.
+  The outposts move out to the new ring within the hour after it has grown. Watch it with
+  `journalctl -u monkey-border --since today`. To hold an act back, stop the timer
+  (`sudo systemctl stop monkey-border.timer`) and start it when the act should happen.
+- The Sunday recap has the Player of the Week line from the first Sunday after the launch.
+- Before Season II ends, Season III's blade goes in `SEASON_SKINS` and at the end of `BLADES`
+  (`tools/wardrobe.py`), and Season III's acts in `ACTS` (`tools/border.py`) with its `Season` in
+  `SEASONS` (`tools/season_calendar.py`).
+
 ## What is built and what isn't
 
 Built:
@@ -726,14 +862,23 @@ Built:
   Moon, Meteor (through `tools/drops.py`), Truce Hour and Hunted (through the standings' bounty commands;
   staff claim the bounty as for any other). Not yet tried in game.
 
+- Season skins after Season I: Twinmoon, Season II's blade (`SEASON_SKINS` in `tools/wardrobe.py`), for
+  everyone online while `#season` is 2, as Founder's Edge is for Season I. Its locked line is hidden until
+  Season II. The name is a placeholder (Season II checklist, step 2).
+- The Champion's Helm (`rw.champion`, set by staff after the finale) and the Hall of Banners' plan and record
+  ("The Hall of Banners"; the build is by hand).
+- Border acts ("Season II"): `tools/border.py` and `deploy/monkey-border.sh` with its hourly timer grow the
+  Overworld's and the Nether's (1:8) borders on the season's dates, once each, never shrinking one, then fit
+  the live map with `tools/map_border.py`, reload BlueMap and purge the changed maps. Installed for Season II;
+  Season I's acts are by hand (docs/LIVE.md), unless the owners install it sooner. Checked by the unit tests
+  only: not yet run against a real server.
+- Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
+
 Not built:
 
 | To build | Notes |
 | --- | --- |
-| Season skins after Season I | One new blade per season in `tools/wardrobe.py`, unlocked by the season number (as Founder's Edge is) |
-| Champion helm and Hall of Banners | One helm and a build at each new spawn |
-| Border acts | `worldborder set` over RCON on the date, for the Overworld and the Nether (1:8), then fit the live map to it and render it again with `tools/map_border.py` (docs/ADMIN.md, "The live map"). The `monkey-rules` pack sets the starting 2500 border (and the Nether's at 1:8) once; grow both by hand |
-| KOTH | Run by staff by hand at first. Automate only if events are weekly and well attended (supply drops are built: above) |
+| KOTH | Run by staff by hand at first. Automate only if events are weekly and well attended (supply drops are built: above). Not built for Season II: the outposts already give factions a point to take and hold every day, and a KOTH night needs its own capture, scoring and Cup points, more than a small change; staff can run one by hand on an outpost |
 | Faction sign-up form | A form (Front Desk, in the Discord repo) for the name, members, banner and charter; a forum post works until then |
 | Base of the Month role | A Discord role, handed out by hand |
 

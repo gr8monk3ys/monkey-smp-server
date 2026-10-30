@@ -103,7 +103,7 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Timed job**:
-A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly), the border acts (hourly, from Season II) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
 
 ## Lifecycle
@@ -154,7 +154,7 @@ Staff place each one once per world from the `monkey-npcs` data pack.
 _Avoid_: bot, villager
 
 **Sunday recap**:
-"Monkey SMP Weekly", the Discord post the weekly standings close makes on Sunday evening: the final table, then one line per section (biggest mover, top fighter, bounties, land, challenges, event turnout, next Saturday). `tools/recap.py` keeps the sections; nothing posts before the launch.
+"Monkey SMP Weekly", the Discord post the weekly standings close makes on Sunday evening: the final table, then one line per section (biggest mover, top fighter, bounties, land, challenges, event turnout, from Season II the Player of the Week, next Saturday). `tools/recap.py` keeps the sections; nothing posts before the launch.
 _Avoid_: newsletter, digest, weekly report
 
 ## Factions

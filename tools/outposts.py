@@ -356,7 +356,7 @@ def status(world: Path, when: dt.datetime) -> int:
     board = saved_world.scoreboard(world)
     scores = board.scores if board else {}
     storage = diplomacy.saved_storage(world)
-    names = diplomacy.saved_names(storage)
+    names = diplomacy.post_names(storage)
     found = saved_world.border(world, saved_world.OVERWORLD)
     print(f"launched: {'yes' if launched(scores) else 'no'}; placed for a border of "
           f"{scores.get(OBJ, {}).get('#ring', 0) or 'none yet'}")
@@ -424,7 +424,7 @@ def captures(storage: dict, base: dict | None) -> list[tuple[str, str]]:
     log = [e for e in mine.get("log", []) if isinstance(e, dict) and e.get("kind") == "capture"]
     base = base or {}
     since = base.get("seq", 0) if base.get("epoch") and base.get("epoch") == mine.get("epoch") else 0
-    known = diplomacy.saved_names(storage)
+    known = diplomacy.post_names(storage)
     out = []
     for e in sorted(log, key=lambda e: int(e.get("n", 0))):
         o, f = int(e.get("o", 0)), int(e.get("f", 0))

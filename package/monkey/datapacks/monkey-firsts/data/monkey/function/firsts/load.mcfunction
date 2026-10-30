@@ -31,4 +31,6 @@ scoreboard players add #dragon rf 0
 scoreboard players add #elytra rf 0
 scoreboard players add #netherite rf 0
 scoreboard players add #claimed rf 0
+# A claim stored without its name by an older pack never set #unnamed: rename checks them all once.
+scoreboard players set #unnamed rf 1
 schedule function monkey:firsts/second 20t replace

@@ -33,5 +33,6 @@ execute if score @s wardrobe matches 206 run function monkey:wardrobe/skin/crown
 execute if score @s wardrobe matches 207 run function monkey:wardrobe/skin/vanguard
 execute if score @s wardrobe matches 208 run function monkey:wardrobe/skin/founders_circlet
 execute if score @s wardrobe matches 209 run function monkey:wardrobe/skin/champions_helm
+execute if score @s wardrobe matches 210 run function monkey:wardrobe/skin/kindred_band
 scoreboard players set @s wardrobe 0
 scoreboard players enable @s wardrobe

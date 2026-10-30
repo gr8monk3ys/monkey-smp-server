@@ -1011,18 +1011,23 @@ the server already writes. **Off by default.**
 - **The moments.** A Server First claimed (`first`), a supply drop or Meteor landing (`drop`, `meteor`), the
   Hunted player killed (`hunted`), an outpost taken (`outpost`).
 - **The line.** Data packs can't write to the log, but the server logs every villager's death with its name,
-  so the pack summons a silent villager 100 blocks under the moment, names it with the marker and kills it the
-  same tick (it drops nothing, nobody sees it):
+  so the pack summons a silent villager at y -100 under the moment (below every dimension's floor), names it
+  with the marker and kills it the same tick (it drops nothing, nobody sees it):
 
   ```
-  [21:42:05] [Server thread/INFO]: Villager Villager['MONKEY-CLIP v=1|kind=first|title=Server First: Enter the
-  Nether|players=;Steve|factions=;Red Monkeys|dim=the_nether|pos=12,64,-30'/123, l=...] died, message: '...'
+  [21:42:05] [Server thread/INFO]: Villager Villager['MONKEY-CLIP v=2|key=...|kind=first|title=Server First:
+  Enter the Nether|players=;Steve|factions=;Red Monkeys|dim=the_nether|pos=12,64,-30'/123, l=...] died, message: '...'
   ```
 
-  `key=value` fields split by `|`: the format version, `kind`, `title`, `players` and `factions` (lists split
+  `key=value` fields split by `|`: the format version, the world's key, `kind`, `title`, `players` and `factions` (lists split
   by `;`, the moment's player first, then a second player such as the Hunted one; a player in no faction adds
   none), `dim` and the block `pos`. The time is the log's, Pacific on the VPS. `FORMAT_VERSION` in
   `tools/clips.py` goes up when a field changes meaning.
+- **Forged lines don't count.** Players can put text in the log (chat) and name villagers, so the reader only
+  takes the server thread's own villager-death line, at y -100, carrying the world's key: two random numbers
+  the pack draws once (`#key1` and `#key2` in `cl`, like the omens' secret). Don't show them to players; a new
+  world gets new ones. A line whose fields aren't exactly the format (another key, one twice, a name holding
+  `|`, `;` or `=`) is left out too. It reports how many lines it left out.
 
 ```
 function monkey:clips/on        # write markers
@@ -1033,8 +1038,12 @@ To hand a night's markers to whoever edits, copy the server's `logs/` folder (`l
 `.log.gz` files) off the VPS, or print them there (it changes nothing):
 
 ```sh
-python3 /srv/monkey/repo/tools/clips.py markers /srv/monkey/MonkeySMP-Server/server/logs --since 2026-11-07
+S=/srv/monkey/MonkeySMP-Server/server
+python3 /srv/monkey/repo/tools/clips.py markers $S/logs --world $S/world --since 2026-11-07
+python3 /srv/monkey/repo/tools/clips.py key $S/world   # the key, to send with a copy of the logs (staff only)
 ```
+
+Whoever reads a copy of the logs needs the key (`--key`): send it with the logs to that person only.
 
 One JSON line a marker, with its date and time. A new feature marks its own moment with one command, as and
 at its player (or at a place): `function monkey:clips/mark {kind:"boss",title:"The boss is down",other:""}`
@@ -1056,14 +1065,18 @@ A spectator sees through walls, so on a factions server the camera must not be a
   you trust, and revoke at once if they join one.
 - **Only in an announced window.** `camera/open` announces it in chat, and chat names each creator going in
   and out of camera.
-- **A leash.** The camera stays in the Overworld within 160 blocks (either way) of its last warp, or of where
-  the creator went in; spectator teleports to players and anything farther snap it back.
+- **Only public places, checked every tick.** Going in always starts at the camera's spawn point (staff set
+  it; until then nobody can go in), and the camera stays in the Overworld within 64 blocks (either way) of its
+  last warp: spawn, the board, an outpost, the arena's entrance, a supply drop. Drops and outposts are placed
+  96 blocks or more from claims, so the leash doesn't reach a base next to them when they're placed.
+  Spectator teleports to players and anything farther are snapped back the next tick.
 - **Not from the event arena, and not within 15 seconds of being hurt** (so it isn't a way out of a fight).
-- **The creator's word.** Approving shows them, and going in shows them again: no coordinates, bases or
-  player positions shared with anyone, on stream or off. A creator who breaks it loses the camera (revoke)
+- **Rule 10 and the creator's word.** Approving shows them the rules, and going in shows them again: stream
+  the camera with a delay of 5 minutes or more, so nobody can snipe from it (rule 10, `docs/RULES.md`), and
+  share no coordinates, bases or player positions with anyone, on stream or off. A creator who breaks it loses the camera (revoke)
   and is dealt with like any rule break (`docs/RULES.md`, "Moderation" above).
 
-Every second the pack checks it all again and puts back whoever no longer passes, so closing the window,
+Every second the pack checks the rest again and puts back whoever no longer passes, so closing the window,
 revoking, `camera/off` or a faction number end it within a second; a creator who was offline is put back at
 their next login.
 

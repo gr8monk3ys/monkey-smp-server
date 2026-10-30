@@ -6,6 +6,7 @@ execute if score @s st.faction matches 1.. run return run tellraw @s {"text":"Fa
 execute if entity @s[tag=ev.arena] run return run tellraw @s {"text":"Not from the event arena.","color":"red"}
 execute if score @s cm.wait matches 1.. run return run tellraw @s {"text":"You were hurt in the last 15 seconds. Try again in a moment.","color":"red"}
 execute if entity @s[gamemode=spectator] run return run tellraw @s {"text":"You're in spectator already.","color":"red"}
+execute unless data storage monkey:camera spawn.x run return run tellraw @s {"text":"Staff haven't set the camera's spawn point.","color":"red"}
 # Where to come back to, and in which game mode.
 execute store result score @s cm.x run data get entity @s Pos[0] 100
 execute store result score @s cm.y run data get entity @s Pos[1] 100
@@ -19,7 +20,8 @@ execute if entity @s[gamemode=adventure] run scoreboard players set @s cm.mode 2
 execute if entity @s[gamemode=spectator] run scoreboard players set @s cm.mode 3
 scoreboard players set @s cm.in 1
 gamemode spectator @s
-function monkey:camera/anchor
+# Always from spawn: the leash is never around a place the creator walked to first.
+function monkey:camera/warp/spawn
 tellraw @a ["",{"selector":"@s","color":"white"},{"text":" is filming with the creator camera (spectator) for this event.","color":"gray"}]
-tellraw @s {"text":"Camera rules: no coordinates, bases or player positions shared with anyone, on stream or off; the camera stays near its warp; staff can take it back.","color":"gray"}
+tellraw @s {"text":"Camera rules: stream it with a delay of 5 minutes or more (rule 10: nobody snipes from your stream); no coordinates, bases or player positions shared with anyone, on stream or off; the camera stays near its warp; staff can take it back.","color":"gray"}
 function monkey:camera/menu

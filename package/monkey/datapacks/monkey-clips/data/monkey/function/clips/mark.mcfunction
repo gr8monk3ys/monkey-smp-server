@@ -2,6 +2,8 @@
 # other: a second player's name, or "". Writes one MONKEY-CLIP line in the log (tools/clips.py).
 execute unless score #on cl matches 1 run return 0
 $data modify storage monkey:clips m set value {kind:"$(kind)",title:"$(title)",players:"",factions:"",dim:"overworld",name:""}
+execute store result storage monkey:clips m.k1 int 1 run scoreboard players get #key1 cl
+execute store result storage monkey:clips m.k2 int 1 run scoreboard players get #key2 cl
 execute if dimension minecraft:the_nether run data modify storage monkey:clips m.dim set value "the_nether"
 execute if dimension minecraft:the_end run data modify storage monkey:clips m.dim set value "the_end"
 summon minecraft:marker ~ ~ ~ {Tags:["cl.here"]}

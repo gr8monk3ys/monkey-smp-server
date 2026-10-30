@@ -1,4 +1,5 @@
 import camera
+import drops
 from diplomacy import FACTION
 
 FILES = camera.datapack_files()
@@ -39,9 +40,24 @@ def test_every_second_the_rules_hold_or_the_creator_is_put_back():
     for rule in ("unless score #on cm matches 1", "unless score #open cm matches 1..", "unless score @s cm.ok",
                  f"if score @s {FACTION} matches 1..", "unless entity @s[gamemode=spectator]"):
         assert any(rule in line and line.endswith("function monkey:camera/leave") for line in check.splitlines()), rule
-    assert "unless dimension minecraft:overworld run return run function monkey:camera/snap" in check
-    assert f"matches -{camera.LEASH}..{camera.LEASH} run return run function monkey:camera/snap" in check
     assert "execute as @a[scores={cm.in=1}] run function monkey:camera/check" in fn("second")
+
+
+def test_the_leash_holds_every_tick_and_inside_the_claim_gap():
+    leash = fn("leash")
+    assert "unless dimension minecraft:overworld run return run function monkey:camera/snap" in leash
+    assert f"matches -{camera.LEASH}..{camera.LEASH} run return run function monkey:camera/snap" in leash
+    assert "monkey:camera/tick" in FILES["data/minecraft/tags/function/tick.json"]
+    assert fn("tick").strip().endswith("execute as @a[scores={cm.in=1}] run function monkey:camera/leash")
+    assert camera.LEASH < drops.CLAIM_GAP * 16
+
+
+def test_going_in_starts_at_the_public_spawn_and_the_rules_ask_for_a_stream_delay():
+    enter = fn("enter")
+    assert enter.index("unless data storage monkey:camera spawn.x") < enter.index("gamemode spectator")
+    assert "function monkey:camera/warp/spawn" in enter[enter.index("gamemode spectator"):]
+    assert "monkey:camera/anchor" not in enter
+    assert "delay" in camera.RULES and "rule 10" in camera.RULES
 
 
 def test_leaving_restores_the_place_dimension_and_game_mode():

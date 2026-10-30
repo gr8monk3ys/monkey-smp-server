@@ -1170,6 +1170,7 @@ python3 /srv/monkey/repo/tools/finale.py result /srv/monkey/MonkeySMP-Server/ser
 `result` prints each faction's points, the winner's roster (faction numbers as of the last hourly board run) and
 the title and `rw.champion` commands. Paste them only for the season's champion by Cup points, which is usually,
 but not always, the finale's winner. A tie names nobody: staff decide.
+
 ## Clip markers
 
 A line in the server log at each big moment, for whoever cuts highlight clips from a recording of the server

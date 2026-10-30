@@ -57,6 +57,7 @@ def test_buttons_set_triggers_the_data_packs_answer():
     answered = set(re.findall(r"scores=\{(\w+)=1\.\.\}", tick))
     answered |= set(re.findall(r"scores=\{(\w+)=1\.\.\}", "".join(standings.datapack_files().values())))
     used = {a["Cmd"].split(":")[1] for name in PRESETS for a in actions(name) if a["Type"] == "SCOREBOARD"}
+    used -= {npcs.GUIDE_STEP["Cmd"].split(":")[1]}   # the first-week quest's step, not a trigger
     assert used == set(npcs.TRIGGERS)
     assert used <= answered, used - answered
     triggers = {o for o, crit in challenges.objectives() if crit == "trigger"}

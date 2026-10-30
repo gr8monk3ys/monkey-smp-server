@@ -1,4 +1,6 @@
 # Macro at.o4, while a player is within 64 blocks: its chunk is loaded, so its label is too.
+# Who is inside has visited an outpost (the first-week quest, tools/quest.py).
+$scoreboard players set @e[type=minecraft:player,gamemode=survival,tag=!ev.arena,x=$(zx),y=$(zy),z=$(zz),dx=24,dy=32,dz=24] op.visit 1
 # A label from an earlier spot goes first, so the one kept below is never it.
 execute as @e[type=minecraft:text_display,tag=op.l4] unless score @s op.id = #o4 op.id run kill @s
 $execute unless entity @e[type=minecraft:text_display,tag=op.l4,x=$(zx),y=$(zy),z=$(zz),dx=24,dy=32,dz=24] positioned $(x) $(ly) $(z) align xz run summon minecraft:text_display ~0.5 ~ ~0.5 {Tags:["op.label","op.l4","op.new"],billboard:"center",view_range:2.0f}

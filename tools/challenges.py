@@ -271,6 +271,7 @@ def datapack_files() -> dict[str, str]:
                  f"execute if score #{kind} rc.week matches ..-1 run scoreboard players set #{kind} rc.week 0",
                  f"scoreboard players set #count rc.week {len(of_kind(kind))}",
                  f"scoreboard players operation #{kind} rc.week %= #count rc.week"]
+    pick.append(f"function {NS}:goal/pick")
     f[f"{FN}/pick.mcfunction"] = lines(*pick)
     f[f"{FN}/sync.mcfunction"] = lines(
         "# Macro {week:N}: deploy/monkey-week.sh runs it every hour (staff can too: docs/ADMIN.md). Starts week N",
@@ -288,6 +289,8 @@ def datapack_files() -> dict[str, str]:
         "# Events begun from now on count for the event challenge.",
         f"scoreboard players operation #firstevent rc.week = #event {STATE}",
         "scoreboard players add #firstevent rc.week 1",
+        "# The weekly server goal (tools/goal.py) starts from zero with the week.",
+        f"function {NS}:goal/restart",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
         "# Run by monkey:rules/launch: this week's progress starts from zero. At Season I's first launch, what test",
@@ -297,6 +300,8 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:challenges/restart",
         *(f"execute if score #season rw.day matches 1 unless score {LAUNCHED} matches 1 run "
           f"scoreboard players reset * {o}" for o in TEST_PLAY),
+        "# The first-week quest (tools/quest.py) forgets test play too, once.",
+        f"function {NS}:quest/launch",
         f"scoreboard players set {LAUNCHED} 1",
     )
     active = []
@@ -323,6 +328,7 @@ def datapack_files() -> dict[str, str]:
         "tellraw @s " + text("", {"text": "Weekly challenges", "color": "gold"},
                              {"text": "  new every Monday (Pacific)  ", "color": "gray"}, OPEN),
         f"function {NS}:challenges/lines",
+        f"function {NS}:goal/line",
     )
     f[f"{FN}/use.mcfunction"] = lines(
         "# Runs as a player who just used /trigger challenges: the wardrobe's challenges page.",

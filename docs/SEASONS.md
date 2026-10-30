@@ -565,6 +565,23 @@ A Strength server gets harder to join every week, so catching up has to be built
   `#smp-forum` recruitment on their first day. The welcome screen a first join gets does this.
 - A 48-hour PvP grace period for a first join (rule 26), built into the `monkey-rules` data pack
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
+- The first-week quest (`docs/RETENTION.md`, "The first week"): five steps for a player new this season,
+  from the Guide to a faction, land and an outpost, with a skin at the end.
+
+### Switches
+
+Two features can be turned off and on again by staff at any time, over RCON or in game (op), with nothing
+lost: progress is kept while they are off. Both ship **on**, and both stay dormant until the launch
+(`#launched rw.day`), so test play never counts toward them.
+
+| Feature | Off | On | Is it on? |
+| --- | --- | --- | --- |
+| First-week quest (`tools/quest.py`) | `function monkey:quest/off` | `function monkey:quest/on` | `scoreboard players get #on rq` |
+| Weekly server goal (`tools/goal.py`) | `function monkey:goal/off` | `function monkey:goal/on` | `scoreboard players get #on rg` |
+
+Off, the quest signs nobody up, checks and says nothing, and `/trigger quest` says it is off; the goal counts,
+shows, announces and posts nothing. The switch is a score in the world, so restarts and deploys keep it.
+The defaults for a new world are `QUEST_ON` and `GOAL_ON` in those files.
 
 ### Telling players what changed
 

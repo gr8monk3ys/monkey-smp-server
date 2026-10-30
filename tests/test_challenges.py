@@ -64,7 +64,7 @@ def run_pick(week: int) -> dict[str, int]:
     """Runs pick.mcfunction the way the server would, for one #week."""
     scores = {"#week": week}
     for line in datapack(f"{FN}/pick.mcfunction").splitlines():
-        if line.startswith("#"):
+        if line.startswith("#") or line == "function monkey:goal/pick":   # the server goal's (test_goal.py)
             continue
         if m := re.fullmatch(r"scoreboard players operation (#\w+) rc\.week = (#\w+) rc\.week", line):
             scores[m[1]] = scores[m[2]]

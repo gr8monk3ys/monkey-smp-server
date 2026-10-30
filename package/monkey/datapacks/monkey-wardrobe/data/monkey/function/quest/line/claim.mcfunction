@@ -1,0 +1,2 @@
+execute if score @s rq.claim matches 1.. run return run tellraw @s [" ",{"text":"Claim a chunk","color":"green","hover_event":{"action":"show_text","value":"Right-click a chunk on the world map (M), or stand in it and type /oclaims claim. Counted within the hour."}},{"text":"  done","color":"green"}]
+tellraw @s [" ",{"text":"Claim a chunk","color":"white","hover_event":{"action":"show_text","value":"Right-click a chunk on the world map (M), or stand in it and type /oclaims claim. Counted within the hour."}},{"text":"  (hover: how)","color":"dark_gray"}]

@@ -4,6 +4,7 @@ scoreboard objectives add st.kills dummy
 scoreboard objectives add st.bounty dummy
 scoreboard objectives add st.ver dummy
 scoreboard objectives add standings trigger
+scoreboard objectives add st.claimed dummy
 # The bounty title: a team, like the supporter titles (docs/RETENTION.md). It lasts the season.
 team add bounty_hunter
 team modify bounty_hunter color red

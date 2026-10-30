@@ -42,6 +42,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import goal
 import npcs
 import season_calendar
 from challenges import LAUNCHED, TEST_PLAY
@@ -361,7 +362,13 @@ def player_of_the_week(week: Week) -> list[str] | None:
 
 
 # The week's sections, in the order they show. Add a new one here (see the top of this file).
-SECTIONS = [mover, fighter, bounties, land, challenges, turnout, player_of_the_week]
+def server_goal(week: Week) -> list[str] | None:
+    """The weekly server goal (tools/goal.py): reached, or how far it got. Nothing while it is off. It counts
+    only after the launch (goal/second), so the launch weekend's line is the season's own play."""
+    return goal.recap_line(week.world.scores, week.number)
+
+
+SECTIONS = [mover, fighter, bounties, land, challenges, server_goal, turnout, player_of_the_week]
 QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 

@@ -174,6 +174,7 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
     synced = "".join(server.sent[:first_board])
     assert '{f:"sync/set",p:"AlexFake",o:"st.faction",v:3}' in synced   # p-blue 1, p-lone 2, p-red 3
     assert '{f:"sync/name",n:2,v:"LoneFake\'s faction"}' in synced
+    assert '{f:"sync/set",p:"AlexFake",o:"st.claimed",v:1}' in synced   # land claimed (the first-week quest)
     assert server.sent[first_board - 1] == "function monkey:diplomacy/batch/run" and first_board == 2
     assert "factions in game: " in capsys.readouterr().out
     # Once the world has saved what was sent, the next hour sends nothing for the factions.
@@ -181,7 +182,8 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
                                  "names": {"f1": "Blue Herons", "f2": "LoneFake's faction", "f3": "Red Monkeys"}}})
     board = with_scores(*[("st.faction", p, n) for p, n in (("AlexFake", 3), ("SamFake", 3), ("RiaFake", 1),
                                                              ("TomFake", 1), ("LoneFake", 2))],
-                        *[("st.leader", p, 1) for p in ("AlexFake", "RiaFake", "LoneFake")])
+                        *[("st.leader", p, 1) for p in ("AlexFake", "RiaFake", "LoneFake")],
+                        *[("st.claimed", p, 1) for p in ("AlexFake", "SamFake", "RiaFake", "TomFake", "LoneFake")])
     world = make_world(tmp_path / "again", board)
     storage(world, {"factions": {"ids": {"f1": "p-blue", "f2": "p-lone", "f3": "p-red"},
                                  "names": {"f1": "Blue Herons", "f2": "LoneFake's faction", "f3": "Red Monkeys"}}})

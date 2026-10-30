@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Siege windows** (off until staff turn them on): two fixed windows a week, Wednesday 7 to 9 PM and Sunday
+  3 to 5 PM Pacific, when every faction's claims can be raided (blocks, explosions, item use). Warnings 30
+  and 5 minutes ahead, announcements in game and in the news channel, `/trigger sieges`, and a window open
+  across a restart stays open. `tools/sieges.py`, the `monkey-sieges` data pack and
+  `deploy/monkey-sieges.sh` with a 5-minute timer, which also gives the game the time. Staff:
+  `monkey:sieges/staff/on`, `off`, `status`. The rules need amending before they go on.
+- **7-day wars** (off until staff turn them on with `monkey:diplomacy/staff/wars_on`): a leader confirms a
+  declaration, which then lasts 7 days; the faction with more kills of the other wins. No war on a pact
+  partner, one declaration per faction every 48 hours, the score in `/trigger diplomacy`, the winner
+  announced in game, in the news channel and in Sunday's standings post.
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

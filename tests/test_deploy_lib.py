@@ -168,6 +168,7 @@ def test_compose_takes_a_relative_live_dir_from_the_callers_folder(sh, tmp_path)
     ("monkey-drops.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
     ("monkey-omens.sh", "send /srv/live/server/world --docker", "the timer tries again in 10 minutes"),
     ("monkey-day.sh", "send --docker", "monkey-day.service tries again in 10 minutes"),
+    ("monkey-sieges.sh", "send --docker", "the timer tries again in 5 minutes"),
 ])
 def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, script, sent, retry):
     code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function monkey:x: ok\n")
@@ -216,7 +217,7 @@ def test_drops_and_omens_with_nothing_to_send_take_no_lock(sh, tmp_path, script)
 def job(sh, tmp_path, script, *args, **env):
     """Runs a timed job's script against a made-up checkout; returns (exit code, its logged lines, calls)."""
     (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
-    for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py"):
+    for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py", "sieges.py"):
         (tmp_path / "repo" / "tools" / name).write_text("")
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
                           **{"MONKEY_DEPLOY_ENV": "/nonexistent", **env})
@@ -227,7 +228,8 @@ def job(sh, tmp_path, script, *args, **env):
 @needs_dash
 @pytest.mark.parametrize(("script", "first"), [("monkey-week.sh", []), ("monkey-day.sh", []),
                                                ("monkey-drops.sh", ["function monkey:x"]),   # drops' spots
-                                               ("monkey-omens.sh", [])])   # never the week's plan
+                                               ("monkey-omens.sh", []),   # never the week's plan
+                                               ("monkey-sieges.sh", ["function monkey:x"])])   # the windows
 def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh, tmp_path, script, first):
     code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function monkey:x\n")
     assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function monkey:x"]
@@ -248,7 +250,8 @@ def test_check_says_why_there_may_be_no_commands_and_what_a_stopped_server_means
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["monkey-week.sh", "monkey-drops.sh", "monkey-omens.sh", "monkey-day.sh"])
+@pytest.mark.parametrize("script", ["monkey-week.sh", "monkey-drops.sh", "monkey-omens.sh", "monkey-day.sh",
+                                    "monkey-sieges.sh"])
 def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" --now')
     assert code == 2 and out == [f"usage: sh {(DEPLOY / script).as_posix()} [--check | --install]"] and calls == []
@@ -260,7 +263,8 @@ def test_a_timed_job_refuses_an_unknown_option_and_installs_only_as_root(sh, tmp
 
 
 JOB_FOR = {"monkey-week.sh": "the weekly challenges", "monkey-drops.sh": "supply drops",
-           "monkey-omens.sh": "omens", "monkey-day.sh": "the wardrobe's day job"}
+           "monkey-omens.sh": "omens", "monkey-day.sh": "the wardrobe's day job",
+           "monkey-sieges.sh": "the siege windows and the clock"}
 
 
 def test_the_day_runs_its_job_and_systemd_retries_it_until_it_gives_up():

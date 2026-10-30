@@ -15,7 +15,15 @@ scoreboard objectives add dp.last dummy
 scoreboard objectives add dp.tmp dummy
 scoreboard objectives add dp.state dummy
 scoreboard objectives add diplomacy trigger
+# 7-day wars: "#LO.HI" the minute (#now sg) it ends (dp.until); "#A.B" A's kills of B in it (dp.score);
+# "#fN" the minute faction N may declare again (dp.next). Storage wars: [{lo, hi}], the ones running.
+scoreboard objectives add dp.until dummy
+scoreboard objectives add dp.score dummy
+scoreboard objectives add dp.next dummy
+execute unless score #formal dp.state matches 0.. run scoreboard players set #formal dp.state 0
+execute unless data storage monkey:diplomacy wars run data modify storage monkey:diplomacy wars set value []
 scoreboard players set #10 dp.tmp 10
+scoreboard players set #60 dp.tmp 60
 execute unless data storage monkey:diplomacy log run data modify storage monkey:diplomacy log set value []
 # This world's marker: the Sunday report tells a new world (a new season) by it.
 execute unless score #world dp.state matches 1.. store result score #world dp.state run random value 1..2147483646

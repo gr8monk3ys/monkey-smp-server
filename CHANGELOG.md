@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **The season story** (`tools/lore.py`, the new `monkey-lore` data pack): Season I's own story, the Knotkeeper's
+  chronicle of Ruk the Monkey King and the rope that is the world border, told a page a week from week 1 to the
+  finale. The Town Crier announces each week's page in chat; the page is a written book staff hide in the world,
+  found by walking up to it, and all eleven give the Knotkeeper title. A test keeps the pages about the border,
+  the End, the Netherite age and the finale in their weeks. docs/SEASONS.md, "The season story".
+- **Monument of the Month** (`tools/monuments.py`): a monthly theme, factions enter a build with
+  `/trigger monument`, Discord votes (by hand, docs/ADMIN.md), and the winner is announced in game and in the
+  recap and kept in a hall of monuments that `tools/season.py carry` takes into the next season for warps.
+- Both ship **off**; staff switch them on (docs/SEASONS.md, "Switches").
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

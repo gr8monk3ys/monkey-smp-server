@@ -42,6 +42,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import monuments
 import npcs
 import season_calendar
 from challenges import LAUNCHED, TEST_PLAY
@@ -360,8 +361,19 @@ def player_of_the_week(week: Week) -> list[str] | None:
     return [f"**Player of the Week:** {md(name)} ({md(top['name'])}, 1st), {did}."]
 
 
+def monument(week: Week) -> list[str] | None:
+    """A Monument of the Month named this week (tools/monuments.py: the hall entry's season and week). Rare, so no
+    world folder to read says nothing rather than "can't tell" (which would hide "A quiet week")."""
+    if week.folder is None:
+        return []
+    season = week.scores("rw.day").get("#season", 1)
+    won = [r for r in monuments.hall(week.folder) if r.get("season") == season and r.get("week") == week.number]
+    return [f"**Monument of the Month:** {md(monuments.name_text(r.get('faction')))} won {r.get('month')}, "
+            f"{r.get('theme')}, at {r.get('x')} {r.get('y')} {r.get('z')}." for r in won]
+
+
 # The week's sections, in the order they show. Add a new one here (see the top of this file).
-SECTIONS = [mover, fighter, bounties, land, challenges, turnout, player_of_the_week]
+SECTIONS = [mover, fighter, bounties, land, challenges, turnout, player_of_the_week, monument]
 QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 

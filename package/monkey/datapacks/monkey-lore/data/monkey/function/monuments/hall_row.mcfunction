@@ -1,0 +1,1 @@
+$tellraw @s ["",{"text":" $(n). Season $(season), $(month), $(theme): ","color":"gray"},{"nbt":"tmp[0].faction","storage":"monkey:monuments","interpret":true,"color":"gold"},{"text":", at $(x) $(y) $(z)","color":"gray"}]

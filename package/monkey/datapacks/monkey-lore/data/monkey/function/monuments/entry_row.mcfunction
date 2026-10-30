@@ -1,0 +1,1 @@
+$tellraw @s ["",{"text":"Faction $(f): ","color":"gray"},{"nbt":"entries.f$(f).faction","storage":"monkey:monuments","interpret":true,"color":"gold"},{"text":" at $(x) $(y) $(z) in $(dim)","color":"gray"}]

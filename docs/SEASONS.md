@@ -554,6 +554,65 @@ safety; this gives builders a moment of their own, the way events do for fighter
   and a line from them about the build. The winners get a Base of the Month role in Discord for the month.
 - **No Cup points.** It is for builders, and points would turn it into a chore for every faction.
 
+### The season story
+
+Each season has a short story told a page a week, so the border acts, the End and the finale mean something in
+the world and not only on the calendar. Season I's is **the Knotkeeper's chronicle**, written by Mira Salt-Hand,
+the last keeper of the knots:
+
+> The world border is not a wall but a rope, tied by Ruk, the Monkey King: a small, loud, hungry monkey who was
+> king only because nobody else would climb that high. He tied it round his people to keep out the Hollow, the
+> land nobody has dreamed yet. A rope that never moves is a noose, so whenever his people grew strong he let some
+> out, and new land rolled in (the border acts). He cut a far gate in the sky and set a dragon on its hinge (the
+> End), buried the deep metal until his people could hold it (the Netherite age), and when he grew too old to
+> untie a knot he climbed into the rope and became it, which is why the border hums and moves when the factions
+> grow. At the end he draws the rope back in to gather everyone close for one last fight (the finale), then
+> ties a new one somewhere new (the next season).
+
+It is an original story in its own world and voice; keep it that way (no text from any translation or game of
+an older Monkey King story). `tools/lore.py`, `BEATS`, has all of it: one beat for each week from 1 to the finale
+(11), each with a title, the Town Crier's line, where its page is hidden and the book's pages. A test checks the
+beats against the calendar: the pages about the border, the End, the Netherite age and the finale fall in the
+weeks those happen.
+
+- **The Crier.** When a week begins, everyone online gets the Town Crier's line for it in chat, once, and anyone
+  else the first time they are on that week. `/trigger lore` says it again, with the pages they have found.
+- **The pages.** Each week's page is a written book hidden in the world. Staff hide every page once per world
+  (`python tools/lore.py plan` lists them and where each goes; docs/ADMIN.md, "The season story"), all of them
+  before the launch if they like: a page sparkles and can be found only from its own week. A player who walks
+  within 4 blocks of it gets the book, once each, and the chat line counts their pages.
+- **The title.** Finding all eleven gives the **Knotkeeper** title (a dark aqua `[Knotkeeper]`, a team like the
+  other titles, carried into later seasons). A title or supporter color the player already shows is never
+  replaced. Nothing else: no items beyond the books, no points.
+
+`tools/lore.py`, in the `monkey-lore` data pack. Off until staff turn it on ("Switches").
+
+### Monument of the Month
+
+Once a month factions build a monument to a theme, Discord votes, and the winner is kept for good: next season it
+is a warp. Base of the Month (above) shows off a home; this is a build made to be visited.
+
+- **Themes**, one a month: `tools/monuments.py`, `THEMES` (Season I: The Gate in November, The Long Night in
+  December, Ruk's Chair in January; Season II's are there too). `python tools/monuments.py plan` lists them.
+- **Entering.** Staff open the month's contest (docs/ADMIN.md, "Monument of the Month"). A member of a faction the
+  server knows (the hourly faction list, `st.faction`) stands at the build and runs `/trigger monument`: that
+  records the spot, the dimension and the faction. Running it again moves the entry; one entry a faction.
+  `/trigger monument set 2` shows the theme, the faction's entry and the hall. The coordinates are posted for the
+  vote, so build it where you don't mind visitors.
+- **Voting** is in Discord, run by staff by hand (the bot has no part in it: its bridge only sends `list` and
+  `tellraw` and reads nothing from the world, and reaction tallies are quick to count by eye): staff close entries,
+  post one thread per entry in `#monkey-smp` (`python tools/monuments.py entries WORLD` prints the posts: faction
+  and coordinates), the faction adds a screenshot to its thread, and members react with a star. After 48 hours
+  the most stars wins; a tie goes to the owners.
+- **The winner** is announced in game (a title on screen and a chat line) and in that Sunday's recap, and goes
+  in the **hall of monuments**: storage `monkey:monuments hall` in the world, numbered from 1 for good.
+  `tools/season.py carry` copies the hall into the next season's world ("Ending a season"), where staff give
+  each monument a warp at spawn (`function monkey:monuments/warp {n:N}` on a spawn NPC's button). The pack never
+  teleports anyone on its own.
+- **No Cup points**, as for Base of the Month.
+
+`tools/monuments.py`, in the `monkey-lore` data pack. Off until staff turn it on ("Switches").
+
 ### New players in mid-season
 
 A Strength server gets harder to join every week, so catching up has to be built in:
@@ -565,6 +624,21 @@ A Strength server gets harder to join every week, so catching up has to be built
   `#smp-forum` recruitment on their first day. The welcome screen a first join gets does this.
 - A 48-hour PvP grace period for a first join (rule 26), built into the `monkey-rules` data pack
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
+
+### Switches
+
+Features staff turn on and off at any time, over RCON or in game (op), with nothing lost: what players have is kept
+while one is off. The switch is a score in the world, so restarts and deploys keep it. These ship **off**; turn
+them on when the owners decide to (and add a line to the player changelog then).
+
+| Feature | On | Off | Is it on? |
+| --- | --- | --- | --- |
+| The season story (`tools/lore.py`) | `function monkey:lore/on` | `function monkey:lore/off` | `scoreboard players get #on lr` |
+| Monument of the Month (`tools/monuments.py`) | `function monkey:monuments/on` | `function monkey:monuments/off` | `scoreboard players get #on mn` |
+
+Off, the Crier tells nobody the story and no hidden page can be found (pages and the title already earned stay);
+`/trigger monument` does nothing, while staff can still open and close a contest, name a winner and use the warps.
+The defaults for a new world are `LORE_ON` and `MONUMENTS_ON` in those files.
 
 ### Telling players what changed
 
@@ -893,6 +967,14 @@ Built:
   Season I world even if it is installed sooner. Checked by the unit tests only: not yet run against a real
   server.
 - Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
+- The season story ("The season story") and Monument of the Month ("Monument of the Month"), both off until
+  staff turn them on ("Switches"). Tried on a test server on 30 October 2026 (Carpet fake players, over RCON):
+  nothing happens while off; the Crier's week is told to everyone online and moves with the week; a hidden page
+  is found once, only from its week, with the book in the inventory; all eleven give the title and never replace
+  another team; entering, moving an entry, a player in no faction refused, closing, naming the winner (a second
+  refused), the warp, and `tools/monuments.py` and `tools/season.py carry` reading the saved world (the carried
+  hall command was run on the server). Not seen: the chat lines, the on-screen title, the sparkles and the book's
+  pages as a player sees them (no real client), and a carried hall loading in a new world.
 
 Not built:
 

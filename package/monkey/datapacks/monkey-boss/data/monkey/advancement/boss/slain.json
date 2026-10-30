@@ -1,0 +1,26 @@
+{
+  "criteria": {
+    "kill": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_scores",
+          "entity": "this",
+          "scores": {
+            "bs.id": {
+              "min": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "kill"
+    ]
+  ],
+  "rewards": {
+    "function": "monkey:boss/slain"
+  }
+}

@@ -84,6 +84,7 @@ ITEM_SLOTS = ("container.*", "armor.*", "weapon.offhand")
 # end       only while the End is open (rule 23: monkey:rules/open_end); netherite: only once rule 24 is lifted
 # item      an item first (holding()): it counts only for a player not carrying it over from test play (CLEAN)
 # reopen    what staff should know before reopening it (the menu and docs/ADMIN.md say the rest)
+# season    only from this season on (#season rw.day): its line is hidden from the menu before then
 # Listed roughly in the order a season reaches them.
 
 
@@ -148,6 +149,12 @@ MILESTONES = [
     dict(id="netherite", name="Wear full Netherite", mirrors=None, netherite=True,
          about="Wear all four pieces of Netherite armor, once the owners lift rule 24 (the Netherite age).",
          trigger="location", player=FULL_NETHERITE),
+    dict(id="boss", name="Slay a border boss", mirrors=None, season=2,
+         about="Land the killing blow on the Edgewalker, the boss that rises on a border act (Season II on).",
+         trigger="player_killed_entity",
+         conditions={"entity": {"type": "minecraft:entity_scores", "entity": "this",
+                                "scores": {"bs.id": {"min": 1}}}},
+         reopen="Each border act raises one boss (tools/boss.py); a reopened first waits for the next act's."),
 ]
 NAME_MAX = 24   # a milestone's name, so its menu line (name, holder, week) fits one line of chat
 
@@ -245,6 +252,8 @@ def advancement(m: dict) -> dict:
              score_check(SEASON_LOCKED, EVENTS, most=0)]
     if m.get("end"):
         terms.append(score_check("#end_open", RULES, least=1))
+    if m.get("season"):
+        terms.append(score_check("#season", "rw.day", least=m["season"]))
     if m.get("player"):
         terms.append(m["player"])
     conditions = {**m.get("conditions", {}), "player": {"type": "minecraft:all_of", "terms": terms}}
@@ -284,6 +293,8 @@ def got_function(m: dict) -> str:
            "# Not with kit gear in the event arena, and not in creative or spectator (staff).",
            f"execute if entity @s[tag={ARENA_TAG}] run return 0",
            "execute unless entity @s[gamemode=!creative,gamemode=!spectator] run return 0"]
+    if m.get("season"):
+        out += [f"execute unless score #season rw.day matches {m['season']}.. run return 0"]
     if m.get("end"):
         out += ["# Only while the End is open (the advancement checks it too).",
                 f"execute unless score #end_open {RULES} matches 1.. run return 0"]
@@ -349,6 +360,7 @@ def show_function(m: dict) -> str:
     hover = {"action": "show_text", "value": m["about"]}
     name = {"text": m["name"], "color": "green", "hover_event": hover}
     out = [f"# {m['name']}: its line in /trigger firsts (one tellraw of the six runs).",
+           *([f"execute unless score #season rw.day matches {m['season']}.. run return 0"] if m.get("season") else []),
            f"execute unless score #{fid} {OBJ} matches 1.. run return run tellraw @s " + text(
                " ", {**name, "color": "white"}, {"text": "  open", "color": "gray"}),
            f"execute store success score #named {OBJ} if data storage {STORE} held.{fid}.name",

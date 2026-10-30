@@ -25,7 +25,7 @@ DATA_FORMAT = 121
 NS = "monkey"
 # challenges writes into wardrobe's
 GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens", "sieges",
-              "lore")
+              "lore", "boss", "finale")
 
 # Objectives the generated packs read but another data pack or mod creates.
 EXTERNAL_OBJECTIVES = {

@@ -1,0 +1,1 @@
+$tellraw @a ["",{"selector":"@s","color":"yellow"},{"text":" of ","color":"gold"},{"nbt":"names.f$(faction)","storage":"monkey:factions","interpret":true,"color":"yellow"},{"text":" slew The Edgewalker! ","color":"gold","bold":true},{"text":"Their banner goes in the Hall of Banners.","color":"gold"}]

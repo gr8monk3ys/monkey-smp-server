@@ -15,3 +15,4 @@ function monkey:firsts/reopen/end
 function monkey:firsts/reopen/dragon
 function monkey:firsts/reopen/elytra
 function monkey:firsts/reopen/netherite
+function monkey:firsts/reopen/boss

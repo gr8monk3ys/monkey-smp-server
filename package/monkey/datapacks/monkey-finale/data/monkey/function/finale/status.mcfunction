@@ -1,0 +1,2 @@
+tellraw @s ["",{"text":"Finale: switch ","color":"gold"},{"score":{"name":"#on","objective":"fn"}},{"text":", phase ","color":"gold"},{"score":{"name":"#phase","objective":"fn"}},{"text":" (0 not yet, 1 warning, 2 shrinking, 3 last hour, 4 over), second ","color":"gold"},{"score":{"name":"#t","objective":"fn"}},{"text":" of 6600","color":"gold"}]
+tellraw @s ["",{"text":"Result: ","color":"gold"},{"nbt":"result","storage":"monkey:finale","color":"white"}]

@@ -182,3 +182,11 @@ _Avoid_: alliance (rule 31's word, for the relationship itself), treaty
 **Outpost**:
 One of four capture points in the newest border ring (North, East, South, West). A faction takes one by being alone inside it for 60 seconds, and each hour it holds one is a weekly standings point (at most 20). `tools/outposts.py` places them.
 _Avoid_: KOTH (that is the staff event), point, flag (that is Faction Raid's)
+
+**Border boss**:
+The Edgewalker, a vanilla mob made strong with data pack commands, that rises in the ring each Season II border act opens and leaves after 90 minutes if nobody kills it (`tools/boss.py`, docs/SEASONS.md, "The border boss"). Off until staff turn on its switch.
+_Avoid_: world boss (no mod; it is one mob on one act)
+
+**Switch**:
+A staff on/off score in the world for a Season II spectacle (the border boss, the finale), off in a new world and refused in Season I (docs/SEASONS.md, "Switches").
+_Avoid_: flag, toggle, feature flag

@@ -35,7 +35,7 @@ def fixed(t: dict) -> tuple[str, str, dict] | None:
 
 def test_the_milestones_are_well_formed():
     ids = [m["id"] for m in firsts.MILESTONES]
-    assert 10 <= len(ids) <= 14 and len(ids) == len(set(ids))
+    assert 10 <= len(ids) <= 15 and len(ids) == len(set(ids))
     for m in firsts.MILESTONES:
         assert re.fullmatch(r"[a-z]+", m["id"]), m["id"]
         assert 0 < len(m["name"]) <= firsts.NAME_MAX and m["about"], m["id"]

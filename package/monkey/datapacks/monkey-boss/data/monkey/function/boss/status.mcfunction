@@ -1,0 +1,2 @@
+tellraw @s ["",{"text":"Border boss: switch ","color":"gold"},{"score":{"name":"#on","objective":"bs"}},{"text":", last act ","color":"gold"},{"score":{"name":"#act","objective":"bs"}},{"text":", state ","color":"gold"},{"score":{"name":"#state","objective":"bs"}},{"text":" (0 none, 1 waiting to rise, 2 up), seconds left ","color":"gold"},{"score":{"name":"#left","objective":"bs"}}]
+tellraw @s ["",{"text":"Records: ","color":"gold"},{"nbt":"acts","storage":"monkey:boss","color":"white"}]

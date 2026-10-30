@@ -112,7 +112,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/monkey/MonkeySMP-Server/docker && docker compose attach monkey` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec monkey monkey rcon "say hi"` |
 | Let a player in by hand | `docker compose exec monkey monkey add-player NAME` |
-| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 600"` and `... "execute in minecraft:the_nether run worldborder set 500 600"`, then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
+| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 12000"` and `... "execute in minecraft:the_nether run worldborder set 500 12000"` (the time is in ticks since 26.3: 12000 is 10 minutes), then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
 | Store or staff grants (wardrobe) | `docker compose exec monkey monkey rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs` |
 | Joins per join address | `python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs` (docs/PROMOTION.md) |

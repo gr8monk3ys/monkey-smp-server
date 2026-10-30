@@ -24,7 +24,8 @@ MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the ma
 DATA_FORMAT = 121
 NS = "monkey"
 # challenges writes into wardrobe's
-GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens")
+GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens", "boss",
+              "finale")
 
 # Objectives the generated packs read but another data pack or mod creates.
 EXTERNAL_OBJECTIVES = {

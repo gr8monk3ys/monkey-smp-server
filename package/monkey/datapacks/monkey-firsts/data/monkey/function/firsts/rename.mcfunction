@@ -15,3 +15,4 @@ function monkey:firsts/rename/one {id:"end"}
 function monkey:firsts/rename/one {id:"dragon"}
 function monkey:firsts/rename/one {id:"elytra"}
 function monkey:firsts/rename/one {id:"netherite"}
+function monkey:firsts/rename/one {id:"boss"}

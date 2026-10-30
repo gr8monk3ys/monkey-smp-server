@@ -15,6 +15,7 @@ scoreboard objectives add rf.end dummy
 scoreboard objectives add rf.dragon dummy
 scoreboard objectives add rf.elytra dummy
 scoreboard objectives add rf.netherite dummy
+scoreboard objectives add rf.boss dummy
 # 0 for a first nobody holds yet (the advancements read it), without touching a claimed one.
 scoreboard players add #diamond rf 0
 scoreboard players add #nether rf 0
@@ -30,6 +31,7 @@ scoreboard players add #end rf 0
 scoreboard players add #dragon rf 0
 scoreboard players add #elytra rf 0
 scoreboard players add #netherite rf 0
+scoreboard players add #boss rf 0
 scoreboard players add #claimed rf 0
 # A claim stored without its name by an older pack never set #unnamed: rename checks them all once.
 scoreboard players set #unnamed rf 1

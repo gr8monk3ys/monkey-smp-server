@@ -479,6 +479,10 @@ copied into each new world's spawn, because the world resets and the hall is wha
   `give @s minecraft:red_banner[minecraft:banner_patterns=[{pattern:"minecraft:stripe_top",color:"black"}]]`,
   and in the new world run it in creative and place the banner. A faction whose flag is gone gets the banner
   from its sign-up post (Registering a faction), made again at a loom.
+- **Boss slayers** (from Season II, "The border boss"). Each faction that killed a border boss gets a smaller
+  banner in its season's bay, below the champion's, with a sign: "Slew the Edgewalker, act N", the faction and
+  the player. `python tools/boss.py status WORLD` lists them; read the banner out as above and add a row for
+  each to the table, in the Banner column.
 - **No data pack.** One banner a season, placed by hand in creative, doesn't need one: the record that has
   to last is the table below, kept in this repo, so a lost world doesn't lose the hall.
 
@@ -766,6 +770,9 @@ the client pack, so players update it.
    sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install
    ```
 
+   Then the switches (Switches, below), if the owners want the border boss and the finale:
+   `monkey rcon "function monkey:boss/on"` and `monkey rcon "function monkey:finale/on"`.
+
 10. Check the season skin: once a player has logged in, `monkey rcon "scoreboard players get NAME rw.s2"` gives
     1 and their wardrobe's challenges page (`/trigger wardrobe set 5`) shows Twinmoon. A champion's
     `rw.champion` came over with the carry.
@@ -781,6 +788,84 @@ the client pack, so players update it.
 - Before Season II ends, Season III's blade goes in `SEASON_SKINS` and at the end of `BLADES`
   (`tools/wardrobe.py`), and Season III's acts in `ACTS` (`tools/border.py`) with its `Season` in
   `SEASONS` (`tools/season_calendar.py`).
+
+### Switches
+
+Season II's spectacles ship **off**. Each has a switch in the world's scoreboard that staff turn on over RCON
+once the season has launched; a new world starts with both off, a reload keeps staff's choice, and in a Season I
+world (`#season rw.day` 1) the switches refuse and nothing runs. Check them with the `status` commands
+(`docs/ADMIN.md`).
+
+| Switch | On | Off | What it does |
+| --- | --- | --- | --- |
+| The border boss | `function monkey:boss/on` | `function monkey:boss/off` | A boss rises on each border act (below). Off also sends away a boss that is up or waiting. |
+| The finale | `function monkey:finale/on` | `function monkey:finale/off` | The border timer starts the finale at its time (below). Off doesn't end one already running: `function monkey:finale/stop` does. |
+
+Turn both on after the launch (Season II checklist, step 9), before 20 February.
+
+### The border boss
+
+On each border act (20 February and 3 April), a boss rises in the ring the act opened: **The Edgewalker**, a
+vanilla wither skeleton twice the size, with a diamond sword, helmet and chestplate (never dropped), armor 15,
+toughness 6, 14 damage a hit, little knockback, fire resistance, no fall damage, and a boss bar for players
+within 96 blocks. No mods: it is built from data pack commands (`tools/boss.py`, the `monkey-boss` pack).
+
+- **Where and when.** The timer picks a spot 48 blocks inside the new edge, on a side and at an offset drawn
+  from the season and the act (so a retry picks the same spot), and sends it right after the act. Chat names the
+  spot (to the nearest block) at once, and the boss rises there on the surface about 10 minutes later, once the
+  border has finished growing; the news post carries the same coordinates to Discord.
+  `python tools/boss.py spot --season 2` prints the spots.
+- **Health.** 150, plus 40 for each survival player online when it rises, kept between 200 and 1000.
+- **Once an act.** The pack remembers the last act it took, so a re-sent act (a retry, or staff by hand) never
+  raises a second boss, and a boss already up blocks another.
+- **The kill.** Whoever lands the killing blow is named in chat with their faction. The first player to kill
+  one gets the Server First "Slay a border boss" (Season II on; hidden from Season I's menu), and the kill goes
+  into the news post and the Sunday recap. The slayer's faction is recorded for the **Hall of Banners**: next
+  season, the hall can hang its banner beside the champion's with a sign naming the act
+  (`python tools/boss.py status WORLD` reads them out of the world, like the champion's banner, before the world
+  is moved away).
+- **Leaving.** Nobody kills it within 90 minutes: chat warns 10 minutes before, then it leaves, with a message.
+  It also leaves if the switch is turned off, and a boss that dies some other way (lava, the void) ends quietly.
+- **A staff event.** While it is up, within 96 blocks of it anyone can fight anyone (rule 41's event
+  exemption; chat says so when it is announced and when it rises). It is always far from spawn.
+- **Nothing that helps in a fight.** No loot, no Strength: a line in chat, a first and a banner.
+
+Untested in a real fight: how hard it is for a group. Change the numbers at the top of `tools/boss.py`.
+
+### The finale
+
+Week 11's Saturday (24 April 2027, 6 PM Pacific): the border closes on the monument, and the faction holding it at
+the close wins the finale (`tools/finale.py`, the `monkey-finale` pack). The border timer starts it from 6 PM,
+once, with the switch on.
+
+- **The monument** is 192 blocks east of spawn (`MONUMENT_OFFSET` from the Overworld border's centre, which the
+  rules pack put on spawn), never at spawn: spawn is sacred and a no-PvP zone (rules 22 and 26), and the hold zone
+  and its event area stay clear of spawn's 7 x 7 chunks (a test checks). Staff build it there before week 11;
+  `python tools/finale.py plan --world WORLD` prints its coordinates. During the shrink the border's centre moves
+  from spawn to the monument, a block a second each way, so the border closes on it.
+
+| From the start | What happens |
+| --- | --- |
+| 0 | "In 10 minutes the border starts closing", with the monument's coordinates. A boss bar counts down to the close. |
+| 9 minutes | "Closing in 1 minute." |
+| 10 minutes | "The border is closing now": it shrinks to 256 blocks across over 40 minutes, its centre moving to the monument (an edge moves at most about 2 blocks a second, under half walking pace). |
+| 50 minutes | The last hour, a staff event (rule 41: anyone can fight anyone within 64 blocks of the monument until the close): the border holds at 256. Every second, each faction scores a point for each member within 24 blocks of the monument (either way, any height, in survival, not in the event arena). |
+| 100 minutes, less 10 and less 1 | Warnings before the close. |
+| 110 minutes | The close: the faction with the most points holds the monument. |
+
+- **Nobody stranded.** The Overworld border never goes below 256 (and never below 128 if someone edits it); a
+  border already that small is left alone, and it never grows. From the shrink on, every 5 seconds players within
+  16 blocks of the edge are warned on screen with the monument's coordinates, and anyone outside the border
+  (logging in out there, say) is moved to a safe spot inside it, around the border's centre (not to the
+  monument). The Nether's border doesn't move. Claims are never touched (rules 37, 39 and 42): land outside the
+  border is only out of reach. Rule 25 in `docs/RULES.md` tells players.
+- **A tie names nobody.** Equal points at the top: staff decide (a last fight, or the Cup points shared).
+- **The result** goes into the news post and the Sunday recap. It is the finale's first place for the Cup
+  (50 points, "The pillar events"); the season's champion is still the faction with the most Cup points.
+  The pack doesn't set `rw.champion` itself: a pack only reaches players who are online, the roster is the
+  faction numbers as of the last hourly board run, and the champion is decided by the Cup. After the close,
+  `python tools/finale.py result WORLD` prints the points, the winner's roster, and the title and helm commands
+  for "Ending a season", step 4, to paste once the Cup is counted.
 
 ## What is built and what isn't
 
@@ -893,6 +978,8 @@ Built:
   Season I world even if it is installed sooner. Checked by the unit tests only: not yet run against a real
   server.
 - Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
+- The border boss and the finale ("The border boss", "The finale"; `tools/boss.py`, `tools/finale.py`), behind
+  their switches (off). Unit tests and a local test server over RCON; never with real players.
 
 Not built:
 

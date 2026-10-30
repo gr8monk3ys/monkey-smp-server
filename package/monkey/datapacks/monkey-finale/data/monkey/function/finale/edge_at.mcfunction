@@ -1,0 +1,3 @@
+# Macro edge {warnx, warnz, warnd, outx, outz, outd, r}. Overworld players only (distance=0..).
+$execute in minecraft:overworld as @a[distance=0..,gamemode=!spectator,gamemode=!creative] unless entity @s[x=$(warnx),y=-64,z=$(warnz),dx=$(warnd),dy=384,dz=$(warnd)] run title @s actionbar ["",{"text":"The finale's border is near: head for the monument at ","color":"red"},{"nbt":"at.x","storage":"monkey:finale","color":"yellow"},{"text":", ","color":"yellow"},{"nbt":"at.z","storage":"monkey:finale","color":"yellow"}]
+$execute in minecraft:overworld as @a[distance=0..,gamemode=!spectator,gamemode=!creative] unless entity @s[x=$(outx),y=-64,z=$(outz),dx=$(outd),dy=384,dz=$(outd)] run function monkey:finale/inside with storage monkey:finale edge

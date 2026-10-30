@@ -12,8 +12,9 @@ the weeks' dates come from tools/season_calendar.py's SEASONS, so moving a seaso
 
 What the timer does, from the saved world (the server saves every 5 minutes, so an hourly job sees its own work):
 - **The act.** Once an act's time has come and the world hasn't recorded it (#border_act ev.state, the last
-  act done; the world's own, so a new season's starts from none), it sends `worldborder set SIZE 600` in each
-  dimension whose saved border is heading for less than the act's size (10 minutes to grow), tells everyone
+  act done; the world's own, so a new season's starts from none), it sends `worldborder set SIZE 12000` in each
+  dimension whose saved border is heading for less than the act's size (10 minutes to grow: since 26.3 the
+  time is in ticks, 20 a second), tells everyone
   online, and records the act. Only the latest act that is due counts, and a border is never shrunk: one
   already that size or bigger (grown by hand) is left alone, and a recorded act never runs again, so the
   finale's shrink is safe. Nothing before the season's launch (#launched rw.day), in a locked world (the
@@ -37,6 +38,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import boss
+import finale
+
 import map_border
 import rcon as server
 import saved_world
@@ -51,6 +55,7 @@ ACTS = {
 }
 NETHER_SCALE = 8
 GROW_SECONDS = 600
+TICKS = 20                    # `worldborder set SIZE TIME` takes ticks since 26.3 (600 would grow it in 30 seconds)
 EVENT_TIME = dt.time(18, 0)   # the Saturday event slot, Pacific
 OVERWORLD, NETHER = saved_world.OVERWORLD, "minecraft:the_nether"
 PURGE = Path("config") / "bluemap" / "monkey-map-purge.txt"
@@ -91,14 +96,26 @@ def width(size: float) -> str:
 
 def act_commands(act: Act, borders: dict[str, saved_world.SavedBorder]) -> list[str]:
     """An act not yet recorded: the `worldborder set`s it still needs (a border heading for less than its size),
-    the news when the Overworld's grows, and the record, last, so a failed set is tried again."""
-    out = [f"execute in {dim} run worldborder set {width(size)} {GROW_SECONDS}"
+    the news when the Overworld's grows, and the record, so a failed set is tried again. After the record, the
+    act's border boss (tools/boss.py): the pack takes each act once and does nothing while its switch is off,
+    and a pack that refuses or isn't there can't hold the act back."""
+    out = [f"execute in {dim} run worldborder set {width(size)} {GROW_SECONDS * TICKS}"
            for dim, size in act.sizes().items() if borders[dim].target < size]
     if any(OVERWORLD in c for c in out):
         news = (f"The border breaks: over the next {GROW_SECONDS // 60} minutes it grows to {act.size} blocks "
                 f"across, and the Nether's to {width(act.nether)}. New land to the edge.")
         out.append("tellraw @a " + json.dumps({"text": news, "color": "gold"}, separators=(",", ":")))
-    return out + [f"scoreboard players set {DONE} {STATE} {act.number}"]
+    centre = borders[OVERWORLD]
+    return out + [f"scoreboard players set {DONE} {STATE} {act.number}",
+                  boss.act_command(act.season, act.number, centre.center_x, centre.center_z, act.size)]
+
+
+def finale_due(season: int, scores: dict[str, dict[str, int]], when: dt.datetime) -> bool:
+    """The finale (tools/finale.py) is due: a season with border acts, its time has come, the saved world has the
+    finale's switch on and it hasn't started there (the pack runs it once a world, so a retry is harmless)."""
+    at = finale.finale_at(season) if ACTS.get(season) else None
+    held = scores.get(finale.OBJ, {})
+    return at is not None and at <= when and held.get("#on", 0) == 1 and held.get("#started", 0) == 0
 
 
 @dataclass
@@ -152,6 +169,10 @@ def read_run(world: Path, when: dt.datetime) -> Run:
         run.borders[dim] = found
     if scores.get(STATE, {}).get(DONE, 0) < run.act.number:
         run.commands = act_commands(run.act, run.borders)
+    elif finale_due(run.season, scores, when):
+        centre = run.borders[OVERWORLD]
+        run.commands = [finale.start_command(centre.center_x, centre.center_z)]
+        return run
     at_act = all(run.borders[dim].target == size for dim, size in run.act.sizes().items())
     if not run.commands and at_act and not run.purges:
         try:
@@ -167,6 +188,15 @@ def commands(world: Path, when: dt.datetime) -> list[str]:
     """What the timer sends now: the act's commands, `bluemap reload` for maps it would fit, or the purges."""
     run = read_run(world, when)
     return run.commands + (["bluemap reload"] if run.maps else []) + [f"bluemap purge {m}" for m in run.purges]
+
+
+def describe(command: str, answer: str) -> str:
+    """The log's line for a command: the boss's and the finale's answers as words (their CODES)."""
+    for call, codes in ((f"function {boss.NS}:boss/act", boss.CODES), (f"function {finale.NS}:finale/start",
+                                                                          finale.CODES)):
+        if command.startswith(call):
+            return server.coded(call, codes)(command, answer)
+    return f"{command}: {answer or 'ok'}"
 
 
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
@@ -186,7 +216,7 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
             log("server not running: nothing sent (the next hour tries again)")
         return 0
     # stop: a failed `worldborder set` must not let the record after it through, or the act never runs again.
-    ok = server.send(rcon, run.commands, log, stop=True) if run.commands else True
+    ok = server.send(rcon, run.commands, log, describe, stop=True) if run.commands else True
     if run.maps:
         for fit in run.maps:
             fit.conf.write_text(fit.fitted, encoding="utf-8", newline="")   # in place: keeps the owner
@@ -220,9 +250,14 @@ def status(world: Path, when: dt.datetime) -> int:
         state = "due" if act.at <= when else "to come"
         print(f"  act {act.number}, week {act.week}: {season_calendar.day_words(act.at.date())} 6 PM Pacific, "
               f"{act.size} (Nether {width(act.nether)}): {state}")
+    at = finale.finale_at(run.season) if ACTS.get(run.season) else None
+    if at is not None:
+        print(f"  the finale: {season_calendar.day_words(at.date())} 6 PM Pacific, closing on the Overworld border's "
+              f"centre: {'due' if at <= when else 'to come'} (its switch and start are the saved world's #on and "
+              f"#started {finale.OBJ})")
     for dim, found in run.borders.items():
         moving = f", growing to {width(found.target)}" if found.target != found.size else ""
-        print(f"  {dim}: {width(found.size)} wide{moving}")
+        print(f"  {dim}: {width(found.size)} wide{moving}, centred on {found.center_x:g}, {found.center_z:g}")
     for fit in run.maps:
         print(f"  map to fit: {map_border.report(fit)}")
     for map_id in run.purges:

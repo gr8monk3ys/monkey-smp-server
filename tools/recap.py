@@ -360,8 +360,40 @@ def player_of_the_week(week: Week) -> list[str] | None:
     return [f"**Player of the Week:** {md(name)} ({md(top['name'])}, 1st), {did}."]
 
 
+def spectacles(week: Week) -> list[str] | None:
+    """Season II's border boss and finale (tools/boss.py, tools/finale.py) when they ended this week: who slew the
+    boss, or that it left, and who held the monument. Read from the saved world's command storage."""
+    if week.folder is None or week.scores("rw.day").get("#season", 0) < 2:
+        return []
+    import boss
+    import finale
+
+    import diplomacy
+    ended = [o for o in boss.outcomes(week.folder) if o.week == week.number and o.state in ("slain", "left")]
+    won = finale.result(week.folder, week.world.scores)
+    won = won if won and won.week == week.number else None
+    if not ended and not won:
+        return []
+    names = diplomacy.names(week.folder)
+    out = []
+    for o in ended:
+        if o.state == "left":
+            out.append(f"**Border boss:** {boss.NAME} left; nobody slew it.")
+        else:
+            of = f" of {md(names.get(o.faction, f'faction {o.faction}'))}" if o.faction else ""
+            out.append(f"**Border boss:** {md(o.player or 'a player')}{of} slew {boss.NAME}.")
+    if won and won.tie:
+        out.append(f"**The finale:** a tie for the monument on {won.points} points; staff name the winner.")
+    elif won and won.faction:
+        out.append(f"**The finale:** {md(names.get(won.faction, f'faction {won.faction}'))} held the monument "
+                   f"and won, with {won.points} points.")
+    elif won:
+        out.append("**The finale:** nobody held the monument.")
+    return out
+
+
 # The week's sections, in the order they show. Add a new one here (see the top of this file).
-SECTIONS = [mover, fighter, bounties, land, challenges, turnout, player_of_the_week]
+SECTIONS = [spectacles, mover, fighter, bounties, land, challenges, turnout, player_of_the_week]
 QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 

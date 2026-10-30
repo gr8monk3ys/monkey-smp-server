@@ -13,6 +13,9 @@ What gets posted, at most once a season each (docs/ADMIN.md, "Monkey SMP news"):
     (players/advancements/<uuid>.json), which keep the time each was done, so the first is the earliest one done
     since the season's launch, whoever's file was saved first.
   - new factions (Open Parties and Claims parties), several in one line: "New faction: Red Wolves, led by Steve."
+  - Season II's spectacles: the border boss rising, with its rough place, and how it ended (tools/boss.py: slain,
+    by whom and their faction, or left), and the finale's winner (tools/finale.py). Read from their packs'
+    command storage. A boss that has ended before its rising posted only posts its end.
 
 Everything comes from the files the server saves (every 5 minutes, ServerCore's autosave-interval-seconds), so a
 post lands 5 to 25 minutes after the moment. Nothing posts before the launch (`#launched rw.day`, set by
@@ -49,6 +52,10 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+import boss
+import finale
+
+import diplomacy
 import firsts
 import saved_world
 import standings
@@ -71,6 +78,7 @@ FIRST_LINES = {
     "dragon": "{p} killed the Ender Dragon. First this season.",
     "elytra": "{p} found an elytra. First this season.",
     "netherite": "{p} is wearing full Netherite. First this season.",
+    "boss": "{p} slew the first border boss. First this season.",
 }
 
 # Vanilla advancements that post for the first player on the server to finish one, with their English titles,
@@ -99,9 +107,9 @@ CHALLENGES = {
 }
 CHALLENGE_LINE = "{p} completed {title}. First this season."
 
-FIRST, CHALLENGE, FACTION = "first", "challenge", "faction"
-KINDS = [FIRST, CHALLENGE, FACTION]             # found at the same time: posted in this order
-LIMITS = {FIRST: 4, CHALLENGE: 2, FACTION: 2}   # posts of each kind in any 24 hours
+FIRST, CHALLENGE, FACTION, EVENT = "first", "challenge", "faction", "event"
+KINDS = [EVENT, FIRST, CHALLENGE, FACTION]      # found at the same time: posted in this order
+LIMITS = {FIRST: 4, CHALLENGE: 2, FACTION: 2, EVENT: 3}   # posts of each kind in any 24 hours
 DAILY = 6                                        # posts in all in any 24 hours
 PER_RUN = 2                                      # posts per run (the timer runs every 10 minutes)
 STALE = dt.timedelta(days=3)                     # waiting longer than this: dropped, never posted
@@ -177,6 +185,35 @@ def faction_items(world: Path, saved: Saved) -> list[Item]:
     return items
 
 
+def event_items(world: Path, saved: Saved) -> list[Item]:
+    """The border boss (each act's rising and its end) and the finale's winner, from their command storage."""
+    outcomes = boss.outcomes(world)
+    won = finale.result(world, saved.scores)
+    if not outcomes and not won:
+        return []
+    names = diplomacy.names(world)
+
+    def faction(n: int) -> str:
+        return md(names.get(n, f"faction {n}"))
+    items = []
+    for o in outcomes:
+        if o.act < 1:
+            continue
+        if o.state == "risen":
+            items.append(Item(f"{EVENT}:boss{o.act}:rose", EVENT, f"{boss.NAME} has risen near {o.x}, {o.z}, past "
+                              "the old border. The first to slay it takes a Server First.", order=o.act))
+        elif o.state == "slain":
+            by = md(o.player or "A player") + (f" of {faction(o.faction)}" if o.faction else "")
+            items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{by} slew {boss.NAME}.", order=o.act))
+        elif o.state == "left":
+            items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{boss.NAME} left: nobody slew it this time.",
+                              order=o.act))
+    if won and won.faction and not won.tie:
+        items.append(Item(f"{EVENT}:finale", EVENT, f"The finale: {faction(won.faction)} held the monument and "
+                          f"won, with {won.points} points.", order=99))
+    return items
+
+
 # What reading a source can raise on a half-saved or changing world: saved_world's ValueError, a file gone or
 # unreadable mid-read (a party disbanded while it was listed), tomllib missing on an old python.
 UNREADABLE = (ValueError, OSError, ImportError)
@@ -188,7 +225,8 @@ def found(world: Path, since: dt.datetime, saved: Saved) -> tuple[list[Item], li
     items, failed = [], []
     for name, read in ((FIRST, lambda: first_items(world, saved)),
                        (CHALLENGE, lambda: challenge_items(world, since, saved)),
-                       (FACTION, lambda: faction_items(world, saved))):
+                       (FACTION, lambda: faction_items(world, saved)),
+                       (EVENT, lambda: event_items(world, saved))):
         try:
             items += read()
         except UNREADABLE as e:

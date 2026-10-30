@@ -71,6 +71,10 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
 25. A world border is set at 2500 x 2500.
     - Leaving or breaking the world border is prohibited.
     - The border is expected to grow as the server progresses or as more players join.
+    - From Season II, on the season's finale evening (its last week) the border shrinks to 256 x 256 around the
+      finale's monument, never smaller. Chat warns 10 minutes before, 1 minute before and when it starts, and
+      anyone it passes is moved back inside. Claims and territories (rules 37, 39 and 42) are never touched: land
+      outside the border is only out of reach until the next season.
 26. New players and spawn are safe from PvP.
     - For 48 hours after your first join, other players can't hurt you. Attacking a player ends that early,
       and so does `/trigger end_grace`. Nobody gets it in the launch hour (rule 23): the whole server starts
@@ -127,6 +131,9 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       block them, heal them or take the loot.
     - Events are exempt. At KOTH, in the arena and at other staff events anyone can fight anyone; the rule
       applies again once you leave the event area.
+    - From Season II these are staff events too, each with its event area: the border boss, within 96 blocks of
+      it while it is up, and the finale's last hour, within 64 blocks of the monument until the close. Spawn is
+      never part of one (rules 22 and 26).
     - First offense: a 2-day ban. Second: 5 days. Third: 14 days. Offenses count for the current season.
 42. Admins roll back griefing of a territory (rules 37 and 39) and an insider's damage (rule 40). A legal
     raid, on anything outside a territory's perimeter, isn't rolled back.
@@ -268,8 +275,8 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
   2500 x 2500, centred on spawn. Since Minecraft 26.3 every dimension has its own border, so the pack also
   gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
-  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
-  and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
+  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 12000` (12000 ticks, 10 minutes,
+  to widen) and `execute in minecraft:the_nether run worldborder set 500 12000`. The pack never touches them again.
 - **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
   before the pack was installed (Minecraft's statistics show they've left the game before, or played over a

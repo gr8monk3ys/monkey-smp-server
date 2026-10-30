@@ -22,6 +22,7 @@ execute if score @s wardrobe matches 115 run function monkey:wardrobe/skin/stand
 execute if score @s wardrobe matches 116 run function monkey:wardrobe/skin/regalia
 execute if score @s wardrobe matches 117 run function monkey:wardrobe/skin/trailblazer
 execute if score @s wardrobe matches 118 run function monkey:wardrobe/skin/pinnacle
+execute if score @s wardrobe matches 119 run function monkey:wardrobe/skin/twinmoon
 execute if score @s wardrobe matches 201 run function monkey:wardrobe/skin/laurel
 execute if score @s wardrobe matches 202 run function monkey:wardrobe/skin/horned
 execute if score @s wardrobe matches 203 run function monkey:wardrobe/skin/plumed
@@ -30,5 +31,6 @@ execute if score @s wardrobe matches 205 run function monkey:wardrobe/skin/wande
 execute if score @s wardrobe matches 206 run function monkey:wardrobe/skin/crown
 execute if score @s wardrobe matches 207 run function monkey:wardrobe/skin/vanguard
 execute if score @s wardrobe matches 208 run function monkey:wardrobe/skin/founders_circlet
+execute if score @s wardrobe matches 209 run function monkey:wardrobe/skin/champions_helm
 scoreboard players set @s wardrobe 0
 scoreboard players enable @s wardrobe

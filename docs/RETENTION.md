@@ -43,6 +43,8 @@ friends, or by supporting:
 | Wanderer's Hood | helm | 12 months of pass | `rw.months 12` |
 | Founder's Edge | blade | played in season 1 | `rw.founder 1` |
 | Founder's Circlet | helm | played 10 minutes on Season I's launch weekend | `rw.launch 1` |
+| Twinmoon | blade | played in Season II | `rw.s2 1` |
+| Champion's Helm | helm | in the season champion's faction | `rw.champion 1` |
 | Lantern | blade | Ember supporter | `rw.tier 1` |
 | Standard | blade | Banner supporter | `rw.tier 2` |
 | Regalia | blade | Crown supporter | `rw.tier 3` |
@@ -71,6 +73,14 @@ Why these counters:
 - **Launch weekend.** Founder's Circlet is for being there at the start: 10 minutes online between the
   launch (Saturday 7 November 2026, 5 PM Pacific) and the end of Sunday 8 November, Pacific. It is never
   sold and never comes back. See "The launch weekend" below.
+- **Later seasons.** Each season after the first has its own blade, as Founder's Edge is Season I's:
+  Twinmoon for everyone who plays while `#season` is 2 (`SEASON_SKINS` in `tools/wardrobe.py`; the name is a
+  placeholder until the owners pick one). It is hidden from the menu's locked list until Season II, so
+  Season I's menu is unchanged, and it never comes back.
+- **Champion.** The Champion's Helm is for everyone in the season champion's faction when the finale
+  ended. Staff set `rw.champion` after the finale (`docs/SEASONS.md`, "Ending a season", step 4); it is
+  never sold, and like every `rw.*` score it carries into the next season. Its locked line also waits for
+  Season II.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 

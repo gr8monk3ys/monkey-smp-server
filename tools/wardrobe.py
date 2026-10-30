@@ -18,6 +18,8 @@ Unlock scores (all per player name, so the store and staff can set them while th
   rw.invites  friends invited who bought a pass
   rw.tier     supporter tier: 1 Ember, 2 Banner, 3 Crown (0 when it lapses)
   rw.founder  1 for everyone who played during the first season
+  rw.s2       1 for everyone who played during Season II (SEASON_SKINS: one blade per season after the first)
+  rw.champion 1 for the season champion's roster (staff set it after the finale; never sold)
   rw.events   events attended (the monkey-events pack counts it, once per event)
   rw.<holiday>  1 for coming to that holiday's event (staff set it at the event; never sold)
   rw.challenges  weekly challenges done, in all seasons together (tools/challenges.py; never sold)
@@ -67,9 +69,15 @@ HOLIDAYS = {
     "rw.midwinter": ("Midwinter", "late December"),
     "rw.midsummer": ("Midsummer", "late June"),
 }
+# Season skins after the first (docs/SEASONS.md, "A season skin"): objective -> (season, its numeral). Everyone
+# online while #season is that season gets it, as rw.founder in Season I. Add the next season's here and a
+# blade with that unlock at the end of BLADES.
+SEASON_SKINS = {"rw.s2": (2, "II")}
+# The season champion's roster (docs/SEASONS.md, "The season champion"): staff set it after the finale.
+CHAMPION = "rw.champion"
 # Scores that can jump while a player is online (the store, staff, an event): crossing a skin's threshold
 # says so in chat. Days say so in new_day; hours and tiers don't.
-NOTIFY = ["rw.months", "rw.events", *HOLIDAYS, "rw.challenges", "rw.launch"]
+NOTIFY = ["rw.months", "rw.events", *HOLIDAYS, "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION]
 # The scores the Tebex store sets (docs/RETENTION.md). Event, holiday, challenge and launch skins must never
 # use them.
 SOLD = {"rw.months", "rw.tier"}
@@ -116,6 +124,10 @@ BLADES = [
          pal="o0b2226 Lc9fbf2 M4fc9b8 D23887a Rfff1a8 Gc0612a g7d3b17 H6b4a2e h4a321f Pfff1a8"),
     dict(id="pinnacle", name="Pinnacle", unlock=("rw.challenges", 18), broad=True, runes=(7, 10, 13),
          pal="o1d0b26 Lffe3f6 Mf0a6d8 Dae4f9c Rfff7c2 Gfff7c2 gd1b05a H3b1d4f h26112f Pfff7c2"),
+    # Season skins (SEASON_SKINS), always added at the end so no other skin's trigger value moves. shown_from:
+    # the season its locked line first shows in the menu, so Season I's menu stays as it was.
+    dict(id="twinmoon", name="Twinmoon", unlock=("rw.s2", 1), broad=True, runes=(8, 12), shown_from=2,
+         pal="o0d1226 Ldfe8ff M8fa3d6 D4a5a8f Rfff6d0 Gc0c8d8 g7d8699 H2a2f52 h1a1d36 Pfff6d0"),
 ]
 
 # Helm icons are drawn as text; '.' is clear, and an outline is added around everything else.
@@ -245,6 +257,26 @@ HELMS = [
                "...SSSSvvSSSS...",
                ".....SSSSSS.....",
                "................",
+               "................",
+               "................",
+               "................",
+               "................"]),
+    # The season champion's roster (CHAMPION): a gold helm with a laurel, kept into every later season. Hidden
+    # from the locked list until Season II (shown_from), as the season skins are.
+    dict(id="champions_helm", name="Champion's Helm", unlock=(CHAMPION, 1), sound="gold", shown_from=2,
+         pal="o2a1d05 Yf6d04d yb88a12 Lfff3b0 G5fae3a g2f6b1e",
+         icon=["................",
+               "................",
+               "................",
+               ".......LL.......",
+               ".....YLLYYy.....",
+               "..G.YLYYYYYy.G..",
+               ".gG.YLYYYYYy.Gg.",
+               ".gGGYYYYYYYyGGg.",
+               "..gGyyyyyyyyGg..",
+               "...gYyYYYYyYg...",
+               "....Yy.YY.yY....",
+               "....yy.yy.yy....",
                "................",
                "................",
                "................",
@@ -428,6 +460,20 @@ def equipment_pixels(skin: dict) -> list[list[str | None]]:
         for col, row, c in ((11, 0, "V"), (12, 0, "V"), (11, 1, "P"), (12, 1, "V"), (10, 2, "V"), (11, 2, "v"),
                             (12, 2, "v"), (13, 2, "V")):  # the gem, at the front
             side(32, row, col, c)
+    elif kind == "champions_helm":
+        for x in range(8):
+            for y in range(8):
+                top(0, x, y, shade(x, y, "Y", "y") if 0 < x < 7 and 0 < y < 7 else "y")
+        for col in range(32):
+            for row in range(3):
+                side(0, row, col, "L" if row == 0 else shade(col, row, "Y", "y"))
+            side(0, 3, col, "y")
+            side(32, 2, col, "G" if col % 2 else "g")  # the laurel, all the way round the hat layer
+            if col % 4 == 1:
+                side(32, 1, col, "G")
+        for row in range(4, 7):  # a nose guard down the middle of the front face
+            side(0, row, 11, "Y")
+            side(0, row, 12, "y")
     elif kind == "wanderers_hood":
         for x in range(8):
             for y in range(8):
@@ -472,6 +518,10 @@ def how_to_unlock(unlock) -> str:
         return "Played during the first season"
     if objective == "rw.launch":
         return "Played on Season I's launch weekend"
+    if objective in SEASON_SKINS:
+        return f"Played during Season {SEASON_SKINS[objective][1]}"
+    if objective == CHAMPION:
+        return "The season champion's faction"
     if objective in HOLIDAYS:
         name, when = HOLIDAYS[objective]
         return f"From the {name} event ({when})"
@@ -485,12 +535,16 @@ def earned_for(unlock) -> str:
         return f"coming to {HOLIDAYS[objective][0]}"
     if objective == "rw.launch":
         return "playing on launch weekend"
+    if objective in SEASON_SKINS:
+        return f"playing in Season {SEASON_SKINS[objective][1]}"
+    if objective == CHAMPION:
+        return "winning the season"
     one, many = SCORES[objective]
     return f"{n} {one if n == 1 else many}"
 
 
-# Skins on the challenges page: the challenge ladder and the founders' keepsakes.
-KEEPSAKES = {"rw.challenges", "rw.launch", "rw.founder"}
+# Skins on the challenges page: the challenge ladder and the keepsakes (founders', seasons', champions').
+KEEPSAKES = {"rw.challenges", "rw.launch", "rw.founder", *SEASON_SKINS, CHAMPION}
 
 
 def page(unlock) -> int:
@@ -521,7 +575,7 @@ def datapack_files() -> dict[str, str]:
                   "rw.days dummy", "rw.lastday dummy", "rw.months dummy", "rw.invites dummy", "rw.tier dummy",
                   "rw.founder dummy", "rw.day dummy", "rw.const dummy", "rw.events dummy", "rw.playbase dummy",
                   "rw.challenges dummy", "rw.launch dummy", "rw.launchtime dummy",
-                  *(f"{o} dummy" for o in HOLIDAYS), *(f"{o}.seen dummy" for o in NOTIFY)]
+                  *(f"{o} dummy" for o in HOLIDAYS), *(f"{o} dummy" for o in SEASON_SKINS), f"{CHAMPION} dummy", *(f"{o}.seen dummy" for o in NOTIFY)]
     f[f"{fn}/load.mcfunction"] = "\n".join([
         "# Generated by tools/wardrobe.py. Scores are created once and kept across restarts.",
         *(f"scoreboard objectives add {o}" for o in objectives),
@@ -541,11 +595,13 @@ def datapack_files() -> dict[str, str]:
         "scoreboard players enable @a wardrobe",
         *(f"scoreboard players add @a {o} 0" for o in (
             "rw.days", "rw.months", "rw.invites", "rw.tier", "rw.founder", "rw.events", *HOLIDAYS, "rw.playbase",
-            "rw.challenges", "rw.launch")),
+            "rw.challenges", "rw.launch", *SEASON_SKINS, CHAMPION)),
         "execute as @a run scoreboard players operation @s rw.hours = @s rw.play",
         "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase",
         "scoreboard players operation @a rw.hours /= #hour rw.const",
         "execute if score #season rw.day matches 1 run scoreboard players set @a rw.founder 1",
+        *(f"execute if score #season rw.day matches {n} run scoreboard players set @a {o} 1"
+          for o, (n, _) in SEASON_SKINS.items()),
         f"execute as @a unless score @s rw.lastday = #today rw.day run function {NS}:wardrobe/new_day",
         f"function {NS}:wardrobe/founder/second",
         f"function {NS}:challenges/second",
@@ -637,7 +693,9 @@ def datapack_files() -> dict[str, str]:
                       "click_event": {"action": "run_command", "command": f"/trigger wardrobe set {value}"},
                       "hover_event": {"action": "show_text", "value": f"Put {s['name']} on {target}"}},
                 {"text": f"  {how}", "color": "dark_gray"}))
-            menu.append(f"execute unless {condition(s['unlock'])} run tellraw @s " + text(
+            # A later season's skin is hidden until that season, unless owned (the champion's, set after a finale).
+            shown = f" if score #season rw.day matches {s['shown_from']}.." if "shown_from" in s else ""
+            menu.append(f"execute unless {condition(s['unlock'])}{shown} run tellraw @s " + text(
                 " ", {"text": s["name"], "color": "gray",
                       "hover_event": {"action": "show_text", "value": f"Locked: {how}"}},
                 {"text": f"  {how}", "color": "dark_gray"}))

@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
 import { pages } from "@/content/guide/pages";
-import { SITE_URL } from "@/lib/config";
+import { siteUrl as url } from "@/lib/seo";
 
-// Built once into out/sitemap.xml: every page of the site, the guide's in reading order.
+// Built once into out/sitemap.xml: every page of the site, the guide's in reading order. tools/site_links.py
+// --built fails when a built page is missing from it.
 export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const url = (path: string) => `${SITE_URL}${path === "/" ? "/" : path}`;
   return [
     { url: url("/"), changeFrequency: "weekly", priority: 1 },
     ...pages.map((page) => ({

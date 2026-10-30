@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { preload } from "react-dom";
 import { JsonLd } from "@/components/json-ld";
 import { SITE_URL } from "@/lib/config";
+import { preloadFont } from "@/lib/fonts";
 import { OG_IMAGE, SITE_NAME, siteGraph } from "@/lib/seo";
 import "./tailwind.css";
 import "./style.css";
@@ -29,10 +29,10 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  // The display face, the body face and the mono face, before the stylesheet asks for them (style.css's @font-face).
-  for (const font of ["pixelify-sans-monkey-bold", "atkinson-next-latin", "atkinson-mono-latin"]) {
-    preload(`/fonts/${font}.woff2`, { as: "font", type: "font/woff2", crossOrigin: "" });
-  }
+  // The display face and the body face, before the stylesheet asks for them (style.css's @font-face). The mono
+  // face is preloaded only by the pages that show code (preloadMono).
+  preloadFont("pixelify-sans-monkey-bold");
+  preloadFont("atkinson-next-latin");
   return (
     <html lang="en">
       <body>

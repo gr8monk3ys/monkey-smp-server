@@ -35,6 +35,15 @@ export function target(key: LinkKey): { href: string; title?: string } {
 /** True once the store is open (STORE_URL is set). */
 export const storeOpen = Boolean(config.STORE_URL);
 
+/** Where the launch stands at `now` (the build, for the pages): "soon" before LAUNCH_AT, "live" from it on, and
+ * "unset" when LAUNCH_AT isn't a time. */
+export type LaunchStage = "soon" | "live" | "unset";
+export function launchStage(now: Date = new Date(), launchAt: string = config.LAUNCH_AT): LaunchStage {
+  const launch = new Date(launchAt).getTime();
+  if (isNaN(launch)) return "unset";
+  return now.getTime() < launch ? "soon" : "live";
+}
+
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
   "November", "December"];

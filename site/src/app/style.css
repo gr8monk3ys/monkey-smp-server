@@ -180,10 +180,12 @@ main > section, footer { padding: 112px var(--gutter); }
 }
 .counter i { display: block; font-style: normal; }
 .counter .unit { font-size: 0.9rem; font-weight: 700; color: var(--sage); }
-/* Until the page's script starts, the countdown's blocks and the visitor's own time hold their place (unseen),
- * so the address and the buttons below don't jump down when they appear. Without JavaScript nothing is held. */
+/* Until the page's script starts, what the countdown will show holds its place (unseen), so the address and the
+ * buttons below don't jump down when it appears: before the launch the blocks and the visitor's own time, after it
+ * (.live) only the line saying the server is open. The Countdown component's inline script sets .live and drops
+ * .pending when nothing will appear; without JavaScript nothing is held. */
 @media (scripting: enabled) {
-  .launch.pending .counter[hidden] { display: flex !important; visibility: hidden; }
+  .launch.pending:not(.live) .counter[hidden] { display: flex !important; visibility: hidden; }
   .launch.pending #countdown[hidden] { display: block !important; visibility: hidden; min-height: 1.6em; }
 }
 #countdown { margin: 0; color: var(--sage); }
@@ -365,6 +367,7 @@ footer .small { margin: 0; }
    * fit on the first screen. */
   .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "launch" "ways" "lede" "trailer"; }
   .hero:has(.launch) .lede { margin-top: 32px; }
+  .hero.lost { grid-template-areas: "hook" "lede" "ways"; padding-bottom: 72px; }
   #pricing { padding-top: 88px; }
   footer { padding-top: 88px; padding-bottom: 48px; }
   .monkey { width: 96px; height: 96px; top: -28px; }

@@ -6,20 +6,23 @@ import { ConfigLink, LaunchTime, Store } from "@/components/links";
 import { Place } from "@/components/place";
 import { Plaque } from "@/components/plaque";
 import { Trailer } from "@/components/trailer";
-import { faq, features, ladder, pass, shots, tiers } from "@/content/front";
+import { faq, features, GAME, ladder, pass, shots, tiers } from "@/content/front";
 import { rules } from "@/content/rules";
-import { config, sayLaunch } from "@/lib/config";
+import { config, launchStage, sayLaunch } from "@/lib/config";
+import { preloadMono } from "@/lib/fonts";
 import { launchEvent, pageMetadata } from "@/lib/seo";
 
 // Written for what people search: a Minecraft factions server, a Fabric SMP, a paid-whitelist server, a season SMP.
 export const metadata: Metadata = pageMetadata({
   title: "Monkey SMP: a Minecraft factions SMP server on Fabric",
-  description: sayLaunch("A paid-whitelist Fabric SMP for Minecraft Java 26.3: factions of four, territory, PvP, new "
-    + "dungeons and magic. One pass, $5 a month, the same for everyone. Season I opens {date}, {pacific}."),
+  description: sayLaunch(`A paid-whitelist Fabric SMP for ${GAME}: factions of four, territory, PvP, new dungeons `
+    + `and magic. One pass, ${pass.price} a month, the same for everyone. Season I opens {date}, {pacific}.`),
   path: "/",
 });
 
 export default function Home() {
+  preloadMono(); // the address on the plaque and in the join steps
+  const event = launchEvent(pass);
   return (
     <>
       <Canopy home="#" label="Sections" items={[
@@ -32,15 +35,15 @@ export default function Home() {
         { label: "Guide", href: "/guide" },
       ]} />
 
-      <JsonLd data={launchEvent()} />
+      {event && <JsonLd data={event} />}
       <main id="main">
         <section className="hero">
           <img className="monkey" src="/img/monkey.svg" alt="" width={224} height={224} />
           <h1>Claim land.<br />Make allies.<br />Keep what you can hold.</h1>
-          <p className="lede">Monkey SMP is a modded factions server on Minecraft Java 26.3 (Fabric) for a small crowd
+          <p className="lede">Monkey SMP is a modded factions server on {GAME} (Fabric) for a small crowd
             that plays evenings, Pacific time. Factions of four, alliances, banner-marked territory, PvP outside your
             walls, reworked terrain, new dungeons, mobs and magic.</p>
-          <Countdown launchAt={config.LAUNCH_AT}>
+          <Countdown launchAt={config.LAUNCH_AT} stage={launchStage()}>
             <LaunchTime template="{date}, {pacific} ({eastern})" />
           </Countdown>
           <div className="ways">
@@ -78,7 +81,7 @@ export default function Home() {
                   <img src={`/img/${s.name}-${i ? 800 : 1600}.webp`}
                     srcSet={`/img/${s.name}-800.webp 800w, /img/${s.name}-1600.webp 1600w`}
                     sizes={i ? "(max-width: 760px) 100vw, 33vw" : "(max-width: 760px) 100vw, 66vw"}
-                    width={1600} height={900} loading="lazy" decoding="async" alt={s.alt} />
+                    width={1600} height={900} loading={i ? "lazy" : undefined} decoding="async" alt={s.alt} />
                 </div>
                 <figcaption>{s.caption}</figcaption>
               </figure>

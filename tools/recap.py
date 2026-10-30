@@ -54,8 +54,9 @@ LINE_LIMIT = 300             # characters of one section line, at most
 NAME_LIMIT = 32              # characters of one name in a section line
 LISTED = 5                   # names in a list (bounty hunters) before "and N more"
 KILLS, BOUNTY = "st.kills", "st.bounty"   # the standings' kills and bounties, with their starting points in week.json
+HUNTS = "st.hunts"                 # player-posted bounties claimed (the wanted board, tools/wanted.py)
 CHALLENGES, SEEN = "rw.challenges", "ev.seen"
-COUNTERS = (CHALLENGES,)           # scores whose starting point baseline() keeps
+COUNTERS = (CHALLENGES, HUNTS)     # scores whose starting point baseline() keeps
 EVENT = "#event"                    # events begun so far, in ev.state (monkey:events/begin)
 
 
@@ -282,6 +283,23 @@ def bounties(week: Week) -> list[str] | None:
     return [fit(lambda them: f"**Bounties claimed:** {total}, by {them}.", names)]
 
 
+def hunter(week: Week) -> list[str] | None:
+    """The week's top bounty hunter, once players have claimed bounties players posted (the wanted board,
+    tools/wanted.py): the most bounties claimed this week, staff-posted (st.bounty) and player-posted (st.hunts)
+    together. A week with only staff bounties has none: the bounties line names those hunters already."""
+    hunts = None if week.test_play else week.gains(HUNTS, fold=True)
+    if not hunts:
+        return None if hunts is None else []
+    total = dict(hunts)
+    for name, n in (week.gains(BOUNTY, fold=True) or {}).items():
+        total[name] = total.get(name, 0) + n
+    top = max(total.values())
+    names = sorted((n for n, k in total.items() if k == top), key=str.casefold)
+    each = " each" if len(names) > 1 else ""
+    return [fit(lambda them: f"**Top bounty hunter:** {them}, {top} {'bounty' if top == 1 else 'bounties'}{each}.",
+                [who(week, week.player(n)) for n in names])]
+
+
 def land(week: Week) -> list[str] | None:
     """Chunks claimed this week, all told, and the faction that claimed the most: each player's claims that
     grew, so land a player gave up doesn't hide land another claimed."""
@@ -368,7 +386,7 @@ def server_goal(week: Week) -> list[str] | None:
     return goal.recap_line(week.world.scores, week.number)
 
 
-SECTIONS = [mover, fighter, bounties, land, challenges, server_goal, turnout, player_of_the_week]
+SECTIONS = [mover, fighter, bounties, hunter, land, challenges, server_goal, turnout, player_of_the_week]
 QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 

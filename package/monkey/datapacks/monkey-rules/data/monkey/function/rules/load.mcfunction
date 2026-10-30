@@ -3,6 +3,7 @@ scoreboard objectives add monkey.rules dummy
 scoreboard objectives add monkey.grace dummy
 scoreboard objectives add monkey.welcome dummy
 scoreboard objectives add end_grace trigger
+function monkey:catchup/load
 # Rule 25, once per world: after that the border is the admins' to grow.
 execute unless score #border monkey.rules matches 1 run function monkey:rules/border
 schedule function monkey:rules/second 20t replace

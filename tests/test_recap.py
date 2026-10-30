@@ -408,3 +408,19 @@ def test_preview_changes_nothing(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "Before the launch" in out and "**Monkey SMP Weekly**" in out and "**Top fighter:** RiaFake" in out
     assert (state / "week.json").read_text() == before and not (state / "weeks").exists()
+
+
+def test_the_top_bounty_hunter_counts_both_kinds_once_players_post_bounties():
+    rows = [{"id": "p-red", "name": "Red Monkeys", "rank": 1, "members": ["AlexFake", "SamFake"]},
+            {"id": "p-blue", "name": "Blue Herons", "rank": 2, "members": ["RiaFake"]}]
+    scores = {"st.hunts": {"AlexFake": 3, "RiaFake": 2}, "st.bounty": {"riafake": 2}}
+    start = {"start": WEEK_ONE.isoformat(), "bounty": {"riafake": 1},
+             "recap": {"launched": True, "scores": {"st.hunts": {"AlexFake": 1}}}}
+    week = recap.Week(rows, standings.World([], {}, scores, {}), start, None, WEEK_ONE + dt.timedelta(weeks=1))
+    # Alex claimed 2 player bounties this week; Ria 2 player bounties and 1 staff one (named in lower case).
+    assert recap.hunter(week) == ["**Top bounty hunter:** RiaFake (Blue Herons), 3 bounties."]
+    scores["st.hunts"] = {"AlexFake": 1}
+    assert recap.hunter(week) == []   # only a staff bounty this week: the bounties line names its hunter
+    del start["recap"]["scores"]["st.hunts"]
+    assert recap.hunter(week) is None   # a week begun before the wanted board: it can't tell
+    assert recap.SECTIONS.index(recap.hunter) == recap.SECTIONS.index(recap.bounties) + 1

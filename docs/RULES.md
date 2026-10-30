@@ -28,6 +28,8 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
    - A naked player is one who has freshly respawned and has nothing on them (seeds and filler items
      don't count).
    - Naked players trying to retrieve loot can be killed if they are actively trying to steal your loot.
+   - A kill on a player who respawned less than 10 minutes ago never counts toward a war's score or claims a
+     bounty.
 6. No hovering in fights as a naked player. If you do, you can be slain.
 7. No loopholes.
    - If you have a question about whether something is legit, contact an admin to confirm before you do it.
@@ -77,6 +79,9 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       together.
     - Grace is for settling in. Using it to scout, carry loot, block a fight, hold a spot for a faction, or
       fight by other means (pets, lava, fire, traps) is a loophole (rule 7), and an admin will end it.
+    - Late joiners get longer: when the catch-up kit is on, a player whose first join is in week 4 or later
+      keeps this grace for their first 8 hours of play (online time), or the 48 hours if that is longer. It
+      ends early the same ways, and the same loophole rule applies.
     - Spawn is a no-PvP zone.
 
 ## Strength rules
@@ -279,7 +284,9 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.
   `function monkey:rules/launch` ends everyone's. One player: `execute as <player> run function
   monkey:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
-  `scoreboard players get <player> monkey.grace`; `time query gametime` is now.
+  `scoreboard players get <player> monkey.grace`; `time query gametime` is now. A late first join's catch-up
+  bubble (docs/SEASONS.md, "The catch-up kit") holds the same grace open for hours of play:
+  `scoreboard players get <player> ck.bubble` is the seconds left, and `grace_end` ends both.
 - **Rule 26, the no-PvP spawn.** An Open Parties and Claims server claim over the 7 x 7 chunks around
   spawn (the vanilla spawn protection and a bit more). With their `playersByPlayers` exception off, server
   claims stop players hurting players, and they keep spawn's blocks safe too (rule 22). An admin sets it up

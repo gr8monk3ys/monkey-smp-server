@@ -497,7 +497,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. Built: one comes by itself on weeknight evenings once 4 or more are on, and staff can start one any time (docs/ADMIN.md, "Supply drops"). | Exploration, small fights, new players |
 | **Omens** | Short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM Pacific, 4 or more online, never Saturday or during a drop): a Blood Moon (harder mobs for a night, a little extra loot), a Meteor (one richer supply drop, 5 minutes' warning), Truce Hour (no PvP for an hour) or Hunted (a bounty on the longest kill streak). Built (docs/ADMIN.md, "Omens"). | Surprise on quiet evenings, the players who are on |
-| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
+| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. With the wanted board on (below), players post bounties too, and the board shows the Most Wanted. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
 | **Market day** | Trading at spawn with stalls; spawn rules apply. | The economy, meeting other factions |
@@ -510,6 +510,32 @@ Twists for later seasons (pick two or three for the vote):
 - Strength cap +3, so fights are about skill.
 - One shared village that every faction must protect from raids.
 - A world seed with a huge ocean, so travel and the Happy Ghast matter.
+
+#### The wanted board
+
+Players put bounties on rivals themselves, on top of the staff bounties above. Off until staff turn it on
+("Switches", below).
+
+- **Posting.** `/trigger wanted` shows the Most Wanted and every rival online, each with a **[Post a bounty]**
+  button. Everyone is told who posted it and on whom. One bounty a player every 12 hours, and both have to
+  be in factions the server knows: never your own faction, never a faction yours has a pact with
+  (`/trigger diplomacy`), never yourself. Posting again on someone your bounty is still up on does nothing.
+- **Claiming.** Kill a wanted player in a fair fight outside the event arena and every bounty on them is
+  yours, by itself: chat announces it and you get the Bounty Hunter title (unless you show another title or
+  supporter color, which is never replaced). A kill by a faction mate or a pact partner claims nothing, and the
+  bounty stays. So does a kill on a player who respawned less than 10 minutes ago (rule 5; their online time,
+  `tools/respawn.py`). After a claim, nobody can post on that player for 6 hours.
+- **What it gives.** The title and the line in chat, nothing else: no items, no standings points, no currency.
+  The +5 standings points stay with the bounties staff post and check, because a kill that claims itself
+  can't tell a fair fight from a fed one. Feeding kills to claim a bounty is exploit B13 as always: staff take
+  the claim back.
+- **Most Wanted.** The three players with the most bounties on them now show on the standings board at spawn
+  and in `/trigger standings`, under this week's table, updated with the board every hour (so a claim can take
+  up to an hour to leave it).
+- **The Sunday recap** names the week's top bounty hunter (staff and player bounties together) in any week a
+  player-posted bounty was claimed.
+
+`tools/wanted.py`, in the `monkey-standings` data pack; staff commands in docs/ADMIN.md.
 
 ### Holidays
 
@@ -567,21 +593,55 @@ A Strength server gets harder to join every week, so catching up has to be built
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
 - The first-week quest (`docs/RETENTION.md`, "The first week"): five steps for a player new this season,
   from the Guide to a faction, land and an outpost, with a skin at the end.
+- The catch-up kit (below), for a first join from week 4 on.
+
+#### The catch-up kit
+
+A player whose first join comes after week 3 (the season's weeks from `tools/season_calendar.py`, `#week
+rc.week` in game) gets, once, when the switch is on ("Switches", below):
+
+- **A starter kit:** an iron pickaxe, axe, shovel and sword, 24 cooked beef, a bed and 32 torches. No armor,
+  nothing diamond or netherite, nothing Strength.
+- **A protection bubble** for 8 hours of their own play: other players can't hurt them. The hours count only
+  while they are online and outside the arena, and the time left shows on the action bar. It ends when the
+  hours run out, the first time they hurt a player, or with `/trigger end_grace`.
+
+Who counts: a first join as rule 26 sees it (the server has never seen the player), after the launch. Anyone
+who played in test play or pre-season was seen then, so is never a late first join; nothing before the launch
+counts. A veteran of an earlier season counts: the new world is as new to them. Staff give it by hand with
+`execute as NAME run function monkey:catchup/grant` (once per player per world).
+
+Its limits, said plainly:
+- The bubble is rule 26's grace held open (the same invisible item that makes players immune to damage other
+  players cause), so it stops damage **taken**, not damage dealt: the first hit they land counts in full and
+  ends the bubble. Vanilla can't cancel one player's outgoing damage without crippling them against mobs too
+  (Weakness) or taking their team slot (titles use teams), so the honest rule is "attacking ends it".
+- Rule 26's 48 game hours of grace from the same first join run alongside it; the protection lasts whichever is
+  longer, until they first attack.
+- As for grace, harm a player causes only indirectly (lava, a pushed fall, a mob led to them) isn't blocked,
+  and using the bubble to scout, carry loot or block a fight breaks rule 26 just the same.
+- The action bar is shared: a war kill or an outpost capture line shows over it for a moment.
+
+`tools/catchup.py`, in the `monkey-rules` data pack next to rule 26.
 
 ### Switches
 
-Two features can be turned off and on again by staff at any time, over RCON or in game (op), with nothing
-lost: progress is kept while they are off. Both ship **on**, and both stay dormant until the launch
-(`#launched rw.day`), so test play never counts toward them.
+Features staff turn on and off at any time, over RCON or in game (op), with nothing lost: what players have
+is kept while one is off. The switch is a score in the world, so restarts and deploys keep it. Most ship
+**off**; turn them on when the owners decide to (and add a line to the player changelog then). The quest and the
+weekly goal ship **on** but stay dormant until the launch (`#launched rw.day`), so test play never counts.
 
-| Feature | Off | On | Is it on? |
+| Feature | On | Off | Is it on? |
 | --- | --- | --- | --- |
-| First-week quest (`tools/quest.py`) | `function monkey:quest/off` | `function monkey:quest/on` | `scoreboard players get #on rq` |
-| Weekly server goal (`tools/goal.py`) | `function monkey:goal/off` | `function monkey:goal/on` | `scoreboard players get #on rg` |
+| First-week quest (`tools/quest.py`) | `function monkey:quest/on` | `function monkey:quest/off` | `scoreboard players get #on rq` |
+| Weekly server goal (`tools/goal.py`) | `function monkey:goal/on` | `function monkey:goal/off` | `scoreboard players get #on rg` |
+| The wanted board (`tools/wanted.py`) | `function monkey:wanted/on` | `function monkey:wanted/off` | `scoreboard players get #on wt` |
+| The catch-up kit (`tools/catchup.py`) | `function monkey:catchup/on` | `function monkey:catchup/off` | `scoreboard players get #on ck` |
 
-Off, the quest signs nobody up, checks and says nothing, and `/trigger quest` says it is off; the goal counts,
-shows, announces and posts nothing. The switch is a score in the world, so restarts and deploys keep it.
-The defaults for a new world are `QUEST_ON` and `GOAL_ON` in those files.
+Off, the wanted board takes no new bounties, claims none and leaves the board at once (`/trigger wanted` says it
+is off), keeping the bounties already posted; the catch-up kit gives nobody new a kit or bubble, and bubbles
+already running carry on. Off, the quest signs nobody up and `/trigger quest` says it is off; the goal counts, shows, announces and posts
+nothing. The defaults for a new world are `QUEST_ON`, `GOAL_ON`, `WANTED_ON` and `CATCHUP_ON` in those files.
 
 ### Telling players what changed
 
@@ -910,6 +970,12 @@ Built:
   Season I world even if it is installed sooner. Checked by the unit tests only: not yet run against a real
   server.
 - Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
+- The wanted board ("The wanted board") and the catch-up kit ("The catch-up kit"), both off until staff turn
+  them on ("Switches"). Tried on a test server on 30 October 2026 (Carpet fake players, kills by `/damage ... by`):
+  posting and every refusal, claims (a mate's, a pact partner's and an arena kill claim nothing), the title, the
+  Most Wanted from a real hourly board run, the kit and bubble (blocks player damage, counts down, pauses in the
+  arena, ends on an attack, `grace_end` or running out, holds grace past rule 26's own). The chat lines weren't
+  seen (no real client).
 
 Not built:
 

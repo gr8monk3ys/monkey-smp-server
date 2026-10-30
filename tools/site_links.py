@@ -35,7 +35,8 @@ import season_calendar
 from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
-KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "LAUNCH_AT")
+KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "STATUS_URL",
+        "LAUNCH_AT")
 # Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
 GUIDE = ("guide", "guide/factions", "guide/week", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))

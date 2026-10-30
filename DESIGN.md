@@ -284,6 +284,13 @@ A stone block holding the "Server address" label in ink-soft, the address in mon
 ### Countdown
 Three shade blocks with ink-framed edges, each holding two gold digits in the display face, with a sage unit label below. When a digit changes it drops in from above in four steps over 320 ms, the hours and minutes delayed by 80 ms and 160 ms. Under reduced motion the digits just change.
 
+### Server status
+A shade block, the countdown's colour, under the ways in on the front page: three cells (Server, Next, Border),
+each a sage label over a bone value and a sage line under it, in a row (one column on phones). A 10 px square
+beside "Server" is lit sage while the server is online, a hollow sage outline while it is offline, and leaf
+otherwise. Every state, the quiet fallback included, fills the same two lines a cell, so nothing moves when the
+status arrives. The guide hub has the same status as one line under its lede.
+
 ### Placed blocks
 The countdown's move, on scroll. The blocks of a list marked `data-place` (the gallery, the steps, the plans,
 the rules, the kit, the changes, the week) that start below the fold wait out of sight, then drop 18 px into

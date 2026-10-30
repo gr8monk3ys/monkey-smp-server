@@ -1,0 +1,19 @@
+# /etc/caddy/Caddyfile on the VPS (docs/LIVE.md, step 9): the live map over HTTPS, and next to it the website's
+# status file, which deploy/monkey-status.sh writes every 2 minutes. Both on 443, so no new port opens.
+# Copy it over the live one and run `systemctl reload caddy`.
+map.monkeysmp.lscaturchio.xyz {
+	encode zstd gzip
+
+	# The status: counts and the public schedule only (tools/status.py). Any site may read it (it is public and
+	# sent without cookies); the website fetches it from monkeysmp.lscaturchio.xyz. Browsers keep it a minute.
+	handle /status.json {
+		root * /srv/monkey/status
+		header Access-Control-Allow-Origin "*"
+		header Cache-Control "public, max-age=60"
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8100
+	}
+}

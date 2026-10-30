@@ -4,11 +4,12 @@ import { Countdown } from "@/components/countdown";
 import { JsonLd } from "@/components/json-ld";
 import { ConfigLink, LaunchTime, Store } from "@/components/links";
 import { Place } from "@/components/place";
+import { ServerStatus } from "@/components/status";
 import { Plaque } from "@/components/plaque";
 import { Trailer } from "@/components/trailer";
 import { faq, features, GAME, ladder, pass, shots, tiers } from "@/content/front";
 import { rules } from "@/content/rules";
-import { config, launchStage, sayLaunch } from "@/lib/config";
+import { builtPhase, config, launchStage, sayLaunch } from "@/lib/config";
 import { preloadMono } from "@/lib/fonts";
 import { launchEvent, pageMetadata } from "@/lib/seo";
 
@@ -53,6 +54,8 @@ export default function Home() {
               <ConfigLink to="DISCORD_INVITE" className="button ghost">Join the Discord</ConfigLink>
             </div>
           </div>
+          {config.STATUS_URL && <ServerStatus url={config.STATUS_URL} mapUrl={config.MAP_URL}
+            launchAt={config.LAUNCH_AT} builtPhase={builtPhase()} />}
           <Trailer />
         </section>
 

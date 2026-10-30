@@ -9,6 +9,7 @@ public site is `site/`.
 players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchio.xyz (A) --> VPS :25565
                                                      \-> failover: SRV target swapped to the playit.gg address
 browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
+                                                                      \-> /status.json: /srv/monkey/status (monkey-status.timer)
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: monkey-deploy.timer --> docker compose (the release's docker/)
 ```
 
@@ -84,15 +85,9 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    record `map.monkeysmp` to the same address, also "DNS only": Caddy gets the certificate itself. The zone has
    a wildcard record that sends any other name to Vercel, so without its own record the map name lands there.
 9. **The live map over HTTPS** (after step 8, so Let's Encrypt can reach the VPS by name). As root, install
-   Caddy from its apt repository (https://caddyserver.com/docs/install), put this in `/etc/caddy/Caddyfile`
-   and run `systemctl reload caddy`:
-   ```
-   map.monkeysmp.lscaturchio.xyz {
-   	encode zstd gzip
-   	reverse_proxy 127.0.0.1:8100
-   }
-   ```
-   Caddy gets and renews the certificate and redirects `http://` to `https://`. The site's `MAP_URL` links
+   Caddy from its apt repository (https://caddyserver.com/docs/install), copy the repo's `deploy/Caddyfile`
+   to `/etc/caddy/Caddyfile` and run `systemctl reload caddy`. It proxies the map to BlueMap and serves the
+   website's status file beside it ("The website's status", below). Caddy gets and renews the certificate and redirects `http://` to `https://`. The site's `MAP_URL` links
    there. Then fit the map to the border (docs/ADMIN.md, "The live map"): before the first fit the map
    shows everything Chunky generated, which is land the border acts haven't opened yet.
    Caddy rather than Cloudflare's proxy: the proxy would hide the address, but the game's own record shows
@@ -346,6 +341,35 @@ evening (two weekday evenings a week, from a start between 6:00 and 8:50 PM unti
 only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, plus the saved scoreboard, claims and border
 from the world. `--check` doesn't show the week's plan. Without the timer there are no automatic omens;
 staff can still start one by hand.
+
+### The website's status (the release with `tools/status.py`)
+
+The front page and the guide show whether the server is online, how many are playing (a count, never names),
+the next event and the border. They read `https://map.monkeysmp.lscaturchio.xyz/status.json`
+(`site/config.json`'s `STATUS_URL`), which `monkey-status.timer` writes every 2 minutes and Caddy serves next to
+the map on 443, so no port opens. Until it is set up, the site shows a quiet fallback ("Pre-season" before the
+launch, "Status not available" after it). Once the release is live:
+
+1. Caddy: `sudo cp /srv/monkey/repo/deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy`. The
+   new part is the `handle /status.json` block: it serves `/srv/monkey/status/status.json` with
+   `Access-Control-Allow-Origin: *` (the file is public and fetched without cookies, so the website, its
+   previews and a local `bun dev` can all read it) and `Cache-Control: public, max-age=60`. Caddy runs as
+   `caddy`, so others must be able to enter `/srv/monkey` (`chmod o+x /srv/monkey`; the default `mkdir` mode allows it).
+2. The timer, which also makes `/srv/monkey/status`:
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-status.sh --install
+sh /srv/monkey/repo/deploy/monkey-status.sh --check
+curl -sI https://map.monkeysmp.lscaturchio.xyz/status.json   # 200, with access-control-allow-origin
+```
+
+It runs as `monkey`, reads `REPO_DIR`, `LIVE_DIR` and `STATUS_DIR` (default `/srv/monkey/status`) from
+`/etc/monkey-deploy.env`, the saved Overworld border, and `list` over RCON for the count (the container's own
+`monkey rcon`; the names in `list`'s answer are never written). It takes no deploy lock: during a deploy or the
+daily restart the file says offline, which is true. Before the launch it writes no player count (only staff
+are on). `python3 /srv/monkey/repo/tools/status.py schedule` prints the dates it counts down to; they come from
+`tools/season_calendar.py` and the event names from `tools/status.py`'s `SCHEDULE` (a copy of the Season I table
+in docs/SEASONS.md, kept in step by a test). A new season needs its rows there.
 
 ### The news timer (the release with Monkey SMP news)
 

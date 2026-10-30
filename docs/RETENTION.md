@@ -217,9 +217,11 @@ it has lapsed, they have usually moved on.
 - **Once a month**, read those answers with the reasons buyers gave Tebex when they cancelled, in the
   same sitting as the funnel numbers below. Three people saying the same thing is the next thing to fix.
 
-Tebex can also send a webhook when a buyer cancels (`recurring-payment.cancellation.requested`), so
-Front Desk could post each new Ending pass in the staff channel instead of someone checking. That is a
-job for the Discord bot's repo, not built yet.
+Tebex can also send a webhook when a buyer cancels (`recurring-payment.cancellation.requested`). Front Desk
+receives it and posts each new Ending pass (the player, the package, the end date and the reason) in the staff
+channel, so nobody has to check (gr8monk3ys/discord-server, `docs/TEBEX_WEBHOOK.md`). It is off until the
+owner exposes the endpoint over HTTPS, adds it in the Tebex panel and puts its secret in the bot's
+`server/.env`; until then, check Recurring Payments by hand as above.
 
 ## Reading the numbers
 

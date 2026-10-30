@@ -25,8 +25,8 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 | Tue 27 Oct | T-11 | Moderator recruitment post (below). Store submitted to Tebex for review (done). |
 | Thu 29 Oct | T-9 | Launch-date announcement: the founding roster and faction registration open, server-list descriptions get the date. 9 PM: moderator applications close. |
 | Fri 30 Oct | T-8 | Moderators picked and given the rank. |
-| Sat 31 Oct | T-7 | T-7 announcement; Reddit post. By the evening, **the 7 November date released** (a patch on 2.9.0, below). |
-| Sun 1 Nov | T-6 | The clocks go back at 2 AM. The date release deploys at 4-5 AM; place the Town Crier again. Off-site backups and Uptime Kuma alerts working. |
+| Sat 31 Oct | T-7 | T-7 announcement; Reddit post. (The 7 November date shipped early: 2.9.1, live on 29 October, below.) |
+| Sun 1 Nov | T-6 | The clocks go back at 2 AM. Off-site backups and Uptime Kuma alerts working. |
 | Tue 3 Nov | T-4 | **Last release tagged**: everything for launch is in it. |
 | Wed 4 Nov | T-3 | The last release deploys at 4-5 AM; the freeze starts. Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. |
 | Thu 5 Nov | T-2 | Trial decided. Build Battle plots built. Moderators onboarded, and their shadowed evening. |
@@ -89,13 +89,11 @@ Why a freeze at all: the load test, the restore drill and the rehearsal (Wednesd
 release players launch on, and Thursday and Friday are left to roll back or patch a bad one. Anything tagged
 after them would be untested on launch night.
 
-**The date release comes first.** 2.9.0 holds the 31 October calendar: on Monday 2 November it would start
-challenge week 1 and the weeknight supply drops a week early, and on 7 November the launch would fall in
-challenge week 1, not 0, with Founder's Circlet's window running 32 hours of game time, no longer kept to the
-wall clock. So the release with the 7 November date (the data packs, `tools/season_calendar.py` for the VPS
-timers, and the Town Crier) is tagged by Saturday 31 October and deploys on Sunday 1 November at 4-5 AM,
-before the week turns. Place the Crier again after it (docs/ADMIN.md, "Spawn NPCs"). If it misses that
-window, it must still be live before the launch.
+**The date release came first (done).** 2.9.0 held the 31 October calendar: on Monday 2 November it would
+have started challenge week 1 and the weeknight supply drops a week early. 2.9.1 moved the data packs,
+`tools/season_calendar.py` (the VPS timers) and the Town Crier to 7 November and went live on Thursday
+29 October; the VPS has run 2.10.0 since, with the same calendar. If the Town Crier at spawn was placed before
+2.9.1, place it again (docs/ADMIN.md, "Spawn NPCs"): a placed NPC keeps the words it was placed with.
 
 How:
 
@@ -249,20 +247,22 @@ with the world, so run it once.
 ## Recording real footage
 
 docs/PROMOTION.md, "Clips from real event nights", has the rules: consent, no player voices, storage. The
-recording setup is the `demo` scenario in the obs-config repo (gr8monk3ys/obs-config; don't change it from
-here). Two nights: **launch night** (Saturday 7 November, 4:45 to 7 PM, the gathering at spawn, 5 PM and
+recording setup is the `smp-cam` scenario in the streaming repo (gr8monk3ys/streaming, formerly obs-config;
+don't change it from here). Its `strategy/monkey-smp-season1/capture-plan.md` has the minute-by-minute shot
+list and the week-one clip plan. Two nights: **launch night** (Saturday 7 November, 4:45 to 7 PM, the gathering at spawn, 5 PM and
 PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 14 November, 6 PM).
 
 - [ ] The camera is one staff account in spectator mode that doesn't play that night, on the home PC.
-- [ ] `python scripts/obsconf.py launch demo` in the obs-config folder: OBS on the Demo profile, Screen scene,
-  1440p60 with a 60-second replay buffer.
-- [ ] In Simple Voice Chat, deafen the camera account, so no player's voice reaches the recording. The
-  Demo profile records the desktop sound alone on track 3: use that track.
+- [ ] `python obs/scripts/obsconf.py launch smp-cam` in the streaming folder (run from Windows Terminal; try
+  it at the Wednesday 4 November rehearsal): the SMP Camera scene, 1440p60 with a 60-second replay buffer. It
+  captures only the Minecraft window and Minecraft's own sound, with the mic and desktop audio off, so no
+  Discord or room voice can reach a clip. SMP Hold cuts away from anything that shouldn't be filmed.
+- [ ] In Simple Voice Chat, deafen the camera account as well, so no player's voice reaches the game's sound.
 - [ ] Ctrl+Alt+F9 starts and stops the recording, Ctrl+Alt+F6 drops a chapter marker at a good moment, and
   Ctrl+Alt+F11 saves the last 60 seconds when something happens that wasn't being recorded.
 - [ ] The event post and a chat message before the start say the night is recorded for the server's clips,
   and that anyone who doesn't want to be in them can say so.
-- [ ] Afterwards, move the files from `D:\Videos\OBS\Demo` to `D:\DevData\monkey-smp-marketing\footage\real\`,
+- [ ] Afterwards, move the files from `D:\Videos\OBS\SMP` to `D:\DevData\monkey-smp-marketing\footage\real\`,
   never into this repo, and note who asked to be left out.
 
 ## After launch: day 1 and day 7

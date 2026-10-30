@@ -8,5 +8,7 @@ execute unless score #meteor dr matches 1 at @e[type=minecraft:marker,tag=dr.spo
 execute if score #meteor dr matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run function monkey:drops/impact
 bossbar set monkey:drop color red
 bossbar set monkey:drop max 1200
+execute unless score #meteor dr matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run function monkey:clips/mark {kind:"drop",title:"A supply drop has landed",other:""}
+execute if score #meteor dr matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run function monkey:clips/mark {kind:"meteor",title:"A Meteor has landed",other:""}
 tellraw @a ["",{"text":"","color":"gold","bold":true,"extra":[{"nbt":"name","storage":"monkey:drops","interpret":true},": "]},{"text":"it has landed at ","color":"yellow"},{"nbt":"spot.x","storage":"monkey:drops","color":"aqua"},{"text":" ","color":"aqua"},{"nbt":"spot.y","storage":"monkey:drops","color":"aqua"},{"text":" ","color":"aqua"},{"nbt":"spot.z","storage":"monkey:drops","color":"aqua"},{"text":". The chests despawn in 20 minutes, with whatever is still in them.","color":"yellow"}]
 execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 1 1.2

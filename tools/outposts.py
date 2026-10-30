@@ -50,6 +50,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import clips
 import diplomacy
 import drops
 import map_border
@@ -845,6 +846,9 @@ def outpost_files(i: int) -> dict[str, str]:
         f"execute as {labels} run data modify entity @s text set from storage {STORE} label.o{i}",
         f"execute store result storage {STORE} tmp.c int 1 run scoreboard players get #c {OBJ}",
         f"function {call}/taken with storage {STORE} tmp",
+        "# A clip marker as the taker nearest the outpost's label (in the middle; no capture while contested).",
+        f"execute at {labels[:-1]},limit=1] as @a[distance=..{ZONE},limit=1,sort=nearest,"
+        f"scores={{{diplomacy.FACTION}=1..}}] at @s run " + clips.mark("outpost", f"The {name} outpost is taken"),
         "execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.4 1.4",
     )
     f[f"{o}/taken.mcfunction"] = lines(

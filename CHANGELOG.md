@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Clip markers (`monkey-clips`, off until `function monkey:clips/on`): a Server First, a supply drop or Meteor
+  landing, the Hunted player's kill and an outpost taken each write a `MONKEY-CLIP` line in the server log, with
+  the players, their factions, the place and a title. `python3 tools/clips.py markers logs/` prints them as
+  JSON for the clips tool (docs/ADMIN.md, "Clip markers").
+- The creator camera (`monkey-camera`, off until `function monkey:camera/on`): creators staff approve, in no
+  faction, toggle spectator with `/trigger camera` during an announced camera window, with camera warps (spawn,
+  the board, the outposts, the event on now), a 160-block leash in the Overworld, and back where they were when
+  they stop (docs/ADMIN.md, "Creator camera").
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

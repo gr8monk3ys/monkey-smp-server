@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { JsonLd } from "@/components/json-ld";
 import { guidePage, pages } from "@/content/guide/pages";
+import { guideTrail, pageMetadata } from "@/lib/seo";
 
 /** The title and description a guide page gives search engines and link previews. */
 export function guideMetadata(href: string): Metadata {
   const page = guidePage(href);
-  return { title: `${page.title} - Monkey SMP guide`, description: page.description };
+  return pageMetadata({ title: `${page.title} · Monkey SMP guide`, description: page.description, path: href });
 }
 
 /** One page of the guide: its title, an optional lede, the page itself, then the pages before and after it. */
@@ -16,6 +18,7 @@ export function GuidePage({ href, lede, children }: { href: string; lede?: React
   const next = pages[at + 1];
   return (
     <article className="doc">
+      <JsonLd data={guideTrail(page.title, page.href)} />
       <h1>{page.title}</h1>
       {lede && <p className="lede">{lede}</p>}
       {children}

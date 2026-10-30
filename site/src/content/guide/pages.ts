@@ -42,7 +42,8 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
         ["moderators", "Moderators"], ["admins", "Admins"],
       ].map(([id, title]) => ({
         href: `/guide/commands/${id}`, title,
-        description: `The Monkey SMP commands for ${title.toLowerCase()}.`,
+        description: `Every command ${title.toLowerCase()} can use on Monkey SMP, a Minecraft factions server, and what `
+          + "each one does.",
       })),
     ],
   },

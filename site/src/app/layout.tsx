@@ -1,13 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { preload } from "react-dom";
+import { JsonLd } from "@/components/json-ld";
 import { SITE_URL } from "@/lib/config";
+import { OG_IMAGE, SITE_NAME, siteGraph } from "@/lib/seo";
 import "./tailwind.css";
 import "./style.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Monkey SMP",
+  // Every page sets its own title, description and canonical address (pageMetadata in src/lib/seo.ts); these are
+  // what a page that forgets falls back to.
+  title: SITE_NAME,
+  description: "A modded Minecraft Java factions server with a paid whitelist: factions, territory, PvP and seasons.",
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, type: "website", locale: "en_US", images: [OG_IMAGE] },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: { url: "/favicon.svg", type: "image/svg+xml" },
     apple: "/img/icon-256.png",
@@ -21,13 +29,14 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  // The display face and the body face, before the stylesheet asks for them (style.css's @font-face).
-  for (const font of ["pixelify-sans-monkey-bold", "atkinson-next-latin"]) {
+  // The display face, the body face and the mono face, before the stylesheet asks for them (style.css's @font-face).
+  for (const font of ["pixelify-sans-monkey-bold", "atkinson-next-latin", "atkinson-mono-latin"]) {
     preload(`/fonts/${font}.woff2`, { as: "font", type: "font/woff2", crossOrigin: "" });
   }
   return (
     <html lang="en">
       <body>
+        <JsonLd data={siteGraph()} />
         {children}
       </body>
     </html>

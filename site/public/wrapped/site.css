@@ -164,6 +164,8 @@ main > section, footer { padding: 112px var(--gutter); }
   width: 224px; height: 224px; image-rendering: pixelated;
 }
 .hero h1 { grid-area: hook; margin-bottom: 0.45em; }
+/* The page for an address the site doesn't have: the hook, a line on where to go, and the two ways back. */
+.hero.lost { grid-template-areas: "hook hook" "lede lede" "ways ways"; padding-bottom: 112px; }
 .lede { grid-area: lede; max-width: var(--measure); margin: 0; font-size: 1.2rem; color: var(--bone-2); }
 
 .launch { grid-area: launch; }
@@ -178,6 +180,12 @@ main > section, footer { padding: 112px var(--gutter); }
 }
 .counter i { display: block; font-style: normal; }
 .counter .unit { font-size: 0.9rem; font-weight: 700; color: var(--sage); }
+/* Until the page's script starts, the countdown's blocks and the visitor's own time hold their place (unseen),
+ * so the address and the buttons below don't jump down when they appear. Without JavaScript nothing is held. */
+@media (scripting: enabled) {
+  .launch.pending .counter[hidden] { display: flex !important; visibility: hidden; }
+  .launch.pending #countdown[hidden] { display: block !important; visibility: hidden; min-height: 1.6em; }
+}
 #countdown { margin: 0; color: var(--sage); }
 
 /* The signature moment: a digit that changes drops into its block like a placed block, in four steps. */
@@ -322,6 +330,11 @@ details p { margin: -4px 0 20px; max-width: var(--measure); }
   background: var(--ink) padding-box; border: 6px solid transparent; border-image: var(--frame-ink) 6 fill / 6px;
 }
 .kit .wide { width: 640px; image-rendering: auto; }
+/* On a wide screen the Discord banner sits beside the logo and the server-list banner. */
+@media (min-width: 1100px) {
+  .kit { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 64px; align-items: start; }
+  .kit figure:last-child { grid-column: 2; grid-row: 1 / span 2; }
+}
 
 footer { position: relative; padding-top: 112px; padding-bottom: 64px; background: var(--shade); }
 footer p:first-child a { color: var(--bone); font-weight: 700; }
@@ -331,7 +344,12 @@ footer .small { margin: 0; }
 @media (max-width: 960px) {
   #world { grid-template-columns: 1fr; }
   .plans, .extras { grid-template-columns: 1fr; }
-  .steps { grid-template-columns: 1fr; max-width: 40rem; }
+  .steps { grid-template-columns: 1fr; max-width: 40rem; gap: 32px; }
+  /* One column: each number sits beside its step instead of above it. */
+  .steps li { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 20px; align-content: start; }
+  .steps li::before { grid-row: 1 / span 3; margin-bottom: 0; }
+  .steps li > * { grid-column: 2; }
+  .steps h3 { margin-top: 4px; }
   .monkey { width: 160px; height: 160px; top: -48px; }
 }
 
@@ -352,6 +370,10 @@ footer .small { margin: 0; }
   .monkey { width: 96px; height: 96px; top: -28px; }
   .lede { font-size: 1.125rem; }
   .launch { margin-top: 20px; }
+  .launch.pending #countdown[hidden] { min-height: 3.2em; }
+  .steps li { grid-template-columns: 56px minmax(0, 1fr); column-gap: 16px; }
+  .steps li::before { width: 56px; height: 56px; font-size: 2rem; }
+  .steps h3 { margin-top: 0; }
   .ways { margin-top: 28px; }
   /* The address gets its own full-width line, so it never breaks mid-name; Copy moves up beside the label. */
   .plaque { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 6px 4px 10px 12px; }

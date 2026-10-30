@@ -35,7 +35,7 @@ export function Countdown({ launchAt, children }: { launchAt: string; children: 
   }) + "." : "";
 
   return (
-    <div className="launch">
+    <div className={running ? "launch" : "launch pending"}>
       <p className="when">
         <span id="launch-label">{live ? "Season I is live" : "Season I launch"}</span>
         {" "}{children}

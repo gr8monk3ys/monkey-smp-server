@@ -26,6 +26,7 @@ The switch: #on mn (MONUMENTS_ON, off). Off, /trigger monument does nothing and 
 open, close and name winners, and the hall and warps work. Stdlib only, Python 3.10 or newer (runs on the VPS).
 """
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -60,7 +61,9 @@ def snbt(value) -> str:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, str):
-        return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+        # JSON's escapes are valid SNBT and cover every control character (\r, \t...), so nothing in a faction
+        # name or theme can split the mcfunction or RCON line (as tools/diplomacy.py does).
+        return json.dumps(value)
     if isinstance(value, list):
         return "[" + ",".join(snbt(v) for v in value) + "]"
     if isinstance(value, dict):

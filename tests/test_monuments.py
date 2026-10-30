@@ -135,3 +135,12 @@ def test_entries_and_hall_for_staff(tmp_path, capsys):
                                                "(overworld)")
     assert monuments.main(["plan"]) == 0
     assert "function monkey:monuments/open/2026-11" in capsys.readouterr().out
+
+
+def test_snbt_strings_cannot_split_a_line():
+    """A faction name (players choose it) with control characters stays one escaped SNBT string on one line."""
+    row = {**WINNER, "faction": {"text": "Red\rMon\tkeys\n\"x\" \\ \u0001"}}
+    out = monuments.snbt([row])
+    assert not any(ord(c) < 0x20 for c in out)
+    assert 'faction:{text:"Red\\rMon\\tkeys\\n\\"x\\" \\\\ \\u0001"}' in out
+    assert monuments.snbt("plain") == '"plain"'

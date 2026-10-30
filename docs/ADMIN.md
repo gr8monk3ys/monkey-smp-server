@@ -1059,6 +1059,59 @@ already on, tonight's done, an event on, too few players, or none of the omens c
 drops off or no dry ground, nobody with a streak online). The evenings, times, lengths and loot are constants
 at the top of `tools/omens.py`; change them there, run `python tools/datapacks.py` and the checks, and release.
 
+## The season story
+
+The Town Crier's weekly line and the hidden pages of the season's story (docs/SEASONS.md, "The season story";
+`tools/lore.py`). Off until `lore/on` (docs/SEASONS.md, "Switches").
+
+```
+python tools/lore.py plan                                   # each week's page and where it goes
+/function monkey:lore/hide/3                                # in game, standing at the spot: hides week 3's page
+/function monkey:lore/unhide                                # removes the hidden page nearest you (5 blocks)
+/execute as NAME run function monkey:lore/find/3            # counts week 3's page as found for NAME (once)
+/execute as NAME run function monkey:lore/book/3            # gives NAME another copy of week 3's book
+scoreboard players get NAME lr.found                        # pages NAME has found
+```
+
+- **Hide every page once per world**, where `plan` says (spawn, an outpost, near the border, the Nether, by the
+  arena), all before the launch if you like: a page shows and can be found only from its own week. Put it
+  somewhere a player can stand within 4 blocks of; a marker works only while its chunk is loaded, so not
+  inside a spawn chunk nobody visits is fine, but don't bury it in a wall. Hide one page in two spots if the
+  first is hard to reach; each player still finds it once.
+- The outposts move with the border, so for "at one of the outposts" pick one in the week it is announced.
+- A player who lost a book: `book/<week>` gives a copy and changes nothing else.
+
+## Monument of the Month
+
+A monthly faction build contest, voted on in Discord (docs/SEASONS.md, "Monument of the Month";
+`tools/monuments.py`). Off until `monuments/on` (docs/SEASONS.md, "Switches").
+
+```
+python tools/monuments.py plan                              # the months, their themes and open commands
+/function monkey:monuments/open/2026-11                     # opens November's contest (The Gate): empty entries
+/function monkey:monuments/close                            # no more entries; lists them for you
+/function monkey:monuments/entries                          # the entries, by faction number
+python3 tools/monuments.py entries WORLD                    # the same, as Discord posts (save-all first)
+/function monkey:monuments/win {faction:2}                  # faction 2's entry wins: announced, kept in the hall
+python3 tools/monuments.py hall WORLD                       # every winner kept, with its number
+/execute as NAME run function monkey:monuments/warp {n:1}   # takes NAME to monument 1
+```
+
+The month, by hand:
+1. On the 1st (or the first Saturday), `open/<YYYY-MM>`; everyone online is told the theme. Post it in
+   `#monkey-smp` too.
+2. Around the 25th, `close`. Run `entries` on the VPS and post each entry as its own thread in `#monkey-smp`
+   (faction and coordinates); ask each faction to add a screenshot to its thread. React with a star on each to
+   start the vote.
+3. After 48 hours, count the stars (a tie goes to the owners) and run `win {faction:N}` with the faction number
+   from the post. The Sunday recap names it that week.
+4. Next season: `tools/season.py carry` copies the hall. Give each monument a warp at spawn: an Easy NPC button
+   with a COMMAND action, permission level 2, `/execute as @initiator run function monkey:monuments/warp {n:N}`
+   (as the Guide's Discord button does, docs/ADMIN.md "Spawn NPCs").
+
+Undoing a wrong winner: `data remove storage monkey:monuments hall[{n:N}]` (only the last one, so the numbers stay
+in order), then `data remove storage monkey:monuments contest.won` and run `win` again.
+
 ## Telling players what changed
 
 Players read changes in two places, with the same words in both:

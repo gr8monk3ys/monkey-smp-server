@@ -6,6 +6,8 @@ scoreboard players remove @a[scores={monkey.welcome=2..}] monkey.welcome 1
 execute as @a[tag=!monkey.joined] run function monkey:rules/first_join
 # Rule 26.
 execute store result score #now monkey.rules run time query gametime
+# The catch-up bubble (tools/catchup.py) keeps its players' grace on, so it goes before the expiry check.
+execute if entity @a[scores={ck.bubble=1..},limit=1] run function monkey:catchup/second
 execute as @a[scores={end_grace=1..}] run function monkey:rules/grace_end
 execute as @a if score @s monkey.grace <= #now monkey.rules run function monkey:rules/grace_end
 # The item goes with the grace (the launch and an admin's grace_end take both), it's off in the arena,

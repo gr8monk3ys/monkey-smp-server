@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **The wanted board** (`tools/wanted.py`, off until `function monkey:wanted/on`): players post cosmetic
+  bounties on rivals with `/trigger wanted`, a fair kill outside the arena claims them by itself (announced,
+  the Bounty Hunter title, no items or points), and the standings board shows the Most Wanted top 3. No
+  bounties on yourself, your faction or a pact partner; one every 12 hours; 6 hours' rest after a claim. The
+  Sunday recap names the week's top bounty hunter.
+- **The catch-up kit** (`tools/catchup.py`, off until `function monkey:catchup/on`): a first join from week 4
+  gets iron tools, food, a bed and torches once, and a protection bubble (rule 26's grace) for 8 hours of play
+  or until they hurt a player, shown on the action bar.
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

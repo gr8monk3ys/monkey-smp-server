@@ -577,6 +577,8 @@ the week's kills and holds the board; the VPS works the standings out and posts 
 /function monkey:standings/remove                                       # next to it: removes it (to move it)
 /function monkey:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
 /function monkey:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
+/function monkey:wanted/on                                              # the wanted board: players post bounties
+/function monkey:wanted/off                                             # (docs/SEASONS.md, "Switches")
 ```
 
 - **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
@@ -584,6 +586,12 @@ the week's kills and holds the board; the VPS works the standings out and posts 
   the hunter the Bounty Hunter title (a red `[Bounty Hunter]` before the name) if they show no other
   title or supporter color; one they paid for is never replaced, and the command tells you so. The title
   lasts the season. Nothing is sold and nothing else comes with it.
+- **The wanted board** (`docs/SEASONS.md`, "The wanted board"; off until `wanted/on`): players post bounties
+  with `/trigger wanted`, and a kill claims them by itself, giving only the title and a chat line (never
+  standings points). Over RCON: `scoreboard players get NAME st.wanted` (bounties on them now),
+  `scoreboard players set NAME st.wanted 0` (clears the bounties on them, say ones posted to harass),
+  `scoreboard players remove NAME st.hunts 1` (takes back a claim from fed kills, B13; take the title with
+  `team leave NAME` if it came with it), `scoreboard players reset NAME wt.last` (lets them post again now).
 - **The Cup column** matches `cup/faction` names to parties: give each faction's Cup entry the party's
   name (`/openpac` shows it), or its owner's name, so the Cup points land on the right row. An entry
   that matches no party shows on its own row, and the VPS logs a warning.

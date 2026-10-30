@@ -1,6 +1,7 @@
 {
   "values": [
     "monkey:standings/load",
-    "monkey:diplomacy/load"
+    "monkey:diplomacy/load",
+    "monkey:wanted/load"
   ]
 }

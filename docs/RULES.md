@@ -279,7 +279,9 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.
   `function monkey:rules/launch` ends everyone's. One player: `execute as <player> run function
   monkey:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
-  `scoreboard players get <player> monkey.grace`; `time query gametime` is now.
+  `scoreboard players get <player> monkey.grace`; `time query gametime` is now. A late first join's catch-up
+  bubble (docs/SEASONS.md, "The catch-up kit") holds the same grace open for hours of play:
+  `scoreboard players get <player> ck.bubble` is the seconds left, and `grace_end` ends both.
 - **Rule 26, the no-PvP spawn.** An Open Parties and Claims server claim over the 7 x 7 chunks around
   spawn (the vanilla spawn protection and a bit more). With their `playersByPlayers` exception off, server
   claims stop players hurting players, and they keep spawn's blocks safe too (rule 22). An admin sets it up

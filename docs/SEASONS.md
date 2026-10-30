@@ -729,10 +729,9 @@ Built:
   seconds to take one, +1 standings point an hour held (at most 20 a week), and an "Outposts" marker set on
   the live map. Tried on a test server on 30 October 2026 (Carpet fake players, the tool against a stand-in
   for docker): the survey placed 3 of 4 (every West candidate was ocean; the hourly run tries new ones), the
-  marker set written and BlueMap reloaded, a capture in 60 seconds, a second faction pausing it, minutes
-  held and the standings' Hold column, a new claim nearby marking it to move (no dry spot came up that hour, so it stayed, still held), and
-  `release`. Not yet with
-  real players or on the VPS.
+  marker set written and BlueMap reloaded, a capture in 60 seconds, a second faction pausing it, minutes held
+  and the standings' Hold column, a new claim nearby marking it to move (no dry spot came up that hour, so it
+  stayed, still held), and `release`. Not yet with real players or on the VPS.
 
 - Omens ("Omens" in the event catalog; docs/ADMIN.md, "Omens"): `tools/omens.py`, the `monkey-omens` data
   pack and `deploy/monkey-omens.sh` with its 10-minute timer. Two weekday evenings a week (Monday to Friday),

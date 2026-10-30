@@ -111,6 +111,17 @@ def saved_names(storage: dict) -> dict[int, str]:
             if (n := number_of(key))}
 
 
+def post_names(storage: dict) -> dict[int, str]:
+    """Faction number -> its name for posts and reports: saved_names(), plus the factions that are gone, under the
+    names diplomacy kept for them (monkey:diplomacy gone.f<N>), so a week's lines never say "faction N". A
+    `gone` that isn't a compound (staff edited it by mistake) is ignored."""
+    mine = storage.get("diplomacy", {})
+    gone = mine.get("gone", {}) if isinstance(mine, dict) else {}
+    out = {n: name_text(v) for key, v in gone.items() if (n := number_of(key))} if isinstance(gone, dict) else {}
+    out.update({n: name for n, name in saved_names(storage).items() if name})
+    return out
+
+
 def names(world: Path) -> dict[int, str]:
     """Faction number -> its name, for the factions that still exist."""
     return saved_names(saved_storage(world))
@@ -283,12 +294,10 @@ def report(storage: dict | None, scores: dict[str, dict[str, int]], before: dict
         since = 0
     log = [e for e in storage.get("diplomacy", {}).get("log", []) if isinstance(e, dict)]
     newest = max((int(e.get("n", 0)) for e in log), default=0)
-    known = saved_names(storage)
-    gone = {n: name_text(v) for key, v in storage.get("diplomacy", {}).get("gone", {}).items()
-            if (n := number_of(key))}
+    known, every = saved_names(storage), post_names(storage)
 
     def name(n) -> str:
-        return discord_name(known.get(int(n)) or gone.get(int(n)) or f"faction {n}")
+        return discord_name(every.get(int(n)) or f"faction {n}")
     week = [e for e in sorted(log, key=lambda e: int(e.get("n", 0))) if int(e.get("n", 0)) > since]
     events = [SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0))) for e in week
               if e.get("kind") in SAID]

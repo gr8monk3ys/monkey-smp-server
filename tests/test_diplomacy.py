@@ -263,6 +263,10 @@ def test_a_faction_gone_by_the_close_keeps_its_name_in_the_post():
     got = diplomacy.report({"diplomacy": {"log": LOG, "gone": {"f9": {"text": "Gold_Lemurs"}, "f3": "Old Name"}},
                             "factions": {"names": NAMES}}, {}, {"diplomacy_seq": 7})
     assert got["diplomacy"][1] == "- Gold\\_Lemurs and Red Monkeys made peace, and a pact"   # a live name wins
+    # A `gone` staff set to something else by mistake is left out: the close still runs.
+    bad = diplomacy.report({"diplomacy": {"log": LOG, "gone": ["f9"]}, "factions": {"names": NAMES}}, {},
+                           {"diplomacy_seq": 7})
+    assert bad["diplomacy"][1] == "- Faction 9 and Red Monkeys made peace, and a pact"
 
 
 def test_a_quiet_week_reports_nothing_and_a_new_world_starts_the_count_again():

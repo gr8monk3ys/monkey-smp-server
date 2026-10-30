@@ -59,7 +59,9 @@ ADVANCEMENT = f"data/{NS}/advancement/firsts"
 STORE = f"{NS}:firsts"
 KEY = "firsts"              # STORE's key in the namespace's command storage file
 OBJ = "rf"                  # #<id>: 1 once claimed; #claimed: how many claims so far this season;
-                            # #unnamed: 1 while a claim waits for its holder's name
+                            # #unnamed: 1 while a claim waits for its holder's name; #wait: seconds
+                            # since second last ran rename
+RENAME_SECONDS = 10         # how often a claim without its holder's name is read again
 TRIGGER = "firsts"
 NAME_TAG = "rf.name"        # the item display that reads a holder's name for a moment
 NETHERITE_STALE = 100       # ticks: an older stamp means the no-Netherite-armor pack is off
@@ -383,28 +385,35 @@ def datapack_files() -> dict[str, str]:
         "# 0 for a first nobody holds yet (the advancements read it), without touching a claimed one.",
         *(f"scoreboard players add #{m['id']} {OBJ} 0" for m in MILESTONES),
         f"scoreboard players add #claimed {OBJ} 0",
+        "# A claim stored without its name by an older pack never set #unnamed: rename checks them all once.",
+        f"scoreboard players set #unnamed {OBJ} 1",
         f"schedule function {NS}:firsts/second 20t replace",
     )
     f[f"{FN}/second.mcfunction"] = lines(
         f"scoreboard players enable @a {TRIGGER}",
         f"execute if score {LAUNCHED} matches 1 run function {NS}:firsts/clean",
-        f"execute if score #unnamed {OBJ} matches 1.. run function {NS}:firsts/rename",
+        f"# Every {RENAME_SECONDS} seconds, not every second: a holder can stay offline for days.",
+        f"scoreboard players add #wait {OBJ} 1",
+        f"execute if score #wait {OBJ} matches {RENAME_SECONDS}.. if score #unnamed {OBJ} matches 1.. "
+        f"run function {NS}:firsts/rename",
+        f"execute if score #wait {OBJ} matches {RENAME_SECONDS}.. run scoreboard players set #wait {OBJ} 0",
         f"schedule function {NS}:firsts/second 20t replace",
     )
     f[f"{FN}/rename.mcfunction"] = lines(
         "# A first claimed without its holder's name (the read failed): read it again where the holder stands",
         "# once they are online, and keep #unnamed set while any is still missing.",
         f"scoreboard players set #unnamed {OBJ} 0",
-        *(f"execute if data storage {STORE} held.{m['id']}{{name:\"\"}} as @a[scores={{{OBJ}.{m['id']}=1..}},"
-          f"limit=1] at @s run function {NS}:firsts/rename/{m['id']}" for m in MILESTONES),
-        *(f"execute if data storage {STORE} held.{m['id']}{{name:\"\"}} run scoreboard players set #unnamed {OBJ} 1"
-          for m in MILESTONES),
+        *(f"function {NS}:firsts/rename/one {{id:\"{m['id']}\"}}" for m in MILESTONES),
     )
-    for m in MILESTONES:
-        f[f"{FN}/rename/{m['id']}.mcfunction"] = lines(
-            f"function {NS}:firsts/name",
-            f"data modify storage {STORE} held.{m['id']}.name set from storage {STORE} name",
-        )
+    f[f"{FN}/rename/one.mcfunction"] = lines(
+        "# Macro {id}: the first's name read again where its holder stands, if it has none and they're online.",
+        f"$execute unless data storage {STORE} held.$(id){{name:\"\"}} run return 0",
+        "# Cleared first: with the holder offline nothing is read, and another player's name must not be kept.",
+        f"data modify storage {STORE} name set value \"\"",
+        f"$execute as @a[scores={{{OBJ}.$(id)=1..}},limit=1] at @s run function {NS}:firsts/name",
+        f"$data modify storage {STORE} held.$(id).name set from storage {STORE} name",
+        f"$execute if data storage {STORE} held.$(id){{name:\"\"}} run scoreboard players set #unnamed {OBJ} 1",
+    )
     f[f"{FN}/tick.mcfunction"] = lines(f"execute as @a[scores={{{TRIGGER}=1..}}] run function {NS}:firsts/use")
     f[f"{FN}/name.mcfunction"] = lines(
         f"# Puts this player's name in storage {STORE} name (\"\" if it can't), through a player head of them",

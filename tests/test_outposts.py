@@ -342,6 +342,15 @@ def test_the_recap_section_names_who_held_longest_and_the_weeks_captures():
     assert len(outposts.captures(storage, None)) == 3
 
 
+def test_a_capture_by_a_faction_gone_by_the_close_keeps_its_name():
+    # Play-tested 2026-10-30: a party deleted midweek was "faction 1" in the post; diplomacy keeps its name aside.
+    storage = {"factions": {"names": {"f2": {"text": "Blue Herons"}}},
+               "diplomacy": {"gone": {"f1": {"text": "Red Monkeys"}}},
+               "outposts": {"epoch": 77, "log": [{"kind": "capture", "o": 2, "f": 1, "n": 3}]}}
+    out = outposts.recap_lines([{"name": "Blue Herons", "outposts": 2}], storage, {"epoch": 77, "seq": 0})
+    assert out[1] == "1 capture this week; last, Red Monkeys took the East outpost."
+
+
 def test_the_capture_log_keeps_its_newest_entries():
     log = fn("log")
     assert f"if data storage monkey:outposts log[{outposts.LOG_KEEP}] run data remove storage monkey:outposts log[0]" \

@@ -56,6 +56,8 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import wanted
+
 import diplomacy
 import outposts
 import recap
@@ -379,7 +381,13 @@ def store_command(key: str, head: str, rows: list[Row], top: int) -> str:
     raise ValueError("the board heading alone is too long for RCON")
 
 
-def board_commands(rows: list[Row], week: dict | None, last: dict | None, now: dt.datetime) -> list[str]:
+def wanted_command(scores: dict[str, dict[str, int]]) -> str:
+    """The board's Most Wanted (tools/wanted.py), from the saved scores; nothing while the wanted board is off."""
+    return f"data modify storage {STORE} wanted set value {snbt(wanted.section(scores))}"
+
+
+def board_commands(rows: list[Row], week: dict | None, last: dict | None, now: dt.datetime,
+                   scores: dict[str, dict[str, int]] | None = None) -> list[str]:
     start = since(week)
     head = f"This week so far ({'since ' + day(start) if start else 'since the standings began'}, " \
            f"updated {clock(now)})"
@@ -387,12 +395,14 @@ def board_commands(rows: list[Row], week: dict | None, last: dict | None, now: d
     if last:
         commands.append(store_command("last", f"Final standings, {span(last)}", [Row(**r) for r in last["rows"]],
                                       LAST_TOP))
+    commands.append(wanted_command(scores or {}))
     commands.append(f"function {NS}:standings/publish")
     return commands
 
 
-def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, now: dt.datetime) -> None:
-    for command in board_commands(rows, week, last, now):
+def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, now: dt.datetime,
+                 scores: dict[str, dict[str, int]] | None = None) -> None:
+    for command in board_commands(rows, week, last, now, scores):
         rcon(command)
 
 
@@ -468,7 +478,27 @@ def sync_factions(rcon, folder: Path, data: World) -> int:
     factions = [diplomacy.Faction(p.id, board_name(p.name) or board_name(p.owner) or p.id[:8], p.members)
                 for p in data.parties]
     unsure = frozenset(p.id for p in saved_world.parties(folder) or [] if p.owner is None)
-    return diplomacy.sync(rcon, factions, data.scores, folder, warn, unsure)
+    # In the same batch: who has claimed land (the first-week quest's step), so an hour costs no extra command.
+    changes = (diplomacy.sync_changes(factions, data.scores, diplomacy.saved_storage(folder), warn, unsure)
+               + claimed_changes(data, usernames(folder)))
+    for command in diplomacy.batch_commands(changes):
+        rcon(command)
+    return len(changes)
+
+
+CLAIMED = "st.claimed"   # 1: the player has claimed land (the first-week quest's step, tools/quest.py)
+
+
+def claimed_changes(data: World, names: dict[str, str]) -> list[dict]:
+    """st.claimed 1 for each player who holds claimed chunks and doesn't have it in game yet. Never set back to
+    0: giving land up later takes the step back from nobody. A UUID with no name in usercache is left out."""
+    have = data.scores.get(CLAIMED, {})
+    out = []
+    for uuid, chunks in sorted(data.claims.items()):
+        name = names.get(uuid)
+        if chunks > 0 and name and have.get(name) != 1:
+            out.append(diplomacy.change("sync/set", p=name, o=CLAIMED, v=1))
+    return out
 
 
 def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
@@ -484,7 +514,8 @@ def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
         print(f"could not write the factions in game: {e}", file=sys.stderr)
         status = 1
     try:
-        update_board(rcon, table(data, week, warn), week, read_json(last_path) if last_path else None, now)
+        update_board(rcon, table(data, week, warn), week, read_json(last_path) if last_path else None, now,
+                     data.scores)
     except RconError as e:
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         return 1
@@ -564,7 +595,7 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
         return 0
     status = 0
     try:
-        update_board(rcon, rows, week, last, now)
+        update_board(rcon, rows, week, last, now, data.scores)
         if last.get("announced"):
             print("board updated (already announced in chat)")
         else:
@@ -616,14 +647,17 @@ TITLE = ("bounty_hunter", "red", "[Bounty Hunter] ")
 
 HELP = [("place", "stand where the board goes, at spawn"), ("remove", "next to the board"),
         ('bounty/post {target:"Alex"}', "one of the top Strength holders"),
-        ('bounty/claim {hunter:"Steve",target:"Alex"}', "once staff have checked the kill")]
+        ('bounty/claim {hunter:"Steve",target:"Alex"}', "once staff have checked the kill"),
+        ("wanted/on", "players post bounties themselves (docs/SEASONS.md, Switches)"),
+        ("wanted/off", "nobody can post or claim one; bounties are kept")]
 
 
 def datapack_files() -> dict[str, str]:
     f: dict[str, str] = {}
-    f["pack.mcmeta"] = mcmeta("Monkey SMP weekly faction standings, bounties, war and pacts (generated by "
-                              "tools/standings.py and tools/diplomacy.py)")
-    f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:standings/load", f"{NS}:diplomacy/load")
+    f["pack.mcmeta"] = mcmeta("Monkey SMP weekly faction standings, bounties, the wanted board, war and pacts "
+                              "(generated by tools/standings.py, tools/wanted.py and tools/diplomacy.py)")
+    f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:standings/load", f"{NS}:diplomacy/load",
+                                                                    f"{NS}:wanted/load")
     f["data/minecraft/tags/function/tick.json"] = function_tag(f"{NS}:standings/tick", f"{NS}:diplomacy/tick")
     team, color, prefix = TITLE
     f[f"{FN}/load.mcfunction"] = lines(
@@ -633,6 +667,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard objectives add {BOUNTY} dummy",
         "scoreboard objectives add st.ver dummy",
         "scoreboard objectives add standings trigger",
+        f"scoreboard objectives add {CLAIMED} dummy",
         "# The bounty title: a team, like the supporter titles (docs/RETENTION.md). It lasts the season.",
         f"team add {team}",
         f"team modify {team} color {color}",
@@ -641,6 +676,7 @@ def datapack_files() -> dict[str, str]:
         f"team modify {team} seeFriendlyInvisibles false",
         f"execute unless data storage {STORE} week run data modify storage {STORE} week set value {snbt(EMPTY_WEEK)}",
         f'execute unless data storage {STORE} last run data modify storage {STORE} last set value {{text:""}}',
+        f'execute unless data storage {STORE} wanted run data modify storage {STORE} wanted set value {{text:""}}',
         f"function {NS}:standings/publish",
         f"schedule function {NS}:standings/second 20t replace",
     )
@@ -668,6 +704,8 @@ def datapack_files() -> dict[str, str]:
         "# week's final standings), then every board display picks it up within a second.",
         f"data modify storage {STORE} board set value {snbt({'text': '', 'extra': [HEADER]})}",
         f"data modify storage {STORE} board.extra append from storage {STORE} week",
+        "# The wanted board's Most Wanted (tools/wanted.py): empty while it is off.",
+        f"data modify storage {STORE} board.extra append from storage {STORE} wanted",
         f'data modify storage {STORE} board.extra append value {{text:"\\n"}}',
         f"data modify storage {STORE} board.extra append from storage {STORE} last",
         f"data modify storage {STORE} board.extra append value {snbt(FOOTER)}",
@@ -696,6 +734,7 @@ def datapack_files() -> dict[str, str]:
         f"kill @e[type={DISPLAY},tag={BOARD_TAG},distance=..5]",
     )
     f.update(bounty_files())
+    f.update(wanted.datapack_files())
     f.update(diplomacy.datapack_files())
     f[f"{FN}/help.mcfunction"] = help_function(f)
     return {k: v if v.endswith("\n") else v + "\n" for k, v in f.items()}
@@ -742,11 +781,13 @@ def help_function(files: dict[str, str]) -> str:
     out = ["# Lists the staff commands; click one to put it in the chat box.",
            "tellraw @s " + text({"text": "Standings and bounty commands (docs/ADMIN.md):", "color": "gold"})]
     for cmd, note in HELP:
-        path = cmd.split(" ")[0]
-        assert f"{FN}/{path}.mcfunction" in files, path
+        # The wanted board's are its own (tools/wanted.py); the rest are standings/<cmd>.
+        full = cmd if cmd.startswith("wanted/") else f"standings/{cmd}"
+        path = full.split(" ")[0]
+        assert f"data/{NS}/function/{path}.mcfunction" in files, path
         out.append("tellraw @s " + text(
             {"text": f" {cmd}", "color": "aqua",
-             "click_event": {"action": "suggest_command", "command": f"/function {NS}:standings/{cmd}"}},
+             "click_event": {"action": "suggest_command", "command": f"/function {NS}:{full}"}},
             {"text": f"  {note}", "color": "dark_gray"}))
     return lines(*out)
 

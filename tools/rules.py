@@ -10,6 +10,8 @@ It writes two folders, both generated (edit this file, not them). Rule numbers a
                then opens both; the End stays closed until `function monkey:rules/open_end`.
       Rule 26: a first join gets 48 hours of PvP grace: other players can't hurt them. Attacking a player
                ends it, and so does `/trigger end_grace`. Nobody gets it during the launch hour.
+      Catch-up: a first join late in the season gets a starter kit and grace held open for hours of play
+               (tools/catchup.py; off until staff turn it on).
       Ban B9:  Fire Aspect and Flame are disabled. They're out of the enchanting table, loot and trades,
                and any copy that still turns up (a mod's chest or a mob's gear) does nothing and can't be
                put on an item.
@@ -27,6 +29,8 @@ The installer copies both into the world on every install (Install-PackageDatapa
 """
 import json
 from pathlib import Path
+
+import catchup
 
 from challenges import LAUNCHED
 from datapacks import NS, function_tag, lines, mcmeta
@@ -134,6 +138,7 @@ def rules_files() -> dict[str, str]:
         f"scoreboard objectives add {GRACE} dummy",
         f"scoreboard objectives add {WELCOME} dummy",
         f"scoreboard objectives add {END_GRACE} trigger",
+        f"function {NS}:catchup/load",
         "# Rule 25, once per world: after that the border is the admins' to grow.",
         f"execute unless score #border {OBJECTIVE} matches 1 run function {NS}:rules/border",
         f"schedule function {NS}:rules/second 20t replace",
@@ -168,6 +173,8 @@ def rules_files() -> dict[str, str]:
         f"execute as @a[tag=!{JOINED}] run function {NS}:rules/first_join",
         "# Rule 26.",
         f"execute store result score #now {OBJECTIVE} run time query gametime",
+        "# The catch-up bubble (tools/catchup.py) keeps its players' grace on, so it goes before the expiry check.",
+        f"execute if entity @a[scores={{{catchup.BUBBLE}=1..}},limit=1] run function {NS}:catchup/second",
         f"execute as @a[scores={{{END_GRACE}=1..}}] run function {NS}:rules/grace_end",
         f"execute as @a if score @s {GRACE} <= #now {OBJECTIVE} run function {NS}:rules/grace_end",
         "# The item goes with the grace (the launch and an admin's grace_end take both), it's off in the arena,",
@@ -193,6 +200,7 @@ def rules_files() -> dict[str, str]:
         f"scoreboard players set @s {WELCOME} {WELCOME_DELAY}",
         "# Rule 26: not in the launch hour, when the whole server starts together.",
         f"execute unless score #launching {OBJECTIVE} matches 1 run function {NS}:rules/grace_start",
+        f"function {NS}:catchup/first_join",
     )
     f[f"{fn}/welcome.mcfunction"] = lines(
         f"scoreboard players reset @s {WELCOME}",
@@ -216,6 +224,8 @@ def rules_files() -> dict[str, str]:
         f"# An admin can end one: execute as <player> run function {NS}:rules/grace_end",
         f"scoreboard players reset @s {GRACE}",
         f"scoreboard players reset @s {END_GRACE}",
+        "# A catch-up bubble ends with it (tools/catchup.py).",
+        f"scoreboard players reset @s {catchup.BUBBLE}",
         f"execute if items entity @s armor.body {GRACE_ITEM} run item replace entity @s armor.body with minecraft:air",
         "tellraw @s " + text({"text": "Your PvP grace is over: other players can hurt you now.", "color": "red"}),
     )
@@ -293,6 +303,7 @@ def rules_files() -> dict[str, str]:
         "tellraw @s " + text({"text": "The End is closed for now. ", "color": "red"},
                              {"text": "The owners will announce when it opens.", "color": "gray"}),
     )
+    f.update(catchup.datapack_files(GRACE, END_GRACE, ARENA_TAG))
     minutes = LAUNCH_SECONDS // 60
     f[f"{fn}/launch.mcfunction"] = lines(
         f"# Rule 23. An admin runs this once, at launch: PvP and the Nether close for {minutes} minutes.",

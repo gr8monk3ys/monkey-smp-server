@@ -4,6 +4,7 @@ scoreboard objectives add st.kills dummy
 scoreboard objectives add st.bounty dummy
 scoreboard objectives add st.ver dummy
 scoreboard objectives add standings trigger
+scoreboard objectives add st.claimed dummy
 # The bounty title: a team, like the supporter titles (docs/RETENTION.md). It lasts the season.
 team add bounty_hunter
 team modify bounty_hunter color red
@@ -12,5 +13,6 @@ team modify bounty_hunter prefix {"text":"[Bounty Hunter] ","color":"red"}
 team modify bounty_hunter seeFriendlyInvisibles false
 execute unless data storage monkey:standings week run data modify storage monkey:standings week set value {text:"",extra:[{text:"No standings yet: the first come out on Sunday evening.\n",color:"gray"}]}
 execute unless data storage monkey:standings last run data modify storage monkey:standings last set value {text:""}
+execute unless data storage monkey:standings wanted run data modify storage monkey:standings wanted set value {text:""}
 function monkey:standings/publish
 schedule function monkey:standings/second 20t replace

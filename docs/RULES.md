@@ -28,6 +28,8 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
    - A naked player is one who has freshly respawned and has nothing on them (seeds and filler items
      don't count).
    - Naked players trying to retrieve loot can be killed if they are actively trying to steal your loot.
+   - A kill on a player who respawned less than 10 minutes ago never counts toward a war's score or claims a
+     bounty.
 6. No hovering in fights as a naked player. If you do, you can be slain.
 7. No loopholes.
    - If you have a question about whether something is legit, contact an admin to confirm before you do it.
@@ -71,12 +73,19 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
 25. A world border is set at 2500 x 2500.
     - Leaving or breaking the world border is prohibited.
     - The border is expected to grow as the server progresses or as more players join.
+    - From Season II, on the season's finale evening (its last week) the border shrinks to 256 x 256 around the
+      finale's monument, never smaller. Chat warns 10 minutes before, 1 minute before and when it starts, and
+      anyone it passes is moved back inside. Claims and territories (rules 37, 39 and 42) are never touched: land
+      outside the border is only out of reach until the next season.
 26. New players and spawn are safe from PvP.
     - For 48 hours after your first join, other players can't hurt you. Attacking a player ends that early,
       and so does `/trigger end_grace`. Nobody gets it in the launch hour (rule 23): the whole server starts
       together.
     - Grace is for settling in. Using it to scout, carry loot, block a fight, hold a spot for a faction, or
       fight by other means (pets, lava, fire, traps) is a loophole (rule 7), and an admin will end it.
+    - Late joiners get longer: when the catch-up kit is on, a player whose first join is in week 4 or later
+      keeps this grace for their first 8 hours of play (online time), or the 48 hours if that is longer. It
+      ends early the same ways, and the same loophole rule applies.
     - Spawn is a no-PvP zone.
 
 ## Strength rules
@@ -127,6 +136,11 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
       block them, heal them or take the loot.
     - Events are exempt. At KOTH, in the arena and at other staff events anyone can fight anyone; the rule
       applies again once you leave the event area.
+    - Outpost sieges are staff events: while a siege window is open, an outpost's square is the event area.
+      Sieges never open a faction's claims or territory.
+    - From Season II these are staff events too, each with its event area: the border boss, within 96 blocks of
+      it while it is up, and the finale's last hour, within 64 blocks of the monument until the close. Spawn is
+      never part of one (rules 22 and 26).
     - First offense: a 2-day ban. Second: 5 days. Third: 14 days. Offenses count for the current season.
 42. Admins roll back griefing of a territory (rules 37 and 39) and an insider's damage (rule 40). A legal
     raid, on anything outside a territory's perimeter, isn't rolled back.
@@ -268,8 +282,8 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
   2500 x 2500, centred on spawn. Since Minecraft 26.3 every dimension has its own border, so the pack also
   gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
-  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 600` (600 seconds to widen)
-  and `execute in minecraft:the_nether run worldborder set 500 600`. The pack never touches them again.
+  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 12000` (12000 ticks, 10 minutes,
+  to widen) and `execute in minecraft:the_nether run worldborder set 500 12000`. The pack never touches them again.
 - **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
   before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
@@ -279,7 +293,9 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   stops while the server is empty, when they hurt a player, or with `/trigger end_grace`.
   `function monkey:rules/launch` ends everyone's. One player: `execute as <player> run function
   monkey:rules/grace_end` (or `grace_start` to give one). Their grace ends at game time
-  `scoreboard players get <player> monkey.grace`; `time query gametime` is now.
+  `scoreboard players get <player> monkey.grace`; `time query gametime` is now. A late first join's catch-up
+  bubble (docs/SEASONS.md, "The catch-up kit") holds the same grace open for hours of play:
+  `scoreboard players get <player> ck.bubble` is the seconds left, and `grace_end` ends both.
 - **Rule 26, the no-PvP spawn.** An Open Parties and Claims server claim over the 7 x 7 chunks around
   spawn (the vanilla spawn protection and a bit more). With their `playersByPlayers` exception off, server
   claims stop players hurting players, and they keep spawn's blocks safe too (rule 22). An admin sets it up

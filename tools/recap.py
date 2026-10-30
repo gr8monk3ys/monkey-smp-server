@@ -42,6 +42,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import goal
+import monuments
 import npcs
 import season_calendar
 from challenges import LAUNCHED, TEST_PLAY
@@ -53,8 +55,9 @@ LINE_LIMIT = 300             # characters of one section line, at most
 NAME_LIMIT = 32              # characters of one name in a section line
 LISTED = 5                   # names in a list (bounty hunters) before "and N more"
 KILLS, BOUNTY = "st.kills", "st.bounty"   # the standings' kills and bounties, with their starting points in week.json
+HUNTS = "st.hunts"                 # player-posted bounties claimed (the wanted board, tools/wanted.py)
 CHALLENGES, SEEN = "rw.challenges", "ev.seen"
-COUNTERS = (CHALLENGES,)           # scores whose starting point baseline() keeps
+COUNTERS = (CHALLENGES, HUNTS)     # scores whose starting point baseline() keeps
 EVENT = "#event"                    # events begun so far, in ev.state (monkey:events/begin)
 
 
@@ -281,6 +284,23 @@ def bounties(week: Week) -> list[str] | None:
     return [fit(lambda them: f"**Bounties claimed:** {total}, by {them}.", names)]
 
 
+def hunter(week: Week) -> list[str] | None:
+    """The week's top bounty hunter, once players have claimed bounties players posted (the wanted board,
+    tools/wanted.py): the most bounties claimed this week, staff-posted (st.bounty) and player-posted (st.hunts)
+    together. A week with only staff bounties has none: the bounties line names those hunters already."""
+    hunts = None if week.test_play else week.gains(HUNTS, fold=True)
+    if not hunts:
+        return None if hunts is None else []
+    total = dict(hunts)
+    for name, n in (week.gains(BOUNTY, fold=True) or {}).items():
+        total[name] = total.get(name, 0) + n
+    top = max(total.values())
+    names = sorted((n for n, k in total.items() if k == top), key=str.casefold)
+    each = " each" if len(names) > 1 else ""
+    return [fit(lambda them: f"**Top bounty hunter:** {them}, {top} {'bounty' if top == 1 else 'bounties'}{each}.",
+                [who(week, week.player(n)) for n in names])]
+
+
 def land(week: Week) -> list[str] | None:
     """Chunks claimed this week, all told, and the faction that claimed the most: each player's claims that
     grew, so land a player gave up doesn't hide land another claimed."""
@@ -360,8 +380,58 @@ def player_of_the_week(week: Week) -> list[str] | None:
     return [f"**Player of the Week:** {md(name)} ({md(top['name'])}, 1st), {did}."]
 
 
+def monument(week: Week) -> list[str] | None:
+    """A Monument of the Month named this week (tools/monuments.py: the hall entry's season and week). Rare, so no
+    world folder to read says nothing rather than "can't tell" (which would hide "A quiet week")."""
+    if week.folder is None:
+        return []
+    season = week.scores("rw.day").get("#season", 1)
+    won = [r for r in monuments.hall(week.folder) if r.get("season") == season and r.get("week") == week.number]
+    return [f"**Monument of the Month:** {md(monuments.name_text(r.get('faction')))} won {r.get('month')}, "
+            f"{r.get('theme')}, at {r.get('x')} {r.get('y')} {r.get('z')}." for r in won]
+
+
+def spectacles(week: Week) -> list[str] | None:
+    """Season II's border boss and finale (tools/boss.py, tools/finale.py) when they ended this week: who slew the
+    boss, or that it left, and who held the monument. Read from the saved world's command storage."""
+    if week.folder is None or week.scores("rw.day").get("#season", 0) < 2:
+        return []
+    import boss
+    import finale
+
+    import diplomacy
+    ended = [o for o in boss.outcomes(week.folder) if o.week == week.number and o.state in ("slain", "left")]
+    won = finale.result(week.folder, week.world.scores)
+    won = won if won and won.week == week.number else None
+    if not ended and not won:
+        return []
+    names = diplomacy.names(week.folder)
+    out = []
+    for o in ended:
+        if o.state == "left":
+            out.append(f"**Border boss:** {boss.NAME} left; nobody slew it.")
+        else:
+            of = f" of {md(names.get(o.faction, f'faction {o.faction}'))}" if o.faction else ""
+            out.append(f"**Border boss:** {md(o.player or 'a player')}{of} slew {boss.NAME}.")
+    if won and won.tie:
+        out.append(f"**The finale:** a tie for the monument on {won.points} points; staff name the winner.")
+    elif won and won.faction:
+        out.append(f"**The finale:** {md(names.get(won.faction, f'faction {won.faction}'))} held the monument "
+                   f"and won, with {won.points} points.")
+    elif won:
+        out.append("**The finale:** nobody held the monument.")
+    return out
+
+
 # The week's sections, in the order they show. Add a new one here (see the top of this file).
-SECTIONS = [mover, fighter, bounties, land, challenges, turnout, player_of_the_week]
+def server_goal(week: Week) -> list[str] | None:
+    """The weekly server goal (tools/goal.py): reached, or how far it got. Nothing while it is off. It counts
+    only after the launch (goal/second), so the launch weekend's line is the season's own play."""
+    return goal.recap_line(week.world.scores, week.number)
+
+
+SECTIONS = [spectacles, mover, fighter, bounties, hunter, land, challenges, server_goal, turnout, player_of_the_week,
+            monument]
 QUIET = "A quiet week: no PvP kills, bounties, new land or challenges."
 LAUNCH = "**The season is open.** Fights, bounties, land and events show here from next Sunday."
 

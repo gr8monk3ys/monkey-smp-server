@@ -3,19 +3,14 @@ import { Canopy, Footer } from "@/components/chrome";
 import { ConfigLink, Store } from "@/components/links";
 import { Place } from "@/components/place";
 import { terms } from "@/content/rules";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Creator codes · Monkey SMP",
-  description: "Stream or post videos from Monkey SMP and earn a share of the passes your viewers buy. The terms for "
-    + "creator codes.",
-  openGraph: {
-    title: "Creator codes · Monkey SMP",
-    description: "Stream or post videos from Monkey SMP and earn a share of the passes your viewers buy.",
-    type: "website",
-    url: "/creators",
-    images: ["/img/og.jpg"],
-  },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Creator codes for streamers and YouTubers · Monkey SMP",
+  description: "Stream or post videos from Monkey SMP, a Minecraft factions server, and earn a share of the passes "
+    + "your viewers buy. The terms for creator codes.",
+  path: "/creators",
+});
 
 export default function Creators() {
   return (

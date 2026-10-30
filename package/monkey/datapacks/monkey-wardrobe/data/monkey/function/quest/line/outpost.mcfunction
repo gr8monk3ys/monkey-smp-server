@@ -1,0 +1,2 @@
+execute if score @s rq.outpost matches 1.. run return run tellraw @s [" ",{"text":"Visit an outpost","color":"green","hover_event":{"action":"show_text","value":"Stand in one of the four outposts' squares. /trigger outposts says where they are."}},{"text":"  done","color":"green"}]
+tellraw @s [" ",{"text":"Visit an outpost","color":"white","hover_event":{"action":"show_text","value":"Stand in one of the four outposts' squares. /trigger outposts says where they are."}},{"text":"  (hover: how)","color":"dark_gray"}]

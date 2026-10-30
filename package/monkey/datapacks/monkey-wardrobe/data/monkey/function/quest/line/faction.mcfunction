@@ -1,0 +1,2 @@
+execute if score @s rq.faction matches 1.. run return run tellraw @s [" ",{"text":"Join or start a faction","color":"green","hover_event":{"action":"show_text","value":"/oparties create to start one, or ask in #smp-forum on the Discord to join one. Counted within the hour."}},{"text":"  done","color":"green"}]
+tellraw @s [" ",{"text":"Join or start a faction","color":"white","hover_event":{"action":"show_text","value":"/oparties create to start one, or ask in #smp-forum on the Discord to join one. Counted within the hour."}},{"text":"  (hover: how)","color":"dark_gray"}]

@@ -1,0 +1,2 @@
+scoreboard players set #phase fn 3
+tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"text":"the border has closed. The last hour starts now: every second, each faction scores a point for each member within 24 blocks of the monument at ","color":"gold"},{"nbt":"at.x","storage":"monkey:finale","color":"yellow"},{"text":", ","color":"yellow"},{"nbt":"at.z","storage":"monkey:finale","color":"yellow"},{"text":". A staff event: within 64 blocks of the monument anyone can fight anyone (rule 41) until the close.","color":"gold"}]

@@ -1,0 +1,12 @@
+# Sends the game its clock and the siege windows (deploy/monkey-sieges.sh, tools/sieges.py). Started every 5
+# minutes by monkey-sieges.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install`
+# (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: siege windows and the clock
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-sieges.sh

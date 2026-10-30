@@ -19,4 +19,5 @@ execute if function monkey:diplomacy/cooling run return run tellraw @s {"text":"
 execute if score #act dp.tmp matches 1 run return run function monkey:diplomacy/war with storage monkey:diplomacy pair
 execute if score #act dp.tmp matches 2 run return run function monkey:diplomacy/pact with storage monkey:diplomacy pair
 execute if score #act dp.tmp matches 3 run return run function monkey:diplomacy/break with storage monkey:diplomacy pair
+execute if score #act dp.tmp matches 4 run return run function monkey:diplomacy/confirm with storage monkey:diplomacy pair
 return run tellraw @s {"text":"Pick from the menu: /trigger diplomacy","color":"red"}

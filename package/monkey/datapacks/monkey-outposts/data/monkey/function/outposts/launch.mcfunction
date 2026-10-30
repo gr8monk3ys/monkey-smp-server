@@ -7,6 +7,7 @@ scoreboard players reset * op.by
 scoreboard players reset * op.prog
 scoreboard players reset * op.min
 scoreboard players reset * op.id
+scoreboard players reset * op.visit
 execute store result score #epoch op run random value 1..1000000000
 execute store result storage monkey:outposts epoch int 1 run scoreboard players get #epoch op
 execute if score #busy op matches 1 run function monkey:outposts/unload with storage monkey:outposts cand

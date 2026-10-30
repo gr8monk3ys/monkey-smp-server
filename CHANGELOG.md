@@ -1,5 +1,62 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **First-week quest**: five steps for a player new this season (talk to the Guide, set your spawn at a bed,
+  join or start a faction, claim a chunk, visit an outpost), shown with `/trigger quest` or the Guide's "Your
+  first week", with the Pathfinder blade at the end. Veterans are never signed up; [Hide] stops it. Each step
+  reads a score another pack already keeps (docs/RETENTION.md, "The first week"). The Guide must be placed
+  again, and players need the new client pack for the blade.
+- **Weekly server goal**: one shared target a week from vanilla statistics (logs, mobs, diamonds, fish, trades,
+  breeding, ancient debris), shown under the week's challenges, announced at half way and at the target, with
+  a title and fireworks over the standings board at spawn. It is in the Sunday recap (docs/RETENTION.md, "The
+  weekly server goal"; `python tools/goal.py schedule`).
+- Both ship on and stay dormant until the launch; staff switch them with `function monkey:quest/off` and
+  `function monkey:goal/off` (docs/SEASONS.md, "Switches").
+- **The wanted board** (`tools/wanted.py`, off until `function monkey:wanted/on`): players post cosmetic
+  bounties on rivals with `/trigger wanted`, a fair kill outside the arena claims them by itself (announced,
+  the Bounty Hunter title, no items or points), and the standings board shows the Most Wanted top 3. No
+  bounties on yourself, your faction or a pact partner; one every 12 hours; 6 hours' rest after a claim; no
+  claim on a player who respawned less than 10 minutes ago (rule 5, `tools/respawn.py`). The Sunday recap
+  names the week's top bounty hunter.
+- **The catch-up kit** (`tools/catchup.py`, off until `function monkey:catchup/on`): a first join from week 4
+  gets iron tools, food, a bed and torches once, and a protection bubble (rule 26's grace) for 8 hours of play
+  or until they hurt a player, shown on the action bar. Rule 26 now says so.
+- **Outpost sieges** (off until staff turn them on): two fixed windows a week, Wednesday 7 to 9 PM and Sunday
+  3 to 5 PM Pacific, when the neutral outposts are the prize: a capture earns a bonus hour held, once per
+  outpost per window. Each siege is a staff event (rule 41's exemption inside an outpost's square only).
+  Faction claims are never opened. Warnings 30 and 5 minutes ahead, announcements in game and in the news
+  channel, `/trigger sieges`, and a Town Crier line. `tools/sieges.py`, the `monkey-sieges` data pack and
+  `deploy/monkey-sieges.sh` with a 5-minute timer, which also gives the game the time. Staff:
+  `monkey:sieges/staff/on`, `off`, `status`.
+- **7-day wars** (off until staff turn them on with `monkey:diplomacy/staff/wars_on`): a leader confirms a
+  declaration, which then lasts 7 days; the faction with more kills of the other wins. No war on a pact
+  partner, one declaration per faction every 48 hours, the score in `/trigger diplomacy`, the winner
+  announced in game, in the news channel and in Sunday's standings post.
+- **Rule 5's guard** (`tools/respawn.py`): a kill on a player who respawned less than 10 minutes ago doesn't
+  count toward a war's score or count twice in the Kills column.
+- The news job posts at most 8 items a day (was 6), to make room for wars and sieges.
+- **The season story** (`tools/lore.py`, the new `monkey-lore` data pack): Season I's own story, the Knotkeeper's
+  chronicle of Ruk the Monkey King and the rope that is the world border, told a page a week from week 1 to the
+  finale. The Town Crier announces each week's page in chat; the page is a written book staff hide in the world,
+  found by walking up to it, and all eleven give the Knotkeeper title. A test keeps the pages about the border,
+  the End, the Netherite age and the finale in their weeks. docs/SEASONS.md, "The season story".
+- **Monument of the Month** (`tools/monuments.py`): a monthly theme, factions enter a build with
+  `/trigger monument`, Discord votes (by hand, docs/ADMIN.md), and the winner is announced in game and in the
+  recap and kept in a hall of monuments that `tools/season.py carry` takes into the next season for warps.
+- Both ship **off**; staff switch them on (docs/SEASONS.md, "Switches").
+- Clip markers (`monkey-clips`, off until `function monkey:clips/on`): a Server First, a supply drop or Meteor
+  landing, the Hunted player's kill and an outpost taken each write a `MONKEY-CLIP` line in the server log, with
+  the players, their factions, the place and a title. `python3 tools/clips.py markers logs/ --world world/` prints them
+  as JSON for the clips tool, leaving out lines without the world's secret key (docs/ADMIN.md, "Clip markers").
+- The creator camera (`monkey-camera`, off until `function monkey:camera/on`): creators staff approve, in no
+  faction, toggle spectator with `/trigger camera` during an announced camera window, with camera warps (spawn,
+  the board, the outposts, the event on now), a 64-block leash in the Overworld checked every tick,
+  always starting at spawn, a 5-minute stream delay in its rules, and back where they were when
+  they stop (docs/ADMIN.md, "Creator camera").
+
 ## [2.10.0] - 2026-10-29
 
 The server is Monkey SMP all the way through now: the old name is gone from the code, the folders, the

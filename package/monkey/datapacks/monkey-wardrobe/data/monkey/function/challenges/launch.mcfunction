@@ -8,4 +8,6 @@ execute if score #season rw.day matches 1 unless score #launched rw.day matches 
 execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run scoreboard players reset * rw.launch
 execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run scoreboard players reset * rw.launch.seen
 execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run scoreboard players reset * rw.launchtime
+# The first-week quest (tools/quest.py) forgets test play too, once.
+function monkey:quest/launch
 scoreboard players set #launched rw.day 1

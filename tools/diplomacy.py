@@ -38,7 +38,9 @@ then trims the log. Claims, the griefing rules and rule 41 stay as they are.
 How a war kill is counted: a hidden advancement per faction number (kill/f<N>: player_killed_entity, the victim a
 player with st.faction N) runs as the killer at the kill, which knows its own faction, so the pair's war score
 (dp.war "#LO.HI") decides. A scoreboard criterion can't name the victim's faction, and a log parser would need
-the server's logs on the VPS and break on renamed players; the advancement needs nothing but the number.
+the server's logs on the VPS and break on renamed players; the advancement needs nothing but the number. A
+victim who respawned less than 10 minutes ago doesn't fire it (rule 5; tools/respawn.py): no war score, no second
+count.
 Stdlib only, and Python 3.10 or newer.
 """
 import json
@@ -47,9 +49,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import respawn
+
 import nbt
 from challenges import LAUNCHED
-from datapacks import NS, lines, refuse, text
+from datapacks import NS, lines, refuse, say, text
 from events import ARENA_TAG
 from rcon import LIMIT
 
@@ -69,7 +73,20 @@ WARKILLS = "st.warkills"
 TRIGGER = "diplomacy"
 WAR, PACT, OFFER, PACTS, LAST, TMP, STATE = "dp.war", "dp.pact", "dp.offer", "dp.pacts", "dp.last", "dp.tmp", \
     "dp.state"
-ACTIONS = {"war": 1, "pact": 2, "break": 3}   # /trigger diplomacy set N*10 + action; 1 to 9 opens the menu
+UNTIL, SCORE, NEXT = "dp.until", "dp.score", "dp.next"   # 7-day wars (below)
+ACTIONS = {"war": 1, "pact": 2, "break": 3, "confirm": 4}   # /trigger diplomacy set N*10 + action; 1 to 9: the menu
+
+# 7-day wars, off until staff switch them on (`function monkey:diplomacy/staff/wars_on`, `#formal dp.state`): a
+# declaration asks the leader to confirm, the war lasts WAR_DAYS (not until Sunday's close), counts its own kills
+# both ways (dp.score "#A.B": A's kills of B, outside the arena, as st.kills counts them) and ends with a winner, the
+# faction with more. A faction can declare again WAR_COOLDOWN_HOURS after its last declaration (dp.next "#fN": the
+# minute it may). Time is the wall clock tools/sieges.py's timer keeps in game (`#now sg`, the minute), so the
+# sieges timer has to run even with siege windows off. Accepting a pact still ends a war (peace), as does a
+# faction ending (gone) or staff (staff/end). Every way a war ends is logged (war_end) for the Sunday post.
+FORMAL = f"#formal {STATE}"
+CLOCK = "#now sg"
+WAR_DAYS = 7
+WAR_COOLDOWN_HOURS = 48
 PLAYER_NAME = re.compile(r"[A-Za-z0-9_]{1,16}")
 
 
@@ -265,7 +282,28 @@ def sync(rcon, factions: list[Faction], scores: dict[str, dict[str, int]], world
 
 SAID = {"war": "{a} declared war on {b}", "pact": "{a} and {b} made a pact",
         "peace": "{a} and {b} made peace, and a pact", "break": "{a} broke its pact with {b}",
-        "end": "staff ended the war or pact between {a} and {b}"}   # offers stay in game chat
+        "end": "staff ended the war or pact between {a} and {b}",
+        "declare": f"{{a}} declared a {WAR_DAYS}-day war on {{b}}"}   # offers stay in game chat
+
+
+def kill_count(n: int) -> str:
+    """1 kill, 2 kills."""
+    return f"{n} kill" if n == 1 else f"{n} kills"
+
+
+def war_end_line(e: dict, name: Callable[[int], str]) -> str | None:
+    """A 7-day war's end (log kind war_end: a, b its two factions, ka and kb their kills of each other, how it
+    ended) in words; None for one already said another way (peace and staff each have their own line)."""
+    a, b, ka, kb = name(e.get("a", 0)), name(e.get("b", 0)), int(e.get("ka", 0)), int(e.get("kb", 0))
+    how = e.get("how")
+    if how == "gone":
+        return f"the war between {a} and {b} ended when one of them stopped being a faction ({kill_count(ka)} to {kb})"
+    if how != "time":
+        return None
+    if ka == kb:
+        return f"the war between {a} and {b} ended in a draw, {kill_count(ka)} each"
+    (win, wk), (lose, lk) = sorted(((a, ka), (b, kb)), key=lambda p: -p[1])
+    return f"{win} won its war with {lose}, {kill_count(wk)} to {lk}"
 REPORT_LIMIT = 10      # declarations in one Discord post
 PACTS_LIMIT = 10       # pacts named in the "Pacts standing" line
 MORE = "- and more: `/trigger diplomacy` in game"
@@ -299,8 +337,12 @@ def report(storage: dict | None, scores: dict[str, dict[str, int]], before: dict
     def name(n) -> str:
         return discord_name(every.get(int(n)) or f"faction {n}")
     week = [e for e in sorted(log, key=lambda e: int(e.get("n", 0))) if int(e.get("n", 0)) > since]
-    events = [SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0))) for e in week
-              if e.get("kind") in SAID]
+    events = []
+    for e in week:
+        if e.get("kind") in SAID:
+            events.append(SAID[e["kind"]].format(a=name(e.get("a", 0)), b=name(e.get("b", 0))))
+        elif e.get("kind") == "war_end" and (line := war_end_line(e, name)):
+            events.append(line)
     pacts = []
     for holder, value in sorted(scores.get(PACT, {}).items()):
         m = re.fullmatch(r"#(\d+)\.(\d+)", holder)
@@ -323,9 +365,11 @@ def week_end(scores: dict[str, dict[str, int]], seq: int) -> list[dict]:
     """The changes that end a closed week, from the scoreboard read at the close: each war and pact offer then
     running ends (only if it is still the one declared then: its score is its declaration's number, so one
     declared again since stays), then week_over announces it and trims the log up to `seq`. Kept in the closed
-    week's file, so a late retry ends the same ones and never a war of the new week."""
+    week's file, so a late retry ends the same ones and never a war of the new week. A 7-day war (it has a
+    dp.until) runs on to its own end."""
+    formal = scores.get(UNTIL, {})
     ends = [change("war_over", lo=int(m[1]), hi=int(m[2]), seq=v) for h, v in sorted(scores.get(WAR, {}).items())
-            if v >= 1 and (m := re.fullmatch(r"#(\d+)\.(\d+)", h))]
+            if v >= 1 and h not in formal and (m := re.fullmatch(r"#(\d+)\.(\d+)", h))]
     ends += [change("offer_over", a=int(m[1]), b=int(m[2]), seq=v) for h, v in sorted(scores.get(OFFER, {}).items())
              if v >= 1 and (m := re.fullmatch(r"#(\d+)\.(\d+)", h))]
     return [*ends, change("week_over", seq=seq)]
@@ -360,8 +404,14 @@ def button(label: str, color: str, action: str, hover: str) -> dict:
             "click_event": {"action": "run_command", "command": f"/trigger {TRIGGER} set $(b){ACTIONS[action]}"}}
 
 
-WAR_BUTTON = button("Declare war", "red", "war", "Kills between your factions count double in the weekly standings "
-                    "until Sunday's close. Everyone is told.")
+WAR_BUTTON = button("Declare war", "red", "war", "Kills between your factions count double in the weekly standings. "
+                    "Everyone is told.")
+CONFIRM_BUTTON = button("Confirm: declare war", "red", "confirm", f"A {WAR_DAYS}-day war starts now. Everyone is "
+                        "told, with your name.")
+
+
+def kills(holder: str) -> dict:
+    return {"score": {"name": holder, "objective": SCORE}, "color": "yellow"}
 PACT_BUTTON = button("Offer a pact", "green", "pact", "Their leader can accept it. No war between you while it "
                      "stands. Everyone is told.")
 ACCEPT_BUTTON = button("Accept the pact", "green", "pact", "No war between you while it stands. Everyone is told.")
@@ -370,6 +420,9 @@ BREAK_BUTTON = button("Break the pact", "dark_red", "break", "Everyone is told, 
 
 # The menu's line for another faction: (when, what it says, its colour, the leader's buttons).
 ROWS = [
+    (f"if score #$(lo).$(hi) {UNTIL} matches -2147483648..", f"at war ({WAR_DAYS} days)", "red",
+     [{"text": " your kills ", "color": "gray"}, kills("#$(a).$(b)"), {"text": ", theirs ", "color": "gray"},
+      kills("#$(b).$(a)"), PEACE_BUTTON]),
     (f"if score #$(lo).$(hi) {WAR} matches 1..", "at war", "red", [PEACE_BUTTON]),
     (f"if score #$(lo).$(hi) {PACT} matches 1", "pact", "green", [BREAK_BUTTON]),
     (f"if score #$(b).$(a) {OFFER} matches 1..", "offers you a pact", "aqua", [ACCEPT_BUTTON, WAR_BUTTON]),
@@ -408,7 +461,15 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard objectives add {TMP} dummy",
         f"scoreboard objectives add {STATE} dummy",
         f"scoreboard objectives add {TRIGGER} trigger",
+        f'# 7-day wars: "#LO.HI" the minute (#now sg) it ends ({UNTIL}); "#A.B" A\'s kills of B in it ({SCORE});',
+        f'# "#fN" the minute faction N may declare again ({NEXT}). Storage wars: [{{lo, hi}}], the ones running.',
+        f"scoreboard objectives add {UNTIL} dummy",
+        f"scoreboard objectives add {SCORE} dummy",
+        f"scoreboard objectives add {NEXT} dummy",
+        f"execute unless score {FORMAL} matches 0.. run scoreboard players set {FORMAL} 0",
+        f"execute unless data storage {STORE} wars run data modify storage {STORE} wars set value []",
         f"scoreboard players set #10 {TMP} 10",
+        f"scoreboard players set #60 {TMP} 60",
         f"execute unless data storage {STORE} log run data modify storage {STORE} log set value []",
         "# This world's marker: the Sunday report tells a new world (a new season) by it.",
         f"execute unless score #world {STATE} matches 1.. store result score #world {STATE} run random value "
@@ -423,12 +484,16 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players enable @a {TRIGGER}",
         f"execute if score {LAUNCHED} matches 1 unless score #launched {STATE} matches 1 run function "
         f"{NS}:diplomacy/launch",
+        "# Once a minute: has a 7-day war run its time?",
+        f"scoreboard players add #wsec {TMP} 1",
+        f"execute if score #wsec {TMP} matches 60.. run function {NS}:diplomacy/wars/check",
     )
     f[f"{FN}/launch.mcfunction"] = lines(
         "# Once, the first second after the launch (monkey:rules/launch sets #launched rw.day): nothing from",
         "# before it counts. Declarations can't be made before it; this clears anything staff set by hand.",
-        *(f"scoreboard players reset * {o}" for o in (WAR, PACT, OFFER, PACTS, LAST, WARKILLS)),
+        *(f"scoreboard players reset * {o}" for o in (WAR, PACT, OFFER, PACTS, LAST, WARKILLS, UNTIL, SCORE, NEXT)),
         f"data modify storage {STORE} log set value []",
+        f"data modify storage {STORE} wars set value []",
         f"scoreboard players set #ended {STATE} 0",
         f"scoreboard players set #launched {STATE} 1",
     )
@@ -494,8 +559,9 @@ def datapack_files() -> dict[str, str]:
         "# Macro pair {a, b, lo, hi}: faction a declares war on faction b.",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run " + refuse(
             "You have a pact with them. Break it first (everyone is told)."),
-        f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run " + refuse(
-            "You're at war with them already, until Sunday's close."),
+        f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run " + refuse("You're at war with them already."),
+        f"execute if score {FORMAL} matches 1 run return run function {NS}:diplomacy/wars/ask with storage {STORE} "
+        "pair",
         f"$scoreboard players reset #$(a).$(b) {OFFER}",
         f"$scoreboard players reset #$(b).$(a) {OFFER}",
         announce({"text": "War! ", "color": "red", "bold": True}, faction("a"), *who,
@@ -532,6 +598,7 @@ def datapack_files() -> dict[str, str]:
         f"$scoreboard players reset #$(b).$(a) {OFFER}",
         f"scoreboard players set #peace {TMP} 0",
         f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run scoreboard players set #peace {TMP} 1",
+        f'$function {NS}:diplomacy/wars/ended {{lo:$(lo),hi:$(hi),how:"peace"}}',
         f"$scoreboard players reset #$(lo).$(hi) {WAR}",
         f"$scoreboard players set #$(lo).$(hi) {PACT} 1",
         f"$scoreboard players add #f$(a) {PACTS} 1",
@@ -574,6 +641,7 @@ def datapack_files() -> dict[str, str]:
         f'$data modify storage {STORE} log append value {{kind:"$(kind)",a:$(a),b:$(b)}}',
         f"execute store result storage {STORE} log[-1].n int 1 run scoreboard players get #seq {STATE}",
     )
+    f.update(war_files(who, done))
 
     # ------------------------------------------------ the menu
     rows = [f"execute if data storage {FACTIONS} names.f{n} unless score @s {FACTION} matches {n} run function "
@@ -590,10 +658,15 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/menu_head.mcfunction"] = lines(
         "$tellraw @s " + text("", {"text": "War and pacts", "color": "gold", "bold": True},
                               gray("  your faction: "), faction("a")),
-        "tellraw @s " + text(gray(
+        f"execute unless score {FORMAL} matches 1 run tellraw @s " + text(gray(
             "A war: kills between the two count double in the weekly standings until Sunday's close (7 PM "
             "Pacific); declare again to go on. A pact: no war between the two until one side breaks it. "
             "Claims and the rules stay the same (no teaming, rule 41).")),
+        f"execute if score {FORMAL} matches 1 run tellraw @s " + text(gray(
+            f"A war lasts {WAR_DAYS} days: kills between the two count double in the weekly standings, and the "
+            "faction with more kills of the other wins. A faction can declare one war every "
+            f"{WAR_COOLDOWN_HOURS} hours. A pact: no war between the two until one side breaks it; accepting one "
+            "ends a war. The rules stay the same (no teaming, rule 41).")),
         f"execute unless score @s {LEADER} matches 1 run tellraw @s " + text(
             gray("Only your faction's leader (its party owner) can declare.")),
     )
@@ -610,8 +683,10 @@ def datapack_files() -> dict[str, str]:
         call = f"function {NS}:diplomacy/row/{i} with storage {STORE} pair"
         show.append(f"$execute {when} run return run {call}" if when else call)
     f[f"{FN}/row_show.mcfunction"] = lines(*show)
-    for i, (_, says, color, buttons) in enumerate(ROWS):
-        line = ["", {"text": " - ", "color": "dark_gray"}, faction("b"), {"text": f": {says}", "color": color}]
+    for i, (_, says, color, parts) in enumerate(ROWS):
+        buttons = [p for p in parts if "click_event" in p]   # the rest (a war's kills) everyone sees
+        line = ["", {"text": " - ", "color": "dark_gray"}, faction("b"), {"text": f": {says}", "color": color},
+                *(p for p in parts if "click_event" not in p)]
         f[f"{FN}/row/{i}.mcfunction"] = lines(
             f"$execute if score @s {LEADER} matches 1 run return run tellraw @s " + text(*line, *buttons),
             "$tellraw @s " + text(*line),
@@ -639,6 +714,8 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/war_kill.mcfunction"] = lines(
         f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. run return 0",
         f"scoreboard players add @s {WARKILLS} 1",
+        f"$execute if score #$(lo).$(hi) {UNTIL} matches -2147483648.. run return run function "
+        f"{NS}:diplomacy/wars/kill with storage {STORE} pair",
         "title @s actionbar " + text({"text": "A war kill: it counts double this week.", "color": "red"}),
     )
 
@@ -646,6 +723,7 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/war_over.mcfunction"] = lines(
         "# Macro {lo, hi, seq}: the Sunday close ends the war declared as number seq, if it still runs.",
         f"$execute unless score #$(lo).$(hi) {WAR} matches $(seq) run return 0",
+        f"$execute if score #$(lo).$(hi) {UNTIL} matches -2147483648.. run return 0",
         f"$scoreboard players reset #$(lo).$(hi) {WAR}",
         f"scoreboard players add #ended {STATE} 1",
     )
@@ -726,15 +804,18 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/staff/end_pair.mcfunction"] = lines(
         f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. unless score #$(lo).$(hi) {PACT} matches 1 run "
         + refuse("Those two have no war or pact."),
+        f'data modify storage {STORE} pair.how set value "staff"',
         f"function {NS}:diplomacy/end_pair with storage {STORE} pair",
         announce({"text": "Staff ended the war or pact between ", "color": "gold"}, faction("a"),
                  {"text": " and ", "color": "gold"}, faction("b"), {"text": ".", "color": "gold"}),
         f'$function {NS}:diplomacy/log {{kind:"end",a:$(a),b:$(b)}}',
     )
     f[f"{FN}/end_pair.mcfunction"] = lines(
-        "# Macro pair {a, b, lo, hi}: ends their war and pact (staff/end_pair, dissolve_pair); both get the pact back.",
+        "# Macro pair {a, b, lo, hi, how}: ends their war and pact (staff/end_pair, dissolve_pair); both get the pact",
+        "# back. A 7-day war's end is logged as `how` (staff or gone).",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(a) {PACTS} 1",
         f"$execute if score #$(lo).$(hi) {PACT} matches 1 run scoreboard players remove #f$(b) {PACTS} 1",
+        f'$function {NS}:diplomacy/wars/ended {{lo:$(lo),hi:$(hi),how:"$(how)"}}',
         f"$scoreboard players reset #$(lo).$(hi) {WAR}",
         f"$scoreboard players reset #$(lo).$(hi) {PACT}",
     )
@@ -749,6 +830,7 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/dissolve_pair.mcfunction"] = lines(
         f"$execute unless score #$(lo).$(hi) {WAR} matches 1.. unless score #$(lo).$(hi) {PACT} matches 1 run "
         "return 0",
+        f'data modify storage {STORE} pair.how set value "gone"',
         f"function {NS}:diplomacy/end_pair with storage {STORE} pair",
         announce({"text": "The war or pact between ", "color": "gray"}, faction("a"), gray(" and "), faction("b"),
                  gray(" is over: one of them is no longer a faction.")),
@@ -765,8 +847,156 @@ def datapack_files() -> dict[str, str]:
     return f
 
 
+def war_files(who: list[dict], done: str) -> dict[str, str]:
+    """The 7-day wars' functions (FORMAL): the confirmation, the start, the kills and the end."""
+    f: dict[str, str] = {}
+    minutes = WAR_DAYS * 24 * 60
+    f[f"{FN}/wars/refusals.mcfunction"] = lines(
+        "# Macro pair {a, b, lo, hi}: 1 (and says why) when faction a can't start a 7-day war on b now.",
+        f"$execute if score #$(lo).$(hi) {PACT} matches 1 run return run function {NS}:diplomacy/wars/no "
+        '{why:"You have a pact with them. Break it first (everyone is told)."}',
+        f"$execute if score #$(lo).$(hi) {WAR} matches 1.. run return run function {NS}:diplomacy/wars/no "
+        '{why:"You\'re at war with them already."}',
+        f"execute unless score {CLOCK} matches 1.. run return run function {NS}:diplomacy/wars/no "
+        '{why:"The server\'s clock isn\'t set yet (it comes every 5 minutes): try again shortly."}',
+        f"$scoreboard players operation #left {TMP} = #f$(a) {NEXT}",
+        f"scoreboard players operation #left {TMP} -= {CLOCK}",
+        f"$execute unless score #f$(a) {NEXT} matches -2147483648.. run scoreboard players set #left {TMP} 0",
+        f"execute if score #left {TMP} matches ..0 run return 0",
+        f"scoreboard players add #left {TMP} 59",
+        f"scoreboard players operation #left {TMP} /= #60 {TMP}",
+        "tellraw @s " + text("", {"text": f"Your faction can declare one war every {WAR_COOLDOWN_HOURS} hours: "
+                                          "the next in ", "color": "red"},
+                             {"score": {"name": "#left", "objective": TMP}, "color": "red"},
+                             {"text": " h.", "color": "red"}),
+        "return 1",
+    )
+    f[f"{FN}/wars/no.mcfunction"] = lines(
+        "$tellraw @s {\"text\":\"$(why)\",\"color\":\"red\"}",
+        "return 1",
+    )
+    f[f"{FN}/wars/ask.mcfunction"] = lines(
+        "# Macro pair {a, b, lo, hi}: a leader picked Declare war; nothing happens until they confirm.",
+        f"execute if function {NS}:diplomacy/wars/refusals_now run return 0",
+        "$tellraw @s " + text("", {"text": "Declare war on ", "color": "red"}, faction("b"),
+                              {"text": "?", "color": "red"},
+                              gray(f" It lasts {WAR_DAYS} days and everyone is told, with your name. Kills between "
+                                   "you count double in the weekly standings, and the faction with more kills of "
+                                   "the other wins. A pact accepted ends it early. Your faction can then declare "
+                                   f"again in {WAR_COOLDOWN_HOURS} hours."), CONFIRM_BUTTON),
+    )
+    f[f"{FN}/wars/refusals_now.mcfunction"] = lines(
+        f"return run function {NS}:diplomacy/wars/refusals with storage {STORE} pair",
+    )
+    f[f"{FN}/confirm.mcfunction"] = lines(
+        "# Macro pair {a, b, lo, hi}: faction a's leader confirmed a 7-day war on faction b.",
+        f"execute unless score {FORMAL} matches 1 run " + refuse("Pick from the menu: /trigger diplomacy"),
+        f"execute if function {NS}:diplomacy/wars/refusals_now run return 0",
+        f"$scoreboard players reset #$(a).$(b) {OFFER}",
+        f"$scoreboard players reset #$(b).$(a) {OFFER}",
+        announce({"text": "War! ", "color": "red", "bold": True}, faction("a"), *who,
+                 {"text": " declared war on ", "color": "red"}, faction("b"),
+                 gray(f". It lasts {WAR_DAYS} days: the faction with more kills of the other wins. Kills between "
+                      "them count double in the weekly standings. /trigger diplomacy shows the score.")),
+        "tellraw @a " + text(gray("Claims still protect, and the griefing rules still apply. Kills on a player who "
+                                  "respawned under 10 minutes ago don't count (rule 5).")),
+        "execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.6 1",
+        f'$function {NS}:diplomacy/log {{kind:"declare",a:$(a),b:$(b)}}',
+        f"$scoreboard players operation #$(lo).$(hi) {WAR} = #seq {STATE}",
+        f"$scoreboard players operation #$(lo).$(hi) {UNTIL} = {CLOCK}",
+        f"$scoreboard players add #$(lo).$(hi) {UNTIL} {minutes}",
+        f"$scoreboard players set #$(a).$(b) {SCORE} 0",
+        f"$scoreboard players set #$(b).$(a) {SCORE} 0",
+        f"$scoreboard players operation #f$(a) {NEXT} = {CLOCK}",
+        f"$scoreboard players add #f$(a) {NEXT} {WAR_COOLDOWN_HOURS * 60}",
+        f"$data modify storage {STORE} wars append value {{lo:$(lo),hi:$(hi)}}",
+        done,
+    )
+    f[f"{FN}/wars/kill.mcfunction"] = lines(
+        "# Macro pair {a, b, lo, hi}, as a player of faction a who killed one of b in their 7-day war.",
+        f"$scoreboard players add #$(a).$(b) {SCORE} 1",
+        "$title @s actionbar " + text("", {"text": "A war kill. ", "color": "red"}, gray("Your faction "),
+                                      kills("#$(a).$(b)"), gray(", theirs "), kills("#$(b).$(a)")),
+    )
+    f[f"{FN}/wars/check.mcfunction"] = lines(
+        "# Once a minute (diplomacy/second): ends each 7-day war whose time is up.",
+        f"scoreboard players set #wsec {TMP} 0",
+        f"execute unless data storage {STORE} wars[0] run return 0",
+        f"execute unless score {CLOCK} matches 1.. run return 0",
+        f"data modify storage {STORE} scan set from storage {STORE} wars",
+        f"function {NS}:diplomacy/wars/next",
+    )
+    f[f"{FN}/wars/next.mcfunction"] = lines(
+        f"execute unless data storage {STORE} scan[0] run return 0",
+        f"function {NS}:diplomacy/wars/one with storage {STORE} scan[0]",
+        f"data remove storage {STORE} scan[0]",
+        f"function {NS}:diplomacy/wars/next",
+    )
+    f[f"{FN}/wars/one.mcfunction"] = lines(
+        f"$execute if score #$(lo).$(hi) {UNTIL} <= {CLOCK} run function {NS}:diplomacy/wars/over "
+        "{lo:$(lo),hi:$(hi)}",
+        "# One that lost its end (staff reset scores by hand) leaves the list.",
+        f"$execute unless score #$(lo).$(hi) {UNTIL} matches -2147483648.. run data remove storage {STORE} "
+        "wars[{lo:$(lo),hi:$(hi)}]",
+    )
+    win = gray(" won, ")
+    f[f"{FN}/wars/over.mcfunction"] = lines(
+        f"# Macro {{lo, hi}}: their {WAR_DAYS} days are up. The faction with more kills of the other wins.",
+        f"$scoreboard players operation #ka {TMP} = #$(lo).$(hi) {SCORE}",
+        f"$scoreboard players operation #kb {TMP} = #$(hi).$(lo) {SCORE}",
+        "$tellraw @a " + text("", {"text": "The war is over: ", "color": "gold", "bold": True}, faction("lo"),
+                              gray(" against "), faction("hi"), gray(f" ({WAR_DAYS} days).")),
+        f"$execute if score #ka {TMP} > #kb {TMP} run tellraw @a " + text(
+            "", faction("lo"), win, kills("#$(lo).$(hi)"), gray(" kills to "), kills("#$(hi).$(lo)"), gray(".")),
+        f"$execute if score #kb {TMP} > #ka {TMP} run tellraw @a " + text(
+            "", faction("hi"), win, kills("#$(hi).$(lo)"), gray(" kills to "), kills("#$(lo).$(hi)"), gray(".")),
+        f"$execute if score #ka {TMP} = #kb {TMP} run tellraw @a " + text(
+            "", gray("A draw, "), kills("#$(lo).$(hi)"), gray(" kills each.")),
+        "execute as @a at @s run playsound minecraft:ui.toast.challenge_complete master @s ~ ~ ~ 0.6 1",
+        f'$function {NS}:diplomacy/wars/ended {{lo:$(lo),hi:$(hi),how:"time"}}',
+        f"$scoreboard players reset #$(lo).$(hi) {WAR}",
+    )
+    f[f"{FN}/wars/ended.mcfunction"] = lines(
+        "# Macro {lo, hi, how}: a 7-day war ended (time, peace, gone or staff): logged with its kills for the",
+        "# Sunday post (tools/diplomacy.py report), and its own scores cleared. The caller ends dp.war.",
+        f"$execute unless score #$(lo).$(hi) {UNTIL} matches -2147483648.. run return 0",
+        f"$scoreboard players operation #ka {TMP} = #$(lo).$(hi) {SCORE}",
+        f"$scoreboard players operation #kb {TMP} = #$(hi).$(lo) {SCORE}",
+        f'$function {NS}:diplomacy/log {{kind:"war_end",a:$(lo),b:$(hi)}}',
+        f'$data modify storage {STORE} log[-1].how set value "$(how)"',
+        f"execute store result storage {STORE} log[-1].ka int 1 run scoreboard players get #ka {TMP}",
+        f"execute store result storage {STORE} log[-1].kb int 1 run scoreboard players get #kb {TMP}",
+        f"$scoreboard players reset #$(lo).$(hi) {UNTIL}",
+        f"$scoreboard players reset #$(lo).$(hi) {SCORE}",
+        f"$scoreboard players reset #$(hi).$(lo) {SCORE}",
+        f"$data remove storage {STORE} wars[{{lo:$(lo),hi:$(hi)}}]",
+    )
+    f[f"{FN}/staff/wars_on.mcfunction"] = lines(
+        f"scoreboard players set {FORMAL} 1",
+        say("", {"text": f"{WAR_DAYS}-day wars are on: ", "color": "gold"},
+            gray("a declaration asks to confirm, and a war lasts its days. The sieges timer keeps the clock "
+                 "(docs/LIVE.md).")),
+    )
+    f[f"{FN}/staff/wars_off.mcfunction"] = lines(
+        f"scoreboard players set {FORMAL} 0",
+        say("", {"text": "Wars run until Sunday's close again. ", "color": "gold"},
+            gray(f"{WAR_DAYS}-day wars already running go on to their end.")),
+    )
+    f[f"{FN}/staff/wars.mcfunction"] = lines(
+        "# The 7-day wars running: their factions' numbers (staff/factions has the names), and the clock.",
+        say("", {"text": f"{WAR_DAYS}-day wars on: ", "color": "gold"}, {"score": {"name": "#formal", "objective":
+                                                                                   STATE}, "color": "yellow"},
+            gray(", running: "), {"nbt": "wars", "storage": STORE, "color": "white"}, gray(", clock (minute): "),
+            {"score": {"name": "#now", "objective": "sg"}, "color": "yellow"}),
+    )
+    return f
+
+
 HELP = [("staff/factions", "every faction's number and name"),
-        ("staff/end {a:3,b:7}", "ends a war or pact between two factions, announced")]
+        ("staff/end {a:3,b:7}", "ends a war or pact between two factions, announced"),
+        ("staff/wars_on", f"{WAR_DAYS}-day wars on (off by default: wars run until Sunday's close)"),
+        ("staff/wars_off", "back to wars until Sunday's close; running 7-day wars go on"),
+        ("staff/wars", "the 7-day wars running and the clock")]
 
 
 def kill_advancement(n: int) -> dict:
@@ -775,6 +1005,7 @@ def kill_advancement(n: int) -> dict:
         {"type": "minecraft:entity_properties", "entity": "this",
          "predicate": {"minecraft:entity_type": "minecraft:player"}},
         {"type": "minecraft:entity_scores", "entity": "this", "scores": {FACTION: {"min": n, "max": n}}},
+        respawn.fresh_victim_excluded(),   # rule 5: a player respawned under 10 minutes ago isn't a war kill
     ]}
     return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": victim}}},
             "rewards": {"function": f"{NS}:diplomacy/kill/f{n}"}}

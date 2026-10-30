@@ -577,6 +577,8 @@ the week's kills and holds the board; the VPS works the standings out and posts 
 /function monkey:standings/remove                                       # next to it: removes it (to move it)
 /function monkey:standings/bounty/post {target:"Alex"}                  # posts a bounty in chat
 /function monkey:standings/bounty/claim {hunter:"Steve",target:"Alex"}  # once you have checked the kill
+/function monkey:wanted/on                                              # the wanted board: players post bounties
+/function monkey:wanted/off                                             # (docs/SEASONS.md, "Switches")
 ```
 
 - **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
@@ -584,6 +586,12 @@ the week's kills and holds the board; the VPS works the standings out and posts 
   the hunter the Bounty Hunter title (a red `[Bounty Hunter]` before the name) if they show no other
   title or supporter color; one they paid for is never replaced, and the command tells you so. The title
   lasts the season. Nothing is sold and nothing else comes with it.
+- **The wanted board** (`docs/SEASONS.md`, "The wanted board"; off until `wanted/on`): players post bounties
+  with `/trigger wanted`, and a kill claims them by itself, giving only the title and a chat line (never
+  standings points). Over RCON: `scoreboard players get NAME st.wanted` (bounties on them now),
+  `scoreboard players set NAME st.wanted 0` (clears the bounties on them, say ones posted to harass),
+  `scoreboard players remove NAME st.hunts 1` (takes back a claim from fed kills, B13; take the title with
+  `team leave NAME` if it came with it), `scoreboard players reset NAME wt.last` (lets them post again now).
 - **The Cup column** matches `cup/faction` names to parties: give each faction's Cup entry the party's
   name (`/openpac` shows it), or its owner's name, so the Cup points land on the right row. An entry
   that matches no party shows on its own row, and the VPS logs a warning.
@@ -605,7 +613,17 @@ party made since can't take part until the next run. `/function monkey:diplomacy
 ```
 /function monkey:diplomacy/staff/factions          # every faction's number and name
 /function monkey:diplomacy/staff/end {a:3,b:7}      # ends the war or pact between factions 3 and 7, announced
+/function monkey:diplomacy/staff/wars_on            # declarations are 7-day wars from now (off by default)
+/function monkey:diplomacy/staff/wars_off           # back to wars until Sunday's close; running 7-day wars go on
+/function monkey:diplomacy/staff/wars               # on or off, the 7-day wars running, and the game's clock
 ```
+
+- **7-day wars** (`docs/SEASONS.md`, "7-day wars") need the sieges timer (`docs/LIVE.md`): without its clock a
+  leader is told the time isn't set yet. A staff `end`, peace and a faction gone end one early. To move a
+  war's end by hand: `scoreboard players set #3.7 dp.until <minute>` (the lower faction number first; the
+  minute is Unix time / 60, as `staff/wars` shows the clock). A faction can declare again 48 hours after
+  its last declaration (`#f3 dp.next`; `scoreboard players reset #f3 dp.next` lifts it). A kill on a player
+  who respawned less than 10 minutes ago doesn't count (rule 5).
 
 - **Ending one by hand.** Use `staff/end` when a war or pact breaks the rules (a pact that is really a
   confederation, rule 31) or was made by mistake. Everyone is told it was staff, and it goes in the Sunday
@@ -619,6 +637,22 @@ party made since can't take part until the next run. `/function monkey:diplomacy
   reach the server, its next run ends those same ones, never a war declared since.
 - **"faction N (name) is missing from the parties read"** in the board run's log: one read didn't find the party. If the
   next run still doesn't, its wars and pacts end. A run that reads no parties at all ends nothing and says so.
+
+**Outpost sieges.** Twice a week the outposts are the prize (`docs/SEASONS.md`, "Outpost sieges"): a capture
+during a window earns a bonus hour held, once per outpost per window. Faction claims are never opened. Off by
+default. `/function monkey:sieges/help` lists these:
+
+```
+/function monkey:sieges/staff/on        # outpost sieges on (a window due now opens within a second)
+/function monkey:sieges/staff/off       # off, and a window open now closes at once
+/function monkey:sieges/staff/status    # on or off, open or not, and the next window
+```
+
+- A window opens and closes by itself on the sieges timer's clock (`docs/LIVE.md`); without the timer
+  nothing opens.
+- Each siege is a staff event: rule 41's exemption holds inside an outpost's square while the window is open,
+  and nowhere else. Every other rule holds; a claim griefed during a siege is rolled back as always (rule 42).
+- To take back a bonus given by mistake: `scoreboard players remove #f3 op.min 60` (faction 3).
 
 **Attendance.** `/function monkey:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function monkey:events/attend` for everyone who came (joining the arena counts
@@ -731,6 +765,30 @@ Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making 
 window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
 `rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
 clears nothing and doesn't open the window again (use `founder/open` above if it has to).
+
+## First-week quest and server goal
+
+Players' side: `docs/RETENTION.md`, "The first week" and "The weekly server goal". The on and off switches
+are in `docs/SEASONS.md`, "Switches". Both live in the `monkey-wardrobe` data pack, and nothing in them
+runs before `rules/launch`; the first launch clears what test play did.
+
+```
+scoreboard players get NAME rq.state                # quest: unset not seen yet, 0 not taking part, 1 on, 2 done, 3 hidden
+scoreboard players get NAME rq                      # quest: steps done
+scoreboard players set NAME rq.state 1              # sign a player up by hand (a returning friend, say)
+function monkey:goal/target {n:3000}                # this week's goal target, until the week turns
+scoreboard players get #total rg                    # this week's goal total so far (#target rg: the target)
+python tools/goal.py schedule                       # which goal runs in which week
+```
+
+The Guide's "Talk to the Guide" step and its "Your first week" button come with its preset: after a release
+that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above). The
+Pathfinder blade needs the new client pack.
+
+**Editing the goal pool.** `POOL` in `tools/goal.py`, as the challenges' pool: an `id` (it names the goal's
+scores, so don't rename the one that is on), a `name` (at most 24 characters), a `target` for about 20 to 30
+active players, an `about`, and `mine` (blocks, mined minus placed) or `stat` (a `minecraft.custom` statistic
+that takes real play: never distance or time online). Week N runs entry N mod how many.
 
 ## Supply drops
 
@@ -1000,6 +1058,215 @@ The timer logs why an evening had no omen: automatic omens off, the season not l
 already on, tonight's done, an event on, too few players, or none of the omens could start (Peaceful, PvP off,
 drops off or no dry ground, nobody with a streak online). The evenings, times, lengths and loot are constants
 at the top of `tools/omens.py`; change them there, run `python tools/datapacks.py` and the checks, and release.
+
+## The season story
+
+The Town Crier's weekly line and the hidden pages of the season's story (docs/SEASONS.md, "The season story";
+`tools/lore.py`). Off until `lore/on` (docs/SEASONS.md, "Switches").
+
+```
+python tools/lore.py plan                                   # each week's page and where it goes
+/function monkey:lore/hide/3                                # in game, standing at the spot: hides week 3's page
+/function monkey:lore/unhide                                # removes the hidden page nearest you (5 blocks)
+/execute as NAME run function monkey:lore/find/3            # counts week 3's page as found for NAME (once)
+/execute as NAME run function monkey:lore/book/3            # gives NAME another copy of week 3's book
+scoreboard players get NAME lr.found                        # pages NAME has found
+```
+
+- **Hide every page once per world**, where `plan` says (spawn, an outpost, near the border, the Nether, by the
+  arena), all before the launch if you like: a page shows and can be found only from its own week. Put it
+  somewhere a player can stand within 4 blocks of; a marker works only while its chunk is loaded, so not
+  inside a spawn chunk nobody visits is fine, but don't bury it in a wall. Hide one page in two spots if the
+  first is hard to reach; each player still finds it once.
+- The outposts move with the border, so for "at one of the outposts" pick one in the week it is announced.
+- A player who lost a book: `book/<week>` gives a copy and changes nothing else.
+
+## Monument of the Month
+
+A monthly faction build contest, voted on in Discord (docs/SEASONS.md, "Monument of the Month";
+`tools/monuments.py`). Off until `monuments/on` (docs/SEASONS.md, "Switches").
+
+```
+python tools/monuments.py plan                              # the months, their themes and open commands
+/function monkey:monuments/open/2026-11                     # opens November's contest (The Gate): empty entries
+/function monkey:monuments/close                            # no more entries; lists them for you
+/function monkey:monuments/entries                          # the entries, by faction number
+python3 tools/monuments.py entries WORLD                    # the same, as Discord posts (save-all first)
+/function monkey:monuments/win {faction:2}                  # faction 2's entry wins: announced, kept in the hall
+python3 tools/monuments.py hall WORLD                       # every winner kept, with its number
+/execute as NAME run function monkey:monuments/warp {n:1}   # takes NAME to monument 1
+```
+
+The month, by hand:
+1. On the 1st (or the first Saturday), `open/<YYYY-MM>`; everyone online is told the theme. Post it in
+   `#monkey-smp` too.
+2. Around the 25th, `close`. Run `entries` on the VPS and post each entry as its own thread in `#monkey-smp`
+   (faction and coordinates); ask each faction to add a screenshot to its thread. React with a star on each to
+   start the vote.
+3. After 48 hours, count the stars (a tie goes to the owners) and run `win {faction:N}` with the faction number
+   from the post. The Sunday recap names it that week.
+4. Next season: `tools/season.py carry` copies the hall. Give each monument a warp at spawn: an Easy NPC button
+   with a COMMAND action, permission level 2, `/execute as @initiator run function monkey:monuments/warp {n:N}`
+   (as the Guide's Discord button does, docs/ADMIN.md "Spawn NPCs").
+
+Undoing a wrong winner: `data remove storage monkey:monuments hall[{n:N}]` (only the last one, so the numbers stay
+in order), then `data remove storage monkey:monuments contest.won` and run `win` again.
+
+## The border boss
+
+A boss on each Season II border act (`docs/SEASONS.md`, "The border boss"), in the `monkey-boss` data pack
+generated by `tools/boss.py`. The border timer (`tools/border.py`) sends the act's boss after the act itself; it
+only rises with the switch on, from Season II, after the launch and before the lock. Over RCON:
+
+```
+function monkey:boss/on                                   # the switch (refused in a Season I world)
+function monkey:boss/off                                  # no boss on the next act; one up or waiting leaves now
+function monkey:boss/status                               # switch, last act, state, seconds left, the records
+function monkey:boss/act {act:1,x:-985,z:1952,delay:615}  # what the timer sends: act 1's boss at X Z, rising in
+                                                          # 615 seconds (delay:0 for now). Once an act.
+function monkey:boss/reset                                # TEST SERVERS ONLY: forget every act (and switch off)
+```
+
+The act command answers with a number the timer's log turns into words (`journalctl -u monkey-border`): 1 the
+boss is announced, 10 the switch is off, 11 not Season II, 12 not launched, 13 the season is locked, 14 that act
+already had its boss, 15 a boss is already up. To hold one back, turn the switch off before the act. On the VPS
+(it changes nothing):
+
+```sh
+python3 /srv/monkey/repo/tools/boss.py spot --season 2      # where each act's boss rises
+python3 /srv/monkey/repo/tools/boss.py status /srv/monkey/MonkeySMP-Server/server/world   # risen, slain (by whom), left
+```
+
+## The finale
+
+The finale's border close (`docs/SEASONS.md`, "The finale"), in the `monkey-finale` data pack generated by
+`tools/finale.py`. The border timer sends `function monkey:finale/start {x:X,z:Z,cx:CX,cz:CZ}` (the monument, 192
+blocks east of spawn, and the Overworld border's centre, spawn) from 6 PM Pacific on week 11's Saturday, once the
+saved world shows the switch on. Build the monument there before week 11: `finale.py plan --world` prints where.
+Over RCON:
+
+```
+function monkey:finale/on                  # the switch (refused in a Season I world)
+function monkey:finale/off                 # the timer won't start it (a running finale goes on)
+function monkey:finale/status              # switch, phase, second of the finale, the result
+function monkey:finale/start {x:192,z:0,cx:0,cz:0}   # start it now: monument X Z, border centre CX CZ (the
+                                           # timer does this; finale.py plan --world prints it). Once a world.
+function monkey:finale/stop                # end a running finale: the border stays where it is, no winner
+function monkey:finale/reset               # TEST SERVERS ONLY: forget it so it can start again
+```
+
+The start answers 1 started, 10 switch off, 11 not Season II, 12 not launched, 13 locked, 14 already started,
+15 the monument is more than 2400 blocks (either way) from the border's centre. `finale/stop` leaves the border
+where it is, its size and its centre: a border still growing from an act stops growing too.
+The timer checks the saved world, so after `finale/on` wait for the next autosave (or `save-all`) before 6 PM.
+After the close (`docs/SEASONS.md`, "Ending a season", step 4):
+
+```sh
+python3 /srv/monkey/repo/tools/finale.py plan --season 2 --world /srv/monkey/MonkeySMP-Server/server/world
+                                                               # the stages, the monument and the start command
+python3 /srv/monkey/repo/tools/finale.py result /srv/monkey/MonkeySMP-Server/server/world
+```
+
+`result` prints each faction's points, the winner's roster (faction numbers as of the last hourly board run) and
+the title and `rw.champion` commands. Paste them only for the season's champion by Cup points, which is usually,
+but not always, the finale's winner. A tie names nobody: staff decide.
+
+## Clip markers
+
+A line in the server log at each big moment, for whoever cuts highlight clips from a recording of the server
+(the streaming repo's clips tool reads them). They live in the `monkey-clips` data pack, generated by
+`tools/clips.py`. Nothing new runs on the VPS and nothing is sent anywhere: the marker is a line in the log
+the server already writes. **Off by default.**
+
+- **The moments.** A Server First claimed (`first`), a supply drop or Meteor landing (`drop`, `meteor`), the
+  Hunted player killed (`hunted`), an outpost taken (`outpost`).
+- **The line.** Data packs can't write to the log, but the server logs every villager's death with its name,
+  so the pack summons a silent villager at y -100 under the moment (below every dimension's floor), names it
+  with the marker and kills it the same tick (it drops nothing, nobody sees it):
+
+  ```
+  [21:42:05] [Server thread/INFO]: Villager Villager['MONKEY-CLIP v=2|key=...|kind=first|title=Server First:
+  Enter the Nether|players=;Steve|factions=;Red Monkeys|dim=the_nether|pos=12,64,-30'/123, l=...] died, message: '...'
+  ```
+
+  `key=value` fields split by `|`: the format version, the world's key, `kind`, `title`, `players` and `factions` (lists split
+  by `;`, the moment's player first, then a second player such as the Hunted one; a player in no faction adds
+  none), `dim` and the block `pos`. The time is the log's, Pacific on the VPS. `FORMAT_VERSION` in
+  `tools/clips.py` goes up when a field changes meaning.
+- **Forged lines don't count.** Players can put text in the log (chat) and name villagers, so the reader only
+  takes the server thread's own villager-death line, at y -100, carrying the world's key: two random numbers
+  the pack draws once (`#key1` and `#key2` in `cl`, like the omens' secret). Don't show them to players; a new
+  world gets new ones. A line whose fields aren't exactly the format (another key, one twice, a name holding
+  `|`, `;` or `=`) is left out too. It reports how many lines it left out.
+
+```
+function monkey:clips/on        # write markers
+function monkey:clips/off       # stop
+```
+
+To hand a night's markers to whoever edits, copy the server's `logs/` folder (`latest.log` and the dated
+`.log.gz` files) off the VPS, or print them there (it changes nothing):
+
+```sh
+S=/srv/monkey/MonkeySMP-Server/server
+python3 /srv/monkey/repo/tools/clips.py markers $S/logs --world $S/world --since 2026-11-07
+python3 /srv/monkey/repo/tools/clips.py key $S/world   # the key, to send with a copy of the logs (staff only)
+```
+
+Whoever reads a copy of the logs needs the key (`--key`): send it with the logs to that person only.
+
+One JSON line a marker, with its date and time. A new feature marks its own moment with one command, as and
+at its player (or at a place): `function monkey:clips/mark {kind:"boss",title:"The boss is down",other:""}`
+(`clips.mark()` in Python checks the text: lowercase kinds, no `"`, `|` or `;`). `other` names a second player.
+
+## Creator camera
+
+Approved creators film the server in spectator: `/trigger camera` toggles it, with a clickable menu of camera
+warps (spawn, the standings board, the four outposts, the event on now: the arena's entrance or a supply
+drop). Toggling it off puts them back exactly where they were, in the game mode they were in. It lives in the
+`monkey-camera` data pack, generated by `tools/camera.py`. **Off by default**, and it only works in a camera
+window staff open.
+
+A spectator sees through walls, so on a factions server the camera must not be a scouting tool. The rules:
+
+- **Staff approve each creator by name** and can revoke it. Only a player in no faction (no `st.faction`
+  number) can be approved or go in, and a creator who joins a faction is taken out. The faction number is as
+  fresh as the hourly board run, so for up to an hour a new faction member could still go in: approve people
+  you trust, and revoke at once if they join one.
+- **Only in an announced window.** `camera/open` announces it in chat, and chat names each creator going in
+  and out of camera.
+- **Only public places, checked every tick.** Going in always starts at the camera's spawn point (staff set
+  it; until then nobody can go in), and the camera stays in the Overworld within 64 blocks (either way) of its
+  last warp: spawn, the board, an outpost, the arena's entrance, a supply drop. Drops and outposts are placed
+  96 blocks or more from claims, so the leash doesn't reach a base next to them when they're placed.
+  Spectator teleports to players and anything farther are snapped back the next tick.
+- **Not from the event arena, and not within 15 seconds of being hurt** (so it isn't a way out of a fight).
+- **Rule 10 and the creator's word.** Approving shows them the rules, and going in shows them again: stream
+  the camera with a delay of 5 minutes or more, so nobody can snipe from it (rule 10, `docs/RULES.md`), and
+  share no coordinates, bases or player positions with anyone, on stream or off. A creator who breaks it loses the camera (revoke)
+  and is dealt with like any rule break (`docs/RULES.md`, "Moderation" above).
+
+Every second the pack checks the rest again and puts back whoever no longer passes, so closing the window,
+revoking, `camera/off` or a faction number end it within a second; a creator who was offline is put back at
+their next login.
+
+Over RCON (or in game with `/`; `function monkey:camera/help` lists them, clickable):
+
+```
+function monkey:camera/on                       # the switch (then open a window)
+function monkey:camera/set_spawn                # once, as staff standing at spawn in the Overworld
+function monkey:camera/approve {name:"Steve"}   # a creator in no faction
+function monkey:camera/open {minutes:120}       # an announced camera window for an event
+function monkey:camera/status                   # switch, seconds left, who is approved and in camera
+function monkey:camera/close                    # end the window: everyone in camera is put back
+function monkey:camera/revoke {name:"Steve"}
+function monkey:camera/off
+```
+
+The creator: `/trigger camera` to go in or out, `/trigger camera set 2` for the menu again (the menu's buttons
+run the warps: 3 spawn, 4 board, 5 to 8 the north, east, south and west outposts, 9 the event).
+Not tried yet: a creator streaming it live with real players on the server, and the Docker or VPS server
+(it was tested on a local server with fake players).
 
 ## Telling players what changed
 

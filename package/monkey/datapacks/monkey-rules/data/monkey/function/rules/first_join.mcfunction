@@ -5,3 +5,4 @@ execute if predicate monkey:rules/returning run return 0
 scoreboard players set @s monkey.welcome 3
 # Rule 26: not in the launch hour, when the whole server starts together.
 execute unless score #launching monkey.rules matches 1 run function monkey:rules/grace_start
+function monkey:catchup/first_join

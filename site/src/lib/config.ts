@@ -10,6 +10,8 @@ export type Config = {
   MODPACK_URL: string;
   INSTALLER_URL: string;
   MAP_URL: string;
+  /** The server's status file (tools/status.py), served beside the live map. Empty: the site shows no status. */
+  STATUS_URL: string;
   /** When the season opens: ISO 8601 with its offset. */
   LAUNCH_AT: string;
 };
@@ -17,7 +19,7 @@ export type Config = {
 export const config: Config = settings;
 
 /** The settings a page can link to. */
-export type LinkKey = Exclude<keyof Config, "ADDRESS" | "LAUNCH_AT">;
+export type LinkKey = Exclude<keyof Config, "ADDRESS" | "LAUNCH_AT" | "STATUS_URL">;
 
 export const SITE_URL = "https://monkeysmp.lscaturchio.xyz";
 
@@ -32,8 +34,23 @@ export function target(key: LinkKey): { href: string; title?: string } {
   return { href: "#" };
 }
 
+/** The season's phase when the site is built, for what the status block shows before its script runs (and
+ * without JavaScript): before the launch, or after it. */
+export function builtPhase(): "preseason" | "live" {
+  return Date.now() < new Date(config.LAUNCH_AT).getTime() ? "preseason" : "live";
+}
+
 /** True once the store is open (STORE_URL is set). */
 export const storeOpen = Boolean(config.STORE_URL);
+
+/** Where the launch stands at `now` (the build, for the pages): "soon" before LAUNCH_AT, "live" from it on, and
+ * "unset" when LAUNCH_AT isn't a time. */
+export type LaunchStage = "soon" | "live" | "unset";
+export function launchStage(now: Date = new Date(), launchAt: string = config.LAUNCH_AT): LaunchStage {
+  const launch = new Date(launchAt).getTime();
+  if (isNaN(launch)) return "unset";
+  return now.getTime() < launch ? "soon" : "live";
+}
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
@@ -75,6 +92,12 @@ export function launchWords(when: Date = new Date(config.LAUNCH_AT)): Record<"da
     pacific: `${clock(west)} Pacific`,
     eastern,
   };
+}
+
+/** 'Sat 14 Nov, 6 PM Pacific': a moment as the status block says it (tools/status.py's schedule). */
+export function shortWhen(when: Date): string {
+  const west = local(when, "America/Los_Angeles");
+  return `${DAYS[west.weekday].slice(0, 3)} ${west.day} ${MONTHS[west.month - 1].slice(0, 3)}, ${clock(west)} Pacific`;
 }
 
 /** A launch template ('{date} at {pacific} ({eastern})') filled in. */

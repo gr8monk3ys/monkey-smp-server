@@ -15,3 +15,4 @@ tellraw @a ["",{"text":"Server First! ","color":"gold","bold":true},{"selector":
 title @a subtitle ["",{"selector":"@s","color":"yellow"},{"text":": Enter the Nether","color":"white"}]
 title @a title {"text":"Server First","color":"gold","bold":true}
 execute as @a at @s run playsound minecraft:ui.toast.challenge_complete master @s ~ ~ ~ 0.8 1
+function monkey:clips/mark {kind:"first",title:"Server First: Enter the Nether",other:""}

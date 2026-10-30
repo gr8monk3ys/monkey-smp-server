@@ -22,6 +22,7 @@ from pathlib import Path
 
 import rules
 import season_calendar
+import sieges
 from datapacks import NS, lines, mcmeta
 from repo import Repo
 
@@ -34,7 +35,9 @@ IGNORE_TAG = "global.ignore"  # data packs that follow the Smithed convention (R
 EASY_NPC = "7.17.1"    # the Easy NPC version the presets were written and tested against (manifest: easy-npc*)
 
 LINKS_DIALOG = f"{NS}:links"   # the pause menu's Monkey SMP links (tools/rules.py)
-TRIGGERS = ("challenges", "standings", "wardrobe")
+TRIGGERS = ("challenges", "standings", "wardrobe", "quest")
+# Scores the Guide sets that are not triggers: talking to it is a step of the first-week quest (tools/quest.py).
+GUIDE_STEP = {"Cmd": "set:rq.guide:1", "Type": "SCOREBOARD"}
 
 # Every Easy NPC feature gate (security.cfg's feature.*). All of them need an admin (an op), so a builder in
 # creative can't give an NPC commands, scores, trades, presets or a new position. Easy NPC still lets any
@@ -74,9 +77,25 @@ TIME = "6 PM Pacific (9 PM Eastern)"
 EVERY_WEEK = ("Every event is in the Discord's events list: press Interested there for a reminder. "
               "New challenges every Monday.")
 
+
+def siege_hours() -> str:
+    """'Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific', from tools/sieges.py's WINDOWS."""
+    starts = sieges.window_starts(season_calendar.SEASON.launch, 7)
+    seen, out = set(), []
+    for start in starts:
+        if start.weekday() not in seen:
+            seen.add(start.weekday())
+            out.append((start.weekday(), sieges.label(start, start + sieges.LENGTH).removesuffix(" Pacific")))
+    return " and ".join(said for _, said in sorted(out)) + " Pacific"
+
+
+# The Crier's line on outpost sieges (tools/sieges.py). They can be off, so it says how to check.
+SIEGES = (f"Outpost sieges, {siege_hours()}: capture an outpost while one is on for a bonus hour held. "
+          "Claims stay protected. /trigger sieges says if one is on.")
+
 GUIDE_HELLO = "Welcome to Monkey SMP! Right-click me if you're new here."
 GUIDE_TEXT = ("Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, "
-              "or open this week's challenges, the faction standings and your wardrobe.")
+              "or open your first week's steps, this week's challenges, the faction standings and your wardrobe.")
 # The short rules (package/monkey/defaults/codeofconduct/en_us.txt), cut to what a new player needs first.
 RULES_TEXT = "<br>".join((
     "The short rules:",
@@ -100,6 +119,8 @@ CRIER_OTHER = "<br>".join((
     f"There's an event every Saturday at {TIME}.",
     "",
     EVERY_WEEK,
+    "",
+    SIEGES,
 ))
 
 
@@ -124,7 +145,7 @@ def crier_text(week: int) -> str:
         then = f"Next week: {EVENTS[week + 1]}, {day(season.saturday(week + 1))}."
     else:
         then = f"Season II is planned for {day(season_calendar.SEASON_TWO)}."
-    return "<br>".join((this, "", then, "", EVERY_WEEK))
+    return "<br>".join((this, "", then, "", EVERY_WEEK, "", SIEGES))
 
 
 # ---------------------------------------------------------------- Easy NPC data
@@ -187,11 +208,13 @@ CHALLENGES_BUTTON = ("challenges", "This week's challenges", close(), trigger("c
 def guide() -> dict:
     back = button("back", "Back", open_dialog("default"))
     return {
-        "events": {"ON_DISTANCE_CLOSE": [bubble(GUIDE_HELLO)], "ON_INTERACTION": [{"Type": "OPEN_DEFAULT_DIALOG"}]},
+        "events": {"ON_DISTANCE_CLOSE": [bubble(GUIDE_HELLO)],
+                   "ON_INTERACTION": [GUIDE_STEP, {"Type": "OPEN_DEFAULT_DIALOG"}]},
         "dialogs": [
             dialog("default", "Welcome", GUIDE_TEXT, [
                 button("rules", "The short rules", open_dialog("rules")),
                 button("factions", "Find a faction", open_dialog("factions")),
+                button("quest", "Your first week", close(), GUIDE_STEP, trigger("quest")),
                 button(*CHALLENGES_BUTTON),
                 button("standings", "Faction standings", close(), trigger("standings")),
                 button("wardrobe", "Your wardrobe", close(), trigger("wardrobe")),

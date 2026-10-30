@@ -1,0 +1,1 @@
+tellraw @s [{"text":"Creator camera: on ","color":"gold"},{"score":{"name":"#on","objective":"cm"}},{"text":", window seconds left ","color":"gray"},{"score":{"name":"#open","objective":"cm"}},{"text":". Approved and online: ","color":"gray"},{"selector":"@a[scores={cm.ok=1}]"},{"text":". In camera: ","color":"gray"},{"selector":"@a[scores={cm.in=1}]"}]

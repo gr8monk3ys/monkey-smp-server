@@ -252,6 +252,56 @@ record who is with whom.
 `tools/diplomacy.py` makes it, inside the `monkey-standings` data pack. It needs no timer of its own: the
 standings' hourly board run writes the faction numbers, and the Sunday close ends the wars.
 
+#### 7-day wars (off until staff turn them on)
+
+With `function monkey:diplomacy/staff/wars_on`, a declaration is a formal 7-day war instead of a war until
+Sunday's close. Off by default; `staff/wars_off` goes back (wars already declared run on to their end), and
+`staff/wars` lists the wars running (by faction number) and the game's clock.
+
+- **Declaring.** The leader picks War in `/trigger diplomacy` and gets a confirmation line first ("Declare war
+  on X?", what it means, and a Confirm button); nothing happens until they click it. Refused, with the reason: a
+  pact partner (break the pact first, which everyone is told; the 2-minute limit still applies), a faction
+  already at war with them, before the game knows the time (the siege timer's clock, below), and a faction
+  that declared a war in the last 48 hours (it says how many hours are left).
+- **Announced** in game with a raid horn, and in the public Discord channel by the news job.
+- **The score.** Each side's kills of the other, outside the event arena, the same kills the Kills column
+  counts (they still count twice there). A kill on a player who respawned less than 10 minutes ago (of their
+  own online time) doesn't count, neither in the score nor twice in the column (rule 5; `tools/respawn.py`). The killer sees the score in the action bar; `/trigger diplomacy`
+  shows it to everyone, in the "at war (7 days)" row.
+- **The end.** Exactly 7 days after the declaration (by the game's clock, within about a minute): the
+  faction with more kills wins, and everyone is told; equal kills is a draw. A pact accepted in between ends it
+  early, as peace; so does staff/end, and a faction that stops being one (its name is kept). Sunday's close
+  doesn't end a 7-day war. Every end goes in Sunday's standings post ("Blue Herons won its war with Red
+  Monkeys, 12 kills to 9"), and the result in the news channel.
+- **The clock.** The game has no calendar, so `deploy/monkey-sieges.sh` sends the time every 5 minutes, and
+  the game counts the minutes in between. That timer must run for 7-day wars even when outpost sieges are
+  off.
+
+### Outpost sieges (off until staff turn them on)
+
+Twice a week, at fixed hours, the four neutral outposts ("Outposts", below) are the prize: **Wednesday 7 to 9
+PM and Sunday 3 to 5 PM Pacific** (clear of Saturday's event and Sunday's 7 PM close). Faction claims are never
+opened: no feature touches Open Parties and Claims' protection, so rules 37, 39 and 42 hold during a siege as
+at any other time, and so does every combat rule (lava included, rule 18).
+
+- **The prize.** A faction that captures an outpost while a window is open gets a bonus 60 minutes held
+  (one standings point), on top of the minutes it then holds it. Once per outpost per window for each
+  faction: retaking the same outpost in the same window earns nothing more. It counts toward the outposts'
+  weekly cap (20 points), so a siege can't outweigh a column.
+- **A staff event.** Each siege is an official staff event, so rule 41's exemption applies inside an outpost's
+  square (the 25 x 25 capture zone) while the window is open: anyone can fight anyone there. Outside the
+  squares, and once the window closes, rule 41 applies again.
+- **Off by default.** `function monkey:sieges/staff/on` turns them on; `staff/off` turns them off (and closes
+  a window that is open); `staff/status` says the state. The hours are `WINDOWS` and `LENGTH` in
+  `tools/sieges.py`; change them there and run `python tools/datapacks.py`. The outposts must be on too
+  (`function monkey:outposts/on`, the default).
+- **Announced:** warnings in chat 30 and 5 minutes before a window opens; at the open, a title, a raid horn and
+  a chat line saying when it closes; at the close, a chat line. The news job posts both to the public Discord
+  channel. `/trigger sieges` says whether a window is open, or when the next one opens. The Town Crier names
+  the hours and says to check `/trigger sieges`.
+- **Needs** the siege timer (`deploy/monkey-sieges.sh --install`, docs/LIVE.md) and the launch
+  (`#launched rw.day`): nothing opens before it.
+
 ### Outposts
 
 Four capture points out in the newest land, so factions have somewhere to meet between events.
@@ -479,6 +529,10 @@ copied into each new world's spawn, because the world resets and the hall is wha
   `give @s minecraft:red_banner[minecraft:banner_patterns=[{pattern:"minecraft:stripe_top",color:"black"}]]`,
   and in the new world run it in creative and place the banner. A faction whose flag is gone gets the banner
   from its sign-up post (Registering a faction), made again at a loom.
+- **Boss slayers** (from Season II, "The border boss"). Each faction that killed a border boss gets a smaller
+  banner in its season's bay, below the champion's, with a sign: "Slew the Edgewalker, act N", the faction and
+  the player. `python tools/boss.py status WORLD` lists them; read the banner out as above and add a row for
+  each to the table, in the Banner column.
 - **No data pack.** One banner a season, placed by hand in creative, doesn't need one: the record that has
   to last is the table below, kept in this repo, so a lost world doesn't lose the hall.
 
@@ -497,7 +551,7 @@ rules already make them event-only. Give at most one per event, so events don't 
 | **KOTH** | A hill outside every territory. Holding it earns points; most points after 30 minutes wins. | Faction PvP without base raids |
 | **Supply drop** | Chests at coordinates announced 10 minutes ahead, in the newest border ring. Built: one comes by itself on weeknight evenings once 4 or more are on, and staff can start one any time (docs/ADMIN.md, "Supply drops"). | Exploration, small fights, new players |
 | **Omens** | Short world events nobody announces ahead, on one or two weekday evenings a week (6 to 10 PM Pacific, 4 or more online, never Saturday or during a drop): a Blood Moon (harder mobs for a night, a little extra loot), a Meteor (one richer supply drop, 5 minutes' warning), Truce Hour (no PvP for an hour) or Hunted (a bounty on the longest kill streak). Built (docs/ADMIN.md, "Omens"). | Surprise on quiet evenings, the players who are on |
-| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. | Keeping the top in check |
+| **Bounty board** | Staff post bounties on the top Strength holders. Whoever kills one in a fair fight outside the arena claims it: the Bounty Hunter title for the season and +5 weekly standings points for their faction. Nothing is sold and nothing helps in a fight. With the wanted board on (below), players post bounties too, and the board shows the Most Wanted. | Keeping the top in check |
 | **Boss night** | Everyone against a boss in an arena (the Wither, or a boss the modpack adds). Truce. | A night everyone can join |
 | **Treasure hunt** | Clues in Discord lead to a buried chest. | Players who don't PvP |
 | **Market day** | Trading at spawn with stalls; spawn rules apply. | The economy, meeting other factions |
@@ -510,6 +564,32 @@ Twists for later seasons (pick two or three for the vote):
 - Strength cap +3, so fights are about skill.
 - One shared village that every faction must protect from raids.
 - A world seed with a huge ocean, so travel and the Happy Ghast matter.
+
+#### The wanted board
+
+Players put bounties on rivals themselves, on top of the staff bounties above. Off until staff turn it on
+("Switches", below).
+
+- **Posting.** `/trigger wanted` shows the Most Wanted and every rival online, each with a **[Post a bounty]**
+  button. Everyone is told who posted it and on whom. One bounty a player every 12 hours, and both have to
+  be in factions the server knows: never your own faction, never a faction yours has a pact with
+  (`/trigger diplomacy`), never yourself. Posting again on someone your bounty is still up on does nothing.
+- **Claiming.** Kill a wanted player in a fair fight outside the event arena and every bounty on them is
+  yours, by itself: chat announces it and you get the Bounty Hunter title (unless you show another title or
+  supporter color, which is never replaced). A kill by a faction mate or a pact partner claims nothing, and the
+  bounty stays. So does a kill on a player who respawned less than 10 minutes ago (rule 5; their online time,
+  `tools/respawn.py`). After a claim, nobody can post on that player for 6 hours.
+- **What it gives.** The title and the line in chat, nothing else: no items, no standings points, no currency.
+  The +5 standings points stay with the bounties staff post and check, because a kill that claims itself
+  can't tell a fair fight from a fed one. Feeding kills to claim a bounty is exploit B13 as always: staff take
+  the claim back.
+- **Most Wanted.** The three players with the most bounties on them now show on the standings board at spawn
+  and in `/trigger standings`, under this week's table, updated with the board every hour (so a claim can take
+  up to an hour to leave it).
+- **The Sunday recap** names the week's top bounty hunter (staff and player bounties together) in any week a
+  player-posted bounty was claimed.
+
+`tools/wanted.py`, in the `monkey-standings` data pack; staff commands in docs/ADMIN.md.
 
 ### Holidays
 
@@ -554,6 +634,65 @@ safety; this gives builders a moment of their own, the way events do for fighter
   and a line from them about the build. The winners get a Base of the Month role in Discord for the month.
 - **No Cup points.** It is for builders, and points would turn it into a chore for every faction.
 
+### The season story
+
+Each season has a short story told a page a week, so the border acts, the End and the finale mean something in
+the world and not only on the calendar. Season I's is **the Knotkeeper's chronicle**, written by Mira Salt-Hand,
+the last keeper of the knots:
+
+> The world border is not a wall but a rope, tied by Ruk, the Monkey King: a small, loud, hungry monkey who was
+> king only because nobody else would climb that high. He tied it round his people to keep out the Hollow, the
+> land nobody has dreamed yet. A rope that never moves is a noose, so whenever his people grew strong he let some
+> out, and new land rolled in (the border acts). He cut a far gate in the sky and set a dragon on its hinge (the
+> End), buried the deep metal until his people could hold it (the Netherite age), and when he grew too old to
+> untie a knot he climbed into the rope and became it, which is why the border hums and moves when the factions
+> grow. At the end he draws the rope back in to gather everyone close for one last fight (the finale), then
+> ties a new one somewhere new (the next season).
+
+It is an original story in its own world and voice; keep it that way (no text from any translation or game of
+an older Monkey King story). `tools/lore.py`, `BEATS`, has all of it: one beat for each week from 1 to the finale
+(11), each with a title, the Town Crier's line, where its page is hidden and the book's pages. A test checks the
+beats against the calendar: the pages about the border, the End, the Netherite age and the finale fall in the
+weeks those happen.
+
+- **The Crier.** When a week begins, everyone online gets the Town Crier's line for it in chat, once, and anyone
+  else the first time they are on that week. `/trigger lore` says it again, with the pages they have found.
+- **The pages.** Each week's page is a written book hidden in the world. Staff hide every page once per world
+  (`python tools/lore.py plan` lists them and where each goes; docs/ADMIN.md, "The season story"), all of them
+  before the launch if they like: a page sparkles and can be found only from its own week. A player who walks
+  within 4 blocks of it gets the book, once each, and the chat line counts their pages.
+- **The title.** Finding all eleven gives the **Knotkeeper** title (a dark aqua `[Knotkeeper]`, a team like the
+  other titles, carried into later seasons). A title or supporter color the player already shows is never
+  replaced. Nothing else: no items beyond the books, no points.
+
+`tools/lore.py`, in the `monkey-lore` data pack. Off until staff turn it on ("Switches").
+
+### Monument of the Month
+
+Once a month factions build a monument to a theme, Discord votes, and the winner is kept for good: next season it
+is a warp. Base of the Month (above) shows off a home; this is a build made to be visited.
+
+- **Themes**, one a month: `tools/monuments.py`, `THEMES` (Season I: The Gate in November, The Long Night in
+  December, Ruk's Chair in January; Season II's are there too). `python tools/monuments.py plan` lists them.
+- **Entering.** Staff open the month's contest (docs/ADMIN.md, "Monument of the Month"). A member of a faction the
+  server knows (the hourly faction list, `st.faction`) stands at the build and runs `/trigger monument`: that
+  records the spot, the dimension and the faction. Running it again moves the entry; one entry a faction.
+  `/trigger monument set 2` shows the theme, the faction's entry and the hall. The coordinates are posted for the
+  vote, so build it where you don't mind visitors.
+- **Voting** is in Discord, run by staff by hand (the bot has no part in it: its bridge only sends `list` and
+  `tellraw` and reads nothing from the world, and reaction tallies are quick to count by eye): staff close entries,
+  post one thread per entry in `#monkey-smp` (`python tools/monuments.py entries WORLD` prints the posts: faction
+  and coordinates), the faction adds a screenshot to its thread, and members react with a star. After 48 hours
+  the most stars wins; a tie goes to the owners.
+- **The winner** is announced in game (a title on screen and a chat line) and in that Sunday's recap, and goes
+  in the **hall of monuments**: storage `monkey:monuments hall` in the world, numbered from 1 for good.
+  `tools/season.py carry` copies the hall into the next season's world ("Ending a season"), where staff give
+  each monument a warp at spawn (`function monkey:monuments/warp {n:N}` on a spawn NPC's button). The pack never
+  teleports anyone on its own.
+- **No Cup points**, as for Base of the Month.
+
+`tools/monuments.py`, in the `monkey-lore` data pack. Off until staff turn it on ("Switches").
+
 ### New players in mid-season
 
 A Strength server gets harder to join every week, so catching up has to be built in:
@@ -565,6 +704,62 @@ A Strength server gets harder to join every week, so catching up has to be built
   `#smp-forum` recruitment on their first day. The welcome screen a first join gets does this.
 - A 48-hour PvP grace period for a first join (rule 26), built into the `monkey-rules` data pack
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
+- The first-week quest (`docs/RETENTION.md`, "The first week"): five steps for a player new this season,
+  from the Guide to a faction, land and an outpost, with a skin at the end.
+- The catch-up kit (below), for a first join from week 4 on.
+
+#### The catch-up kit
+
+A player whose first join comes after week 3 (the season's weeks from `tools/season_calendar.py`, `#week
+rc.week` in game) gets, once, when the switch is on ("Switches", below):
+
+- **A starter kit:** an iron pickaxe, axe, shovel and sword, 24 cooked beef, a bed and 32 torches. No armor,
+  nothing diamond or netherite, nothing Strength.
+- **A protection bubble** for 8 hours of their own play: other players can't hurt them. The hours count only
+  while they are online and outside the arena, and the time left shows on the action bar. It ends when the
+  hours run out, the first time they hurt a player, or with `/trigger end_grace`.
+
+Who counts: a first join as rule 26 sees it (the server has never seen the player), after the launch. Anyone
+who played in test play or pre-season was seen then, so is never a late first join; nothing before the launch
+counts. A veteran of an earlier season counts: the new world is as new to them. Staff give it by hand with
+`execute as NAME run function monkey:catchup/grant` (once per player per world).
+
+Its limits, said plainly:
+- The bubble is rule 26's grace held open (the same invisible item that makes players immune to damage other
+  players cause), so it stops damage **taken**, not damage dealt: the first hit they land counts in full and
+  ends the bubble. Vanilla can't cancel one player's outgoing damage without crippling them against mobs too
+  (Weakness) or taking their team slot (titles use teams), so the honest rule is "attacking ends it".
+- Rule 26's 48 game hours of grace from the same first join run alongside it; the protection lasts whichever is
+  longer, until they first attack.
+- As for grace, harm a player causes only indirectly (lava, a pushed fall, a mob led to them) isn't blocked,
+  and using the bubble to scout, carry loot or block a fight breaks rule 26 just the same.
+- The action bar is shared: a war kill or an outpost capture line shows over it for a moment.
+
+`tools/catchup.py`, in the `monkey-rules` data pack next to rule 26.
+
+### Switches
+
+Features staff turn on and off at any time, over RCON or in game (op), with nothing lost: what players have
+is kept while one is off. The switch is a score in the world, so restarts and deploys keep it. Most ship
+**off**; turn them on when the owners decide to (and add a line to the player changelog then). The quest and the
+weekly goal ship **on** but stay dormant until the launch (`#launched rw.day`), so test play never counts.
+
+| Feature | On | Off | Is it on? |
+| --- | --- | --- | --- |
+| First-week quest (`tools/quest.py`) | `function monkey:quest/on` | `function monkey:quest/off` | `scoreboard players get #on rq` |
+| Weekly server goal (`tools/goal.py`) | `function monkey:goal/on` | `function monkey:goal/off` | `scoreboard players get #on rg` |
+| The wanted board (`tools/wanted.py`) | `function monkey:wanted/on` | `function monkey:wanted/off` | `scoreboard players get #on wt` |
+| The catch-up kit (`tools/catchup.py`) | `function monkey:catchup/on` | `function monkey:catchup/off` | `scoreboard players get #on ck` |
+| The season story (`tools/lore.py`) | `function monkey:lore/on` | `function monkey:lore/off` | `scoreboard players get #on lr` |
+| Monument of the Month (`tools/monuments.py`) | `function monkey:monuments/on` | `function monkey:monuments/off` | `scoreboard players get #on mn` |
+
+Off, the wanted board takes no new bounties, claims none and leaves the board at once (`/trigger wanted` says it
+is off), keeping the bounties already posted; the catch-up kit gives nobody new a kit or bubble, and bubbles
+already running carry on. Off, the quest signs nobody up and `/trigger quest` says it is off; the goal counts, shows, announces and posts
+nothing. Off, the Crier tells nobody the story and no hidden page can be found (pages and the title already earned stay);
+`/trigger monument` does nothing, while staff can still open and close a contest, name a winner and use the warps.
+The defaults for a new world are `QUEST_ON`, `GOAL_ON`, `WANTED_ON`, `CATCHUP_ON`, `LORE_ON` and
+`MONUMENTS_ON` in those files.
 
 ### Telling players what changed
 
@@ -766,6 +961,9 @@ the client pack, so players update it.
    sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install
    ```
 
+   Then the switches (Switches, below), if the owners want the border boss and the finale:
+   `monkey rcon "function monkey:boss/on"` and `monkey rcon "function monkey:finale/on"`.
+
 10. Check the season skin: once a player has logged in, `monkey rcon "scoreboard players get NAME rw.s2"` gives
     1 and their wardrobe's challenges page (`/trigger wardrobe set 5`) shows Twinmoon. A champion's
     `rw.champion` came over with the carry.
@@ -781,6 +979,84 @@ the client pack, so players update it.
 - Before Season II ends, Season III's blade goes in `SEASON_SKINS` and at the end of `BLADES`
   (`tools/wardrobe.py`), and Season III's acts in `ACTS` (`tools/border.py`) with its `Season` in
   `SEASONS` (`tools/season_calendar.py`).
+
+### Switches
+
+Season II's spectacles ship **off**. Each has a switch in the world's scoreboard that staff turn on over RCON
+once the season has launched; a new world starts with both off, a reload keeps staff's choice, and in a Season I
+world (`#season rw.day` 1) the switches refuse and nothing runs. Check them with the `status` commands
+(`docs/ADMIN.md`).
+
+| Switch | On | Off | What it does |
+| --- | --- | --- | --- |
+| The border boss | `function monkey:boss/on` | `function monkey:boss/off` | A boss rises on each border act (below). Off also sends away a boss that is up or waiting. |
+| The finale | `function monkey:finale/on` | `function monkey:finale/off` | The border timer starts the finale at its time (below). Off doesn't end one already running: `function monkey:finale/stop` does. |
+
+Turn both on after the launch (Season II checklist, step 9), before 20 February.
+
+### The border boss
+
+On each border act (20 February and 3 April), a boss rises in the ring the act opened: **The Edgewalker**, a
+vanilla wither skeleton twice the size, with a diamond sword, helmet and chestplate (never dropped), armor 15,
+toughness 6, 14 damage a hit, little knockback, fire resistance, no fall damage, and a boss bar for players
+within 96 blocks. No mods: it is built from data pack commands (`tools/boss.py`, the `monkey-boss` pack).
+
+- **Where and when.** The timer picks a spot 48 blocks inside the new edge, on a side and at an offset drawn
+  from the season and the act (so a retry picks the same spot), and sends it right after the act. Chat names the
+  spot (to the nearest block) at once, and the boss rises there on the surface about 10 minutes later, once the
+  border has finished growing; the news post carries the same coordinates to Discord.
+  `python tools/boss.py spot --season 2` prints the spots.
+- **Health.** 150, plus 40 for each survival player online when it rises, kept between 200 and 1000.
+- **Once an act.** The pack remembers the last act it took, so a re-sent act (a retry, or staff by hand) never
+  raises a second boss, and a boss already up blocks another.
+- **The kill.** Whoever lands the killing blow is named in chat with their faction. The first player to kill
+  one gets the Server First "Slay a border boss" (Season II on; hidden from Season I's menu), and the kill goes
+  into the news post and the Sunday recap. The slayer's faction is recorded for the **Hall of Banners**: next
+  season, the hall can hang its banner beside the champion's with a sign naming the act
+  (`python tools/boss.py status WORLD` reads them out of the world, like the champion's banner, before the world
+  is moved away).
+- **Leaving.** Nobody kills it within 90 minutes: chat warns 10 minutes before, then it leaves, with a message.
+  It also leaves if the switch is turned off, and a boss that dies some other way (lava, the void) ends quietly.
+- **A staff event.** While it is up, within 96 blocks of it anyone can fight anyone (rule 41's event
+  exemption; chat says so when it is announced and when it rises). It is always far from spawn.
+- **Nothing that helps in a fight.** No loot, no Strength: a line in chat, a first and a banner.
+
+Untested in a real fight: how hard it is for a group. Change the numbers at the top of `tools/boss.py`.
+
+### The finale
+
+Week 11's Saturday (24 April 2027, 6 PM Pacific): the border closes on the monument, and the faction holding it at
+the close wins the finale (`tools/finale.py`, the `monkey-finale` pack). The border timer starts it from 6 PM,
+once, with the switch on.
+
+- **The monument** is 192 blocks east of spawn (`MONUMENT_OFFSET` from the Overworld border's centre, which the
+  rules pack put on spawn), never at spawn: spawn is sacred and a no-PvP zone (rules 22 and 26), and the hold zone
+  and its event area stay clear of spawn's 7 x 7 chunks (a test checks). Staff build it there before week 11;
+  `python tools/finale.py plan --world WORLD` prints its coordinates. During the shrink the border's centre moves
+  from spawn to the monument, a block a second each way, so the border closes on it.
+
+| From the start | What happens |
+| --- | --- |
+| 0 | "In 10 minutes the border starts closing", with the monument's coordinates. A boss bar counts down to the close. |
+| 9 minutes | "Closing in 1 minute." |
+| 10 minutes | "The border is closing now": it shrinks to 256 blocks across over 40 minutes, its centre moving to the monument (an edge moves at most about 2 blocks a second, under half walking pace). |
+| 50 minutes | The last hour, a staff event (rule 41: anyone can fight anyone within 64 blocks of the monument until the close): the border holds at 256. Every second, each faction scores a point for each member within 24 blocks of the monument (either way, any height, in survival, not in the event arena). |
+| 100 minutes, less 10 and less 1 | Warnings before the close. |
+| 110 minutes | The close: the faction with the most points holds the monument. |
+
+- **Nobody stranded.** The Overworld border never goes below 256 (and never below 128 if someone edits it); a
+  border already that small is left alone, and it never grows. From the shrink on, every 5 seconds players within
+  16 blocks of the edge are warned on screen with the monument's coordinates, and anyone outside the border
+  (logging in out there, say) is moved to a safe spot inside it, around the border's centre (not to the
+  monument). The Nether's border doesn't move. Claims are never touched (rules 37, 39 and 42): land outside the
+  border is only out of reach. Rule 25 in `docs/RULES.md` tells players.
+- **A tie names nobody.** Equal points at the top: staff decide (a last fight, or the Cup points shared).
+- **The result** goes into the news post and the Sunday recap. It is the finale's first place for the Cup
+  (50 points, "The pillar events"); the season's champion is still the faction with the most Cup points.
+  The pack doesn't set `rw.champion` itself: a pack only reaches players who are online, the roster is the
+  faction numbers as of the last hourly board run, and the champion is decided by the Cup. After the close,
+  `python tools/finale.py result WORLD` prints the points, the winner's roster, and the title and helm commands
+  for "Ending a season", step 4, to paste once the Cup is counted.
 
 ## What is built and what isn't
 
@@ -841,6 +1117,11 @@ Built:
   offer and accept, no war on a partner, peace, a break, the limit of 2 pacts both ways, staff/end, and a
   deleted party missing on one run and gone on the next, its pact and war dissolved. Fixed then: a faction
   gone by the close was "faction N" in the post; it now keeps its name there. Not yet with real players.
+- 7-day wars and outpost sieges ("7-day wars", "Outpost sieges"): `tools/diplomacy.py` (the `monkey-standings`
+  pack), `tools/sieges.py` (the `monkey-sieges` pack), the capture bonus in `tools/outposts.py`, rule 5's guard
+  in `tools/respawn.py`, and `deploy/monkey-sieges.sh` with its 5-minute timer. Both off by default. A first
+  version opened every faction's claims during a window; it broke rules 18, 37, 39 and 42 and was replaced by
+  outpost sieges before it merged. What was tried in game is in the pull request (#96).
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `monkey-drops` data pack and `deploy/monkey-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat
@@ -893,6 +1174,22 @@ Built:
   Season I world even if it is installed sooner. Checked by the unit tests only: not yet run against a real
   server.
 - Player of the Week in the Sunday recap ("Weekly standings"), from Season II. Unit tests only.
+- The wanted board ("The wanted board") and the catch-up kit ("The catch-up kit"), both off until staff turn
+  them on ("Switches"). Tried on a test server on 30 October 2026 (Carpet fake players, kills by `/damage ... by`):
+  posting and every refusal, claims (a mate's, a pact partner's and an arena kill claim nothing), the title, the
+  Most Wanted from a real hourly board run, the kit and bubble (blocks player damage, counts down, pauses in the
+  arena, ends on an attack, `grace_end` or running out, holds grace past rule 26's own). The chat lines weren't
+  seen (no real client).
+- The season story ("The season story") and Monument of the Month ("Monument of the Month"), both off until
+  staff turn them on ("Switches"). Tried on a test server on 30 October 2026 (Carpet fake players, over RCON):
+  nothing happens while off; the Crier's week is told to everyone online and moves with the week; a hidden page
+  is found once, only from its week, with the book in the inventory; all eleven give the title and never replace
+  another team; entering, moving an entry, a player in no faction refused, closing, naming the winner (a second
+  refused), the warp, and `tools/monuments.py` and `tools/season.py carry` reading the saved world (the carried
+  hall command was run on the server). Not seen: the chat lines, the on-screen title, the sparkles and the book's
+  pages as a player sees them (no real client), and a carried hall loading in a new world.
+- The border boss and the finale ("The border boss", "The finale"; `tools/boss.py`, `tools/finale.py`), behind
+  their switches (off). Unit tests and a local test server over RCON; never with real players.
 
 Not built:
 

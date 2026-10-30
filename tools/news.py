@@ -13,6 +13,15 @@ What gets posted, at most once a season each (docs/ADMIN.md, "Monkey SMP news"):
     (players/advancements/<uuid>.json), which keep the time each was done, so the first is the earliest one done
     since the season's launch, whoever's file was saved first.
   - new factions (Open Parties and Claims parties), several in one line: "New faction: Red Wolves, led by Steve."
+  - 7-day wars (tools/diplomacy.py, when staff switch them on): each declaration and each end, from the
+    diplomacy log in the saved storage: "War: Red Wolves declared a 7-day war on Blue Herons." and "Red Wolves won
+    its war with Blue Herons, 12 kills to 9." Gone factions keep their names (diplomacy.post_names).
+  - outpost sieges (tools/sieges.py, when staff switch them on): one when a window opens and one when it closes,
+    from the sieges pack's saved scores (#open, #opened, #closed sg). An open post that can't go before the window
+    closes doesn't go; a close post waits at most CLOSE_FRESH.
+  - Season II's spectacles: the border boss rising, with its rough place, and how it ended (tools/boss.py: slain,
+    by whom and their faction, or left), and the finale's winner (tools/finale.py). Read from their packs'
+    command storage. A boss that has ended before its rising posted only posts its end.
 
 Everything comes from the files the server saves (every 5 minutes, ServerCore's autosave-interval-seconds), so a
 post lands 5 to 25 minutes after the moment. Nothing posts before the launch (`#launched rw.day`, set by
@@ -49,8 +58,14 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+import boss
+import finale
+
+import diplomacy
 import firsts
 import saved_world
+import season_calendar
+import sieges
 import standings
 from challenges import LAUNCHED
 from recap import listed, md
@@ -71,6 +86,7 @@ FIRST_LINES = {
     "dragon": "{p} killed the Ender Dragon. First this season.",
     "elytra": "{p} found an elytra. First this season.",
     "netherite": "{p} is wearing full Netherite. First this season.",
+    "boss": "{p} slew the first border boss. First this season.",
 }
 
 # Vanilla advancements that post for the first player on the server to finish one, with their English titles,
@@ -99,10 +115,17 @@ CHALLENGES = {
 }
 CHALLENGE_LINE = "{p} completed {title}. First this season."
 
-FIRST, CHALLENGE, FACTION = "first", "challenge", "faction"
-KINDS = [FIRST, CHALLENGE, FACTION]             # found at the same time: posted in this order
-LIMITS = {FIRST: 4, CHALLENGE: 2, FACTION: 2}   # posts of each kind in any 24 hours
-DAILY = 6                                        # posts in all in any 24 hours
+WAR_LINES = {"declare": f"War: {{a}} declared a {diplomacy.WAR_DAYS}-day war on {{b}}.",
+             "peace": "{a} and {b} ended their war with a pact, {ka} to {kb}."}
+SIEGE_OPEN = ("Outpost siege open until {end} Pacific: capture an outpost for a bonus hour held. Faction claims "
+              "stay protected. `/trigger sieges` in game.")
+SIEGE_CLOSED = "The outpost siege is over: captures earn no bonus until the next one."
+
+FIRST, CHALLENGE, FACTION, WAR, SIEGE, EVENT = "first", "challenge", "faction", "war", "siege", "event"
+KINDS = [EVENT, FIRST, CHALLENGE, FACTION, WAR, SIEGE]   # found at the same time: posted in this order
+LIMITS = {FIRST: 4, CHALLENGE: 2, FACTION: 2, WAR: 3, SIEGE: 2, EVENT: 3}   # posts of each kind in any 24 hours
+KEPT = {WAR}       # kinds whose item stays news when the world drops it (the log is trimmed at Sunday's close)
+DAILY = 8                                        # posts in all in any 24 hours
 PER_RUN = 2                                      # posts per run (the timer runs every 10 minutes)
 STALE = dt.timedelta(days=3)                     # waiting longer than this: dropped, never posted
 SETTLE = dt.timedelta(minutes=15)                # a challenge waits this long after it is first seen
@@ -111,6 +134,7 @@ SAVE_LAG = dt.timedelta(minutes=10)              # how far a saved file can trai
 FACTIONS_LISTED = 8                              # names in one faction line, then "and N more"
 GAP_SECONDS = 1.0                                # between two posts in a run (Discord's webhook rate limit)
 DAY = dt.timedelta(days=1)
+CLOSE_FRESH = 180                                # minutes a siege window's close stays news
 
 PENDING, SENDING, POSTED, DROPPED, BASELINE = "pending", "sending", "posted", "dropped", "baseline"
 
@@ -177,6 +201,80 @@ def faction_items(world: Path, saved: Saved) -> list[Item]:
     return items
 
 
+def war_items(world: Path) -> list[Item]:
+    """The 7-day wars' declarations and ends in the diplomacy log (the Sunday close trims it, so the saved world
+    has each for a week at most)."""
+    storage = diplomacy.saved_storage(world)
+    every = diplomacy.post_names(storage)
+
+    def name(n) -> str:
+        return md(every.get(int(n)) or f"faction {n}")
+    items = []
+    for e in storage.get("diplomacy", {}).get("log", []):
+        if not isinstance(e, dict) or "n" not in e:
+            continue
+        kind, a, b = e.get("kind"), name(e.get("a", 0)), name(e.get("b", 0))
+        if kind == "declare":
+            line = WAR_LINES["declare"].format(a=a, b=b)
+        elif kind == "war_end" and e.get("how") == "peace":
+            line = WAR_LINES["peace"].format(a=a, b=b, ka=diplomacy.kill_count(int(e.get("ka", 0))),
+                                          kb=int(e.get("kb", 0)))
+        elif kind == "war_end" and (said := diplomacy.war_end_line(e, name)):
+            line = f"{said[0].upper()}{said[1:]}."
+        else:
+            continue
+        items.append(Item(f"{WAR}:{int(e['n'])}", WAR, line, order=int(e["n"])))
+    return items
+
+
+def siege_items(saved: Saved) -> list[Item]:
+    """A siege window open now (#open sg), and one that closed in the last CLOSE_FRESH minutes of game time
+    (#closed sg, the minute; #now sg is the game's minute when the world was saved). Nothing while they're off."""
+    sg = saved.scores.get(sieges.OBJ, {})
+    if sg.get("#on") != 1:
+        return []
+    items = []
+    if sg.get("#open") == 1 and (opened := sg.get("#opened")):
+        # #opened can trail the window's start by a minute (the game's clock counts on between syncs): the
+        # window open a minute later is the one, and its scheduled end is the one to say.
+        end = sieges.window(dt.datetime.fromtimestamp((opened + 1) * 60, UTC))[1]
+        items.append(Item(f"{SIEGE}:open:{opened}", SIEGE, SIEGE_OPEN.format(
+            end=season_calendar.clock(end.astimezone(season_calendar.PACIFIC)))))
+    closed, now = sg.get("#closed"), sg.get("#now")
+    if sg.get("#open") != 1 and closed and now is not None and 0 <= now - closed <= CLOSE_FRESH:
+        items.append(Item(f"{SIEGE}:closed:{closed}", SIEGE, SIEGE_CLOSED))
+    return items
+
+
+def event_items(world: Path, saved: Saved) -> list[Item]:
+    """The border boss (each act's rising and its end) and the finale's winner, from their command storage."""
+    outcomes = boss.outcomes(world)
+    won = finale.result(world, saved.scores)
+    if not outcomes and not won:
+        return []
+    names = diplomacy.names(world)
+
+    def faction(n: int) -> str:
+        return md(names.get(n, f"faction {n}"))
+    items = []
+    for o in outcomes:
+        if o.act < 1:
+            continue
+        if o.state == "risen":
+            items.append(Item(f"{EVENT}:boss{o.act}:rose", EVENT, f"{boss.NAME} has risen near {o.x}, {o.z}, past "
+                              "the old border. The first to slay it takes a Server First.", order=o.act))
+        elif o.state == "slain":
+            by = md(o.player or "A player") + (f" of {faction(o.faction)}" if o.faction else "")
+            items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{by} slew {boss.NAME}.", order=o.act))
+        elif o.state == "left":
+            items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{boss.NAME} left: nobody slew it this time.",
+                              order=o.act))
+    if won and won.faction and not won.tie:
+        items.append(Item(f"{EVENT}:finale", EVENT, f"The finale: {faction(won.faction)} held the monument and "
+                          f"won, with {won.points} points.", order=99))
+    return items
+
+
 # What reading a source can raise on a half-saved or changing world: saved_world's ValueError, a file gone or
 # unreadable mid-read (a party disbanded while it was listed), tomllib missing on an old python.
 UNREADABLE = (ValueError, OSError, ImportError)
@@ -188,7 +286,10 @@ def found(world: Path, since: dt.datetime, saved: Saved) -> tuple[list[Item], li
     items, failed = [], []
     for name, read in ((FIRST, lambda: first_items(world, saved)),
                        (CHALLENGE, lambda: challenge_items(world, since, saved)),
-                       (FACTION, lambda: faction_items(world, saved))):
+                       (FACTION, lambda: faction_items(world, saved)),
+                       (WAR, lambda: war_items(world)),
+                       (SIEGE, lambda: siege_items(saved)),
+                       (EVENT, lambda: event_items(world, saved))):
         try:
             items += read()
         except UNREADABLE as e:
@@ -254,7 +355,7 @@ def merge(state: dict, items: list[Item], now: dt.datetime, failed: list[str], b
     notes = []
     keys = {item.key for item in items}
     for key, entry in state["items"].items():
-        if entry["status"] == PENDING and entry["kind"] not in failed:
+        if entry["status"] == PENDING and entry["kind"] not in failed and entry["kind"] not in KEPT:
             entry["gone"] = key not in keys
     for item in items:
         old = state["items"].get(item.key)

@@ -46,6 +46,7 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
+import clips
 import map_border
 import rcon as server
 import saved_world
@@ -507,6 +508,10 @@ def datapack_files() -> dict[str, str]:
         f"{NS}:drops/impact",
         f"bossbar set {BAR} color red",
         f"bossbar set {BAR} max {DESPAWN}",
+        f"execute unless score #meteor {OBJ} matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run "
+        + clips.mark("drop", "A supply drop has landed"),
+        f"execute if score #meteor {OBJ} matches 1 at @e[type=minecraft:marker,tag=dr.spot,limit=1] run "
+        + clips.mark("meteor", "A Meteor has landed"),
         "tellraw @a " + text("", HEAD, {"text": "it has landed at ", "color": "yellow"}, *AT_XYZ,
                              {"text": f". The chests despawn in {DESPAWN // 60} minutes, with whatever is still in "
                                       "them.", "color": "yellow"}),

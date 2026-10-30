@@ -634,6 +634,9 @@ def datapack_files() -> dict[str, str]:
                              {"text": " killed ", "color": "yellow"}, TARGET,
                              {"text": ". Staff check the kill, then the bounty is theirs.", "color": "yellow"}),
         f"scoreboard players set #phase {OBJ} 1",
+        f'data modify storage {STORE} clip set value {{kind:"hunted",title:"The Hunted player is down"}}',
+        f"data modify storage {STORE} clip.other set from storage {STORE} target.name",
+        f"function {NS}:clips/mark with storage {STORE} clip",
         f"function {NS}:omens/end",
     )
     f[f"{hu}/died.mcfunction"] = lines(

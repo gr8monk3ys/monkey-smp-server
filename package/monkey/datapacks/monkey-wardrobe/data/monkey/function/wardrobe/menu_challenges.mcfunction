@@ -2,6 +2,7 @@
 tellraw @s ["",{"text":"\nWeekly challenges","color":"gold","bold":true},{"text":"  new every Monday, 12 AM Pacific","color":"gray"}]
 tellraw @s [{"text":"","color":"gray"},{"score":{"name":"@s","objective":"rw.challenges"},"color":"white"}," challenges done in all seasons"]
 function monkey:challenges/lines
+function monkey:goal/line
 tellraw @s {"text":"Blades (hold the sword)","color":"gold"}
 execute if score @s rw.founder matches 1.. run tellraw @s [" ",{"text":"[Founder's Edge]","color":"green","click_event":{"action":"run_command","command":"/trigger wardrobe set 107"},"hover_event":{"action":"show_text","value":"Put Founder's Edge on the sword in your hand"}},{"text":"  Played during the first season","color":"dark_gray"}]
 execute unless score @s rw.founder matches 1.. run tellraw @s [" ",{"text":"Founder's Edge","color":"gray","hover_event":{"action":"show_text","value":"Locked: Played during the first season"}},{"text":"  Played during the first season","color":"dark_gray"}]
@@ -18,5 +19,6 @@ execute if score @s rw.launch matches 1.. run tellraw @s [" ",{"text":"[Founder'
 execute unless score @s rw.launch matches 1.. run tellraw @s [" ",{"text":"Founder's Circlet","color":"gray","hover_event":{"action":"show_text","value":"Locked: Played on Season I's launch weekend"}},{"text":"  Played on Season I's launch weekend","color":"dark_gray"}]
 execute if score @s rw.champion matches 1.. run tellraw @s [" ",{"text":"[Champion's Helm]","color":"green","click_event":{"action":"run_command","command":"/trigger wardrobe set 209"},"hover_event":{"action":"show_text","value":"Put Champion's Helm on the helmet you're wearing"}},{"text":"  The season champion's faction","color":"dark_gray"}]
 execute unless score @s rw.champion matches 1.. if score #season rw.day matches 2.. run tellraw @s [" ",{"text":"Champion's Helm","color":"gray","hover_event":{"action":"show_text","value":"Locked: The season champion's faction"}},{"text":"  The season champion's faction","color":"dark_gray"}]
+execute if score @s rw.kin matches 1.. run tellraw @s [" ",{"text":"[Kindred Band]","color":"green","click_event":{"action":"run_command","command":"/trigger wardrobe set 210"},"hover_event":{"action":"show_text","value":"Put Kindred Band on the helmet you're wearing"}},{"text":"  A friend joined with your referral code, or you joined with theirs","color":"dark_gray"}]
 tellraw @s [" ",{"text":"[Reset blade]","color":"aqua","click_event":{"action":"run_command","command":"/trigger wardrobe set 2"}},"  ",{"text":"[Reset helm]","color":"aqua","click_event":{"action":"run_command","command":"/trigger wardrobe set 3"}}]
 tellraw @s [" ",{"text":"[Earned in game]","color":"aqua","click_event":{"action":"run_command","command":"/trigger wardrobe set 1"}},"  ",{"text":"[Pass & supporter]","color":"aqua","click_event":{"action":"run_command","command":"/trigger wardrobe set 4"}}]

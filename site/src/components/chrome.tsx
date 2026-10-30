@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { LinkKey } from "@/lib/config";
+import { newestWrapped } from "@/lib/wrapped";
 import { ConfigLink } from "./links";
 
 /** A link in the nav or the footer: a path or in-page anchor, or one of config.json's URLs. */
@@ -24,8 +25,11 @@ export function Canopy({ home = "/", label, items }: { home?: string; label: str
   );
 }
 
-/** The footer: the page's links in a row, and the line every Minecraft server owes Mojang. */
+/** The footer: the page's links in a row (and the newest Season Wrapped once there is one), and the line every
+ * Minecraft server owes Mojang. */
 export function Footer({ items }: { items: NavItem[] }) {
+  const wrapped = newestWrapped();
+  if (wrapped) items = [...items, wrapped];
   return (
     <footer className="crown">
       <p>

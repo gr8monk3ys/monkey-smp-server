@@ -1,0 +1,13 @@
+# Writes the website's status file (deploy/monkey-status.sh, tools/status.py). Started every 2 minutes by
+# monkey-status.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-status.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: website status
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-status.sh
+TimeoutStartSec=2min
+Nice=10

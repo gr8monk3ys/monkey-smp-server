@@ -36,6 +36,7 @@ friends, or by supporting:
 | Trailblazer | blade | 3 weekly challenges | `rw.challenges 3` |
 | Vanguard Helm | helm | 9 weekly challenges | `rw.challenges 9` |
 | Pinnacle | blade | 18 weekly challenges | `rw.challenges 18` |
+| Pathfinder | blade | finished the first-week quest | `rw.quest 1` |
 | Oathblade I | blade | 1 month of pass | `rw.months 1` |
 | Oathblade II | blade | 2 months of pass | `rw.months 2` |
 | Oathblade III | blade | 3 months of pass | `rw.months 3` |
@@ -45,6 +46,7 @@ friends, or by supporting:
 | Founder's Circlet | helm | played 10 minutes on Season I's launch weekend | `rw.launch 1` |
 | Twinmoon | blade | played in Season II | `rw.s2 1` |
 | Champion's Helm | helm | in the season champion's faction | `rw.champion 1` |
+| Kindred Band | helm | a referral: a friend bought a pass with your code, or you with theirs | `rw.kin 1` |
 | Lantern | blade | Ember supporter | `rw.tier 1` |
 | Standard | blade | Banner supporter | `rw.tier 2` |
 | Regalia | blade | Crown supporter | `rw.tier 3` |
@@ -82,6 +84,11 @@ Why these counters:
   never sold, and like every `rw.*` score it carries into the next season. Its locked line also waits for
   Season II.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
+- **Referrals.** The Kindred Band is for both players of a referral: a member's `/referral` code (Front Desk,
+  the Discord bot) on a new buyer's Tebex purchase. It also counts one `rw.invites` for the code's owner, so
+  referrals climb the invite ladder too. Never sold and no discount: the bot reads the code from the
+  purchase's webhook and gives the skin, nothing else. It has no locked line in the menu, so it shows only to
+  players who own it. Off until the owner turns it on (discord-server, `docs/TEBEX_WEBHOOK.md`, "Referrals").
 - **Supporter tiers** get the flashiest skins, because they pay for the server.
 
 `monkey-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
@@ -132,6 +139,42 @@ Minecraft has no calendar, so `monkey-week.timer` tells the server the week ever
 (`deploy/monkey-week.sh`, `docs/LIVE.md`, step 7). The week is a score in the world, so the daily restart
 and deploys keep it. Without the timer the week never turns over.
 
+### The first week
+
+A player new this season gets a short quest: five steps that walk them from spawn out into the world, with
+the **Pathfinder** blade at the end (`tools/quest.py`). `/trigger quest`, or the Guide's "Your first week",
+shows the steps, each with a hover that says what counts:
+
+| Step | Done when | Counted by |
+| --- | --- | --- |
+| Talk to the Guide at spawn | they right-click the Guide | the Guide sets `rq.guide` (an Easy NPC action) |
+| Set your spawn at a bed | they use a bed (there is no /home: a bed is home) | an advancement on vanilla's `any_block_use` |
+| Join or start a faction | they are in an Open Parties and Claims party | `st.faction`, from the hourly standings run |
+| Claim a chunk | they hold claimed land | `st.claimed`, from the same hourly run |
+| Visit an outpost | they stand in an outpost's square | `op.visit`, set by the outposts pack |
+
+Nothing polls for it: each step reads a score something else already keeps, once a second, and only for
+players taking part. A step once done stays done. The faction and claim steps can take up to an hour to tick.
+
+Who gets it: a player first seen after the launch with no play carried from an earlier season
+(`rw.playbase`) and at most 3 days played. Everyone else is marked as not taking part and never hears of it,
+so veterans get no spam. Chat says so once when it starts, and once a day for their first 7 days played while
+it is unfinished. **[Hide]** stops the reminders (`/trigger quest` brings it back). The Pathfinder's locked
+line in the wardrobe shows only to players taking part.
+
+### The weekly server goal
+
+One target a week that everyone's play counts toward together: chop 4,000 logs, defeat 2,500 mobs, and so
+on (`POOL` in `tools/goal.py`; `python tools/goal.py schedule`). It changes with the challenges, every Monday
+at 12 AM Pacific, and the launch weekend runs the first. The server's total shows under the week's challenges
+(`/trigger challenges` and the weekly hello). Chat tells everyone at half way, and when it is reached everyone
+online gets a title, a sound, and fireworks over the standings board at spawn. Nothing is given: the reward is
+the moment, so there is nothing to farm. The Sunday recap has a line for it.
+
+It counts vanilla statistics: blocks mined minus the same blocks placed (as the challenges do), or one
+statistic such as fish caught. Creative and spectator play never counts, and nothing counts before the
+launch. Staff switches: `docs/SEASONS.md`, "Switches".
+
 ### The launch weekend
 
 Founder's Circlet is the one skin tied to a date. `function monkey:rules/launch` (rule 23, the launch hour)
@@ -159,6 +202,8 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | A monthly pass renews | `scoreboard players add {username} rw.months 1` |
 | A 3-month pass is bought | `scoreboard players add {username} rw.months 3` |
 | A friend they invited buys a pass (staff) | `scoreboard players add NAME rw.invites 1` |
+| A referral (Front Desk posts these in the mod channel, or sends them itself) | `scoreboard players set BUYER rw.kin 1`, `scoreboard players set NAME rw.kin 1`, `scoreboard players add NAME rw.invites 1` |
+| That purchase is refunded or charged back (only if staff decide to) | `scoreboard players remove NAME rw.invites 1`, `scoreboard players reset BUYER rw.kin` (the referrer keeps theirs) |
 | Season 1 ends (once) | `scoreboard players set #season rw.day 2` |
 
 Skins already applied stay on the item when a tier expires; the menu just stops offering locked ones.

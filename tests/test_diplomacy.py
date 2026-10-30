@@ -5,6 +5,7 @@ import json
 import re
 
 import pytest
+import respawn
 from fake_world import score_rows
 from nbt_writer import nbt
 from test_standings import BASELINE, SCOREBOARD, SUNDAY, WEBHOOK, FakeDiscord, make_world
@@ -174,6 +175,7 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
     synced = "".join(server.sent[:first_board])
     assert '{f:"sync/set",p:"AlexFake",o:"st.faction",v:3}' in synced   # p-blue 1, p-lone 2, p-red 3
     assert '{f:"sync/name",n:2,v:"LoneFake\'s faction"}' in synced
+    assert '{f:"sync/set",p:"AlexFake",o:"st.claimed",v:1}' in synced   # land claimed (the first-week quest)
     assert server.sent[first_board - 1] == "function monkey:diplomacy/batch/run" and first_board == 2
     assert "factions in game: " in capsys.readouterr().out
     # Once the world has saved what was sent, the next hour sends nothing for the factions.
@@ -181,7 +183,8 @@ def test_the_hourly_board_run_writes_the_factions_first(tmp_path, capsys):
                                  "names": {"f1": "Blue Herons", "f2": "LoneFake's faction", "f3": "Red Monkeys"}}})
     board = with_scores(*[("st.faction", p, n) for p, n in (("AlexFake", 3), ("SamFake", 3), ("RiaFake", 1),
                                                              ("TomFake", 1), ("LoneFake", 2))],
-                        *[("st.leader", p, 1) for p in ("AlexFake", "RiaFake", "LoneFake")])
+                        *[("st.leader", p, 1) for p in ("AlexFake", "RiaFake", "LoneFake")],
+                        *[("st.claimed", p, 1) for p in ("AlexFake", "SamFake", "RiaFake", "TomFake", "LoneFake")])
     world = make_world(tmp_path / "again", board)
     storage(world, {"factions": {"ids": {"f1": "p-blue", "f2": "p-lone", "f3": "p-red"},
                                  "names": {"f1": "Blue Herons", "f2": "LoneFake's faction", "f3": "Red Monkeys"}}})
@@ -438,6 +441,8 @@ def test_a_kill_advancement_per_faction_number(n):
             "predicate": {"minecraft:entity_type": "minecraft:player"}} in terms
     assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"st.faction": {"min": n, "max": n}}} \
         in terms
+    # rule 5: a victim who respawned under 10 minutes ago doesn't fire it (no war score, no second count)
+    assert respawn.fresh_victim_excluded() in terms
     assert '"condition"' not in json.dumps(adv)   # the pre-26 key fails the whole pack
     assert adv["rewards"] == {"function": f"monkey:diplomacy/kill/f{n}"}
     reward = fn(f"kill/f{n}").splitlines()
@@ -479,7 +484,7 @@ def test_a_button_decodes_to_its_faction_and_action(action):
     value = int(f"{diplomacy.MAX_FACTIONS}{diplomacy.ACTIONS[action]}")
     assert value // 10 == diplomacy.MAX_FACTIONS and value % 10 == diplomacy.ACTIONS[action]
     assert 0 < diplomacy.ACTIONS[action] <= 9
-    rows = "".join(fn(f"row/{i}") for i in range(len(diplomacy.ROWS)))
+    rows = "".join(fn(f"row/{i}") for i in range(len(diplomacy.ROWS))) + fn("wars/ask")   # confirm: the ask
     assert f"/trigger diplomacy set $(b){diplomacy.ACTIONS[action]}" in rows
 
 
@@ -567,4 +572,115 @@ def test_help_lists_only_real_functions():
     assert fn("help").count("suggest_command") == len(diplomacy.HELP)
     for cmd, _ in diplomacy.HELP:
         assert f"{FN}/{cmd.split(' ')[0]}.mcfunction" in FILES
+
+
+# ---------------------------------------------------------------- 7-day wars (FORMAL)
+
+
+def test_seven_day_wars_are_off_by_default_and_staff_switch_them():
+    assert "execute unless score #formal dp.state matches 0.. run scoreboard players set #formal dp.state 0" in fn(
+        "load")
+    assert "scoreboard players set #formal dp.state 1" in fn("staff/wars_on")
+    assert "scoreboard players set #formal dp.state 0" in fn("staff/wars_off")
+    assert {"staff/wars_on", "staff/wars_off", "staff/wars"} <= {cmd for cmd, _ in diplomacy.HELP}
+
+
+def test_switched_on_a_declaration_only_asks_and_the_confirm_starts_it():
+    war = fn("war")
+    ask = "execute if score #formal dp.state matches 1 run return run function monkey:diplomacy/wars/ask"
+    # after the pact refusal, before anything is announced or logged
+    assert war.index("dp.pact matches 1 run return run") < war.index(ask) < war.index("$tellraw @a")
+    assert "/trigger diplomacy set $(b)4" in fn("wars/ask") and "tellraw @a" not in fn("wars/ask")
+    confirm = fn("confirm")
+    assert confirm.splitlines()[1].startswith("execute unless score #formal dp.state matches 1 run return run")
+    assert confirm.index("execute if function monkey:diplomacy/wars/refusals_now run return 0") < confirm.index(
+        "$tellraw @a")
+    assert '$function monkey:diplomacy/log {kind:"declare",a:$(a),b:$(b)}' in confirm
+    minutes = diplomacy.WAR_DAYS * 24 * 60
+    assert "$scoreboard players operation #$(lo).$(hi) dp.until = #now sg" in confirm
+    assert f"$scoreboard players add #$(lo).$(hi) dp.until {minutes}" in confirm
+    assert f"$scoreboard players add #f$(a) dp.next {diplomacy.WAR_COOLDOWN_HOURS * 60}" in confirm
+    assert "$scoreboard players set #$(a).$(b) dp.score 0" in confirm
+    assert "$scoreboard players set #$(b).$(a) dp.score 0" in confirm
+    assert "$data modify storage monkey:diplomacy wars append value {lo:$(lo),hi:$(hi)}" in confirm
+
+
+def test_no_war_on_a_pact_partner_nor_without_the_clock_nor_inside_the_cooldown():
+    refusals = fn("wars/refusals")
+    assert refusals.index("dp.pact matches 1 run return run") < refusals.index("#now sg matches 1..")
+    assert "execute unless score #now sg matches 1.. run return run function monkey:diplomacy/wars/no" in refusals
+    assert "$scoreboard players operation #left dp.tmp = #f$(a) dp.next" in refusals
+    assert "execute if score #left dp.tmp matches ..0 run return 0" in refusals
+    assert refusals.rstrip().endswith("return 1")
+
+
+def test_a_war_kill_counts_on_the_war_scoreboard_both_ways():
+    war_kill = fn("war_kill")
+    assert war_kill.index("scoreboard players add @s st.warkills 1") < war_kill.index("wars/kill")
+    assert "$scoreboard players add #$(a).$(b) dp.score 1" in fn("wars/kill")
+
+
+def test_the_wars_are_checked_once_a_minute_and_end_by_the_clock():
+    second = fn("second")
+    assert "scoreboard players add #wsec dp.tmp 1" in second
+    assert "execute if score #wsec dp.tmp matches 60.. run function monkey:diplomacy/wars/check" in second
+    check = fn("wars/check")
+    assert "scoreboard players set #wsec dp.tmp 0" in check and "execute unless score #now sg matches 1.." in check
+    one = fn("wars/one")
+    assert "$execute if score #$(lo).$(hi) dp.until <= #now sg run function monkey:diplomacy/wars/over" in one
+    over = fn("wars/over")
+    assert over.index("tellraw @a") < over.index('wars/ended {lo:$(lo),hi:$(hi),how:"time"}') < over.index(
+        "$scoreboard players reset #$(lo).$(hi) dp.war")
+    assert "#ka dp.tmp > #kb dp.tmp" in over and "#kb dp.tmp > #ka dp.tmp" in over and "#ka dp.tmp = #kb" in over
+
+
+def test_every_way_a_war_ends_is_logged_with_its_kills_and_clears_it():
+    ended = fn("wars/ended")
+    assert ended.splitlines()[2] == "$execute unless score #$(lo).$(hi) dp.until matches -2147483648.. run return 0"
+    assert '$function monkey:diplomacy/log {kind:"war_end",a:$(lo),b:$(hi)}' in ended
+    assert '$data modify storage monkey:diplomacy log[-1].how set value "$(how)"' in ended
+    for line in ("$scoreboard players reset #$(lo).$(hi) dp.until", "$scoreboard players reset #$(hi).$(lo) dp.score",
+                 "$data remove storage monkey:diplomacy wars[{lo:$(lo),hi:$(hi)}]"):
+        assert line in ended
+    assert 'wars/ended {lo:$(lo),hi:$(hi),how:"peace"}' in fn("accept")
+    assert 'wars/ended {lo:$(lo),hi:$(hi),how:"$(how)"}' in fn("end_pair")
+    assert 'pair.how set value "staff"' in fn("staff/end_pair") and 'pair.how set value "gone"' in fn("dissolve_pair")
+
+
+def test_a_seven_day_war_runs_past_sundays_close():
+    assert "$execute if score #$(lo).$(hi) dp.until matches -2147483648.. run return 0" in fn("war_over")
+    scores = {"dp.war": {"#1.2": 3, "#2.5": 4}, "dp.until": {"#2.5": 29_000_000}}
+    assert diplomacy.week_end(scores, 9) == [C("war_over", lo=1, hi=2, seq=3), C("week_over", seq=9)]
+
+
+def test_the_launch_clears_the_seven_day_wars_too():
+    launch = fn("launch")
+    for o in ("dp.until", "dp.score", "dp.next"):
+        assert f"scoreboard players reset * {o}" in launch
+    assert "data modify storage monkey:diplomacy wars set value []" in launch
+
+
+def test_the_menu_shows_a_seven_day_war_with_its_kills_to_everyone():
+    assert diplomacy.ROWS[0][0] == "if score #$(lo).$(hi) dp.until matches -2147483648.."
+    row = fn("row/0").splitlines()
+    assert '"name":"#$(a).$(b)","objective":"dp.score"' in row[1] and "click_event" not in row[1]
+
+
+def test_the_report_says_how_each_seven_day_war_ended_with_names_of_gone_factions():
+    log = [{"kind": "declare", "a": 1, "b": 2, "n": 4},
+           {"kind": "war_end", "a": 1, "b": 2, "n": 5, "how": "time", "ka": 3, "kb": 7},
+           {"kind": "war_end", "a": 1, "b": 9, "n": 6, "how": "time", "ka": 2, "kb": 2},
+           {"kind": "war_end", "a": 2, "b": 9, "n": 7, "how": "gone", "ka": 1, "kb": 0},
+           {"kind": "war_end", "a": 1, "b": 2, "n": 8, "how": "peace", "ka": 1, "kb": 0},   # "peace" has its line
+           {"kind": "war_end", "a": 1, "b": 2, "n": 9, "how": "staff", "ka": 0, "kb": 0}]   # so has "end"
+    got = diplomacy.report({"diplomacy": {"log": log, "gone": {"f9": {"text": "Gold Lemurs"}}},
+                            "factions": {"names": {"f1": {"text": "Red Monkeys"}, "f2": {"text": "Blue Herons"}}}},
+                           {}, {"diplomacy_seq": 3})
+    assert got["diplomacy"] == [
+        "**War and pacts this week**",
+        f"- Red Monkeys declared a {diplomacy.WAR_DAYS}-day war on Blue Herons",
+        "- Blue Herons won its war with Red Monkeys, 7 kills to 3",
+        "- The war between Red Monkeys and Gold Lemurs ended in a draw, 2 kills each",
+        "- The war between Blue Herons and Gold Lemurs ended when one of them stopped being a faction (1 kill to 0)",
+    ]
 

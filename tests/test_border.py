@@ -20,8 +20,8 @@ SEASON_TWO = ("rw.day", "#season", 2)
 ACT_ONE = dt.datetime(2027, 2, 20, 18, 1, tzinfo=PACIFIC)    # Season II, week 2: a minute after the act's time
 BEFORE = dt.datetime(2027, 2, 20, 17, 59, tzinfo=PACIFIC)
 ACT_TWO = dt.datetime(2027, 4, 3, 18, 1, tzinfo=PACIFIC)
-SET_4000 = "execute in minecraft:overworld run worldborder set 4000 600"
-SET_500 = "execute in minecraft:the_nether run worldborder set 500 600"
+SET_4000 = "execute in minecraft:overworld run worldborder set 4000 12000"
+SET_500 = "execute in minecraft:the_nether run worldborder set 500 12000"
 
 
 def make_server(tmp_path, overworld, nether, *scores):
@@ -70,7 +70,7 @@ def test_a_failed_set_is_not_recorded_so_the_next_hour_tries_again(tmp_path):
     world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
     log, server = [], rcon.Recorder(fail=1)
     assert border.send(server, world, ACT_ONE, log.append) == 1
-    assert server.sent == [] and "not sent after it: 3 command(s)" in log
+    assert server.sent == [] and "not sent after it: 4 command(s)" in log
     assert border.commands(world, ACT_ONE)[:2] == [SET_4000, SET_500]   # still due
 
 
@@ -89,7 +89,7 @@ def test_an_act_grows_both_borders_and_says_so(tmp_path):
     world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
     sent = border.commands(world, ACT_ONE)
     assert sent[:2] == [SET_4000, SET_500] and sent[2].startswith('tellraw @a {"text":"The border breaks')
-    assert sent[3:] == ["scoreboard players set #border_act ev.state 1"]
+    assert sent[3] == "scoreboard players set #border_act ev.state 1" and sent[4].startswith("function monkey:boss/act")
     server = rcon.Recorder()
     assert border.send(server, world, ACT_ONE, log=lambda _: None) == 0 and server.sent == sent
     # Two acts due (the server was down for weeks): only the latest counts.
@@ -99,9 +99,9 @@ def test_an_act_grows_both_borders_and_says_so(tmp_path):
 def test_a_border_is_never_shrunk_and_only_the_dimension_behind_is_set(tmp_path):
     record = "scoreboard players set #border_act ev.state 1"
     world = make_server(tmp_path, (3000, 4000), 312.5, SEASON_TWO, LAUNCHED)   # the Overworld already growing
-    assert border.commands(world, ACT_ONE) == [SET_500, record]
+    assert border.commands(world, ACT_ONE)[:2] == [SET_500, record]
     world = make_server(tmp_path, 5000, 600, SEASON_TWO, LAUNCHED)            # grown further by hand
-    assert border.commands(world, ACT_ONE) == [record]
+    assert border.commands(world, ACT_ONE)[:1] == [record]
     world = make_server(tmp_path, 5000, 600, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
     run = border.read_run(world, ACT_ONE)
     assert run.commands == [] and run.maps == [] and run.why == "act 1 is done (the border has moved on since)"

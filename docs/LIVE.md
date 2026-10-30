@@ -347,9 +347,9 @@ only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env`, plus the saved sco
 from the world. `--check` doesn't show the week's plan. Without the timer there are no automatic omens;
 staff can still start one by hand.
 
-### The sieges timer (the release with siege windows and 7-day wars)
+### The sieges timer (the release with outpost sieges and 7-day wars)
 
-Once that release is live, install `monkey-sieges.timer` (`docs/SEASONS.md`, "Siege windows" and "7-day
+Once that release is live, install `monkey-sieges.timer` (`docs/SEASONS.md`, "Outpost sieges" and "7-day
 wars"):
 
 ```sh
@@ -360,8 +360,8 @@ sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install
 It runs every 5 minutes (40 seconds past 2, 7, 12... minutes) as `monkey` and sends one command, the time
 and the next siege window, whether or not windows are on: the game has no calendar, and 7-day wars and the
 windows count from it. It reads only `REPO_DIR` and `LIVE_DIR` from `/etc/monkey-deploy.env` and no world
-files. `--check` lists the coming windows. It changes nothing in game by itself: siege windows and 7-day wars
-stay off until staff turn them on (`docs/ADMIN.md`, "Siege windows").
+files. `--check` lists the coming windows. It changes nothing in game by itself: outpost sieges and 7-day wars
+stay off until staff turn them on (`docs/ADMIN.md`, "Outpost sieges").
 
 ### The news timer (the release with Monkey SMP news)
 

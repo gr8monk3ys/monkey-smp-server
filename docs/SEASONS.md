@@ -265,7 +265,8 @@ Sunday's close. Off by default; `staff/wars_off` goes back (wars already declare
   that declared a war in the last 48 hours (it says how many hours are left).
 - **Announced** in game with a raid horn, and in the public Discord channel by the news job.
 - **The score.** Each side's kills of the other, outside the event arena, the same kills the Kills column
-  counts (they still count twice there). The killer sees the score in the action bar; `/trigger diplomacy`
+  counts (they still count twice there). A kill on a player who respawned less than 10 minutes ago (of their
+  own online time) doesn't count, neither in the score nor twice in the column (rule 5; `tools/respawn.py`). The killer sees the score in the action bar; `/trigger diplomacy`
   shows it to everyone, in the "at war (7 days)" row.
 - **The end.** Exactly 7 days after the declaration (by the game's clock, within about a minute): the
   faction with more kills wins, and everyone is told; equal kills is a draw. A pact accepted in between ends it
@@ -273,34 +274,31 @@ Sunday's close. Off by default; `staff/wars_off` goes back (wars already declare
   doesn't end a 7-day war. Every end goes in Sunday's standings post ("Blue Herons won its war with Red
   Monkeys, 12 kills to 9"), and the result in the news channel.
 - **The clock.** The game has no calendar, so `deploy/monkey-sieges.sh` sends the time every 5 minutes, and
-  the game counts the minutes in between. That timer must run for 7-day wars even when siege windows are off.
+  the game counts the minutes in between. That timer must run for 7-day wars even when outpost sieges are
+  off.
 
-### Siege windows (off until staff turn them on)
+### Outpost sieges (off until staff turn them on)
 
-Claims are protected, except during a siege window: two fixed windows a week, **Wednesday 7 to 9 PM and
-Sunday 3 to 5 PM Pacific** (clear of Saturday's event and Sunday's 7 PM close). During a window, every
-faction's claims can be raided by anyone: blocks broken and placed, explosions, and items used (buckets, flint
-and steel, TNT). The server's own claims stay protected, and so should entities (animals, item frames,
-villagers: their settings aren't changed). Not checked in game: entities, opening chests during a window, and
-breaking one (a broken chest spills its contents).
+Twice a week, at fixed hours, the four neutral outposts ("Outposts", below) are the prize: **Wednesday 7 to 9
+PM and Sunday 3 to 5 PM Pacific** (clear of Saturday's event and Sunday's 7 PM close). Faction claims are never
+opened: no feature touches Open Parties and Claims' protection, so rules 37, 39 and 42 hold during a siege as
+at any other time, and so does every combat rule (lava included, rule 18).
 
-- **Off by default.** `function monkey:sieges/staff/on` turns them on; `staff/off` turns them off (and
-  closes a window that is open, protecting claims again at once); `staff/status` says the state. The
-  hours are `WINDOWS` and `LENGTH` in `tools/sieges.py`; change them there and run
-  `python tools/datapacks.py`.
-- **Warnings** in chat 30 and 5 minutes before a window opens. At the open, a title, a raid horn and a chat
-  line saying when it closes; at the close, a chat line. The news job posts both to the public Discord
-  channel. `/trigger sieges` says whether a window is open, or when the next one opens.
-- **How it works.** Open Parties and Claims can change its default player config while the server runs
-  (`opac default-player-config set`). Three of its protection exceptions aren't player-configurable, so the
-  default holds for every player's claims: `claims.protection.exceptions.blocksByPlayers` (Every during a
-  window, Nobody outside), `blocksByExplosions` (on, off) and `itemUse` (Every, Nobody). The mod writes the
-  change to `world/serverconfig/openpartiesandclaims-default-player-config.toml`, so a window open across a
-  restart is open again after it, and one that ended while the server was down closes at the next clock
-  sync. Outside a window the three are the mod's defaults.
-- **Rules.** Rules 37, 39 and 42 forbid griefing a territory and promise a rollback. Before staff turn
-  siege windows on, the rules need a line saying claims can be raided during a window (and whether rule 8,
-  spawn, still holds), or every raid is a rule break.
+- **The prize.** A faction that captures an outpost while a window is open gets a bonus 60 minutes held
+  (one standings point), on top of the minutes it then holds it. Once per outpost per window for each
+  faction: retaking the same outpost in the same window earns nothing more. It counts toward the outposts'
+  weekly cap (20 points), so a siege can't outweigh a column.
+- **A staff event.** Each siege is an official staff event, so rule 41's exemption applies inside an outpost's
+  square (the 25 x 25 capture zone) while the window is open: anyone can fight anyone there. Outside the
+  squares, and once the window closes, rule 41 applies again.
+- **Off by default.** `function monkey:sieges/staff/on` turns them on; `staff/off` turns them off (and closes
+  a window that is open); `staff/status` says the state. The hours are `WINDOWS` and `LENGTH` in
+  `tools/sieges.py`; change them there and run `python tools/datapacks.py`. The outposts must be on too
+  (`function monkey:outposts/on`, the default).
+- **Announced:** warnings in chat 30 and 5 minutes before a window opens; at the open, a title, a raid horn and
+  a chat line saying when it closes; at the close, a chat line. The news job posts both to the public Discord
+  channel. `/trigger sieges` says whether a window is open, or when the next one opens. The Town Crier names
+  the hours and says to check `/trigger sieges`.
 - **Needs** the siege timer (`deploy/monkey-sieges.sh --install`, docs/LIVE.md) and the launch
   (`#launched rw.day`): nothing opens before it.
 
@@ -893,20 +891,11 @@ Built:
   offer and accept, no war on a partner, peace, a break, the limit of 2 pacts both ways, staff/end, and a
   deleted party missing on one run and gone on the next, its pact and war dissolved. Fixed then: a faction
   gone by the close was "faction N" in the post; it now keeps its name there. Not yet with real players.
-- 7-day wars and siege windows ("7-day wars", "Siege windows"): `tools/diplomacy.py` (the
-  `monkey-standings` pack), `tools/sieges.py` (the `monkey-sieges` pack) and `deploy/monkey-sieges.sh` with its
-  5-minute timer. Both off by default. Tried on a test server on 30 October 2026 (the package as CI builds it,
-  Carpet fake players, the timer's `send` run against a stand-in for docker with made-up times; the two
-  factions were written in game by the board run's own sync code, as the fake players' parties weren't in the
-  saved world). Sieges: off by default and nothing at a sync while off; the 30- and 5-minute warnings; the
-  open, with the three settings changed and a player of another faction breaking a block in a claim; the
-  close, with the settings back and the same break refused; a window open across a restart open again (even
-  with the toml edited back by hand), and closed by a late sync after its end; `staff/off` during a window.
-  Wars: the confirmation (nothing before Confirm), the declaration, war kills both ways in the score, the
-  refusals (already at war, a pact partner, the 48-hour wait), the end by time (the winner logged with both
-  kills), peace by a pact, a faction gone mid-war (its name kept), `staff/wars_off`, and the Sunday post's
-  lines and the news items from the saved log. Not seen: the chat and title text as players read it (fake
-  players show no chat), arena kills during a war, Discord posts, and the VPS timer.
+- 7-day wars and outpost sieges ("7-day wars", "Outpost sieges"): `tools/diplomacy.py` (the `monkey-standings`
+  pack), `tools/sieges.py` (the `monkey-sieges` pack), the capture bonus in `tools/outposts.py`, rule 5's guard
+  in `tools/respawn.py`, and `deploy/monkey-sieges.sh` with its 5-minute timer. Both off by default. A first
+  version opened every faction's claims during a window; it broke rules 18, 37, 39 and 42 and was replaced by
+  outpost sieges before it merged. What was tried in game is in the pull request (#96).
 - Supply drops ("Supply drop" in the event catalog; docs/ADMIN.md, "Supply drops"): `tools/drops.py`, the
   `monkey-drops` data pack and `deploy/monkey-drops.sh` with its 10-minute timer. Monday to Thursday, 6 to
   10 PM Pacific, the first time 4 or more are online (staff change the number in game): a boss bar and chat

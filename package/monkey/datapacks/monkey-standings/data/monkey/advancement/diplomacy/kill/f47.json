@@ -22,6 +22,26 @@
                   "max": 47
                 }
               }
+            },
+            {
+              "type": "minecraft:inverted",
+              "term": {
+                "type": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:type_specific/player": {
+                    "stats": [
+                      {
+                        "type": "minecraft:custom",
+                        "stat": "minecraft:time_since_death",
+                        "value": {
+                          "max": 11999
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ]
         }

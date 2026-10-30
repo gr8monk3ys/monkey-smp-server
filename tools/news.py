@@ -16,7 +16,7 @@ What gets posted, at most once a season each (docs/ADMIN.md, "Monkey SMP news"):
   - 7-day wars (tools/diplomacy.py, when staff switch them on): each declaration and each end, from the
     diplomacy log in the saved storage: "War: Red Wolves declared a 7-day war on Blue Herons." and "Red Wolves won
     its war with Blue Herons, 12 kills to 9." Gone factions keep their names (diplomacy.post_names).
-  - siege windows (tools/sieges.py, when staff switch them on): one when a window opens and one when it closes,
+  - outpost sieges (tools/sieges.py, when staff switch them on): one when a window opens and one when it closes,
     from the sieges pack's saved scores (#open, #opened, #closed sg). An open post that can't go before the window
     closes doesn't go; a close post waits at most CLOSE_FRESH.
 
@@ -110,8 +110,9 @@ CHALLENGE_LINE = "{p} completed {title}. First this season."
 
 WAR_LINES = {"declare": f"War: {{a}} declared a {diplomacy.WAR_DAYS}-day war on {{b}}.",
              "peace": "{a} and {b} ended their war with a pact, {ka} to {kb}."}
-SIEGE_OPEN = "Siege window open until {end} Pacific: faction claims can be raided. `/trigger sieges` in game."
-SIEGE_CLOSED = "The siege window is closed: claims are protected again."
+SIEGE_OPEN = ("Outpost siege open until {end} Pacific: capture an outpost for a bonus hour held. Faction claims "
+              "stay protected. `/trigger sieges` in game.")
+SIEGE_CLOSED = "The outpost siege is over: captures earn no bonus until the next one."
 
 FIRST, CHALLENGE, FACTION, WAR, SIEGE = "first", "challenge", "faction", "war", "siege"
 KINDS = [FIRST, CHALLENGE, FACTION, WAR, SIEGE]   # found at the same time: posted in this order

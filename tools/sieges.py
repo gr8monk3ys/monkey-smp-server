@@ -1,30 +1,26 @@
-"""Siege windows: twice a week, at fixed hours, faction claims can be raided (docs/SEASONS.md, "Siege windows").
+"""Outpost sieges: twice a week, at fixed hours, the neutral outposts are the prize (docs/SEASONS.md, "Outpost
+sieges").
 
     python tools/sieges.py windows [--at TIME]    the window open now or next, and the ones after it (changes nothing)
     python tools/sieges.py commands [--at TIME]   the RCON command for now (deploy/monkey-sieges.sh)
     python tools/sieges.py send --docker DIR      sends it to the running server (the timer, every 5 minutes)
     python tools/datapacks.py                     regenerates the monkey-sieges data pack (with the others)
 
-Off until staff switch it on in game (`function monkey:sieges/staff/on`): the pack ships with `#on sg` at 0, and
-then claims are protected all the time, as before. Switched on and after the launch, each window in WINDOWS
-(Pacific) opens the claims for LENGTH: chat warns WARN_SECONDS before, and says when it opens and closes; the
-Discord post is tools/news.py's (the news feed's webhook).
+Off until staff switch it on in game (`function monkey:sieges/staff/on`): the pack ships with `#on sg` at 0.
+Switched on and after the launch, each window in WINDOWS (Pacific) is open for LENGTH: chat warns WARN_SECONDS
+before, and says when it opens and closes; the Discord post is tools/news.py's (the news feed's webhook).
 
-What a window opens is what Open Parties and Claims can change while the server runs, tried on a test server
-(docs/SEASONS.md says what was seen): its default player config, for the three options in SETTINGS, which are not
-player-configurable on this server (not in playerConfigurablePlayerConfigOptions), so the default is every
-player claim's value. `opac default-player-config set ...` works from a data pack function, takes effect at once,
-and doesn't touch the server's own claims (spawn) or the wilderness, which have their own configs. Entities (farm
-animals, item frames, villagers) stay protected: their options are player-configurable, so a player's own
-setting would win anyway. Open Parties and Claims can't open claims for one faction's enemies only, so a window
-opens every claim to every player outside its party.
+What a window does: nothing to anyone's claims. Faction claims are never opened by any feature (rules 37, 39 and
+42), and no Open Parties and Claims setting is touched. While a window is open (#open sg 1), a faction that
+captures an outpost (tools/outposts.py) earns CAPTURE_BONUS_MINUTES held on top, once per outpost per window;
+the outposts' weekly cap on points still holds. Each siege is an official staff event, so rule 41's teaming
+exemption applies inside an outpost's square during the window, and nowhere else (docs/RULES.md).
 
 Minecraft can't see the wall clock, so the timer sends it: `function monkey:sieges/clock {now, open, close,
 label}`: the minute (Unix time / 60), the seconds until the window open now or next opens (0: open now) and until
 it closes, and its hours in words. The pack counts down each second between runs, so the warnings and the open
 and close land on the second; each run sets the count right again. The clock (`#now sg`, the minute) is also what
-tools/diplomacy.py's 7-day wars end by. A restart keeps the scores: an open window opens the claims again as the
-pack loads (Open Parties and Claims may not have saved the change), and the countdowns wait for the next run, so
+tools/diplomacy.py's 7-day wars end by. A restart keeps the scores, and the countdowns wait for the next run, so
 a window that ended while the server was down closes within 5 minutes of the start.
 
 Stdlib only plus tools/season_calendar.py and tools/rcon.py, and Python 3.10 or newer: the VPS runs it straight
@@ -58,18 +54,15 @@ LENGTH = dt.timedelta(hours=2)
 WARN_SECONDS = (30 * 60, 5 * 60)   # chat warns this long before a window opens
 SLOT_MINUTES = 5                   # how often deploy/monkey-sieges.timer sends the clock
 
-# What a window changes: Open Parties and Claims' default player config, (option, open, closed). The closed
-# values are the mod's own defaults, which this server runs; staff who change one by hand change it here too.
-SETTINGS = (
-    ("claims.protection.exceptions.blocksByPlayers", "E", "N"),         # break and use blocks (doors, chests)
-    ("claims.protection.exceptions.blocksByExplosions", "true", "false"),   # TNT and creepers break blocks
-    ("claims.protection.exceptions.itemUse", "E", "N"),                 # place blocks (TNT), use items
-)
-OPAC = "opac default-player-config set"
+# A capture during an open window earns its faction this many minutes held on top (tools/outposts.py: 60 minutes
+# is one standings point), once per outpost per window, inside the outposts' weekly cap.
+CAPTURE_BONUS_MINUTES = 60
+OPEN = f"#open {OBJ}"       # 1 while a window is open (tools/outposts.py reads it)
+OPENED = f"#opened {OBJ}"   # the minute the window open now opened: which window it is
 
 HELP = [
-    ("staff/on", "siege windows on (off by default)"),
-    ("staff/off", "siege windows off; an open one closes now"),
+    ("staff/on", "outpost sieges on (off by default)"),
+    ("staff/off", "outpost sieges off; an open window closes now"),
     ("staff/status", "on or off, open or not, the next window"),
 ]
 
@@ -134,14 +127,14 @@ def minutes(holder: str) -> dict:
     return {"score": {"name": holder, "objective": OBJ}, "color": "yellow"}
 
 
-WHAT = ("Outside your own party, anyone can break blocks, open chests and doors, place blocks and set off TNT in "
-        "any faction's claims. Spawn and the wilderness are as always, and so are animals, item frames and "
-        "villagers in claims. The other rules still apply.")
+WHAT = ("The four outposts are the prize: a capture while it is open earns your faction a bonus hour held. It's a "
+        "staff event: inside an outpost's square anyone can fight anyone (rule 41). Faction claims stay protected "
+        "and every other rule still applies, lava included. /trigger outposts says where they are.")
 
 
 def datapack_files() -> dict[str, str]:
     f: dict[str, str] = {}
-    f["pack.mcmeta"] = mcmeta("Monkey SMP siege windows (generated by tools/sieges.py)")
+    f["pack.mcmeta"] = mcmeta("Monkey SMP outpost sieges (generated by tools/sieges.py)")
     f["data/minecraft/tags/function/load.json"] = function_tag(f"{NS}:sieges/load")
     hours = int(LENGTH.total_seconds() // 3600)
     warn_long, warn_short = max(WARN_SECONDS), min(WARN_SECONDS)
@@ -154,13 +147,9 @@ def datapack_files() -> dict[str, str]:
         "# Off until staff turn it on (staff/on).",
         f"execute unless score #on {OBJ} matches 0.. run scoreboard players set #on {OBJ} 0",
         f"execute unless score #open {OBJ} matches 0.. run scoreboard players set #open {OBJ} 0",
-        "# The countdowns are as old as the stop: wait for the timer's next run before acting on them.",
+        "# The countdowns are as old as the stop: wait for the timer's next run before acting on them. A window",
+        "# open when the server stopped stays open; one that ended meanwhile closes at the timer's next run.",
         f"scoreboard players set #synced {OBJ} 0",
-        "# A window open when the server stopped opens the claims again (Open Parties and Claims may not have",
-        "# saved the change); one that ended meanwhile closes at the timer's next run.",
-        f"execute if score #open {OBJ} matches 1 run function {NS}:sieges/unlock",
-        f"execute unless score #open {OBJ} matches 1 if score #applied {OBJ} matches 1 run function "
-        f"{NS}:sieges/lock",
         f"schedule function {NS}:sieges/second 20t replace",
     )
     f[f"{FN}/second.mcfunction"] = lines(
@@ -211,7 +200,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players operation #mins {OBJ} /= #60 {OBJ}",
         "tellraw @a " + text("", {"text": "Siege window in ", "color": "gold", "bold": True}, minutes("#mins"),
                              {"text": " min", "color": "gold", "bold": True}, gray(" ("), LABEL,
-                             gray("). Faction claims can be raided while it is open. /trigger sieges")),
+                             gray("). The outposts are the prize; faction claims stay protected. /trigger sieges")),
         "execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 0.6 0.8",
     )
     f[f"{FN}/open.mcfunction"] = lines(
@@ -220,12 +209,11 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players operation #opened {OBJ} = {NOW}",
         f"scoreboard players set #w1 {OBJ} 1",
         f"scoreboard players set #w2 {OBJ} 1",
-        f"function {NS}:sieges/unlock",
         "tellraw @a " + text("", {"text": "The siege window is open", "color": "red", "bold": True}, gray(" ("),
                              LABEL, gray(f"). {WHAT}")),
         "title @a times 10 60 20",
-        "title @a subtitle " + text({"text": "Claims can be raided until it closes", "color": "gray"}),
-        "title @a title " + text({"text": "Siege window open", "color": "red"}),
+        "title @a subtitle " + text({"text": "Capture an outpost for a bonus hour", "color": "gray"}),
+        "title @a title " + text({"text": "Outpost siege open", "color": "red"}),
         "execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.6 1",
     )
     f[f"{FN}/close.mcfunction"] = lines(
@@ -233,20 +221,10 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players operation #closed {OBJ} = {NOW}",
         f"scoreboard players set #w1 {OBJ} 0",
         f"scoreboard players set #w2 {OBJ} 0",
-        f"function {NS}:sieges/lock",
         "tellraw @a " + text("", {"text": "The siege window is closed.", "color": "green", "bold": True},
-                             gray(" Claims are protected again. /trigger sieges says when the next one opens.")),
+                             gray(" Captures earn no bonus, and rule 41 applies at the outposts again. "
+                                  "/trigger sieges says when the next one opens.")),
         "execute as @a at @s run playsound minecraft:block.note_block.bell master @s ~ ~ ~ 0.6 1.2",
-    )
-    f[f"{FN}/unlock.mcfunction"] = lines(
-        "# Opens every faction's claims (Open Parties and Claims' default player config; tools/sieges.py SETTINGS).",
-        *(f"{OPAC} {key} {opened}" for key, opened, _ in SETTINGS),
-        f"scoreboard players set #applied {OBJ} 1",
-    )
-    f[f"{FN}/lock.mcfunction"] = lines(
-        "# Protects the claims again, as the server runs them outside a window.",
-        *(f"{OPAC} {key} {closed}" for key, _, closed in SETTINGS),
-        f"scoreboard players set #applied {OBJ} 0",
     )
 
     # ---- /trigger sieges
@@ -255,7 +233,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players set @s {TRIGGER} 0",
         f"scoreboard players enable @s {TRIGGER}",
         f"execute unless score #on {OBJ} matches 1 run return run " + say(
-            "", {"text": "Siege windows are off: ", "color": "gold"}, gray("claims are protected all the time.")),
+            "", {"text": "Outpost sieges are off.", "color": "gold"}),
         f"execute if score #open {OBJ} matches 1 run scoreboard players operation #mins {OBJ} = #closes {OBJ}",
         f"execute unless score #open {OBJ} matches 1 run scoreboard players operation #mins {OBJ} = #opens {OBJ}",
         f"scoreboard players add #mins {OBJ} 59",
@@ -277,25 +255,24 @@ def datapack_files() -> dict[str, str]:
     # ---- staff
     f[f"{FN}/staff/on.mcfunction"] = lines(
         f"scoreboard players set #on {OBJ} 1",
-        say("", {"text": "Siege windows are on. ", "color": "gold"},
+        say("", {"text": "Outpost sieges are on. ", "color": "gold"},
             gray("The next opens on time (the sieges timer must be installed: docs/LIVE.md).")),
         f"function {NS}:sieges/staff/status",
     )
     f[f"{FN}/staff/off.mcfunction"] = lines(
         f"scoreboard players set #on {OBJ} 0",
         f"execute if score #open {OBJ} matches 1 run function {NS}:sieges/close",
-        f"execute if score #applied {OBJ} matches 1 run function {NS}:sieges/lock",
-        say("", {"text": "Siege windows are off: ", "color": "gold"}, gray("claims are protected all the time.")),
+        say("", {"text": "Outpost sieges are off.", "color": "gold"}),
     )
     f[f"{FN}/staff/status.mcfunction"] = lines(
         say("", {"text": "Siege windows: on ", "color": "gold"}, minutes("#on"), gray(", open "), minutes("#open"),
-            gray(", claims opened "), minutes("#applied"), gray(", clock set "), minutes("#synced"),
+            gray(", clock set "), minutes("#synced"),
             gray(", seconds to open "), minutes("#opens"), gray(", to close "), minutes("#closes"),
             gray(", window "), LABEL),
     )
     f[f"{FN}/help.mcfunction"] = lines(
         "# Lists the staff commands; click one to put it in the chat box.",
-        say("", {"text": "Siege window commands (docs/ADMIN.md):", "color": "gold"}),
+        say("", {"text": "Outpost siege commands (docs/ADMIN.md):", "color": "gold"}),
         *(say("", {"text": f" {cmd}", "color": "aqua",
                "click_event": {"action": "suggest_command", "command": f"/function {NS}:sieges/{cmd}"}},
               {"text": f"  {note}", "color": "dark_gray"}) for cmd, note in HELP),
@@ -325,7 +302,7 @@ def send(rcon, when: dt.datetime, log=print) -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Siege windows: the timer's clock, the windows, the data pack.")
+    ap = argparse.ArgumentParser(description="Outpost sieges: the timer's clock, the windows, the data pack.")
     sub = ap.add_subparsers(dest="command", required=True)
     server.job_subcommands(sub, "sends it to the running server (deploy/monkey-sieges.sh, every 5 minutes)",
                            others=[("windows", "the window open now or next, and the ones after it")])

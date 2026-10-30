@@ -4,8 +4,7 @@ execute if function monkey:diplomacy/wars/refusals_now run return 0
 $scoreboard players reset #$(a).$(b) dp.offer
 $scoreboard players reset #$(b).$(a) dp.offer
 $tellraw @a ["",{"text":"War! ","color":"red","bold":true},{"nbt":"names.f$(a)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":" (","color":"gray"},{"selector":"@s","color":"gray"},{"text":")","color":"gray"},{"text":" declared war on ","color":"red"},{"nbt":"names.f$(b)","storage":"monkey:factions","interpret":true,"color":"white"},{"text":". It lasts 7 days: the faction with more kills of the other wins. Kills between them count double in the weekly standings. /trigger diplomacy shows the score.","color":"gray"}]
-execute if score #on sg matches 1 run tellraw @a {"text":"Siege windows open every faction's claims to raids: /trigger sieges says when.","color":"gray"}
-execute unless score #on sg matches 1 run tellraw @a {"text":"Claims still protect, and the griefing rules still apply.","color":"gray"}
+tellraw @a {"text":"Claims still protect, and the griefing rules still apply. Kills on a player who respawned under 10 minutes ago don't count (rule 5).","color":"gray"}
 execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.6 1
 $function monkey:diplomacy/log {kind:"declare",a:$(a),b:$(b)}
 $scoreboard players operation #$(lo).$(hi) dp.war = #seq dp.state

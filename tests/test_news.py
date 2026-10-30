@@ -228,11 +228,11 @@ def test_a_siege_window_posts_when_it_opens_and_when_it_closes_and_nothing_while
         return [(i.key, i.text) for i in news.siege_items(news.read_saved(world(tmp_path, extra_scores=siege_rows(
             **kw))))]
     assert items(open_=1, opened=OPENED, now=OPENED + 3) == [
-        (f"siege:open:{OPENED}", "Siege window open until 9 PM Pacific: faction claims can be raided. "
-                                 "`/trigger sieges` in game.")]
+        (f"siege:open:{OPENED}", "Outpost siege open until 9 PM Pacific: capture an outpost for a bonus hour "
+                                 "held. Faction claims stay protected. `/trigger sieges` in game.")]
     closed = OPENED + 120
     assert items(opened=OPENED, closed=closed, now=closed + 10) == [
-        (f"siege:closed:{closed}", "The siege window is closed: claims are protected again.")]
+        (f"siege:closed:{closed}", "The outpost siege is over: captures earn no bonus until the next one.")]
     assert items(opened=OPENED, closed=closed, now=closed + news.CLOSE_FRESH + 1) == []   # old news
     assert items(on=0, open_=1, opened=OPENED, now=OPENED) == []
     assert items(on=0, closed=closed, now=closed) == []

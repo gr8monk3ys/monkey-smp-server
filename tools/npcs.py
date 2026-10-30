@@ -22,6 +22,7 @@ from pathlib import Path
 
 import rules
 import season_calendar
+import sieges
 from datapacks import NS, lines, mcmeta
 from repo import Repo
 
@@ -74,6 +75,22 @@ TIME = "6 PM Pacific (9 PM Eastern)"
 EVERY_WEEK = ("Every event is in the Discord's events list: press Interested there for a reminder. "
               "New challenges every Monday.")
 
+
+def siege_hours() -> str:
+    """'Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific', from tools/sieges.py's WINDOWS."""
+    starts = sieges.window_starts(season_calendar.SEASON.launch, 7)
+    seen, out = set(), []
+    for start in starts:
+        if start.weekday() not in seen:
+            seen.add(start.weekday())
+            out.append((start.weekday(), sieges.label(start, start + sieges.LENGTH).removesuffix(" Pacific")))
+    return " and ".join(said for _, said in sorted(out)) + " Pacific"
+
+
+# The Crier's line on outpost sieges (tools/sieges.py). They can be off, so it says how to check.
+SIEGES = (f"Outpost sieges, {siege_hours()}: capture an outpost while one is on for a bonus hour held. "
+          "Claims stay protected. /trigger sieges says if one is on.")
+
 GUIDE_HELLO = "Welcome to Monkey SMP! Right-click me if you're new here."
 GUIDE_TEXT = ("Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, "
               "or open this week's challenges, the faction standings and your wardrobe.")
@@ -100,6 +117,8 @@ CRIER_OTHER = "<br>".join((
     f"There's an event every Saturday at {TIME}.",
     "",
     EVERY_WEEK,
+    "",
+    SIEGES,
 ))
 
 
@@ -124,7 +143,7 @@ def crier_text(week: int) -> str:
         then = f"Next week: {EVENTS[week + 1]}, {day(season.saturday(week + 1))}."
     else:
         then = f"Season II is planned for {day(season_calendar.SEASON_TWO)}."
-    return "<br>".join((this, "", then, "", EVERY_WEEK))
+    return "<br>".join((this, "", then, "", EVERY_WEEK, "", SIEGES))
 
 
 # ---------------------------------------------------------------- Easy NPC data

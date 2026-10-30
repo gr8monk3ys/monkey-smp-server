@@ -5,6 +5,9 @@ scoreboard objectives add op.by dummy
 scoreboard objectives add op.prog dummy
 scoreboard objectives add op.min dummy
 scoreboard objectives add op.id dummy
+scoreboard objectives add op.sg dummy
+# Outpost sieges' score (tools/sieges.py), read at a capture; made here too so the read never fails.
+scoreboard objectives add sg dummy
 scoreboard objectives add outposts trigger
 execute unless score #auto op matches 0.. run scoreboard players set #auto op 1
 execute unless score #busy op matches 0.. run scoreboard players set #busy op 0

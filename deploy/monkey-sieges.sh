@@ -1,10 +1,10 @@
 #!/bin/sh
-# Siege windows and the game's clock (tools/sieges.py; docs/SEASONS.md, "Siege windows"): a timed job
+# Outpost sieges and the game's clock (tools/sieges.py; docs/SEASONS.md, "Outpost sieges"): a timed job
 # (deploy/lib.sh, timed_job) that sends `python3 tools/sieges.py commands` to the server over RCON: the minute,
 # the seconds until the next siege window opens and closes, and its hours. Minecraft can't see the wall clock;
-# the monkey-sieges pack counts on from each run, warns, opens and closes the window on the second, and (when
-# staff have switched siege windows on) opens and closes the claims. The same minute ends 7-day wars
-# (tools/diplomacy.py), so the timer runs whether or not siege windows are on. monkey-sieges.timer runs it every
+# the monkey-sieges pack counts on from each run, and (when staff have switched outpost sieges on) warns, opens
+# and closes the window on the second; claims are never touched. The same minute ends 7-day wars
+# (tools/diplomacy.py), so the timer runs whether or not outpost sieges are on. monkey-sieges.timer runs it every
 # 5 minutes as the monkey user; every run sends the same kind of command, so running it again is safe.
 #
 #   sh monkey-sieges.sh                  sends the clock (a server that isn't running is skipped)

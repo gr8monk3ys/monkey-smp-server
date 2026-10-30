@@ -38,7 +38,9 @@ then trims the log. Claims, the griefing rules and rule 41 stay as they are.
 How a war kill is counted: a hidden advancement per faction number (kill/f<N>: player_killed_entity, the victim a
 player with st.faction N) runs as the killer at the kill, which knows its own faction, so the pair's war score
 (dp.war "#LO.HI") decides. A scoreboard criterion can't name the victim's faction, and a log parser would need
-the server's logs on the VPS and break on renamed players; the advancement needs nothing but the number.
+the server's logs on the VPS and break on renamed players; the advancement needs nothing but the number. A
+victim who respawned less than 10 minutes ago doesn't fire it (rule 5; tools/respawn.py): no war score, no second
+count.
 Stdlib only, and Python 3.10 or newer.
 """
 import json
@@ -46,6 +48,8 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import respawn
 
 import nbt
 from challenges import LAUNCHED
@@ -894,10 +898,8 @@ def war_files(who: list[dict], done: str) -> dict[str, str]:
                  {"text": " declared war on ", "color": "red"}, faction("b"),
                  gray(f". It lasts {WAR_DAYS} days: the faction with more kills of the other wins. Kills between "
                       "them count double in the weekly standings. /trigger diplomacy shows the score.")),
-        "execute if score #on sg matches 1 run tellraw @a " + text(gray(
-            "Siege windows open every faction's claims to raids: /trigger sieges says when.")),
-        "execute unless score #on sg matches 1 run tellraw @a " + text(gray(
-            "Claims still protect, and the griefing rules still apply.")),
+        "tellraw @a " + text(gray("Claims still protect, and the griefing rules still apply. Kills on a player who "
+                                  "respawned under 10 minutes ago don't count (rule 5).")),
         "execute as @a at @s run playsound minecraft:event.raid.horn master @s ~ ~ ~ 0.6 1",
         f'$function {NS}:diplomacy/log {{kind:"declare",a:$(a),b:$(b)}}',
         f"$scoreboard players operation #$(lo).$(hi) {WAR} = #seq {STATE}",
@@ -1003,6 +1005,7 @@ def kill_advancement(n: int) -> dict:
         {"type": "minecraft:entity_properties", "entity": "this",
          "predicate": {"minecraft:entity_type": "minecraft:player"}},
         {"type": "minecraft:entity_scores", "entity": "this", "scores": {FACTION: {"min": n, "max": n}}},
+        respawn.fresh_victim_excluded(),   # rule 5: a player respawned under 10 minutes ago isn't a war kill
     ]}
     return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": victim}}},
             "rewards": {"function": f"{NS}:diplomacy/kill/f{n}"}}

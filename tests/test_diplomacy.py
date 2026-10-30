@@ -5,6 +5,7 @@ import json
 import re
 
 import pytest
+import respawn
 from fake_world import score_rows
 from nbt_writer import nbt
 from test_standings import BASELINE, SCOREBOARD, SUNDAY, WEBHOOK, FakeDiscord, make_world
@@ -438,6 +439,8 @@ def test_a_kill_advancement_per_faction_number(n):
             "predicate": {"minecraft:entity_type": "minecraft:player"}} in terms
     assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"st.faction": {"min": n, "max": n}}} \
         in terms
+    # rule 5: a victim who respawned under 10 minutes ago doesn't fire it (no war score, no second count)
+    assert respawn.fresh_victim_excluded() in terms
     assert '"condition"' not in json.dumps(adv)   # the pre-26 key fails the whole pack
     assert adv["rewards"] == {"function": f"monkey:diplomacy/kill/f{n}"}
     reward = fn(f"kill/f{n}").splitlines()

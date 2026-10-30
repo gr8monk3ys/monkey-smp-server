@@ -1,4 +1,5 @@
-"""Siege windows (tools/sieges.py): when they open, the clock the timer sends, the pack, the VPS units."""
+"""Outpost sieges (tools/sieges.py): when they open, the clock the timer sends, the pack, the outposts' bonus,
+the VPS units."""
 import datetime as dt
 import json
 import re
@@ -7,6 +8,8 @@ import pytest
 
 import datapacks
 import diplomacy
+import npcs
+import outposts
 import season_calendar
 import sieges
 from repo import REPO
@@ -109,24 +112,45 @@ def test_send_skips_a_server_that_is_not_running():
 # ---------------------------------------------------------------- the pack
 
 
-def test_off_by_default_and_a_restart_keeps_the_switch_and_restores_an_open_window():
+def test_off_by_default_and_a_restart_keeps_the_switch_and_waits_for_the_clock():
     load = fn("load")
     assert "execute unless score #on sg matches 0.. run scoreboard players set #on sg 0" in load
     assert "scoreboard players set #synced sg 0" in load
-    assert "execute if score #open sg matches 1 run function monkey:sieges/unlock" in load
-    assert ("execute unless score #open sg matches 1 if score #applied sg matches 1 run function monkey:sieges/lock"
-            in load)
     assert FILES["data/minecraft/tags/function/load.json"] == datapacks.function_tag("monkey:sieges/load")
 
 
-def test_unlock_and_lock_set_open_parties_and_claims_default_player_config():
-    unlock, lock = fn("unlock"), fn("lock")
-    for key, opened, closed in sieges.SETTINGS:
-        assert f"opac default-player-config set {key} {opened}\n" in unlock
-        assert f"opac default-player-config set {key} {closed}\n" in lock
-    assert "scoreboard players set #applied sg 1" in unlock and "scoreboard players set #applied sg 0" in lock
-    # only the protection exceptions: never the server's own claims or the wilderness
-    assert not re.search(r"server-claims-config|wilderness-config|expired-claims-config", unlock + lock)
+def test_no_feature_ever_opens_a_claim():
+    # Rules 37, 39 and 42: faction claims are never opened. Nothing in the sieges or outposts packs touches
+    # Open Parties and Claims' protection, and a window only marks itself open.
+    every = list(FILES.values()) + list(outposts.datapack_files().values())
+    for body in every:
+        assert not re.search(r"\bopac\b|openpartiesandclaims|claims\.protection", body)
+    assert not hasattr(sieges, "SETTINGS")
+    assert not any(path.endswith(("/unlock.mcfunction", "/lock.mcfunction")) for path in FILES)
+
+
+def test_a_capture_in_an_open_window_earns_the_bonus_once_per_outpost_per_window():
+    ofiles = outposts.datapack_files()
+    for i in range(1, outposts.COUNT + 1):
+        captured = ofiles[f"{outposts.FN}/o/{i}/captured.mcfunction"]
+        assert (f"execute if score #open sg matches 1 run function monkey:outposts/o/{i}/siege with storage "
+                "monkey:outposts tmp") in captured
+        siege = ofiles[f"{outposts.FN}/o/{i}/siege.mcfunction"].splitlines()
+        assert f"$execute if score #s{i}.$(c) op.sg = #opened sg run return 0" in siege
+        assert f"$scoreboard players operation #s{i}.$(c) op.sg = #opened sg" in siege
+        assert f"$scoreboard players add #f$(c) op.min {sieges.CAPTURE_BONUS_MINUTES}" in siege
+        # the check comes before the bonus, so a retake in the same window earns nothing more
+        assert siege.index(f"$execute if score #s{i}.$(c) op.sg = #opened sg run return 0") < \
+            siege.index(f"$scoreboard players add #f$(c) op.min {sieges.CAPTURE_BONUS_MINUTES}")
+    load = ofiles[f"{outposts.FN}/load.mcfunction"]
+    assert "scoreboard objectives add op.sg dummy" in load and "scoreboard objectives add sg dummy" in load
+    assert sieges.CAPTURE_BONUS_MINUTES == 60   # one standings point (outposts.POINTS_PER_HOUR), inside the cap
+
+
+def test_the_crier_names_the_siege_hours_and_how_to_check():
+    assert npcs.SIEGES.startswith("Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific")
+    assert "/trigger sieges" in npcs.SIEGES and "Claims stay protected" in npcs.SIEGES
+    assert npcs.SIEGES in npcs.crier_text(2) and npcs.SIEGES in npcs.CRIER_OTHER
 
 
 def test_the_check_waits_for_the_clock_and_the_launch_then_opens_closes_and_warns_in_order():
@@ -154,7 +178,6 @@ def test_the_seconds_count_down_between_runs_and_the_minute_counts_on():
 
 def test_open_and_close_announce_record_the_minute_and_reset_the_warnings():
     opened, closed = fn("open"), fn("close")
-    assert "function monkey:sieges/unlock" in opened and "function monkey:sieges/lock" in closed
     assert "scoreboard players operation #opened sg = #now sg" in opened
     assert "scoreboard players operation #closed sg = #now sg" in closed
     assert "scoreboard players set #w1 sg 0" in closed and "scoreboard players set #w2 sg 0" in closed
@@ -164,14 +187,13 @@ def test_open_and_close_announce_record_the_minute_and_reset_the_warnings():
 def test_staff_off_closes_an_open_window_and_locks():
     off = fn("staff/off")
     assert off.index("scoreboard players set #on sg 0") < off.index("run function monkey:sieges/close")
-    assert "execute if score #applied sg matches 1 run function monkey:sieges/lock" in off
     assert "scoreboard players set #on sg 1" in fn("staff/on")
 
 
 def test_the_trigger_says_off_open_or_the_next_window():
     show = fn("show")
     assert "scoreboard players set @s sieges 0" in show and "scoreboard players enable @s sieges" in show
-    assert "Siege windows are off" in show and "A siege window is open now" in show and "Next siege window" in show
+    assert "Outpost sieges are off" in show and "A siege window is open now" in show and "Next siege window" in show
     assert "execute as @a[scores={sieges=1..}] run function monkey:sieges/show" in fn("second")
 
 

@@ -5,10 +5,7 @@ scoreboard players set #60 sg 60
 # Off until staff turn it on (staff/on).
 execute unless score #on sg matches 0.. run scoreboard players set #on sg 0
 execute unless score #open sg matches 0.. run scoreboard players set #open sg 0
-# The countdowns are as old as the stop: wait for the timer's next run before acting on them.
+# The countdowns are as old as the stop: wait for the timer's next run before acting on them. A window
+# open when the server stopped stays open; one that ended meanwhile closes at the timer's next run.
 scoreboard players set #synced sg 0
-# A window open when the server stopped opens the claims again (Open Parties and Claims may not have
-# saved the change); one that ended meanwhile closes at the timer's next run.
-execute if score #open sg matches 1 run function monkey:sieges/unlock
-execute unless score #open sg matches 1 if score #applied sg matches 1 run function monkey:sieges/lock
 schedule function monkey:sieges/second 20t replace

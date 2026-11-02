@@ -25,7 +25,7 @@ def test_scores_by_objective_and_holder_a_missing_score_is_0(tmp_path):
     folder = FakeWorld(tmp_path).scores(("ev.cup", "red", 30), ("ev.cup", "blue", 0), ("rw.days", "AlexFake", 41),
                                         ("ev.cup", "#total", 99, {"Locked": 1})).path
     board = saved_world.scoreboard(folder)
-    # 26.3 leaves Score out when it is 0 (the writer does too): it reads as 0, not as missing.
+    # 26.2 leaves Score out when it is 0 (the writer does too): it reads as 0, not as missing.
     assert board.scores == {"ev.cup": {"red": 30, "blue": 0, "#total": 99}, "rw.days": {"AlexFake": 41}}
 
 

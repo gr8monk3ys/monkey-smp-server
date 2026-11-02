@@ -32,7 +32,7 @@ def fn(path: str) -> str:
 
 
 def put_storage(world, contents: dict) -> None:
-    """The monkey namespace's command storage as 26.3 saves it (as tests/test_diplomacy.py writes it)."""
+    """The monkey namespace's command storage as 26.2 saves it (as tests/test_diplomacy.py writes it)."""
     path = world / "data" / "monkey" / "command_storage.dat"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))

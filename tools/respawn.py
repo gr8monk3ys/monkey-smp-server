@@ -18,7 +18,7 @@ STAT = "minecraft:time_since_death"
 
 
 def fresh(entity: str = "this") -> dict:
-    """An entity condition (26.x shape): true for a player alive less than FRESH_MINUTES since their last death."""
+    """An entity condition (26.2 shape): true for a player alive less than FRESH_MINUTES since their last death."""
     return {"condition": "minecraft:entity_properties", "entity": entity, "predicate": {
         "minecraft:type_specific/player": {"stats": [
             {"type": "minecraft:custom", "stat": STAT, "value": {"max": FRESH_TICKS - 1}}]}}}

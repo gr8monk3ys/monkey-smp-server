@@ -24,7 +24,7 @@ def fn(path: str) -> str:
 
 
 def storage(world, contents: dict) -> None:
-    """The monkey namespace's command storage, laid out as a 26.3 server saves it (data/monkey/command_storage.dat,
+    """The monkey namespace's command storage, laid out as a 26.2 server saves it (data/monkey/command_storage.dat,
     gzipped, the paths under data.contents)."""
     path = world / "data" / "monkey" / "command_storage.dat"
     path.parent.mkdir(parents=True, exist_ok=True)

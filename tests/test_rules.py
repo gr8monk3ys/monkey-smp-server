@@ -71,7 +71,7 @@ def test_grace_is_immunity_to_players_only_from_the_body_slot():
     assert grace["slots"] == ["body"] and grace["supported_items"] == []
     assert set(grace["effects"]) == {"minecraft:damage_immunity", "minecraft:prevent_equipment_drop"}
     (immunity,) = grace["effects"]["minecraft:damage_immunity"]
-    # 26.x condition format: "type", and component entity predicates (vanilla's protection.json)
+    # 26.2 condition format: "condition", and component entity predicates (vanilla's protection.json)
     assert immunity["requirements"] == {"condition": "minecraft:damage_source_properties",
                                         "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}
     assert '"monkey:pvp_grace":1' in rules.GRACE_STACK and "monkey_grace" in rules.GRACE_STACK

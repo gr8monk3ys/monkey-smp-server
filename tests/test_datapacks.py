@@ -13,7 +13,7 @@ def test_committed_packs_match_the_generators():
 
 
 def test_formats_follow_the_server_minecraft_version():
-    # DATA_FORMAT, wardrobe's RESOURCE_FORMAT and rules' VANILLA_NON_TREASURE are 26.3's: a Minecraft update must
+    # DATA_FORMAT, wardrobe's RESOURCE_FORMAT and rules' VANILLA_NON_TREASURE are 26.2's: a Minecraft update must
     # bump or re-check them all.
     assert REPO.load_manifest()["minecraft"] == datapacks.MINECRAFT
 

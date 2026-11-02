@@ -310,7 +310,7 @@ def test_the_champion_has_most_firsts_and_a_tie_goes_to_who_reached_it_first(tmp
     assert firsts.champion(firsts.holders(world)).player == "Steve"
 
 
-def test_command_storage_reads_26_3s_file_and_refuses_a_bad_one(tmp_path):
+def test_command_storage_reads_the_saved_file_and_refuses_a_bad_one(tmp_path):
     w = FakeWorld(tmp_path / "w")
     assert saved_world.command_storage(w.path, "monkey") is None
     w.storage("monkey", {"firsts": {"held": {}}, "drops": {"night": 3}})

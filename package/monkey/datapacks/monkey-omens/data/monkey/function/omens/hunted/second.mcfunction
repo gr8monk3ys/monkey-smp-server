@@ -4,6 +4,6 @@ scoreboard players add #mins om 59
 scoreboard players operation #mins om /= #60 om
 execute store result bossbar monkey:omen value run scoreboard players get #timer om
 bossbar set monkey:omen players @a
-bossbar set monkey:omen name [{"text":"","color":"red"},{"text":"Hunted: ","bold":true},{"nbt":"target.name","storage":"monkey:omens","color":"white"},{"text":" for "},{"score":{"name":"#mins","objective":"om"},"color":"white"},{"text":" min","color":"red"}]
+bossbar set monkey:omen name [{"text":"","color":"red"},{"text":"Hunted: ","bold":true},{"nbt":"target.name","storage":"monkey:omens","interpret":true,"color":"white"},{"text":" for "},{"score":{"name":"#mins","objective":"om"},"color":"white"},{"text":" min","color":"red"}]
 execute unless entity @a[scores={om.hunt=1..}] run return run function monkey:omens/hunted/left
 execute if score #timer om matches ..0 run function monkey:omens/hunted/survived

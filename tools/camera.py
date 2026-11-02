@@ -52,6 +52,7 @@ DIM = "cm.dim"      # 0 Overworld, 1 Nether, 2 End
 MODE = "cm.mode"    # 0 survival, 1 creative, 2 adventure, 3 spectator
 ANCHOR = ("cm.ax", "cm.az")         # the leash's middle
 LEASH = 64          # under drops.CLAIM_GAP (96 blocks): the warps' places keep that far from claims
+WARP_Y = 120        # a warp's height while its chunk has no ground to read (spectator, so anywhere is safe)
 HURT_SECONDS = 15
 WINDOW_MINUTES = 120    # the default camera window
 DIMENSIONS = ("overworld", "the_nether", "the_end")
@@ -183,7 +184,10 @@ def datapack_files() -> dict[str, str]:
         "title @s actionbar " + text(gray(f"The camera stays within {LEASH} blocks of its warp, in the Overworld.")),
     )
     f[f"{FN}/to.mcfunction"] = lines(
-        "# Macro {x, z}: above the ground there.",
+        "# Macro {x, z}: above the ground there. A height check needs the chunk loaded and silently does nothing",
+        "# if it isn't, so the plain teleport comes first: the warp happens either way, and the leash's middle",
+        "# (camera/anchor) is never where the creator was standing.",
+        f"$execute in minecraft:overworld run tp @s $(x) {WARP_Y} $(z)",
         "$execute in minecraft:overworld positioned $(x) 0 $(z) positioned over motion_blocking run tp @s ~ ~20 ~",
     )
     f[f"{FN}/leave.mcfunction"] = lines(

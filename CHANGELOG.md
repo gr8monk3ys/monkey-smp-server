@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- First-week quest: a player whose last step was the Guide or the bed never finished it. Those two steps read and
+  marked one score, so the check never ran them; each step now has its own done mark (`rq.done.<id>`).
+- Block Runner is required in the client pack: a client without it was refused ("does not support vanilla clients
+  as it has mandatory registry data maps"), and the Low-end PC advice said it was safe to leave out.
+- Creator camera: a warp to an unloaded chunk silently did nothing, and the leash then centred on where the creator
+  stood, so going in with nobody at spawn could look around their own spot. The teleport now always happens.
+- Names and labels read from storage no longer show quote marks in chat (Server Firsts, the server goal, omens,
+  siege windows, the monument contest).
+
 ### Added
 
 - **First-week quest**: five steps for a player new this season (talk to the Guide, set your spawn at a bed,

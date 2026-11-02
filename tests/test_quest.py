@@ -136,6 +136,13 @@ def test_a_step_done_stays_done_and_the_last_gives_the_skin():
     assert f"scoreboard players set @s {quest.REWARD} 1" in finish
 
 
+def test_no_step_reads_the_score_that_marks_it_done():
+    """guide and home were one score in both places: `unless x matches 1.. if x matches 1..` never ran the step, so
+    a player whose last step was one of those two never finished the quest."""
+    for s in quest.STEPS:
+        assert quest.done_score(s) != s["score"][0], s["id"]
+
+
 def test_hide_and_show_again():
     use = fn("use")
     assert f"matches {quest.HIDE} if score @s rq.state matches {quest.ON} run function monkey:quest/hide" in use

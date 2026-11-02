@@ -138,9 +138,10 @@ def datapack_files() -> dict[str, str]:
         "# As a player: the contest (and their faction's entry), then the hall.",
         f"execute if score #open {OBJ} matches 1 run tellraw @s " + text(
             "", {"text": "Monument of the Month, ", "color": "gold"},
-            {"nbt": "contest.month", "storage": STORE, "color": "gold"},
-            {"text": ": ", "color": "gold"}, {"nbt": "contest.theme", "storage": STORE, "color": "white"},
-            gray(" ("), {"nbt": "contest.about", "storage": STORE, "color": "gray"},
+            {"nbt": "contest.month", "storage": STORE, "interpret": True, "color": "gold"},
+            {"text": ": ", "color": "gold"},
+            {"nbt": "contest.theme", "storage": STORE, "interpret": True, "color": "white"},
+            gray(" ("), {"nbt": "contest.about", "storage": STORE, "interpret": True, "color": "gray"},
             gray("). Build it with your faction, then stand at it and "),
             {"text": f"/trigger {TRIGGER}", "color": "aqua",
              "click_event": {"action": "suggest_command", "command": f"/trigger {TRIGGER}"}},

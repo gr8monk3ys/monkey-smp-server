@@ -370,7 +370,7 @@ def show_function(m: dict) -> str:
            f"execute store success score #dated {OBJ} if data storage {STORE} held.{fid}.week",
            f"execute if data storage {STORE} held.{fid}{{week:-1}} run scoreboard players set #dated {OBJ} 0"]
     holder = f"@a[scores={{{OBJ}.{fid}=1..}}]"
-    who = [(f"if score #named {OBJ} matches 1", held(fid, "name", "yellow")),
+    who = [(f"if score #named {OBJ} matches 1", held(fid, "name", "yellow") | {"interpret": True}),
            (f"if score #named {OBJ} matches 0 if entity {holder}", {"selector": holder, "color": "yellow"}),
            ("", {"text": "a player now offline", "color": "gray"})]
     when = [(f"if score #dated {OBJ} matches 1", [{"text": "  week ", "color": "dark_gray"},

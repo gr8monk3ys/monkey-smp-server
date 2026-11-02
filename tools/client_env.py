@@ -3,8 +3,9 @@
 The Modrinth App and Prism Launcher list each "optional" file of a .mrpack with a tick box, ticked by
 default, so a player on a slow PC can leave out shaders, Distant Horizons or visual mods (docs/PLAYERS.md,
 "Low-end PC"). Every other file is "required": the mods that add blocks, items, entities or other registry
-entries the server sends, and the libraries those mods need. Without one of them Fabric turns the player
-away at the door ("This server requires ... installed on your client").
+entries the server sends, the libraries those mods need, and a mod with a mandatory registry data map (Block
+Runner: "This server does not support vanilla clients as it has mandatory registry data maps"). Without one of
+them Fabric turns the player away at the door ("This server requires ... installed on your client").
 
 A mod goes on the optional list only when it is client-side: it isn't on the server at all, or it is a
 client-only mod by its fabric.mod.json, or Modrinth says its client half is optional (the server runs it
@@ -136,7 +137,6 @@ OPTIONAL_MODS = {
     "cCStmVIN": ("banner-flags", "server"),
     "BLG002oq": ("better-craftables", "server"),
     "UT8WxaW1": ("blaze-attack-animation", "server"),
-    "1VSGxqkt": ("block-runner", "server"),
     "fALzjamp": ("chunky", "server"),
     "Wnxd13zP": ("clumps", "server"),
     "j6oNCsqx": ("craft-tridents", "server"),

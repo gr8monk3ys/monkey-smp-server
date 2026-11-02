@@ -122,10 +122,10 @@ MILESTONES = [
          about="Hold a block of ancient debris.", **holding("ancient_debris")),
     dict(id="vault", name="Open a trial vault", mirrors="adventure/under_lock_and_key",
          about="Use a trial key (or an ominous one) on a vault in trial chambers.", trigger="item_used_on_block",
-         conditions={"location": {"condition": "minecraft:all_of", "terms": [
+         conditions={"location": [
              {"condition": "minecraft:location_check", "predicate": {"block": {"blocks": "minecraft:vault"}}},
              {"condition": "minecraft:match_tool",
-              "predicate": {"items": ["minecraft:trial_key", "minecraft:ominous_trial_key"]}}]}}),
+              "predicate": {"items": ["minecraft:trial_key", "minecraft:ominous_trial_key"]}}]}),
     dict(id="mace", name="Get a mace", mirrors=None,
          about="Hold a mace, from an ominous vault's heavy core. Enchanted maces stay banned (B2).",
          **holding("mace")),

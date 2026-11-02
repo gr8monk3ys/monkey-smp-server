@@ -182,7 +182,7 @@ def arena_files() -> dict[str, str]:
     f[f"data/{NS}/tags/entity_type/holds_items.json"] = json.dumps({"values": [
         f"minecraft:{e}" for e in ("chest_minecart", "hopper_minecart", "bamboo_chest_raft", *(
             f"{wood}_chest_boat" for wood in ("oak", "spruce", "birch", "jungle", "acacia", "cherry", "dark_oak",
-                                              "pale_oak", "mangrove", "poplar")),
+                                              "pale_oak", "mangrove")),
             "donkey", "mule", "llama", "trader_llama")]}, indent=2)
     f[f"{fn}/strength_sync.mcfunction"] = lines(
         "# Removes the Strength mod's damage modifiers above the player's level; the mod adds the rest.",

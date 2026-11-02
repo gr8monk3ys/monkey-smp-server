@@ -5,8 +5,10 @@ scoreboard objectives add rq.state dummy
 scoreboard objectives add rq.day dummy
 scoreboard objectives add rq.guide dummy
 scoreboard objectives add rq.home dummy
-scoreboard objectives add rq.faction dummy
-scoreboard objectives add rq.claim dummy
-scoreboard objectives add rq.outpost dummy
+scoreboard objectives add rq.done.guide dummy
+scoreboard objectives add rq.done.home dummy
+scoreboard objectives add rq.done.faction dummy
+scoreboard objectives add rq.done.claim dummy
+scoreboard objectives add rq.done.outpost dummy
 # The switch: set once in a new world, then whatever staff made it (quest/on, quest/off).
 execute unless score #on rq matches 0.. run scoreboard players set #on rq 1

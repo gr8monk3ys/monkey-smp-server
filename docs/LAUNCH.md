@@ -148,6 +148,12 @@ below).
   --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
   docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
   a release places no NPCs by itself.
+- [ ] **By Wed 4 Nov: the last release's one-time steps**, once it is live. A deploy only copies `package/`, so
+  these are by hand: `sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install` (a 7-day war counts from its
+  clock, so without it a war never ends on time, even with siege windows off); the status file, with
+  `sudo sh /srv/monkey/repo/deploy/monkey-status.sh --install`, the new Caddyfile and `sudo systemctl reload caddy`
+  (docs/LIVE.md, "The sieges timer" and "The website's status"); and the Guide placed again (docs/ADMIN.md, "Spawn NPCs"),
+  or "Talk to the Guide" never counts in the first-week quest: a placed NPC keeps what it was placed with.
 - [ ] **Wed 4 Nov: rehearse on the drill copy**, never the live world: `function monkey:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a

@@ -52,11 +52,11 @@ WARDROBE_PAGE = 1          # the wardrobe page the Pathfinder blade is on (wardr
 
 # ---------------------------------------------------------------- the steps: edit here
 #
-# id      stable and short: it names the step's score (rq.<id>, unless `score` is the step's own)
+# id      stable and short: it names the step's done mark (rq.done.<id>)
 # name    the menu line; about: its hover, what counts
 # score   (objective, n): the step is done once the player's score in it is n or more. For guide and home the
 #         score is the step's own (rq.guide, rq.home): the Guide and the advancement set it; for the others
-#         another pack keeps it, and the step copies it into rq.<id> the second it is reached, so it stays done.
+#         another pack keeps it. The second it is reached the step sets its done mark, so it stays done.
 # The order is the order a new player meets them: spawn first, then out into the world.
 STEPS = [
     dict(id="guide", name="Talk to the Guide at spawn", score=("rq.guide", 1),
@@ -78,14 +78,14 @@ OWN = {"rq.guide", "rq.home"}   # step scores this pack creates (the others are 
 
 
 def done_score(step: dict) -> str:
-    """The score that says the step is done for good."""
-    objective = step["score"][0]
-    return objective if objective in OWN else f"{OBJ}.{step['id']}"
+    """The score that says the step is done for good. Never the score the step reads: the check runs the step
+    when the one is reached and the other isn't, so one score in both places could never fire."""
+    return f"{OBJ}.done.{step['id']}"
 
 
 def objectives() -> list[tuple[str, str]]:
     return [(TRIGGER, "trigger"), (OBJ, "dummy"), (STATE, "dummy"), (REMINDED, "dummy"),
-            *((done_score(s), "dummy") for s in STEPS)]
+            *((o, "dummy") for o in sorted(OWN)), *((done_score(s), "dummy") for s in STEPS)]
 
 
 # ---------------------------------------------------------------- the data pack

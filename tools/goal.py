@@ -99,7 +99,7 @@ def target() -> dict:
 
 
 def name() -> dict:
-    return {"nbt": "name", "storage": STORE, "color": "yellow"}
+    return {"nbt": "name", "storage": STORE, "interpret": True, "color": "yellow"}
 
 
 def fireworks() -> list[str]:
@@ -201,7 +201,7 @@ def datapack_files() -> dict[str, str]:
         f"execute unless score #on {OBJ} matches 1 run return 0",
         f"execute unless score {LAUNCHED} matches 1 run return 0",
         "tellraw @s " + text(" ", {"text": "Server goal  ", "color": "gray"}, *progress,
-                             {"nbt": "status", "storage": STORE, "color": "green"}),
+                             {"nbt": "status", "storage": STORE, "interpret": True, "color": "green"}),
     )
     f[f"{FN}/on.mcfunction"] = lines(
         "# Staff: the goal on. Counting starts again from where the total was.",

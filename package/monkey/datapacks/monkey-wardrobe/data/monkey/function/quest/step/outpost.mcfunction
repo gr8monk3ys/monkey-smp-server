@@ -1,5 +1,5 @@
 # Visit an outpost: done for good.
-scoreboard players set @s rq.outpost 1
+scoreboard players set @s rq.done.outpost 1
 function monkey:quest/count
 execute if score @s rq matches 5.. run return run function monkey:quest/finish
 playsound minecraft:entity.experience_orb.pickup player @s ~ ~ ~ 0.6 1

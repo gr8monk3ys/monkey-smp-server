@@ -108,3 +108,9 @@ def test_client_env_of_index_entries():
                           "env": {"client": "required", "server": "unsupported"}}]}
     assert client_env.check(drifted) == ["client mods/sodium.jar: env must be "
                                          "{'client': 'optional', 'server': 'unsupported'} (see tools/client_env.py)"]
+
+
+def test_block_runner_is_required():
+    """Its mandatory registry data map isn't in the jar facts these tests read; a real client without it was refused
+    at the door (2026-11-01, 62 mods refused, 63 with Block Runner joined)."""
+    assert "1VSGxqkt" in MODS and "1VSGxqkt" not in client_env.OPTIONAL_MODS

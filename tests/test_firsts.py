@@ -222,7 +222,7 @@ def test_the_menu_reads_a_first_as_holders_does():
     assert "execute if data storage monkey:firsts held.vault{week:-1} run scoreboard players set #dated rf 0" in show
     lines = show[5:]
     assert len(lines) == 6 and not lines[-1].startswith("execute")   # the last one: no name, no week
-    named = '{"storage":"monkey:firsts","nbt":"held.vault.name","color":"yellow"}'
+    named = '{"storage":"monkey:firsts","nbt":"held.vault.name","color":"yellow","interpret":true}'
     online = '{"selector":"@a[scores={rf.vault=1..}]","color":"yellow"}'
     week = '"nbt":"held.vault.week"'
     for line in lines:

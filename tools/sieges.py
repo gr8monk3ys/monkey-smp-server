@@ -120,7 +120,7 @@ def gray(s: str) -> dict:
     return {"text": s, "color": "gray"}
 
 
-LABEL = {"nbt": "label", "storage": STORE, "color": "yellow"}
+LABEL = {"nbt": "label", "storage": STORE, "interpret": True, "color": "yellow"}
 
 
 def minutes(holder: str) -> dict:

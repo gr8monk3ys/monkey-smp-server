@@ -260,7 +260,7 @@ def head(omen: str, color: str) -> dict:
     return {"text": NAMES[omen] + ": ", "color": color, "bold": True}
 
 
-TARGET = {"nbt": "target.name", "storage": STORE, "color": "white"}
+TARGET = {"nbt": "target.name", "storage": STORE, "interpret": True, "color": "white"}
 EVENTS_ON = drops.EVENTS_ON
 STATES = {omen: i for i, omen in enumerate(OMENS, 1)}
 TO_ALL = "execute as @a at @s run "

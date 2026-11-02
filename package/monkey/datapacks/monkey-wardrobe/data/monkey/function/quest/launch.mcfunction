@@ -5,9 +5,11 @@ scoreboard players reset * rq.state
 scoreboard players reset * rq.day
 scoreboard players reset * rq.guide
 scoreboard players reset * rq.home
-scoreboard players reset * rq.faction
-scoreboard players reset * rq.claim
-scoreboard players reset * rq.outpost
+scoreboard players reset * rq.done.guide
+scoreboard players reset * rq.done.home
+scoreboard players reset * rq.done.faction
+scoreboard players reset * rq.done.claim
+scoreboard players reset * rq.done.outpost
 # The skin only in Season I: a later season's world carries what players earned before.
 execute if score #season rw.day matches 1 run scoreboard players reset * rw.quest
 execute if score #season rw.day matches 1 run scoreboard players reset * rw.quest.seen

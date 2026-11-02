@@ -1,5 +1,5 @@
 # Join or start a faction: done for good.
-scoreboard players set @s rq.faction 1
+scoreboard players set @s rq.done.faction 1
 function monkey:quest/count
 execute if score @s rq matches 5.. run return run function monkey:quest/finish
 playsound minecraft:entity.experience_orb.pickup player @s ~ ~ ~ 0.6 1

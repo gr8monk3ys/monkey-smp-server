@@ -80,3 +80,12 @@ def test_revoking_resets_approval_and_trigger():
     revoke = fn("revoke")
     assert "$scoreboard players reset $(name) cm.ok" in revoke
     assert "$scoreboard players reset $(name) camera" in revoke
+
+
+def test_a_warp_moves_the_creator_even_if_its_chunk_is_not_loaded():
+    """The height check needs a loaded chunk and silently does nothing otherwise, which left the leash's middle where
+    the creator stood. The plain teleport comes first, so going in always starts at the warp."""
+    to = fn("to").splitlines()
+    plain = to.index(f"$execute in minecraft:overworld run tp @s $(x) {camera.WARP_Y} $(z)")
+    over = next(i for i, line in enumerate(to) if "positioned over motion_blocking" in line)
+    assert plain < over

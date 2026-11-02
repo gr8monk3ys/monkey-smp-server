@@ -282,7 +282,7 @@
         "sha512": "11129a59e7eed8fc57687f87c8ab7fe4f899ebbe052158d90eb37069f2bcd5b682fddec60fcc7a991e82d090cf6cdfee56639400ffd8cc5e68ec733201349fc9"
       },
       "env": {
-        "client": "optional",
+        "client": "required",
         "server": "unsupported"
       },
       "downloads": [

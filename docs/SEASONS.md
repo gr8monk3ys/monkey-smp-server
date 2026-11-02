@@ -465,8 +465,8 @@ beds, pearls, totems, enchanted golden apples, maces, debuffs, escape tunnels, T
   and nobody argues about who hit first.
 - **Banned items must be gone by the end of the ceasefire:** used, destroyed or thrown in the void.
   Staff run `clear` on everyone online for totems, end crystals and enchanted golden apples, and the
-  usual bans apply to anything found later, in an ender chest too. Pearls and golden apples kept for
-  crafting stay legal, as before.
+  usual bans apply to anything found later, in an ender chest too. Pearls and enchanted golden apples
+  kept for crafting stay legal, as before.
 - **Traps come down.** Respawn and logout traps, and lava traps, built during Anarchy are removed by
   their builders during the ceasefire. Staff remove what's left with Ledger, and a death to one
   afterwards is judged under the normal rules.

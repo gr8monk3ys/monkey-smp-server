@@ -104,14 +104,14 @@ def home_advancement() -> dict:
     """Any use of a bed while the step is open for the player (signed up, not done). The bed sets the respawn
     point, which no other trigger reports; it fires once and the reward makes the step done, so a player who
     finished it never fires it again."""
-    player = {"type": "minecraft:all_of", "terms": [
-        {"type": "minecraft:entity_scores", "entity": "this", "scores": {STATE: {"min": ON, "max": ON}}},
-        {"type": "minecraft:inverted", "term": {
-            "type": "minecraft:entity_scores", "entity": "this", "scores": {"rq.home": {"min": 1}}}},
+    player = {"condition": "minecraft:all_of", "terms": [
+        {"condition": "minecraft:entity_scores", "entity": "this", "scores": {STATE: {"min": ON, "max": ON}}},
+        {"condition": "minecraft:inverted", "term": {
+            "condition": "minecraft:entity_scores", "entity": "this", "scores": {"rq.home": {"min": 1}}}},
     ]}
-    bed = {"type": "minecraft:location_check", "predicate": {"block": {"blocks": "#minecraft:beds"}}}
+    bed = {"condition": "minecraft:location_check", "predicate": {"block": {"blocks": "#minecraft:beds"}}}
     return {"criteria": {"bed": {"trigger": "minecraft:any_block_use",
-                                 "conditions": {"player": player, "location": bed}}},
+                                 "conditions": {"player": [player], "location": [bed]}}},
             "rewards": {"function": f"{NS}:quest/reward/home"}}
 
 

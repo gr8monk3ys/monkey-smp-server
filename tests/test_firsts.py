@@ -21,13 +21,13 @@ def advancement(fid: str) -> dict:
 
 def terms(fid: str) -> list[dict]:
     (criterion,) = advancement(fid)["criteria"].values()
-    return criterion["conditions"]["player"]["terms"]
+    return criterion["conditions"]["player"][0]["terms"]
 
 
 def fixed(t: dict) -> tuple[str, str, dict] | None:
-    if t["type"] != "minecraft:int_value_check":
+    if t["condition"] != "minecraft:value_check":
         return None
-    return t["value"]["target"]["name"], t["value"]["score"], t["test"]
+    return t["value"]["target"]["name"], t["value"]["score"], t["range"]
 
 
 # ---------------------------------------------------------------- the milestones
@@ -119,7 +119,7 @@ def test_the_name_is_read_from_a_player_head_and_never_left_over():
     table = json.loads(FILES["data/monkey/loot_table/firsts/head.json"])
     (entry,) = table["pools"][0]["entries"]
     assert entry["name"] == "minecraft:player_head"
-    assert entry["modifier"] == {"type": "minecraft:fill_player_head", "entity": "this"}
+    assert entry["functions"] == [{"function": "minecraft:fill_player_head", "entity": "this"}]
 
 
 def test_the_first_launch_clears_test_play_and_a_later_one_nothing():

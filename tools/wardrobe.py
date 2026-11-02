@@ -797,7 +797,7 @@ def datapack_files() -> dict[str, str]:
             components["minecraft:equippable"] = {"slot": "head", "asset_id": f"{NS}:{s['id']}",
                                                   "equip_sound": f"minecraft:item.armor.equip_{s['sound']}"}
         f[f"data/{NS}/item_modifier/wardrobe/{s['id']}.json"] = json.dumps(
-            {"type": "minecraft:set_components", "components": components}, indent=2)
+            {"function": "minecraft:set_components", "components": components}, indent=2)
 
     reset_blade = ["# Puts the item's own look back."]
     for m in SWORDS:
@@ -805,7 +805,7 @@ def datapack_files() -> dict[str, str]:
         reset_blade.append(f"execute if items entity @s weapon.mainhand minecraft:{item} run item modify entity @s "
                            f"weapon.mainhand {NS}:wardrobe/reset/{item}")
         f[f"data/{NS}/item_modifier/wardrobe/reset/{item}.json"] = json.dumps(
-            {"type": "minecraft:set_components", "components": {"minecraft:item_model": f"minecraft:{item}"}},
+            {"function": "minecraft:set_components", "components": {"minecraft:item_model": f"minecraft:{item}"}},
             indent=2)
     f[f"{fn}/reset_blade.mcfunction"] = "\n".join(reset_blade) + "\n"
     reset_helm = ["# Puts the helmet's own look back."]
@@ -813,7 +813,7 @@ def datapack_files() -> dict[str, str]:
         reset_helm.append(f"execute if items entity @s armor.head minecraft:{item} run item modify entity @s "
                           f"armor.head {NS}:wardrobe/reset/{item}")
         f[f"data/{NS}/item_modifier/wardrobe/reset/{item}.json"] = json.dumps(
-            {"type": "minecraft:set_components", "components": {
+            {"function": "minecraft:set_components", "components": {
                 "minecraft:item_model": f"minecraft:{item}",
                 "minecraft:equippable": {"slot": "head", "asset_id": f"minecraft:{asset}",
                                          "equip_sound": f"minecraft:item.armor.equip_{sound}"}}}, indent=2)

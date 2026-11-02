@@ -4,10 +4,10 @@
       "trigger": "minecraft:item_used_on_block",
       "conditions": {
         "location": {
-          "type": "minecraft:all_of",
+          "condition": "minecraft:all_of",
           "terms": [
             {
-              "type": "minecraft:location_check",
+              "condition": "minecraft:location_check",
               "predicate": {
                 "block": {
                   "blocks": "minecraft:vault"
@@ -15,7 +15,7 @@
               }
             },
             {
-              "type": "minecraft:match_tool",
+              "condition": "minecraft:match_tool",
               "predicate": {
                 "items": [
                   "minecraft:trial_key",
@@ -25,53 +25,55 @@
             }
           ]
         },
-        "player": {
-          "type": "minecraft:all_of",
-          "terms": [
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "min": 1
-              },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#launched"
+        "player": [
+          {
+            "condition": "minecraft:all_of",
+            "terms": [
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "min": 1
                 },
-                "score": "rw.day"
-              }
-            },
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "max": 0
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#launched"
+                  },
+                  "score": "rw.day"
+                }
               },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#vault"
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "max": 0
                 },
-                "score": "rf"
-              }
-            },
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "max": 0
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#vault"
+                  },
+                  "score": "rf"
+                }
               },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#season_locked"
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "max": 0
                 },
-                "score": "ev.state"
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#season_locked"
+                  },
+                  "score": "ev.state"
+                }
               }
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   },

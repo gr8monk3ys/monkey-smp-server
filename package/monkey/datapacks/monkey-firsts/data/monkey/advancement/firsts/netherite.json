@@ -3,73 +3,75 @@
     "netherite": {
       "trigger": "minecraft:location",
       "conditions": {
-        "player": {
-          "type": "minecraft:all_of",
-          "terms": [
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "min": 1
-              },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#launched"
+        "player": [
+          {
+            "condition": "minecraft:all_of",
+            "terms": [
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "min": 1
                 },
-                "score": "rw.day"
-              }
-            },
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "max": 0
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#launched"
+                  },
+                  "score": "rw.day"
+                }
               },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#netherite"
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "max": 0
                 },
-                "score": "rf"
-              }
-            },
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "max": 0
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#netherite"
+                  },
+                  "score": "rf"
+                }
               },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#season_locked"
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "max": 0
                 },
-                "score": "ev.state"
-              }
-            },
-            {
-              "type": "minecraft:entity_properties",
-              "entity": "this",
-              "predicate": {
-                "minecraft:equipment": {
-                  "head": {
-                    "items": "minecraft:netherite_helmet"
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#season_locked"
                   },
-                  "chest": {
-                    "items": "minecraft:netherite_chestplate"
-                  },
-                  "legs": {
-                    "items": "minecraft:netherite_leggings"
-                  },
-                  "feet": {
-                    "items": "minecraft:netherite_boots"
+                  "score": "ev.state"
+                }
+              },
+              {
+                "condition": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:equipment": {
+                    "head": {
+                      "items": "minecraft:netherite_helmet"
+                    },
+                    "chest": {
+                      "items": "minecraft:netherite_chestplate"
+                    },
+                    "legs": {
+                      "items": "minecraft:netherite_leggings"
+                    },
+                    "feet": {
+                      "items": "minecraft:netherite_boots"
+                    }
                   }
                 }
               }
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   },

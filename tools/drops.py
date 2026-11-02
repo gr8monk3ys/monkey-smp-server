@@ -293,9 +293,9 @@ def loot_table(loot: list = LOOT, rolls: dict = ROLLS) -> dict:
             if p != pool:
                 continue
             entry = {"type": "minecraft:item", "name": f"minecraft:{name}", "weight": weight}
-            if b > 1:   # 26.2's form: one "modifier" (older packs had a "functions" list)
-                entry["modifier"] = {"type": "minecraft:set_count",
-                                     "count": {"type": "minecraft:uniform", "min": a, "max": b}}
+            if b > 1:   # 26.2's form: a "functions" list (26.3 has one "modifier")
+                entry["functions"] = [{"function": "minecraft:set_count",
+                                       "count": {"type": "minecraft:uniform", "min": a, "max": b}}]
             entries.append(entry)
         rolls = lo if lo == hi else {"type": "minecraft:uniform", "min": lo, "max": hi}
         pools.append({"rolls": rolls, "entries": entries})

@@ -113,12 +113,13 @@ def test_flags_survive_being_placed_and_broken():
         table = json.loads(FILES[f"data/minecraft/loot_table/blocks/{color}_banner.json"])
         entry = table["pools"][0]["entries"][0]
         assert entry["name"] == f"minecraft:{color}_banner"
-        include = entry["modifier"]["include"]
+        [copy] = entry["functions"]
+        include = copy["include"]
         assert {"minecraft:custom_data", "minecraft:lore", "minecraft:banner_patterns"} <= set(include)
     assert len(events.COLORS) == 16
     stamp = fn("flag/stamp")
     assert '"monkey_flag":{"id":"$(id)","n":$(n)}' in stamp
-    assert '"type":"minecraft:set_count","count":1' in stamp
+    assert '"function":"minecraft:set_count","count":1' in stamp
 
 
 def test_help_lists_only_real_functions():

@@ -420,8 +420,8 @@ def flag_files() -> dict[str, str]:
         f"function {NS}:events/flag/stamp with storage {STORE} flag",
     )
     stamp = [
-        {"type": "minecraft:set_count", "count": 1},
-        {"type": "minecraft:set_components", "components": {
+        {"function": "minecraft:set_count", "count": 1},
+        {"function": "minecraft:set_components", "components": {
             "minecraft:custom_data": {"monkey_flag": {"id": "$(id)", "n": 0}},
             "minecraft:custom_name": {"text": "$(name) flag", "color": "gold", "italic": False},
             "minecraft:lore": [{"text": "Official flag no. $(n)", "color": "gray", "italic": False},
@@ -441,13 +441,13 @@ def flag_files() -> dict[str, str]:
         f[f"data/minecraft/loot_table/blocks/{color}_banner.json"] = json.dumps({
             "type": "minecraft:block",
             "pools": [{
-                "condition": {"type": "minecraft:survives_explosion"},
+                "conditions": [{"condition": "minecraft:survives_explosion"}],
                 "entries": [{
                     "type": "minecraft:item",
-                    "modifier": {"type": "minecraft:copy_components", "source": "block_entity", "include": [
+                    "functions": [{"function": "minecraft:copy_components", "source": "block_entity", "include": [
                         "minecraft:custom_name", "minecraft:item_name", "minecraft:tooltip_display",
                         "minecraft:banner_patterns", "minecraft:rarity",
-                        "minecraft:custom_data", "minecraft:lore", "minecraft:enchantment_glint_override"]},
+                        "minecraft:custom_data", "minecraft:lore", "minecraft:enchantment_glint_override"]}],
                     "name": banner}],
                 "rolls": 1}],
             "random_sequence": f"minecraft:blocks/{color}_banner"}, indent=2)

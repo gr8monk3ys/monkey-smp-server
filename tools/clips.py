@@ -64,7 +64,7 @@ FORBIDDEN = set('"|;\\')  # never in a kind or a title
 # A player head of whoever the loot command runs as (as firsts.head_loot_table; firsts imports this module).
 HEAD = {"type": "minecraft:chest", "pools": [{"rolls": 1, "entries": [{
     "type": "minecraft:item", "name": "minecraft:player_head",
-    "modifier": {"type": "minecraft:fill_player_head", "entity": "this"}}]}]}
+    "functions": [{"function": "minecraft:fill_player_head", "entity": "this"}]}]}]}
 
 # Exactly the server thread's line for a villager's death, nothing a player can type or name: a chat line has
 # `<name>` after the thread, and a named villager would have to die 100 blocks under the Overworld's floor and

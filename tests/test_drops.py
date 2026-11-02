@@ -256,15 +256,16 @@ def test_the_loot_is_modest():
     assert {p for p, *_ in drops.LOOT} == set(drops.ROLLS)
 
 
-def test_the_loot_table_is_26_3s_form():
+def test_the_loot_table_is_26_2s_form():
     table = json.loads(FILES["data/monkey/loot_table/drops/supply.json"])
     assert table["type"] == "minecraft:chest" and len(table["pools"]) == len(drops.ROLLS)
     for pool in table["pools"]:
         for entry in pool["entries"]:
-            assert "functions" not in entry
-            if "modifier" in entry:
-                assert entry["modifier"]["type"] == "minecraft:set_count"
-                assert entry["modifier"]["count"]["min"] < entry["modifier"]["count"]["max"]
+            assert "modifier" not in entry
+            if "functions" in entry:
+                [function] = entry["functions"]
+                assert function["function"] == "minecraft:set_count"
+                assert function["count"]["min"] < function["count"]["max"]
     names = [e["name"] for p in table["pools"] for e in p["entries"]]
     assert names == [f"minecraft:{item}" for pool in drops.ROLLS for p, item, *_ in drops.LOOT if p == pool]
 

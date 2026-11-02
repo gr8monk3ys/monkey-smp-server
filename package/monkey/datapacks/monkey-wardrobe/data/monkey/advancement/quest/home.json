@@ -3,41 +3,45 @@
     "bed": {
       "trigger": "minecraft:any_block_use",
       "conditions": {
-        "player": {
-          "type": "minecraft:all_of",
-          "terms": [
-            {
-              "type": "minecraft:entity_scores",
-              "entity": "this",
-              "scores": {
-                "rq.state": {
-                  "min": 1,
-                  "max": 1
-                }
-              }
-            },
-            {
-              "type": "minecraft:inverted",
-              "term": {
-                "type": "minecraft:entity_scores",
+        "player": [
+          {
+            "condition": "minecraft:all_of",
+            "terms": [
+              {
+                "condition": "minecraft:entity_scores",
                 "entity": "this",
                 "scores": {
-                  "rq.home": {
-                    "min": 1
+                  "rq.state": {
+                    "min": 1,
+                    "max": 1
+                  }
+                }
+              },
+              {
+                "condition": "minecraft:inverted",
+                "term": {
+                  "condition": "minecraft:entity_scores",
+                  "entity": "this",
+                  "scores": {
+                    "rq.home": {
+                      "min": 1
+                    }
                   }
                 }
               }
-            }
-          ]
-        },
-        "location": {
-          "type": "minecraft:location_check",
-          "predicate": {
-            "block": {
-              "blocks": "#minecraft:beds"
+            ]
+          }
+        ],
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "block": {
+                "blocks": "#minecraft:beds"
+              }
             }
           }
-        }
+        ]
       }
     }
   },

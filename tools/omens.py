@@ -290,16 +290,16 @@ def bar_add(omen: str, color: str, seconds: int) -> list[str]:
 def loot_table() -> dict:
     return {"type": "minecraft:chest", "pools": [{"rolls": 1, "entries": [
         {"type": "minecraft:item", "name": f"minecraft:{item}", "weight": weight} | (
-            {"modifier": {"type": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": a, "max": b}}}
+            {"functions": [{"function": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": a, "max": b}}]}
             if b > 1 else {})
         for item, weight, a, b in BLOOD_LOOT]}]}
 
 
 def kill_advancement(name: str, entity: dict) -> str:
-    """A hidden advancement for a player killing `entity` (26.x shapes: one condition, named by "type"), whose
+    """A hidden advancement for a player killing `entity` (26.2 shapes: a list of conditions, each named by "condition"), whose
     reward takes it back so it fires again."""
     return json.dumps({"criteria": {"kill": {"trigger": "minecraft:player_killed_entity",
-                                             "conditions": {"entity": entity}}},
+                                             "conditions": {"entity": [entity]}}},
                        "requirements": [["kill"]],
                        "rewards": {"function": f"{NS}:omens/{name}"}}, indent=2)
 
@@ -309,7 +309,7 @@ MOON = {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name":
 
 
 def has_score(objective: str) -> dict:
-    return {"type": "minecraft:entity_scores", "entity": "this", "scores": {objective: {"min": 1}}}
+    return {"condition": "minecraft:entity_scores", "entity": "this", "scores": {objective: {"min": 1}}}
 
 
 def datapack_files() -> dict[str, str]:
@@ -322,10 +322,10 @@ def datapack_files() -> dict[str, str]:
         *(f"minecraft:{m}" for m in BLOOD_MOBS),
         *({"id": f"minecraft:{m}", "required": False} for m in BLOOD_MOBS_OPTIONAL)]}, indent=2)
     f[f"data/{NS}/advancement/omens/blood_kill.json"] = kill_advancement("blood_moon/kill", {
-        "type": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": MOON, "max": MOON}}})
+        "condition": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": MOON, "max": MOON}}})
     f[f"data/{NS}/advancement/omens/hunted_kill.json"] = kill_advancement("hunted/kill", {
-        "type": "minecraft:all_of", "terms": [
-            {"type": "minecraft:entity_properties", "entity": "this",
+        "condition": "minecraft:all_of", "terms": [
+            {"condition": "minecraft:entity_properties", "entity": "this",
              "predicate": {"minecraft:entity_type": "minecraft:player"}},
             has_score("om.hunt")]})
 

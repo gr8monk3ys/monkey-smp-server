@@ -190,9 +190,9 @@ def summon_nbt() -> str:
 
 
 def kill_advancement() -> dict:
-    """Fires as a player who killed the boss (26.x shapes, as omens'): the victim carries its act in bs.id."""
-    boss = {"type": "minecraft:entity_scores", "entity": "this", "scores": {ID: {"min": 1}}}
-    return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": boss}}},
+    """Fires as a player who killed the boss (26.2 shapes, as omens'): the victim carries its act in bs.id."""
+    boss = {"condition": "minecraft:entity_scores", "entity": "this", "scores": {ID: {"min": 1}}}
+    return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": [boss]}}},
             "requirements": [["kill"]], "rewards": {"function": f"{NS}:boss/slain"}}
 
 

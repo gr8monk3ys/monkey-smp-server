@@ -436,14 +436,13 @@ def test_a_kill_advancement_per_faction_number(n):
     adv = json.loads(FILES[f"{diplomacy.ADVANCEMENT}/kill/f{n}.json"])
     criterion = adv["criteria"]["kill"]
     assert criterion["trigger"] == "minecraft:player_killed_entity"
-    terms = criterion["conditions"]["entity"]["terms"]
-    assert {"type": "minecraft:entity_properties", "entity": "this",
+    terms = criterion["conditions"]["entity"][0]["terms"]
+    assert {"condition": "minecraft:entity_properties", "entity": "this",
             "predicate": {"minecraft:entity_type": "minecraft:player"}} in terms
-    assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"st.faction": {"min": n, "max": n}}} \
+    assert {"condition": "minecraft:entity_scores", "entity": "this", "scores": {"st.faction": {"min": n, "max": n}}} \
         in terms
     # rule 5: a victim who respawned under 10 minutes ago doesn't fire it (no war score, no second count)
     assert respawn.fresh_victim_excluded() in terms
-    assert '"condition"' not in json.dumps(adv)   # the pre-26 key fails the whole pack
     assert adv["rewards"] == {"function": f"monkey:diplomacy/kill/f{n}"}
     reward = fn(f"kill/f{n}").splitlines()
     assert reward[1] == f"advancement revoke @s only monkey:diplomacy/kill/f{n}"   # first, so the next kill fires

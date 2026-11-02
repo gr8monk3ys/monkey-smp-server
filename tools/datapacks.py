@@ -56,9 +56,9 @@ def refuse(msg: str) -> str:
 
 
 def score_check(holder: str, objective: str, least: int | None = None, most: int | None = None) -> dict:
-    """A predicate condition (26.x shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
+    """A predicate condition (26.2 shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
     test = {k: v for k, v in (("min", least), ("max", most)) if v is not None}
-    return {"type": "minecraft:int_value_check", "test": test,
+    return {"condition": "minecraft:value_check", "range": test,
             "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": holder},
                       "score": objective}}
 

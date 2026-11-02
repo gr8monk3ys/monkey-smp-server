@@ -72,7 +72,7 @@ def test_grace_is_immunity_to_players_only_from_the_body_slot():
     assert set(grace["effects"]) == {"minecraft:damage_immunity", "minecraft:prevent_equipment_drop"}
     (immunity,) = grace["effects"]["minecraft:damage_immunity"]
     # 26.x condition format: "type", and component entity predicates (vanilla's protection.json)
-    assert immunity["requirements"] == {"type": "minecraft:damage_source_properties",
+    assert immunity["requirements"] == {"condition": "minecraft:damage_source_properties",
                                         "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}
     assert '"monkey:pvp_grace":1' in rules.GRACE_STACK and "monkey_grace" in rules.GRACE_STACK
     # a player's body slot refuses anything not equippable there; only the pack may put it on, and only on players
@@ -100,8 +100,8 @@ def test_grace_lasts_48_hours_and_ends_on_attack_or_trigger():
     attack = json.loads(data["data/monkey/advancement/rules/grace_attack.json"])
     criterion = attack["criteria"]["hurt_a_player"]
     assert criterion["trigger"] == "minecraft:player_hurt_entity"
-    assert criterion["conditions"]["entity"]["predicate"] == {"minecraft:entity_type": "minecraft:player"}
-    assert criterion["conditions"]["player"]["type"] == "minecraft:entity_scores"
+    assert criterion["conditions"]["entity"][0]["predicate"] == {"minecraft:entity_type": "minecraft:player"}
+    assert criterion["conditions"]["player"][0]["condition"] == "minecraft:entity_scores"
     assert attack["rewards"]["function"] == "monkey:rules/grace_attack"
     forfeit = data[f"{fn}grace_attack.mcfunction"]
     assert "advancement revoke @s only monkey:rules/grace_attack" in forfeit
@@ -143,7 +143,7 @@ def test_players_from_before_the_pack_get_no_welcome_or_grace():
         "execute if predicate monkey:rules/returning run return 0")
     assert tag < returning < min(i for i, line in enumerate(first) if rules.WELCOME in line or "grace_start" in line)
     predicate = json.loads(data["data/monkey/predicate/rules/returning.json"])
-    assert predicate["type"] == "minecraft:any_of"
+    assert predicate["condition"] == "minecraft:any_of"
     stats = {t["predicate"]["minecraft:type_specific/player"]["stats"][0]["stat"] for t in predicate["terms"]}
     assert stats == {"minecraft:leave_game", "minecraft:play_time"}
 

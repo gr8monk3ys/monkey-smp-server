@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { JsonLd } from "@/components/json-ld";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <JsonLd data={siteGraph()} />
         {children}
+        <Analytics />
       </body>
     </html>
   );

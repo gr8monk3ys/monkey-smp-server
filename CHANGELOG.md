@@ -12,8 +12,9 @@ anti-xray config, the new world, pre-generation and the map.
 - Minecraft 26.3 to 26.2, Fabric Loader 0.20.1. A world can't go back a version, so Season I gets a new world.
 - The server's mods are the shared folder's list plus the operations tools and the libraries listed mods need: 151
   mods, down from 166. Client pack: 165 mods and 22 resource packs, about 310 MB, down from 560 MB.
-- Strength SMP Season 4 to Season 5. The Season 4 and Silver's effects patches don't carry over; the Season 5
-  sync in `tools/events.py` removes its four attack-damage buffs by their new names.
+- Strength SMP Season 4 to Season 5, and its four attack-damage buffs are removed by their new names in
+  `tools/events.py`. Season 5 needs no patch, so the Season 4 one is gone. Silver's Effects Library is patched
+  again, against the file 26.2 reads: 25 fake players went from about 7,200 command-limit hits a run to none.
 - Tebex is a managed mod: a restore or a new VPS gets it by itself. The restore drill now removes
   `server/mods/tebex`, where its key is, instead of leaving out the jar.
 - The Nether: Amethyst Nether is 160 tall, with its roof near y 160 (`antixray.toml`, BlueMap's comment).

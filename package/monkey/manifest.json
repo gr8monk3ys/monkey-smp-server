@@ -1435,6 +1435,10 @@
       "size": 453926,
       "hashes": {
         "sha512": "f4ff6eb3c41bc16d3747c7bd0326e517a0dcdba15f059ec3424a1db777facff0067a4610e38a0f9c01267195592c67c4834d32e71e70bcf31ee309e3de29cc75"
+      },
+      "patch": {
+        "path": "patches/silvers_effects-library",
+        "base_sha512": "f4ff6eb3c41bc16d3747c7bd0326e517a0dcdba15f059ec3424a1db777facff0067a4610e38a0f9c01267195592c67c4834d32e71e70bcf31ee309e3de29cc75"
       }
     },
     {

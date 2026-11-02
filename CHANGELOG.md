@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [2.11.0] - 2026-11-03
+
+The last release before Season I: everything for launch is in it, and it goes live in the 4-5 AM window on
+Wednesday 4 November, when the freeze starts (docs/LAUNCH.md, "Release freeze"). Most of the new systems ship off
+until staff switch them on (docs/SEASONS.md, "Switches"). `client/` changed, so players update the client pack,
+a small download (the wardrobe's new skins, and Block Runner is required). After it deploys, some steps are by
+hand (docs/LAUNCH.md, "Ops readiness"), including placing the Guide again: `function monkey:npcs/guide/here`.
 
 ### Fixed
 

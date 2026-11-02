@@ -28,7 +28,7 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 | Sat 31 Oct | T-7 | T-7 announcement; Reddit post. (The 7 November date shipped early: 2.9.1, live on 29 October, below.) |
 | Sun 1 Nov | T-6 | The clocks go back at 2 AM. Off-site backups and Uptime Kuma alerts working. |
 | Wed 4 Nov | T-3 | **Last release (3.0.0) tagged in the evening**: Minecraft 26.2, the owners' mod list, everything for launch. |
-| Thu 5 Nov | T-2 | 3.0.0 deploys at 4-5 AM; the freeze starts. New world, Chunky, the map rendered and fitted. Trial decided and a test purchase. Build Battle plots built. Moderators onboarded, and their shadowed evening. |
+| Thu 5 Nov | T-2 | 3.0.0 deploys at 4-5 AM; the freeze starts. New world, Chunky, the map rendered and fitted. Trial decided and a test purchase. New screenshots for the site gallery and the banners (`marketing/build.py`: the banners and `og.jpg` still show the old world, and the server-list banner still says 26.3). Build Battle plots built. Moderators onboarded, and their shadowed evening. |
 | Fri 6 Nov | T-1 | Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. Test joins, the trailer. Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
 | Sat 7 Nov | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
 | Sun 8 Nov | T+1 | Day-1 check. 6 PM Build Battle judging. Launch weekend ends at midnight. |

@@ -32,7 +32,7 @@ MUTED = (200, 204, 210)
 
 ADDRESS = "monkeysmp.lscaturchio.xyz"
 TAGLINE = "Claim land. Make allies. Keep what you can hold."
-HOOKS = "Factions of four  ·  Strength SMP  ·  Modded terrain and dungeons"
+HOOKS = "Factions of four  ·  Strength SMP  ·  A remade Nether and new dungeons"
 
 
 def font(name, size):

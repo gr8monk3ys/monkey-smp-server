@@ -43,7 +43,7 @@ export default function Home() {
           <h1>Claim land.<br />Make allies.<br />Keep what you can hold.</h1>
           <p className="lede">Monkey SMP is a modded factions server on {GAME} (Fabric) for a small crowd
             that plays evenings, Pacific time. Factions of four, alliances, banner-marked territory, PvP outside your
-            walls, reworked terrain, new dungeons, mobs and magic.</p>
+            walls, a remade Nether, new dungeons, mobs and magic.</p>
           <Countdown launchAt={config.LAUNCH_AT} stage={launchStage()}>
             <LaunchTime template="{date}, {pacific} ({eastern})" />
           </Countdown>

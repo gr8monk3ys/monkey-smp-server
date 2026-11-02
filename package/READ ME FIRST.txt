@@ -1,7 +1,7 @@
 MONKEY SMP - how to run the server
 ==================================
 
-A modded Minecraft (Java 26.3) factions server: parties, allies, land claims, PvP, new
+A modded Minecraft (Java 26.2) factions server: parties, allies, land claims, PvP, new
 structures, mobs and magic. You need: a computer with Windows 10 or 11, macOS, or Linux,
 16 GB of RAM or more (24-32 GB if you also play on it), and about 10 GB of free disk space.
 You do NOT need to install Java or anything else - this folder takes care of it.

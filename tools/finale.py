@@ -71,7 +71,7 @@ MIN_SIZE = 128              # FINAL_SIZE is never set below this (a test checks 
 RADIUS = 24                 # the monument's zone: this many blocks from its centre either way
 EDGE_MARGIN = 16            # players this close to the edge (or past it) are warned
 EDGE_EVERY = 5              # seconds between edge checks
-TICKS = 20                  # `worldborder set SIZE TIME` takes ticks since 26.3
+TICKS = 20                  # `worldborder set SIZE TIME` takes ticks on 26.2
 # Where: the monument is MONUMENT_OFFSET blocks (x, z) from the Overworld border's centre, which the rules pack put
 # on spawn (docs/RULES.md, rule 25). Never at spawn: spawn is sacred and a no-PvP zone (rules 22 and 26), the server
 # claim over its 7 x 7 chunks, so SPAWN_ZONE blocks either way of the centre; the hold zone (RADIUS) and the event

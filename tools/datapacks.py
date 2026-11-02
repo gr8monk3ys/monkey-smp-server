@@ -20,8 +20,8 @@ from pathlib import Path
 
 from repo import REPO, Repo
 
-MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
-DATA_FORMAT = 121
+MINECRAFT = "26.2"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
+DATA_FORMAT = 107
 NS = "monkey"
 # challenges writes into wardrobe's
 GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens", "sieges",

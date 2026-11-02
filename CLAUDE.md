@@ -4,7 +4,7 @@ Everything is named Monkey SMP / `monkey`: what players see and the code, folder
 and download names alike (see `GLOSSARY.md`). Don't bring back the old name; only `tools/migrate_names.py` (old
 worlds and server folders) and the player installer's move of the old game folder still have to know it.
 
-Server package for a Fabric 26.3 factions server (1.x releases were Paper 26.1.2) that runs natively on
+Server package for a Fabric 26.2 factions server (1.x releases were Paper 26.1.2) that runs natively on
 Windows (`.bat`), Linux and macOS (`.sh` launchers + the `monkey/monkey.sh` PowerShell bootstrap) and in
 Docker (`package/docker/`), with one PowerShell installer (ADR-0007), plus a "Prepare for Hosting" bundle for
 panel hosts (ADR-0006). `package/` is exactly what ships in the release zip; `package/monkey/manifest.json`

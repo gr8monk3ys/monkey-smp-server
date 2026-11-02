@@ -81,7 +81,7 @@ Nine two-bar sections at 100 BPM, cut on the downbeat: logo reveal, then one hoo
 factions server; factions of four; alliances and territory; Strength SMP; modded terrain and dungeons;
 the Season I launch hour; one pass, same price), then the Discord and website. The motion is slow pans
 over the in-game screenshots; no live gameplay footage was captured. Swap a section's screenshot for a
-clip later by recording with the shaders on and replacing `pan()` for that section.
+clip later by recording in game and replacing `pan()` for that section.
 
 The music is made from scratch in `music.py` (additive saws, synthesised drums, A minor, Am F C G), so
 there is nothing to license.

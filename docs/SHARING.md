@@ -23,7 +23,7 @@ can't join a server on 2.1.0 if the mods changed.
 Copy, fill in the blanks, and send with `MonkeySMP-Server-<version>.zip`:
 
 ```text
-Here's Monkey SMP server (Minecraft Java 26.3, modded factions/PvP).
+Here's Monkey SMP server (Minecraft Java 26.2, modded factions/PvP).
 
 To run it on your computer (Windows 10/11, a Mac or Linux, 12 GB+ RAM):
 1. Unzip it somewhere permanent, like Documents.

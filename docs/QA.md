@@ -31,7 +31,7 @@ watch and read status: no staff commands that change anything.
    the EULA, then your Minecraft username: you become the admin, with op. The first start downloads about
    500 MB; wait for "Done".
 4. Install the game side, start Minecraft with the Monkey SMP profile and join `localhost`.
-5. Someone else to test with (needed for claims, Carry On in a claim and the Hunted omen): see "READ ME FIRST.txt", section 4, or
+5. Someone else to test with (needed for claims and the Hunted omen): see "READ ME FIRST.txt", section 4, or
    have them on the same network join your computer's local address. Add them with `Add Player.bat`.
 
 Your account has two hats. Most checks need both:
@@ -66,13 +66,10 @@ away `/function monkey:npcs/crier/here`.
 - [ ] As admin: `//pos1`, move, `//pos2`, `//set stone` fills the box; `//undo` puts it back.
 - [ ] As a plain player: `//pos1` is refused.
 
-**Claims and Carry On.**
+**Claims.**
 
-- [ ] As a plain player, `/oclaims claim` claims your chunk; `M` then right-click claims more, up to 4.
-- [ ] Sneak + right-click with empty hands picks up a cow, a sheep or a chicken, and places it back.
-  **(animals never tried in game)**
-- [ ] It won't pick up a chest, barrel, furnace, hopper, spawner, bed, door or the NPCs.
-- [ ] With a second player: they can't pick up anything, or break anything, inside your claim.
+- [ ] As a plain player, `/oclaims claim` claims your chunk; stand in the next one and claim it too, up to 4.
+- [ ] With a second player: they can't break anything inside your claim.
 
 **Enchantments.** **(the table and trades never tried in game)**
 

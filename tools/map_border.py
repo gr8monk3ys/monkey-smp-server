@@ -4,7 +4,7 @@
     python3 tools/map_border.py PATH/TO/server --check   exit 1 if a mask doesn't match its border
 
 Chunky pre-generates out to the season's largest border, so without a mask the map would show the land the
-border acts will open (docs/SEASONS.md). The border is read from the world's own files (since 26.3 each
+border acts will open (docs/SEASONS.md). The border is read from the world's own files (on 26.2 each
 dimension keeps its own, in world/dimensions/minecraft/<dimension>/data/minecraft/world_border.dat), so run
 `save-all` first when it changed in the last few minutes. A border that is still growing counts at its
 final size. A dimension without a border (the End) keeps its map as it is.
@@ -122,7 +122,7 @@ def fit_maps(server: Path) -> list[MapFit]:
         saved_border = saved_world.border(server / world, dimension)
         if saved_border is None:
             raise ValueError(f"{conf}: no border saved at {saved_world.border_path(server / world, dimension)} "
-                             "(a 26.3 world that has been saved?)")
+                             "(a 26.2 world that has been saved?)")
         border = fit_border(saved_border)
         try:
             fitted = with_mask(text, border.mask()) if border else text

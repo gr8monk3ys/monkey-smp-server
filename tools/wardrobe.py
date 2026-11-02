@@ -53,7 +53,7 @@ from datapacks import NS, function_tag, mcmeta, text
 from repo import Repo
 from season_calendar import LAUNCH_SECONDS
 
-RESOURCE_FORMAT = 97
+RESOURCE_FORMAT = 88
 DATAPACK = "monkey-wardrobe"
 RESOURCEPACK = "Monkey SMP Wardrobe"
 

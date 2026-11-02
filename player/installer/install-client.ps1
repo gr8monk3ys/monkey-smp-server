@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Adds a "Monkey SMP" profile to the Minecraft Launcher that plays Fabric with the pack's mods,
-    resource packs and shaders from its own game folder. Every file is downloaded from its official
+    and resource packs from its own game folder. Every file is downloaded from its official
     source (Modrinth) and checked against the hash in the pack before it is used. Running it again
     is safe: files that are already correct are skipped and mods the new pack dropped are removed.
     The player's own files (worlds, screenshots, extra packs, changed settings) are never touched.

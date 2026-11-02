@@ -17,7 +17,7 @@ from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
 
-# 26.3 logs joins as "System chat: NAME joined the game"; older servers left the prefix out. A renamed
+# 26.2 logs joins as "System chat: NAME joined the game"; older servers left the prefix out. A renamed
 # player shows as "NAME (formerly known as OLD) joined the game".
 JOIN = re.compile(r"\]: (?:System chat: )?([A-Za-z0-9_]{1,16})"
                   r"(?: \(formerly known as [A-Za-z0-9_]+\))? joined the game")

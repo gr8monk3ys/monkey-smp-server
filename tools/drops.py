@@ -123,7 +123,7 @@ METEOR_ROLLS = {"metal": (2, 3), "rock": (2, 3)}
 METEOR_LOOT_TABLE = f"{NS}:drops/meteor"
 
 # What a drop may sit on: the natural ground of the Overworld's surface, so never on someone's build.
-# (26.3's substrate_overworld is dirt, grass blocks, podzol, mycelium, mud and moss.)
+# (26.2's substrate_overworld is dirt, grass blocks, podzol, mycelium, mud and moss.)
 GROUND = ["#minecraft:substrate_overworld", "#minecraft:sand", "#minecraft:terracotta",
           "#minecraft:base_stone_overworld", "minecraft:gravel", "minecraft:clay", "minecraft:snow_block",
           "minecraft:sandstone", "minecraft:red_sandstone", "minecraft:calcite"]
@@ -293,7 +293,7 @@ def loot_table(loot: list = LOOT, rolls: dict = ROLLS) -> dict:
             if p != pool:
                 continue
             entry = {"type": "minecraft:item", "name": f"minecraft:{name}", "weight": weight}
-            if b > 1:   # 26.3's form: one "modifier" (older packs had a "functions" list)
+            if b > 1:   # 26.2's form: one "modifier" (older packs had a "functions" list)
                 entry["modifier"] = {"type": "minecraft:set_count",
                                      "count": {"type": "minecraft:uniform", "min": a, "max": b}}
             entries.append(entry)

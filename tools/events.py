@@ -33,9 +33,10 @@ STATE = "ev.state"       # #arena, #raid, #anarchy, #season_locked: what is runn
 STRENGTH = "ev.strength" # a player's real Strength level while they are in the arena
 CUP = "ev.cup"
 
-# The Strength SMP mod's scores (silvers_strength-smp-season-4). Its tick adds one attack_damage
-# modifier per level but only removes them at level 0, so setting a lower level by command has to
-# remove the higher modifiers too (`strength_sync`).
+# The Strength SMP mod's scores (silvers_strength-smp-season-5). Its tick adds one attack_damage
+# modifier for each level above 1 (buff-level_1 at level 2 up to buff-level_4 at level 5, the highest)
+# but only removes them at level 1 and below, so setting a lower level by command has to remove the
+# higher modifiers too (`strength_sync`).
 LEVEL = "Strength_SMP+Strength_Level"
 WITHDRAW = "Withdraw_Strength"
 STRENGTH_ITEM = '*[custom_data~{"Strength_SMP+Item":{}}]'
@@ -51,7 +52,7 @@ CORPSE_CLICK = "type=minecraft:interaction,tag=player_corpses.interaction"
 COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan",
           "purple", "blue", "brown", "green", "red", "black"]
 
-# Enchantment books: every 26.3 enchantment at its vanilla maximum, except what the rules ban (B2 enchanted
+# Enchantment books: every 26.2 enchantment at its vanilla maximum, except what the rules ban (B2 enchanted
 # maces, B9 Fire Aspect and Flame) and the curses, which are no prize.
 MAX_LEVEL = {
     "aqua_affinity": 1, "bane_of_arthropods": 5, "blast_protection": 4, "channeling": 1, "depth_strider": 3,
@@ -185,8 +186,8 @@ def arena_files() -> dict[str, str]:
             "donkey", "mule", "llama", "trader_llama")]}, indent=2)
     f[f"{fn}/strength_sync.mcfunction"] = lines(
         "# Removes the Strength mod's damage modifiers above the player's level; the mod adds the rest.",
-        *(f"attribute @s[scores={{{LEVEL}=..{n - 1}}}] minecraft:attack_damage modifier remove "
-          f"strength_smp:buff-level_{n}" for n in range(2, 6)),
+        *(f"attribute @s[scores={{{LEVEL}=..{n}}}] minecraft:attack_damage modifier remove "
+          f"strength_smp:buff-level_{n}" for n in range(1, 5)),
     )
     for point, prefix, what in (("lobby", "l", "the arena's entrance: players join here and leave to here"),
                                 ("pit", "p", "the waiting room inside: players arrive and respawn here")):
@@ -460,7 +461,7 @@ def book_files() -> dict[str, str]:
                       'lore=[{text:"Monkey SMP event reward, Season $(season)",color:"gold",italic:false}],'
                       'custom_data={monkey_event_book:{season:"$(season)"}}')
         f[f"{FN}/book/{ench}.mcfunction"] = lines(
-            f"# Macro {{season:\"I\"}}, run as the winner: one event book (B18), {ench} {level}.",
+            f"# Macro {{season:\"I\"}}, run as the winner: one event book, {ench} {level}.",
             f"$give @s minecraft:enchanted_book[{components}]",
         )
     return f

@@ -8,8 +8,8 @@
 enabled = true
 usePermission = false
 
-# Engine mode 3 sends fake ores everywhere ores could be, so x-ray shows noise. Tectonic's mountains go
-# above maxBlockHeight; the only ores up there are coal, iron and emerald. Sulfur Caves Plus ores (in
+# Engine mode 3 sends fake ores everywhere ores could be, so x-ray shows noise. Peaks can go above
+# maxBlockHeight; the only ores up there are coal, iron and emerald. Sulfur Caves Plus ores (in
 # `c:ores`) sit in sulfur and cinnabar, so those two are replacement blocks as well: otherwise the
 # only fake ores in a sulfur cave would be exactly where the real ones are.
 [overworld]
@@ -21,11 +21,12 @@ lavaObscures = false
 hiddenBlocks = ["#c:ores", "raw_copper_block", "raw_iron_block", "raw_gold_block", "!#antixray:hidden_only_ores"]
 replacementBlocks = ["#antixray:hidden_only_ores", "stone", "deepslate", "andesite", "calcite", "diorite", "dirt", "granite", "gravel", "sand", "tuff", "mossy_cobblestone", "obsidian", "clay", "infested_stone", "amethyst_block", "budding_amethyst", "chest", "sulfur", "cinnabar"]
 
-# Engine mode 1 swaps hidden blocks for netherrack (end stone in the End).
+# Engine mode 1 swaps hidden blocks for netherrack (end stone in the End). Amethyst Nether's terrain
+# and bedrock roof reach y 160, not vanilla's 128.
 [the_nether]
 enabled = true
 engineMode = 1
-maxBlockHeight = 128
+maxBlockHeight = 160
 updateRadius = 2
 lavaObscures = true
 hiddenBlocks = ["ancient_debris", "nether_quartz_ore", "nether_gold_ore", "gold_block", "gilded_blackstone",

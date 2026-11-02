@@ -93,15 +93,13 @@ What keeps it there:
   `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.
 - **Two patches in the Strength SMP mods** (docs/MAINTAINING.md lists them). Unpatched, they ran tens of
   thousands of commands per tick and went past Minecraft's limit of 65,536, which cut their effects off.
-- **Three mods from the shared mod list are left out**: Slabbed (alpha; about doubles the tick, and has an open
-  report of freezing servers on 26.3), The Sift (adds about 65% to the tick), and Amethyst Nether (replaces the
-  whole Nether, as Incendium does; its page lists them as incompatible). To add one anyway, drop its jar into
-  `server\mods` (and players into their mods folder): the installer leaves files it doesn't manage alone.
+- **Extras stay out of the pack.** To add a mod anyway, drop its jar into `server\mods` (and players into their
+  mods folder): the installer leaves files it doesn't manage alone.
 
 ## Before a big group joins
 
 - **Pre-generate the world.** Generating new terrain on the main thread is what drags the tick rate down when
-  many players explore at once, and Tectonic's tall terrain makes each chunk expensive. Generate out to the
+  many players explore at once. Generate out to the
   season's largest border (6000 wide, docs/SEASONS.md) plus the view distance, without changing the border: the
   `monkey-rules` pack sets the starting one (Rule 25) and the border acts grow it. With nobody online, in the
   server console: `chunky worldborder` (centres on the border, which is on spawn, not 0,0), `chunky radius 3200`
@@ -123,7 +121,7 @@ What keeps it there:
 |---|---|
 | `default` | normal play: parties and claims (Open Parties and Claims), voice chat |
 | `builder` | the same as `default` for now: an op switches a builder's game mode (below) |
-| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), x-ray alerts (MinerTrack), teleport to a spot (`ledger tp`), Ledger inspect/search/rollback/restore (not purge) |
+| `moderator` | + warn, mute, kick and ban with a reason (BanHammer), vanish, look into inventories and ender chests (InvView, look only), teleport to a spot (`ledger tp`), Ledger inspect/search/rollback/restore (not purge) |
 | `admin` | every mod's commands, including editing other players' inventories and IP bans; vanilla commands need op as well (below) |
 
 ```
@@ -207,17 +205,9 @@ broke or placed what, and who took what from a chest.
 
 **X-ray.** AntiXray hides ores and other valuables in what the server sends: a player can only see ores that touch
 air, water or lava, and x-ray mods, packs and F3+A see fake ores everywhere instead. The settings are in
-`server\config\antixray.toml`. Some x-ray gets past it (a cracked world seed; Distant Horizons' LODs if its
-server-side LODs are switched back on, below), so
-MinerTrack watches how people mine: someone who tunnels straight from one buried diamond or emerald vein to the
-next (or to ancient debris in the Nether) builds up a violation level (VL), and moderators get a chat alert at VL 2,
-4 and 5. It never kicks or bans; that's your call. `mtrack check NAME` shows a player's violations, `mtrack verbose`
-alerts you on every VL increase, `mtrack logs FILE.log` shows one of the daily logs (they're in
-`server\config\MinerTrack\logs`) and `mtrack reset NAME` clears a player you've cleared. Lucky players set it off
-too, so check before you act. Settings are in `server\config\MinerTrack\` (`config.yml`, plus one file per
-dimension in `Configuration\`). It only watches vanilla diamond, emerald and ancient debris; to watch a modded ore
-too, add its id (e.g. `sulfurcavesplus:sulfur_diamond_ore`) to `rare-ores` in that dimension's file and run
-`mtrack reload`.
+`server\config\antixray.toml`. Some x-ray gets past it (a cracked world seed, say), and since 3.0.0 nothing watches
+how people mine (MinerTrack isn't on the 26.2 mod list). For a suspected x-ray player, use Ledger: the diamond
+query under "Griefing" shows who mined what.
 
 The saved query for diamonds: every diamond ore broken in the last day, newest first (add `source:NAME` for one
 player, or change `after:1d` to `after:7d`):
@@ -256,12 +246,6 @@ lp group moderator permission set invview.command.inv true
 lp group moderator permission set invview.command.echest true
 lp group moderator permission set invview.can_modify false
 lp group admin permission set invview.can_modify true
-lp group moderator permission set minertrack.notify true
-lp group moderator permission set minertrack.check true
-lp group moderator permission set minertrack.verbose true
-lp group moderator permission set minertrack.logs true
-lp group moderator permission set minertrack.reset true
-lp group moderator permission set minertrack.help true
 ```
 
 Older rank files also hold `minecraft.command.*` nodes (builder's `gamemode`; moderator's `teleport`, `tp`,
@@ -277,46 +261,6 @@ lp group moderator permission unset minecraft.command.ban
 lp group moderator permission unset minecraft.command.kick
 lp group moderator permission unset minecraft.command.pardon
 ```
-
-## Distant Horizons and x-ray
-
-Distant Horizons runs on the server too: it builds the far-away terrain (LODs) from the real world and sends it to
-players, who keep it in their own `DistantHorizons.sqlite`. AntiXray only changes chunks, not LODs, so out of the
-box the LODs carry every real ore, buried or not, and anyone can read them out of that file. This was tested on
-26.3 with the client pack (October 2026):
-
-- **Default settings: leaks.** Of 32 ores read from a player's LOD file 140 to 270 blocks away, 31 were the real
-  block at that spot, 21 of them buried with no air, water or lava next to them.
-- **`maxGenerationRequestDistance` doesn't help.** Its lowest value still sends the 64 x 64 area the player is
-  standing in, with real ores, so walking around collects them anyway.
-- **The settings below: no leak.** The player only had LODs of chunks they had loaded themselves, and every buried
-  ore in them was one of AntiXray's fakes.
-
-So the server ships with them on, in `server\config\DistantHorizons.toml` (`defaults/config/DistantHorizons.toml`
-in the package; Distant Horizons fills in the rest of the file on the first start):
-
-```toml
-[server]
-	synchronizeOnLoad = false
-	enableRealTimeUpdates = false
-
-[common.worldGenerator]
-	generatorPlan = "DISABLED"
-```
-
-The cost: players no longer get distant terrain from the server, only LODs of what they have walked past, so the
-far view fills in slowly on a fresh world. It also takes Distant Horizons' world generation off the server's CPU.
-A server set up before this default keeps its old file: change it as in "Distant Horizons stops sending its own
-LODs" in `docs/LIVE.md`.
-
-To send server-built LODs again (only if ores in them stop mattering, say on a creative or event server), stop
-the server and put back Distant Horizons' own values: `synchronizeOnLoad = true`, `enableRealTimeUpdates = true`
-and `generatorPlan = "SURFACE_THEN_CHUNKS"`.
-
-The other way is Voxy with LOD Server Support (LSS) instead of Distant Horizons, which can scramble ores in what it
-sends (`xrayObfuscation = "auto"` in `server\config\lss-server-config.yaml`; not tested here). Keep the Distant
-Horizons settings above either way: the LSS client can also pull LODs from a Distant Horizons server, so changing
-the client pack alone doesn't close anything.
 
 ## Claims and parties
 
@@ -420,19 +364,6 @@ These configs ship in `package/monkey/defaults/` and are copied on start only wh
 edit on the server sticks. Stop the server before editing one. `tests/test_mod_defaults.py` keeps the shipped
 values.
 
-- **Carry On** (`server\config\carryon-common.json`). Sneak + right-click with empty hands picks up a block
-  entity (an enchanting table, a beehive with its bees, a sign and so on) or a passive mob. On top of Carry On's
-  own blacklist it can't lift anything that stores items: chests, trapped chests, copper chests, barrels,
-  shulker boxes, furnaces, smokers, blast furnaces, hoppers, dispensers, droppers, crafters, brewing stands,
-  decorated pots, shelves, chiseled bookshelves, lecterns and jukeboxes. Supply drops are chests; a carried
-  container would skip the raid rules' container checks and the arena's empty-inventory check; and Ledger
-  probably doesn't log a carried block (untested), so a container moved outside a claim could leave no trail.
-  Nor spawners (the owners decided on 27 October 2026 that they stay put, as in vanilla), trial spawners,
-  vaults, banners, beds, doors, players, Easy NPCs (the Guide and the Town Crier), text displays, markers and
-  interactions (the standings board), armor stands, item frames, chest and hopper minecarts or chest boats.
-  Open Parties and Claims applies to it like any other use: on a test server a non-member couldn't pick up a
-  spawner or a barrel inside someone else's claim, also during a Faction Raid. (Picking up animals couldn't be
-  driven with the test players, so that wasn't checked.)
 - **Loot Restock** (`server\lootrestock.properties`). A structure loot chest refills from its loot table 7 days
   after it was emptied, and only when it is completely empty. Barrels, item frames and trial vaults are left
   alone. Only ops can break a tracked loot chest. It tracks only chests opened while they still have a loot
@@ -447,23 +378,19 @@ values.
   the void. TNT can't break it, but pistons can push bedrock. A claim protects its bedrock from non-members like
   any block, and spawn protection covers spawn. The mod changes the bedrock block itself, so the Nether roof and
   the End's exit portal break the same way (only the Overworld floor was tried). Rules 44 to 46 cover the rest.
-- **Enchantment Disabler** (`server\config\enchantmentdisabler\config.toml`). It turns off all 17 of Dungeons and
-  Taverns' own enchantments (`nova_structures:*`) at the enchanting table, in loot and in villager trades, so
-  they come only from events (rule B18). Event books made with `/give` or the staff kits still work. On a test
-  server 0 of these enchantments turned up in the new structures' chests; the table and trades are off in the
-  config but weren't checked in game.
-- **Ultimate Minecarts** (`server\config\ultimate_minecarts_server.json`): linking carts with chains is on, and
-  minecarts don't hurt players or mobs they hit.
+- **Enchantment Disabler** ships with its own defaults, which disable nothing. Rule B18 and the Dungeons and
+  Taverns enchantments it covered left with that mod in 3.0.0.
 
 ## World generation
 
-The world is generated with Tectonic's Overkill settings (`server\config\tectonic.json`) plus Terralith,
-Incendium, Endercon (the End) and the structure mods. The seed is pinned in the manifest, so every copy of the
+The Overworld and the End generate as in vanilla 26.2 plus the mods' structures and biomes (Grand Capitals,
+Crazy Chambers, Streams Reflowing, Sulfur Caves Plus and others), and Amethyst Nether replaces the Nether: 160
+tall, with its own biomes as well as vanilla's, and fortresses and bastions still in it. The seed is pinned in the manifest, so every copy of the
 server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
 rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
 can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
 don't hand the server zip or a hosting bundle to players. A determined cheater can still work it out from the
-terrain with a seed cracker, which is one reason MinerTrack watches how people mine.
+terrain with a seed cracker.
 
 ## The live map
 
@@ -498,8 +425,8 @@ No need to fit it to the finale's shrinking border: the land outside was open al
 From Season II the border timer (`deploy/monkey-border.sh`, docs/LIVE.md) grows the border and does this fit,
 the reload and the purges by itself.
 
-The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. Incendium
-makes the Nether 192 tall, so BlueMap's own cut (y 90 to 127) left the bedrock roof covering the map. Where
+The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. Amethyst
+Nether's roof is near y 160, so BlueMap's own cut (y 90 to 127) would leave it covering the map. Where
 BlueMap wrote `world_the_nether.conf` itself, delete the `max-y: 127` line under `min-y: 90` in its second
 `render-mask` layer, then `bluemap reload` and `bluemap purge world_the_nether`.
 

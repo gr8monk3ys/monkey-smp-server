@@ -28,7 +28,7 @@ export default function Home() {
     <>
       <Canopy home="#" label="Sections" items={[
         { label: "The world", href: "#world" },
-        { label: "Gallery", href: "#gallery" },
+        ...(shots.length ? [{ label: "Gallery", href: "#gallery" }] : []),
         { label: "Join", href: "#join" },
         { label: "Pricing", href: "#pricing" },
         { label: "Rules", href: "#rules" },
@@ -74,8 +74,7 @@ export default function Home() {
 
         <section id="gallery">
           <h2>Out there</h2>
-          <p className="note">Screenshots from the server&apos;s own world, taken with the shaders that ship in the
-            pack.</p>
+          <p className="note">Screenshots from the server&apos;s own world.</p>
           <Place className="gallery">
             {shots.map((s, i) => (
               <figure key={s.name}>

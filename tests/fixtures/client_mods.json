@@ -18,25 +18,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "1OE8wbN0": {
-  "slug": "prism-lib",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "prism",
-  "environment": "client",
-  "ids": [
-   "prism"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "1VSGxqkt": {
   "slug": "block-runner",
   "modrinth": {
@@ -53,26 +34,6 @@
    "fabric-api",
    "forgeconfigapiport",
    "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "1bokaNcj": {
-  "slug": "xaeros-minimap",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "xaerominimap",
-  "environment": "*",
-  "ids": [
-   "xaerolib",
-   "xaerominimap"
-  ],
-  "depends": [
-   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -115,6 +76,9 @@
   "id": "morevillagers",
   "environment": "*",
   "ids": [
+   "cloth-basic-math",
+   "cloth-config",
+   "cloth-config2",
    "morevillagers"
   ],
   "depends": [
@@ -124,39 +88,18 @@
   "code": true,
   "blockstates": 11,
   "items": 10,
-  "entity_textures": 54
+  "entity_textures": 52
  },
- "24CSPS1E": {
-  "slug": "horse-expert",
+ "2VF6JEnL": {
+  "slug": "multi-key-bindings",
   "modrinth": {
    "client": "required",
-   "server": "required"
+   "server": "unsupported"
   },
-  "id": "horseexpert",
+  "id": "multi-key-bindings",
   "environment": "*",
   "ids": [
-   "horseexpert"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 1,
-  "entity_textures": 4
- },
- "2M01OLQq": {
-  "slug": "shulkerboxtooltip",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "shulkerboxtooltip",
-  "environment": "*",
-  "ids": [
-   "shulkerboxtooltip"
+   "multi-key-bindings"
   ],
   "depends": [
    "fabric-api"
@@ -210,6 +153,23 @@
   "items": 0,
   "entity_textures": 0
  },
+ "46n24c6r": {
+  "slug": "clear-fog",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "nofog",
+  "environment": "client",
+  "ids": [
+   "nofog"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "4I1XuqiY": {
   "slug": "entity-model-features",
   "modrinth": {
@@ -223,6 +183,104 @@
   ],
   "depends": [
    "entity_texture_features"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "4KWv7wbN": {
+  "slug": "chisel-reborn",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "chisel",
+  "environment": "*",
+  "ids": [
+   "chisel"
+  ],
+  "depends": [
+   "cryonicconfig",
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 1293,
+  "items": 1294,
+  "entity_textures": 0
+ },
+ "4q8UOK1d": {
+  "slug": "subtle-effects",
+  "modrinth": {
+   "client": "required",
+   "server": "optional"
+  },
+  "id": "subtle_effects",
+  "environment": "*",
+  "ids": [
+   "com_moulberry_mixinconstraints",
+   "subtle_effects"
+  ],
+  "depends": [
+   "fabric-api",
+   "fzzy_config"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 11
+ },
+ "57KDkTen": {
+  "slug": "nether-gold-ore-drops-raw-gold",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_nether_goldoredropsrawgold",
+  "environment": "*",
+  "ids": [
+   "mr_nether_goldoredropsrawgold"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "5OpfEtF0": {
+  "slug": "ride-together",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "ridetogether",
+  "environment": "*",
+  "ids": [
+   "ridetogether"
+  ],
+  "depends": [
+   "fabric-resource-loader-v1"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "5RO5CdUY": {
+  "slug": "repeatable-trial-vaults",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "repeatable_trial_vaults",
+  "environment": "*",
+  "ids": [
+   "repeatable_trial_vaults"
+  ],
+  "depends": [
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -265,44 +323,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "5kU1O8pw": {
-  "slug": "goat-expansion",
-  "modrinth": {
-   "client": "unsupported",
-   "server": "required"
-  },
-  "id": "goatexpansion",
-  "environment": "*",
-  "ids": [
-   "goatexpansion"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 1,
-  "items": 4,
-  "entity_textures": 0
- },
- "61PI8Hzj": {
-  "slug": "cosy-critters",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "cosycritters",
-  "environment": "client",
-  "ids": [
-   "cosycritters"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "65UyswbY": {
   "slug": "commandkeys",
   "modrinth": {
@@ -320,6 +340,25 @@
   "code": true,
   "blockstates": 0,
   "items": 0,
+  "entity_textures": 0
+ },
+ "68kWHuUF": {
+  "slug": "universal_ores",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "universal_ores",
+  "environment": "*",
+  "ids": [
+   "universal_ores"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 44,
+  "items": 44,
   "entity_textures": 0
  },
  "7F1sQUtH": {
@@ -341,136 +380,18 @@
   "items": 0,
   "entity_textures": 0
  },
- "7JTDDmRT": {
-  "slug": "dungeons-and-taverns-desert-temple-overhaul",
+ "7YjclEGc": {
+  "slug": "dynamic-lights",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_dungeons_andtavernsdeserttempleoverhaul",
+  "id": "dynamiclights",
   "environment": "*",
   "ids": [
-   "mr_dungeons_andtavernsdeserttempleoverhaul"
+   "dynamiclights"
   ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "7P86n6Vg": {
-  "slug": "walksylib",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "walksylib",
-  "environment": "client",
-  "ids": [
-   "walksylib"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "7tEfOcA7": {
-  "slug": "mezzconfig",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "mezz_config",
-  "environment": "*",
-  "ids": [
-   "mezz_config"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "8BmcQJ2H": {
-  "slug": "geckolib",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "geckolib",
-  "environment": "*",
-  "ids": [
-   "geckolib"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "8Dbnvm77": {
-  "slug": "dungeons-and-taverns-nether-fortress-overhaul",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_dungeons_andtavernsnetherfortressoverhaul",
-  "environment": "*",
-  "ids": [
-   "mr_dungeons_andtavernsnetherfortressoverhaul"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "8HLtNhbi": {
-  "slug": "playereactions",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "reactions",
-  "environment": "client",
-  "ids": [
-   "reactions"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "8Pq6Exn2": {
-  "slug": "packed-packs",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "packed_packs",
-  "environment": "client",
-  "ids": [
-   "fidgetz",
-   "packed_packs",
-   "packed_packs_api"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
+  "depends": [],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -495,62 +416,57 @@
   "items": 0,
   "entity_textures": 0
  },
- "8qVa1XCN": {
-  "slug": "lightoverlay",
+ "8kLBMwES": {
+  "slug": "rotten-flesh-to-leather",
   "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "light-overlay",
-  "environment": "client",
-  "ids": [
-   "light-overlay"
-  ],
-  "depends": [
-   "fabric-api",
-   "overlaylib",
-   "yet_another_config_lib_v3"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "9B9c6QcJ": {
-  "slug": "vehicle-upgrade",
-  "modrinth": {
-   "client": "required",
+   "client": "optional",
    "server": "required"
   },
-  "id": "vehicleupgrade",
+  "id": "mr_rotten_fleshtoleather",
   "environment": "*",
   "ids": [
-   "vehicleupgrade"
+   "mr_rotten_fleshtoleather"
   ],
   "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
+   "fabric-resource-loader-v0"
   ],
-  "code": true,
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
  },
- "9NM0dXub": {
-  "slug": "advancement-plaques",
+ "9EFaPoo8": {
+  "slug": "amethyst-nether",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_amethyst_nether",
+  "environment": "*",
+  "ids": [
+   "mr_amethyst_nether"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "9Pk89J3g": {
+  "slug": "justenoughbreeding",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "advancementplaques",
-  "environment": "client",
+  "id": "justenoughbreeding",
+  "environment": "*",
   "ids": [
-   "advancementplaques"
+   "justenoughbreeding"
   ],
   "depends": [
-   "fabric-api",
-   "iceberg"
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -602,19 +518,20 @@
   "items": 0,
   "entity_textures": 0
  },
- "9gNVPfzw": {
-  "slug": "minecraftcapes",
+ "9ggA4qiy": {
+  "slug": "stepitup",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "minecraftcapes",
+  "id": "stepitup",
   "environment": "*",
   "ids": [
-   "minecraftcapes"
+   "stepitup"
   ],
   "depends": [
-   "fabric-key-mapping-api-v1"
+   "cloth-config2",
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -656,6 +573,25 @@
    "cloth-config2"
   ],
   "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "A0W9tMly": {
+  "slug": "aitk",
+  "modrinth": {
+   "client": "unknown",
+   "server": "unknown"
+  },
+  "id": "aitk",
+  "environment": "*",
+  "ids": [
+   "aitk"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -707,87 +643,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "Ai97as0C": {
-  "slug": "ks-mace-trims",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_ks_macetrims",
-  "environment": "*",
-  "ids": [
-   "mr_ks_macetrims"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 1,
-  "entity_textures": 0
- },
- "AibBIVmj": {
-  "slug": "oneconfig",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "oneconfig",
-  "environment": "client",
-  "ids": [
-   "adventure-platform-fabric",
-   "ca_weblite_java-objc-bridge",
-   "com_electronwill_night-config_core",
-   "com_electronwill_night-config_json",
-   "com_electronwill_night-config_toml",
-   "com_electronwill_night-config_yaml",
-   "com_github_bawnorton_mixinsquared_mixinsquared-common",
-   "hypixel-mod-api",
-   "net_hypixel_hypixel-data",
-   "net_hypixel_mod-api",
-   "net_kyori_adventure-api",
-   "net_kyori_adventure-key",
-   "net_kyori_adventure-platform-api",
-   "net_kyori_adventure-platform-mod-shared",
-   "net_kyori_adventure-text-logger-slf4j",
-   "net_kyori_adventure-text-minimessage",
-   "net_kyori_adventure-text-serializer-ansi",
-   "net_kyori_adventure-text-serializer-commons",
-   "net_kyori_adventure-text-serializer-gson",
-   "net_kyori_adventure-text-serializer-json",
-   "net_kyori_adventure-text-serializer-plain",
-   "net_kyori_ansi",
-   "net_kyori_examination-api",
-   "net_kyori_examination-string",
-   "net_kyori_option",
-   "oneconfig",
-   "oneconfigbootstrap",
-   "oneconfigv1",
-   "org_commonmark_commonmark",
-   "org_polyfrost_oneconfig_commands",
-   "org_polyfrost_oneconfig_config",
-   "org_polyfrost_oneconfig_config-impl",
-   "org_polyfrost_oneconfig_events",
-   "org_polyfrost_oneconfig_hud",
-   "org_polyfrost_oneconfig_internal",
-   "org_polyfrost_oneconfig_notifications",
-   "org_polyfrost_oneconfig_poly-compose",
-   "org_polyfrost_oneconfig_ui",
-   "org_polyfrost_oneconfig_utils",
-   "org_yaml_snakeyaml"
-  ],
-  "depends": [
-   "compose-multiplatform",
-   "fabric-api",
-   "fabric-api-base",
-   "fabric-command-api-v2",
-   "fabric-language-kotlin"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "AihRqJiY": {
   "slug": "tnt-timer",
   "modrinth": {
@@ -798,47 +653,6 @@
   "environment": "*",
   "ids": [
    "mr_tnt_timer"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "B0g2vT6l": {
-  "slug": "rechiseled",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "rechiseled",
-  "environment": "*",
-  "ids": [
-   "rechiseled"
-  ],
-  "depends": [
-   "fabric-api",
-   "fusion",
-   "supermartijn642configlib",
-   "supermartijn642corelib"
-  ],
-  "code": true,
-  "blockstates": 3849,
-  "items": 3850,
-  "entity_textures": 0
- },
- "B7il7E9H": {
-  "slug": "trident-all-weather-channeling",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "trident_all_weather_channeling",
-  "environment": "*",
-  "ids": [
-   "trident_all_weather_channeling"
   ],
   "depends": [
    "fabric-resource-loader-v0"
@@ -867,25 +681,6 @@
   "items": 17,
   "entity_textures": 3
  },
- "BLG002oq": {
-  "slug": "better-craftables",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "better_craftables",
-  "environment": "*",
-  "ids": [
-   "better_craftables"
-  ],
-  "depends": [
-   "fabric-resource-loader-v1"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "BVzZfTc1": {
   "slug": "entitytexturefeatures",
   "modrinth": {
@@ -896,6 +691,47 @@
   "environment": "client",
   "ids": [
    "entity_texture_features"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "Bc9bwujS": {
+  "slug": "trample-no-more",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "tramplenomore",
+  "environment": "*",
+  "ids": [
+   "tramplenomore"
+  ],
+  "depends": [
+   "bookshelf",
+   "fabric-api",
+   "prickle"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "BdKIyOLe": {
+  "slug": "boat-item-view",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "boatiview",
+  "environment": "client",
+  "ids": [
+   "boatiview",
+   "cloth-basic-math",
+   "cloth-config",
+   "cloth-config2"
   ],
   "depends": [],
   "code": true,
@@ -923,21 +759,23 @@
   "items": 0,
   "entity_textures": 0
  },
- "BuWCQzqf": {
-  "slug": "hopo-better-underwater-ruins",
+ "CLgavC7x": {
+  "slug": "more-jukebox-noteblock-variants",
   "modrinth": {
-   "client": "optional",
+   "client": "required",
    "server": "required"
   },
-  "id": "hopobetterunderwaterruins",
+  "id": "quad-lolmjnv",
   "environment": "*",
   "ids": [
-   "hopobetterunderwaterruins"
+   "quad-lolmjnv"
   ],
-  "depends": [],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 24,
+  "items": 24,
   "entity_textures": 0
  },
  "CgGEe1h3": {
@@ -980,25 +818,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "DEvdqUh9": {
-  "slug": "silvers_strength-smp-season-4",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_silvers_strength_smpseason4",
-  "environment": "*",
-  "ids": [
-   "mr_silvers_strength_smpseason4"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "DIlqwRFH": {
   "slug": "fpsdisplay",
   "modrinth": {
@@ -1015,25 +834,6 @@
   ],
   "depends": [],
   "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "DNuNq5bb": {
-  "slug": "dungeons-and-taverns-ancient-city-overhaul",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_dungeons_andtavernsancientcityoverhaul",
-  "environment": "*",
-  "ids": [
-   "mr_dungeons_andtavernsancientcityoverhaul"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -1057,26 +857,24 @@
   "items": 0,
   "entity_textures": 0
  },
- "E0SdeAoH": {
-  "slug": "wakes-reforged",
+ "Dv9hvreZ": {
+  "slug": "many-more-banners",
   "modrinth": {
-   "client": "required",
+   "client": "optional",
    "server": "required"
   },
-  "id": "wakes",
-  "environment": "client",
+  "id": "mr_many_morebanners",
+  "environment": "*",
   "ids": [
-   "wakes"
+   "mr_many_morebanners"
   ],
   "depends": [
-   "baguettelib",
-   "fabric-api",
-   "forgeconfigapiport"
+   "fabric-resource-loader-v0"
   ],
-  "code": true,
+  "code": false,
   "blockstates": 0,
   "items": 0,
-  "entity_textures": 0
+  "entity_textures": 80
  },
  "E8egdGje": {
   "slug": "revault",
@@ -1137,6 +935,25 @@
   "items": 16,
   "entity_textures": 0
  },
+ "Effrh3ze": {
+  "slug": "better-smoke",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "bettersmoke",
+  "environment": "client",
+  "ids": [
+   "bettersmoke"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "EgugIDm8": {
   "slug": "mixson",
   "modrinth": {
@@ -1192,25 +1009,6 @@
   "items": 56,
   "entity_textures": 95
  },
- "EsAfCjCV": {
-  "slug": "appleskin",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "appleskin",
-  "environment": "*",
-  "ids": [
-   "appleskin"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "EwYg6C78": {
   "slug": "windy",
   "modrinth": {
@@ -1249,25 +1047,6 @@
   "blockstates": 35,
   "items": 146,
   "entity_textures": 363
- },
- "FGNYBAJ6": {
-  "slug": "more-armor-trims",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "more_armor_trims",
-  "environment": "*",
-  "ids": [
-   "more_armor_trims"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 13,
-  "entity_textures": 0
  },
  "FapP9XhG": {
   "slug": "crazy-chambers",
@@ -1330,78 +1109,21 @@
   "items": 0,
   "entity_textures": 0
  },
- "GG6Bb564": {
-  "slug": "smoothcamera",
+ "Go9Vr0TE": {
+  "slug": "reimagined-trims",
   "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "smoothcamera",
-  "environment": "*",
-  "ids": [
-   "smoothcamera"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "Gj6Yce3v": {
-  "slug": "sway",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "sway",
-  "environment": "*",
-  "ids": [
-   "sway"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "Guh4HXen": {
-  "slug": "items-displayed",
-  "modrinth": {
-   "client": "required",
+   "client": "optional",
    "server": "required"
   },
-  "id": "items_displayed",
+  "id": "mr_reimagined_trims",
   "environment": "*",
   "ids": [
-   "items_displayed"
+   "mr_reimagined_trims"
   ],
   "depends": [
-   "fabric-api"
+   "fabric-resource-loader-v0"
   ],
-  "code": true,
-  "blockstates": 75,
-  "items": 91,
-  "entity_textures": 18
- },
- "HEds12HI": {
-  "slug": "visualkeys",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "visualkeys",
-  "environment": "client",
-  "ids": [
-   "visualkeys"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -1436,16 +1158,20 @@
   "items": 0,
   "entity_textures": 0
  },
- "IUfpx2Js": {
-  "slug": "stepupagain2",
+ "Hf3Qz2H3": {
+  "slug": "superresolution",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "stepup",
+  "id": "super_resolution",
   "environment": "client",
   "ids": [
-   "stepup"
+   "com_electronwill_night-config_core",
+   "com_electronwill_night-config_toml",
+   "net_jodah_typetools",
+   "net_neoforged_bus",
+   "super_resolution"
   ],
   "depends": [
    "fabric-api"
@@ -1455,64 +1181,19 @@
   "items": 0,
   "entity_textures": 0
  },
- "IYY9Siz8": {
-  "slug": "jamlib",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "jamlib",
-  "environment": "*",
-  "ids": [
-   "jamlib"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "JS7W12Jd": {
-  "slug": "mob-civil-war",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "civil-war",
-  "environment": "*",
-  "ids": [
-   "civil-war"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "JuksLGBQ": {
-  "slug": "optigui",
+ "JHgf35QL": {
+  "slug": "nemos-inventory-sorting",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "optigui",
-  "environment": "client",
+  "id": "nemos_inventory_sorting",
+  "environment": "*",
   "ids": [
-   "optigui",
-   "org_apache_commons_commons-text",
-   "org_ini4j_ini4j"
+   "nemos_inventory_sorting"
   ],
   "depends": [
-   "fabric-events-interaction-v0",
-   "fabric-key-mapping-api-v1",
-   "fabric-language-kotlin",
-   "fabric-lifecycle-events-v1",
-   "fabric-networking-api-v1",
-   "fabric-resource-loader-v0"
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -1534,80 +1215,6 @@
    "fabric-api",
    "fzzy_config",
    "mixson"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "LBKcRJTu": {
-  "slug": "cinematic-zoom-fabric",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "cinematiczoom",
-  "environment": "client",
-  "ids": [
-   "cinematiczoom"
-  ],
-  "depends": [],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "LN9BxssP": {
-  "slug": "supermartijn642s-config-lib",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "supermartijn642configlib",
-  "environment": "*",
-  "ids": [
-   "supermartijn642configlib"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "M15Gwx1o": {
-  "slug": "silvers_strength-restrictions-season-4",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_silvers_strength_restrictionsseason4",
-  "environment": "*",
-  "ids": [
-   "mr_silvers_strength_restrictionsseason4"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "M1B8mLoH": {
-  "slug": "overlaylib",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "overlaylib",
-  "environment": "client",
-  "ids": [
-   "overlaylib"
-  ],
-  "depends": [
-   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -1656,103 +1263,19 @@
   "items": 0,
   "entity_textures": 0
  },
- "N6HQR33B": {
-  "slug": "ultimate_minecarts",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "ultimate_minecarts",
-  "environment": "*",
-  "ids": [
-   "ultimate_minecarts"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 1,
-  "items": 0,
-  "entity_textures": 5
- },
- "NFlNaUBA": {
-  "slug": "qraftys-end-villages",
+ "NzkisNaN": {
+  "slug": "unlimited-trading",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_qraftys_endvillages",
+  "id": "mr_unlimited_trading",
   "environment": "*",
   "ids": [
-   "mr_qraftys_endvillages"
+   "mr_unlimited_trading"
   ],
   "depends": [
    "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "NSLJJooQ": {
-  "slug": "worldedit-cui",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "worldeditcui",
-  "environment": "client",
-  "ids": [
-   "fabric-api-base",
-   "fabric-key-mapping-api-v1",
-   "fabric-lifecycle-events-v1",
-   "fabric-networking-api-v1",
-   "fabric-rendering-v1",
-   "fabric-resource-loader-v1",
-   "fabric-screen-api-v1",
-   "fabric-transitive-access-wideners-v1",
-   "worldeditcui",
-   "worldeditcui_protocol"
-  ],
-  "depends": [],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "NU7qMnLN": {
-  "slug": "players-drop-heads",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_players_dropheads",
-  "environment": "*",
-  "ids": [
-   "mr_players_dropheads"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "NcUtCpym": {
-  "slug": "xaeros-world-map",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "xaeroworldmap",
-  "environment": "*",
-  "ids": [
-   "xaerolib",
-   "xaeroworldmap"
-  ],
-  "depends": [
-   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -1788,25 +1311,6 @@
   "environment": "client",
   "ids": [
    "explosiveenhancement"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "OfKzpbRU": {
-  "slug": "baguettelib",
-  "modrinth": {
-   "client": "unsupported",
-   "server": "required"
-  },
-  "id": "baguettelib",
-  "environment": "*",
-  "ids": [
-   "baguettelib"
   ],
   "depends": [
    "fabric-api"
@@ -1878,66 +1382,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "PLAGcSFJ": {
-  "slug": "particle-effects",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "particle_effects",
-  "environment": "client",
-  "ids": [
-   "particle_effects"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "POQ2i9zu": {
-  "slug": "friends-and-foes",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "friendsandfoes",
-  "environment": "*",
-  "ids": [
-   "friendsandfoes"
-  ],
-  "depends": [
-   "fabric-api",
-   "resourcefullib"
-  ],
-  "code": true,
-  "blockstates": 24,
-  "items": 42,
-  "entity_textures": 74
- },
- "PZyzzLjz": {
-  "slug": "falling-leaves-plus",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "fallingleavesplus",
-  "environment": "client",
-  "ids": [
-   "fallingleavesplus"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "QAGBst4M": {
   "slug": "puzzles-lib",
   "modrinth": {
@@ -1958,16 +1402,35 @@
   "items": 0,
   "entity_textures": 0
  },
- "QIt10I7z": {
-  "slug": "dungeons-and-taverns-pillager-outpost-overhaul",
+ "Siqx9wiO": {
+  "slug": "extra-more-blocks",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "verticalslabs",
+  "environment": "*",
+  "ids": [
+   "verticalslabs"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 303,
+  "items": 303,
+  "entity_textures": 0
+ },
+ "T2Z3j2pD": {
+  "slug": "warden-with-loot",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_dungeons_andtavernspillageroutpostoverhaul",
+  "id": "mr_warden_withloot",
   "environment": "*",
   "ids": [
-   "mr_dungeons_andtavernspillageroutpostoverhaul"
+   "mr_warden_withloot"
   ],
   "depends": [
    "fabric-resource-loader-v0"
@@ -1977,41 +1440,58 @@
   "items": 0,
   "entity_textures": 0
  },
- "RLzHAoZe": {
-  "slug": "resourcify",
+ "T9FDHbY5": {
+  "slug": "statuseffecttimer",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "resourcify",
+  "id": "statuseffecttimer",
   "environment": "client",
   "ids": [
-   "resourcify"
+   "statuseffecttimer"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "TnOXNf5e": {
+  "slug": "peek",
+  "modrinth": {
+   "client": "required",
+   "server": "optional"
+  },
+  "id": "peek",
+  "environment": "*",
+  "ids": [
+   "fabric-api-base",
+   "fabric-networking-api-v1",
+   "fabric-rendering-v1",
+   "fabric-resource-loader-v1",
+   "peek"
   ],
   "depends": [
-   "fabric-language-kotlin",
-   "fabric-resource-loader-v0"
+   "fabric-lifecycle-events-v1"
   ],
   "code": true,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
  },
- "SJDzFJH7": {
-  "slug": "cirrus",
+ "TvL1V8O5": {
+  "slug": "norecipebook",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "cirrus",
+  "id": "norecipebook",
   "environment": "client",
   "ids": [
-   "cirrus"
+   "norecipebook"
   ],
-  "depends": [
-   "fabric-api",
-   "yet_another_config_lib_v3"
-  ],
+  "depends": [],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -2095,46 +1575,94 @@
   "items": 0,
   "entity_textures": 0
  },
- "VSNURh3q": {
-  "slug": "c2me-fabric",
+ "VNYXl8f7": {
+  "slug": "more-grindstone-variants",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "lolmgv",
+  "environment": "*",
+  "ids": [
+   "lolmgv"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 60,
+  "items": 59,
+  "entity_textures": 0
+ },
+ "VmxEUiAL": {
+  "slug": "silvers_strength-smp-season-5",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "c2me",
+  "id": "mr_silvers_strength_smpseason5",
   "environment": "*",
   "ids": [
-   "c2me",
-   "c2me-base",
-   "c2me-client-uncapvd",
-   "c2me-fixes-chunkio-threading-issues",
-   "c2me-fixes-general-threading-issues",
-   "c2me-fixes-worldgen-threading-issues",
-   "c2me-fixes-worldgen-vanilla-bugs",
-   "c2me-notickvd",
-   "c2me-opts-allocs",
-   "c2me-opts-chunkio",
-   "c2me-opts-math",
-   "c2me-opts-natives-math",
-   "c2me-opts-scheduling",
-   "c2me-opts-worldgen-general",
-   "c2me-opts-worldgen-vanilla",
-   "c2me-rewrites-chunk-serializer",
-   "c2me-rewrites-chunk-system",
-   "c2me-rewrites-chunkio",
-   "c2me-server-utils",
-   "c2me-threading-lighting",
-   "com_electronwill_night-config_core",
-   "com_electronwill_night-config_toml",
-   "com_github_ben-manes_caffeine_caffeine",
-   "com_ibm_async_asyncutil",
-   "io_reactivex_rxjava3_rxjava",
-   "mixinsquared",
-   "net_objecthunter_exp4j",
-   "org_jctools_jctools-core",
-   "org_reactivestreams_reactive-streams"
+   "mr_silvers_strength_smpseason5"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "W1TjtEQz": {
+  "slug": "simple-harvesting",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "simple_harvesting",
+  "environment": "*",
+  "ids": [
+   "simple_harvesting"
   ],
   "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "W2K5WNdH": {
+  "slug": "twod_projectiles",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "twod_projectiles",
+  "environment": "client",
+  "ids": [
+   "twod_projectiles"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "WQaxNzFg": {
+  "slug": "deimos",
+  "modrinth": {
+   "client": "optional",
+   "server": "optional"
+  },
+  "id": "deimos",
+  "environment": "*",
+  "ids": [
+   "deimos"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -2155,8 +1683,8 @@
    "fabric-api"
   ],
   "code": true,
-  "blockstates": 632,
-  "items": 632,
+  "blockstates": 612,
+  "items": 612,
   "entity_textures": 0
  },
  "Wb5oqrBJ": {
@@ -2176,20 +1704,20 @@
   "items": 0,
   "entity_textures": 0
  },
- "WeytAdLH": {
-  "slug": "bindcommands",
+ "WhbRG4iK": {
+  "slug": "fallingleaves",
   "modrinth": {
-   "client": "optional",
-   "server": "optional"
+   "client": "required",
+   "server": "unsupported"
   },
-  "id": "bind_cmd",
-  "environment": "*",
+  "id": "fallingleaves",
+  "environment": "client",
   "ids": [
-   "bind_cmd"
+   "fallingleaves"
   ],
   "depends": [
-   "fabric-api",
-   "modmenu"
+   "cloth-config",
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -2213,46 +1741,24 @@
   "items": 0,
   "entity_textures": 0
  },
- "XD7XOrAF": {
-  "slug": "overflowing-bars",
+ "XTAy8Fqs": {
+  "slug": "shield-banner-fix",
   "modrinth": {
    "client": "required",
-   "server": "unsupported"
-  },
-  "id": "overflowingbars",
-  "environment": "client",
-  "ids": [
-   "overflowingbars"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "XpzGz7KD": {
-  "slug": "elytra-trims",
-  "modrinth": {
-   "client": "optional",
    "server": "optional"
   },
-  "id": "elytratrims",
+  "id": "shieldbannerfix",
   "environment": "*",
   "ids": [
-   "elytratrims"
+   "shieldbannerfix"
   ],
   "depends": [
-   "fabric-api",
-   "fabric-language-kotlin"
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
   "items": 0,
-  "entity_textures": 0
+  "entity_textures": 60
  },
  "Y8uFrUil": {
   "slug": "ukulib",
@@ -2271,30 +1777,6 @@
   ],
   "depends": [
    "fabric-api-base"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "YL57xq9U": {
-  "slug": "iris",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "iris",
-  "environment": "client",
-  "ids": [
-   "fabric-api-base",
-   "fabric-key-mapping-api-v1",
-   "io_github_douira_glsl-transformer",
-   "iris",
-   "org_anarres_jcpp",
-   "org_antlr_antlr4-runtime"
-  ],
-  "depends": [
-   "sodium"
   ],
   "code": true,
   "blockstates": 0,
@@ -2360,45 +1842,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "aC3cM3Vq": {
-  "slug": "mouse-tweaks",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "mousetweaks",
-  "environment": "client",
-  "ids": [
-   "mousetweaks"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "aEK1KhsC": {
-  "slug": "full-brightness-toggle",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "fullbrightnesstoggle",
-  "environment": "*",
-  "ids": [
-   "fullbrightnesstoggle"
-  ],
-  "depends": [
-   "collective",
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "aKeMRgHX": {
   "slug": "random-mob-sizes-dp",
   "modrinth": {
@@ -2454,64 +1897,23 @@
   "items": 0,
   "entity_textures": 0
  },
- "ahTPKYtE": {
-  "slug": "armored-foes",
+ "bRFWnJ87": {
+  "slug": "animal_feeding_trough",
   "modrinth": {
    "client": "required",
    "server": "required"
   },
-  "id": "armoredfoes",
+  "id": "animal_feeding_trough",
   "environment": "*",
   "ids": [
-   "armoredfoes"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "ba5MV2CF": {
-  "slug": "mc2-interactive-foliage",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "mc2_interactivefoliage",
-  "environment": "*",
-  "ids": [
-   "mc2_interactivefoliage"
-  ],
-  "depends": [
-   "fabric-api",
-   "sway"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "bi0HAGC0": {
-  "slug": "betternetherportals",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "better_nether_portals",
-  "environment": "*",
-  "ids": [
-   "better_nether_portals"
+   "animal_feeding_trough"
   ],
   "depends": [
    "fabric-api"
   ],
   "code": true,
-  "blockstates": 2,
-  "items": 0,
+  "blockstates": 1,
+  "items": 1,
   "entity_textures": 0
  },
  "bppzc3HJ": {
@@ -2534,63 +1936,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "btPzz1Xc": {
-  "slug": "craftsense",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "craftsense",
-  "environment": "*",
-  "ids": [
-   "craftsense"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "c8slFMT1": {
-  "slug": "better-capes",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "bettercapes",
-  "environment": "client",
-  "ids": [
-   "bettercapes"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "cCStmVIN": {
-  "slug": "banner-flags",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_banner_flags",
-  "environment": "*",
-  "ids": [
-   "mr_banner_flags"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "cVNW5lr6": {
   "slug": "item-highlighter",
   "modrinth": {
@@ -2605,25 +1950,6 @@
   "depends": [
    "fabric-api",
    "iceberg"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "codAaoxh": {
-  "slug": "midnightlib",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "midnightlib",
-  "environment": "*",
-  "ids": [
-   "midnightlib"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
   ],
   "code": true,
   "blockstates": 0,
@@ -2649,21 +1975,22 @@
   "items": 0,
   "entity_textures": 0
  },
- "d7LHtwd7": {
-  "slug": "name-tag-upgrade",
+ "dlNu0RQY": {
+  "slug": "wakes",
   "modrinth": {
    "client": "required",
-   "server": "required"
+   "server": "unsupported"
   },
-  "id": "nametagupgrade",
-  "environment": "*",
+  "id": "wakes",
+  "environment": "client",
   "ids": [
-   "nametagupgrade"
+   "com_github_jdiemke_delaunay-triangulator_delaunaytriangulator",
+   "midnightlib",
+   "wakes"
   ],
   "depends": [
    "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
+   "fabric-resource-loader-v0"
   ],
   "code": true,
   "blockstates": 0,
@@ -2676,10 +2003,10 @@
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_advancements_plus",
+  "id": "mr_advancements",
   "environment": "*",
   "ids": [
-   "mr_advancements_plus"
+   "mr_advancements"
   ],
   "depends": [
    "fabric-resource-loader-v0"
@@ -2744,87 +2071,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "eHe8QhtD": {
-  "slug": "compose-multiplatform",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "compose-multiplatform",
-  "environment": "client",
-  "ids": [
-   "androidx_annotation_annotation-jvm",
-   "androidx_arch_core_core-common",
-   "androidx_collection_collection-jvm",
-   "androidx_compose_runtime_runtime-annotation-jvm",
-   "androidx_compose_runtime_runtime-desktop",
-   "androidx_compose_runtime_runtime-retain-desktop",
-   "androidx_compose_runtime_runtime-saveable-desktop",
-   "androidx_lifecycle_lifecycle-common-jvm",
-   "androidx_lifecycle_lifecycle-runtime-compose-desktop",
-   "androidx_lifecycle_lifecycle-runtime-desktop",
-   "androidx_lifecycle_lifecycle-viewmodel-compose-desktop",
-   "androidx_lifecycle_lifecycle-viewmodel-desktop",
-   "androidx_lifecycle_lifecycle-viewmodel-savedstate-desktop",
-   "androidx_navigation_navigation-common-desktop",
-   "androidx_navigation_navigation-runtime-desktop",
-   "androidx_navigationevent_navigationevent-compose-desktop",
-   "androidx_navigationevent_navigationevent-desktop",
-   "androidx_savedstate_savedstate-compose-desktop",
-   "androidx_savedstate_savedstate-desktop",
-   "compose-multiplatform",
-   "org_jetbrains_androidx_navigation_navigation-common-desktop",
-   "org_jetbrains_androidx_navigation_navigation-compose-desktop",
-   "org_jetbrains_androidx_navigation_navigation-runtime-desktop",
-   "org_jetbrains_androidx_navigationevent_navigatione7609bcf9907a44",
-   "org_jetbrains_compose_animation_animation-core-desktop",
-   "org_jetbrains_compose_animation_animation-desktop",
-   "org_jetbrains_compose_foundation_foundation-desktop",
-   "org_jetbrains_compose_foundation_foundation-layout-desktop",
-   "org_jetbrains_compose_material_material-desktop",
-   "org_jetbrains_compose_material_material-ripple-desktop",
-   "org_jetbrains_compose_ui_ui-backhandler-desktop",
-   "org_jetbrains_compose_ui_ui-desktop",
-   "org_jetbrains_compose_ui_ui-geometry-desktop",
-   "org_jetbrains_compose_ui_ui-graphics-desktop",
-   "org_jetbrains_compose_ui_ui-text-desktop",
-   "org_jetbrains_compose_ui_ui-tooling-preview-desktop",
-   "org_jetbrains_compose_ui_ui-unit-desktop",
-   "org_jetbrains_compose_ui_ui-util-desktop",
-   "org_jetbrains_runtime_jbr-api",
-   "org_jetbrains_skiko_skiko-awt",
-   "org_jetbrains_skiko_skiko-awt-runtime-linux-arm64",
-   "org_jetbrains_skiko_skiko-awt-runtime-linux-x64",
-   "org_jetbrains_skiko_skiko-awt-runtime-macos-arm64",
-   "org_jetbrains_skiko_skiko-awt-runtime-macos-x64",
-   "org_jetbrains_skiko_skiko-awt-runtime-windows-x64",
-   "org_jspecify_jspecify"
-  ],
-  "depends": [
-   "fabric-language-kotlin"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "eXts2L7r": {
-  "slug": "placeholder-api",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "placeholder-api",
-  "environment": "*",
-  "ids": [
-   "placeholder-api"
-  ],
-  "depends": [],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "fALzjamp": {
   "slug": "chunky",
   "modrinth": {
@@ -2837,63 +2083,6 @@
    "chunky"
   ],
   "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "fPetb5Kh": {
-  "slug": "natures-compass",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "naturescompass",
-  "environment": "*",
-  "ids": [
-   "naturescompass"
-  ],
-  "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 1,
-  "entity_textures": 0
- },
- "fQEb0iXm": {
-  "slug": "krypton",
-  "modrinth": {
-   "client": "optional",
-   "server": "optional"
-  },
-  "id": "krypton",
-  "environment": "*",
-  "ids": [
-   "com_velocitypowered_velocity-native",
-   "krypton"
-  ],
-  "depends": [],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "fYAofsi6": {
-  "slug": "smaller-nether-portals",
-  "modrinth": {
-   "client": "unsupported",
-   "server": "required"
-  },
-  "id": "smallernetherportals",
-  "environment": "*",
-  "ids": [
-   "smallernetherportals"
-  ],
-  "depends": [
-   "collective",
    "fabric-api"
   ],
   "code": true,
@@ -2918,26 +2107,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "gF3BGWvG": {
-  "slug": "open-parties-and-claims",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "openpartiesandclaims",
-  "environment": "*",
-  "ids": [
-   "openpartiesandclaims"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "gvQqBUqZ": {
   "slug": "lithium",
   "modrinth": {
@@ -2953,6 +2122,59 @@
   "code": true,
   "blockstates": 0,
   "items": 0,
+  "entity_textures": 0
+ },
+ "gvl7lVcV": {
+  "slug": "ping-view",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "pingview",
+  "environment": "client",
+  "ids": [
+   "pingview"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "h3XWIuzM": {
+  "slug": "dark-loading-screen",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "dark-loading-screen",
+  "environment": "client",
+  "ids": [
+   "dark-loading-screen"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "hCf7CjRg": {
+  "slug": "colorful-trims",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_colorful_trims",
+  "environment": "*",
+  "ids": [
+   "mr_colorful_trims"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 29,
   "entity_textures": 0
  },
  "hYykXjDp": {
@@ -2988,10 +2210,8 @@
   "id": "player_animation_library",
   "environment": "*",
   "ids": [
+   "com_zigythebird_mochafloats",
    "org_redlance_common-utils_services",
-   "org_redlance_mochafloats_lexer",
-   "org_redlance_mochafloats_parser",
-   "org_redlance_mochafloats_runtime",
    "player_animation_library"
   ],
   "depends": [
@@ -3003,24 +2223,44 @@
   "items": 0,
   "entity_textures": 0
  },
- "iLlwyhcZ": {
-  "slug": "moogs-glow-up",
+ "hvqcuDMT": {
+  "slug": "rp-renames",
   "modrinth": {
    "client": "required",
-   "server": "required"
+   "server": "unsupported"
   },
-  "id": "glow_up",
-  "environment": "*",
+  "id": "rprenames",
+  "environment": "client",
   "ids": [
-   "glow_up"
+   "rprenames"
   ],
   "depends": [
    "fabric-api"
   ],
   "code": true,
-  "blockstates": 4,
-  "items": 3,
-  "entity_textures": 24
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "iBGoeZ40": {
+  "slug": "morefrogs",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "morefrogs",
+  "environment": "*",
+  "ids": [
+   "dungeonconfig",
+   "morefrogs"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 6,
+  "items": 11,
+  "entity_textures": 28
  },
  "iltKD9qU": {
   "slug": "underlay",
@@ -3034,26 +2274,6 @@
    "underlay"
   ],
   "depends": [
-   "fabric-api"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "j5LquiGA": {
-  "slug": "naturally-charged-creepers",
-  "modrinth": {
-   "client": "unsupported",
-   "server": "required"
-  },
-  "id": "naturallychargedcreepers",
-  "environment": "*",
-  "ids": [
-   "naturallychargedcreepers"
-  ],
-  "depends": [
-   "collective",
    "fabric-api"
   ],
   "code": true,
@@ -3097,19 +2317,19 @@
   "items": 0,
   "entity_textures": 0
  },
- "joEfVgkn": {
-  "slug": "carry-on",
+ "jxeW9Fvw": {
+  "slug": "glowing-glow-squids",
   "modrinth": {
-   "client": "required",
+   "client": "optional",
    "server": "required"
   },
-  "id": "carryon",
+  "id": "mr_glowing_glowsquids",
   "environment": "*",
   "ids": [
-   "carryon"
+   "mr_glowing_glowsquids"
   ],
   "depends": [
-   "fabric-api"
+   "fabric-resource-loader-v0"
   ],
   "code": true,
   "blockstates": 0,
@@ -3134,19 +2354,78 @@
   "items": 0,
   "entity_textures": 0
  },
- "kFU5UCQz": {
-  "slug": "picture-mode",
+ "kB56GtWA": {
+  "slug": "just-enough-professions-jep",
+  "modrinth": {
+   "client": "required",
+   "server": "optional"
+  },
+  "id": "justenoughprofessions",
+  "environment": "*",
+  "ids": [
+   "justenoughprofessions"
+  ],
+  "depends": [
+   "fabric-api",
+   "jei"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "kIhxG5zE": {
+  "slug": "armor-trim-item-fix",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "picturemode",
-  "environment": "*",
+  "id": "armortrimitemfix",
+  "environment": "client",
   "ids": [
-   "picturemode"
+   "armortrimitemfix"
   ],
   "depends": [
    "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "kcoiKSkz": {
+  "slug": "brighter",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "brighter",
+  "environment": "client",
+  "ids": [
+   "brighter"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "kepjj2sy": {
+  "slug": "shoulder-surfing-reloaded",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "shouldersurfing",
+  "environment": "client",
+  "ids": [
+   "shouldersurfing"
+  ],
+  "depends": [
+   "fabric-api",
+   "forgeconfigapiport"
   ],
   "code": true,
   "blockstates": 0,
@@ -3193,26 +2472,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "lNDRiXkY": {
-  "slug": "variants-and-ventures",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "variantsandventures",
-  "environment": "*",
-  "ids": [
-   "variantsandventures"
-  ],
-  "depends": [
-   "fabric-api",
-   "resourcefullib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 4,
-  "entity_textures": 16
- },
  "lO3s8hjs": {
   "slug": "bridging-mod",
   "modrinth": {
@@ -3233,47 +2492,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "lOOpEntO": {
-  "slug": "attributefix",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "attributefix",
-  "environment": "*",
-  "ids": [
-   "attributefix"
-  ],
-  "depends": [
-   "fabric-api",
-   "prickle"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "leFnAa7O": {
-  "slug": "village-masquerade",
-  "modrinth": {
-   "client": "required",
-   "server": "required"
-  },
-  "id": "villagemasquerade",
-  "environment": "*",
-  "ids": [
-   "villagemasquerade"
-  ],
-  "depends": [
-   "fabric-api",
-   "forgeconfigapiport",
-   "puzzleslib"
-  ],
-  "code": true,
-  "blockstates": 6,
-  "items": 54,
-  "entity_textures": 48
- },
  "mOgUt4GM": {
   "slug": "modmenu",
   "modrinth": {
@@ -3288,30 +2506,10 @@
    "fabric-lifecycle-events-v1",
    "fabric-resource-loader-v1",
    "fabric-screen-api-v1",
-   "modmenu",
-   "placeholder-api"
+   "modmenu"
   ],
   "depends": [],
   "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "n2UxUWXF": {
-  "slug": "silvers-datapack-tags-library",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_silvers_datapacktagslibrary",
-  "environment": "*",
-  "ids": [
-   "mr_silvers_datapacktagslibrary"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -3355,6 +2553,61 @@
   "items": 0,
   "entity_textures": 0
  },
+ "oEhQIkOs": {
+  "slug": "cryonicconfig",
+  "modrinth": {
+   "client": "optional",
+   "server": "optional"
+  },
+  "id": "cryonicconfig",
+  "environment": "*",
+  "ids": [
+   "cryonicconfig"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "oLS8HdJ1": {
+  "slug": "streams-reflowing",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "streamsreflowing",
+  "environment": "*",
+  "ids": [
+   "streamsreflowing"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 1,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "ofDka6PS": {
+  "slug": "spawn-animations-compats",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_spawn_animationscompats",
+  "environment": "*",
+  "ids": [
+   "mr_spawn_animationscompats"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "ohNO6lps": {
   "slug": "forge-config-api-port",
   "modrinth": {
@@ -3371,23 +2624,6 @@
   "depends": [
    "fabric-api"
   ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "orXAsira": {
-  "slug": "cape-provider",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "cape-provider",
-  "environment": "client",
-  "ids": [
-   "cape-provider"
-  ],
-  "depends": [],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -3410,6 +2646,25 @@
   "code": true,
   "blockstates": 0,
   "items": 0,
+  "entity_textures": 0
+ },
+ "pLsa93bN": {
+  "slug": "more-lectern-variants",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "lolmlv",
+  "environment": "*",
+  "ids": [
+   "lolmlv"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 11,
+  "items": 11,
   "entity_textures": 0
  },
  "pXo36Na4": {
@@ -3443,8 +2698,6 @@
    "com_plasmoverse_concentus",
    "emotecraft",
    "org_redlance_emotecraftlibrary_game-sdk",
-   "org_redlance_platformtools_common",
-   "org_redlance_platformtools_referer",
    "translationfallbacks"
   ],
   "depends": [
@@ -3456,6 +2709,61 @@
    "fabric-sound-api-v1",
    "player_animation_library"
   ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "pcN1B3cK": {
+  "slug": "banner-bedsheets",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_banner_bedsheets",
+  "environment": "*",
+  "ids": [
+   "mr_banner_bedsheets"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "pmzEEeIf": {
+  "slug": "silvers_strength-restrictions-season-5",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_silvers_strength_restrictionsseason5",
+  "environment": "*",
+  "ids": [
+   "mr_silvers_strength_restrictionsseason5"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "ppMUvsIg": {
+  "slug": "leaf-me-alone",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "leafmealone",
+  "environment": "*",
+  "ids": [
+   "leafmealone"
+  ],
+  "depends": [],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -3484,16 +2792,16 @@
   "items": 0,
   "entity_textures": 0
  },
- "rOUBggPv": {
-  "slug": "supermartijn642s-core-lib",
+ "rM6o3WUr": {
+  "slug": "craftable-bell",
   "modrinth": {
-   "client": "required",
+   "client": "optional",
    "server": "required"
   },
-  "id": "supermartijn642corelib",
+  "id": "craftablebell",
   "environment": "*",
   "ids": [
-   "supermartijn642corelib"
+   "craftablebell"
   ],
   "depends": [
    "fabric-api"
@@ -3503,16 +2811,16 @@
   "items": 0,
   "entity_textures": 0
  },
- "rYocd2LE": {
-  "slug": "dungeons-and-taverns-stronghold-overhaul",
+ "raz4aMjT": {
+  "slug": "craftable-chainmail-armor-by-sumbaii999",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_dungeons_andtavernsstrongholdoverhaul",
+  "id": "mr_craftable_chainmailarmorbysumbaii999",
   "environment": "*",
   "ids": [
-   "mr_dungeons_andtavernsstrongholdoverhaul"
+   "mr_craftable_chainmailarmorbysumbaii999"
   ],
   "depends": [
    "fabric-resource-loader-v0"
@@ -3560,64 +2868,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "smUP7V3r": {
-  "slug": "durability-tooltip",
-  "modrinth": {
-   "client": "required",
-   "server": "unsupported"
-  },
-  "id": "durabilitytooltip",
-  "environment": "*",
-  "ids": [
-   "durabilitytooltip"
-  ],
-  "depends": [
-   "fabric-api",
-   "supermartijn642configlib"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "t0YT91nL": {
-  "slug": "epic-structures-dungeons",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_epic_structuresdungeons",
-  "environment": "*",
-  "ids": [
-   "mr_epic_structuresdungeons"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "tpehi7ww": {
-  "slug": "dungeons-and-taverns",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_dungeons_andtaverns",
-  "environment": "*",
-  "ids": [
-   "mr_dungeons_andtaverns"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 5,
-  "entity_textures": 0
- },
  "u6dRKJwZ": {
   "slug": "jei",
   "modrinth": {
@@ -3638,63 +2888,16 @@
   "items": 0,
   "entity_textures": 0
  },
- "uCdwusMi": {
-  "slug": "distanthorizons",
+ "uEfK2CXF": {
+  "slug": "just-enough-resources-jer",
   "modrinth": {
-   "client": "optional",
-   "server": "optional"
+   "client": "required",
+   "server": "unsupported"
   },
-  "id": "distanthorizons",
+  "id": "jeresources",
   "environment": "*",
   "ids": [
-   "distanthorizons",
-   "fabric-api",
-   "fabric-api-base",
-   "fabric-api-lookup-api-v1",
-   "fabric-biome-api-v1",
-   "fabric-block-api-v1",
-   "fabric-block-getter-api-v2",
-   "fabric-client-gametest-api-v1",
-   "fabric-client-tags-api-v1",
-   "fabric-command-api-v2",
-   "fabric-content-registries-v0",
-   "fabric-convention-tags-v2",
-   "fabric-crash-report-info-v1",
-   "fabric-creative-tab-api-v1",
-   "fabric-data-attachment-api-v1",
-   "fabric-data-generation-api-v1",
-   "fabric-debug-api-v1",
-   "fabric-dimensions-v1",
-   "fabric-entity-events-v1",
-   "fabric-events-interaction-v0",
-   "fabric-game-rule-api-v1",
-   "fabric-item-api-v1",
-   "fabric-key-mapping-api-v1",
-   "fabric-lifecycle-events-v1",
-   "fabric-loot-api-v3",
-   "fabric-menu-api-v1",
-   "fabric-message-api-v1",
-   "fabric-model-loading-api-v1",
-   "fabric-networking-api-v1",
-   "fabric-object-builder-api-v1",
-   "fabric-particles-v1",
-   "fabric-permission-api-v1",
-   "fabric-recipe-api-v1",
-   "fabric-registry-sync-v0",
-   "fabric-renderer-api-v1",
-   "fabric-renderer-indigo",
-   "fabric-rendering-fluids-v1",
-   "fabric-rendering-v1",
-   "fabric-resource-conditions-api-v1",
-   "fabric-resource-loader-v0",
-   "fabric-resource-loader-v1",
-   "fabric-screen-api-v1",
-   "fabric-serialization-api-v1",
-   "fabric-sound-api-v1",
-   "fabric-tag-api-v1",
-   "fabric-transfer-api-v1",
-   "fabric-transitive-access-wideners-v1",
-   "lod"
+   "jeresources"
   ],
   "depends": [],
   "code": true,
@@ -3722,24 +2925,23 @@
   "items": 2,
   "entity_textures": 0
  },
- "uWsLN21d": {
-  "slug": "better-client-enc",
+ "uUn9PlWe": {
+  "slug": "cleanf3",
   "modrinth": {
    "client": "required",
    "server": "unsupported"
   },
-  "id": "better_client",
-  "environment": "*",
+  "id": "cleanf3",
+  "environment": "client",
   "ids": [
-   "better_client",
-   "mixson"
+   "cleanf3"
   ],
   "depends": [
    "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
-  "items": 1,
+  "items": 0,
   "entity_textures": 0
  },
  "uXXizFIs": {
@@ -3759,18 +2961,39 @@
   "items": 0,
   "entity_textures": 0
  },
- "vO9IpKuK": {
-  "slug": "fresh-armor-bar",
+ "ua9u8yK9": {
+  "slug": "craft-horse-armor",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_craft_horsearmor",
+  "environment": "*",
+  "ids": [
+   "mr_craft_horsearmor"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "uy4Cnpcm": {
+  "slug": "bookshelf-lib",
   "modrinth": {
    "client": "required",
-   "server": "unsupported"
+   "server": "required"
   },
-  "id": "fresh-armor-bar",
-  "environment": "client",
+  "id": "bookshelf",
+  "environment": "*",
   "ids": [
-   "fresh-armor-bar"
+   "bookshelf"
   ],
-  "depends": [],
+  "depends": [
+   "fabric-api"
+  ],
   "code": true,
   "blockstates": 0,
   "items": 0,
@@ -3814,21 +3037,41 @@
   "items": 2,
   "entity_textures": 3
  },
- "wBo7DRiB": {
-  "slug": "silvers_effects-library",
+ "vz3NiXrd": {
+  "slug": "bat-membrane",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "mr_silvers_effects_library",
+  "id": "bat_membrane",
   "environment": "*",
   "ids": [
-   "mr_silvers_effects_library"
+   "bat_membrane"
   ],
   "depends": [
    "fabric-resource-loader-v0"
   ],
   "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "wF189hn9": {
+  "slug": "ukus-armor-hud",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "ukus-armor-hud",
+  "environment": "client",
+  "ids": [
+   "ukus-armor-hud"
+  ],
+  "depends": [
+   "fabric-resource-loader-v1",
+   "ukulib"
+  ],
+  "code": true,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -3855,17 +3098,26 @@
   "items": 0,
   "entity_textures": 0
  },
- "wnEe9KBa": {
-  "slug": "vmp-fabric",
+ "xGdtZczs": {
+  "slug": "polymer",
   "modrinth": {
    "client": "optional",
    "server": "required"
   },
-  "id": "vmp",
+  "id": "polymer-bundled",
   "environment": "*",
   "ids": [
-   "com_ibm_async_asyncutil",
-   "vmp"
+   "polymer-autohost",
+   "polymer-blocks",
+   "polymer-bundled",
+   "polymer-common",
+   "polymer-core",
+   "polymer-networking",
+   "polymer-registry-sync-manipulator",
+   "polymer-resource-pack",
+   "polymer-resource-pack-extras",
+   "polymer-sound-patcher",
+   "polymer-virtual-entity"
   ],
   "depends": [],
   "code": true,
@@ -3873,38 +3125,19 @@
   "items": 0,
   "entity_textures": 0
  },
- "wr1BCv8H": {
-  "slug": "endercon",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_endercon",
-  "environment": "*",
-  "ids": [
-   "mr_endercon"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "x02cBj9Y": {
-  "slug": "status-effect-bars",
+ "xQU6E1ee": {
+  "slug": "distracting-trims",
   "modrinth": {
    "client": "required",
-   "server": "unsupported"
+   "server": "required"
   },
-  "id": "status-effect-bars",
-  "environment": "client",
+  "id": "distractingtrims",
+  "environment": "*",
   "ids": [
-   "status-effect-bars"
+   "distractingtrims"
   ],
   "depends": [
-   "cloth-config2"
+   "fabric-api"
   ],
   "code": true,
   "blockstates": 0,
@@ -3948,23 +3181,23 @@
   "items": 0,
   "entity_textures": 0
  },
- "yIerZIBi": {
-  "slug": "fair-fletching",
+ "yM3Gl0Pb": {
+  "slug": "more-loom-variants",
   "modrinth": {
    "client": "required",
    "server": "required"
   },
-  "id": "fair-fletching",
+  "id": "lolmlmv",
   "environment": "*",
   "ids": [
-   "fair-fletching"
+   "lolmlmv"
   ],
   "depends": [
    "fabric-api"
   ],
   "code": true,
-  "blockstates": 0,
-  "items": 0,
+  "blockstates": 11,
+  "items": 11,
   "entity_textures": 0
  },
  "yTSyrZpM": {
@@ -3986,61 +3219,21 @@
   "items": 0,
   "entity_textures": 0
  },
- "yXAvIk0x": {
-  "slug": "scribble",
+ "yxIf0Dct": {
+  "slug": "too-cheap",
   "modrinth": {
-   "client": "required",
-   "server": "unsupported"
+   "client": "optional",
+   "server": "required"
   },
-  "id": "scribble",
-  "environment": "client",
+  "id": "too-cheap",
+  "environment": "*",
   "ids": [
-   "fabric-api-base",
-   "fabric-resource-loader-v1",
-   "scribble",
-   "tapestry",
-   "tapestry_config"
+   "too-cheap"
   ],
-  "depends": [],
+  "depends": [
+   "cloth-config2"
+  ],
   "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "z6GJ3ycD": {
-  "slug": "dungeons-and-taverns-ocean-monument-overhaul",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_dungeons_andtavernsoceanmonumentoverhaul",
-  "environment": "*",
-  "ids": [
-   "mr_dungeons_andtavernsoceanmonumentoverhaul"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "zJhgi9nK": {
-  "slug": "silvers_inventory-library",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_silvers_inventory_library",
-  "environment": "*",
-  "ids": [
-   "mr_silvers_inventory_library"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0

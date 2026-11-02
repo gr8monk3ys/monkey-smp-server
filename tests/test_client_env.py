@@ -46,10 +46,10 @@ def test_retired_optional_mods_are_out_of_the_pack():
     assert not set(client_env.RETIRED_OPTIONAL) & set(client_env.OPTIONAL_MODS)
 
 
-def test_resource_packs_and_shaders_are_optional():
+def test_resource_packs_are_optional():
     others = [f for f in INDEX["files"] if not f["path"].startswith("mods/")]
     assert others and all(f["env"]["client"] == "optional" for f in others)
-    assert {f["path"].split("/")[0] for f in others} == {"resourcepacks", "shaderpacks"}
+    assert {f["path"].split("/")[0] for f in others} == {"resourcepacks"}
 
 
 @pytest.mark.parametrize("pid", sorted(client_env.OPTIONAL_MODS))

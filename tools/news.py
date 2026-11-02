@@ -90,7 +90,7 @@ FIRST_LINES = {
 }
 
 # Vanilla advancements that post for the first player on the server to finish one, with their English titles,
-# as Minecraft 26.3's own files have them (data/minecraft/advancement/ in the server jar; the titles from the
+# as Minecraft 26.2's own files have them (data/minecraft/advancement/ in the server jar; the titles from the
 # client jar's en_us.json). Mostly the challenge frames. Left out: what a Server First already posts (Hero of
 # the Village, Free the End, Sky's the Limit, Cover Me in Debris), what the rules ban (Postmortal: totems; The
 # End... Again...: end crystals), and the easy or lucky ones (It Spreads, Bullseye, Subspace Bubble...).

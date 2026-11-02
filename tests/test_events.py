@@ -62,8 +62,8 @@ def test_holds_items_tag_covers_vehicles_and_pack_animals():
 
 def test_strength_sync_removes_every_modifier_above_the_level():
     sync = fn("arena/strength_sync")
-    for n in range(2, 6):
-        assert (f"{events.LEVEL}=..{n - 1}}}] minecraft:attack_damage modifier remove "
+    for n in range(1, 5):
+        assert (f"{events.LEVEL}=..{n}}}] minecraft:attack_damage modifier remove "
                 f"strength_smp:buff-level_{n}") in sync
 
 

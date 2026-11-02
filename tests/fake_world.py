@@ -1,4 +1,4 @@
-"""A made-up saved world for the tests: the files tools/saved_world.py reads, laid out and shaped as 26.3 and
+"""A made-up saved world for the tests: the files tools/saved_world.py reads, laid out and shaped as 26.2 and
 Open Parties and Claims save them (the paths are written out here, not taken from saved_world.py, so a wrong
 path there fails the tests).
 
@@ -34,7 +34,7 @@ def toml_string(text: str) -> str:
 
 
 def score_rows(*rows) -> list[dict]:
-    """PlayerScores entries from (objective, holder, score[, more fields]). 26.3 leaves Score out when it is 0."""
+    """PlayerScores entries from (objective, holder, score[, more fields]). 26.2 leaves Score out when it is 0."""
     return [{"Objective": objective, "Name": name} | ({"Score": score} if score else {}) | (extra[0] if extra else {})
             for objective, name, score, *extra in rows]
 
@@ -59,7 +59,7 @@ class FakeWorld:
         return self
 
     def scoreboard(self, board: dict) -> "FakeWorld":
-        """A whole scoreboard.dat, as given (26.3 puts it under "data", with a DataVersion)."""
+        """A whole scoreboard.dat, as given (26.2 puts it under "data", with a DataVersion)."""
         return self._write("data/minecraft/scoreboard.dat", nbt(board, gzipped=True))
 
     def scores(self, *rows, teams: list[dict] | None = None) -> "FakeWorld":
@@ -88,7 +88,7 @@ class FakeWorld:
 
     def border(self, dimension: str, center_x: float, center_z: float, size: float,
                lerp_target: float | None = None) -> "FakeWorld":
-        """A dimension's world_border.dat as 26.3 writes it (the fields read, plus a few that aren't)."""
+        """A dimension's world_border.dat as 26.2 writes it (the fields read, plus a few that aren't)."""
         namespace, name = dimension.split(":")
         data = {"center_x": center_x, "center_z": center_z, "size": size,
                 "lerp_target": size if lerp_target is None else lerp_target}
@@ -98,7 +98,7 @@ class FakeWorld:
 
     def advancements(self, player_uuid: str, done: dict[str, str], undone: dict[str, str] | None = None,
                      ) -> "FakeWorld":
-        """A player's players/advancements/<uuid>.json as 26.3 writes it (pretty JSON, DataVersion last; seen on
+        """A player's players/advancements/<uuid>.json as 26.2 writes it (pretty JSON, DataVersion last; seen on
         a 26.3 test server on 2026-10-25): advancement -> {"criteria": {name: "2026-10-25 21:12:32 -0700"},
         "done": bool}. `done` and `undone` map an advancement to its one criterion's time."""
         data = {adv: {"criteria": {"requirement": when}, "done": True} for adv, when in done.items()}
@@ -107,6 +107,6 @@ class FakeWorld:
                            json.dumps(data | {"DataVersion": 5023}, indent=2).encode())
 
     def storage(self, namespace: str, contents: dict) -> "FakeWorld":
-        """A namespace's command storage as 26.3 saves it: data/<namespace>/command_storage.dat, key -> compound."""
+        """A namespace's command storage as 26.2 saves it: data/<namespace>/command_storage.dat, key -> compound."""
         return self._write(f"data/{namespace}/command_storage.dat",
                            nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))

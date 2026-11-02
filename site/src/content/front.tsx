@@ -12,10 +12,9 @@ export const features: { fig?: string; title: string; text: ReactNode }[] = [
       nobody may grief it; everything outside it is contested.</>,
   },
   {
-    fig: "y 500",
     title: "Land worth fighting over",
-    text: <>Tectonic and Terralith reshape the overworld and push its peaks past y&nbsp;500; Incendium remakes the
-      Nether and Endercon the End. Dungeons, taverns and capitals are scattered across it.</>,
+    text: <>Amethyst Nether remakes the Nether, Grand Capitals rebuilds villages and illager strongholds, and Crazy
+      Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them.</>,
   },
   {
     fig: "3D",
@@ -42,40 +41,11 @@ export const features: { fig?: string; title: string; text: ReactNode }[] = [
 
 /** The gallery (#gallery): img/<name>-800.webp and -1600.webp. The first is the big one, and loads first. */
 export const shots: { name: string; where: string; alt: string; caption: ReactNode }[] = [
-  {
-    name: "mountains", where: "Overworld",
-    alt: "A ridge of red, yellow and white painted stone rising above a sea of clouds",
-    caption: <>The Painted Mountains, above the clouds. Tectonic and Terralith push peaks past y&nbsp;500.</>,
-  },
-  {
-    name: "nether-castle", where: "The Nether",
-    alt: "Blackstone towers with red roofs under falling lava, a piglin brute on the battlements",
-    caption: "A Forbidden Castle in the Nether. It is guarded.",
-  },
-  {
-    name: "end-citadel", where: "The End",
-    alt: "A purpur citadel among spiked end-stone islands under a violet sky",
-    caption: "The Phantom Citadel, out past the dragon's island.",
-  },
-  {
-    name: "fortified-village", where: "Overworld",
-    alt: "A walled village with a stone keep, built out over shallow water",
-    caption: "A fortified village on the coast. Someone will claim it.",
-  },
-  {
-    name: "floating-island", where: "Overworld",
-    alt: "A cabin on a small floating island over the sea, snowy peaks behind",
-    caption: "A cabin on a floating island, a long swim from anywhere.",
-  },
-  {
-    name: "mage-tower", where: "Overworld",
-    alt: "A tall stone mage tower with a green spire, standing in a shallow lake",
-    caption: "A mage tower in the shallows.",
-  },
+  // Empty until the shots are retaken on the 3.0.0 world: the old ones showed terrain from mods that left.
 ];
 
 /** The game the server runs: the page's description and its lede both name it. */
-export const GAME = "Minecraft Java 26.3";
+export const GAME = "Minecraft Java 26.2";
 
 /** The pass's monthly price in US dollars: the price shown, the page's description and the launch event's offer
  * (src/lib/seo.ts) all come from it. */
@@ -148,9 +118,9 @@ export const faq: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Can I make the pack lighter for a slower computer?",
-    a: "Yes. Shaders, Distant Horizons, the resource packs and most of the visual and sound mods are optional. In "
+    a: "Yes. The resource packs and most of the visual and sound mods are optional. In "
       + "Prism Launcher, untick them when you install the pack; in the Modrinth App, switch them off in the "
-      + "instance's Content tab. Start with Distant Horizons, which draws land far past your render distance. Keep "
+      + "instance's Content tab. Keep "
       + "Sodium and the other speed mods on. The mods that add blocks, mobs and items can't be left out, and the "
       + "installer for the regular launcher always installs everything.",
   },

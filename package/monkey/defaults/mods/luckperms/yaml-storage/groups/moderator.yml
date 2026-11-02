@@ -25,12 +25,6 @@ permissions:
 - ledger.commands.search
 - ledger.commands.status
 - ledger.commands.tp
-- minertrack.check
-- minertrack.help
-- minertrack.logs
-- minertrack.notify
-- minertrack.reset
-- minertrack.verbose
 - vanish.command.vanish
 - vanish.feature.view
 parents:

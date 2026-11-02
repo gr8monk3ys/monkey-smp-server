@@ -61,7 +61,7 @@ FN = f"data/{NS}/function/diplomacy"
 ADVANCEMENT = f"data/{NS}/advancement/diplomacy"
 FACTIONS = f"{NS}:factions"
 STORE = f"{NS}:diplomacy"
-STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.3 saves the monkey namespace's storage
+STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.2 saves the monkey namespace's storage
 
 MAX_FACTIONS = 99      # numbers given in a world; /trigger diplomacy set <N><action> holds N up to 99
 MAX_PACTS = 2          # pacts a faction can hold at once

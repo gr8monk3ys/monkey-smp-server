@@ -7,7 +7,7 @@ download zips a season's world to open in singleplayer: the map, everyone's inve
 the data packs, plus a READ ME. It leaves out what is private or only matters to the live server:
 server.properties (the RCON password), ops, the whitelist and ban lists and usercache all sit outside
 the world folder and never go in; inside it, the Ledger database (who did what, where), mod server
-config, scripts, player-activity times, Distant Horizons' cache and session.lock stay out too.
+config, scripts and session.lock stay out too.
 
 carry reads the old world's scoreboard and writes a small data pack into the new world, monkey-carry,
 that puts back every wardrobe score (rw.*: days, months, invites, tiers, founders, events, holidays,
@@ -35,7 +35,7 @@ from datapacks import NS, function_tag, mcmeta
 CARRY = "monkey-carry"
 # What goes in the download, relative to the world folder; then what is taken back out.
 KEEP = ["level.dat", "dimensions", "data", "players", "datapacks"]
-DROP = ["DistantHorizons*", "session.lock", "data/baguettelib", "data/mezz_config", f"datapacks/{CARRY}"]
+DROP = ["session.lock", "data/mezz_config", f"datapacks/{CARRY}"]
 # Scores that are not carried: worked out again (rw.hours), the play-time statistic (rw.play, carried as
 # rw.playbase), constants (rw.const), the day counter, set on its own (rw.day), and the seconds played in
 # Season I's launch weekend (rw.launchtime; rw.launch, the skin, carries). The weekly challenges' rc.* scores

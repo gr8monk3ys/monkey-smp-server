@@ -1,6 +1,6 @@
 """Load-test an installed server package with Carpet fake players, and profile it.
 
-  python tools/loadtest.py C:/temp/monkey-test/MonkeySMP-Server --carpet C:/Downloads/fabric-carpet-26.3.jar
+  python tools/loadtest.py C:/temp/monkey-test/MonkeySMP-Server --carpet C:/Downloads/fabric-carpet-26.2.jar
       Starts the server in that folder (an unzipped release installed once, e.g. by tests/smoke.ps1, so it
       has its own ports and a world), spawns --players fake players with Carpet over RCON, waits --warmup
       seconds, then samples `tick query` every 10 s for --minutes while Java Flight Recorder records CPU

@@ -93,10 +93,10 @@ change, change it too.
 |---|---|
 | Name | Monkey SMP |
 | URL | `monkeysmp` |
-| Summary | The client pack for Monkey SMP, a small whitelisted factions server on Minecraft 26.3 (Fabric). It has the claims map, proximity voice, the new terrain mods and shaders. |
+| Summary | The client pack for Monkey SMP, a small whitelisted factions server on Minecraft 26.2 (Fabric). It has proximity voice, a remade Nether and new structures and mobs. |
 | Categories | Multiplayer (featured), Adventure, Combat |
 | Environment | client-side only (the server runs its own package, not this pack) |
-| License | MIT for the pack's own files (configs, settings, the Monkey SMP Wardrobe resource pack); every mod, resource pack and shader keeps its own license and is downloaded from its own Modrinth page |
+| License | MIT for the pack's own files (configs, settings, the Monkey SMP Wardrobe resource pack); every mod and resource pack keeps its own license and is downloaded from its own Modrinth page |
 | Icon | `marketing/logo/png/mark-512.png` |
 | Links | Wiki `https://monkeysmp.lscaturchio.xyz` (Modrinth has no website field, and the site is the players' guide), Discord `https://discord.gg/C25hy9Ca9W`. No source or issues link: the repo is private, and Modrinth flags links it can't open. |
 | Disclosures | **Paid features**, two entries: "Joining the server needs a paid server pass (the pack itself is free)" and "Supporter tiers unlock some Wardrobe cosmetic skins". Nothing else is on (the owners left AI-generated content off). |
@@ -104,7 +104,7 @@ change, change it too.
 ### Description
 
 ```markdown
-Monkey SMP is a small whitelisted factions server on Minecraft Java 26.3 (Fabric). Most of us play in the evenings, Pacific time. This is the pack you need to join, with the shaders, sounds and settings we actually play with.
+Monkey SMP is a small whitelisted factions server on Minecraft Java 26.2 (Fabric). Most of us play in the evenings, Pacific time. This is the pack you need to join, with the sounds and settings we actually play with.
 
 ## Joining
 
@@ -117,40 +117,30 @@ The app updates the pack whenever the server needs a new one. A PC with 16 GB of
 
 ## What the server is like
 
-- Factions of up to four players. You claim land on the map (2×2 chunks per player), allies share claims, and PvP is on everywhere outside spawn.
+- Factions of up to four players. You claim land with `/oclaims claim` (2×2 chunks per player), allies share claims, and PvP is on everywhere outside spawn.
 - Strength SMP rules: winning fights makes you stronger, and losing them drains it.
-- Tectonic and Terralith terrain, with mountains past y 500. Incendium redoes the Nether, Endercon the End, and Dungeons and Taverns adds new structures.
+- Amethyst Nether remakes the Nether, Grand Capitals rebuilds villages and illager structures, and Crazy Chambers makes trial chambers bigger.
 - Proximity voice through Simple Voice Chat. There's a live BlueMap of the world on the website.
 - Every season has a Build Battle, a Faction Raid and Arena Glory, and the factions play for the Season Cup.
 
 ## What's in the pack
 
-- Performance: Sodium, Lithium, FerriteCore and ImmediatelyFast, plus Distant Horizons for long view distances.
-- Visuals: Iris with Complementary, BSL and Photon (press O to switch shaders or turn them off), Fresh Animations, Continuity and 3D Skin Layers.
-- Maps: Xaero's Minimap and World Map (you can claim chunks from the map), JEI and AppleSkin.
+- Performance: Sodium, Lithium, FerriteCore and ImmediatelyFast.
+- Visuals: Fresh Animations, Continuity and 3D Skin Layers.
+- Recipes: JEI, with Just Enough Resources and Just Enough Professions.
 - Sound: Simple Voice Chat (press V) and the Enhanced Audio resource pack.
-- Server content: Naturalist, Variants and Ventures, Goat Expansion and the other mods that add blocks, mobs and items. Don't turn these off, because the server needs them.
+- Server content: Naturalist, More Frogs, Sulfur Caves Plus and the other mods that add blocks, mobs and items. Don't turn these off, because the server needs them.
 - The Monkey SMP Wardrobe resource pack, for the server's sword and helmet skins. You earn most of them by playing.
 
-If your computer struggles, turn off Distant Horizons, the shaders and the visual and sound mods in the instance's Content tab, and leave the performance mods on. The FAQ on the website has more.
+If your computer struggles, turn off the resource packs and the visual and sound mods in the instance's Content tab, and leave the performance mods on. The FAQ on the website has more.
 
 Run by Diego and Lorenzo Scaturchio.
 ```
 
 ### Gallery
 
-From `site/public/img/` (in-game screenshots, the site's captions). The first is the banner image.
-
-| File | Title | Description |
-|---|---|---|
-| `mountains-1600.webp` | The Painted Mountains | Above the clouds. Tectonic and Terralith push peaks past y 500. |
-| `nether-castle-1600.webp` | A Forbidden Castle | In the Nether. It is guarded. |
-| `end-citadel-1600.webp` | The Phantom Citadel | Out past the dragon's island. |
-| `fortified-village-1600.webp` | A fortified village | On the coast. Someone will claim it. |
-| `floating-island-1600.webp` | A floating island | A cabin, a long swim from anywhere. |
-| `mage-tower-1600.webp` | A mage tower | In the shallows. |
-
-Modrinth doesn't allow AI-made images on a project page; these are all screenshots from the game.
+Empty until the shots are retaken on the 3.0.0 world: the old ones in `site/public/img/` show terrain and
+structures from mods that left. Each needs a file, a title and a description; the first is the banner.
 
 ## The server listing
 
@@ -193,17 +183,14 @@ to server listings only, not to modpacks, so:
 
 ## What's in the pack, and may it be published
 
-Checked 2026-10-25 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
+Checked 2026-11-02 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
 
-- **All 213 files are on Modrinth** (176 mods, 22 resource packs, 15 shader packs) and download from
+- **All 187 files are on Modrinth** (165 mods, 22 resource packs) and download from
   `cdn.modrinth.com`. Modrinth's rule for modpacks is that a file hosted on Modrinth may be used in a pack
   whatever its license, so none of them needs extra permission.
 - **The overrides are the pack's own**: configs, `options.txt`, the generated Monkey SMP Wardrobe resource pack
-  (`tools/wardrobe.py` draws its pixel art), and a shader settings file. No jars or zips, which Modrinth flags
+  (`tools/wardrobe.py` draws its pixel art). No jars or zips, which Modrinth flags
   in a pack's overrides.
-- To tidy up, not blocking: two shader projects are archived by their authors (Aurora's Shaders, Pixel
-  Perfect; their files still download), and Complementary Unbound is in the pack twice (r5.7.1 and
-  r5.9.3).
 
 ## Updating this page
 

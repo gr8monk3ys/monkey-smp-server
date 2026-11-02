@@ -77,7 +77,7 @@ LINKS = (("Discord", DISCORD, "Factions, events, tickets and the full rulebook")
          ("Store", f"{SITE}/#pricing", "The Server Pass and supporter tiers"))
 
 BANNED_ENCHANTMENTS = ("minecraft:fire_aspect", "minecraft:flame")
-# Vanilla 26.3's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
+# Vanilla 26.2's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
 # gear all draw from it, so the pack replaces it with this list minus the banned ones. No mod in the pack
 # adds to it; one that does would lose its addition (see the RULES.md admin notes).
 VANILLA_NON_TREASURE = (
@@ -97,7 +97,7 @@ DISABLED = {
 
 ARMOR_SLOTS = ("head", "chest", "legs", "feet")
 NETHERITE_ARMOR = ("netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots")
-# 26.3 can't drop a vanilla recipe (other data refers to it, and the server won't start), so the upgrade is
+# 26.2 can't drop a vanilla recipe (other data refers to it, and the server won't start), so the upgrade is
 # replaced by one that needs a barrier as its template: no survival player can ever fill it in.
 NEVER_TEMPLATE = "minecraft:barrier"
 
@@ -147,7 +147,7 @@ def rules_files() -> dict[str, str]:
         "# A function run by the server runs at the world spawn, so ~ ~ is spawn.",
         "execute in minecraft:overworld run worldborder center ~ ~",
         f"execute in minecraft:overworld run worldborder set {BORDER}",
-        "# Since 26.3 each dimension has its own border (the Nether's no longer follows the overworld's), so",
+        "# On 26.2 each dimension has its own border (the Nether's no longer follows the overworld's), so",
         "# give the Nether the one it used to have: the same area at its 1:8 scale.",
         f"execute summon minecraft:marker run function {NS}:rules/nether_border",
         f"scoreboard players set #border {OBJECTIVE} 1",

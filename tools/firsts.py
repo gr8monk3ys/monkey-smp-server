@@ -80,7 +80,7 @@ ITEM_SLOTS = ("container.*", "armor.*", "weapon.offhand")
 #           mid-season
 # name      the menu line and the announcement ("Steve is the first on the server to enter the Nether")
 # about     the hover text: what counts
-# trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.3)
+# trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.2)
 # player    a predicate on the player, added to the launched-and-unclaimed check
 # end       only while the End is open (rule 23: monkey:rules/open_end); netherite: only once rule 24 is lifted
 # item      an item first (holding()): it counts only for a player not carrying it over from test play (CLEAN)

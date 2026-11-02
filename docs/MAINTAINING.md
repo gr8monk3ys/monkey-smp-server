@@ -270,7 +270,7 @@ without hashes); `--online` checks meta still serves the same profile.
 
 Each file in `client/modrinth.index.json` is `"client": "required"` or `"optional"`: an optional one gets a tick
 box in Prism and the Modrinth App, so a player on a slow computer can leave it out ("Low-end PC" in
-`docs/PLAYERS.md`). `tools/client_env.py` decides which (`OPTIONAL_MODS`, plus every resource pack and shader
+`docs/PLAYERS.md`). `tools/client_env.py` decides which (`OPTIONAL_MODS`, plus every resource
 pack); `snapshot.py client` writes it and `validate.py` checks the index still matches. A mod that isn't on the
 list is required, so a new mod is safe until someone sorts it. A mod belongs on the list only when the player
 can join without it: it isn't on the server, or it is client-only, or Modrinth calls its client half optional,
@@ -299,11 +299,7 @@ patch against the new upstream file: carry the change below over, then check it 
 
 | Mod | File | What the patch does, and why |
 |---|---|---|
-| `silvers_effects-library` | `pack.mcmeta` | Raises the highest supported pack format so the pack loads on Minecraft 26.3. |
-| `silvers_effects-library` | `overlay_26.3/.../technical/effects.mcfunction` | One command at the top returns early for a non-player entity with none of the 19 `*_duration` scores. Upstream runs the function's 97 commands for every loaded mob on every tick; none can match a mob without a score, and with about 1,900 mobs loaded that went past Minecraft's 65,536-commands-per-tick limit, cutting the function off before it reached every mob. Players must never be skipped: the last line re-arms their tick advancement. |
-| `silvers_strength-smp-season-4` | `.../main/enchant/check.mcfunction`, and its copy in `overlay_26.3/` | A per-player counter at the top makes the 968 block checks below it (markers on enchanting tables, anvils and grindstones near the player) run every 10 ticks instead of every tick. It was 26% of the server tick with 25 players. The markers persist, so the only change is that a newly placed block is noticed within half a second. Version 1.8 added the `overlay_26.3` copy, which is the one 26.3 runs, so both carry the change. |
 | `lootrestock` | `org/oldskooler/lootrestock/handler/ChestInteractionHandler.class` | A Java class, not a data file. Loot Restock checks whether a structure chest is empty the first time a player opens it, and that check rolls the chest's loot with no player, so vanilla's "a player opened a loot chest" advancement never fired and the weekly "Open 8 loot chests" challenge never counted. The patch answers "not empty" there without rolling (the code only runs for a chest that still has its loot table). Make it again with `python tools/lootrestock_patch.py LootRestock-<version>.jar OUT.jar`, put `OUT.jar` in the test server's `mods`, and snapshot; the script's docstring has the details. Loot Restock is GPL-3.0-or-later and its source is public, so shipping a changed class is fine as long as the change stays published: it is, in this repo. |
-| `trident-all-weather-channeling` | `.../function/app/trident_hit_entity.mcfunction` and `.../app/summon_lightning.mcfunction` | Upstream calls lightning on every Channeling trident that has ever hit something, including ones left in the ground, so one hit struck every old trident nearby (on a test server, a pig next to an old trident turned into a zombified piglin). The patch marks only the attacker's own trident still in flight (`on owner`, so another player's trident nearby is never picked; tested the earlier "nearest in flight" version the same way, only the pig by the trident that hit was struck). The strike is scheduled a tick later so it runs from the server at the world spawn, and lightning, which isn't damage a player causes, leaves out two places PvP is off (rule 26): nothing within 64 blocks of spawn, and nothing within 6 blocks of a player in grace. Patches can't add files, so this uses the mod's two functions. |
 
 Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the two
 performance patches took the typical tick from 184 ms to 143 ms and the command-limit hits from about 2,100 a
@@ -316,23 +312,17 @@ that works on it but isn't listed for it is pinned by hand: the same entry `add.
 from the Modrinth version), after a smoke test and a test join. `check_updates.py` never reports its updates,
 so look at its Modrinth page when updating the pack, and when changing Minecraft version.
 
-| Mod | Listed for | Tested on 26.3 |
-|---|---|---|
-| `hostname-catcher` 0.2 | 26.1 to 26.2 | 2026-10-25: boots, lets a login through a join address in, logs a real client's join |
+None since 3.0.0: every mod in the manifest is listed for 26.2.
 
 ## Mods left out on purpose
 
-The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync.
+The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync. Since 3.0.0 the folder is the list (docs/ADMIN.md), so this is short.
 
 | Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
 |---|---|
-| Slabbed (0.6.2-alpha) | About 140 ms more per tick, and an open report of 0 TPS deadlocks on 26.3 ([slabbed#102](https://github.com/peetsamods/slabbed/issues/102)). |
-| The Sift | About 90 ms more per tick: it adds an ichor fluid state to block-state definitions and hooks the fluid lookup. It also replaces the same ancient-city centres as the Dungeons and Taverns ancient-city overhaul. (Gone from the folder by 2.8.0.) |
-| Amethyst Nether | Defines `minecraft:the_nether`, as Incendium does; only one can generate, and its Modrinth page lists Incendium as incompatible. |
-| Just Enough Professions, Improved Inventory Tabs, Villager News, Koh's Death Effects | Not on Modrinth, so they can't be pinned (ADR-0002). |
+| Improved Inventory Tabs | Not on Modrinth, so it can't be pinned (ADR-0002). |
+| Arrow In The Knee (`aitk`) | Says it runs on servers, but a mixin into a client class stops one from starting. Client pack only. |
 | PrickleMC, Crops Love Rain (NeoForge files) | The folder's `cropsloverain-3.2.1.jar` is the NeoForge build, and PrickleMC's NeoForge jar sits next to its Fabric one. The pack has the Fabric build of each. |
-| Deimos (2.7.1) | A library, and nothing in the pack or the folder needs it (every jar's `fabric.mod.json`, checked 2026-10-26). |
-| Nullscape | In the pack until 2.8.0, then gone from the folder. Don't bring it back next to Endercon: with both, a test server's End had no outer-island highlands or midlands, so no End cities and none of Qrafty's End Villages. Endercon alone generates both. |
 | Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |
 
 After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't
@@ -445,9 +435,9 @@ spawns fake players with [Carpet](https://modrinth.com/mod/carpet) over RCON and
 CPU profile of the main thread:
 
 ```powershell
-python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25
+python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.2.jar --players 25
 # what one mod costs: the same run without it (and its libraries)
-python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.3.jar --players 25 --without silvers_strength-smp-season-4
+python tools/loadtest.py $env:TEMP\monkey-test\MonkeySMP-Server --carpet C:\Downloads\fabric-carpet-26.2.jar --players 25 --without silvers_strength-smp-season-5
 ```
 
 Results go to `<copy>\loadtest\<name>\`: `summary.json` (mean and typical tick time, TPS, the slowest ticks, how often the 65,536-commands

@@ -17,11 +17,11 @@ The files, relative to the world folder:
   data/openpartiesandclaims/parties/<party>.nbt                 each party: its owner and members
   data/openpartiesandclaims/player-configs/<player>.toml        a party's name (its owner's parties.name)
   data/openpartiesandclaims/player-claims/<player>.nbt          each player's claimed chunks
-  dimensions/<namespace>/<name>/data/minecraft/world_border.dat  a dimension's border (since 26.3)
-  data/<namespace>/command_storage.dat                          a namespace's command storage (since 26.3)
+  dimensions/<namespace>/<name>/data/minecraft/world_border.dat  a dimension's border (26.2)
+  data/<namespace>/command_storage.dat                          a namespace's command storage (26.2)
   players/advancements/<player uuid>.json                       each player's advancements (JSON, not NBT)
 
-This module says where things are and how they are saved (26.3 leaves a score of 0 out; the scoreboard sits
+This module says where things are and how they are saved (26.2 leaves a score of 0 out; the scoreboard sits
 under "data"; a UUID is four ints); callers keep their own rules (ranking, where drops land, map masks).
 It only reads, through tools/nbt.py. A damaged file is a ValueError naming it: nbt.read's when it isn't NBT,
 this module's when it is NBT but not shaped as the server saves it (a field missing or of the wrong type, a
@@ -118,7 +118,7 @@ def scoreboard(folder: Path) -> Scoreboard | None:
         scores: dict[str, dict[str, int]] = {}
         displays: dict[str, dict[str, str]] = {}
         for s in data.get("PlayerScores", []):
-            # 26.3 leaves Score out when it is 0.
+            # 26.2 leaves Score out when it is 0.
             scores.setdefault(s["Objective"], {})[s["Name"]] = s.get("Score", 0)
             display = s.get("display") or s.get("Display")
             if display:
@@ -246,7 +246,7 @@ def border(folder: Path, dimension: str = OVERWORLD) -> SavedBorder | None:
 
 
 def command_storage_path(folder: Path, namespace: str) -> Path:
-    """Since 26.3 a namespace's storage is data/<namespace>/command_storage.dat (it was
+    """On 26.2 a namespace's storage is data/<namespace>/command_storage.dat (it was
     data/command_storage_<namespace>.dat)."""
     return folder / "data" / namespace / "command_storage.dat"
 
@@ -276,7 +276,7 @@ def advancements(folder: Path, wanted: set[str]) -> dict[str, dict[str, dt.datet
     -> when it was done, the time of its last criterion (an aware time). A player with none of them is left out;
     no players/advancements folder: nobody.
 
-    26.3 saves a player's advancements as JSON in players/advancements/<uuid>.json, on the autosave and when they
+    26.2 saves a player's advancements as JSON in players/advancements/<uuid>.json, on the autosave and when they
     leave: advancement -> {"criteria": {name: time}, "done": true|false}, plus a "DataVersion" number. A file that
     isn't that JSON (cut short mid-write, say) is a ValueError naming it."""
     where = folder / ADVANCEMENTS

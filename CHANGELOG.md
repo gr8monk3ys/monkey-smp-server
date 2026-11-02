@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.0.0] - 2026-11-04
+
+Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which
+was never tagged or deployed, and has everything 2.11.0 had. Players reinstall the client pack. After it deploys
+there are steps by hand (docs/LIVE.md, "3.0.0: Minecraft 26.2 and a new world"): one Tebex jar, the Nether
+anti-xray config, the new world, pre-generation and the map.
+
+### Changed
+
+- Minecraft 26.3 to 26.2, Fabric Loader 0.20.1. A world can't go back a version, so Season I gets a new world.
+- The server's mods are the shared folder's list plus the operations tools and the libraries listed mods need: 151
+  mods, down from 166. Client pack: 165 mods and 22 resource packs, about 310 MB, down from 560 MB.
+- Strength SMP Season 4 to Season 5. The Season 4 and Silver's effects patches don't carry over; the Season 5
+  sync in `tools/events.py` removes its four attack-damage buffs by their new names.
+- Tebex is a managed mod: a restore or a new VPS gets it by itself. The restore drill now removes
+  `server/mods/tebex`, where its key is, instead of leaving out the jar.
+- The Nether: Amethyst Nether is 160 tall, with its roof near y 160 (`antixray.toml`, BlueMap's comment).
+- Datapacks and the wardrobe pack are built for 26.2 (data format 107, resource format 88); the Block Wheel pool is
+  regenerated (979 blocks: 26.3's concrete and wool slabs and stairs are gone).
+- The launch plan: 3.0.0 is tagged on Wednesday 4 November and the freeze starts Thursday 5 November.
+
+### Removed
+
+- All terrain and structure mods not on the list: Terralith, Tectonic, Incendium, Structory, Endercon, Moog's
+  structures, Dungeons and Taverns, Epic Dungeons, Qrafty's End Villages, Lithostitched. Also Variants and Ventures,
+  Friends and Foes, Carry On, GeckoLib, C2ME, MinerTrack, the trim mods, Trident All-Weather Channeling and its patch.
+- On the client: Iris and all 15 shader packs, Xaero's Minimap and World Map, Distant Horizons, Mouse Tweaks. Open
+  Parties and Claims is server-side only now, so claims are by `/oclaims claim`, with no claims screen.
+- Rule B18 is retired: the Nova Structures books it covered left with their mod.
+- The site's gallery, until the shots are retaken on the new world: the old ones show terrain that's gone.
+
 ## [2.11.0] - 2026-11-03
 
 The last release before Season I: everything for launch is in it, and it goes live in the 4-5 AM window on

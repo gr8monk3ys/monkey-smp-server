@@ -11,6 +11,10 @@
 
 ## Install (pick one)
 
+**The game can look frozen while it starts.** With the whole pack, getting to the title screen takes about 3
+minutes on a fast computer, every time. Near the end, Windows may show **Not Responding** on and off for up
+to a minute. That's normal: don't close the window, and choose **Wait** if Windows asks.
+
 ### A. The Modrinth App (recommended, Windows, macOS and Linux)
 
 1. Install the [Modrinth App](https://modrinth.com/app) (free) and sign in with the Microsoft account you

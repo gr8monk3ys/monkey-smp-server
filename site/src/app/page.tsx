@@ -116,8 +116,10 @@ export default function Home() {
             </li>
             <li>
               <h3>Connect</h3>
-              <p>Multiplayer, Add Server, <code>{config.ADDRESS}</code>. No port needed. A computer with 16 GB of RAM
-                and a mid-range graphics card runs it well; the installer sets the game&apos;s memory for you.</p>
+              <p>The game takes about 3 minutes to start and may show Not Responding near the end. Don&apos;t close
+                it. Then Multiplayer, Add Server, <code>{config.ADDRESS}</code>. No port needed. A computer with 16 GB
+                of RAM and a mid-range graphics card runs it well; the installer sets the game&apos;s memory for
+                you.</p>
             </li>
           </Place>
         </section>

@@ -50,16 +50,27 @@ order and the dates.
 - [x] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
   `tebex secret <key>` in the console. The key is a secret: type it into the console, never into a file in
   this repo or a chat.
-- [x] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
+- [ ] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
   move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
 
   **Result, 2026-11-02, with the $5 pass on a staff account:** `whitelist add` ran about a minute after paying
   (it replied "already whitelisted", so the command is proved, not the list changing), `rw.months` stayed at 0,
   SMP Member arrived, and the sale is in Payments. **Still unproved: the removal commands and the role coming
-  off.** The panel refused the refund because the money hadn't settled (see "Refunds before the money settles").
-  The subscription is cancelled and shows Ending, with no charge on 2 Dec; the first removal should run then.
-  Check it did, then put that staff account back with `whitelist add`, because staff must stay on the list.
+  off.** The panel refused the refund because the money hadn't settled (see "Refunds before the money settles"),
+  and this sale won't be refunded, so a refund stays untested until a real one. The subscription is cancelled and
+  shows Ending, with no charge on 2 Dec; the first removal should run then. Check it did, then put that staff
+  account back with `whitelist add`, because staff must stay on the list. Tick this item after that check.
+
+- [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
+  approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
+  `STORE_URL` is empty.
+- [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.json`) and
+  leave it unmerged. It merges **at 5 PM on launch day** (launch day, below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
+  arranged in the Discord, which stays true. Site-only pull requests are fine during the release freeze.
+- [ ] **Keep the storefront's address to staff until it merges.** A pass bought there goes on the whitelist
+  within a minute, and that player could walk into the world before everyone else. Staff check the whitelist
+  daily until launch (below).
 
 ### Refunds before the money settles
 
@@ -71,16 +82,6 @@ the first weeks after launch waits, including the 48-hour one the site promises.
   money follows once Tebex clears it. Keep a list of who is owed what.
 - Refund them from the panel as soon as Withdrawable covers it. Tebex then says up to 14 business days to arrive.
 - After that, leave enough in the wallet to cover refunds when you withdraw.
-
-- [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
-  approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
-  `STORE_URL` is empty.
-- [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.json`) and
-  leave it unmerged. It merges **at 5 PM on launch day** (launch day, below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
-  arranged in the Discord, which stays true. Site-only pull requests are fine during the release freeze.
-- [ ] **Keep the storefront's address to staff until it merges.** A pass bought there goes on the whitelist
-  within a minute, and that player could walk into the world before everyone else. Staff check the whitelist
-  daily until launch (below).
 
 ### The 7-day trial
 

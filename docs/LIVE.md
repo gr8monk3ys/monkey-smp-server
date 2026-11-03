@@ -732,11 +732,13 @@ Only one copy may run the world at a time: two live copies split the world into 
 
 ### The store (set up once, before the first sale)
 
-Status (2026-11-02): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
-(`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
-storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
+Status (2026-11-02): the Tebex project "Monkey SMP" is set up and connected to the live server, and Tebex has
+approved it. Delivery (`tebex secret` in the console), all five packages (checked in the panel against the table
+below), the support contact, the payout wallet and the storefront are all done. Tebex's Discord integration isn't
+connected yet, so the paid role doesn't arrive: connect it and add the role to the pass packages before the test purchase.
 The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
-belongs to another server). On 2026-11-02 that page answered 503, "Store unavailable", so it isn't selling yet.
+belongs to another server). That page answers 503, "Store unavailable", until someone presses **Publish your
+project** on the panel's dashboard, so it isn't selling yet; publishing opens it to real payments.
 Once it opens, make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
 only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
 and terms against the table below before the first real sale.

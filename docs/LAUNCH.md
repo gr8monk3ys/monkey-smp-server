@@ -50,8 +50,8 @@ order and the dates.
 - [ ] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
   `tebex secret <key>` in the console. The key is a secret: type it into the console, never into a file in
   this repo or a chat.
-- [ ] **Test purchase** of the $5 pass on a staff account. Check that `whitelist add` ran, `rw.months` went up
-  by one, and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
+- [ ] **Test purchase** of the $5 pass on a staff account. Check that `whitelist add` ran, `rw.months` didn't
+  move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
   approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while

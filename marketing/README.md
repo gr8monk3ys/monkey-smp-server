@@ -22,25 +22,25 @@ this folder, so a change is an edit and a re-run, not a redraw.
 
 The site also uses `site/public/img/og.jpg` (Open Graph / Twitter card, set in `site/src/app/page.tsx`) and
 `site/public/img/icon-256.png` (apple-touch-icon).
-`site/public/media/` holds the 720p trailer and its poster (the logo-reveal frame), and `site/public/kit/` copies of the
+`site/public/media/` holds the 720p trailer and its poster (the frame at 6.5 s), and `site/public/kit/` copies of the
 logo PNGs and both banners for the site's "Spread the word" section. Copy them again after a re-export.
 
 ## Kept out of git
 
-The big renders live in `D:\DevData\monkey-smp-marketing\out\` (override with `MONKEY_MARKETING`):
+The big renders live in `D:\DevData\monkey-smp\marketing\out\` (override with `MONKEY_MARKETING`):
 
 - `monkey-smp-trailer-1080p.mp4`: the trailer, 1920 x 1080, 30 fps, 60 s, H.264 + AAC, -14 LUFS.
 - `trailer-music.wav`: its music on its own.
 - `discord-invite-splash-1920x1080.png`, `youtube-header-2560x1440.png`, `twitter-header-1500x500.png`,
   `og-1200x630.png` (PNG master of `site/public/img/og.jpg`), plus copies of everything in the repo.
 
-The event footage the trailer cuts to sits in `D:\DevData\monkey-smp-marketing\footage\` (`build`,
+The event footage the trailer cuts to sits in `D:\DevData\monkey-smp\marketing\footage\` (`build`,
 `raid`, `arena`, `cup`, `wardrobe`, each a 1080p30 mp4). It was filmed on the photo server with Carpet
 fake players acting out each event through the real `monkey:events` functions, so the bossbar, titles,
 sidebar and wardrobe items are what players will see. It is staged, not a recording of a real event.
 
-Fonts sit in `D:\DevData\monkey-smp-marketing\fonts\`; the screenshots are the full-size originals in
-`D:\DevData\monkey-photos\shots\` (override with `MONKEY_SHOTS`; `site/public/img` has smaller copies).
+Fonts sit in `D:\DevData\monkey-smp\marketing\fonts\`; the screenshots are the full-size originals in
+`D:\DevData\monkey-smp\photos\shots\` (override with `MONKEY_SHOTS`; `site/public/img` has smaller copies).
 
 ## Look
 
@@ -57,7 +57,7 @@ Needs Python 3.11 with Pillow, numpy and scipy, Inkscape 1.4 on `PATH` (it raste
 1. Fonts (OFL, from google/fonts), once:
 
    ```sh
-   cd D:/DevData/monkey-smp-marketing/fonts
+   cd D:/DevData/monkey-smp/marketing/fonts
    curl -LO "https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/Fraunces%5BSOFT,WONK,opsz,wght%5D.ttf"
    curl -LO "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/InstrumentSans%5Bwdth,wght%5D.ttf"
    curl -LO "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf"
@@ -77,11 +77,17 @@ Keep the facts in step with the site (`site/src/app/page.tsx`, `site/src/content
 
 ## Trailer
 
-Nine two-bar sections at 100 BPM, cut on the downbeat: logo reveal, then one hook each (a modded
-factions server; factions of four; alliances and territory; Strength SMP; modded terrain and dungeons;
-the Season I launch hour; one pass, same price), then the Discord and website. The motion is slow pans
-over the in-game screenshots; no live gameplay footage was captured. Swap a section's screenshot for a
-clip later by recording in game and replacing `pan()` for that section.
+Twelve sections of two bars at 100 BPM, cut on the downbeat (the last runs three): logo reveal, five hooks
+over slow pans across the in-game screenshots (a modded factions server; factions of four; alliances and
+territory; Strength SMP; modded terrain and dungeons), the events over the staged footage (Build Battle, Faction
+Raid, Arena Glory, the Season Cup, one pass), then the Discord and website.
+
+The site's copy comes from the 1080p render, and the poster from its frame at 6.5 s:
+
+```bash
+ffmpeg -i monkey-smp-trailer-1080p.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 25 -c:a aac -b:a 128k -movflags +faststart site/public/media/trailer-720p.mp4
+ffmpeg -ss 6.5 -i site/public/media/trailer-720p.mp4 -frames:v 1 -c:v libwebp -quality 78 site/public/media/trailer-poster.webp
+```
 
 The music is made from scratch in `music.py` (additive saws, synthesised drums, A minor, Am F C G), so
 there is nothing to license.

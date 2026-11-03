@@ -15,13 +15,13 @@ flags, the arena kit, the Cup sidebar and the wardrobe items.
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import music
 from PIL import Image, ImageDraw, ImageFilter
 
 from build import (
     ADDRESS,
+    DATA,
     GOLD,
     INK,
     OUT,
@@ -43,7 +43,7 @@ SECTION = 2 * music.BAR
 FADE = 0.5  # crossfade between sections, seconds
 DISCORD = "discord.gg/C25hy9Ca9W"
 SOFT = (226, 221, 210)
-FOOTAGE = Path(r"D:\DevData\monkey-smp-marketing\footage")
+FOOTAGE = DATA / "footage"
 
 
 @dataclass
@@ -95,7 +95,7 @@ SECTIONS = [
         ],
         "04  ·  MODDED TERRAIN AND DUNGEONS",
         "Land worth fighting over.",
-        "Amethyst Nether, Grand Capitals and Crazy Chambers. Capitals, trial chambers and deep dark cities.",
+        "Amethyst Nether, Grand Capitals, Crazy Chambers and deep dark cities.",
     ),
     Section(
         [],

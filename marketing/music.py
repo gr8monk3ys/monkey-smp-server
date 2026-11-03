@@ -210,7 +210,7 @@ def write(path, audio):
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else r"D:\DevData\monkey-smp-marketing\out\trailer-music.wav")
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else r"D:\DevData\monkey-smp\marketing\out\trailer-music.wav")
     out.parent.mkdir(parents=True, exist_ok=True)
     write(out, render())
     print("wrote", out, f"{LENGTH:.1f} s")

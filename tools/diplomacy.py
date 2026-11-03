@@ -61,7 +61,7 @@ FN = f"data/{NS}/function/diplomacy"
 ADVANCEMENT = f"data/{NS}/advancement/diplomacy"
 FACTIONS = f"{NS}:factions"
 STORE = f"{NS}:diplomacy"
-STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.3 saves the monkey namespace's storage
+STORAGE_FILE = Path("data") / NS / "command_storage.dat"   # where 26.2 saves the monkey namespace's storage
 
 MAX_FACTIONS = 99      # numbers given in a world; /trigger diplomacy set <N><action> holds N up to 99
 MAX_PACTS = 2          # pacts a faction can hold at once
@@ -1000,12 +1000,12 @@ HELP = [("staff/factions", "every faction's number and name"),
 
 
 def kill_advancement(n: int) -> dict:
-    """Fires as a player who killed a player of faction n (26.x shapes, as tools/challenges.py's advancements)."""
-    victim = {"type": "minecraft:all_of", "terms": [
-        {"type": "minecraft:entity_properties", "entity": "this",
+    """Fires as a player who killed a player of faction n (26.2 shapes, as tools/challenges.py's advancements)."""
+    victim = {"condition": "minecraft:all_of", "terms": [
+        {"condition": "minecraft:entity_properties", "entity": "this",
          "predicate": {"minecraft:entity_type": "minecraft:player"}},
-        {"type": "minecraft:entity_scores", "entity": "this", "scores": {FACTION: {"min": n, "max": n}}},
+        {"condition": "minecraft:entity_scores", "entity": "this", "scores": {FACTION: {"min": n, "max": n}}},
         respawn.fresh_victim_excluded(),   # rule 5: a player respawned under 10 minutes ago isn't a war kill
     ]}
-    return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": victim}}},
+    return {"criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": [victim]}}},
             "rewards": {"function": f"{NS}:diplomacy/kill/f{n}"}}

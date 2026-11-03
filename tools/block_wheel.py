@@ -10,7 +10,7 @@ nobody can pick the seed after seeing the result.
 
 The pool is every block that is also an item in this Minecraft version, minus what a survival player
 can't get before the End opens (docs/SEASONS.md, Build Battle). Make REPORTS with the server jar:
-    java -cp "<every jar under libraries>;versions/26.3/server-26.3.jar" net.minecraft.data.Main --reports
+    java -cp "<every jar under libraries>;versions/26.2/server-26.2.jar" net.minecraft.data.Main --reports
 """
 import argparse
 import hashlib
@@ -22,7 +22,7 @@ from pathlib import Path
 from repo import REPO
 
 POOL = REPO.root / "tools" / "wheel_pool.txt"
-MINECRAFT = "26.3"
+MINECRAFT = "26.2"
 
 # Blocks that have an item but can't be obtained in survival, or only in or after the End.
 UNOBTAINABLE = re.compile(

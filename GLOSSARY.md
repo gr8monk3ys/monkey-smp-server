@@ -37,7 +37,7 @@ The download every player gets: the client pack plus a one-click installer for t
 _Avoid_: client zip, installer (alone)
 
 **Client pack**:
-The mods, resource packs and shaders a player installs to join: the required files the server needs, plus optional files for the intended look and feel.
+The mods and resource packs a player installs to join: the required files the server needs, plus optional files for the intended look and feel.
 _Avoid_: modpack (alone), client mods
 
 **Optional file**:

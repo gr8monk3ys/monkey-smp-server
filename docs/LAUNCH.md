@@ -3,7 +3,7 @@
 The run sheet for opening Season I: **Saturday 7 November 2026 at 5 PM Pacific** (8 PM Eastern, 01:00 UTC
 on Sunday 8 November), with everyone let in at once. It was written on Monday 26 October for a 21 November
 launch; the owners moved it to 31 October, then on Wednesday 28 October to 7 November, which leaves ten days
-before it and a four-day release freeze. It runs to T+7 (Saturday 14 November,
+before it and a three-day release freeze. It runs to T+7 (Saturday 14 November,
 the first weekly event). Every date below is Pacific time. Daylight saving time ends at 2 AM on Sunday
 1 November, the week before the launch, so the launch and everything after it is standard time.
 
@@ -27,10 +27,10 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 | Fri 30 Oct | T-8 | Moderators picked and given the rank. |
 | Sat 31 Oct | T-7 | T-7 announcement; Reddit post. (The 7 November date shipped early: 2.9.1, live on 29 October, below.) |
 | Sun 1 Nov | T-6 | The clocks go back at 2 AM. Off-site backups and Uptime Kuma alerts working. |
-| Tue 3 Nov | T-4 | **Last release tagged**: everything for launch is in it. |
-| Wed 4 Nov | T-3 | The last release deploys at 4-5 AM; the freeze starts. Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. |
-| Thu 5 Nov | T-2 | Trial decided. Build Battle plots built. Moderators onboarded, and their shadowed evening. |
-| Fri 6 Nov | T-1 | Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
+| Mon 2 Nov | T-5 | **3.0.0 tagged and deployed early** for a test night: Minecraft 26.2, the owners' mod list, a test world on the launch seed. |
+| Wed 4 Nov | T-3 | **Last day to tag a fix (3.0.x)** from what the test found; it deploys at 4-5 AM on Thursday. |
+| Thu 5 Nov | T-2 | The freeze starts. **The launch world:** a fresh copy of the seed, replacing the test world, then Chunky, the map rendered and fitted. Trial decided and a test purchase. New screenshots for the site gallery and the banners (`marketing/build.py`: the banners and `og.jpg` still show the old world, and the server-list banner still says 26.3). Build Battle plots built. Moderators onboarded, and their shadowed evening. |
+| Fri 6 Nov | T-1 | Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. Test joins, the trailer. Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
 | Sat 7 Nov | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
 | Sun 8 Nov | T+1 | Day-1 check. 6 PM Build Battle judging. Launch weekend ends at midnight. |
 | Mon 9 Nov | T+2 | The freeze ends. Day-1 retention. |
@@ -81,12 +81,13 @@ before turning it on for everyone.
 
 ### Release freeze: launch weekend
 
-Four days, not the seven the 21 November plan had. The last release is tagged on **Tuesday 3 November** and
-goes live in the 4-5 AM window on **Wednesday 4 November**. Nothing new deploys until **Monday 9 November**,
-after launch weekend.
+Three days, not the seven the 21 November plan had. On 2 November the owners moved the server to Minecraft 26.2
+and held the 2.11.0 tag. 3.0.0 went live that evening, ahead of plan, for a test night. A fix it turns up is tagged
+as 3.0.x by the evening of **Wednesday 4 November** and goes live in the 4-5 AM window on **Thursday 5 November**.
+Nothing new deploys after that until **Monday 9 November**, after launch weekend.
 
-Why a freeze at all: the load test, the restore drill and the rehearsal (Wednesday 4 November) run against the
-release players launch on, and Thursday and Friday are left to roll back or patch a bad one. Anything tagged
+Why a freeze at all: the load test, the restore drill and the rehearsal (Friday 6 November) run against the
+release players launch on, and what is left of Friday and Saturday morning is there to roll back or patch a bad one. Anything tagged
 after them would be untested on launch night.
 
 **The date release came first (done).** 2.9.0 held the 31 October calendar: on Monday 2 November it would
@@ -100,7 +101,7 @@ How:
 - **Hold the tag.** The VPS deploys only the newest `vX.Y.Z` tag (`TRACK=tags`), so no tag means no deploy.
   This is the freeze. Merging to `main` is fine; tagging is not.
 - **Stop the deploy timer as a backstop**, once the last release is live (check with
-  `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` on Wednesday 4 November after 5 AM):
+  `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` on Thursday 5 November after 5 AM):
   `sudo systemctl stop monkey-deploy.timer`. An accidental tag then waits. The timer is still enabled, so a
   reboot of the VPS starts it again: after any reboot, `systemctl is-active monkey-deploy.timer` and stop it
   again.
@@ -114,47 +115,49 @@ How:
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
-after that makes launch only if it is in the Tuesday 3 November release; whatever misses it waits until Monday
+after that makes launch only if it is in the 3.0.0 release; whatever misses it waits until Monday
 9 November at the earliest, and its lines come out of the announcements ("Copy that depends on unmerged work",
 below).
 
 ### Ops readiness
 
-- [x] **The 2.8.0 world.** Done 2026-10-27: 2.8.0 went live on a new world (docs/LIVE.md, "A new world for
-  Season I (2.8.0)"), and Chunky started pre-generating it. Do the load test and the rehearsal on this world.
-- [ ] **Wed 4 Nov, before the load test: Chunky.** `monkey rcon "chunky progress"` (as `monkey`, in
+- [ ] **Thu 5 Nov: the launch world.** Testers played in the world made on 2 November, so replace it with a fresh
+  copy of the same seed (docs/LIVE.md, "3.0.0: Minecraft 26.2 and a new world"), take testers back off the
+  whitelist, and start Chunky. Do the load test and the rehearsal on this world. Walk the spawn area, monuments and
+  NPC spots: the terrain changed.
+- [ ] **Fri 6 Nov, before the load test: Chunky.** `monkey rcon "chunky progress"` (as `monkey`, in
   `/srv/monkey/MonkeySMP-Server/docker`; `monkey rcon` is short for `docker compose exec monkey monkey rcon`).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:
   the load test refuses to run before it does.
 - [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
   check `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots` lists hourly snapshots. The keys go
   in the password manager and `/etc/monkey-backup.env` (root only), nowhere else.
-- [ ] **Wed 4 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
+- [ ] **Fri 6 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
   restored isn't a backup yet. Without working off-site backups by launch day, copy a backup off the VPS by
   hand that morning, and tell the other owner.
 - [ ] **By Sun 1 Nov: uptime alerts.** Uptime Kuma on the home PC (fleet repo, `services/uptime-kuma.md`)
   with the Minecraft ping and the map check from docs/LIVE.md, "Monitoring". Use the notification's Test
   button and check the message arrives in the staff channel.
-- [ ] **Wed 4 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
+- [ ] **Fri 6 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
   Over about 40 ms median at 25 players: follow the decision rule there before launch.
-- [ ] **By Wed 4 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
+- [ ] **By Fri 6 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
   `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
   docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
-- [ ] **By Wed 4 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/monkey/repo/deploy/monkey-drops.sh
+- [ ] **By Fri 6 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/monkey/repo/deploy/monkey-drops.sh
   --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
   docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
   a release places no NPCs by itself.
-- [ ] **By Wed 4 Nov: the last release's one-time steps**, once it is live. A deploy only copies `package/`, so
+- [ ] **By Fri 6 Nov: the last release's one-time steps**, once it is live. A deploy only copies `package/`, so
   these are by hand: `sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install` (a 7-day war counts from its
   clock, so without it a war never ends on time, even with siege windows off); the status file, with
   `sudo sh /srv/monkey/repo/deploy/monkey-status.sh --install`, the new Caddyfile and `sudo systemctl reload caddy`
   (docs/LIVE.md, "The sieges timer" and "The website's status"); and the Guide placed again (docs/ADMIN.md, "Spawn NPCs"),
   or "Talk to the Guide" never counts in the first-week quest: a placed NPC keeps what it was placed with.
-- [ ] **Wed 4 Nov: rehearse on the drill copy**, never the live world: `function monkey:rules/launch`,
+- [ ] **Fri 6 Nov: rehearse on the drill copy**, never the live world: `function monkey:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
   launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
@@ -219,7 +222,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 
 | Time | Who | Step |
 | --- | --- | --- |
-| 9 AM | an owner | `monkey-deploy.sh --status`: the release from 3 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
+| 9 AM | an owner | `monkey-deploy.sh --status`: the release from 4 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
@@ -260,7 +263,7 @@ PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 14 
 
 - [ ] The camera is one staff account in spectator mode that doesn't play that night, on the home PC.
 - [ ] `python obs/scripts/obsconf.py launch smp-cam` in the streaming folder (run from Windows Terminal; try
-  it at the Wednesday 4 November rehearsal): the SMP Camera scene, 1440p60 with a 60-second replay buffer. It
+  it at the Friday 6 November rehearsal): the SMP Camera scene, 1440p60 with a 60-second replay buffer. It
   captures only the Minecraft window and Minecraft's own sound, with the mic and desktop audio off, so no
   Discord or room voice can reach a clip. SMP Hold cuts away from anything that shouldn't be filmed.
 - [ ] In Simple Voice Chat, deafen the camera account as well, so no player's voice reaches the game's sound.
@@ -420,9 +423,8 @@ The tools are documented once; this list points at them.
 - [ ] **Getting somewhere, and what goes to an owner:** a moderator reaches a spot with `ledger tp` or a
   clicked position in Ledger's results. Whitelisting, game modes and teleporting to a player need op, which
   moderators don't get, so they ask an owner (docs/ADMIN.md, "What needs op" under "Ranks").
-- [ ] **X-ray alerts (MinerTrack) and Ledger:** alerts at VL 2, 4 and 5, `mtrack check NAME`, and the diamond
-  query; a lucky miner sets it off too, so check before acting (docs/ADMIN.md, "Moderation" and
-  "Griefing").
+- [ ] **X-ray and Ledger:** nothing alerts on x-ray since 3.0.0, so try the diamond query. A lucky miner looks
+  the same, so check before acting (docs/ADMIN.md, "Moderation" and "Griefing").
 - [ ] **Tickets and appeals:** reports and payment problems come in Front Desk tickets. Appeals are
   reviewed by a different admin within 7 days (docs/RULES.md, "Community and payments").
   Anything about money goes to an owner.

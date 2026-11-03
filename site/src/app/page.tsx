@@ -28,7 +28,7 @@ export default function Home() {
     <>
       <Canopy home="#" label="Sections" items={[
         { label: "The world", href: "#world" },
-        { label: "Gallery", href: "#gallery" },
+        ...(shots.length ? [{ label: "Gallery", href: "#gallery" }] : []),
         { label: "Join", href: "#join" },
         { label: "Pricing", href: "#pricing" },
         { label: "Rules", href: "#rules" },
@@ -43,7 +43,7 @@ export default function Home() {
           <h1>Claim land.<br />Make allies.<br />Keep what you can hold.</h1>
           <p className="lede">Monkey SMP is a modded factions server on {GAME} (Fabric) for a small crowd
             that plays evenings, Pacific time. Factions of four, alliances, banner-marked territory, PvP outside your
-            walls, reworked terrain, new dungeons, mobs and magic.</p>
+            walls, a remade Nether, new dungeons, mobs and magic.</p>
           <Countdown launchAt={config.LAUNCH_AT} stage={launchStage()}>
             <LaunchTime template="{date}, {pacific} ({eastern})" />
           </Countdown>
@@ -72,25 +72,26 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="gallery">
-          <h2>Out there</h2>
-          <p className="note">Screenshots from the server&apos;s own world, taken with the shaders that ship in the
-            pack.</p>
-          <Place className="gallery">
-            {shots.map((s, i) => (
-              <figure key={s.name}>
-                <div className="shot">
-                  <span className="where">{s.where}</span>
-                  <img src={`/img/${s.name}-${i ? 800 : 1600}.webp`}
-                    srcSet={`/img/${s.name}-800.webp 800w, /img/${s.name}-1600.webp 1600w`}
-                    sizes={i ? "(max-width: 760px) 100vw, 33vw" : "(max-width: 760px) 100vw, 66vw"}
-                    width={1600} height={900} loading={i ? "lazy" : undefined} decoding="async" alt={s.alt} />
-                </div>
-                <figcaption>{s.caption}</figcaption>
-              </figure>
-            ))}
-          </Place>
-        </section>
+        {shots.length > 0 && (
+          <section id="gallery">
+            <h2>Out there</h2>
+            <p className="note">Screenshots from the server&apos;s own world.</p>
+            <Place className="gallery">
+              {shots.map((s, i) => (
+                <figure key={s.name}>
+                  <div className="shot">
+                    <span className="where">{s.where}</span>
+                    <img src={`/img/${s.name}-${i ? 800 : 1600}.webp`}
+                      srcSet={`/img/${s.name}-800.webp 800w, /img/${s.name}-1600.webp 1600w`}
+                      sizes={i ? "(max-width: 760px) 100vw, 33vw" : "(max-width: 760px) 100vw, 66vw"}
+                      width={1600} height={900} loading={i ? "lazy" : undefined} decoding="async" alt={s.alt} />
+                  </div>
+                  <figcaption>{s.caption}</figcaption>
+                </figure>
+              ))}
+            </Place>
+          </section>
+        )}
 
         <section id="join">
           <h2>How to join</h2>

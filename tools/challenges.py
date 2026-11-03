@@ -389,16 +389,16 @@ def datapack_files() -> dict[str, str]:
 def advancement(c: dict) -> dict:
     """A hidden advancement that counts one kill of a listed mob, or one loot chest, then is taken back.
 
-    26.x conditions name their kind with "type", a criterion's "player"/"entity" is one condition (not a list),
-    and entity predicates are components ("minecraft:entity_type"); the pre-26 shapes fail the whole datapack
-    load (see tools/rules.py)."""
+    On 26.2 a condition names its kind with "condition", a criterion's "player"/"entity" is a list of conditions,
+    and entity predicates are components ("minecraft:entity_type"); 26.3's shapes fail the whole datapack load
+    (see tools/rules.py)."""
     if "kill" in c:
-        criteria = {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": {
-            "type": "minecraft:entity_properties", "entity": "this",
-            "predicate": {"minecraft:entity_type": f"#{NS}:challenges/{c['id']}"}}}}}
+        criteria = {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {"entity": [{
+            "condition": "minecraft:entity_properties", "entity": "this",
+            "predicate": {"minecraft:entity_type": f"#{NS}:challenges/{c['id']}"}}]}}}
     else:   # one criterion per loot table, as vanilla's loot_bastion does; any of them counts
         criteria = {t.replace("/", "."): {"trigger": "minecraft:player_generates_container_loot",
-                                          "conditions": {"loot_tables": f"minecraft:chests/{t}"}}
+                                          "conditions": {"loot_table": f"minecraft:chests/{t}"}}
                     for t in LOOT_TABLES}
     return {"criteria": criteria, "requirements": [list(criteria)],
             "rewards": {"function": f"{NS}:challenges/reward/{c['id']}"}}
@@ -408,14 +408,14 @@ def visit_advancement(c: dict, group: str, structures: list[str]) -> dict:
     """Fires (checked once a second) for a player inside one of the structures, only while the challenge is on
     and only until this kind counted, so it costs nothing the rest of the time."""
     index = of_kind(c["kind"]).index(c)
-    player = {"type": "minecraft:all_of", "terms": [
+    player = {"condition": "minecraft:all_of", "terms": [
         score_check(f"#{c['kind']}", "rc.week", least=index, most=index),
-        {"type": "minecraft:inverted", "term": {
-            "type": "minecraft:entity_scores", "entity": "this", "scores": {f"rc.{c['id']}.{group}": {"min": 1}}}},
-        {"type": "minecraft:entity_properties", "entity": "this",
+        {"condition": "minecraft:inverted", "term": {
+            "condition": "minecraft:entity_scores", "entity": "this", "scores": {f"rc.{c['id']}.{group}": {"min": 1}}}},
+        {"condition": "minecraft:entity_properties", "entity": "this",
          "predicate": {"minecraft:location": {"structures": [f"minecraft:{s}" for s in structures]}}},
     ]}
-    return {"criteria": {"visit": {"trigger": "minecraft:location", "conditions": {"player": player}}},
+    return {"criteria": {"visit": {"trigger": "minecraft:location", "conditions": {"player": [player]}}},
             "rewards": {"function": f"{NS}:challenges/reward/{c['id']}/{group}"}}
 
 

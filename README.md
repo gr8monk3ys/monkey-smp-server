@@ -3,17 +3,17 @@
 [![CI](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gr8monk3ys/monkey-smp-server/actions/workflows/ci.yml)
 
 A modded Minecraft Java **factions server** with PvP and roleplay: parties, alliances and land claims,
-reworked terrain (Tectonic, Terralith), new structures, mobs and magic. It is packaged so that
+a remade Nether (Amethyst Nether), new structures and mobs. It is packaged so that
 **anyone can host it from one download on Windows, macOS or Linux** (double-click on Windows), run it
 **with Docker**, or **put it on an online Minecraft host** with one upload. No Java install and no port
 forwarding needed.
 
 | | |
 |---|---|
-| Minecraft | Java Edition **26.3** |
+| Minecraft | Java Edition **26.2** |
 | Server | [Fabric](https://fabricmc.net) (loader pinned in the manifest) |
-| Server mods | 166: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Tectonic, Terralith, Incendium, Endercon, Moog's structures, Epic Dungeons, Grand Capitals, Naturalist, Variants & Ventures, Strength SMP, C2ME, ... |
-| Client pack | 234 mods, resource packs and shaders (required to join) |
+| Server mods | 151: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Amethyst Nether, Grand Capitals, Crazy Chambers, Sulfur Caves Plus, Naturalist, Strength SMP, ServerCore, ... |
+| Client pack | 165 mods and 22 resource packs (required to join) |
 | Players | about 10 at full speed on a 2017 desktop CPU, 25 on a current fast one ([measured](docs/ADMIN.md#how-many-players)) |
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).
@@ -97,7 +97,7 @@ Players need the mods (the server adds blocks, mobs and items). On **every OS** 
 [Modrinth App](https://modrinth.com/app): install the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
 and the app keeps it up to date. Windows players who'd rather keep the normal Minecraft Launcher unzip
 `MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**: it installs
-Fabric and every mod, resource pack and shader into a separate folder (downloaded from Modrinth, each
+Fabric and every mod and resource pack into a separate folder (downloaded from Modrinth, each
 file hash-checked) and adds a **Monkey SMP** installation to the launcher. [Prism Launcher](https://prismlauncher.org)
 installs the pack from Modrinth too, or imports the `.mrpack`. Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
 
@@ -119,7 +119,7 @@ package/                    <- exactly what goes in the release zip
     Monkey.psm1             <- the installer module: install, start/stop, backup, RCON, hosting export
     manifest.json           <- every download, pinned by URL + size + hash (Java once per platform)
     pwsh.lock               <- the portable PowerShell 7 builds monkey.sh may download, pinned the same way
-    defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, Tectonic, BlueMap)
+    defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
 player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
 client/                     <- source of the player modpack (.mrpack) + the pinned Fabric launcher profile
@@ -160,5 +160,5 @@ python tools/build.py          # -> dist/
 ## License
 
 The scripts, configs and docs in this repo are MIT licensed (see [LICENSE](LICENSE)). Minecraft, Fabric,
-the mods, datapacks, resource packs and shaders are separate projects under their own licenses; this repo
+the mods, datapacks and resource packs are separate projects under their own licenses; this repo
 only links to them.

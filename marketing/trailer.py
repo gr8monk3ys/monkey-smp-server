@@ -66,7 +66,7 @@ SECTIONS = [
     Section([("ancient_city", (1.15, 1.05), (0.5, 0.5), (0.52, 0.5))]),  # logo reveal
     Section(
         [("mountains", (1.0, 1.12), (0.5, 0.6), (0.5, 0.5))],
-        "MINECRAFT JAVA 26.3  ·  FABRIC",
+        "MINECRAFT JAVA 26.2  ·  FABRIC",
         "A modded factions server.",
         "PvP, politics and a world worth fighting over.",
     ),
@@ -95,7 +95,7 @@ SECTIONS = [
         ],
         "04  ·  MODDED TERRAIN AND DUNGEONS",
         "Land worth fighting over.",
-        "Tectonic, Terralith, Incendium and Endercon. Castles, citadels and deep dark cities.",
+        "Amethyst Nether, Grand Capitals and Crazy Chambers. Capitals, trial chambers and deep dark cities.",
     ),
     Section(
         [],

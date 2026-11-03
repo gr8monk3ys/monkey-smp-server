@@ -25,7 +25,7 @@ SSH key into the server.
 ## The machine
 
 One fast core matters more than anything else (docs/ADMIN.md, "How many players"): a current Ryzen
-(7000/9000 series) at about 5 GHz runs about 25 players at 20 TPS; an old Xeon runs fewer than a 2017
+(7000/9000 series) at about 5 GHz is roughly twice a 2017 desktop per core; an old Xeon runs fewer than a 2017
 desktop. Pick a VPS or dedicated server that names the CPU model, with 16 GB of RAM, NVMe and a US West or
 central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 
@@ -107,7 +107,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/monkey/MonkeySMP-Server/docker && docker compose attach monkey` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec monkey monkey rcon "say hi"` |
 | Let a player in by hand | `docker compose exec monkey monkey add-player NAME` |
-| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 12000"` and `... "execute in minecraft:the_nether run worldborder set 500 12000"` (the time is in ticks since 26.3: 12000 is 10 minutes), then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
+| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 12000"` and `... "execute in minecraft:the_nether run worldborder set 500 12000"` (the time is in ticks: 12000 is 10 minutes), then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
 | Store or staff grants (wardrobe) | `docker compose exec monkey monkey rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs` |
 | Joins per join address | `python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs` (docs/PROMOTION.md) |
@@ -132,7 +132,7 @@ A deploy never overwrites files in `server/`, and a new default config only reac
 that file yet. When a release changes a default the live server already has, its steps are here. They work
 before or after the release goes live.
 
-For 2.5.0, `deploy/upgrade-2.5.0.sh` does the two sections below (Distant Horizons; the short rules, ServerCore
+For 2.5.0, `deploy/upgrade-2.5.0.sh` did the Distant Horizons change (gone with the mod in 3.0.0) and the section below (the short rules, ServerCore
 and claims) with a single restart, then the spawn claim, python3 and the two timers ("Monitoring, the daily
 restart and the update check"). It skips whatever is already done, so it is safe to run again. Run it as root
 once 2.5.0 is live, `--check` first (it says what is left and changes nothing). Under `systemd-run` it carries on
@@ -172,6 +172,44 @@ stopped, before 2.10.0 deploys. In this order, as root:
 
 Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
 run `migrate_names.py` on it first.
+
+### 3.0.0: Minecraft 26.2 and a new world
+
+3.0.0 moves the server from Minecraft 26.3 back to 26.2 and to the owners' mod list. A world can't go back a
+Minecraft version, so Season I gets a new one. Follow "A new world for Season I (2.8.0)" below, with these changes. It takes hours.
+
+**The order differs: the old world leaves before the deploy.** A 26.2 server can't load the 26.3 world, so letting
+the release deploy first would fail its boot and roll back. Pause deploys, run `monkey backup` while the server is
+up and keep that backup, stop the server, move the world aside, carry, and only then run
+`sh /srv/monkey/repo/deploy/monkey-deploy.sh --now`. It skips its own backup when the server is stopped, and its
+first start makes the new world.
+
+Before the first start on 3.0.0, while the server is stopped:
+
+1. **One Tebex jar.** Tebex is now a managed mod, with the same file name as the jar placed by hand on the
+   live server, so the deploy should simply take it over. Check there is exactly one:
+   `ls ../server/mods/*tebex*.jar | wc -l` prints `1`. Leave the `tebex` folder beside it: it holds the store's
+   key. Two jars with
+   the same mod id stop Fabric from starting: delete the older one.
+2. **Configs a deploy doesn't replace.** The live server keeps its own copy of a config, so copy the one that
+   changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
+   replaces any tuning made on the server, then
+   `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 160 tall
+   now). Remove the one for a mod that left and would otherwise look live:
+   `rm -f ../server/config/enchantmentdisabler/config.toml`. Leftovers from other mods that left (Carry On,
+   Tectonic, Distant Horizons, MinerTrack) are harmless; delete them if you like.
+
+Changes to the steps below:
+
+- **Step 1:** the folder to keep is `/srv/monkey/seasons/pre-3.0/`, with the backup taken just before the world moved.
+- **Step 4:** move the old world to `/srv/monkey/seasons/pre-3.0/world`. The short rules didn't change.
+- **Step 5:** carry from that folder, still `--season 1`. The wardrobe scores, tiers and grants come across, and
+  so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
+- **Step 6: the seed is the owners' call.** The land differs either way, because the terrain mods left.
+- **Step 8:** leave out the `grep` for `nova_structures:` (rule B18 is retired).
+- **Step 10:** Qrafty's End Villages left; End cities are the reason to pre-generate the End.
+- **After step 12, look around:** the terrain is new, so the spawn area, monuments and NPC spots all need a walk
+  (docs/LAUNCH.md, "Ops readiness"). Then render the map and fit its border (`tools/map_border.py`).
 
 ### A new world for Season I (2.8.0)
 
@@ -465,31 +503,6 @@ as `openpartiesandclaims-server.toml.before-npcs` and starts the server again wh
 missing or spread over several lines, it changes nothing and says so: add the entries it names to it by hand
 with the server stopped. Nothing to do in game: the NPCs stay where they are.
 
-### Distant Horizons stops sending its own LODs (the release after 2.4.2)
-
-The live `DistantHorizons.toml` was written by Distant Horizons on the first start, with server-side LODs on,
-and those carry the real ores ("Distant Horizons and x-ray" in docs/ADMIN.md). Turn them off with the server
-stopped, so Distant Horizons can't write over the change. As `monkey` (`sudo -iu monkey`):
-
-```sh
-cd /srv/monkey/MonkeySMP-Server/docker
-exec 9>/tmp/monkey-deploy.lock && flock 9    # the deploy lock (LOCK_FILE in /etc/monkey-deploy.env): no deploy or backup starts meanwhile
-docker compose stop monkey
-f=/srv/monkey/MonkeySMP-Server/server/config/DistantHorizons.toml
-cp "$f" "$f.bak"
-sed -i -e 's/^\([[:space:]]*synchronizeOnLoad[[:space:]]*=\).*/\1 false/' \
-       -e 's/^\([[:space:]]*enableRealTimeUpdates[[:space:]]*=\).*/\1 false/' \
-       -e 's/^\([[:space:]]*generatorPlan[[:space:]]*=\).*/\1 "DISABLED"/' "$f"
-grep -nE '^[[:space:]]*(synchronizeOnLoad|enableRealTimeUpdates|generatorPlan)[[:space:]]*=' "$f"
-docker compose start monkey
-exec 9>&-                                    # let deploys and backups run again
-```
-
-The `grep` must print three lines ending in `false`, `false` and `"DISABLED"`. If it prints fewer, a newer
-Distant Horizons has renamed a key: find it in the file (its comments say what each setting does) and set it
-by hand, with the server stopped again. LODs players already received before the change stay on their
-computers; from now on they only get LODs of land they walk past.
-
 ### The short rules, ServerCore and claims (the release after 2.4.2)
 
 The release brings the short rules (`server/codeofconduct/en_us.txt`, a new file), but the live server keeps its
@@ -648,9 +661,8 @@ is fine.
 **On a new VPS**: set it up as in "Set up (once)" above. In step 5, before running the deploy script the
 second time, do steps 2 and 3 of the off-site setup with the values from your password manager, then
 `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/MonkeySMP-Server/server`
-and `chown -R monkey: /srv/monkey/MonkeySMP-Server/server`. Then run the deploy script, download the Tebex
-jar into `server/mods` again (backups leave jars out; see "Payments and Discord"), and finish with step 4
-of the off-site setup. The new VPS carries on the same series of snapshots.
+and `chown -R monkey: /srv/monkey/MonkeySMP-Server/server`. Then run the deploy script, and finish with step 4
+of the off-site setup. The Tebex jar comes with the manifest and its key with the restore (`server/mods/tebex`). The new VPS carries on the same series of snapshots.
 
 ### Monthly restore drill (home PC)
 
@@ -674,9 +686,10 @@ read and the world loads, and it rehearses the playit.gg fallback below, which s
    C:\Tools\restic\restic.exe restore latest:/srv/monkey/MonkeySMP-Server/server --target server
    ```
    The newest snapshot should be from the last hour or two.
-5. **Start it** with `Start Server.bat`. Backups leave the jars out, so the first start downloads Java,
-   Fabric and the mods (about 500 MB), then loads the restored world. Leave the Tebex jar out on a drill:
-   with it, this copy would carry out store purchases meant for the VPS.
+5. **Take the store's key out, then start it.** Delete `server\mods\tebex` first: it holds Tebex's secret key,
+   and with it this copy would carry out store purchases meant for the VPS. Then `Start Server.bat`. Backups leave
+   the jars out, so the first start downloads Java, Fabric and the mods (about 300 MB), then loads the restored
+   world.
 6. **Join it** through playit.gg: start the agent and join its tunnel address (not `monkeysmp.lscaturchio.xyz`:
    DNS stays on the VPS during a drill). Your base should be there as it was at the snapshot's time.
 7. **Stop it and delete the folder.** It is a copy: nothing done on it counts. Note the date and what
@@ -686,8 +699,8 @@ read and the world loads, and it rehearses the playit.gg fallback below, which s
 
 When the VPS or its provider is down for longer than a restart:
 
-1. On the home PC, do steps 1 to 5 of the restore drill above, in a folder you keep, and put the Tebex jar
-   into `server\mods` this time (see "Payments and Discord").
+1. On the home PC, do steps 1 to 5 of the restore drill above, in a folder you keep, but keep
+   `server\mods\tebex` this time: here the store should deliver (see "Payments and Discord").
 2. Start the playit.gg agent (set up once, as in `READ ME FIRST.txt`). Its tunnel address and port stay
    the same between runs; a premium playit.gg account adds a UDP tunnel for voice chat.
 3. In Cloudflare DNS, point the `_minecraft._tcp.monkeysmp` SRV record at the playit address and port,
@@ -704,24 +717,22 @@ Only one copy may run the world at a time: two live copies split the world into 
   commands on the server after a purchase: `whitelist add {username}` for the pass (`whitelist remove` when
   it ends), and the wardrobe scoreboard and team commands for supporter tiers (the full list, with the
   reverse on expiry, is in docs/RETENTION.md). The monthly pass renews until the buyer cancels it from
-  Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Tebex's
-  Fabric mod (2.4.6) is built for 26.2 but loads on 26.3 (checked on the live server, October 2026). It sits
-  in `server/mods` as an extra jar, which deploys and the installer leave alone. Backups leave every jar
-  out, so after restoring one (or on the fallback below) download it again:
-  `https://cdn.modrinth.com/data/nRA0jiJt/versions/qg7SxggJ/tebex-fabric-26.2-2.4.6-0096441.jar`. Once
-  there is a 26.3 build it can go into the manifest with `tools/add.py`, and then it comes back by itself.
+  Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Since
+  3.0.0 Tebex's Fabric mod (2.4.6) is in the manifest like any other mod, so a deploy, a restore or a new VPS
+  gets it by itself. Its secret key is not in the repo: it sits in `server/mods/tebex`, outside the world, and
+  `tebex secret` in the console sets it.
 - **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
   appeals and the `monkey` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
 
 ### The store (set up once, before the first sale)
 
-Status (2026-10-28): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
+Status (2026-11-02): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
 (`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
 storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
-Until it is approved, checkout takes only test payments and the public store address isn't known.
-`monkeysmp.tebex.io` belongs to another server, so read the address off the Tebex panel once the store is live.
-Then make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
+The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
+belongs to another server). On 2026-11-02 that page answered 503, "Store unavailable", so it isn't selling yet.
+Once it opens, make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
 only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
 and terms against the table below before the first real sale.
 
@@ -785,7 +796,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now monkey-restart.timer
 Both post to `STAFF_WEBHOOK_URL` in `/etc/monkey-deploy.env` when it is set (a staff-only channel), and to
 `DISCORD_WEBHOOK_URL` otherwise.
 
-**The daily restart** keeps memory from creeping up over days of uptime (Distant Horizons, BlueMap and mod
+**The daily restart** keeps memory from creeping up over days of uptime (BlueMap and mod
 caches). It runs inside the deploy window but after the deploy check: when a release went live that morning,
 the server is younger than `RESTART_MIN_UPTIME` hours (6) and the restart skips. It waits up to 30 minutes for
 the deploy lock, so it never overlaps a deploy or an off-site backup. It warns anyone online 5 minutes and 1
@@ -832,8 +843,7 @@ busy. To run the Sunday job now (it still closes only a week at least 3 days old
 ## Load test
 
 The player table in docs/ADMIN.md was measured on an i7-8700K with nothing else running. The VPS core is
-faster, but it has only two threads, shared by the game thread, C2ME's chunk workers, Distant Horizons'
-LOD builders, BlueMap's renderer and the garbage collector, so its number has to be measured on the VPS.
+faster, but it has only two threads, shared by the game thread, BlueMap's renderer and the garbage collector, so its number has to be measured on the VPS.
 `deploy/monkey-loadtest.sh` runs `tools/loadtest.py` there: 25 Carpet fake players standing spread out in
 generated terrain (the same test as the table), 5 minutes measured, with a spark profile of every thread.
 
@@ -875,15 +885,16 @@ ServerCore kept the full distances (simulation 6, view 8), so the numbers aren't
 leave it.** The run's `summary.json` and staff post hold a docs link that spark printed while stopping;
 `tools/loadtest.py` now skips those. The profile link above came from the run's `server.log`.
 
+**Don't rely on that row.** Until 3.0.0 the tool lost most of its fake players in the first two minutes and didn't
+say so (CHANGELOG, 3.0.0), and the tick dropping from about 30 ms to about 15 ms fits that. The tool now records
+`players_online_min` and the staff post gives it: a run only counts if it equals the players asked for.
+
 **Decision rule.** Under about 40 ms median at 25 players, leave it: that leaves room for spikes. Above
 that, change one thing at a time, in this order, and run the test again after each:
 
-1. **Cap Distant Horizons** if its threads show up in the spark profile. In `server/config/DistantHorizons.toml`:
-   `numberOfThreads = 1` and `threadRunTimeRatio = "0.5"` under `[common.multiThreading]`, and a smaller
-   `maxGenerationRequestDistance` (4096 now) under `[server]`.
-2. **Pause BlueMap in the evening** if it shows up. It already renders on one thread
+1. **Pause BlueMap in the evening** if it shows up. It already renders on one thread
    (`render-thread-count: 1`); `bluemap stop` over RCON pauses it and `bluemap start` resumes it.
-3. **Lower `simulation-distance`** in the live `server.properties` from 6 to 5, then 4. Players still see 8
+2. **Lower `simulation-distance`** in the live `server.properties` from 6 to 5, then 4. Players still see 8
    chunks; mobs, crops and farms only run nearer. If `servercore_status` in `summary.json` shows lower
    distances than these, ServerCore's dynamic mode was already cutting them during the test because ticks
    were over 45 ms, so the real cost is higher than the number.
@@ -912,7 +923,7 @@ The question for Reizor support (the owner sends it):
    proxied on Free: voice either stops working, or `voice_host` points at the VPS and publishes the address
    the proxy hides. Pro ($25 a month, 5 TB) adds Simple Voice Chat support. With Free, check the traffic after
    the first month (`vnstat` on the VPS).
-2. **The real player addresses.** The Proxy Protocol Support mod (Fabric, server side only, 1.2.1 for 26.3,
+2. **The real player addresses.** The Proxy Protocol Support mod (Fabric, server side only,
    added with `tools/add.py`) reads them from the proxy, so bans, LuckPerms and logs see players, not
    TCPShield. In `server/config/proxy_protocol_support.json`: `"enableProxyProtocol": true`,
    `"whitelistTCPShieldServers": true` (it fetches TCPShield's addresses itself) and

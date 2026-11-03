@@ -365,8 +365,8 @@ def test_roused_mobs_calm_by_themselves_and_pay_only_at_their_own_moon():
     assert rise.index("scoreboard players add #moon om 1") < rise.index("difficulty hard")
     moon = {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": "#moon"}, "score": "om"}
     adv = json.loads(FILES["data/monkey/advancement/omens/blood_kill.json"])
-    assert adv["criteria"]["kill"]["conditions"]["entity"] == {
-        "type": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": moon, "max": moon}}}
+    assert adv["criteria"]["kill"]["conditions"]["entity"] == [{
+        "condition": "minecraft:entity_scores", "entity": "this", "scores": {"om.blood": {"min": moon, "max": moon}}}]
 
 
 FORBIDDEN = ("netherite", "diamond", "emerald", "golden_apple", "enchanted", "potion", "totem", "elytra",
@@ -429,8 +429,8 @@ def test_hunted_posts_the_standings_bounty_and_staff_claim_it():
     kill = fn("hunted/kill")
     assert "execute if entity @s[tag=ev.arena] run return 0" in kill
     adv = json.loads(FILES["data/monkey/advancement/omens/hunted_kill.json"])
-    terms = adv["criteria"]["kill"]["conditions"]["entity"]["terms"]
-    assert {"type": "minecraft:entity_scores", "entity": "this", "scores": {"om.hunt": {"min": 1}}} in terms
+    terms = adv["criteria"]["kill"]["conditions"]["entity"][0]["terms"]
+    assert {"condition": "minecraft:entity_scores", "entity": "this", "scores": {"om.hunt": {"min": 1}}} in terms
     # Nothing shows where they are.
     hunted = "\n".join(FILES[p] for p in FUNCTIONS if "/hunted/" in p)
     assert "glowing" not in hunted and "Pos" not in hunted and "locate" not in hunted

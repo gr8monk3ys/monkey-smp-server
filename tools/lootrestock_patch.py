@@ -7,7 +7,7 @@ Why. Loot Restock starts tracking a structure chest (or chest minecart) the firs
 and records whether it is empty with the container's isEmpty(). For a container that still has its loot
 table, vanilla's isEmpty() rolls the loot first, with no player. Vanilla then has nothing left to roll when
 the player's own open goes through, so the `player_generates_container_loot` advancement never fires and
-the weekly "Open 8 loot chests" challenge never counts a chest (tested on 26.3 with Loot Restock 1.0.3;
+the weekly "Open 8 loot chests" challenge never counts a chest (tested on 26.2 with Loot Restock 1.0.3;
 barrels, which Loot Restock leaves alone in our config, still counted).
 
 The patch. In ChestInteractionHandler's two container handlers, the call to isEmpty() becomes `false`

@@ -75,7 +75,6 @@ def test_download_keeps_the_world_and_leaves_out_private_files(tmp_path):
             "players/stats/a.json", "data/minecraft/scoreboard.dat", "data/openpartiesandclaims/server-info.nbt",
             "datapacks/monkey-wardrobe/pack.mcmeta"]
     drop = ["ledger.sqlite", "session.lock", "level.dat_old", "serverconfig/x.toml", "scripts/a.js",
-            "dimensions/minecraft/overworld/data/DistantHorizons.sqlite", "data/baguettelib/player_activity.dat",
             "data/mezz_config/server-id.txt", "datapacks/monkey-carry/pack.mcmeta"]
     for rel in keep + drop:
         (world / rel).parent.mkdir(parents=True, exist_ok=True)

@@ -32,7 +32,7 @@ MUTED = (200, 204, 210)
 
 ADDRESS = "monkeysmp.lscaturchio.xyz"
 TAGLINE = "Claim land. Make allies. Keep what you can hold."
-HOOKS = "Factions of four  ·  Strength SMP  ·  Modded terrain and dungeons"
+HOOKS = "Factions of four  ·  Strength SMP  ·  A remade Nether and new dungeons"
 
 
 def font(name, size):
@@ -184,7 +184,7 @@ def discord_banner():
 def invite_splash():
     def season(im, d):
         f = body(30, bold=True)
-        label = "SEASON I  ·  FACTIONS PvP  ·  JAVA 26.3"
+        label = "SEASON I  ·  FACTIONS PvP  ·  JAVA 26.2"
         tw = d.textlength(label, font=f)
         pill(d, ((1920 - tw) / 2 - 28, 1080 - 150, (1920 + tw) / 2 + 28, 1080 - 96), label, f)
 
@@ -250,7 +250,7 @@ def server_list_banner():
     word = svg_png("wordmark", 2)  # 10 cells tall -> 20 px
     paste(im, word, (66, 8))
     d.text((w - 10, 20), ADDRESS, font=mono(12), fill=GOLD, anchor="rs")
-    d.text((66, 34), "Factions PvP · Strength SMP · Season I · Java 26.3", font=body(13, bold=True), fill=PAPER)
+    d.text((66, 34), "Factions PvP · Strength SMP · Season I · Java 26.2", font=body(13, bold=True), fill=PAPER)
     return im
 
 

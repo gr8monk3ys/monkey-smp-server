@@ -130,7 +130,7 @@ uptime_hours() {
 # The link to a fresh `spark health` report (TPS, tick times, CPU, memory, GC), or nothing. spark answers
 # from its own thread after the RCON reply has gone, but it also sends the link to the console, so the link
 # is read from the server log: only from a line that one of spark's own threads logged and that is nothing
-# but the link, as spark writes it (26.3 logs it as "System chat: <link>"), so a link a player types in chat
+# but the link, with or without "System chat: " before it, so a link a player types in chat
 # (logged by the server thread as "<name> ...") can't end up in the staff report, and never a link to
 # spark's docs, which it also prints.
 spark_health() {

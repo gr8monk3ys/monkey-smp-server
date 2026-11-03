@@ -3,30 +3,32 @@
     "kill": {
       "trigger": "minecraft:player_killed_entity",
       "conditions": {
-        "entity": {
-          "type": "minecraft:entity_scores",
-          "entity": "this",
-          "scores": {
-            "om.blood": {
-              "min": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#moon"
+        "entity": [
+          {
+            "condition": "minecraft:entity_scores",
+            "entity": "this",
+            "scores": {
+              "om.blood": {
+                "min": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#moon"
+                  },
+                  "score": "om"
                 },
-                "score": "om"
-              },
-              "max": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#moon"
-                },
-                "score": "om"
+                "max": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#moon"
+                  },
+                  "score": "om"
+                }
               }
             }
           }
-        }
+        ]
       }
     }
   },

@@ -68,14 +68,14 @@ def test_the_guide_sets_its_step_and_opens_the_quest():
     assert npcs.trigger("quest") in buttons["Your first week"]["Actions"]
 
 
-def test_the_bed_step_is_a_26x_advancement_open_only_while_the_step_is():
+def test_the_bed_step_is_an_advancement_open_only_while_the_step_is():
     adv = json.loads(pack()["data/monkey/advancement/quest/home.json"])
     crit = adv["criteria"]["bed"]
     assert crit["trigger"] == "minecraft:any_block_use"
-    player = crit["conditions"]["player"]
-    assert player["type"] == "minecraft:all_of" and '"condition":' not in json.dumps(adv)
+    [player] = crit["conditions"]["player"]
+    assert player["condition"] == "minecraft:all_of"
     assert {"min": quest.ON, "max": quest.ON} in [t.get("scores", {}).get(quest.STATE) for t in player["terms"]]
-    assert crit["conditions"]["location"]["predicate"]["block"]["blocks"] == "#minecraft:beds"
+    assert crit["conditions"]["location"][0]["predicate"]["block"]["blocks"] == "#minecraft:beds"
     assert adv["rewards"]["function"] == "monkey:quest/reward/home"
     reward = fn("reward/home")
     assert "scoreboard players set @s rq.home 1" in reward and "advancement revoke @s only monkey:quest/home" in reward

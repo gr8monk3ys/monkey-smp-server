@@ -1,6 +1,44 @@
 # Changelog
 
-## [2.11.0] - 2026-11-03
+## [3.0.0] - 2026-11-02
+
+Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which
+was never tagged or deployed, and has everything 2.11.0 had. Players reinstall the client pack. After it deploys
+there are steps by hand (docs/LIVE.md, "3.0.0: Minecraft 26.2 and a new world"): one Tebex jar, the Nether
+anti-xray config, the new world, pre-generation and the map.
+
+### Changed
+
+- Minecraft 26.3 to 26.2, Fabric Loader 0.20.1. A world can't go back a version, so Season I gets a new world.
+- The server's mods are the shared folder's list plus the operations tools and the libraries listed mods need: 151
+  mods, down from 166. Client pack: 165 mods and 22 resource packs, about 310 MB, down from 560 MB.
+- Strength SMP Season 4 to Season 5, and its four attack-damage buffs are removed by their new names in
+  `tools/events.py`. Season 5 needs no patch, so the Season 4 one is gone. Silver's Effects Library is patched
+  again, against the file 26.2 reads: 25 fake players went from 3,359 command-limit hits a run to none.
+- `tools/loadtest.py` keeps its fake players alive. It gave them protection before they had joined and could spawn
+  them over chunks still generating, so most died in the first two minutes and Carpet removed them: a run
+  measured 3 to 6 players out of 25 and didn't say so. `summary.json` now has `players_online_min`.
+- Tebex is a managed mod: a restore or a new VPS gets it by itself. The restore drill now removes
+  `server/mods/tebex`, where its key is, instead of leaving out the jar.
+- The Nether: Amethyst Nether is 160 tall, with its roof near y 160 (`antixray.toml`, BlueMap's comment).
+- Datapacks and the wardrobe pack are built for 26.2 (data format 107, resource format 88); the Block Wheel pool is
+  regenerated (979 blocks: 26.3's concrete and wool slabs and stairs are gone).
+- Voice chat's mute moves from M to Y, so M opens the world map and nothing else.
+- The launch plan: 3.0.0 is tagged early, on Monday 2 November, for a test night. The freeze still starts Thursday 5 November, and Season I starts on a fresh copy of this seed.
+- Keys: each key does one thing. Fullbright is `.`, the shoulder swap `\`, the fast emote `[`; Essential's menu, friends, screenshots and cosmetics move to Home, End, Insert and Delete.
+- Client: Essential no longer asks twice whether to update on the second launch.
+
+### Removed
+
+- All terrain and structure mods not on the list: Terralith, Tectonic, Incendium, Structory, Endercon, Moog's
+  structures, Dungeons and Taverns, Epic Dungeons, Qrafty's End Villages, Lithostitched. Also Variants and Ventures,
+  Friends and Foes, Carry On, GeckoLib, C2ME, MinerTrack, the trim mods, Trident All-Weather Channeling and its patch.
+- On the client: Iris and all 15 shader packs, Xaero's Minimap and World Map, Distant Horizons, Mouse Tweaks. Open
+  Parties and Claims is server-side only now, so claims are by `/oclaims claim`, with no claims screen.
+- Rule B18 is retired: the Nova Structures books it covered left with their mod.
+- The site's gallery, until the shots are retaken on the new world: the old ones show terrain that's gone.
+
+## [2.11.0] - 2026-11-02
 
 The last release before Season I: everything for launch is in it, and it goes live in the 4-5 AM window on
 Wednesday 4 November, when the freeze starts (docs/LAUNCH.md, "Release freeze"). Most of the new systems ship off

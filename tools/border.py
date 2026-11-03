@@ -6,14 +6,14 @@
     python3 tools/border.py send WORLD --docker DIR [--at TIME]   sends them (deploy/monkey-border.sh, hourly)
 
 docs/SEASONS.md, "The acts of a season": the border breaks twice a season, in the Saturday event slot (6 PM
-Pacific), from 2500 to 4000 and then to 6000, and the Nether's with it at 1:8 (since 26.3 each dimension has its
+Pacific), from 2500 to 4000 and then to 6000, and the Nether's with it at 1:8 (on 26.2 each dimension has its
 own border; the monkey-rules pack sets the starting ones once per world). ACTS has each season's acts by week;
 the weeks' dates come from tools/season_calendar.py's SEASONS, so moving a season moves its acts.
 
 What the timer does, from the saved world (the server saves every 5 minutes, so an hourly job sees its own work):
 - **The act.** Once an act's time has come and the world hasn't recorded it (#border_act ev.state, the last
   act done; the world's own, so a new season's starts from none), it sends `worldborder set SIZE 12000` in each
-  dimension whose saved border is heading for less than the act's size (10 minutes to grow: since 26.3 the
+  dimension whose saved border is heading for less than the act's size (10 minutes to grow: on 26.2 the
   time is in ticks, 20 a second), tells everyone
   online, and records the act. Only the latest act that is due counts, and a border is never shrunk: one
   already that size or bigger (grown by hand) is left alone, and a recorded act never runs again, so the
@@ -55,7 +55,7 @@ ACTS = {
 }
 NETHER_SCALE = 8
 GROW_SECONDS = 600
-TICKS = 20                    # `worldborder set SIZE TIME` takes ticks since 26.3 (600 would grow it in 30 seconds)
+TICKS = 20                    # `worldborder set SIZE TIME` takes ticks on 26.2 (600 would grow it in 30 seconds)
 EVENT_TIME = dt.time(18, 0)   # the Saturday event slot, Pacific
 OVERWORLD, NETHER = saved_world.OVERWORLD, "minecraft:the_nether"
 PURGE = Path("config") / "bluemap" / "monkey-map-purge.txt"
@@ -164,7 +164,7 @@ def read_run(world: Path, when: dt.datetime) -> Run:
     for dim in (OVERWORLD, NETHER):
         found = saved_world.border(world, dim)
         if found is None:
-            run.why = f"no saved border for {dim} (a 26.3 world that has been saved?)"
+            run.why = f"no saved border for {dim} (a 26.2 world that has been saved?)"
             return run
         run.borders[dim] = found
     if scores.get(STATE, {}).get(DONE, 0) < run.act.number:

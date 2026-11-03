@@ -65,10 +65,10 @@ def test_each_act_raises_one_boss():
 
 def test_the_kill_advancement_and_the_first_read_the_boss_score():
     adv = json.loads(FILES["data/monkey/advancement/boss/slain.json"])
-    assert adv["criteria"]["kill"]["conditions"]["entity"]["scores"] == {boss.ID: {"min": 1}}
+    assert adv["criteria"]["kill"]["conditions"]["entity"][0]["scores"] == {boss.ID: {"min": 1}}
     m = firsts.milestone("boss")
-    assert m["season"] == 2 and m["conditions"]["entity"]["scores"] == {boss.ID: {"min": 1}}
-    terms = firsts.advancement(m)["criteria"]["boss"]["conditions"]["player"]["terms"]
+    assert m["season"] == 2 and m["conditions"]["entity"][0]["scores"] == {boss.ID: {"min": 1}}
+    terms = firsts.advancement(m)["criteria"]["boss"]["conditions"]["player"][0]["terms"]
     assert datapacks.score_check("#season", "rw.day", least=2) in terms
     show = firsts.show_function(m).splitlines()
     assert show[1] == "execute unless score #season rw.day matches 2.. run return 0"   # hidden in Season I's menu

@@ -22,7 +22,7 @@ web
 
 ## Product Purpose
 
-Monkey SMP is a small, paid, whitelisted, modded Minecraft Java factions server (Fabric, Minecraft 26.3),
+Monkey SMP is a small, paid, whitelisted, modded Minecraft Java factions server (Fabric, Minecraft 26.2),
 hosted by Diego and Lorenzo Scaturchio for a crowd that plays evenings, Pacific time, up to 30 online. The site
 exists to turn a curious visitor into a player: explain what the server is, show the world, and take them
 through the three steps (get a pass, install the modpack, connect). For members it is the reference for the
@@ -34,7 +34,7 @@ connects without needing help.
 - Factions of up to four under their own banners, alliances, protected territory (2 x 2 chunks a player) and
   contested land everywhere else, with Strength SMP (win fights and your strength grows, lose and it drains)
   as the centerpiece.
-- Reworked terrain and new dungeons, mobs and magic (Tectonic, Terralith, Incendium, Endercon and others),
+- A remade Nether, rebuilt villages and new structures and mobs (Amethyst Nether, Grand Capitals, Crazy Chambers, Naturalist and others),
   proximity voice chat and a public live 3D map.
 - Seasons: each season is a new world with its own rules and a twist players vote on. Season I opens
   Saturday 7 November 2026, 5 PM Pacific, everyone let in at once.
@@ -78,9 +78,8 @@ connects without needing help.
 
 ## Evidence on Hand
 
-- Six screenshots from the server's own world, taken with the pack's shaders (`site/public/img/*-800.webp`
-  and `-1600.webp`): the Painted Mountains, a Nether castle, an End citadel, a fortified village, a floating
-  island, a mage tower.
+- Six screenshots of the 2.x world (`site/public/img/*-800.webp` and `-1600.webp`), off the site since 3.0.0
+  because they show terrain and structures from mods that left: retake them on the new world.
 - A one-minute trailer (`site/public/media/trailer-720p.mp4`, poster `trailer-poster.webp`); its event scenes are
   staged on a test server with stand-in players, and the caption says so.
 - Logo, stacked logo, mark, server-list banner and Discord banner (`site/public/kit/`); the link-preview

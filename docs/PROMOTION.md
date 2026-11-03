@@ -16,21 +16,21 @@ Three ground rules, everywhere:
 
 Paste these as they are. Lists that have a field this kit doesn't cover get the website.
 
-**Name:** `Monkey SMP | Modded Factions | Java 26.3`
+**Name:** `Monkey SMP | Modded Factions | Java 26.2`
 
 **Short description** (under 150 characters, for lists that show one line):
 
-> Modded factions on Java 26.3: factions of four, territory, PvP, Strength SMP, voice chat, weekly events. Paid pass, $5/mo.
+> Modded factions on Java 26.2: factions of four, territory, PvP, Strength SMP, voice chat, weekly events. Paid pass, $5/mo.
 
 **Long description:**
 
-> Monkey SMP is a small modded factions server on Minecraft Java 26.3 (Fabric), for players who play evenings,
+> Monkey SMP is a small modded factions server on Minecraft Java 26.2 (Fabric), for players who play evenings,
 > Pacific time.
 >
 > - Factions of up to four, alliances, banner-marked territory nobody may grief. Everything outside it is
 >   contested.
 > - Strength SMP: win fights and your strength grows, lose them and it drains.
-> - Tectonic, Terralith, Incendium and Endercon terrain, with dungeons, taverns and capitals to raid.
+> - A remade Nether, rebuilt villages and illager strongholds, bigger trial chambers, sulfur caves to raid.
 > - Proximity voice chat, and a public 3D live map.
 > - One event a week (Saturday, 6 pm Pacific): faction raids, arena nights, Dragon Night.
 > - Up to 30 online, a pre-generated world on a dedicated CPU, 20 TPS.
@@ -46,7 +46,7 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 Fabric, US West, English. Not Roleplay: the server has no roleplay rules, and a roleplay crowd
 would be disappointed.
 
-**Version:** Java 26.3. **Country:** United States. **Max players:** 30.
+**Version:** Java 26.2. **Country:** United States. **Max players:** 30.
 
 **Banner** (468 × 60, the size every list takes): `site/public/kit/server-list-468x60.png`, also served at
 https://monkeysmp.lscaturchio.xyz/kit/server-list-468x60.png. **Icon** (64 × 64): `marketing/server-icon.png`.
@@ -116,7 +116,7 @@ the client pack. Every join adds a line like this to the log:
 [20:15:02] [Server thread/INFO]: [STDOUT]: Player NAME connected via: yt.monkeysmp.lscaturchio.xyz
 ```
 
-Modrinth lists it for 26.2 only; it was tested on 26.3 (docs/MAINTAINING.md, "Mods pinned by hand"). The mod
+The mod
 can also turn away players who come in through an address that isn't on its allow-list. The pack ships
 `config/hostname-catcher.yml` with an empty list (`allowed-domains: []`), which lets every address in; keep it
 that way. The mod's own default lists only `localhost`, `127.0.0.1` and `*.example.com`, so it would turn away
@@ -142,7 +142,7 @@ is in docs/LAUNCH.md, "Announcement schedule"; the founding roster post (T-9) an
 docs/LAUNCH.md too. Like everything here, nothing is posted until an owner says yes.
 
 - **Lines marked [needs ...]** mention work that isn't merged yet. Each stays only if that work is in the
-  release tagged on Tuesday 3 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
+  last release, tagged by Wednesday 4 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
   marker before posting.
 - **Lines marked [store]** or **[by hand]**: keep the one that is true on the day. The store's link goes on the
   site at 5 PM on launch day (docs/LAUNCH.md, "The store").
@@ -161,7 +161,7 @@ one. Everything else in the listing kit stays.
 
 **Short description** (under 150 characters):
 
-> Modded factions on Java 26.3. Season I opens Sat 7 Nov, 5 PM PT. Factions of four, PvP, weekly events. Paid pass $5/mo.
+> Modded factions on Java 26.2. Season I opens Sat 7 Nov, 5 PM PT. Factions of four, PvP, weekly events. Paid pass $5/mo.
 
 **First line of the long description:**
 
@@ -171,7 +171,7 @@ one. Everything else in the listing kit stays.
 
 From Sunday 8 November, 9 AM, swap them for:
 
-> Modded factions on Java 26.3. Season I is live until 23 Jan. Factions of four, PvP, weekly events. Paid pass $5/mo.
+> Modded factions on Java 26.2. Season I is live until 23 Jan. Factions of four, PvP, weekly events. Paid pass $5/mo.
 
 > **Season I is live**, from 7 November 2026 to 23 January 2027, with an event every Saturday at 6 PM Pacific.
 
@@ -184,18 +184,18 @@ answer comments from the same account that day. Other subreddits only after read
 
 **Title:**
 
-> [Java 26.3] [Modded] [Factions] [Paid] Monkey SMP: Season I opens Saturday 7 November, 5 PM Pacific
+> [Java 26.2] [Modded] [Factions] [Paid] Monkey SMP: Season I opens Saturday 7 November, 5 PM Pacific
 
 **Body:**
 
-> **Monkey SMP** is a small modded factions server on Minecraft Java 26.3 (Fabric), for people who play
+> **Monkey SMP** is a small modded factions server on Minecraft Java 26.2 (Fabric), for people who play
 > evenings, Pacific time. **Season I opens Saturday 7 November at 5 PM Pacific / 8 PM Eastern**, with
 > everyone let in at the same moment, and runs to 23 January 2027.
 >
 > - Factions of up to four, alliances, and banner-marked territory nobody may grief. Everything outside it is
 >   contested.
 > - Strength SMP: win fights and your strength grows, lose them and it drains.
-> - Tectonic, Terralith, Incendium and Endercon terrain, with dungeons, taverns and capitals to raid.
+> - A remade Nether, rebuilt villages and illager strongholds, bigger trial chambers, sulfur caves to raid.
 > - An event every Saturday at 6 PM Pacific: faction raids, arena nights, Dragon Night. Launch weekend is a
 >   Build Battle.
 > - Weekly faction standings and a bounty board. [needs #42]
@@ -307,7 +307,7 @@ code, no discount for the buyer, and the #ad disclosure. Send them the page, don
 Message template (Discord DM, email from the channel's About page, or a reply on their Discord; one message,
 no follow-up spam):
 
-> Hi NAME, I'm Lorenzo, one of the two people running Monkey SMP, a small modded factions server on Java 26.3
+> Hi NAME, I'm Lorenzo, one of the two people running Monkey SMP, a small modded factions server on Java 26.2
 > (factions of four, territory, Strength SMP, proximity voice, a weekly raid or arena night).
 >
 > I liked VIDEO. If you're looking for a server for a series, you'd be welcome to play here for free, and you

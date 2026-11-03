@@ -218,19 +218,19 @@ def datapack_files() -> dict[str, str]:
     # ------------------------------------------------ claims
     f[f"{ADVANCEMENT}/slain.json"] = json.dumps({
         "criteria": {"slain": {"trigger": "minecraft:entity_killed_player", "conditions": {
-            "player": {"type": "minecraft:all_of", "terms": [
-                {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
-                respawn.fresh_victim_excluded()]},   # rule 5: freshly respawned, no claim
-            "entity": {"type": "minecraft:entity_properties", "entity": "this",
-                       "predicate": {"minecraft:entity_type": "minecraft:player"}}}}},
+            "player": [{"condition": "minecraft:all_of", "terms": [
+                {"condition": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
+                respawn.fresh_victim_excluded()]}],   # rule 5: freshly respawned, no claim
+            "entity": [{"condition": "minecraft:entity_properties", "entity": "this",
+                        "predicate": {"minecraft:entity_type": "minecraft:player"}}]}}},
         "rewards": {"function": f"{NS}:wanted/slain"}}, indent=2)
     f[f"{ADVANCEMENT}/kill.json"] = json.dumps({
         "criteria": {"kill": {"trigger": "minecraft:player_killed_entity", "conditions": {
-            "entity": {"type": "minecraft:all_of", "terms": [
-                {"type": "minecraft:entity_properties", "entity": "this",
+            "entity": [{"condition": "minecraft:all_of", "terms": [
+                {"condition": "minecraft:entity_properties", "entity": "this",
                  "predicate": {"minecraft:entity_type": "minecraft:player"}},
-                {"type": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
-                respawn.fresh_victim_excluded()]}}}},
+                {"condition": "minecraft:entity_scores", "entity": "this", "scores": {WANTED: {"min": 1}}},
+                respawn.fresh_victim_excluded()]}]}}},
         "rewards": {"function": f"{NS}:wanted/kill"}}, indent=2)
     f[f"{FN}/slain.mcfunction"] = lines(
         "# As a wanted player killed by a player (it fires before the killer's): marks them for the killer's claim,",

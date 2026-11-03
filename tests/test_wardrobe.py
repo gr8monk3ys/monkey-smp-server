@@ -164,7 +164,7 @@ def test_skins_change_the_look_and_nothing_else():
         if path not in modifiers:
             continue
         modifier = json.loads(text)
-        assert modifier["type"] == "minecraft:set_components"
+        assert modifier["function"] == "minecraft:set_components"
         components = modifier["components"]
         assert set(components) <= {"minecraft:item_model", "minecraft:equippable"}, path
         if "minecraft:equippable" in components:

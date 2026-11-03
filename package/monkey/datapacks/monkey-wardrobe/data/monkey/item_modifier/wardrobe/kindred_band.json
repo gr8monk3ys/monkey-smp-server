@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:set_components",
+  "function": "minecraft:set_components",
   "components": {
     "minecraft:item_model": "monkey:kindred_band",
     "minecraft:equippable": {

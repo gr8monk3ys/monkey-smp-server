@@ -80,7 +80,7 @@ ITEM_SLOTS = ("container.*", "armor.*", "weapon.offhand")
 #           mid-season
 # name      the menu line and the announcement ("Steve is the first on the server to enter the Nether")
 # about     the hover text: what counts
-# trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.3)
+# trigger, conditions   the advancement's criterion, as vanilla's advancement in `mirrors` has it (26.2)
 # player    a predicate on the player, added to the launched-and-unclaimed check
 # end       only while the End is open (rule 23: monkey:rules/open_end); netherite: only once rule 24 is lifted
 # item      an item first (holding()): it counts only for a player not carrying it over from test play (CLEAN)
@@ -95,16 +95,16 @@ def holding(item: str) -> dict:
 
 
 def killed(mob: str) -> dict:
-    return {"entity": {"type": "minecraft:entity_properties", "entity": "this",
-                       "predicate": {"minecraft:entity_type": f"minecraft:{mob}"}}}
+    return {"entity": [{"condition": "minecraft:entity_properties", "entity": "this",
+                        "predicate": {"minecraft:entity_type": f"minecraft:{mob}"}}]}
 
 
 def inside(structure: str) -> dict:
-    return {"type": "minecraft:entity_properties", "entity": "this",
+    return {"condition": "minecraft:entity_properties", "entity": "this",
             "predicate": {"minecraft:location": {"structures": f"minecraft:{structure}"}}}
 
 
-FULL_NETHERITE = {"type": "minecraft:entity_properties", "entity": "this", "predicate": {"minecraft:equipment": {
+FULL_NETHERITE = {"condition": "minecraft:entity_properties", "entity": "this", "predicate": {"minecraft:equipment": {
     slot: {"items": f"minecraft:netherite_{piece}"}
     for slot, piece in (("head", "helmet"), ("chest", "chestplate"), ("legs", "leggings"), ("feet", "boots"))}}}
 
@@ -122,10 +122,10 @@ MILESTONES = [
          about="Hold a block of ancient debris.", **holding("ancient_debris")),
     dict(id="vault", name="Open a trial vault", mirrors="adventure/under_lock_and_key",
          about="Use a trial key (or an ominous one) on a vault in trial chambers.", trigger="item_used_on_block",
-         conditions={"location": {"type": "minecraft:all_of", "terms": [
-             {"type": "minecraft:location_check", "predicate": {"block": {"blocks": "minecraft:vault"}}},
-             {"type": "minecraft:match_tool",
-              "predicate": {"items": ["minecraft:trial_key", "minecraft:ominous_trial_key"]}}]}}),
+         conditions={"location": [
+             {"condition": "minecraft:location_check", "predicate": {"block": {"blocks": "minecraft:vault"}}},
+             {"condition": "minecraft:match_tool",
+              "predicate": {"items": ["minecraft:trial_key", "minecraft:ominous_trial_key"]}}]}),
     dict(id="mace", name="Get a mace", mirrors=None,
          about="Hold a mace, from an ominous vault's heavy core. Enchanted maces stay banned (B2).",
          **holding("mace")),
@@ -153,8 +153,8 @@ MILESTONES = [
     dict(id="boss", name="Slay a border boss", mirrors=None, season=2,
          about="Land the killing blow on the Edgewalker, the boss that rises on a border act (Season II on).",
          trigger="player_killed_entity",
-         conditions={"entity": {"type": "minecraft:entity_scores", "entity": "this",
-                                "scores": {"bs.id": {"min": 1}}}},
+         conditions={"entity": [{"condition": "minecraft:entity_scores", "entity": "this",
+                                 "scores": {"bs.id": {"min": 1}}}]},
          reopen="Each border act raises one boss (tools/boss.py); a reopened first waits for the next act's."),
 ]
 NAME_MAX = 24   # a milestone's name, so its menu line (name, holder, week) fits one line of chat
@@ -247,8 +247,8 @@ def advancement(m: dict) -> dict:
     season's lock and while nobody holds the first (so it costs next to nothing once it is claimed). The reward
     checks again and claims it.
 
-    26.x shapes, as tools/challenges.py's: a condition names its kind with "type", a criterion's "player" is
-    one condition (not a list), and entity predicates are components."""
+    26.2 shapes, as tools/challenges.py's: a condition names its kind with "condition", a criterion's "player"
+    is a list of conditions, and entity predicates are components."""
     terms = [score_check(LAUNCHED_HOLDER, LAUNCHED_OBJECTIVE, least=1), score_check(f"#{m['id']}", OBJ, most=0),
              score_check(SEASON_LOCKED, EVENTS, most=0)]
     if m.get("end"):
@@ -257,7 +257,7 @@ def advancement(m: dict) -> dict:
         terms.append(score_check("#season", "rw.day", least=m["season"]))
     if m.get("player"):
         terms.append(m["player"])
-    conditions = {**m.get("conditions", {}), "player": {"type": "minecraft:all_of", "terms": terms}}
+    conditions = {**m.get("conditions", {}), "player": [{"condition": "minecraft:all_of", "terms": terms}]}
     return {"criteria": {m["id"]: {"trigger": f"minecraft:{m['trigger']}", "conditions": conditions}},
             "rewards": {"function": f"{NS}:firsts/got/{m['id']}"}}
 
@@ -266,7 +266,7 @@ def head_loot_table() -> dict:
     """A player head of whoever the loot command runs as: its profile has their name."""
     return {"type": "minecraft:chest", "pools": [{"rolls": 1, "entries": [{
         "type": "minecraft:item", "name": "minecraft:player_head",
-        "modifier": {"type": "minecraft:fill_player_head", "entity": "this"}}]}]}
+        "functions": [{"function": "minecraft:fill_player_head", "entity": "this"}]}]}]}
 
 
 def held(first_id: str, field: str, color: str) -> dict:

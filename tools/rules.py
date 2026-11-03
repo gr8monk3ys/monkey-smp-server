@@ -77,7 +77,7 @@ LINKS = (("Discord", DISCORD, "Factions, events, tickets and the full rulebook")
          ("Store", f"{SITE}/#pricing", "The Server Pass and supporter tiers"))
 
 BANNED_ENCHANTMENTS = ("minecraft:fire_aspect", "minecraft:flame")
-# Vanilla 26.3's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
+# Vanilla 26.2's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
 # gear all draw from it, so the pack replaces it with this list minus the banned ones. No mod in the pack
 # adds to it; one that does would lose its addition (see the RULES.md admin notes).
 VANILLA_NON_TREASURE = (
@@ -97,7 +97,7 @@ DISABLED = {
 
 ARMOR_SLOTS = ("head", "chest", "legs", "feet")
 NETHERITE_ARMOR = ("netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots")
-# 26.3 can't drop a vanilla recipe (other data refers to it, and the server won't start), so the upgrade is
+# 26.2 can't drop a vanilla recipe (other data refers to it, and the server won't start), so the upgrade is
 # replaced by one that needs a barrier as its template: no survival player can ever fill it in.
 NEVER_TEMPLATE = "minecraft:barrier"
 
@@ -147,7 +147,7 @@ def rules_files() -> dict[str, str]:
         "# A function run by the server runs at the world spawn, so ~ ~ is spawn.",
         "execute in minecraft:overworld run worldborder center ~ ~",
         f"execute in minecraft:overworld run worldborder set {BORDER}",
-        "# Since 26.3 each dimension has its own border (the Nether's no longer follows the overworld's), so",
+        "# On 26.2 each dimension has its own border (the Nether's no longer follows the overworld's), so",
         "# give the Nether the one it used to have: the same area at its 1:8 scale.",
         f"execute summon minecraft:marker run function {NS}:rules/nether_border",
         f"scoreboard players set #border {OBJECTIVE} 1",
@@ -235,29 +235,29 @@ def rules_files() -> dict[str, str]:
         f"advancement revoke @s only {NS}:rules/grace_attack",
         f"execute unless entity @s[tag={ARENA_TAG}] run function {NS}:rules/grace_end",
     )
-    # 26.x conditions name their kind with "type" and entity predicates are components
-    # ("minecraft:entity_type"); the pre-26 "condition" key fails the whole datapack load.
+    # 26.2 conditions name their kind with "condition" and entity predicates are components
+    # ("minecraft:entity_type"); 26.3's "type" key fails the whole datapack load.
     f[f"data/{NS}/advancement/rules/grace_attack.json"] = js({
         "criteria": {"hurt_a_player": {"trigger": "minecraft:player_hurt_entity", "conditions": {
-            "player": {"type": "minecraft:entity_scores", "entity": "this", "scores": {GRACE: {"min": 1}}},
-            "entity": {"type": "minecraft:entity_properties", "entity": "this",
-                       "predicate": {"minecraft:entity_type": "minecraft:player"}}}}},
+            "player": [{"condition": "minecraft:entity_scores", "entity": "this", "scores": {GRACE: {"min": 1}}}],
+            "entity": [{"condition": "minecraft:entity_properties", "entity": "this",
+                        "predicate": {"minecraft:entity_type": "minecraft:player"}}]}}},
         "rewards": {"function": f"{NS}:rules/grace_attack"},
     })
     # A player the server has seen before has left the game at least once, or (after a crash, which may not
     # count the leave) played for over a minute. Minecraft's own statistics go back before this pack.
     def stat_at_least(stat: str, least: int) -> dict:
-        return {"type": "minecraft:entity_properties", "entity": "this", "predicate": {
+        return {"condition": "minecraft:entity_properties", "entity": "this", "predicate": {
             "minecraft:type_specific/player": {"stats": [
                 {"type": "minecraft:custom", "stat": f"minecraft:{stat}", "value": {"min": least}}]}}}
 
-    f[f"data/{NS}/predicate/rules/returning.json"] = js({"type": "minecraft:any_of", "terms": [
+    f[f"data/{NS}/predicate/rules/returning.json"] = js({"condition": "minecraft:any_of", "terms": [
         stat_at_least("leave_game", 1), stat_at_least("play_time", 60 * 20)]})
     f[f"data/{NS}/enchantment/pvp_grace.json"] = js({
         "description": "PvP grace",
         "effects": {
             "minecraft:damage_immunity": [{"effect": {}, "requirements": {
-                "type": "minecraft:damage_source_properties",
+                "condition": "minecraft:damage_source_properties",
                 "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}}],
             "minecraft:prevent_equipment_drop": {},
         },

@@ -20,8 +20,8 @@ from pathlib import Path
 
 from repo import REPO, Repo
 
-MINECRAFT = "26.3"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
-DATA_FORMAT = 121
+MINECRAFT = "26.2"     # DATA_FORMAT is this version's; a test fails when the manifest moves on
+DATA_FORMAT = 107
 NS = "monkey"
 # challenges writes into wardrobe's
 GENERATORS = ("events", "wardrobe", "npcs", "rules", "standings", "drops", "firsts", "outposts", "omens", "sieges",
@@ -56,9 +56,9 @@ def refuse(msg: str) -> str:
 
 
 def score_check(holder: str, objective: str, least: int | None = None, most: int | None = None) -> dict:
-    """A predicate condition (26.x shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
+    """A predicate condition (26.2 shape) on a fixed holder's score, such as `#launched rw.day` at least 1."""
     test = {k: v for k, v in (("min", least), ("max", most)) if v is not None}
-    return {"type": "minecraft:int_value_check", "test": test,
+    return {"condition": "minecraft:value_check", "range": test,
             "value": {"type": "minecraft:score", "target": {"type": "minecraft:fixed", "name": holder},
                       "score": objective}}
 

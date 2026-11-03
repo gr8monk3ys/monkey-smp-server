@@ -5,7 +5,7 @@
       {
         "effect": {},
         "requirements": {
-          "type": "minecraft:damage_source_properties",
+          "condition": "minecraft:damage_source_properties",
           "predicate": {
             "source_entity": {
               "minecraft:entity_type": "minecraft:player"

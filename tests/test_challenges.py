@@ -313,9 +313,9 @@ def test_kill_challenges_never_count_players():
         advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{c['id']}.json"))
         criterion = advancement["criteria"]["kill"]
         assert criterion["trigger"] == "minecraft:player_killed_entity"
-        assert criterion["conditions"]["entity"] == {
-            "type": "minecraft:entity_properties", "entity": "this",
-            "predicate": {"minecraft:entity_type": f"#monkey:challenges/{c['id']}"}}
+        assert criterion["conditions"]["entity"] == [{
+            "condition": "minecraft:entity_properties", "entity": "this",
+            "predicate": {"minecraft:entity_type": f"#monkey:challenges/{c['id']}"}}]
 
 
 def test_loot_counts_a_structure_chest_once_from_any_table():
@@ -323,7 +323,7 @@ def test_loot_counts_a_structure_chest_once_from_any_table():
     advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{loot['id']}.json"))
     assert len(advancement["requirements"]) == 1   # any one criterion fires it (OR)
     assert set(advancement["requirements"][0]) == set(advancement["criteria"])
-    tables = [c["conditions"]["loot_tables"] for c in advancement["criteria"].values()]
+    tables = [c["conditions"]["loot_table"] for c in advancement["criteria"].values()]
     assert all(t.startswith("minecraft:chests/") for t in tables)
     assert len(tables) == len(set(tables)) == len(challenges.LOOT_TABLES)
     assert "minecraft:chests/spawn_bonus_chest" not in tables
@@ -343,42 +343,56 @@ def test_visits_are_checked_only_while_the_challenge_is_on():
     for c in challenges.POOL:
         for group, structures in c.get("visit", {}).items():
             advancement = json.loads(datapack(f"data/monkey/advancement/challenges/{c['id']}/{group}.json"))
-            player = advancement["criteria"]["visit"]["conditions"]["player"]
-            assert player["type"] == "minecraft:all_of"
+            [player] = advancement["criteria"]["visit"]["conditions"]["player"]
+            assert player["condition"] == "minecraft:all_of"
             week, flag, place = player["terms"]
             index = challenges.of_kind(c["kind"]).index(c)
-            assert week["type"] == "minecraft:int_value_check"
-            assert week["test"] == {"min": index, "max": index}
+            assert week["condition"] == "minecraft:value_check"
+            assert week["range"] == {"min": index, "max": index}
             assert week["value"] == {"type": "minecraft:score", "score": "rc.week",
                                      "target": {"type": "minecraft:fixed", "name": f"#{c['kind']}"}}
-            assert flag["type"] == "minecraft:inverted"
-            assert flag["term"] == {"type": "minecraft:entity_scores", "entity": "this",
+            assert flag["condition"] == "minecraft:inverted"
+            assert flag["term"] == {"condition": "minecraft:entity_scores", "entity": "this",
                                     "scores": {f"rc.{c['id']}.{group}": {"min": 1}}}
             assert place["predicate"] == {"minecraft:location": {"structures": [f"minecraft:{s}" for s in structures]}}
             assert len(c["visit"]) >= c["goal"]
 
 
-def test_advancements_use_the_26_condition_shapes():
-    """26.x reads a condition's kind from "type", takes one condition (not a list) per criterion field, and keys
-    entity predicates as components; any pre-26 shape fails the whole datapack load (seen in a boot)."""
-    old_keys = {"condition", "loot_table", "range", "location", "type_specific"}
+def test_every_generated_pack_uses_26_2s_shapes():
+    """26.2 reads a condition's kind from "condition" and a function's from "function", takes a list of conditions
+    per criterion field and a "functions" list per loot entry. 26.3's shapes fail the whole pack's load (seen in a
+    boot), and a bare object in a criterion field can parse as a predicate that matches anything."""
+    old_keys = {"test", "loot_tables", "type_specific", "modifier"}
+    kinds = ("advancement", "loot_table", "predicate", "item_modifier", "enchantment")
+    not_a_type = re.compile(r"minecraft:(.*_of|inverted|entity_.*|value_check|int_value_check|survives_explosion"
+                            r"|location_check|set_.*|copy_.*|fill_player_head)")
 
     def walk(node, path):
         if isinstance(node, dict):
-            assert not old_keys & set(node), f"{path}: pre-26 key in {sorted(old_keys & set(node))}"
+            assert not old_keys & set(node), f"{path}: 26.3 key in {sorted(old_keys & set(node))}"
+            assert not not_a_type.fullmatch(str(node.get("type"))), f"{path}: 26.3 names this by type: {node['type']}"
             for key, value in node.items():
                 walk(value, f"{path}.{key}")
         elif isinstance(node, list):
             for i, value in enumerate(node):
                 walk(value, f"{path}[{i}]")
 
-    for path, text in wardrobe.datapack_files().items():
-        if path.startswith("data/monkey/advancement/challenges/"):
-            advancement = json.loads(text)
-            walk(advancement, path)
-            for criterion in advancement["criteria"].values():
-                for field in ("player", "entity"):
-                    assert not isinstance(criterion.get("conditions", {}).get(field), list), path
+    seen = dict.fromkeys(kinds, 0)
+    packs = REPO.monkey / "datapacks"
+    for file in packs.rglob("data/*/*/**/*.json"):
+        kind = file.relative_to(packs).parts[3]   # <pack>/data/<namespace>/<kind>/...
+        if kind not in kinds:
+            continue
+        seen[kind] += 1
+        document = json.loads(file.read_text(encoding="utf-8"))
+        walk(document, str(file))
+        for criterion in document.get("criteria", {}).values() if kind == "advancement" else ():
+            for field, value in criterion.get("conditions", {}).items():
+                if field in ("player", "entity", "location"):
+                    assert isinstance(value, list), f"{file}: {field} is not a list"
+        for pool in document.get("pools", []) if kind == "loot_table" else ():
+            assert "condition" not in pool, file
+    assert all(seen.values()), seen
 
 
 def test_events_count_only_from_this_week():

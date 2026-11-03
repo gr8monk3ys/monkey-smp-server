@@ -3,49 +3,51 @@
     "visit": {
       "trigger": "minecraft:location",
       "conditions": {
-        "player": {
-          "type": "minecraft:all_of",
-          "terms": [
-            {
-              "type": "minecraft:int_value_check",
-              "test": {
-                "min": 1,
-                "max": 1
-              },
-              "value": {
-                "type": "minecraft:score",
-                "target": {
-                  "type": "minecraft:fixed",
-                  "name": "#explore"
+        "player": [
+          {
+            "condition": "minecraft:all_of",
+            "terms": [
+              {
+                "condition": "minecraft:value_check",
+                "range": {
+                  "min": 1,
+                  "max": 1
                 },
-                "score": "rc.week"
-              }
-            },
-            {
-              "type": "minecraft:inverted",
-              "term": {
-                "type": "minecraft:entity_scores",
+                "value": {
+                  "type": "minecraft:score",
+                  "target": {
+                    "type": "minecraft:fixed",
+                    "name": "#explore"
+                  },
+                  "score": "rc.week"
+                }
+              },
+              {
+                "condition": "minecraft:inverted",
+                "term": {
+                  "condition": "minecraft:entity_scores",
+                  "entity": "this",
+                  "scores": {
+                    "rc.structures.monument": {
+                      "min": 1
+                    }
+                  }
+                }
+              },
+              {
+                "condition": "minecraft:entity_properties",
                 "entity": "this",
-                "scores": {
-                  "rc.structures.monument": {
-                    "min": 1
+                "predicate": {
+                  "minecraft:location": {
+                    "structures": [
+                      "minecraft:monument"
+                    ]
                   }
                 }
               }
-            },
-            {
-              "type": "minecraft:entity_properties",
-              "entity": "this",
-              "predicate": {
-                "minecraft:location": {
-                  "structures": [
-                    "minecraft:monument"
-                  ]
-                }
-              }
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   },

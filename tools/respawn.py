@@ -18,12 +18,12 @@ STAT = "minecraft:time_since_death"
 
 
 def fresh(entity: str = "this") -> dict:
-    """An entity condition (26.x shape): true for a player alive less than FRESH_MINUTES since their last death."""
-    return {"type": "minecraft:entity_properties", "entity": entity, "predicate": {
+    """An entity condition (26.2 shape): true for a player alive less than FRESH_MINUTES since their last death."""
+    return {"condition": "minecraft:entity_properties", "entity": entity, "predicate": {
         "minecraft:type_specific/player": {"stats": [
             {"type": "minecraft:custom", "stat": STAT, "value": {"max": FRESH_TICKS - 1}}]}}}
 
 
 def fresh_victim_excluded(entity: str = "this") -> dict:
     """The term a kill advancement adds to its victim's conditions: the victim isn't fresh()."""
-    return {"type": "minecraft:inverted", "term": fresh(entity)}
+    return {"condition": "minecraft:inverted", "term": fresh(entity)}

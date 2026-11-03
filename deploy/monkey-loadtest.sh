@@ -51,9 +51,9 @@ FORCE=${FORCE:-}
 COPY_DIR=${COPY_DIR:-/srv/monkey-loadtest/MonkeySMP-Server}
 RESULTS=${RESULTS:-/root/loadtest-results/$(date +%Y%m%d-%H%M)}
 IMAGE=monkey-loadtest
-# Carpet makes the fake players; it is not part of the pack. The Fabric build for Minecraft 26.3, from Modrinth.
-CARPET_URL=https://cdn.modrinth.com/data/TQTTVgYE/versions/yt9oDFOj/fabric-carpet-26.3%2Bv260915.jar
-CARPET_SHA512=7a479ba69eb5049cb94365d5044bd58c9f970c50b3484861fe3675f1917f7c99c1b1f50a5e01bdd9ded940d76a995539009a3656e05be2f513f20ec14de991a7
+# Carpet makes the fake players; it is not part of the pack. The Fabric build for Minecraft 26.2, from Modrinth.
+CARPET_URL=https://cdn.modrinth.com/data/TQTTVgYE/versions/bGrLxJ8v/fabric-carpet-26.2%2Bv260616.jar
+CARPET_SHA512=8b8fac6979bd3153f5cfb4faa6bab52e1357eab814492a6658f3c0e1ac2856ad37a626c0a03a0839c39abb7bf56661f77b09d05d10ac01173bcdd373a33c6265
 whole_number WARN_MINUTES "$WARN_MINUTES" minutes
 whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
@@ -200,7 +200,7 @@ report=''
 for s in $SCENARIOS; do
     f="$COPY_DIR/loadtest/$s-$PLAYERS/summary.json"
     [ -f "$f" ] || continue
-    line="$s, $PLAYERS players: median tick $(field mspt_median "$f") ms, p95 up to $(field p95_max "$f") ms, $(field tps "$f") TPS"
+    line="$s, $(field players_online_min "$f") of $PLAYERS players stayed: median tick $(field mspt_median "$f") ms, p95 up to $(field p95_max "$f") ms, $(field tps "$f") TPS"
     url=$(field spark_profile "$f")
     [ -z "$url" ] || line="$line, all threads $url"
     report="$report $line."

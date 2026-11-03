@@ -6,7 +6,7 @@ means the same thing everywhere.
 
 Hosted by Diego A. Scaturchio and Lorenzo D. Scaturchio.
 
-Welcome everyone! This is our first attempt at an open, non-anarchy PvP server. We're using the Season 4
+Welcome everyone! This is our first attempt at an open, non-anarchy PvP server. We're using the Season 5
 version of the original Strength SMP plugin from YouTube. In this SMP you'll face alliances, factions,
 enemies, wars, and events that change the course of the game. Below are the rules and bans that keep the
 server safe and fun. If something turns out to be unfun or unfair, the rules can be adjusted based on
@@ -187,18 +187,13 @@ These are banned on the server.
   indicators and the like. Anything else must be approved by the server owners.
 - **B16.** Replay Mod or Flashback for a competitive advantage. Videos and build photos are fine.
 - **B17.** The cushion glitch (an x-ray glitch).
-- **B18.** Enchantment books from the Nova Structures mod are only server event rewards. Books found
-  naturally can't be applied.
+- **B18.** Retired in 3.0.0: the Nova Structures books it covered left the pack with their mod.
 - **B19.** F3+A and reloading shaders. These count as x-ray.
 
 ## The mods
 
-Coming soon: the mods every player should know about. New in 2.8.0, and worth knowing now:
+Coming soon: the mods every player should know about. Worth knowing now:
 
-- **Carry On.** Sneak and right-click with both hands empty to pick up a passive animal, a beehive with its bees
-  or a block like an enchanting table, and right-click to put it down. Not anything that stores items (chests,
-  barrels, shulker boxes, furnaces, hoppers and the like), spawners, banners, beds, doors, players or the NPCs at
-  spawn, and nothing in someone else's territory.
 - **Loot chests refill.** A structure's loot chest that you empty fills again a week later. Once one has been
   opened, only staff can break it.
 - **Bedrock breaks** with a netherite pickaxe (rules 44 to 46).
@@ -245,8 +240,8 @@ Open items from the owners' draft:
   26 October 2026: the owners shelved shops before they reached the live server, so rule 43 now covers trading
   by hand (items for items, no scams, no real-money trading). If shops come back, so does the rule's shop
   wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
-- B18: the owners want Nova Structures' books configured out. That mod isn't in the 2.3.0 pack. Since 2.8.0
-  (Dungeons and Taverns, whose enchantments are Nova Structures') the server does it: see B18 below.
+- B18: the owners wanted Nova Structures' books configured out. From 2.8.0 Enchantment Disabler did that;
+  3.0.0 drops the mod that added them, so the rule's number stays and the rule is retired.
 - Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
   griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
   the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
@@ -275,12 +270,12 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   Open it with
   `function monkey:rules/open_end`; `function monkey:rules/close_end` closes it again.
 - **Rule 24, no Netherite armor** (pack `monkey-no-netherite-armor`). The smithing table won't upgrade
-  diamond armor to Netherite. Netherite armor from mod loot (Incendium, Moog's structures) or from a mob is
+  diamond armor to Netherite. Netherite armor from mod loot or from a mob is
   taken off once a second and dropped at the player's feet, so nothing is lost. Netherite tools, weapons
   and horse armor are untouched. To lift the rule: `datapack disable "file/monkey-no-netherite-armor"`.
   The world remembers that across restarts and updates. `datapack enable` turns the rule back on.
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
-  2500 x 2500, centred on spawn. Since Minecraft 26.3 every dimension has its own border, so the pack also
+  2500 x 2500, centred on spawn. On Minecraft 26.2 every dimension has its own border, so the pack also
   gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
   alone. After that the borders are yours to grow, e.g. `worldborder set 4000 12000` (12000 ticks, 10 minutes,
   to widen) and `execute in minecraft:the_nether run worldborder set 500 12000`. The pack never touches them again.
@@ -323,16 +318,8 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   block for an ore that touches no air, water or lava. In the Overworld every such spot shows a random ore, so
   x-ray sees noise; in the Nether and the End hidden ores show as netherrack or end stone. X-ray clients and
   packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
-  Distant Horizons' own server-side LODs would carry the real ores, so the server doesn't send them ("Distant
-  Horizons and x-ray" in `docs/ADMIN.md`). For x-ray that gets past all this (a cracked seed, say), MinerTrack alerts
-  moderators when someone mines from one buried diamond vein straight to the next; it never punishes by itself.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
-- **B18, Nova Structures' books** (Enchantment Disabler, `defaults/config/enchantmentdisabler/config.toml`,
-  since 2.8.0). All 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the
-  enchanting table, loot and villager trades, so nobody finds them; staff make event rewards with `/give` or
-  `enchant`, which still work. On a server installed before 2.8.0 the file is new, so the installer copies
-  it. If Dungeons and Taverns adds an enchantment, add it to the file (and to `tests/test_mod_defaults.py`).
 - **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
   enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
   `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may

@@ -1,6 +1,6 @@
 """Load-test an installed server package with Carpet fake players, and profile it.
 
-  python tools/loadtest.py C:/temp/monkey-test/MonkeySMP-Server --carpet C:/Downloads/fabric-carpet-26.3.jar
+  python tools/loadtest.py C:/temp/monkey-test/MonkeySMP-Server --carpet C:/Downloads/fabric-carpet-26.2.jar
       Starts the server in that folder (an unzipped release installed once, e.g. by tests/smoke.ps1, so it
       has its own ports and a world), spawns --players fake players with Carpet over RCON, waits --warmup
       seconds, then samples `tick query` every 10 s for --minutes while Java Flight Recorder records CPU
@@ -42,6 +42,7 @@ from datetime import datetime
 from pathlib import Path
 
 SAMPLE_EVERY_S = 10
+SPAWN_TIMEOUT_S = 120
 FORMATTING = re.compile("\u00a7.")
 # Mixin handlers carry the mod id in their name: handler$ben000$fabric-biome-api-v1$finalizeWorldGen.
 MIXIN = re.compile(r"\$[a-z]{3}\d{3}\$([A-Za-z0-9_.-]+)\$")
@@ -217,15 +218,44 @@ def wait_for_spark_url(log: Path, offset: int, timeout_s: int = 60) -> str:
         time.sleep(2)
 
 
+def online_names(reply: str) -> set[str]:
+    """Lower-cased names from the reply to `list`. Carpet can take a real account's spelling (Load12 -> load12)."""
+    _, _, names = reply.partition(":")
+    return {n.strip().lower() for n in names.split(",") if n.strip()}
+
+
+def wait_for(check, timeout_s: int = SPAWN_TIMEOUT_S) -> bool:
+    deadline = time.time() + timeout_s
+    while not check():
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.5)
+    return True
+
+
 def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
+    """Carpet removes a fake player that dies, so each must be protected before it can fall: its chunk loaded first
+    (a player over a chunk still generating falls into the void) and its effects given once it has really joined
+    (`player spawn` returns before that, and the commands after it then find nobody). A player that can't get in is
+    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run."""
     for i, name in enumerate(names):
         angle = 2 * math.pi * i / len(names)
         x, z = (0, 0) if scenario == "explore" else (radius * math.cos(angle), radius * math.sin(angle))
+        rcon.cmd(f"forceload add {x:.0f} {z:.0f}")
+        if not wait_for(lambda x=x, z=z: "passed" in rcon.cmd(f"execute if loaded {x:.0f} 64 {z:.0f}")):
+            print(f"WARNING: the chunk for {name} at {x:.0f} {z:.0f} did not load; skipping them", flush=True)
+            rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
+            continue
         rcon.cmd(f"player {name} spawn at {x:.0f} 200 {z:.0f} facing {math.degrees(angle):.0f} 0 "
                  "in minecraft:overworld in survival")
-        rcon.cmd(f"spreadplayers {x:.0f} {z:.0f} 0 1 false {name}")
+        if not wait_for(lambda name=name: name.lower() in online_names(rcon.cmd("list"))):
+            print(f"WARNING: {name} did not join; skipping them", flush=True)
+            rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
+            continue
         rcon.cmd(f"effect give {name} minecraft:resistance infinite 255 true")
         rcon.cmd(f"effect give {name} minecraft:saturation infinite 255 true")
+        rcon.cmd(f"spreadplayers {x:.0f} {z:.0f} 0 1 false {name}")
+        rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
         if scenario == "walk":
             for action in ("sprint", "move forward", "jump continuous"):
                 rcon.cmd(f"player {name} {action}")
@@ -362,7 +392,8 @@ def main(argv=None):
                     rcon.cmd("perf start")  # names each datapack function; JFR can't
                     perf_at = 0
                 if time.time() - last >= SAMPLE_EVERY_S:
-                    row = {"t": round(time.time(), 1), **parse_tick_query(rcon.cmd("tick query"))}
+                    row = {"t": round(time.time(), 1), "online": len(online_names(rcon.cmd("list"))),
+                           **parse_tick_query(rcon.cmd("tick query"))}
                     rows.append(row)
                     samples.write(json.dumps(row) + "\n")
                     samples.flush()
@@ -406,6 +437,8 @@ def main(argv=None):
     summary = {"scenario": args.scenario, "players": args.players, "without": args.without,
                "memory_gb": args.memory_gb, "minutes": args.minutes, "warmup_s": args.warmup,
                **summarize(rows),
+               # a run that lost players measured fewer than it says
+               "players_online_min": min((r["online"] for r in rows), default=0),
                "command_limit_hits": log_text.count("Command execution stopped due to limit"),
                "cant_keep_up_warnings": log_text.count("Can't keep up!"),
                "servercore_status": servercore}
@@ -422,6 +455,9 @@ def main(argv=None):
         shutil.rmtree(repository, ignore_errors=True)
     (out / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=1))
+    if summary["players_online_min"] < args.players:
+        print(f"WARNING: only {summary['players_online_min']} of {args.players} players stayed online; "
+              "this run doesn't measure what it says (see server.log)")
     print(f"results: {out}")
 
 

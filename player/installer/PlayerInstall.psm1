@@ -169,7 +169,7 @@ function Read-HostAnswer {
 .PARAMETER MinecraftDir
     The Minecraft Launcher's data folder (normally %APPDATA%\.minecraft).
 .PARAMETER GameDir
-    The folder the profile plays from: mods, resource packs, shaders, configs, worlds, screenshots.
+    The folder the profile plays from: mods, resource packs, configs, worlds, screenshots.
 .PARAMETER Pack
     The client pack (.mrpack). Not needed for -Uninstall.
 .PARAMETER FabricProfile
@@ -332,7 +332,7 @@ function Read-ClientPack {
 .SYNOPSIS
     Reads the Fabric launcher profile json and checks it is the one for the pack's Minecraft and loader.
 .OUTPUTS
-    Id ('fabric-loader-0.19.5-26.3'), Path.
+    Id ('fabric-loader-0.20.1-26.2'), Path.
 #>
 function Read-FabricProfile {
     param([Parameter(Mandatory)] [string]$Path, [Parameter(Mandatory)] $Pack)

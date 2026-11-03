@@ -48,7 +48,7 @@ export const roles: Role[] = [
         cmds: [
           { code: "/oparties create", does: "Starts a party: your faction. You're its leader." },
           { code: "/oparties join <leader>", does: "Joins the party that invited you, named by its leader." },
-          { code: "/oclaims claim", does: <>Claims the chunk you&apos;re standing in. Or press <kbd>M</kbd> and right-click chunks.</> },
+          { code: "/oclaims claim", does: "Claims the chunk you're standing in." },
           {
             code: "/opac",
             does: <>Your party and claims settings. <code>/oclaims</code> and <code>/oparties</code> with <kbd>Tab</kbd> list
@@ -71,7 +71,8 @@ export const roles: Role[] = [
         heading: "Keys",
         cmds: [
           { kbd: "V", does: "Voice chat settings." },
-          { kbd: "M", does: "The world map, where you claim land." },
+          { kbd: "M", does: "The world map." },
+          { kbd: "Y", does: "Mutes your microphone." },
           {
             term: "Sneak + right-click",
             does: "With both hands empty: picks up a passive animal or a block like an enchanting table. Right-click "

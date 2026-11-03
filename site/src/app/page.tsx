@@ -110,7 +110,7 @@ export default function Home() {
             </li>
             <li>
               <h3>Install the modpack</h3>
-              <p>The server adds blocks, mobs and items, so you need the pack (about 370 MB). In the Modrinth App or
+              <p>The server adds blocks, mobs and items, so you need the pack (about 385 MB). In the Modrinth App or
                 Prism Launcher, import <ConfigLink to="MODPACK_URL" download>the modpack</ConfigLink>. For the
                 regular Minecraft Launcher on Windows, unzip <ConfigLink to="INSTALLER_URL" download>the
                 installer</ConfigLink> and double-click <code>Install for Minecraft Launcher.bat</code>.</p>

@@ -250,11 +250,25 @@ def kit_commands(name: str, torch: bool) -> list[str]:
     return [f"item replace entity {name} {slot} with minecraft:{item}" for slot, item in slots]
 
 
-def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int, kit: bool = False):
+def give_kit(rcon: Rcon, name: str, torch: bool) -> int:
+    """Give the kit and return how many commands the server refused: a refused one leaves the slot empty, which is the
+    flattered run --kit exists to prevent, and only its reply says so."""
+    refused = 0
+    for command in kit_commands(name, torch):
+        reply = rcon.cmd(command)
+        if "Replaced" not in reply:
+            refused += 1
+            print(f"WARNING: {command} -> {reply.strip()[:120]}", flush=True)
+    return refused
+
+
+def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int, kit: bool = False) -> int:
     """Carpet removes a fake player that dies, so each must be protected before it can fall: its chunk loaded first
     (a player over a chunk still generating falls into the void) and its effects given once it has really joined
     (`player spawn` returns before that, and the commands after it then find nobody). A player that can't get in is
-    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run."""
+    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run. Returns
+    how many kit commands the server refused."""
+    refused = 0
     for i, name in enumerate(names):
         angle = 2 * math.pi * i / len(names)
         x, z = (0, 0) if scenario == "explore" else (radius * math.cos(angle), radius * math.sin(angle))
@@ -274,12 +288,12 @@ def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int, kit:
         rcon.cmd(f"spreadplayers {x:.0f} {z:.0f} 0 1 false {name}")
         rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
         if kit:
-            for command in kit_commands(name, torch=i % 2 == 0):
-                rcon.cmd(command)
+            refused += give_kit(rcon, name, torch=i % 2 == 0)
         if scenario == "walk":
             for action in ("sprint", "move forward", "jump continuous"):
                 rcon.cmd(f"player {name} {action}")
         time.sleep(0.5)
+    return refused
 
 
 def java_tool(root: Path, name: str) -> Path:
@@ -391,7 +405,7 @@ def main(argv=None):
         print(f"started java (pid {proc.pid}); waiting for RCON on {rcon_port}", flush=True)
         rcon = wait_for_rcon(proc, rcon_port, props["rcon.password"], 900)
         names = [f"Load{i:02d}" for i in range(args.players)]
-        spawn_players(rcon, names, args.scenario, args.radius, args.kit)
+        kit_refused = spawn_players(rcon, names, args.scenario, args.radius, args.kit)
         print(rcon.cmd("list"), flush=True)
         print(f"warming up {args.warmup} s", flush=True)
         time.sleep(args.warmup)
@@ -455,7 +469,8 @@ def main(argv=None):
             (out / "perf.txt").write_text(perf_report(text), encoding="utf-8")
             shutil.move(report, out / report.name)
     log_text = (out / "server.log").read_text(encoding="utf-8", errors="replace")
-    summary = {"scenario": args.scenario, "players": args.players, "without": args.without,
+    summary = {"scenario": args.scenario, "players": args.players, "kit": args.kit, "kit_refused": kit_refused,
+               "without": args.without,
                "memory_gb": args.memory_gb, "minutes": args.minutes, "warmup_s": args.warmup,
                **summarize(rows),
                # a run that lost players measured fewer than it says

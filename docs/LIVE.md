@@ -876,7 +876,7 @@ systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min sh /srv/mon
 journalctl -fu monkey-loadtest
 ```
 
-Before a release ships the script, copy `deploy/monkey-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` to `/root/` and
+Before a release ships the script, copy `deploy/monkey-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` together to `/root/`, as the script passes `--kit`, and
 run `systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/monkey-loadtest.sh`.
 
 Why it is safe for the live world and for players:

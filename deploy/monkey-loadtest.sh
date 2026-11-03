@@ -11,7 +11,7 @@
 #   SCENARIOS    "still" (default, standing players); "still walk" adds a
 #                run with players walking through loaded terrain
 #   PLAYERS      fake players (default 30)     MINUTES   minutes measured per scenario (default 5)
-#   LOADTEST_PY  the loadtest.py to run (default: the deployed checkout's); it needs --spark
+#   LOADTEST_PY  the loadtest.py to run (default: the deployed checkout's); it needs --spark and --kit
 #   FORCE=1      run although Chunky is still pre-generating (the numbers then include it)
 # Settings and webhooks come from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV).
 #

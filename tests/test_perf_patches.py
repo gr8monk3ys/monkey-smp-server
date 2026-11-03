@@ -38,6 +38,19 @@ def test_macro_calls_only_run_when_a_slot_holds_the_item():
         assert all(" if items entity @s " in line for line in calls)
 
 
+def test_each_guard_tests_the_item_its_macro_edits():
+    """A guard on the wrong item leaves the macro never running, and the banned item stays."""
+    public = "data/strength_restrictions/function/technical/main/tick/public.mcfunction"
+    files = [patched("silvers_strength-restrictions-season-5", public),
+             patched("silvers_strength-smp-season-5", SMP + "powers/spear.mcfunction"),
+             patched("silvers_strength-smp-season-5", SMP + "enchant/main.mcfunction")]
+    for text in files:
+        for line in commands(text):
+            if MACRO in line:
+                guarded = line.split(" if items entity @s ", 1)[1].split(" ", 1)[1].split(f" run {MACRO}", 1)[0]
+                assert f"\"beginning_item\":'{guarded}'" in line
+
+
 def test_each_guard_covers_all_the_slots_the_macro_edits():
     """The macro touches the hotbar, the inventory, the offhand and the armour: a missing slot keeps a banned item."""
     text = patched("silvers_strength-smp-season-5", SMP + "powers/spear.mcfunction")

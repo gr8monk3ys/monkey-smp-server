@@ -96,8 +96,8 @@ What keeps it there:
 - **A patch in Silver's Effects Library** (docs/MAINTAINING.md lists it). Unpatched, it ran 97 commands per
   loaded mob per tick and went past Minecraft's limit of 65,536, which cut off whatever ran next.
 - **The speed patches of 3.1.0** (docs/MAINTAINING.md). Six datapacks do less per tick. On this PC with 30 fake
-  players carrying a full inventory, the median tick went from 185 ms to about 69 ms (docs/LIVE.md, "Load test").
-- **Extras stay out of the pack. To add a mod anyway, drop its jar into `server\mods` (and players into their
+  players carrying a survival inventory, the median tick went from 185 ms to about 69 ms (docs/LIVE.md, "Load test").
+- **Extras stay out of the pack.** To add a mod anyway, drop its jar into `server\mods` (and players into their
   mods folder): the installer leaves files it doesn't manage alone.
 
 ## Before a big group joins

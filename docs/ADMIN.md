@@ -75,13 +75,15 @@ standing spread out in generated terrain:
 
 | Players | Typical tick | TPS |
 |---|---|---|
-| 5 | 19 ms | 20 |
-| 10 | 48 ms | 20 |
-| 25 | 71 ms | about 13 |
+| 5 | 39 ms | 20 |
+| 10 | 60 ms | about 16 |
+| 25 | 133 ms | about 7 |
 
-So a PC like that runs **about 10 players at full speed**; with 25 it stays playable but slow. A rented host
-with a current Ryzen (7000 or 9000 series) is roughly twice as fast per core, which is what 25 players need;
-many budget plans run older Xeons that are slower than a 2017 desktop. Exploring ungenerated land costs far
+So a PC like that runs **about 5 players at full speed**, and with 25 everything moves at about a third of normal
+speed, even with ServerCore's distances and mob caps cut (simulation distance 4, mob cap 60%). About three
+quarters of the tick is datapack commands. A rented host with a current Ryzen (7000 or 9000 series) is roughly
+twice as fast per core, which still isn't enough for 25 at full speed; many budget plans run older Xeons that are
+slower than a 2017 desktop. Exploring ungenerated land costs far
 more than these numbers (see the next section).
 
 What keeps it there:
@@ -91,8 +93,8 @@ What keeps it there:
   back up when the server recovers (`dynamic`; never above view distance 8 / simulation distance 6).
   `/servercore status` shows the current values. Mob farms that depend on distant mobs can be slower: set
   `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.
-- **Two patches in the Strength SMP mods** (docs/MAINTAINING.md lists them). Unpatched, they ran tens of
-  thousands of commands per tick and went past Minecraft's limit of 65,536, which cut their effects off.
+- **A patch in Silver's Effects Library** (docs/MAINTAINING.md lists it). Unpatched, it ran 97 commands per
+  loaded mob per tick and went past Minecraft's limit of 65,536, which cut off whatever ran next.
 - **Extras stay out of the pack.** To add a mod anyway, drop its jar into `server\mods` (and players into their
   mods folder): the installer leaves files it doesn't manage alone.
 

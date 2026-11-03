@@ -14,7 +14,10 @@ anti-xray config, the new world, pre-generation and the map.
   mods, down from 166. Client pack: 165 mods and 22 resource packs, about 310 MB, down from 560 MB.
 - Strength SMP Season 4 to Season 5, and its four attack-damage buffs are removed by their new names in
   `tools/events.py`. Season 5 needs no patch, so the Season 4 one is gone. Silver's Effects Library is patched
-  again, against the file 26.2 reads: 25 fake players went from about 7,200 command-limit hits a run to none.
+  again, against the file 26.2 reads: 25 fake players went from 3,359 command-limit hits a run to none.
+- `tools/loadtest.py` keeps its fake players alive. It gave them protection before they had joined and could spawn
+  them over chunks still generating, so most died in the first two minutes and Carpet removed them: a run
+  measured 3 to 6 players out of 25 and didn't say so. `summary.json` now has `players_online_min`.
 - Tebex is a managed mod: a restore or a new VPS gets it by itself. The restore drill now removes
   `server/mods/tebex`, where its key is, instead of leaving out the jar.
 - The Nether: Amethyst Nether is 160 tall, with its roof near y 160 (`antixray.toml`, BlueMap's comment).

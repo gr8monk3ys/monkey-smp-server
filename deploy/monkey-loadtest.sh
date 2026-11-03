@@ -200,7 +200,7 @@ report=''
 for s in $SCENARIOS; do
     f="$COPY_DIR/loadtest/$s-$PLAYERS/summary.json"
     [ -f "$f" ] || continue
-    line="$s, $PLAYERS players: median tick $(field mspt_median "$f") ms, p95 up to $(field p95_max "$f") ms, $(field tps "$f") TPS"
+    line="$s, $(field players_online_min "$f") of $PLAYERS players stayed: median tick $(field mspt_median "$f") ms, p95 up to $(field p95_max "$f") ms, $(field tps "$f") TPS"
     url=$(field spark_profile "$f")
     [ -z "$url" ] || line="$line, all threads $url"
     report="$report $line."

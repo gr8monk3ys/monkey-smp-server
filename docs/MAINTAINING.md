@@ -300,13 +300,14 @@ patch against the new upstream file: carry the change below over, then check it 
 | Mod | File | What the patch does, and why |
 |---|---|---|
 | `lootrestock` | `org/oldskooler/lootrestock/handler/ChestInteractionHandler.class` | A Java class, not a data file. Loot Restock checks whether a structure chest is empty the first time a player opens it, and that check rolls the chest's loot with no player, so vanilla's "a player opened a loot chest" advancement never fired and the weekly "Open 8 loot chests" challenge never counted. The patch answers "not empty" there without rolling (the code only runs for a chest that still has its loot table). Make it again with `python tools/lootrestock_patch.py LootRestock-<version>.jar OUT.jar`, put `OUT.jar` in the test server's `mods`, and snapshot; the script's docstring has the details. Loot Restock is GPL-3.0-or-later and its source is public, so shipping a changed class is fine as long as the change stays published: it is, in this repo. |
-| `silvers_effects-library` | `overlay_26.2/data/s_effects_lib/function/technical/effects.mcfunction` | Upstream runs 97 commands for every loaded mob, every tick, and with a full mob cap that passes Minecraft's limit of 65,536 commands per tick, which cuts off whatever runs next. One command on top returns early for a non-player with none of the library's 19 `*_duration` scores. Players are never skipped, because the file's last line re-arms their tick advancement. 26.2 reads `overlay_26.2/`, not the `overlay_26.3/` the last patch replaced, so check the overlay when the Minecraft version moves. |
+| `silvers_effects-library` | `overlay_26.2/data/s_effects_lib/function/technical/effects.mcfunction` | Upstream runs 97 commands for every loaded mob, every tick, so about 675 loaded mobs pass Minecraft's limit of 65,536 commands per tick, which cuts off whatever runs next. One command on top returns early for a non-player with none of the library's 19 `*_duration` scores. Players are never skipped, because the file's last line re-arms their tick advancement. 26.2 reads `overlay_26.2/`, not the `overlay_26.3/` the last patch replaced, so check the overlay when the Minecraft version moves. |
 
 Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the effects
-patch took the command-limit hits from about 7,200 a run to none. The typical tick didn't drop (46 ms before, 49 ms
+patch took the command-limit hits from 3,359 a run to none. The typical tick didn't drop (132 ms before, 133 ms
 after), because the unpatched runs were being cut off and the patched ones run everything. Strength SMP Season 5
-needs no patch of its own: its enchant check runs from a placed-block advancement, not every tick. Without Season 5
-the unpatched library still hit the limit just as often, and the patched typical tick was 42 ms.
+needs no patch of its own: its enchant check runs from a placed-block advancement, not every tick, and it costs
+about 23 ms a tick at 25 players (133 ms with it, 110 ms without). Check `players_online_min` in `summary.json`
+before believing a run: it must equal the players asked for.
 
 ## Mods pinned by hand
 

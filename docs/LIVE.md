@@ -25,7 +25,7 @@ SSH key into the server.
 ## The machine
 
 One fast core matters more than anything else (docs/ADMIN.md, "How many players"): a current Ryzen
-(7000/9000 series) at about 5 GHz runs about 25 players at 20 TPS; an old Xeon runs fewer than a 2017
+(7000/9000 series) at about 5 GHz is roughly twice a 2017 desktop per core; an old Xeon runs fewer than a 2017
 desktop. Pick a VPS or dedicated server that names the CPU model, with 16 GB of RAM, NVMe and a US West or
 central location (the group plays evenings Pacific). Debian 12 or Ubuntu 24.04.
 
@@ -877,6 +877,10 @@ averaged over 50 ms. The worst p95 was 74 ms and the worst p99 105 ms, with two 
 ServerCore kept the full distances (simulation 6, view 8), so the numbers aren't flattered. **Decision:
 leave it.** The run's `summary.json` and staff post hold a docs link that spark printed while stopping;
 `tools/loadtest.py` now skips those. The profile link above came from the run's `server.log`.
+
+**Don't rely on that row.** Until 3.0.0 the tool lost most of its fake players in the first two minutes and didn't
+say so (CHANGELOG, 3.0.0), and the tick dropping from about 30 ms to about 15 ms fits that. The tool now records
+`players_online_min` and the staff post gives it: a run only counts if it equals the players asked for.
 
 **Decision rule.** Under about 40 ms median at 25 players, leave it: that leaves room for spikes. Above
 that, change one thing at a time, in this order, and run the test again after each:

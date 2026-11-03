@@ -16,6 +16,11 @@ def test_parse_tick_query():
     assert loadtest.parse_tick_query("Unknown command") == {}
 
 
+def test_online_names():
+    assert loadtest.online_names("There are 2 of a max of 30 players online: Load00, load12") == {"load00", "load12"}
+    assert loadtest.online_names("There are 0 of a max of 30 players online: ") == set()
+
+
 def test_summarize():
     rows = [{"mspt_avg": 40.0, "p95": 45.0, "p99": 60.0}, {"mspt_avg": 60.0, "p95": 70.0, "p99": 90.0}, {}]
     rows[0]["p50"], rows[1]["p50"] = 30.0, 50.0

@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2026-11-04
+## [3.0.0] - 2026-11-02
 
 Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which
 was never tagged or deployed, and has everything 2.11.0 had. Players reinstall the client pack. After it deploys
@@ -24,7 +24,9 @@ anti-xray config, the new world, pre-generation and the map.
 - Datapacks and the wardrobe pack are built for 26.2 (data format 107, resource format 88); the Block Wheel pool is
   regenerated (979 blocks: 26.3's concrete and wool slabs and stairs are gone).
 - Voice chat's mute moves from M to Y, so M opens the world map and nothing else.
-- The launch plan: 3.0.0 is tagged on Wednesday 4 November and the freeze starts Thursday 5 November.
+- The launch plan: 3.0.0 is tagged early, on Monday 2 November, for a test night. The freeze still starts Thursday 5 November, and Season I starts on a fresh copy of this seed.
+- Keys: each key does one thing. Fullbright is `.`, the shoulder swap `\`, the fast emote `[`; Essential's menu, friends, screenshots and cosmetics move to Home, End, Insert and Delete.
+- Client: Essential no longer asks twice whether to update on the second launch.
 
 ### Removed
 
@@ -36,7 +38,7 @@ anti-xray config, the new world, pre-generation and the map.
 - Rule B18 is retired: the Nova Structures books it covered left with their mod.
 - The site's gallery, until the shots are retaken on the new world: the old ones show terrain that's gone.
 
-## [2.11.0] - 2026-11-03
+## [2.11.0] - 2026-11-02
 
 The last release before Season I: everything for launch is in it, and it goes live in the 4-5 AM window on
 Wednesday 4 November, when the freeze starts (docs/LAUNCH.md, "Release freeze"). Most of the new systems ship off

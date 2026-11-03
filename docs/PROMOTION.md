@@ -142,7 +142,7 @@ is in docs/LAUNCH.md, "Announcement schedule"; the founding roster post (T-9) an
 docs/LAUNCH.md too. Like everything here, nothing is posted until an owner says yes.
 
 - **Lines marked [needs ...]** mention work that isn't merged yet. Each stays only if that work is in the
-  release tagged on Wednesday 4 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
+  last release, tagged by Wednesday 4 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
   marker before posting.
 - **Lines marked [store]** or **[by hand]**: keep the one that is true on the day. The store's link goes on the
   site at 5 PM on launch day (docs/LAUNCH.md, "The store").

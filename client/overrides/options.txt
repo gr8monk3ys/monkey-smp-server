@@ -272,7 +272,7 @@ key_key.voice_chat_settings:key.keyboard.unknown
 key_key.voice_chat_group:key.keyboard.unknown
 key_key.voice_chat_toggle_recording:key.keyboard.unknown
 key_key.voice_chat_adjust_volumes:key.keyboard.unknown
-key_key.punchy.triggerable.punchy_sword_inspect_rework:key.keyboard.g
+key_key.punchy.triggerable.punchy_sword_inspect_rework:key.keyboard.apostrophe
 key_key.punchy.triggerable.punchy_sword_inspect_old:key.keyboard.j
 soundCategory_master:1.0
 soundCategory_music:1.0
@@ -292,3 +292,13 @@ modelPart_right_sleeve:true
 modelPart_left_pants_leg:true
 modelPart_right_pants_leg:true
 modelPart_hat:true
+key_key.brighter.toggle_fullbright:key.keyboard.period
+key_keybind.name.MENU_ACCESS:key.keyboard.home
+key_key.bbm.jump:key.keyboard.right.bracket
+key_key.simpleharvesting.config:key.keyboard.f9
+key_keybind.name.ESSENTIAL_FRIENDS:key.keyboard.end
+key_keybind.name.SCREENSHOT_MANAGER:key.keyboard.insert
+key_key.dungeonconfig.open:key.keyboard.f10
+key_key.shouldersurfing.swap_shoulder:key.keyboard.backslash
+key_key.emotecraft.fastchoose:key.keyboard.left.bracket
+key_keybind.name.COSMETIC_STUDIO:key.keyboard.delete

@@ -176,10 +176,15 @@ run `migrate_names.py` on it first.
 ### 3.0.0: Minecraft 26.2 and a new world
 
 3.0.0 moves the server from Minecraft 26.3 back to 26.2 and to the owners' mod list. A world can't go back a
-Minecraft version, so Season I gets a new one, once 3.0.0 is live, before launch. Follow "A new world for
-Season I (2.8.0)" below, with these changes. It takes hours, so start early on Thursday 5 November.
+Minecraft version, so Season I gets a new one. Follow "A new world for Season I (2.8.0)" below, with these changes. It takes hours.
 
-Before the first start on 3.0.0, or at the latest in step 3 while the server is stopped:
+**The order differs: the old world leaves before the deploy.** A 26.2 server can't load the 26.3 world, so letting
+the release deploy first would fail its boot and roll back. Pause deploys, run `monkey backup` while the server is
+up and keep that backup, stop the server, move the world aside, carry, and only then run
+`sh /srv/monkey/repo/deploy/monkey-deploy.sh --now`. It skips its own backup when the server is stopped, and its
+first start makes the new world.
+
+Before the first start on 3.0.0, while the server is stopped:
 
 1. **One Tebex jar.** Tebex is now a managed mod, with the same file name as the jar placed by hand on the
    live server, so the deploy should simply take it over. Check there is exactly one:
@@ -196,7 +201,7 @@ Before the first start on 3.0.0, or at the latest in step 3 while the server is 
 
 Changes to the steps below:
 
-- **Step 1:** the folder to keep is `/srv/monkey/seasons/pre-3.0/`, with the newest backup from before the update.
+- **Step 1:** the folder to keep is `/srv/monkey/seasons/pre-3.0/`, with the backup taken just before the world moved.
 - **Step 4:** move the old world to `/srv/monkey/seasons/pre-3.0/world`. The short rules didn't change.
 - **Step 5:** carry from that folder, still `--season 1`. The wardrobe scores, tiers and grants come across, and
   so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
@@ -722,12 +727,12 @@ Only one copy may run the world at a time: two live copies split the world into 
 
 ### The store (set up once, before the first sale)
 
-Status (2026-10-28): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
+Status (2026-11-02): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
 (`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
 storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
-Until it is approved, checkout takes only test payments and the public store address isn't known.
-`monkeysmp.tebex.io` belongs to another server, so read the address off the Tebex panel once the store is live.
-Then make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
+The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
+belongs to another server). On 2026-11-02 that page answered 503, "Store unavailable", so it isn't selling yet.
+Once it opens, make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
 only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
 and terms against the table below before the first real sale.
 

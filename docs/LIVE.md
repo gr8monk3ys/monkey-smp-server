@@ -186,11 +186,10 @@ first start makes the new world.
 
 Before the first start on 3.0.0, while the server is stopped:
 
-1. **One Tebex jar.** Tebex is now a managed mod, with the same file name as the jar placed by hand on the
-   live server, so the deploy should simply take it over. Check there is exactly one:
-   `ls ../server/mods/*tebex*.jar | wc -l` prints `1`. Leave the `tebex` folder beside it: it holds the store's
-   key. Two jars with
-   the same mod id stop Fabric from starting: delete the older one.
+1. **One Tebex jar.** Tebex is now a managed mod, but its file name (`tebex-fabric-26.2-2.4.6-0096441.jar`) differs
+   from the jar placed by hand on the live server (`tebex-fabric-26.2-2.4.6.jar`), so a deploy leaves both. They
+   were the same bytes and the server still started, but remove the hand-placed one:
+   `ls ../server/mods/*tebex*.jar | wc -l` prints `1`. Leave the `tebex` folder beside it: it holds the store's key.
 2. **Configs a deploy doesn't replace.** The live server keeps its own copy of a config, so copy the one that
    changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
    replaces any tuning made on the server, then
@@ -207,7 +206,13 @@ Changes to the steps below:
   so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
 - **Step 6: the seed is the owners' call.** The land differs either way, because the terrain mods left.
 - **Step 8:** leave out the `grep` for `nova_structures:` (rule B18 is retired).
-- **Step 10:** Qrafty's End Villages left; End cities are the reason to pre-generate the End.
+- **After the first start: the Nether's border goes to 2500.** On this seed nothing is inside the pack's 312.5: the
+  nearest fortress is about 440 blocks from the Nether's centre and the nearest bastion about 1500. Without a
+  fortress there are no blaze rods, so no eyes of ender for Dragon Night. So on every copy of this seed, the fresh
+  launch world included: `monkey rcon "execute in minecraft:the_nether run worldborder set 2500"`, before the map
+  fit in step 9. A portal still lands inside the Overworld's border, because the game clamps it.
+- **Step 10:** the Nether's radius is 1300, not 500. Qrafty's End Villages left; End cities are the reason to
+  pre-generate the End.
 - **After step 12, look around:** the terrain is new, so the spawn area, monuments and NPC spots all need a walk
   (docs/LAUNCH.md, "Ops readiness"). Then render the map and fit its border (`tools/map_border.py`).
 

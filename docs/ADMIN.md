@@ -407,7 +407,8 @@ are on: set it to `false` there and run `bluemap reload`.
 It also stops at the world border. Chunky generates out to the season's largest border (docs/LIVE.md, step
 6), so a map of everything generated would show the land the border acts haven't opened yet. The first
 `render-mask` layer of each map in `server\config\bluemap\maps\` is a box on its dimension's border: the
-shipped files fit Season I's start (2500 wide around spawn, 312.5 in the Nether), and the End has no border.
+shipped files fit the pack's starting borders (2500 wide around spawn, 312.5 in the Nether; Season I's Nether is
+wider, docs/LIVE.md, "3.0.0"), and the End has no border.
 After each border act, and once on a server whose map files BlueMap wrote itself, fit the masks to the
 border with `tools/map_border.py` from this repo (Python 3; on the live server the repo is at
 `/srv/monkey/repo`) and render the maps again:

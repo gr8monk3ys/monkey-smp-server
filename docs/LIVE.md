@@ -186,11 +186,10 @@ first start makes the new world.
 
 Before the first start on 3.0.0, while the server is stopped:
 
-1. **One Tebex jar.** Tebex is now a managed mod, with the same file name as the jar placed by hand on the
-   live server, so the deploy should simply take it over. Check there is exactly one:
-   `ls ../server/mods/*tebex*.jar | wc -l` prints `1`. Leave the `tebex` folder beside it: it holds the store's
-   key. Two jars with
-   the same mod id stop Fabric from starting: delete the older one.
+1. **One Tebex jar.** Tebex is now a managed mod, but its file name (`tebex-fabric-26.2-2.4.6-0096441.jar`) differs
+   from the jar placed by hand on the live server (`tebex-fabric-26.2-2.4.6.jar`), so a deploy leaves both. They
+   were the same bytes and the server still started, but remove the hand-placed one:
+   `ls ../server/mods/*tebex*.jar | wc -l` prints `1`. Leave the `tebex` folder beside it: it holds the store's key.
 2. **Configs a deploy doesn't replace.** The live server keeps its own copy of a config, so copy the one that
    changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
    replaces any tuning made on the server, then
@@ -207,7 +206,13 @@ Changes to the steps below:
   so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
 - **Step 6: the seed is the owners' call.** The land differs either way, because the terrain mods left.
 - **Step 8:** leave out the `grep` for `nova_structures:` (rule B18 is retired).
-- **Step 10:** Qrafty's End Villages left; End cities are the reason to pre-generate the End.
+- **After the first start: the Nether's border goes to 2500.** On this seed nothing is inside the pack's 312.5: the
+  nearest fortress is about 440 blocks from the Nether's centre and the nearest bastion about 1500. Without a
+  fortress there are no blaze rods, so no eyes of ender for Dragon Night. So on every copy of this seed, the fresh
+  launch world included: `monkey rcon "execute in minecraft:the_nether run worldborder set 2500"`, before the map
+  fit in step 9. A portal still lands inside the Overworld's border, because the game clamps it.
+- **Step 10:** the Nether's radius is 1300, not 500. Qrafty's End Villages left; End cities are the reason to
+  pre-generate the End.
 - **After step 12, look around:** the terrain is new, so the spawn area, monuments and NPC spots all need a walk
   (docs/LAUNCH.md, "Ops readiness"). Then render the map and fit its border (`tools/map_border.py`).
 
@@ -727,12 +732,13 @@ Only one copy may run the world at a time: two live copies split the world into 
 
 ### The store (set up once, before the first sale)
 
-Status (2026-11-02): the Tebex project "Monkey SMP" is set up and connected to the live server. Delivery
-(`tebex secret` in the console), the Server Pass package, the support contact, the payout wallet and the
-storefront are all done. It went to Tebex for review on 2026-10-27, which Tebex says takes up to 2 working days.
+Status (2026-11-02): the Tebex project "Monkey SMP" is approved, published and connected to the live server, so
+the store takes real payments. Delivery (`tebex secret` in the console), all five packages (checked in the panel
+against the table below), the support contact, the payout wallet and the storefront are all done. The paid role is
+**SMP Member**, given by Tebex's bot; its role must stay above that one.
 The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
-belongs to another server). On 2026-11-02 that page answered 503, "Store unavailable", so it isn't selling yet.
-Once it opens, make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
+belongs to another server). Nothing links to it until `STORE_URL` merges, so keep it to staff.
+Make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
 only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
 and terms against the table below before the first real sale.
 
@@ -747,7 +753,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 
 - **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price
   for access; a sale has to be open to everyone.
-- **Free trial on the monthly pass: 7 days.** Tebex added native trials for subscription packages (1, 3,
+- **Free trial on the monthly pass: 7 days, off at launch (docs/LAUNCH.md).** Tebex added native trials for subscription packages (1, 3,
   7, 10, 14 or 30 days; Packages > the package > Trials). It takes card details at checkout and charges
   when the trial ends; a trial on the package is the same for every buyer, so it stays within the
   one-price rule. Seven days always includes a Saturday event (docs/SEASONS.md). Tebex's docs don't say

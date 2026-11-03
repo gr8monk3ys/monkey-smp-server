@@ -47,11 +47,11 @@ order and the dates.
   read the store's address off the Tebex panel once it is approved). The packages exactly as in
   the table in docs/LIVE.md (prices can't change on a subscription once sold, docs/adr/0008). Commands from
   docs/RETENTION.md. The Discord integration for the paid role. Link the payout wallet (Link Wallet).
-- [ ] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
+- [x] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
   `tebex secret <key>` in the console. The key is a secret: type it into the console, never into a file in
   this repo or a chat.
-- [ ] **Test purchase** of the $5 pass on a staff account. Check that `whitelist add` ran, `rw.months` went up
-  by one, and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
+- [ ] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
+  move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
   approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
@@ -65,19 +65,21 @@ order and the dates.
 
 ### The 7-day trial
 
-docs/LIVE.md, "The store", explains the trial and what is unknown about it. Test it once with real money
-before turning it on for everyone.
+**Decided 2026-11-02: no trial at launch, so say nothing about one.** It would need its own test with a real
+card that week, and Tebex's docs don't say which commands run when a trial starts. An open-house evening in
+December does the same job (docs/LIVE.md).
 
-- [ ] **Once the store is approved:** turn the 7-day trial on for the monthly pass, buy
+docs/LIVE.md, "The store", explains the trial and what is unknown about it. To turn it on after launch, test it
+once with real money first:
+
+- [ ] Turn the 7-day trial on for the monthly pass, buy
   it with a real card on a staff alt, and check: the whitelist command ran when the trial started, the
   Discord role arrived, and `rw.months` didn't move yet.
 - [ ] **The same day, cancel the trial** on Tebex's payment history page and check `whitelist remove` ran.
   No money changes hands if it's cancelled inside the 7 days.
-- [ ] **Thu 5 Nov: decide.** Trials go on only if all three checks passed. Then add the FAQ answer from
-  docs/LIVE.md to the site (`faq` in `site/src/content/front.tsx`) in its own small pull request, and add
-  the trial line to the T-1 and launch announcements (docs/PROMOTION.md). If the whitelist waited for the first charge, leave trials off
-  and plan an open-house evening in December instead (docs/LIVE.md).
-- [ ] If the store isn't approved in time, there is no trial at launch. Say nothing about one.
+- [ ] Trials go on only if all three checks passed. Then add the FAQ answer from
+  docs/LIVE.md to the site (`faq` in `site/src/content/front.tsx`) in its own small pull request. If the
+  whitelist waited for the first charge, leave trials off.
 
 ### Release freeze: launch weekend
 

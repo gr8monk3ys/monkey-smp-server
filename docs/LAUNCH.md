@@ -47,10 +47,10 @@ order and the dates.
   read the store's address off the Tebex panel once it is approved). The packages exactly as in
   the table in docs/LIVE.md (prices can't change on a subscription once sold, docs/adr/0008). Commands from
   docs/RETENTION.md. The Discord integration for the paid role. Link the payout wallet (Link Wallet).
-- [ ] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
+- [x] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
   `tebex secret <key>` in the console. The key is a secret: type it into the console, never into a file in
   this repo or a chat.
-- [ ] **Test purchase** of the $5 pass on a staff account. Check that `whitelist add` ran, `rw.months` didn't
+- [ ] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
   move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't

@@ -43,16 +43,35 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 docs/LIVE.md, "Payments and Discord" and "The store", has the packages, prices and commands. This is the
 order and the dates.
 
-- [ ] **Mon 26 Oct to Thu 29 Oct: build the storefront** (not `monkeysmp.tebex.io`, which is another server's;
+- [x] **Mon 26 Oct to Thu 29 Oct: build the storefront** (not `monkeysmp.tebex.io`, which is another server's;
   read the store's address off the Tebex panel once it is approved). The packages exactly as in
   the table in docs/LIVE.md (prices can't change on a subscription once sold, docs/adr/0008). Commands from
   docs/RETENTION.md. The Discord integration for the paid role. Link the payout wallet (Link Wallet).
 - [x] **Connect the server:** the Tebex jar in `server/mods` (docs/LIVE.md gives the URL), then
   `tebex secret <key>` in the console. The key is a secret: type it into the console, never into a file in
   this repo or a chat.
-- [ ] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
+- [x] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
   move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
   check they ran), and leave only staff on the whitelist.
+
+  **Result, 2026-11-02, with the $5 pass on a staff account:** `whitelist add` ran about a minute after paying
+  (it replied "already whitelisted", so the command is proved, not the list changing), `rw.months` stayed at 0,
+  SMP Member arrived, and the sale is in Payments. **Still unproved: the removal commands and the role coming
+  off.** The panel refused the refund because the money hadn't settled (see "Refunds before the money settles").
+  The subscription is cancelled and shows Ending, with no charge on 2 Dec; the first removal should run then.
+  Check it did, then put that staff account back with `whitelist add`, because staff must stay on the list.
+
+### Refunds before the money settles
+
+The panel refuses a refund with "You don't have sufficient withdrawable funds" unless the wallet's **Withdrawable**
+balance covers it, and new money sits under Settling first. Tebex says that averages 14 days. So every refund in
+the first weeks after launch waits, including the 48-hour one the site promises. While that lasts:
+
+- Take the player off the whitelist by hand (`whitelist remove NAME`), take away SMP Member, and tell them the
+  money follows once Tebex clears it. Keep a list of who is owed what.
+- Refund them from the panel as soon as Withdrawable covers it. Tebex then says up to 14 business days to arrive.
+- After that, leave enough in the wallet to cover refunds when you withdraw.
+
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
   approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
   `STORE_URL` is empty.

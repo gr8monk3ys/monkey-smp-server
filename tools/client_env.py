@@ -25,7 +25,7 @@ KINDS = {
     "performance": "makes the game faster or lighter: keep it on a slow PC",
     "visuals": "looks only: animations, particles, smoke and fog",
     "audio": "sound only: voice chat, ambience, echo",
-    "map": "maps you hold",
+    "map": "the minimap and world map",
     "interface": "HUD, tooltips, menus and controls",
     "library": "needed only by other optional mods, if at all",
     "server": "the server runs it; players need no copy of it",

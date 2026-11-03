@@ -236,17 +236,22 @@ def wait_for(check, timeout_s: int = SPAWN_TIMEOUT_S) -> bool:
 def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
     """Carpet removes a fake player that dies, so each must be protected before it can fall: its chunk loaded first
     (a player over a chunk still generating falls into the void) and its effects given once it has really joined
-    (`player spawn` returns before that, and the commands after it then find nobody)."""
+    (`player spawn` returns before that, and the commands after it then find nobody). A player that can't get in is
+    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run."""
     for i, name in enumerate(names):
         angle = 2 * math.pi * i / len(names)
         x, z = (0, 0) if scenario == "explore" else (radius * math.cos(angle), radius * math.sin(angle))
         rcon.cmd(f"forceload add {x:.0f} {z:.0f}")
         if not wait_for(lambda x=x, z=z: "passed" in rcon.cmd(f"execute if loaded {x:.0f} 64 {z:.0f}")):
-            raise SystemExit(f"the chunk for {name} at {x:.0f} {z:.0f} did not load")
+            print(f"WARNING: the chunk for {name} at {x:.0f} {z:.0f} did not load; skipping them", flush=True)
+            rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
+            continue
         rcon.cmd(f"player {name} spawn at {x:.0f} 200 {z:.0f} facing {math.degrees(angle):.0f} 0 "
                  "in minecraft:overworld in survival")
         if not wait_for(lambda name=name: name.lower() in online_names(rcon.cmd("list"))):
-            raise SystemExit(f"{name} did not join")
+            print(f"WARNING: {name} did not join; skipping them", flush=True)
+            rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
+            continue
         rcon.cmd(f"effect give {name} minecraft:resistance infinite 255 true")
         rcon.cmd(f"effect give {name} minecraft:saturation infinite 255 true")
         rcon.cmd(f"spreadplayers {x:.0f} {z:.0f} 0 1 false {name}")

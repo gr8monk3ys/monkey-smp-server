@@ -72,24 +72,26 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="gallery">
-          <h2>Out there</h2>
-          <p className="note">Screenshots from the server&apos;s own world.</p>
-          <Place className="gallery">
-            {shots.map((s, i) => (
-              <figure key={s.name}>
-                <div className="shot">
-                  <span className="where">{s.where}</span>
-                  <img src={`/img/${s.name}-${i ? 800 : 1600}.webp`}
-                    srcSet={`/img/${s.name}-800.webp 800w, /img/${s.name}-1600.webp 1600w`}
-                    sizes={i ? "(max-width: 760px) 100vw, 33vw" : "(max-width: 760px) 100vw, 66vw"}
-                    width={1600} height={900} loading={i ? "lazy" : undefined} decoding="async" alt={s.alt} />
-                </div>
-                <figcaption>{s.caption}</figcaption>
-              </figure>
-            ))}
-          </Place>
-        </section>
+        {shots.length > 0 && (
+          <section id="gallery">
+            <h2>Out there</h2>
+            <p className="note">Screenshots from the server&apos;s own world.</p>
+            <Place className="gallery">
+              {shots.map((s, i) => (
+                <figure key={s.name}>
+                  <div className="shot">
+                    <span className="where">{s.where}</span>
+                    <img src={`/img/${s.name}-${i ? 800 : 1600}.webp`}
+                      srcSet={`/img/${s.name}-800.webp 800w, /img/${s.name}-1600.webp 1600w`}
+                      sizes={i ? "(max-width: 760px) 100vw, 33vw" : "(max-width: 760px) 100vw, 66vw"}
+                      width={1600} height={900} loading={i ? "lazy" : undefined} decoding="async" alt={s.alt} />
+                  </div>
+                  <figcaption>{s.caption}</figcaption>
+                </figure>
+              ))}
+            </Place>
+          </section>
+        )}
 
         <section id="join">
           <h2>How to join</h2>

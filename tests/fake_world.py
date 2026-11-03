@@ -67,7 +67,7 @@ class FakeWorld:
         data: dict = {"PlayerScores": score_rows(*rows)}
         if teams is not None:
             data["Teams"] = teams
-        return self.scoreboard({"DataVersion": 5023, "data": data})
+        return self.scoreboard({"DataVersion": 4903, "data": data})
 
     def party(self, party_id: str, owner: dict | None, members=()) -> "FakeWorld":
         """A party file; owner and members are member(...) entries. owner None: no owner."""
@@ -94,19 +94,19 @@ class FakeWorld:
                 "lerp_target": size if lerp_target is None else lerp_target}
         data = {k: float(v) for k, v in data.items()} | {"lerp_time": Long(0), "warning_blocks": 5}
         return self._write(f"dimensions/{namespace}/{name}/data/minecraft/world_border.dat",
-                           nbt({"DataVersion": 5023, "data": data}, gzipped=True))
+                           nbt({"DataVersion": 4903, "data": data}, gzipped=True))
 
     def advancements(self, player_uuid: str, done: dict[str, str], undone: dict[str, str] | None = None,
                      ) -> "FakeWorld":
         """A player's players/advancements/<uuid>.json as 26.2 writes it (pretty JSON, DataVersion last; seen on
-        a 26.3 test server on 2026-10-25): advancement -> {"criteria": {name: "2026-10-25 21:12:32 -0700"},
+        a 26.2 test server on 2026-11-02): advancement -> {"criteria": {name: "2026-10-25 21:12:32 -0700"},
         "done": bool}. `done` and `undone` map an advancement to its one criterion's time."""
         data = {adv: {"criteria": {"requirement": when}, "done": True} for adv, when in done.items()}
         data |= {adv: {"criteria": {"requirement": when}, "done": False} for adv, when in (undone or {}).items()}
         return self._write(f"players/advancements/{player_uuid}.json",
-                           json.dumps(data | {"DataVersion": 5023}, indent=2).encode())
+                           json.dumps(data | {"DataVersion": 4903}, indent=2).encode())
 
     def storage(self, namespace: str, contents: dict) -> "FakeWorld":
         """A namespace's command storage as 26.2 saves it: data/<namespace>/command_storage.dat, key -> compound."""
         return self._write(f"data/{namespace}/command_storage.dat",
-                           nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))
+                           nbt({"DataVersion": 4903, "data": {"contents": contents}}, gzipped=True))

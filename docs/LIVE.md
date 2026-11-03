@@ -187,7 +187,9 @@ Before the first start on 3.0.0, or at the latest in step 3 while the server is 
    key. Two jars with
    the same mod id stop Fabric from starting: delete the older one.
 2. **Configs a deploy doesn't replace.** The live server keeps its own copy of a config, so copy the one that
-   changed: `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 160 tall
+   changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
+   replaces any tuning made on the server, then
+   `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 160 tall
    now). Remove the one for a mod that left and would otherwise look live:
    `rm -f ../server/config/enchantmentdisabler/config.toml`. Leftovers from other mods that left (Carry On,
    Tectonic, Distant Horizons, MinerTrack) are harmless; delete them if you like.

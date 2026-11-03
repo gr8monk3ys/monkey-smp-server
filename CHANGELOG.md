@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.1.0] - 2026-11-03
+
+The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on
+launch night. Players reinstall the client pack. No world has to move for the deploy, but new structures only appear
+in land generated after it, so the launch world made on Thursday 5 November has them and the test world's land
+doesn't. One step by hand on the live server (docs/LIVE.md, "3.1.0: the final mod list and the speed patches").
+
+### Added
+
+- The shared folder's 24 new jars, as it stood on 3 November. Nothing left it. Dungeons and Taverns and nine of its
+  overhauls; Moog's End, Nether, Soaring and Voyager structures, Mineshafts Reimagined and Temples Reimagined, with
+  Moog's Structure Lib; Bigger Better End Cities, Trek, Phantoms in the End, Amplified Nether and Iris. Server: 172
+  mods, up from 151. Client pack: 179 mods and 22 resource packs, about 370 MB, up from 310 MB.
+- Rule B18 is back: Dungeons and Taverns' enchantments are event rewards only, and
+  `config/enchantmentdisabler/config.toml` keeps all 17 out of the table, loot and trades.
+
+### Changed
+
+- Speed: six datapacks do the same job with less work per tick (docs/MAINTAINING.md, "Patches this pack carries"). On
+  the i7-8700K with 30 fake players carrying a full inventory, the median tick went from 185.1 ms to 68.5 ms and TPS
+  from 5.4 to 14.1. ServerCore's dynamic mode also held lower mob caps and distances in the second run, so not all of
+  that is the patches, and the VPS's own number comes from the load test on 6 November.
+- Two small trades come with that. Dynamic lights update every other tick, and a fuse about to end forces an update
+  because a light block stops explosion damage. Warden With Loot's two advancements unlock only in the deep dark, so a
+  warning raised just outside the biome unlocks on next entering it.
+- `tools/loadtest.py --kit` gives each fake player a survival inventory: an empty one flatters the server, because the
+  datapacks scan every slot and a whole-player read encodes every item. `deploy/monkey-loadtest.sh` now uses it and
+  runs 30 players, not 25.
+- Iris is back as an optional mod. The pack still carries no shader packs.
+
+### Not added
+
+- Patina & Chime, the owner's own mod: it isn't publicly on Modrinth yet (ADR-0002), so it waits until it is approved.
+- Amplified Nether is in the pack but changes nothing while Amethyst Nether is: it overrides `minecraft:nether`, and
+  Amethyst's Nether uses its own `an:nether` settings.
+
 ## [3.0.0] - 2026-11-02
 
 Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which

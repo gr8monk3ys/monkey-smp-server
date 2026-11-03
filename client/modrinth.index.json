@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "game": "minecraft",
-  "versionId": "3.0.0",
+  "versionId": "3.1.0",
   "name": "Monkey SMP - Client",
   "summary": "Client pack for Monkey SMP factions server.",
   "files": [
@@ -64,6 +64,21 @@
         "https://cdn.modrinth.com/data/9EFaPoo8/versions/ItSnSx09/amethyst-nether-v4.3.2.jar"
       ],
       "fileSize": 1722266
+    },
+    {
+      "path": "mods/Amplified_Nether_26.2_v1.2.16.jar",
+      "hashes": {
+        "sha1": "66c053e74379607c614ad252b8f838d3a2533e32",
+        "sha512": "1d778f0df10a97b967dea225b7e30e2699a3cd90682fcc1035eb386c6620a682104ac88a5bc24ea87b61ba8b0098a824008a2a8c4f3d3b42f809666f588f9679"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/wXiGiyGX/versions/agiByWs3/Amplified_Nether_26.2_v1.2.16.jar"
+      ],
+      "fileSize": 108430
     },
     {
       "path": "mods/animal_feeding_trough-1.2.1+26.2.jar",
@@ -711,6 +726,156 @@
       "fileSize": 16699
     },
     {
+      "path": "mods/dungeons-and-taverns-5.3.2.jar",
+      "hashes": {
+        "sha1": "11d740c9d0b8c5917626531608af79e295521837",
+        "sha512": "af734c31a45cb7c7cc6630d4b258b588aade4ecc6db72d443d5f4d8151ffb2c7b6edfc8fbbe4cdbc6e85d41018bb54661cf9f1dba6226cccf3e18b1de3888703"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/tpehi7ww/versions/y9AUViOD/dungeons-and-taverns-5.3.2.jar"
+      ],
+      "fileSize": 39642964
+    },
+    {
+      "path": "mods/dungeons-and-taverns-ancient-city-overhaul-3.4.jar",
+      "hashes": {
+        "sha1": "049fa2484e6d4f266bd547fac548c9993a82fc43",
+        "sha512": "df707b6cbe9670d384ea1915e233b2165d48d073dae62ab77db8f1f85d4dc7287cade4f95db7f857d7cb85fe47228b099df7bab8a8dd42c0052d6362135d3afe"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/DNuNq5bb/versions/LdVOQBQG/dungeons-and-taverns-ancient-city-overhaul-3.4.jar"
+      ],
+      "fileSize": 1070006
+    },
+    {
+      "path": "mods/dungeons-and-taverns-desert-temple-overhaul-v2.1.jar",
+      "hashes": {
+        "sha1": "5fb528acb8a524ed58b2ea096aff28db5b594a66",
+        "sha512": "272ca1a5117249d20bb02dbf948a08e7d7335fac491aee9d3ad8694abe51870f512dd90795181f16a822bb94ccd765271774243c79adebcd3de417fd47d509a7"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/7JTDDmRT/versions/5CxIf8Tt/dungeons-and-taverns-desert-temple-overhaul-v2.1.jar"
+      ],
+      "fileSize": 408745
+    },
+    {
+      "path": "mods/dungeons-and-taverns-jungle-temple-overhaul-v2.1.jar",
+      "hashes": {
+        "sha1": "fe0fbefce4fbbe01327e33c930bf6c8be6ad444e",
+        "sha512": "3963c4fa6119c81532cbb9802628ffb6815512e5310dea82393afde7e2611645f894741d3eb3a3f27d8c4b8164dcfce9a71e149684da3ba0722f5c7e13bbe1b6"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/oHjYCS0f/versions/pvrni7rg/dungeons-and-taverns-jungle-temple-overhaul-v2.1.jar"
+      ],
+      "fileSize": 294337
+    },
+    {
+      "path": "mods/dungeons-and-taverns-mineshaft-overhaul-1.1.jar",
+      "hashes": {
+        "sha1": "cdf64d33865b8e4abdf706e0a7e3ba9aa5fcf049",
+        "sha512": "0cb7f7dd1a43d406232b6f4e154d4c70611b316c4909da1e8b3a223f27a7d2d348abd7000fa45e1fcf8f76568a122dda6ea3d5a7716881ab6fcf6befc76dfa46"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/ozLFhOy3/versions/7zo1nTm8/dungeons-and-taverns-mineshaft-overhaul-1.1.jar"
+      ],
+      "fileSize": 1287861
+    },
+    {
+      "path": "mods/dungeons-and-taverns-nether-fortress-overhaul-v3.1.jar",
+      "hashes": {
+        "sha1": "9b6bb22714dc19665ed4a85360a06b346e02fa00",
+        "sha512": "9533ee4ff7f4bc4507cb5bc0051e447550963b54dc023e6ad01baaa462d7633eb5c088bd20a5322500905b4b23f65ccbb7479ac30f1e5c58edbb6f783d5444c6"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/8Dbnvm77/versions/3TBxftsp/dungeons-and-taverns-nether-fortress-overhaul-v3.1.jar"
+      ],
+      "fileSize": 567076
+    },
+    {
+      "path": "mods/dungeons-and-taverns-ocean-monument-overhaul-2.2.1.jar",
+      "hashes": {
+        "sha1": "d0fe3d17e3d5265a4f1b36131f57c51e5ad8b708",
+        "sha512": "6a195b76fb91ed2491658f763943a51b4ba37f35fbc70388306c99f085b1ec480a06fab83061b0c608812901e295300ffaad80a4a3054f3f6cd162b497a91437"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/z6GJ3ycD/versions/pSv7WyCj/dungeons-and-taverns-ocean-monument-overhaul-2.2.1.jar"
+      ],
+      "fileSize": 3261229
+    },
+    {
+      "path": "mods/dungeons-and-taverns-pillager-outpost-overhaul-v3.3.jar",
+      "hashes": {
+        "sha1": "6c42574c289aa443493e3b7da77c33b5cc495071",
+        "sha512": "9d5556ab947d9363cee3878b77cd2b8464e09d32eebc1f2b1aece05c1d37ce0632234dcf8f16ca5a91302b4f948679b1916ea3e634b5cf2e6af2ce756be9a1ad"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/QIt10I7z/versions/GPXkMYNM/dungeons-and-taverns-pillager-outpost-overhaul-v3.3.jar"
+      ],
+      "fileSize": 451522
+    },
+    {
+      "path": "mods/dungeons-and-taverns-stronghold-overhaul-v2.4.0.jar",
+      "hashes": {
+        "sha1": "13e7d264bdf0e05133a5208b5547ac4fc1ce0657",
+        "sha512": "43c4636354c24eb96d2877be55a987d6c3cad5b0aeefd0bbd371c1ebcc5c303dd35753cc23e8f6471bb7e2c36e9d74f8d0bde458624d8a85a6c8945b2400051d"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/rYocd2LE/versions/PhiBm7he/dungeons-and-taverns-stronghold-overhaul-v2.4.0.jar"
+      ],
+      "fileSize": 3254963
+    },
+    {
+      "path": "mods/dungeons-and-taverns-woodland-mansion-overhaul-2.1.jar",
+      "hashes": {
+        "sha1": "9c7c4f706c1c7d9cdf288918c0d51dfbfeba4988",
+        "sha512": "75292c0e09ac5194eb9b11d0988d0b33930c3021e41ac75d5de2d4e87fa1a0827f979d59c5ce5ee4a429e680bb0ad973dc7026c9b40ae5c26c63ba1c40460063"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/3GfxWFCy/versions/zg7f1Hac/dungeons-and-taverns-woodland-mansion-overhaul-2.1.jar"
+      ],
+      "fileSize": 5864747
+    },
+    {
       "path": "mods/dynamiclights-v1.9.3-mc1.17-26.2.9-mod.jar",
       "hashes": {
         "sha1": "4194919ace5fa7764af6f8f0f85500f664e5f0bd",
@@ -1176,6 +1341,21 @@
       "fileSize": 207018
     },
     {
+      "path": "mods/iris-fabric-1.11.4+mc26.2.jar",
+      "hashes": {
+        "sha1": "bd0b24731a94b8fe164531e6345718d30ab08ed2",
+        "sha512": "dee955580976aebc92373f5c2d88398ad1019b043c6254a41fe7ab8a6ca3a5ff29d58df2b22ec43a31198beb769e814658eef06fbf980066a2e2c216eeafd32a"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/YL57xq9U/versions/gxZWWnKH/iris-fabric-1.11.4%2Bmc26.2.jar"
+      ],
+      "fileSize": 2821616
+    },
+    {
       "path": "mods/jei-26.2-fabric-30.48.0.244.jar",
       "hashes": {
         "sha1": "ab2c982647d1ac94770c235d10d6b10a4f98a3ed",
@@ -1534,6 +1714,21 @@
         "https://cdn.modrinth.com/data/TnOXNf5e/versions/yMTgDHkD/peek-fabric-1.5.1%2B26.2.jar"
       ],
       "fileSize": 651686
+    },
+    {
+      "path": "mods/phantoms-in-the-end-1.0.2+26.2.X.jar",
+      "hashes": {
+        "sha1": "bbbf0da873de328b1745612cc0343287a8e31aaf",
+        "sha512": "6623603614baa6e4996f8907c33b6921af7bf40b01a34e99d78b04631ee0add36534489db0e616e5521d48f635abbbd7db222a7bc32628945e2d5a9df122b3c0"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/r69cUvfV/versions/4bCdpEtQ/phantoms-in-the-end-1.0.2%2B26.2.X.jar"
+      ],
+      "fileSize": 25972
     },
     {
       "path": "mods/PickUpNotifier-v26.2.0-mc26.2.x-Fabric.jar",
@@ -2269,6 +2464,21 @@
         "https://cdn.modrinth.com/data/Bc9bwujS/versions/nFODtnJ9/TrampleNoMore-fabric-MC26.2-26.2.0.1.jar"
       ],
       "fileSize": 18481
+    },
+    {
+      "path": "mods/trek-B0.6.2.jar",
+      "hashes": {
+        "sha1": "e83cbdbe987129cb039ead47d11994d8cbdb1ade",
+        "sha512": "17f35802c2f8dbae026153718b6d40a2b4c3ae1558e6e87500ecffe859fe2e607e00b3be76b8c8cbee7da932a042ebe5a279df9929fb7b51000ea1af49fcc1c9"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/h2jngREY/versions/OYbFzi8L/trek-B0.6.2.jar"
+      ],
+      "fileSize": 12461621
     },
     {
       "path": "mods/twod_projectiles-fabric-26.2-1.1.1.jar",

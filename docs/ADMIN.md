@@ -95,7 +95,9 @@ What keeps it there:
   `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.
 - **A patch in Silver's Effects Library** (docs/MAINTAINING.md lists it). Unpatched, it ran 97 commands per
   loaded mob per tick and went past Minecraft's limit of 65,536, which cut off whatever ran next.
-- **Extras stay out of the pack.** To add a mod anyway, drop its jar into `server\mods` (and players into their
+- **The speed patches of 3.1.0** (docs/MAINTAINING.md). Six datapacks do less per tick. On this PC with 30 fake
+  players carrying a full inventory, the median tick went from 185 ms to about 69 ms (docs/LIVE.md, "Load test").
+- **Extras stay out of the pack. To add a mod anyway, drop its jar into `server\mods` (and players into their
   mods folder): the installer leaves files it doesn't manage alone.
 
 ## Before a big group joins
@@ -380,8 +382,9 @@ values.
   the void. TNT can't break it, but pistons can push bedrock. A claim protects its bedrock from non-members like
   any block, and spawn protection covers spawn. The mod changes the bedrock block itself, so the Nether roof and
   the End's exit portal break the same way (only the Overworld floor was tried). Rules 44 to 46 cover the rest.
-- **Enchantment Disabler** ships with its own defaults, which disable nothing. Rule B18 and the Dungeons and
-  Taverns enchantments it covered left with that mod in 3.0.0.
+- **Enchantment Disabler** (`config/enchantmentdisabler/config.toml`) keeps all 17 of Dungeons and Taverns' own
+  enchantments (`nova_structures:*`) out of the enchanting table, loot and villager trades, so rule B18 (event
+  rewards only) holds by itself. `/give` and `enchant` still work for event books.
 
 ## World generation
 

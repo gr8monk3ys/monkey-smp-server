@@ -146,3 +146,11 @@ def test_perf_report():
     assert sections["== datapack functions (% of the whole tick)"].splitlines() == [
         "  7.4%  incendium:clocks/main", "  0.6%  nullscape:tick"]
     assert loadtest.perf_report("nothing here") == "no profile sections found\n"
+
+
+def test_kit_fills_real_slots_and_only_some_hold_a_torch():
+    commands = loadtest.kit_commands("Load00", torch=True)
+    assert all(c.startswith("item replace entity Load00 ") for c in commands)
+    slots = [c.split()[4] for c in commands]
+    assert len(slots) == len(set(slots)) and {"hotbar.0", "armor.chest", "weapon.offhand"} <= set(slots)
+    assert not any(" weapon.offhand " in c for c in loadtest.kit_commands("Load01", torch=False))

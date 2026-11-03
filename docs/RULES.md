@@ -187,7 +187,8 @@ These are banned on the server.
   indicators and the like. Anything else must be approved by the server owners.
 - **B16.** Replay Mod or Flashback for a competitive advantage. Videos and build photos are fine.
 - **B17.** The cushion glitch (an x-ray glitch).
-- **B18.** Retired in 3.0.0: the Nova Structures books it covered left the pack with their mod.
+- **B18.** Enchantment books from the Nova Structures mod are only server event rewards. Books found
+  naturally can't be applied.
 - **B19.** F3+A and reloading shaders. These count as x-ray.
 
 ## The mods
@@ -240,8 +241,8 @@ Open items from the owners' draft:
   26 October 2026: the owners shelved shops before they reached the live server, so rule 43 now covers trading
   by hand (items for items, no scams, no real-money trading). If shops come back, so does the rule's shop
   wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
-- B18: the owners wanted Nova Structures' books configured out. From 2.8.0 Enchantment Disabler did that;
-  3.0.0 drops the mod that added them, so the rule's number stays and the rule is retired.
+- B18: the owners want Nova Structures' books configured out. 3.0.0 dropped the mod that adds them and retired
+  the rule; 3.1.0 brings Dungeons and Taverns back, so the server does it again: see B18 below.
 - Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
   griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
   the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
@@ -322,6 +323,11 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
+- **B18, Nova Structures' books** (Enchantment Disabler, `defaults/config/enchantmentdisabler/config.toml`).
+  All 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the enchanting table, loot
+  and villager trades, so nobody finds them; staff make event rewards with `/give` or `enchant`, which still
+  work. A server without the file gets it from the installer. If Dungeons and Taverns adds an enchantment, add
+  it to the file (and to `tests/test_mod_defaults.py`).
 - **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
   enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
   `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may

@@ -173,6 +173,21 @@ stopped, before 2.10.0 deploys. In this order, as root:
 Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
 run `migrate_names.py` on it first.
 
+### 3.1.0: the final mod list and the speed patches
+
+3.1.0 stays on Minecraft 26.2, so the deploy loads the world it finds. Its new structures only appear in land
+generated after it, so nothing else about the world changes until the launch world replaces it.
+
+**One config a deploy doesn't replace.** The live server keeps the Enchantment Disabler config 3.0.0 made, which
+disables nothing, so rule B18 doesn't hold until it is copied. Do this while the server is stopped for the launch
+world: `diff ../server/config/enchantmentdisabler/config.toml ../monkey/defaults/config/enchantmentdisabler/config.toml`,
+then `cp ../monkey/defaults/config/enchantmentdisabler/config.toml ../server/config/enchantmentdisabler/config.toml`.
+Check with `grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l`, which prints `17`.
+
+The launch world then follows the next section. The new jars don't change its steps: the seed still has a fortress
+about 440 blocks from the Nether's centre and a bastion about 1500, so the Nether's border stays 2500. The spawn area,
+monuments and NPC spots still need the walk, on land this release changed again.
+
 ### 3.0.0: Minecraft 26.2 and a new world
 
 3.0.0 moves the server from Minecraft 26.3 back to 26.2 and to the owners' mod list. A world can't go back a
@@ -194,9 +209,8 @@ Before the first start on 3.0.0, while the server is stopped:
    changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
    replaces any tuning made on the server, then
    `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 160 tall
-   now). Remove the one for a mod that left and would otherwise look live:
-   `rm -f ../server/config/enchantmentdisabler/config.toml`. Leftovers from other mods that left (Carry On,
-   Tectonic, Distant Horizons, MinerTrack) are harmless; delete them if you like.
+   now). Leftovers from mods that left (Carry On, Tectonic, Distant Horizons, MinerTrack) are harmless; delete
+   them if you like.
 
 Changes to the steps below:
 
@@ -205,7 +219,6 @@ Changes to the steps below:
 - **Step 5:** carry from that folder, still `--season 1`. The wardrobe scores, tiers and grants come across, and
   so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
 - **Step 6: the seed is the owners' call.** The land differs either way, because the terrain mods left.
-- **Step 8:** leave out the `grep` for `nova_structures:` (rule B18 is retired).
 - **After the first start: the Nether's border goes to 2500.** On this seed nothing is inside the pack's 312.5: the
   nearest fortress is about 440 blocks from the Nether's centre and the nearest bastion about 1500. Without a
   fortress there are no blaze rods, so no eyes of ender for Dragon Night. So on every copy of this seed, the fresh
@@ -850,8 +863,9 @@ busy. To run the Sunday job now (it still closes only a week at least 3 days old
 
 The player table in docs/ADMIN.md was measured on an i7-8700K with nothing else running. The VPS core is
 faster, but it has only two threads, shared by the game thread, BlueMap's renderer and the garbage collector, so its number has to be measured on the VPS.
-`deploy/monkey-loadtest.sh` runs `tools/loadtest.py` there: 25 Carpet fake players standing spread out in
-generated terrain (the same test as the table), 5 minutes measured, with a spark profile of every thread.
+`deploy/monkey-loadtest.sh` runs `tools/loadtest.py` there: 30 Carpet fake players with a survival inventory (`--kit`),
+standing spread out in generated terrain, 5 minutes measured, with a spark profile of every thread. 30 is the owners'
+worst case for launch night.
 
 Run it as root at a quiet time, after Chunky has finished pre-generating (it refuses before that; `FORCE=1`
 overrides) and not around midnight UTC (monkey-day.timer). The server is offline for about 15 minutes: the
@@ -883,6 +897,8 @@ ServerCore's status); the headline goes to the staff webhook.
 | Date | Release | Players | Median tick | Worst p95 | TPS | spark profile |
 |---|---|---|---|---|---|---|
 | 2026-10-25 | v2.4.1 | 24 of 25 | 23.6 ms | 74.3 ms | 20.0 | https://spark.lucko.me/fyE6dSvpV0 |
+| 2026-11-02 | v3.0.0, still, no kit | 30 of 30 | 53.8 ms | 129.7 ms | 18.0 | https://spark.lucko.me/yHTlfc2FXO |
+| 2026-11-02 | v3.0.0, walk, no kit | 30 of 30 | 63.5 ms | 170.3 ms | 15.2 | https://spark.lucko.me/S9do0Sa6Ff |
 
 The first run, on 2026-10-25 at 22:30 Pacific. One fake player (Load08) didn't join, so it ran with 24. The
 median sample stayed at 13-31 ms: about 30 ms for a minute or two, then about 15 ms. No 10-second sample
@@ -895,7 +911,20 @@ leave it.** The run's `summary.json` and staff post hold a docs link that spark 
 say so (CHANGELOG, 3.0.0), and the tick dropping from about 30 ms to about 15 ms fits that. The tool now records
 `players_online_min` and the staff post gives it: a run only counts if it equals the players asked for.
 
-**Decision rule.** Under about 40 ms median at 25 players, leave it: that leaves room for spikes. Above
+**3.1.0 on the home PC.** The table above is the VPS; these are the i7-8700K with its slow disk, so compare them only
+with each other. 30 fake players with a kit, standing, all 30 online, no command-limit hits:
+
+| Build | Median tick | Worst p95 | TPS | ServerCore held | spark profile |
+|---|---|---|---|---|---|
+| 3.1.0's mods, no speed patches | 185.1 ms | 335.8 ms | 5.4 | mob cap 60%, simulation 5 | https://spark.lucko.me/Dzh1y2KSog |
+| With the speed patches | 68.5 ms | 153.5 ms | 14.1 | mob cap 40%, simulation 4, view 7 | not captured |
+
+Those two runs ended on different settings, so not all of the gain is the patches. Datapack commands are still 64% of
+the tick. The worst p99 is about 6.3 s, one stall each autosave: the main thread writes 30 players' `.dat` files
+(`PlayerList.saveAll` in a JFR recording) and this PC's disk is slow. Holding the view distance at 8 didn't remove it.
+The VPS's p99s above (547 ms and 1,055 ms) may be the same thing; nobody has checked.
+
+**Decision rule.** Under about 40 ms median at 30 players, leave it: that leaves room for spikes. Above
 that, change one thing at a time, in this order, and run the test again after each:
 
 1. **Pause BlueMap in the evening** if it shows up. It already renders on one thread

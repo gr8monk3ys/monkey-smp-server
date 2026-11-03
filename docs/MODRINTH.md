@@ -119,7 +119,7 @@ The app updates the pack whenever the server needs a new one. A PC with 16 GB of
 
 - Factions of up to four players. You claim land with `/oclaims claim` (2×2 chunks per player), allies share claims, and PvP is on everywhere outside spawn.
 - Strength SMP rules: winning fights makes you stronger, and losing them drains it.
-- Amethyst Nether remakes the Nether, Grand Capitals rebuilds villages and illager structures, and Crazy Chambers makes trial chambers bigger.
+- Amethyst Nether remakes the Nether, Grand Capitals rebuilds villages and illager structures, Crazy Chambers makes trial chambers bigger, and Dungeons and Taverns and Moog's structures add more to find.
 - Proximity voice through Simple Voice Chat. There's a live BlueMap of the world on the website.
 - Every season has a Build Battle, a Faction Raid and Arena Glory, and the factions play for the Season Cup.
 
@@ -185,7 +185,7 @@ to server listings only, not to modpacks, so:
 
 Checked 2026-11-02 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
 
-- **All 187 files are on Modrinth** (165 mods, 22 resource packs) and download from
+- **All 201 files are on Modrinth** (179 mods, 22 resource packs) and download from
   `cdn.modrinth.com`. Modrinth's rule for modpacks is that a file hosted on Modrinth may be used in a pack
   whatever its license, so none of them needs extra permission.
 - **The overrides are the pack's own**: configs, `options.txt`, the generated Monkey SMP Wardrobe resource pack

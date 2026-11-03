@@ -23,6 +23,7 @@ anti-xray config, the new world, pre-generation and the map.
 - The Nether: Amethyst Nether is 160 tall, with its roof near y 160 (`antixray.toml`, BlueMap's comment).
 - Datapacks and the wardrobe pack are built for 26.2 (data format 107, resource format 88); the Block Wheel pool is
   regenerated (979 blocks: 26.3's concrete and wool slabs and stairs are gone).
+- Voice chat's mute moves from M to Y, so M opens the world map and nothing else.
 - The launch plan: 3.0.0 is tagged on Wednesday 4 November and the freeze starts Thursday 5 November.
 
 ### Removed

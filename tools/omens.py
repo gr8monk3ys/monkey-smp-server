@@ -290,14 +290,15 @@ def bar_add(omen: str, color: str, seconds: int) -> list[str]:
 def loot_table() -> dict:
     return {"type": "minecraft:chest", "pools": [{"rolls": 1, "entries": [
         {"type": "minecraft:item", "name": f"minecraft:{item}", "weight": weight} | (
-            {"functions": [{"function": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": a, "max": b}}]}
+            {"functions": [{"function": "minecraft:set_count",
+                            "count": {"type": "minecraft:uniform", "min": a, "max": b}}]}
             if b > 1 else {})
         for item, weight, a, b in BLOOD_LOOT]}]}
 
 
 def kill_advancement(name: str, entity: dict) -> str:
-    """A hidden advancement for a player killing `entity` (26.2 shapes: a list of conditions, each named by "condition"), whose
-    reward takes it back so it fires again."""
+    """A hidden advancement for a player killing `entity` (26.2 shapes: a list of conditions, each named by
+    "condition"), whose reward takes it back so it fires again."""
     return json.dumps({"criteria": {"kill": {"trigger": "minecraft:player_killed_entity",
                                              "conditions": {"entity": [entity]}}},
                        "requirements": [["kill"]],

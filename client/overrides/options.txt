@@ -256,7 +256,6 @@ key_key.jei.closeRecipeGui:key.keyboard.escape
 key_key.jei.copy.recipe.id:key.keyboard.unknown
 key_key.modmenu.open_menu:key.keyboard.unknown
 key_key.optigui.inspect:key.keyboard.f12
-key_key.picturemode.open:key.keyboard.m
 key_key.punchy.open_main_menu:key.keyboard.f8
 key_key.punchy.inspect:key.keyboard.i
 key_key.reachbehind.toggle_reaching_behind_blocks:key.keyboard.unknown
@@ -265,7 +264,7 @@ key_key.stepup.toggle_vanilla_cycle:key.keyboard.k
 key_key.trade_cycling.cycle_trades:key.keyboard.c
 key_key.push_to_talk:key.keyboard.unknown
 key_key.whisper:key.keyboard.unknown
-key_key.mute_microphone:key.keyboard.m
+key_key.mute_microphone:key.keyboard.y
 key_key.disable_voice_chat:key.keyboard.n
 key_key.hide_icons:key.keyboard.h
 key_key.voice_chat:key.keyboard.v

@@ -1,6 +1,5 @@
 import json
 import re
-import tomllib
 
 import rules
 from repo import REPO

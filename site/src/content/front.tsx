@@ -109,7 +109,8 @@ export const faq: { q: string; a: ReactNode }[] = [
   {
     q: "Refunds?",
     a: "If you can't get the pack to run in your first 48 hours, ask in the Discord and you get your money back. "
-      + "The monthly pass renews until you cancel it, and you can cancel any time; the 3-month pass doesn't renew.",
+      + "In the first weeks after launch that can take a while, because Tebex has to clear a payment before it can "
+      + "return one. The monthly pass renews until you cancel it, and you can cancel any time; the 3-month pass doesn't renew.",
   },
   {
     q: "I'm under 18.",

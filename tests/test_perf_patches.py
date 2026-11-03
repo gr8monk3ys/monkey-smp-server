@@ -28,7 +28,8 @@ def test_every_speed_patch_is_pinned_in_the_manifest():
 
 
 def test_macro_calls_only_run_when_a_slot_holds_the_item():
-    files = [patched("silvers_strength-restrictions-season-5", "data/strength_restrictions/function/technical/main/tick/public.mcfunction"),
+    restrictions = "data/strength_restrictions/function/technical/main/tick/public.mcfunction"
+    files = [patched("silvers_strength-restrictions-season-5", restrictions),
              patched("silvers_strength-smp-season-5", SMP + "powers/spear.mcfunction"),
              patched("silvers_strength-smp-season-5", SMP + "enchant/main.mcfunction")]
     for text in files:
@@ -51,9 +52,11 @@ def test_armor_and_sword_powers_stay_upstream():
 
 
 def test_fire_is_still_read_for_both_effects_that_use_it():
-    text = patched("silvers_effects-library", "overlay_26.2/data/s_effects_lib/function/technical/tick/public.mcfunction")
+    tick = "overlay_26.2/data/s_effects_lib/function/technical/tick/public.mcfunction"
+    text = patched("silvers_effects-library", tick)
     fire = [line for line in commands(text) if "store result score @s s_effects_lib+Fire" in line]
-    assert sorted(line.split()[4] for line in fire) == ["s_effects_lib+eternal_flame_duration", "s_effects_lib+undead_curse_duration"]
+    effects = ["s_effects_lib+eternal_flame_duration", "s_effects_lib+undead_curse_duration"]
+    assert sorted(line.split()[4] for line in fire) == effects
 
 
 def test_bombs_arm_in_every_entity_that_can_hold_one():
@@ -64,7 +67,7 @@ def test_bombs_arm_in_every_entity_that_can_hold_one():
 
 
 def test_tnt_is_counted_every_tick_and_a_fuse_ending_forces_a_light_pass():
-    """A light block stops explosion damage, so lights must be cleared on time even though they update every other tick."""
+    """A light block stops explosion damage, so lights must clear on time though they update every other tick."""
     lines = commands(patched("dynamic-lights", "data/dynamiclights/function/internal/main.mcfunction"))
     tnt = next(line for line in lines if "explosion_detection/tnt" in line)
     assert "$pass" not in tnt

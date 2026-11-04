@@ -34,7 +34,7 @@ connects without needing help.
 - Factions of up to four under their own banners, alliances, protected territory (2 x 2 chunks a player) and
   contested land everywhere else, with Strength SMP (win fights and your strength grows, lose and it drains)
   as the centerpiece.
-- A remade Nether, rebuilt villages and new structures and mobs (Amethyst Nether, Grand Capitals, Crazy Chambers, Naturalist and others),
+- Rebuilt villages and new structures and mobs (Grand Capitals, Dungeons and Taverns, Crazy Chambers, Naturalist and others),
   proximity voice chat and a public live 3D map.
 - Seasons: each season is a new world with its own rules and a twist players vote on. Season I opens
   Saturday 7 November 2026, 5 PM Pacific, everyone let in at once.

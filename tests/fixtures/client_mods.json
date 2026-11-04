@@ -109,6 +109,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "3GfxWFCy": {
+  "slug": "dungeons-and-taverns-woodland-mansion-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernswoodlandmansionoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernswoodlandmansionoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "3dsI6Hle": {
   "slug": "stormies-spiders",
   "modrinth": {
@@ -208,27 +227,6 @@
   "blockstates": 1293,
   "items": 1294,
   "entity_textures": 0
- },
- "4q8UOK1d": {
-  "slug": "subtle-effects",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "subtle_effects",
-  "environment": "*",
-  "ids": [
-   "com_moulberry_mixinconstraints",
-   "subtle_effects"
-  ],
-  "depends": [
-   "fabric-api",
-   "fzzy_config"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 11
  },
  "57KDkTen": {
   "slug": "nether-gold-ore-drops-raw-gold",
@@ -380,6 +378,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "7JTDDmRT": {
+  "slug": "dungeons-and-taverns-desert-temple-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsdeserttempleoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsdeserttempleoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "7YjclEGc": {
   "slug": "dynamic-lights",
   "modrinth": {
@@ -393,6 +410,25 @@
   ],
   "depends": [],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "8Dbnvm77": {
+  "slug": "dungeons-and-taverns-nether-fortress-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsnetherfortressoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsnetherfortressoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -426,25 +462,6 @@
   "environment": "*",
   "ids": [
    "mr_rotten_fleshtoleather"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "9EFaPoo8": {
-  "slug": "amethyst-nether",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_amethyst_nether",
-  "environment": "*",
-  "ids": [
-   "mr_amethyst_nether"
   ],
   "depends": [
    "fabric-resource-loader-v0"
@@ -834,6 +851,25 @@
   ],
   "depends": [],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "DNuNq5bb": {
+  "slug": "dungeons-and-taverns-ancient-city-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsancientcityoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsancientcityoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -1402,6 +1438,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "QIt10I7z": {
+  "slug": "dungeons-and-taverns-pillager-outpost-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernspillageroutpostoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernspillageroutpostoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 3,
+  "entity_textures": 0
+ },
  "Siqx9wiO": {
   "slug": "extra-more-blocks",
   "modrinth": {
@@ -1490,6 +1545,23 @@
   "environment": "client",
   "ids": [
    "norecipebook"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "UFRJve4V": {
+  "slug": "clear-waterlavapowdersnow",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "clearwaterlava",
+  "environment": "client",
+  "ids": [
+   "clearwaterlava"
   ],
   "depends": [],
   "code": true,
@@ -1777,6 +1849,30 @@
   ],
   "depends": [
    "fabric-api-base"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "YL57xq9U": {
+  "slug": "iris",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "iris",
+  "environment": "client",
+  "ids": [
+   "fabric-api-base",
+   "fabric-key-mapping-api-v1",
+   "io_github_douira_glsl-transformer",
+   "iris",
+   "org_anarres_jcpp",
+   "org_antlr_antlr4-runtime"
+  ],
+  "depends": [
+   "sodium"
   ],
   "code": true,
   "blockstates": 0,
@@ -2137,6 +2233,25 @@
   ],
   "depends": [],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "h2jngREY": {
+  "slug": "trek",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_trek",
+  "environment": "*",
+  "ids": [
+   "mr_trek"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -2570,6 +2685,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "oHjYCS0f": {
+  "slug": "dungeons-and-taverns-jungle-temple-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsjungletempleoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsjungletempleoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "oLS8HdJ1": {
   "slug": "streams-reflowing",
   "modrinth": {
@@ -2625,6 +2759,25 @@
    "fabric-api"
   ],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "ozLFhOy3": {
+  "slug": "dungeons-and-taverns-mineshaft-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsmineshaftoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsmineshaftoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -2792,6 +2945,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "r69cUvfV": {
+  "slug": "phantoms-in-the-end",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "phantoms-in-the-end",
+  "environment": "*",
+  "ids": [
+   "phantoms-in-the-end"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "rM6o3WUr": {
   "slug": "craftable-bell",
   "modrinth": {
@@ -2807,6 +2979,25 @@
    "fabric-api"
   ],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "rYocd2LE": {
+  "slug": "dungeons-and-taverns-stronghold-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsstrongholdoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsstrongholdoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
@@ -2866,6 +3057,25 @@
   "code": true,
   "blockstates": 0,
   "items": 0,
+  "entity_textures": 0
+ },
+ "tpehi7ww": {
+  "slug": "dungeons-and-taverns",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtaverns",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtaverns"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
+  "blockstates": 0,
+  "items": 4,
   "entity_textures": 0
  },
  "u6dRKJwZ": {
@@ -3234,6 +3444,25 @@
    "cloth-config2"
   ],
   "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "z6GJ3ycD": {
+  "slug": "dungeons-and-taverns-ocean-monument-overhaul",
+  "modrinth": {
+   "client": "optional",
+   "server": "required"
+  },
+  "id": "mr_dungeons_andtavernsoceanmonumentoverhaul",
+  "environment": "*",
+  "ids": [
+   "mr_dungeons_andtavernsoceanmonumentoverhaul"
+  ],
+  "depends": [
+   "fabric-resource-loader-v0"
+  ],
+  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0

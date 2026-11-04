@@ -1,5 +1,57 @@
 # Changelog
 
+## [3.1.0] - 2026-11-03
+
+The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on
+launch night. Players reinstall the client pack. No world has to move for the deploy, but new structures only appear
+in land generated after it, so the launch world made on Thursday 5 November has them and the test world's land
+doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: the final mod list and the speed patches").
+
+### Added
+
+- The shared folder as it stood on 4 November. Dungeons and Taverns and nine of its overhauls; Moog's End, Nether,
+  Soaring and Voyager structures, Mineshafts Reimagined and Temples Reimagined, with Moog's Structure Lib; Bigger Better
+  End Cities, Trek, Phantoms in the End and Iris; and ClearWaterLava, optional on the client. Server: 170 mods, up from
+  151. Client pack: 177 mods and 22 resource packs, about 380 MB, up from 310 MB.
+- Rule 25: Season I's border starts 5000 wide, as the owners' group asked, not 2500. The acts become 5500 on 21 November
+  and 6000 on 26 December, so the largest border, the pre-generation radius and the finale don't change. The pack's
+  Nether default is 625 wide; Season I's stays 2500 by hand.
+- Rule B18 is back: Dungeons and Taverns' enchantments are event rewards only, and
+  `config/enchantmentdisabler/config.toml` keeps all 17 out of the table, loot and trades.
+- The Enchant Disabler for Dungeons and Taverns data pack (4.4), pinned so every new world has it from its first start.
+  It also replaces 30 of DnT's enchantment tags and hides 14 of its advancements. Its inventory strip does nothing while
+  the Enchantment Disabler mod is installed, because the mod blocks the edit it makes. Its cost at 30 players didn't
+  show: a median tick of 54.0 and 54.8 ms with it and 54.0 ms without, with every inventory changing twice a second
+  (docs/LIVE.md, "Load test").
+
+### Changed
+
+- Speed: five datapacks do the same job with less work per tick (docs/MAINTAINING.md, "Patches this pack carries"). On
+  the i7-8700K with 30 fake players carrying a survival inventory, the median tick went from 185.1 ms to 68.5 ms and TPS
+  from 5.4 to 14.1. ServerCore's dynamic mode also held lower mob caps and distances in the second run, so not all of
+  that is the patches. The final build, with the Nether mods gone and on a fresh world, measured 52.5 ms and TPS 18.0. The
+  VPS's own number comes from the load test on 6 November.
+- Two small trades come with that. Dynamic lights update every other tick, and a fuse about to end forces an update
+  because a light block stops explosion damage. Warden With Loot's two advancements unlock only in the deep dark, so a
+  warning raised just outside the biome unlocks on next entering it while the warning lasts. They give no rewards.
+- `tools/loadtest.py --kit` gives each fake player a survival inventory: an empty one flatters the server, because the
+  datapacks scan every slot and a whole-player read encodes every item. `deploy/monkey-loadtest.sh` now uses it and
+  runs 30 players, not 25.
+- Iris is back as an optional mod. The pack still carries no shader packs.
+
+### Removed
+
+- Amethyst Nether and Amplified Nether, gone from the shared folder. The Nether is vanilla's terrain again, 128 tall, with
+  Moog's Nether, Dungeons and Taverns' overhaul and Skniro's ores in it. `antixray.toml` follows, and that config is one
+  of the two to copy by hand. Amethyst's bomb timer and its speed patch go with it. It was about 9.7% of a tick on the
+  3.0.0 VPS test.
+- Subtle Effects, cut from the shared folder on 4 November. It was an optional client mod, so the server doesn't change.
+
+### Not added
+
+- Two jars in the folder aren't on Modrinth (ADR-0002): Patina & Chime, the owner's own mod, which waits until it is
+  approved and whose folder copy is an old build, and Improved Inventory Tabs.
+
 ## [3.0.0] - 2026-11-02
 
 Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which

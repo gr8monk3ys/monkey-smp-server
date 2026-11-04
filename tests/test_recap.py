@@ -104,7 +104,7 @@ def test_a_busy_week(season):
         "**Land:** 5 chunks claimed, the most by Blue Herons (+5).",
         "**Challenges:** 3 done, by 2 players.",
         "**Event turnout:** 2 players came.",
-        "**Next Saturday:** The border breaks, from 2500 to 4000 blocks, Saturday 21 November, 6 PM Pacific "
+        "**Next Saturday:** The border breaks, from 5000 to 5500 blocks, Saturday 21 November, 6 PM Pacific "
         "(9 PM Eastern).",
         f"Scored as {standings.FORMULA} `/trigger standings` shows the board in game.",
     ]

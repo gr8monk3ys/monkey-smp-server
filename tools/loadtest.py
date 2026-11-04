@@ -233,11 +233,42 @@ def wait_for(check, timeout_s: int = SPAWN_TIMEOUT_S) -> bool:
     return True
 
 
-def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
+def kit_commands(name: str, torch: bool) -> list[str]:
+    """A worn-in survival inventory for --kit. An empty fake player flatters the server: the datapacks scan every slot
+    every tick, and a whole-player data read (`data get entity`, `nbt=`) has to encode every item."""
+    gear = "[enchantments={unbreaking:3,mending:1}]"
+    hotbar = [f"{tool}{gear}" for tool in ("diamond_sword", "diamond_pickaxe", "diamond_axe", "diamond_shovel", "bow")]
+    hotbar += ["shield", "iron_spear", "cooked_beef 64", "torch 64"]
+    bulk = ("cobblestone", "deepslate", "dirt", "oak_log", "oak_planks", "stick", "iron_ingot", "gold_ingot", "coal",
+            "redstone", "lapis_lazuli", "copper_ingot", "bread", "arrow", "rotten_flesh", "bone", "string", "gunpowder")
+    slots = [(f"hotbar.{i}", item) for i, item in enumerate(hotbar)]
+    slots += [(f"inventory.{i}", f"{item} 32") for i, item in enumerate(bulk)]
+    slots += [(f"armor.{part}", f"diamond_{piece}{gear}") for part, piece in
+              (("head", "helmet"), ("chest", "chestplate"), ("legs", "leggings"), ("feet", "boots"))]
+    if torch:
+        slots.append(("weapon.offhand", "torch 64"))
+    return [f"item replace entity {name} {slot} with minecraft:{item}" for slot, item in slots]
+
+
+def give_kit(rcon: Rcon, name: str, torch: bool) -> int:
+    """Give the kit and return how many commands the server refused: a refused one leaves the slot empty, which is the
+    flattered run --kit exists to prevent, and only its reply says so."""
+    refused = 0
+    for command in kit_commands(name, torch):
+        reply = rcon.cmd(command)
+        if "Replaced" not in reply:
+            refused += 1
+            print(f"WARNING: {command} -> {reply.strip()[:120]}", flush=True)
+    return refused
+
+
+def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int, kit: bool = False) -> int:
     """Carpet removes a fake player that dies, so each must be protected before it can fall: its chunk loaded first
     (a player over a chunk still generating falls into the void) and its effects given once it has really joined
     (`player spawn` returns before that, and the commands after it then find nobody). A player that can't get in is
-    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run."""
+    skipped with a warning, not fatal: players_online_min records it, and one miss shouldn't lose a whole run. Returns
+    how many kit commands the server refused."""
+    refused = 0
     for i, name in enumerate(names):
         angle = 2 * math.pi * i / len(names)
         x, z = (0, 0) if scenario == "explore" else (radius * math.cos(angle), radius * math.sin(angle))
@@ -256,10 +287,13 @@ def spawn_players(rcon: Rcon, names: list[str], scenario: str, radius: int):
         rcon.cmd(f"effect give {name} minecraft:saturation infinite 255 true")
         rcon.cmd(f"spreadplayers {x:.0f} {z:.0f} 0 1 false {name}")
         rcon.cmd(f"forceload remove {x:.0f} {z:.0f}")
+        if kit:
+            refused += give_kit(rcon, name, torch=i % 2 == 0)
         if scenario == "walk":
             for action in ("sprint", "move forward", "jump continuous"):
                 rcon.cmd(f"player {name} {action}")
         time.sleep(0.5)
+    return refused
 
 
 def java_tool(root: Path, name: str) -> Path:
@@ -325,6 +359,7 @@ def main(argv=None):
     ap.add_argument("--warmup", type=int, default=120, help="seconds between spawning players and measuring")
     ap.add_argument("--memory-gb", type=int, default=8)
     ap.add_argument("--radius", type=int, default=500, help="still/walk: players start this far from 0,0")
+    ap.add_argument("--kit", action="store_true", help="give each player a survival inventory (half hold a torch)")
     ap.add_argument("--without", nargs="*", default=[], metavar="SLUG", help="mods to leave out for this run")
     ap.add_argument("--keep-recording", action="store_true",
                     help="keep rec.jfr (the whole run, startup included) to dig into a stall with `jfr print`")
@@ -370,7 +405,7 @@ def main(argv=None):
         print(f"started java (pid {proc.pid}); waiting for RCON on {rcon_port}", flush=True)
         rcon = wait_for_rcon(proc, rcon_port, props["rcon.password"], 900)
         names = [f"Load{i:02d}" for i in range(args.players)]
-        spawn_players(rcon, names, args.scenario, args.radius)
+        kit_refused = spawn_players(rcon, names, args.scenario, args.radius, args.kit)
         print(rcon.cmd("list"), flush=True)
         print(f"warming up {args.warmup} s", flush=True)
         time.sleep(args.warmup)
@@ -434,7 +469,8 @@ def main(argv=None):
             (out / "perf.txt").write_text(perf_report(text), encoding="utf-8")
             shutil.move(report, out / report.name)
     log_text = (out / "server.log").read_text(encoding="utf-8", errors="replace")
-    summary = {"scenario": args.scenario, "players": args.players, "without": args.without,
+    summary = {"scenario": args.scenario, "players": args.players, "kit": args.kit, "kit_refused": kit_refused,
+               "without": args.without,
                "memory_gb": args.memory_gb, "minutes": args.minutes, "warmup_s": args.warmup,
                **summarize(rows),
                # a run that lost players measured fewer than it says

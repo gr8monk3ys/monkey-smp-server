@@ -32,7 +32,7 @@ def fn(path: str) -> str:
 def make_world(root, *rows, border=True):
     fake = FakeWorld(root / "world")
     if border:
-        fake.border(saved_world.OVERWORLD, *SPAWN, 2500.0)
+        fake.border(saved_world.OVERWORLD, *SPAWN, 5000.0)
     (fake.path / "data" / "openpartiesandclaims" / "player-claims").mkdir(parents=True)
     if rows:
         fake.scores(*rows)

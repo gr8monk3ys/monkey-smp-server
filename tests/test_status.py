@@ -22,7 +22,7 @@ def at(text: str) -> dt.datetime:
     return rcon.parse_time(text)
 
 
-def world(tmp_path, size=2500.0, target=None):
+def world(tmp_path, size=5000.0, target=None):
     return FakeWorld(tmp_path / "world").border(OVERWORLD, -80.0, 416.0, size, target).path
 
 
@@ -79,7 +79,7 @@ def test_a_live_season_shows_the_count_the_next_event_and_the_border(tmp_path):
         "version": 1, "checked": "2026-11-12T03:00:00Z", "season": 1, "phase": "live",
         "opens": "2026-11-08T01:00:00Z", "online": True, "players": 3,
         "next": {"what": "Faction Raid I", "at": "2026-11-15T02:00:00Z"},
-        "border": {"size": 2500, "growing_to": None, "next": {"size": 4000, "at": "2026-11-22T02:00:00Z"}},
+        "border": {"size": 5000, "growing_to": None, "next": {"size": 5500, "at": "2026-11-22T02:00:00Z"}},
     }
     assert server.sent == ["list"]
 
@@ -108,8 +108,8 @@ def test_a_stopped_or_silent_server_is_offline(tmp_path):
 
 
 def test_a_growing_border_and_the_act_after_it(tmp_path):
-    data = status.status(world(tmp_path, 3000.0, 4000.0), at("2026-11-22T02:05:00Z"))
-    assert data["border"] == {"size": 3000, "growing_to": 4000, "next": {"size": 6000, "at": "2026-12-27T02:00:00Z"}}
+    data = status.status(world(tmp_path, 5200.0, 5500.0), at("2026-11-22T02:05:00Z"))
+    assert data["border"] == {"size": 5200, "growing_to": 5500, "next": {"size": 6000, "at": "2026-12-27T02:00:00Z"}}
     # A border grown by hand past the next act: no act makes it bigger.
     data = status.status(world(tmp_path, 6000.0), at("2026-11-12T03:00:00Z"))
     assert data["border"]["next"] is None
@@ -134,7 +134,7 @@ def test_show_and_schedule_print(tmp_path, capsys):
     assert status.main(["schedule"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert out[0] == "Sat 7 Nov, 5 PM Pacific: Season I opens"
-    assert "Sat 21 Nov, 6 PM Pacific: The border breaks (to 4000)" in out
+    assert "Sat 21 Nov, 6 PM Pacific: The border breaks (to 5500)" in out
 
 
 UNITS = ["monkey-status.service", "monkey-status.timer"]

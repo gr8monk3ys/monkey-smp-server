@@ -80,7 +80,7 @@ A name held by last season's champion can't be taken by another faction, nor one
 ### The acts of a season
 
 The Season I rules already hold back some of the world (the first hour, the End, Netherite armor, the
-2500 border). Opening those on a schedule turns them into the season's story. Weeks count from launch.
+5000 border). Opening those on a schedule turns them into the season's story. Weeks count from launch.
 
 The four pillar events (below) run in every season. The acts and the catalog fill the weeks between them.
 
@@ -88,13 +88,13 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 | --- | --- | --- |
 | 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone, and Founder's Circlet for 10 minutes online before the end of Sunday (Pacific). Challenge week 0. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
-| 2 | **The border breaks** | The border grows from 2500 to 4000, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
+| 2 | **The border breaks** | The border grows from 5000 to 5500, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
 | 4 | **Arena Glory I** | Kit duels (1v1) for individuals, then the 4v4 faction bracket. |
 | 5 | **Netherite age** | Netherite armor is allowed (rule 24): `datapack disable "file/monkey-no-netherite-armor"`. Announced a week ahead. |
 | 6 | **Faction Raid II** | Flags again, now with Netherite and bigger bases. |
 | 7 | **Build Battle II** | A shorter one: one evening, one spin, at spawn plots. |
-| 8 | **The border breaks again** | 4000 to 6000, and the live map with it. |
+| 8 | **The border breaks again** | 5500 to 6000, and the live map with it. |
 | 9 | **Arena Glory II** | 2v2 and the 4v4 bracket. |
 | 10 | **Faction Raid III** | Last raid. Cup standings set the finale's spawn order. |
 | 11 | **The finale** | The border shrinks toward spawn over an evening, then a last fight. Worth the most Cup points. |
@@ -116,12 +116,12 @@ launch, and starts again on 14 March 2027, after the season: every Season I time
 | --- | --- | --- | --- |
 | 0 | 7 Nov 2026, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 8 Nov, 6 PM. | Launch weekend runs to midnight on Sunday 8 Nov. The first Saturday of November, so no Town Hall: launch night takes its place. |
 | 1 | 14 Nov | Faction Raid I | |
-| 2 | 21 Nov | The border breaks: 2500 to 4000 | |
+| 2 | 21 Nov | The border breaks: 5000 to 5500 | |
 | 3 | 28 Nov | **Dragon Night**: the End opens, Anarchy for 90 minutes | Thanksgiving is Thursday 26 Nov: the End opens on the long weekend. |
 | 4 | 5 Dec | Faction Raid II | Town Hall (first Saturday). Netherite age and Midwinter announced. |
 | 5 | 12 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter decorating at spawn starts |
 | 6 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | |
-| 7 | 26 Dec | The border breaks again: 4000 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
+| 7 | 26 Dec | The border breaks again: 5500 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
 | 8 | 2 Jan 2027 | Build Battle II | Town Hall. The first Base of the Month (entries by 25 Dec). |
 | 9 | 9 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
 | 10 | 16 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
@@ -902,13 +902,13 @@ Sunday 14 March 2027**, in week 5: from then 6 PM Pacific is 9 PM Eastern as bef
 | --- | --- | --- | --- |
 | 0 | Sat 6 Feb 2027, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 7 Feb, 6 PM. | Twinmoon for everyone who plays this season. The first Saturday of February, so no Town Hall: launch night takes its place. |
 | 1 | Sat 13 Feb | Faction Raid I | |
-| 2 | Sat 20 Feb | The border breaks: 2500 to 4000 (by itself at 6:01 PM, `monkey-border.timer`) | |
+| 2 | Sat 20 Feb | The border breaks: 5000 to 5500 (by itself at 6:01 PM, `monkey-border.timer`) | |
 | 3 | Sat 27 Feb | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
 | 4 | Sat 6 Mar | Arena Glory I | Town Hall (first Saturday). Netherite age announced. No Base of the Month: bases are under three weeks old on 25 February. |
 | 5 | Sat 13 Mar | Netherite age (rule 24 lifted), plus a small event from the catalog | Clocks go forward on Sunday 14 March |
 | 6 | Sat 20 Mar | Faction Raid II | |
 | 7 | Sat 27 Mar | Build Battle II | Easter is Sunday 28 March |
-| 8 | Sat 3 Apr | The border breaks again: 4000 to 6000 (by itself at 6:01 PM) | Town Hall. Base of the Month (entries by 25 March). |
+| 8 | Sat 3 Apr | The border breaks again: 5500 to 6000 (by itself at 6:01 PM) | Town Hall. Base of the Month (entries by 25 March). |
 | 9 | Sat 10 Apr | Arena Glory II | Two weeks before the end: the end date again, the twist vote opens, Season III's date set |
 | 10 | Sat 17 Apr | Faction Raid III | The Cup standings set the finale's spawn order |
 | 11 | Sat 24 Apr | **The finale**. The world locks after it. | |

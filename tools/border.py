@@ -6,7 +6,7 @@
     python3 tools/border.py send WORLD --docker DIR [--at TIME]   sends them (deploy/monkey-border.sh, hourly)
 
 docs/SEASONS.md, "The acts of a season": the border breaks twice a season, in the Saturday event slot (6 PM
-Pacific), from 2500 to 4000 and then to 6000, and the Nether's with it at 1:8 (on 26.2 each dimension has its
+Pacific), from 5000 to 5500 and then to 6000, and the Nether's with it at 1:8 (on 26.2 each dimension has its
 own border; the monkey-rules pack sets the starting ones once per world). ACTS has each season's acts by week;
 the weeks' dates come from tools/season_calendar.py's SEASONS, so moving a season moves its acts.
 
@@ -51,7 +51,7 @@ from events import STATE
 # Each season's acts: (week, the Overworld border's new width). The Nether's is 1:8 of it.
 # Season I (weeks 2 and 7, by hand) is left out on purpose: the timer does nothing in a Season I world.
 ACTS = {
-    2: ((2, 4000), (8, 6000)),   # Season II, proposed: 20 February and 3 April 2027
+    2: ((2, 5500), (8, 6000)),   # Season II, proposed: 20 February and 3 April 2027
 }
 NETHER_SCALE = 8
 GROW_SECONDS = 600

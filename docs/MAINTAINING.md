@@ -136,6 +136,11 @@ it applies to mods the same way). To take it, put the new upstream file in the s
 `mod-originals/` or `datapack-originals/` and the edited copy in `mods/` or the world's datapacks
 folder, then snapshot the server as below; that re-makes the patch against the new file.
 
+The Enchant Disabler data pack names Dungeons and Taverns' enchantments and replaces 30 of its tags, so an update to
+either needs checking against the other: its file is named for DnT 5.3.0 while DnT is pinned at 5.3.2. It has to load after
+DnT's own packs for its tags to win, which it does on a new world. Its inventory strip does nothing while the Enchantment
+Disabler mod is installed (docs/RULES.md, B18).
+
 `python tools/build.py` writes three files to `dist/` (it fails if `player/` is missing):
 
 | File | For | Contents |
@@ -301,6 +306,11 @@ patch against the new upstream file: carry the change below over, then check it 
 |---|---|---|
 | `lootrestock` | `org/oldskooler/lootrestock/handler/ChestInteractionHandler.class` | A Java class, not a data file. Loot Restock checks whether a structure chest is empty the first time a player opens it, and that check rolls the chest's loot with no player, so vanilla's "a player opened a loot chest" advancement never fired and the weekly "Open 8 loot chests" challenge never counted. The patch answers "not empty" there without rolling (the code only runs for a chest that still has its loot table). Make it again with `python tools/lootrestock_patch.py LootRestock-<version>.jar OUT.jar`, put `OUT.jar` in the test server's `mods`, and snapshot; the script's docstring has the details. Loot Restock is GPL-3.0-or-later and its source is public, so shipping a changed class is fine as long as the change stays published: it is, in this repo. |
 | `silvers_effects-library` | `overlay_26.2/data/s_effects_lib/function/technical/effects.mcfunction` | Upstream runs 97 commands for every loaded mob, every tick, so about 675 loaded mobs pass Minecraft's limit of 65,536 commands per tick, which cuts off whatever runs next. One command on top returns early for a non-player with none of the library's 19 `*_duration` scores. Players are never skipped, because the file's last line re-arms their tick advancement. 26.2 reads `overlay_26.2/`, not the `overlay_26.3/` the last patch replaced, so check the overlay when the Minecraft version moves. |
+| `silvers_strength-restrictions-season-5` | `data/strength_restrictions/function/technical/main/tick/public.mcfunction` | Upstream calls a 41-slot macro 22 times per player per tick, 20 of them the same two calls repeated. Shared with other packs' argument sets, the macro is re-parsed on most calls. Each call now runs only when an `if items` check finds the item in a slot, and fire enchants are only removed from items that have them. |
+| `silvers_strength-smp-season-5` | `overlay_26.2/data/strength_smp/function/technical/main/powers/spear.mcfunction`, `enchant/main.mcfunction` | The same guard on its 9 calls to that macro. The armor power stays upstream: a guard on its `HurtTime` read stopped the hit counter ever starting (`tests/test_perf_patches.py`). |
+| `silvers_effects-library` | `overlay_26.2/data/s_effects_lib/function/technical/tick/public.mcfunction` | Upstream encodes each whole player every tick to copy `Fire` into a score that only eternal flame and undead curse read. It now reads `Fire` only while one of those is running. |
+| `dynamic-lights` | `data/dynamiclights/function/internal/main.mcfunction` | Lights update every other tick instead of every tick. TNT is still counted every tick and a fuse about to end forces a pass, because a light block stops explosion damage. Walking with a torch, the light can trail by one tick. |
+| `warden-with-loot` | `data/warden_with_loot/advancement/deep_dark/spawn_warden.json`, `trigger_sculk_shrieker.json` | Two cosmetic `tick` advancements encode the whole player twice per player per tick: 15% of the main thread at 30 players. They now test the biome first, as conditions run in order. A warning raised just outside the deep dark unlocks on next entering it. |
 
 Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the effects
 patch took the command-limit hits from 3,359 a run to none. The typical tick didn't drop (132 ms before, 133 ms
@@ -325,6 +335,7 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 | Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
 |---|---|
 | Improved Inventory Tabs | Not on Modrinth, so it can't be pinned (ADR-0002). |
+| Patina & Chime (`patina-and-chime`) | Awaiting moderation on Modrinth (the project returns 404), so it can't be pinned (ADR-0002). It adds mixins and advancements on both sides. Add it in a release once it is approved. |
 | Arrow In The Knee (`aitk`) | Says it runs on servers, but a mixin into a client class stops one from starting. Client pack only. |
 | PrickleMC, Crops Love Rain (NeoForge files) | The folder's `cropsloverain-3.2.1.jar` is the NeoForge build, and PrickleMC's NeoForge jar sits next to its Fabric one. The pack has the Fabric build of each. |
 | Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |

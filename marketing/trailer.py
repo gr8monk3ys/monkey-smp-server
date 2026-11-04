@@ -95,7 +95,7 @@ SECTIONS = [
         ],
         "04  ·  MODDED TERRAIN AND DUNGEONS",
         "Land worth fighting over.",
-        "Amethyst Nether, Grand Capitals, Crazy Chambers and deep dark cities.",
+        "Dungeons and Taverns, Grand Capitals, Crazy Chambers and deep dark cities.",
     ),
     Section(
         [],

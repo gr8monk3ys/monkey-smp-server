@@ -5,7 +5,7 @@
 It writes two folders, both generated (edit this file, not them). Rule numbers are docs/RULES.md's.
 
   package/monkey/datapacks/monkey-rules/
-      Rule 25: a 2500 x 2500 world border centred on spawn (and the Nether's at 1:8), set once.
+      Rule 25: a 5000 x 5000 world border centred on spawn (and the Nether's at 1:8), set once.
       Rule 23: the launch hour. `function monkey:rules/launch` closes PvP and the Nether for an hour,
                then opens both; the End stays closed until `function monkey:rules/open_end`.
       Rule 26: a first join gets 48 hours of PvP grace: other players can't hurt them. Attacking a player
@@ -40,7 +40,7 @@ from repo import Repo
 RULES_PACK = "monkey-rules"
 NETHERITE_PACK = "monkey-no-netherite-armor"
 
-BORDER = 2500          # rule 25: the border's full width in blocks, centred on spawn
+BORDER = 5000          # rule 25: the border's full width in blocks, centred on spawn
 LAUNCH_SECONDS = 3600  # rule 23: how long PvP and the Nether stay closed after launch
 OBJECTIVE = "monkey.rules"
 # Rule 24's pack stamps the game time here every second while it is on, so other packs can tell it is

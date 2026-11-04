@@ -20,7 +20,7 @@ to a minute. That's normal: don't close the window, and choose **Wait** if Windo
 1. Install the [Modrinth App](https://modrinth.com/app) (free) and sign in with the Microsoft account you
    play Minecraft with. You don't buy Minecraft again.
 2. Open the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp) and press **Install** (or search
-   for "Monkey SMP" in the app's Discover). It downloads about 383 MB: the mods and resource packs.
+   for "Monkey SMP" in the app's Discover). It downloads about 380 MB: the mods and resource packs.
 3. Give the game enough memory: the instance's settings > **Java and memory**, 6 GB (8 GB if the computer has more
    than 16 GB of RAM).
    Too little memory makes the game stutter or crash.
@@ -39,7 +39,7 @@ If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
-   It downloads about 383 MB (mods and resource packs) from their official websites and checks
+   It downloads about 380 MB (mods and resource packs) from their official websites and checks
    every file, and sets the game's memory from your computer's RAM. When it's done, press a key to close
    the window.
 3. Open the launcher, click the version box next to the green **Play** button, choose **Monkey SMP**,
@@ -94,7 +94,7 @@ What to leave out:
 1. **Resource packs:** Patrix 32x (73 MB, not switched on by default) and Enhanced Audio (18 MB) are the big
    ones. Fresh Animations needs Entity Model Features and Entity Texture Features to move.
 2. **Animations and effects:** Entity Model Features, Entity Texture Features, 3D Skin Layers, Explosive
-   Enhancement, Falling Leaves, Wakes, Windy, Better Smoke, Subtle Effects and the like.
+   Enhancement, Falling Leaves, Wakes, Windy, Better Smoke and the like.
 3. **Extras:** Essential (cosmetics, friends and screenshots). Leave out Simple Voice Chat only if you don't want
    proximity voice: without it you can't hear or talk to anyone.
 

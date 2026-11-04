@@ -228,27 +228,6 @@
   "items": 1294,
   "entity_textures": 0
  },
- "4q8UOK1d": {
-  "slug": "subtle-effects",
-  "modrinth": {
-   "client": "required",
-   "server": "optional"
-  },
-  "id": "subtle_effects",
-  "environment": "*",
-  "ids": [
-   "com_moulberry_mixinconstraints",
-   "subtle_effects"
-  ],
-  "depends": [
-   "fabric-api",
-   "fzzy_config"
-  ],
-  "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 11
- },
  "57KDkTen": {
   "slug": "nether-gold-ore-drops-raw-gold",
   "modrinth": {

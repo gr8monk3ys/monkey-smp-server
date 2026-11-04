@@ -9,10 +9,10 @@ doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: t
 
 ### Added
 
-- The shared folder as it stood on 3 November. Dungeons and Taverns and nine of its overhauls; Moog's End, Nether,
+- The shared folder as it stood on 4 November. Dungeons and Taverns and nine of its overhauls; Moog's End, Nether,
   Soaring and Voyager structures, Mineshafts Reimagined and Temples Reimagined, with Moog's Structure Lib; Bigger Better
   End Cities, Trek, Phantoms in the End and Iris; and ClearWaterLava, optional on the client. Server: 170 mods, up from
-  151. Client pack: 178 mods and 22 resource packs, about 383 MB, up from 310 MB.
+  151. Client pack: 177 mods and 22 resource packs, about 380 MB, up from 310 MB.
 - Rule 25: Season I's border starts 5000 wide, as the owners' group asked, not 2500. The acts become 5500 on 21 November
   and 6000 on 26 December, so the largest border, the pre-generation radius and the finale don't change. The pack's
   Nether default is 625 wide; Season I's stays 2500 by hand.
@@ -45,6 +45,7 @@ doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: t
   Moog's Nether, Dungeons and Taverns' overhaul and Skniro's ores in it. `antixray.toml` follows, and that config is one
   of the two to copy by hand. Amethyst's bomb timer and its speed patch go with it. It was about 9.7% of a tick on the
   3.0.0 VPS test.
+- Subtle Effects, cut from the shared folder on 4 November. It was an optional client mod, so the server doesn't change.
 
 ### Not added
 

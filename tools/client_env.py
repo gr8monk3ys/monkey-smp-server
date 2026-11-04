@@ -62,7 +62,6 @@ OPTIONAL_MODS = {
     "vgVfk0m2": ("real-arrow-tip", "visuals"),
     "pXo36Na4": ("sb-enchantment-effects", "visuals"),
     "XTAy8Fqs": ("shield-banner-fix", "visuals"),
-    "4q8UOK1d": ("subtle-effects", "visuals"),
     "Hf3Qz2H3": ("superresolution", "visuals"),
     "eB5MDILu": ("thirdpersondeath-continued", "visuals"),
     "jExZM2Rj": ("tightfire", "visuals"),
@@ -164,6 +163,7 @@ OPTIONAL_MODS = {
 # earlier releases (tests/fixtures/manifests) still validate; none may be in the current pack.
 RETIRED_OPTIONAL = {
     # 3.1.0: gone from the shared mod folder
+    "4q8UOK1d": "subtle-effects",
     "9EFaPoo8": "amethyst-nether",
     "wXiGiyGX": "amplified-nether",
     # 2.8.0: gone from the shared mod folder

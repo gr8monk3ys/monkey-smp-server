@@ -13,7 +13,7 @@ forwarding needed.
 | Minecraft | Java Edition **26.2** |
 | Server | [Fabric](https://fabricmc.net) (loader pinned in the manifest) |
 | Server mods | 170: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Dungeons and Taverns, Grand Capitals, Crazy Chambers, Sulfur Caves Plus, Naturalist, Strength SMP, ServerCore, ... |
-| Client pack | 178 mods and 22 resource packs (required to join) |
+| Client pack | 177 mods and 22 resource packs (required to join) |
 | Players | about 10 at full speed on a 2017 desktop CPU, 25 on a current fast one ([measured](docs/ADMIN.md#how-many-players)) |
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).

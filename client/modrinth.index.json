@@ -2286,21 +2286,6 @@
       "fileSize": 3381545
     },
     {
-      "path": "mods/SubtleEffects-fabric-26.2-1.15.1.jar",
-      "hashes": {
-        "sha1": "b0f8fbcdf48ff631fea5ada80d60482ab2eb470b",
-        "sha512": "7944d374562a717374a3246b9dea0b4ba8c63c55e2e733fe35b989df202950a9b537c4de4d01b888e14531b4718b522617909fb43725c384c9516fb55015e55c"
-      },
-      "env": {
-        "client": "optional",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/4q8UOK1d/versions/jBBK1eBb/SubtleEffects-fabric-26.2-1.15.1.jar"
-      ],
-      "fileSize": 3511198
-    },
-    {
       "path": "mods/sulfurcavesplus-1.1.7-26.2.jar",
       "hashes": {
         "sha1": "14d5f6f86c670bcca5929ec6ba27b94f320e94be",

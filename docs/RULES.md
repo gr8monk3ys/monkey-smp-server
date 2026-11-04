@@ -70,7 +70,7 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
     - When the hour is up, PvP and **only** the Nether open.
 24. Until notified, players **can't** craft or use Netherite armor, but **can** use Netherite tools and
     weapons.
-25. A world border is set at 2500 x 2500.
+25. A world border is set at 5000 x 5000.
     - Leaving or breaking the world border is prohibited.
     - The border is expected to grow as the server progresses or as more players join.
     - From Season II, on the season's finale evening (its last week) the border shrinks to 256 x 256 around the
@@ -187,7 +187,8 @@ These are banned on the server.
   indicators and the like. Anything else must be approved by the server owners.
 - **B16.** Replay Mod or Flashback for a competitive advantage. Videos and build photos are fine.
 - **B17.** The cushion glitch (an x-ray glitch).
-- **B18.** Retired in 3.0.0: the Nova Structures books it covered left the pack with their mod.
+- **B18.** Enchantment books from the Nova Structures mod are only server event rewards. Books found
+  naturally can't be applied.
 - **B19.** F3+A and reloading shaders. These count as x-ray.
 
 ## The mods
@@ -240,12 +241,13 @@ Open items from the owners' draft:
   26 October 2026: the owners shelved shops before they reached the live server, so rule 43 now covers trading
   by hand (items for items, no scams, no real-money trading). If shops come back, so does the rule's shop
   wording as adopted ("Shelved mods" in `docs/MAINTAINING.md`).
-- B18: the owners wanted Nova Structures' books configured out. From 2.8.0 Enchantment Disabler did that;
-  3.0.0 drops the mod that added them, so the rule's number stays and the rule is retired.
+- B18: the owners want Nova Structures' books configured out. 3.0.0 dropped the mod that adds them and retired
+  the rule; 3.1.0 brings Dungeons and Taverns back, so the server does it again: see B18 below.
 - Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
   griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
   the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
-  B12). The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
+  B12). Amethyst Nether killed ender pearls that reached the underside of its bedrock roof; it left in 3.1.0 and
+  nothing replaces that, so 46 now rests on the rule alone. The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
 - Friends & Foes (2.8.0) adds the Totem of Freezing (from Iceologers) and the Totem of Illusion (from
   Illusioners). They aren't Totems of Undying, so B4 doesn't cover them as written; both are panic buttons
   when you're hurt (one freezes whoever is close, the other turns you invisible and spawns copies of you).
@@ -275,12 +277,12 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   and horse armor are untouched. To lift the rule: `datapack disable "file/monkey-no-netherite-armor"`.
   The world remembers that across restarts and updates. `datapack enable` turns the rule back on.
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
-  2500 x 2500, centred on spawn. On Minecraft 26.2 every dimension has its own border, so the pack also
-  gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
-  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 12000` (12000 ticks, 10 minutes,
-  to widen) and `execute in minecraft:the_nether run worldborder set 500 12000`. The pack never touches them again.
+  5000 x 5000, centred on spawn. On Minecraft 26.2 every dimension has its own border, so the pack also
+  gives the Nether the matching one at its 1:8 scale (625 wide, centred on spawn / 8). The End's is left
+  alone. After that the borders are yours to grow, e.g. `worldborder set 5500 12000` (12000 ticks, 10 minutes,
+  to widen) and `execute in minecraft:the_nether run worldborder set 687.5 12000`. The pack never touches them again.
   Season I's world is the exception: staff set its Nether to 2500 by hand (docs/LIVE.md, "3.0.0"), so the border acts
-  leave the Nether alone. `worldborder set 500` there would shrink it.
+  leave the Nether alone. `worldborder set 687.5` there would shrink it.
 - **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
   before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
@@ -320,8 +322,17 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   block for an ore that touches no air, water or lava. In the Overworld every such spot shows a random ore, so
   x-ray sees noise; in the Nether and the End hidden ores show as netherrack or end stone. X-ray clients and
   packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
+  The client pack's own mods count as approved under B15, ClearWaterLava and No Fog included: they're ticked by
+  default, so everyone has them, and the server can't tell who keeps them.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
+- **B18, Nova Structures' books** (Enchantment Disabler, `defaults/config/enchantmentdisabler/config.toml`).
+  All 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the enchanting table, loot
+  and villager trades, so nobody finds them; staff make event rewards with `/give` or `enchant`, which still
+  work. A server without the file gets it from the installer. If Dungeons and Taverns adds an enchantment, add
+  it to the file (and to `tests/test_mod_defaults.py`). The Enchant Disabler data pack is pinned too: its tags take DnT's
+  enchantments out of DnT's loot and trades a second way, but its inventory strip does nothing with the mod installed,
+  so the mod is what lets event books survive in a player's inventory. Remove the mod and those books get stripped.
 - **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
   enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
   `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may

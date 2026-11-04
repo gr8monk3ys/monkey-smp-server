@@ -28,7 +28,7 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 | Sat 31 Oct | T-7 | T-7 announcement; Reddit post. (The 7 November date shipped early: 2.9.1, live on 29 October, below.) |
 | Sun 1 Nov | T-6 | The clocks go back at 2 AM. Off-site backups and Uptime Kuma alerts working. |
 | Mon 2 Nov | T-5 | **3.0.0 tagged and deployed early** for a test night: Minecraft 26.2, the owners' mod list, a test world on the launch seed. |
-| Wed 4 Nov | T-3 | **Last day to tag a fix (3.0.x)** from what the test found; it deploys at 4-5 AM on Thursday. |
+| Wed 4 Nov | T-3 | **Last day to tag 3.1.0:** the owners' final mod list, the speed patches and any fix from the test. It deploys at 4-5 AM on Thursday, and players reinstall the pack. |
 | Thu 5 Nov | T-2 | The freeze starts. **The launch world:** a fresh copy of the seed, replacing the test world, then Chunky, the map rendered and fitted. Trial decided and a test purchase. New screenshots for the site gallery and the banners (`marketing/build.py`: the banners and `og.jpg` still show the old world, and the server-list banner still says 26.3). Build Battle plots built. Moderators onboarded, and their shadowed evening. |
 | Fri 6 Nov | T-1 | Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. Test joins, the trailer. Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
 | Sat 7 Nov | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
@@ -104,8 +104,9 @@ once with real money first:
 ### Release freeze: launch weekend
 
 Three days, not the seven the 21 November plan had. On 2 November the owners moved the server to Minecraft 26.2
-and held the 2.11.0 tag. 3.0.0 went live that evening, ahead of plan, for a test night. A fix it turns up is tagged
-as 3.0.x by the evening of **Wednesday 4 November** and goes live in the 4-5 AM window on **Thursday 5 November**.
+and held the 2.11.0 tag. 3.0.0 went live that evening, ahead of plan, for a test night. 3.1.0, with the owners' final mod list, the speed
+patches and any fix the test turns up, is tagged by the evening of **Wednesday 4 November** and goes live in the
+4-5 AM window on **Thursday 5 November**.
 Nothing new deploys after that until **Monday 9 November**, after launch weekend.
 
 Why a freeze at all: the load test, the restore drill and the rehearsal (Friday 6 November) run against the
@@ -137,14 +138,16 @@ How:
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
-after that makes launch only if it is in the 3.0.0 release; whatever misses it waits until Monday
+after that makes launch only if it is in the 3.1.0 release; whatever misses it waits until Monday
 9 November at the earliest, and its lines come out of the announcements ("Copy that depends on unmerged work",
 below).
 
 ### Ops readiness
 
-- [ ] **Thu 5 Nov: the launch world.** Testers played in the world made on 2 November, so replace it with a fresh
-  copy of the same seed (docs/LIVE.md, "3.0.0: Minecraft 26.2 and a new world"), take testers back off the
+- [ ] **Thu 5 Nov: the launch world.** Check 3.1.0 deployed at 4-5 AM first: its new structures only appear in land
+  generated after it. Testers played in the world made on 2 November, so replace it with a fresh copy of the same
+  seed (docs/LIVE.md, "3.1.0: the final mod list and the speed patches", then "3.0.0: Minecraft 26.2 and a new
+  world"), take testers back off the
   whitelist, and start Chunky. Do the load test and the rehearsal on this world. Walk the spawn area, monuments and
   NPC spots: the terrain changed.
 - [ ] **Fri 6 Nov, before the load test: Chunky.** `monkey rcon "chunky progress"` (as `monkey`, in
@@ -163,7 +166,7 @@ below).
   button and check the message arrives in the staff channel.
 - [ ] **Fri 6 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
-  Over about 40 ms median at 25 players: follow the decision rule there before launch.
+  Over about 40 ms median at 30 players: follow the decision rule there before launch.
 - [ ] **By Fri 6 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
   `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:

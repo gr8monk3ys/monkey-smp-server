@@ -207,10 +207,10 @@ def test_a_uuid_that_is_not_one_is_a_value_error(value):
 
 
 def test_the_border_as_saved_per_dimension(tmp_path):
-    folder = (FakeWorld(tmp_path).border(OVERWORLD, -80.0, 416.0, 2500.0, 4000.0)
-              .border(NETHER, -9.5, 52.5, 312.5).path)
-    assert saved_world.border(folder) == saved_world.SavedBorder(-80.0, 416.0, 2500.0, 4000.0)   # Overworld default
-    assert saved_world.border(folder, NETHER) == saved_world.SavedBorder(-9.5, 52.5, 312.5, 312.5)
+    folder = (FakeWorld(tmp_path).border(OVERWORLD, -80.0, 416.0, 5000.0, 5500.0)
+              .border(NETHER, -9.5, 52.5, 625.0).path)
+    assert saved_world.border(folder) == saved_world.SavedBorder(-80.0, 416.0, 5000.0, 5500.0)   # Overworld default
+    assert saved_world.border(folder, NETHER) == saved_world.SavedBorder(-9.5, 52.5, 625.0, 625.0)
     assert saved_world.border(folder, "minecraft:the_end") is None
     nether = folder / "dimensions" / "minecraft" / "the_nether" / "data" / "minecraft" / "world_border.dat"
     assert saved_world.border_path(folder, NETHER) == nether

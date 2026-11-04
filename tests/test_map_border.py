@@ -36,11 +36,11 @@ def masks(server_dir):
 
 
 def test_the_shipped_masks_are_season_ones_starting_border(tmp_path):
-    # The defaults are fitted to Rule 25's 2500 border (and the Nether's 312.5) around the pinned spawn.
+    # The defaults are fitted to Rule 25's 5000 border (and the Nether's 625) around the pinned spawn.
     assert map_border.main([str(server(tmp_path, SEASON_ONE)), "--check"]) == 0
     assert masks(tmp_path) == {
-        "world": {"min-x": -1330, "max-x": 1169, "min-z": -834, "max-z": 1665},
-        "world_the_nether": {"min-x": -166, "max-x": 146, "min-z": -104, "max-z": 208},
+        "world": {"min-x": -2580, "max-x": 2419, "min-z": -2084, "max-z": 2915},
+        "world_the_nether": {"min-x": -322, "max-x": 302, "min-z": -260, "max-z": 364},
         "world_the_end": None,
     }
 
@@ -57,8 +57,8 @@ def test_the_shipped_maps_are_the_worlds_bluemap_would_make():
 
 
 def test_the_nether_map_cuts_everything_from_y_90_up():
-    # Amethyst Nether's roof is near y 160: a ceiling cut that stops at 127 (BlueMap's own) leaves it covering
-    # the map, so the cut has no top.
+    # A ceiling cut that stops at 127 (BlueMap's own) leaves anything built on the roof covering the map, so the
+    # cut has no top.
     nether = (DEFAULT_MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
     ceiling = nether.split("subtract: true", 1)[1].split("}", 1)[0]
     assert "min-y: 90" in ceiling
@@ -66,7 +66,7 @@ def test_the_nether_map_cuts_everything_from_y_90_up():
 
 
 def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, capsys):
-    grown = {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 4000.0), "minecraft:the_nether": (*NETHER_CENTRE, 500.0)}
+    grown = {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5500.0), "minecraft:the_nether": (*NETHER_CENTRE, 687.5)}
     server(tmp_path, grown)
     end_before = (tmp_path / map_border.MAPS / "world_the_end.conf").read_bytes()
 
@@ -75,7 +75,7 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
     out = capsys.readouterr().out
     assert "bluemap reload" in out and "bluemap purge world\n" in out and "bluemap purge world_the_nether" in out
     assert "purge world_the_end" not in out
-    assert masks(tmp_path)["world"] == {"min-x": -2080, "max-x": 1919, "min-z": -1584, "max-z": 2415}
+    assert masks(tmp_path)["world"] == {"min-x": -2830, "max-x": 2669, "min-z": -2334, "max-z": 3165}
     nether = (tmp_path / map_border.MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
     assert "subtract: true\n    min-y: 90\n  }" in nether
     assert nether.count(map_border.MARK) == 1
@@ -84,13 +84,13 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
 
 
 def test_a_growing_border_counts_at_its_final_size(tmp_path):
-    server(tmp_path, {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 2600.0, 6000.0)})
+    server(tmp_path, {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5200.0, 6000.0)})
     assert masks(tmp_path)["world"] == {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415}
     # A shrinking one at its target too (tools/drops.py takes the smaller of the two instead).
-    server(tmp_path / "b", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 6000.0, 2500.0)})
-    assert masks(tmp_path / "b")["world"] == {"min-x": -1330, "max-x": 1169, "min-z": -834, "max-z": 1665}
+    server(tmp_path / "b", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 6000.0, 5000.0)})
+    assert masks(tmp_path / "b")["world"] == {"min-x": -2580, "max-x": 2419, "min-z": -2084, "max-z": 2915}
     # Heading past the vanilla maximum: no border, the map left as it is.
-    server(tmp_path / "c", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 2500.0, map_border.NO_BORDER)})
+    server(tmp_path / "c", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5000.0, map_border.NO_BORDER)})
     assert masks(tmp_path / "c")["world"] is None
 
 
@@ -117,12 +117,12 @@ def test_a_config_bluemap_wrote_itself_gets_the_mask(tmp_path):
     maps = tmp_path / "bluemap-maps"
     maps.mkdir()
     (maps / "world_the_nether.conf").write_text(GENERATED_NETHER, encoding="utf-8", newline="")
-    srv = server(tmp_path / "server", {"minecraft:the_nether": (*NETHER_CENTRE, 312.5)}, maps)
+    srv = server(tmp_path / "server", {"minecraft:the_nether": (*NETHER_CENTRE, 625.0)}, maps)
 
     assert map_border.main([str(srv)]) == 0
     assert (srv / map_border.MAPS / "world_the_nether.conf").read_text(encoding="utf-8") == GENERATED_NETHER.replace(
         "    #min-x: -4000\n    #max-x: 4000\n",
-        f"    {map_border.MARK}\n    min-x: -166\n    max-x: 146\n    min-z: -104\n    max-z: 208\n",
+        f"    {map_border.MARK}\n    min-x: -322\n    max-x: 302\n    min-z: -260\n    max-z: 364\n",
     )
 
 
@@ -131,7 +131,7 @@ def test_a_hand_made_first_layer_is_left_for_a_person(tmp_path, capsys):
     maps.mkdir()
     hand_made = GENERATED_NETHER.replace("#min-x: -4000", "subtract: true")
     (maps / "world_the_nether.conf").write_text(hand_made, encoding="utf-8")
-    srv = server(tmp_path / "server", {"minecraft:the_nether": (*NETHER_CENTRE, 312.5)}, maps)
+    srv = server(tmp_path / "server", {"minecraft:the_nether": (*NETHER_CENTRE, 625.0)}, maps)
     assert map_border.main([str(srv)]) == 2
     assert "subtract: true" in capsys.readouterr().err
 

@@ -95,7 +95,7 @@ def test_the_timer_starts_it_once_with_the_switch_on(tmp_path):
 
 
 def test_no_finale_in_season_one(tmp_path):
-    world = make_server(tmp_path, 2500, 312.5, ("rw.day", "#season", 1), LAUNCHED, ON)
+    world = make_server(tmp_path, 5000, 625, ("rw.day", "#season", 1), LAUNCHED, ON)
     for when in (FINALE, dt.datetime(2027, 1, 23, 18, 1, tzinfo=PACIFIC)):
         assert not any("finale" in c for c in border.commands(world, when))
 

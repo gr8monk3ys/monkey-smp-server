@@ -1,0 +1,45 @@
+{
+  "parent": "minecraft:adventure/avoid_vibration",
+  "display": {
+    "icon": {
+      "id": "minecraft:sculk_shrieker"
+    },
+    "title": {
+      "translate": "warden_with_loot.advancements.trigger_sculk_shrieker.title"
+    },
+    "description": {
+      "translate": "warden_with_loot.advancements.trigger_sculk_shrieker.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "trigger_sculk_shrieker": {
+      "trigger": "tick",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "biomes": "minecraft:deep_dark"
+            }
+          },
+          {
+            "condition": "minecraft:inverted",
+            "term": {
+              "condition": "entity_properties",
+              "entity": "this",
+              "predicate": {
+                "nbt": "{warden_spawn_tracker:{warning_level:0}}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "trigger_sculk_shrieker"
+    ]
+  ]
+}

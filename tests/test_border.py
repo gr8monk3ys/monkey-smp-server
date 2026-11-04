@@ -20,8 +20,8 @@ SEASON_TWO = ("rw.day", "#season", 2)
 ACT_ONE = dt.datetime(2027, 2, 20, 18, 1, tzinfo=PACIFIC)    # Season II, week 2: a minute after the act's time
 BEFORE = dt.datetime(2027, 2, 20, 17, 59, tzinfo=PACIFIC)
 ACT_TWO = dt.datetime(2027, 4, 3, 18, 1, tzinfo=PACIFIC)
-SET_4000 = "execute in minecraft:overworld run worldborder set 4000 12000"
-SET_500 = "execute in minecraft:the_nether run worldborder set 500 12000"
+SET_5500 = "execute in minecraft:overworld run worldborder set 5500 12000"
+SET_687 = "execute in minecraft:the_nether run worldborder set 687.5 12000"
 
 
 def make_server(tmp_path, overworld, nether, *scores):
@@ -40,12 +40,12 @@ def make_server(tmp_path, overworld, nether, *scores):
 def test_the_acts_follow_the_season_calendar():
     two = border.acts(2)
     assert [(a.at.date(), a.size, a.nether) for a in two] == [
-        (dt.date(2027, 2, 20), 4000, 500), (dt.date(2027, 4, 3), 6000, 750)]
+        (dt.date(2027, 2, 20), 5500, 687.5), (dt.date(2027, 4, 3), 6000, 750)]
     assert all(a.at.astimezone(PACIFIC).hour == 18 for a in two)
     # 3 April is after daylight saving time starts (14 March 2027): still 6 PM Pacific, an hour earlier in UTC.
     assert [a.at.astimezone(season_calendar.UTC).hour for a in two] == [2, 1]
     assert border.acts(1) == [] and border.acts(3) == []
-    assert "Saturday 20 February 2027, 6 PM Pacific: 4000 wide, the Nether 500" in border.plan(2)
+    assert "Saturday 20 February 2027, 6 PM Pacific: 5500 wide, the Nether 687.5" in border.plan(2)
 
 
 def test_season_twos_acts_are_its_calendars_border_breaks():
@@ -59,7 +59,7 @@ def test_season_one_is_left_to_staff(tmp_path):
     """Season I's acts are by hand: a timer installed early sends nothing in a Season I world, even an hour after
     staff grew the border, when the last save still shows the old one (it would start the growth again)."""
     assert 1 not in border.ACTS
-    world = make_server(tmp_path, 2500, 312.5, ("rw.day", "#season", 1), LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, ("rw.day", "#season", 1), LAUNCHED)
     for when in (dt.datetime(2026, 11, 21, 18, 1, tzinfo=PACIFIC), dt.datetime(2026, 12, 26, 18, 1, tzinfo=PACIFIC)):
         run = border.read_run(world, when)
         assert run.commands == [] and run.maps == [] and run.why == "no border acts for season 1"
@@ -67,40 +67,40 @@ def test_season_one_is_left_to_staff(tmp_path):
 
 
 def test_a_failed_set_is_not_recorded_so_the_next_hour_tries_again(tmp_path):
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
     log, server = [], rcon.Recorder(fail=1)
     assert border.send(server, world, ACT_ONE, log.append) == 1
     assert server.sent == [] and "not sent after it: 4 command(s)" in log
-    assert border.commands(world, ACT_ONE)[:2] == [SET_4000, SET_500]   # still due
+    assert border.commands(world, ACT_ONE)[:2] == [SET_5500, SET_687]   # still due
 
 
 def test_nothing_before_the_launch_the_act_or_in_a_locked_world(tmp_path):
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO)
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO)
     assert border.commands(world, ACT_ONE) == [] and border.read_run(world, ACT_ONE).why == "the season hasn't launched"
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
     assert border.commands(world, BEFORE) == [] and border.read_run(world, BEFORE).why == "no border act yet"
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED, ("ev.state", "#season_locked", 1))
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED, ("ev.state", "#season_locked", 1))
     assert border.commands(world, ACT_ONE) == []
-    world = make_server(tmp_path, 2500, 312.5, ("rw.day", "#season", 5), LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, ("rw.day", "#season", 5), LAUNCHED)
     assert border.read_run(world, ACT_ONE).why == "no border acts for season 5"
 
 
 def test_an_act_grows_both_borders_and_says_so(tmp_path):
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
     sent = border.commands(world, ACT_ONE)
-    assert sent[:2] == [SET_4000, SET_500] and sent[2].startswith('tellraw @a {"text":"The border breaks')
+    assert sent[:2] == [SET_5500, SET_687] and sent[2].startswith('tellraw @a {"text":"The border breaks')
     assert sent[3] == "scoreboard players set #border_act ev.state 1" and sent[4].startswith("function monkey:boss/act")
     server = rcon.Recorder()
     assert border.send(server, world, ACT_ONE, log=lambda _: None) == 0 and server.sent == sent
     # Two acts due (the server was down for weeks): only the latest counts.
-    assert border.commands(world, ACT_TWO)[:2] == [SET_4000.replace("4000", "6000"), SET_500.replace("500", "750")]
+    assert border.commands(world, ACT_TWO)[:2] == [SET_5500.replace("5500", "6000"), SET_687.replace("687.5", "750")]
 
 
 def test_a_border_is_never_shrunk_and_only_the_dimension_behind_is_set(tmp_path):
     record = "scoreboard players set #border_act ev.state 1"
-    world = make_server(tmp_path, (3000, 4000), 312.5, SEASON_TWO, LAUNCHED)   # the Overworld already growing
-    assert border.commands(world, ACT_ONE)[:2] == [SET_500, record]
-    world = make_server(tmp_path, 5000, 600, SEASON_TWO, LAUNCHED)            # grown further by hand
+    world = make_server(tmp_path, (5200, 5500), 625, SEASON_TWO, LAUNCHED)   # the Overworld already growing
+    assert border.commands(world, ACT_ONE)[:2] == [SET_687, record]
+    world = make_server(tmp_path, 5800, 700, SEASON_TWO, LAUNCHED)            # grown further by hand
     assert border.commands(world, ACT_ONE)[:1] == [record]
     world = make_server(tmp_path, 5000, 600, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
     run = border.read_run(world, ACT_ONE)
@@ -108,7 +108,7 @@ def test_a_border_is_never_shrunk_and_only_the_dimension_behind_is_set(tmp_path)
 
 
 def test_the_map_follows_the_act_then_purges_an_hour_later(tmp_path):
-    world = make_server(tmp_path, 4000, 500, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
+    world = make_server(tmp_path, 5500, 687.5, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
     assert border.commands(world, ACT_ONE) == ["bluemap reload"]
     log, server = [], rcon.Recorder()
     assert border.send(server, world, ACT_ONE, log.append) == 0 and server.sent == ["bluemap reload"]
@@ -131,7 +131,7 @@ def test_the_map_is_not_fitted_to_the_finales_shrinking_border(tmp_path):
 
 
 def test_a_stopped_server_gets_nothing_and_nothing_is_written(tmp_path):
-    world = make_server(tmp_path, 4000, 500, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
+    world = make_server(tmp_path, 5500, 687.5, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
     log = []
     assert border.send(rcon.Recorder(running=False), world, ACT_ONE, log.append) == 0
     assert log == ["server not running: nothing sent (the next hour tries again)"]
@@ -139,10 +139,10 @@ def test_a_stopped_server_gets_nothing_and_nothing_is_written(tmp_path):
 
 
 def test_status_runs(tmp_path, capsys):
-    world = make_server(tmp_path, 2500, 312.5, SEASON_TWO, LAUNCHED)
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
     assert border.main(["status", str(world), "--at", ACT_ONE.isoformat()]) == 0
     out = capsys.readouterr().out
-    assert "act 1, week 2: Saturday 20 February 6 PM Pacific, 4000 (Nether 500): due" in out
+    assert "act 1, week 2: Saturday 20 February 6 PM Pacific, 5500 (Nether 687.5): due" in out
     assert "act 2, week 8: Saturday 3 April 6 PM Pacific, 6000 (Nether 750): to come" in out
 
 

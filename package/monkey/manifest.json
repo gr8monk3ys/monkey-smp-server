@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "minecraft": "26.2",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -87,18 +87,6 @@
       "size": 593638,
       "hashes": {
         "sha512": "b4d0b9a8f99f03a0f0cb93b7bb32dec31a1b08bebce74f3303d914cbc1c3bb51a5e02b168308f75fb7b13366632d79b9fe7567d683b0bbf86a0cc677cc5f963d"
-      }
-    },
-    {
-      "slug": "amethyst-nether",
-      "project_id": "9EFaPoo8",
-      "version": "v4.3.2+mod",
-      "version_id": "ItSnSx09",
-      "file": "amethyst-nether-v4.3.2.jar",
-      "url": "https://cdn.modrinth.com/data/9EFaPoo8/versions/ItSnSx09/amethyst-nether-v4.3.2.jar",
-      "size": 1722266,
-      "hashes": {
-        "sha512": "357ddd7ada8c77678dc326e521f8e6b313fd2a5f925c5d0deefe323fd283986b7268c894e10ce73005598e58e056c589a8f1f5866fbfc6edf0b420218387be2d"
       }
     },
     {
@@ -231,6 +219,18 @@
       "size": 379919,
       "hashes": {
         "sha512": "c39b7874405f4de5512ffe866a8541e452d8aa8453c0615475a6206852a751e0aa47dcb44cb3734cbae27a124450a4131a5667b54a1b62400a820e12c21621c7"
+      }
+    },
+    {
+      "slug": "bigger-better-end-cities",
+      "project_id": "A1ySbDYD",
+      "version": "26.1-26.3-1.1.3",
+      "version_id": "8bEN9Ap5",
+      "file": "bigger_end_cities-26.1-26.3-1.1.3.jar",
+      "url": "https://cdn.modrinth.com/data/A1ySbDYD/versions/8bEN9Ap5/bigger_end_cities-26.1-26.3-1.1.3.jar",
+      "size": 42287,
+      "hashes": {
+        "sha512": "8b90fd897d2e7e7dae889509959ff9aba4e1cb27c3acfd05fb42d9dbead21109b2030a2db8c659d436f8cf9dad1e39aea16780d36b36839171768652030894cb"
       }
     },
     {
@@ -582,6 +582,126 @@
       }
     },
     {
+      "slug": "dungeons-and-taverns",
+      "project_id": "tpehi7ww",
+      "version": "5.3.2+mod",
+      "version_id": "y9AUViOD",
+      "file": "dungeons-and-taverns-5.3.2.jar",
+      "url": "https://cdn.modrinth.com/data/tpehi7ww/versions/y9AUViOD/dungeons-and-taverns-5.3.2.jar",
+      "size": 39642964,
+      "hashes": {
+        "sha512": "af734c31a45cb7c7cc6630d4b258b588aade4ecc6db72d443d5f4d8151ffb2c7b6edfc8fbbe4cdbc6e85d41018bb54661cf9f1dba6226cccf3e18b1de3888703"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-ancient-city-overhaul",
+      "project_id": "DNuNq5bb",
+      "version": "3.4+mod",
+      "version_id": "LdVOQBQG",
+      "file": "dungeons-and-taverns-ancient-city-overhaul-3.4.jar",
+      "url": "https://cdn.modrinth.com/data/DNuNq5bb/versions/LdVOQBQG/dungeons-and-taverns-ancient-city-overhaul-3.4.jar",
+      "size": 1070006,
+      "hashes": {
+        "sha512": "df707b6cbe9670d384ea1915e233b2165d48d073dae62ab77db8f1f85d4dc7287cade4f95db7f857d7cb85fe47228b099df7bab8a8dd42c0052d6362135d3afe"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-desert-temple-overhaul",
+      "project_id": "7JTDDmRT",
+      "version": "v2.1+mod",
+      "version_id": "5CxIf8Tt",
+      "file": "dungeons-and-taverns-desert-temple-overhaul-v2.1.jar",
+      "url": "https://cdn.modrinth.com/data/7JTDDmRT/versions/5CxIf8Tt/dungeons-and-taverns-desert-temple-overhaul-v2.1.jar",
+      "size": 408745,
+      "hashes": {
+        "sha512": "272ca1a5117249d20bb02dbf948a08e7d7335fac491aee9d3ad8694abe51870f512dd90795181f16a822bb94ccd765271774243c79adebcd3de417fd47d509a7"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-jungle-temple-overhaul",
+      "project_id": "oHjYCS0f",
+      "version": "v2.1+mod",
+      "version_id": "pvrni7rg",
+      "file": "dungeons-and-taverns-jungle-temple-overhaul-v2.1.jar",
+      "url": "https://cdn.modrinth.com/data/oHjYCS0f/versions/pvrni7rg/dungeons-and-taverns-jungle-temple-overhaul-v2.1.jar",
+      "size": 294337,
+      "hashes": {
+        "sha512": "3963c4fa6119c81532cbb9802628ffb6815512e5310dea82393afde7e2611645f894741d3eb3a3f27d8c4b8164dcfce9a71e149684da3ba0722f5c7e13bbe1b6"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-mineshaft-overhaul",
+      "project_id": "ozLFhOy3",
+      "version": "1.1+mod",
+      "version_id": "7zo1nTm8",
+      "file": "dungeons-and-taverns-mineshaft-overhaul-1.1.jar",
+      "url": "https://cdn.modrinth.com/data/ozLFhOy3/versions/7zo1nTm8/dungeons-and-taverns-mineshaft-overhaul-1.1.jar",
+      "size": 1287861,
+      "hashes": {
+        "sha512": "0cb7f7dd1a43d406232b6f4e154d4c70611b316c4909da1e8b3a223f27a7d2d348abd7000fa45e1fcf8f76568a122dda6ea3d5a7716881ab6fcf6befc76dfa46"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-nether-fortress-overhaul",
+      "project_id": "8Dbnvm77",
+      "version": "v3.1+mod",
+      "version_id": "3TBxftsp",
+      "file": "dungeons-and-taverns-nether-fortress-overhaul-v3.1.jar",
+      "url": "https://cdn.modrinth.com/data/8Dbnvm77/versions/3TBxftsp/dungeons-and-taverns-nether-fortress-overhaul-v3.1.jar",
+      "size": 567076,
+      "hashes": {
+        "sha512": "9533ee4ff7f4bc4507cb5bc0051e447550963b54dc023e6ad01baaa462d7633eb5c088bd20a5322500905b4b23f65ccbb7479ac30f1e5c58edbb6f783d5444c6"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-ocean-monument-overhaul",
+      "project_id": "z6GJ3ycD",
+      "version": "2.2.1+mod",
+      "version_id": "pSv7WyCj",
+      "file": "dungeons-and-taverns-ocean-monument-overhaul-2.2.1.jar",
+      "url": "https://cdn.modrinth.com/data/z6GJ3ycD/versions/pSv7WyCj/dungeons-and-taverns-ocean-monument-overhaul-2.2.1.jar",
+      "size": 3261229,
+      "hashes": {
+        "sha512": "6a195b76fb91ed2491658f763943a51b4ba37f35fbc70388306c99f085b1ec480a06fab83061b0c608812901e295300ffaad80a4a3054f3f6cd162b497a91437"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-pillager-outpost-overhaul",
+      "project_id": "QIt10I7z",
+      "version": "v3.3+mod",
+      "version_id": "GPXkMYNM",
+      "file": "dungeons-and-taverns-pillager-outpost-overhaul-v3.3.jar",
+      "url": "https://cdn.modrinth.com/data/QIt10I7z/versions/GPXkMYNM/dungeons-and-taverns-pillager-outpost-overhaul-v3.3.jar",
+      "size": 451522,
+      "hashes": {
+        "sha512": "9d5556ab947d9363cee3878b77cd2b8464e09d32eebc1f2b1aece05c1d37ce0632234dcf8f16ca5a91302b4f948679b1916ea3e634b5cf2e6af2ce756be9a1ad"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-stronghold-overhaul",
+      "project_id": "rYocd2LE",
+      "version": "v2.4.0+mod",
+      "version_id": "PhiBm7he",
+      "file": "dungeons-and-taverns-stronghold-overhaul-v2.4.0.jar",
+      "url": "https://cdn.modrinth.com/data/rYocd2LE/versions/PhiBm7he/dungeons-and-taverns-stronghold-overhaul-v2.4.0.jar",
+      "size": 3254963,
+      "hashes": {
+        "sha512": "43c4636354c24eb96d2877be55a987d6c3cad5b0aeefd0bbd371c1ebcc5c303dd35753cc23e8f6471bb7e2c36e9d74f8d0bde458624d8a85a6c8945b2400051d"
+      }
+    },
+    {
+      "slug": "dungeons-and-taverns-woodland-mansion-overhaul",
+      "project_id": "3GfxWFCy",
+      "version": "2.1+mod",
+      "version_id": "zg7f1Hac",
+      "file": "dungeons-and-taverns-woodland-mansion-overhaul-2.1.jar",
+      "url": "https://cdn.modrinth.com/data/3GfxWFCy/versions/zg7f1Hac/dungeons-and-taverns-woodland-mansion-overhaul-2.1.jar",
+      "size": 5864747,
+      "hashes": {
+        "sha512": "75292c0e09ac5194eb9b11d0988d0b33930c3021e41ac75d5de2d4e87fa1a0827f979d59c5ce5ee4a429e680bb0ad973dc7026c9b40ae5c26c63ba1c40460063"
+      }
+    },
+    {
       "slug": "dynamic-lights",
       "project_id": "7YjclEGc",
       "version": "1.9.3+mod",
@@ -591,6 +711,10 @@
       "size": 426439,
       "hashes": {
         "sha512": "89bb5d380c5778dbca6d093a7dc82a280ab9c8142c801ccd04bbd6975ff6acf6110cef97b1641869f7bc6d963772f5689f00c90cea740d5420afed756f3caf2b"
+      },
+      "patch": {
+        "path": "patches/dynamic-lights",
+        "base_sha512": "89bb5d380c5778dbca6d093a7dc82a280ab9c8142c801ccd04bbd6975ff6acf6110cef97b1641869f7bc6d963772f5689f00c90cea740d5420afed756f3caf2b"
       }
     },
     {
@@ -1018,6 +1142,18 @@
       }
     },
     {
+      "slug": "mes-moogs-end-structures",
+      "project_id": "r4PuRGfV",
+      "version": "2.1.1",
+      "version_id": "S7bUhX4n",
+      "file": "MoogsEndStructures-universal-1.21-2.1.1.jar",
+      "url": "https://cdn.modrinth.com/data/r4PuRGfV/versions/S7bUhX4n/MoogsEndStructures-universal-1.21-2.1.1.jar",
+      "size": 2285901,
+      "hashes": {
+        "sha512": "5732c98bf3d1e6aa3c76cf23db77301065dd96f060fb9bf85e8af00769bc6a93e213aad7ff79a3116b3cfd5015fe98437bdadf9fdc0dd829eae1759e3c1fee96"
+      }
+    },
+    {
       "slug": "mixson",
       "project_id": "EgugIDm8",
       "version": "2.2.0",
@@ -1027,6 +1163,54 @@
       "size": 62343,
       "hashes": {
         "sha512": "0add1efe32cc073e822e4069afd4b2d2cd9e7175362519da4f954e36ba2012acf46aae681582da9e905df240f8f2e26ae23cc1b13da3107e5bf1c31c86ea6381"
+      }
+    },
+    {
+      "slug": "mmr-moogs-mineshafts-reimagined",
+      "project_id": "z25hqseO",
+      "version": "1.1.0",
+      "version_id": "JJc7pNHb",
+      "file": "MoogsMineshaftsReimagined-universal-1.21-1.1.0.jar",
+      "url": "https://cdn.modrinth.com/data/z25hqseO/versions/JJc7pNHb/MoogsMineshaftsReimagined-universal-1.21-1.1.0.jar",
+      "size": 5067871,
+      "hashes": {
+        "sha512": "ccf495329a6afc5cf73f18e1b1a6c7eecf74378cad1513fdeb0e76d836fecb7013d61bc3f5e70e566dd1f5507b6c381a43bf50cd9bb096c6af035929a23a9f20"
+      }
+    },
+    {
+      "slug": "mns-moogs-nether-structures",
+      "project_id": "nGUXvjTa",
+      "version": "3.1.1",
+      "version_id": "OLTqXnsN",
+      "file": "MoogsNetherStructures-universal-1.21-3.1.1.jar",
+      "url": "https://cdn.modrinth.com/data/nGUXvjTa/versions/OLTqXnsN/MoogsNetherStructures-universal-1.21-3.1.1.jar",
+      "size": 3916038,
+      "hashes": {
+        "sha512": "95f8f8fcff3851bf1b92e2ab8465e551506fe819d5269ef7e251d446563546a318ee7fcb7b8a671209895e4fd5df084101f203da43b65d1af4833e9d7bae6c00"
+      }
+    },
+    {
+      "slug": "moogs-structure-lib",
+      "project_id": "1oUDhxuy",
+      "version": "3.4.2-fabric-26.2",
+      "version_id": "KOfVwVft",
+      "file": "MoogsStructureLib-fabric-26.2-3.4.2.jar",
+      "url": "https://cdn.modrinth.com/data/1oUDhxuy/versions/KOfVwVft/MoogsStructureLib-fabric-26.2-3.4.2.jar",
+      "size": 1092285,
+      "hashes": {
+        "sha512": "5f986230f99b3554f3b1f31e7b58a90ccde984e25ba7c64a931cdf5fe1801b41081b8e42f6a49149d3c868f304be5a8a3bd2b466d7ba0e7fa3b2408fc778be89"
+      }
+    },
+    {
+      "slug": "moogs-voyager-structures",
+      "project_id": "OQAgZMH1",
+      "version": "5.1.3",
+      "version_id": "PiFoSPXI",
+      "file": "MoogsVoyagerStructures-universal-1.21-5.1.3.jar",
+      "url": "https://cdn.modrinth.com/data/OQAgZMH1/versions/PiFoSPXI/MoogsVoyagerStructures-universal-1.21-5.1.3.jar",
+      "size": 2234287,
+      "hashes": {
+        "sha512": "80e9e4a6543e8fc7d24d7e1fb4d4245d1d30f9aaf02ae2ba1098956106bea411a4502ce1d4b8fa97b935c9421a0eebf42226a46c8172cbbf621cc8ca16a50457"
       }
     },
     {
@@ -1099,6 +1283,30 @@
       "size": 804271,
       "hashes": {
         "sha512": "e07bbf1785eae1f2eb494153098ebcfd2fcbb930d4f3409ce4c580b49510855da49f908f051ffa88acf277cd75132381fad2ae715e132c87421571665e9a6756"
+      }
+    },
+    {
+      "slug": "mss-moogs-soaring-structures",
+      "project_id": "RJCLIx7k",
+      "version": "2.2.0",
+      "version_id": "O20bIWkj",
+      "file": "MoogsSoaringStructures-universal-1.21-2.2.0.jar",
+      "url": "https://cdn.modrinth.com/data/RJCLIx7k/versions/O20bIWkj/MoogsSoaringStructures-universal-1.21-2.2.0.jar",
+      "size": 5022443,
+      "hashes": {
+        "sha512": "1460cbb932e8f39c00bc7f980322696107c965094e00b9a05aa6b4ce6bc9babff5c3444b2135b8a6e7b88285dabbe3426cc4780fd1e3a8b64cc1b2cd8adb9dca"
+      }
+    },
+    {
+      "slug": "mtr-moogs-temples-reimagined",
+      "project_id": "UNanzCXS",
+      "version": "2.0.4",
+      "version_id": "RvfqP9Zb",
+      "file": "MoogsTemplesReimagined-universal-1.21-2.0.4.jar",
+      "url": "https://cdn.modrinth.com/data/UNanzCXS/versions/RvfqP9Zb/MoogsTemplesReimagined-universal-1.21-2.0.4.jar",
+      "size": 1709776,
+      "hashes": {
+        "sha512": "f458e48119f6d716548e95b96b1249406e53547eaa1b6ab9ec3f3e6899a60323450fae29809fea52446911ac2a74de197736f869ab76a8b24b5fbb824e9a8171"
       }
     },
     {
@@ -1183,6 +1391,18 @@
       "size": 1968719,
       "hashes": {
         "sha512": "82db5bce008212e5871f532015699adbffc1ff3cdf0d3eef520a327c0871863f54b9179a6118463dbace06bd526e737bca3bd58e988e45debbd8ae52aa6e5541"
+      }
+    },
+    {
+      "slug": "phantoms-in-the-end",
+      "project_id": "r69cUvfV",
+      "version": "1.0.2+26.2.X",
+      "version_id": "4bCdpEtQ",
+      "file": "phantoms-in-the-end-1.0.2+26.2.X.jar",
+      "url": "https://cdn.modrinth.com/data/r69cUvfV/versions/4bCdpEtQ/phantoms-in-the-end-1.0.2%2B26.2.X.jar",
+      "size": 25972,
+      "hashes": {
+        "sha512": "6623603614baa6e4996f8907c33b6921af7bf40b01a34e99d78b04631ee0add36534489db0e616e5521d48f635abbbd7db222a7bc32628945e2d5a9df122b3c0"
       }
     },
     {
@@ -1475,6 +1695,10 @@
       "size": 72568,
       "hashes": {
         "sha512": "279bc38f3ec17d06f2bbcd63c8d9e7f203890d0bdb419858266129c845644fb09a4bbab8838f2123a9bd4dc25a8a5588bc6b9728d87e12c6c271bb2154bc3dd0"
+      },
+      "patch": {
+        "path": "patches/silvers_strength-restrictions-season-5",
+        "base_sha512": "279bc38f3ec17d06f2bbcd63c8d9e7f203890d0bdb419858266129c845644fb09a4bbab8838f2123a9bd4dc25a8a5588bc6b9728d87e12c6c271bb2154bc3dd0"
       }
     },
     {
@@ -1487,6 +1711,10 @@
       "size": 868264,
       "hashes": {
         "sha512": "fef6abba1880cf2b5a34fc12d681fc11c0d50d8f034327a956a92262ea5b50a4eb56ed808b359728c50198591dfcc571908abf250ffa3f347fbe8a27b0fea0b5"
+      },
+      "patch": {
+        "path": "patches/silvers_strength-smp-season-5",
+        "base_sha512": "fef6abba1880cf2b5a34fc12d681fc11c0d50d8f034327a956a92262ea5b50a4eb56ed808b359728c50198591dfcc571908abf250ffa3f347fbe8a27b0fea0b5"
       }
     },
     {
@@ -1742,6 +1970,18 @@
       }
     },
     {
+      "slug": "trek",
+      "project_id": "h2jngREY",
+      "version": "B0.6.2+mod",
+      "version_id": "OYbFzi8L",
+      "file": "trek-B0.6.2.jar",
+      "url": "https://cdn.modrinth.com/data/h2jngREY/versions/OYbFzi8L/trek-B0.6.2.jar",
+      "size": 12461621,
+      "hashes": {
+        "sha512": "17f35802c2f8dbae026153718b6d40a2b4c3ae1558e6e87500ecffe859fe2e607e00b3be76b8c8cbee7da932a042ebe5a279df9929fb7b51000ea1af49fcc1c9"
+      }
+    },
+    {
       "slug": "underlay",
       "project_id": "iltKD9qU",
       "version": "1.0.5-hotfix.1",
@@ -1847,6 +2087,10 @@
       "size": 928269,
       "hashes": {
         "sha512": "895d0f29dadf18c0058c3b32a3e68fad9749ab971d08914362a73dc38f00740afb00796b1d122608b5d765924c86807534338219308fafd43e0459ce7ffbd226"
+      },
+      "patch": {
+        "path": "patches/warden-with-loot",
+        "base_sha512": "895d0f29dadf18c0058c3b32a3e68fad9749ab971d08914362a73dc38f00740afb00796b1d122608b5d765924c86807534338219308fafd43e0459ce7ffbd226"
       }
     },
     {
@@ -1886,5 +2130,18 @@
       }
     }
   ],
-  "datapacks": []
+  "datapacks": [
+    {
+      "slug": "dnt-enchant-disabler",
+      "project_id": "jr7t09l6",
+      "version": "4.4",
+      "version_id": "cLq5AoVs",
+      "file": "Enchant Disabler for DnT 5.3.0.zip",
+      "url": "https://cdn.modrinth.com/data/jr7t09l6/versions/cLq5AoVs/Enchant%20Disabler%20for%20DnT%205.3.0.zip",
+      "size": 61737,
+      "hashes": {
+        "sha512": "1dc3f753967b4c92d17f70dfb2b545e5944cb15951d908703cc71615dcd3367903dcb4b8367005ee18cb8fb2d8f1b45166bc606049e778ce1b387d43e75f44c9"
+      }
+    }
+  ]
 }

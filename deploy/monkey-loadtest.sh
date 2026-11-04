@@ -8,10 +8,10 @@
 #   journalctl -fu monkey-loadtest
 #
 # Environment (systemd-run --setenv=NAME=value):
-#   SCENARIOS    "still" (default, the same test as the 8700K table in docs/ADMIN.md); "still walk" adds a
+#   SCENARIOS    "still" (default, standing players); "still walk" adds a
 #                run with players walking through loaded terrain
-#   PLAYERS      fake players (default 25)     MINUTES   minutes measured per scenario (default 5)
-#   LOADTEST_PY  the loadtest.py to run (default: the deployed checkout's); it needs --spark
+#   PLAYERS      fake players (default 30)     MINUTES   minutes measured per scenario (default 5)
+#   LOADTEST_PY  the loadtest.py to run (default: the deployed checkout's); it needs --spark and --kit
 #   FORCE=1      run although Chunky is still pre-generating (the numbers then include it)
 # Settings and webhooks come from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV).
 #
@@ -44,7 +44,7 @@ DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 LOCK_FILE=${LOCK_FILE:-/tmp/monkey-deploy.lock}
 SCENARIOS=${SCENARIOS:-still}
-PLAYERS=${PLAYERS:-25}
+PLAYERS=${PLAYERS:-30}
 MINUTES=${MINUTES:-5}
 LOADTEST_PY=${LOADTEST_PY:-$REPO_DIR/tools/loadtest.py}
 FORCE=${FORCE:-}
@@ -73,8 +73,10 @@ case "$COPY_DIR" in /?*/?*) ;; *) die "COPY_DIR=$COPY_DIR is not an absolute pat
 case "$COPY_DIR/" in "$LIVE_DIR"/*) die "COPY_DIR=$COPY_DIR is inside the live folder" ;; esac
 case "$LIVE_DIR/" in "$COPY_DIR"/*) die "COPY_DIR=$COPY_DIR holds the live folder" ;; esac
 [ -f "$LOADTEST_PY" ] || die "no $LOADTEST_PY"
-grep -q -- '--spark' "$LOADTEST_PY" ||
-    die "$LOADTEST_PY predates --spark: copy tools/loadtest.py from a newer checkout here and set LOADTEST_PY"
+for flag in --spark --kit; do
+    grep -q -- "$flag" "$LOADTEST_PY" ||
+        die "$LOADTEST_PY predates $flag: copy tools/loadtest.py from a newer checkout here and set LOADTEST_PY"
+done
 
 # One at a time with deploys, the daily restart and off-site backups. Read-only: root may not open another
 # user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.
@@ -192,7 +194,7 @@ docker run --rm --name monkey-loadtest -v "$COPY_DIR:/monkey" -v "$work:/lt:ro" 
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends python3 >/dev/null
         for s in $SCENARIOS; do
-            python3 -B /lt/loadtest.py /monkey --carpet /lt/carpet.jar --players "$PLAYERS" --scenario "$s" \
+            python3 -B /lt/loadtest.py /monkey --carpet /lt/carpet.jar --players "$PLAYERS" --scenario "$s" --kit \
                 --minutes "$MINUTES" --memory-gb "$MEMORY_GB" --spark --name "$s-$PLAYERS"
         done'
 

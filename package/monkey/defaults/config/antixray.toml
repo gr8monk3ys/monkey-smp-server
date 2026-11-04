@@ -21,12 +21,12 @@ lavaObscures = false
 hiddenBlocks = ["#c:ores", "raw_copper_block", "raw_iron_block", "raw_gold_block", "!#antixray:hidden_only_ores"]
 replacementBlocks = ["#antixray:hidden_only_ores", "stone", "deepslate", "andesite", "calcite", "diorite", "dirt", "granite", "gravel", "sand", "tuff", "mossy_cobblestone", "obsidian", "clay", "infested_stone", "amethyst_block", "budding_amethyst", "chest", "sulfur", "cinnabar"]
 
-# Engine mode 1 swaps hidden blocks for netherrack (end stone in the End). Amethyst Nether's terrain
-# and bedrock roof reach y 160, not vanilla's 128.
+# Engine mode 1 swaps hidden blocks for netherrack (end stone in the End). The Nether is vanilla's
+# height: its bedrock roof ends at y 127.
 [the_nether]
 enabled = true
 engineMode = 1
-maxBlockHeight = 160
+maxBlockHeight = 128
 updateRadius = 2
 lavaObscures = true
 hiddenBlocks = ["ancient_debris", "nether_quartz_ore", "nether_gold_ore", "gold_block", "gilded_blackstone",

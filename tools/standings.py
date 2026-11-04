@@ -25,6 +25,14 @@ more kills; still tied, they share the rank. docs/SEASONS.md, "Weekly standings"
                                                          now (changes nothing)
     python tools/datapacks.py                            regenerates the monkey-standings data pack (with the others)
 
+board and close with --out FILE also write the website's standings file (deploy/monkey-standings.sh: STATUS_DIR's
+standings.json, next to status.json; https://map.monkeysmp.lscaturchio.xyz/standings.json, docs/LIVE.md, "The website's
+standings"), from what those runs already read. The file is public, so it holds faction names, ranks and points only:
+never a member, a player's name, a coordinate, a kill count or a claim. Many players are under 18 and faction names
+get no review, so it is built from an allow-list (public_rows), and STATE/hidden-names.txt lets staff hide a name. It
+is never in the way of the board or the close: a write that fails is logged and they go on. Nothing is written before
+the launch (#launched rw.day), so test play never shows.
+
 WORLD is the live world folder (server/world). Everything is read from the files the server saves (every 5
 minutes, and when it stops), never from RCON, which can't list parties or scores:
   data/openpartiesandclaims/parties/*.nbt          each party: its owner and members
@@ -49,6 +57,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import unicodedata
 import urllib.error
@@ -57,6 +66,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import wanted
+from status import CLOSE_TIME, SEASON, iso
+from status import write as write_public
 
 import diplomacy
 import outposts
@@ -444,6 +455,130 @@ def post_discord(url: str, content: str, urlopen=urllib.request.urlopen) -> str 
     return None
 
 
+# ---------------------------------------------------------------- the website's file
+
+
+PUBLIC_VERSION = 1
+PUBLIC_NAME_LIMIT = 32            # characters of a faction's name in the public file
+HIDDEN_NAMES = "hidden-names.txt"  # in the state folder: names staff hide, one per line
+AUTO_NAME = "'s faction"          # what read_parties calls a party with no name: it holds its owner's name
+_CODE = re.compile("§.?", re.DOTALL)   # Minecraft's formatting: a section sign and the character after it
+
+
+def plain_name(value) -> str:
+    """A name with no formatting, no control or invisible characters (category C: they could reorder or hide the
+    text around them) and single spaces. Those characters go first, so one can't split a code from its letter.
+    "" for what isn't a string."""
+    if not isinstance(value, str):
+        return ""
+    return " ".join(_CODE.sub("", "".join(c for c in value if not unicodedata.category(c).startswith("C"))).split())
+
+
+def public_name(value) -> str | None:
+    """A player-chosen name as it may show, at most PUBLIC_NAME_LIMIT characters; None if nothing is left of it."""
+    return plain_name(value)[:PUBLIC_NAME_LIMIT].rstrip() or None
+
+
+def name_key(text: str) -> str:
+    """What hidden names and players' names are compared on: letters and digits, no case, no accents, so colour codes,
+    capitals, spacing and symbols can't dodge a match. Hiding one name too many costs a "A faction"; a name of symbols
+    alone is compared whole."""
+    return norm(unicodedata.normalize("NFKD", text)) or text.casefold()
+
+
+def hidden_names(state: Path) -> frozenset[str]:
+    """The keys of STATE/hidden-names.txt. Compared as public_name leaves them, so a name works whether staff copy
+    it from the page (cut short, no colours) or from the game. No file: none hidden. A file that can't be read
+    raises: no write beats showing a name it may hide."""
+    try:
+        text = (state / HIDDEN_NAMES).read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        return frozenset()
+    return frozenset(name_key(name) for name in map(public_name, text.splitlines()) if name)
+
+
+def shown_name(row: dict, hidden: frozenset[str], people: frozenset[str]) -> str | None:
+    """A row's name for the public file, or None: no usable name, hidden by staff, or a player's name. That is the
+    name read_parties gives a party with none ("Alex's faction") or a faction or Cup entry named exactly as a player
+    is, whether a member (`row`'s own) or anyone in usercache."""
+    name = public_name(row.get("name"))
+    if name is None or name_key(name) in hidden:
+        return None
+    whole = plain_name(row.get("name"))
+    owner = whole[:-len(AUTO_NAME)] if whole.casefold().endswith(AUTO_NAME) else whole
+    members = row.get("members")
+    named = {name_key(m) for m in members if isinstance(m, str)} if isinstance(members, list) else set()
+    return None if name_key(owner) in people | named else name
+
+
+def public_rows(rows, hidden: frozenset[str], people: frozenset[str]) -> list[dict]:
+    """The allow-list: rank, name and points, and nothing else of a row gets out. A row without a number for its rank
+    and points (a closed week's file edited by hand) is left out."""
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        place, points = row.get("rank"), row.get("points")
+        if type(place) is int and type(points) is int:   # not bool, which is an int to isinstance
+            out.append({"rank": place, "name": shown_name(row, hidden, people), "points": points})
+    return out
+
+
+def public_last_week(state: Path, hidden: frozenset[str], people: frozenset[str]) -> dict | None:
+    """The newest closed week, if it closed after the launch (test play's is no last week), with today's hidden names:
+    hiding a name fixes old weeks as well. None before a first close, and for a file that can't be read."""
+    try:
+        week = last_launched(state)
+        if week is None:
+            return None
+        closed = dt.datetime.fromisoformat(week["end"])
+        if closed.tzinfo is None:
+            raise ValueError(f"no time zone in {week['end']}")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+        warn(f"last week's table is left out of the public standings: {type(e).__name__}: {e}")
+        return None
+    return {"closed": iso(closed), "factions": public_rows(week.get("rows"), hidden, people)}
+
+
+def next_close(now: dt.datetime, begun: dt.datetime | None = None) -> dt.datetime:
+    """When the timer next ends the week, in UTC: the next Sunday at 7 PM Pacific (monkey-standings.timer), as the
+    clock there says it, whichever side of a daylight-saving change it falls on. A week begun under MIN_WEEK_DAYS
+    before a Sunday isn't closed that Sunday (close), so its close is the one after."""
+    day = now.astimezone(season_calendar.PACIFIC).date()
+    day += dt.timedelta(days=(6 - day.weekday()) % 7)
+    while True:
+        when = dt.datetime.combine(day, CLOSE_TIME, season_calendar.PACIFIC).astimezone(season_calendar.UTC)
+        if when > now and (begun is None or when - begun >= dt.timedelta(days=MIN_WEEK_DAYS)):
+            return when
+        day += dt.timedelta(days=7)
+
+
+def public_standings(world: Path, data: World, week: dict | None, state: Path, now: dt.datetime) -> dict:
+    """The file's contents (the contract with the site's standings page): this week so far and last week's table."""
+    hidden = hidden_names(state)
+    people = frozenset(name_key(n) for n in usernames(world).values() if isinstance(n, str))
+    return {"version": PUBLIC_VERSION, "checked": iso(now), "season": SEASON,
+            "week_closes": iso(next_close(now, since(week))),
+            "factions": public_rows([asdict(r) for r in table(data, week)], hidden, people),
+            "last_week": public_last_week(state, hidden, people)}
+
+
+def publish(out: Path | None, world: Path, data: World, week: dict | None, state: Path, now: dt.datetime) -> None:
+    """Writes the website's file, unless the world hasn't launched. Whatever goes wrong is logged and goes no
+    further: the board and the close never depend on it. The last good file then stays up, `checked` showing its age."""
+    if out is None:
+        return
+    if not recap.launched(data):
+        print("no public standings before the launch (#launched rw.day)")
+        return
+    try:
+        write_public(out, public_standings(world, data, week, state, now))
+    except Exception as e:   # anything at all: this is never worth a missed board or close
+        print(f"could not write the public standings to {out}: {type(e).__name__}: {e}", file=sys.stderr)
+    else:
+        print(f"public standings written ({out})")
+
+
 # ---------------------------------------------------------------- the commands
 
 
@@ -501,10 +636,11 @@ def claimed_changes(data: World, names: dict[str, str]) -> list[dict]:
     return out
 
 
-def board(world: Path, state: Path, rcon, now: dt.datetime) -> int:
+def board(world: Path, state: Path, rcon, now: dt.datetime, out: Path | None = None) -> int:
     week = read_json(week_file(state))
     last_path = latest_week(state)
     data = read_world(world)
+    publish(out, world, data, week, state, now)   # first: it needs no RCON, so a stopped server still gets it
     status = 0
     try:   # never in the board's way: the board goes up whatever happens here
         sent = sync_factions(rcon, world, data)
@@ -569,10 +705,11 @@ def preview(world: Path, state: Path, now: dt.datetime) -> int:
     return 0
 
 
-def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=urllib.request.urlopen) -> int:
+def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=urllib.request.urlopen,
+          out: Path | None = None) -> int:
     """Ends the week (unless it began under MIN_WEEK_DAYS ago, so a re-run or a retry closes nothing twice), then
     does whatever the newest closed week still lacks: the board, the chat announcement, the Discord post (only
-    for a week that closed after the launch)."""
+    for a week that closed after the launch). The website's file goes out once the week is closed, on every run."""
     week = read_json(week_file(state))
     start_ = since(week)
     data = read_world(world)
@@ -589,6 +726,7 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     else:
         print(f"this week began {clock(start_)}, under {MIN_WEEK_DAYS} days ago: not closing it (a re-run or a "
               "retry); finishing the last closed week, if anything is left")
+    publish(out, world, data, week, state, now)
     path = latest_week(state)
     last = read_json(path) if path else None
     if path is None or last is None:
@@ -813,6 +951,8 @@ def main(argv=None) -> int:
                        help="where the week's snapshot and the closed weeks are kept")
         if name in ("board", "close"):
             p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+            p.add_argument("--out", type=Path, help="also write the website's standings file here "
+                                                    "(/srv/monkey/status/standings.json)")
     args = ap.parse_args(argv)
     now = season_calendar.now()
     if args.command == "show":
@@ -823,8 +963,8 @@ def main(argv=None) -> int:
         return preview(args.world, args.state, now)
     rcon = Docker(args.docker)
     if args.command == "board":
-        return board(args.world, args.state, rcon, now)
-    return close(args.world, args.state, rcon, now, webhook())
+        return board(args.world, args.state, rcon, now, args.out)
+    return close(args.world, args.state, rcon, now, webhook(), out=args.out)
 
 
 if __name__ == "__main__":

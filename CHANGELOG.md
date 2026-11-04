@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+For 3.2.0. Nothing changes in game, and players install nothing. One step by hand on the live server: the new
+Caddyfile (docs/LIVE.md, "The website's standings").
+
+### Added
+
+- Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
+  and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
+  last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in
+  game. Nothing is written before the launch, and a failed write never stops the board or the close.
+- `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
+  touching the game.
+
+### Fixed
+
+- The hosting smoke test could fail a clean shutdown: stopping right after `Done` landed in the post-start save, and
+  the saved line never printed. It now waits 20 seconds first, and a clean container exit counts as evidence too.
+
 ## [3.1.1] - 2026-11-04
 
 Mace Limiter, the one jar the shared folder gained after 3.1.0. It runs on the server only, so players keep the 3.1.0

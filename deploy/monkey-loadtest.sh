@@ -73,8 +73,10 @@ case "$COPY_DIR" in /?*/?*) ;; *) die "COPY_DIR=$COPY_DIR is not an absolute pat
 case "$COPY_DIR/" in "$LIVE_DIR"/*) die "COPY_DIR=$COPY_DIR is inside the live folder" ;; esac
 case "$LIVE_DIR/" in "$COPY_DIR"/*) die "COPY_DIR=$COPY_DIR holds the live folder" ;; esac
 [ -f "$LOADTEST_PY" ] || die "no $LOADTEST_PY"
-grep -q -- '--spark' "$LOADTEST_PY" ||
-    die "$LOADTEST_PY predates --spark: copy tools/loadtest.py from a newer checkout here and set LOADTEST_PY"
+for flag in --spark --kit; do
+    grep -q -- "$flag" "$LOADTEST_PY" ||
+        die "$LOADTEST_PY predates $flag: copy tools/loadtest.py from a newer checkout here and set LOADTEST_PY"
+done
 
 # One at a time with deploys, the daily restart and off-site backups. Read-only: root may not open another
 # user's file in /tmp for writing (fs.protected_regular), and flock works on any open file.

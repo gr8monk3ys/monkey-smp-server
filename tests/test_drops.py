@@ -35,7 +35,7 @@ def fn(path: str) -> str:
 
 
 
-def make_world(root, size=2500.0, target=None, claims=None):
+def make_world(root, size=5000.0, target=None, claims=None):
     fake = FakeWorld(root / "world").border(saved_world.OVERWORLD, *SPAWN, size, target)
     (fake.path / "data" / "openpartiesandclaims" / "player-claims").mkdir(parents=True)
     for i, chunks in enumerate(claims or []):
@@ -90,14 +90,14 @@ def test_a_slot_is_ten_minutes():
 def test_the_ring_follows_the_border_acts():
     def ring(size):
         return drops.ring(map_border.Border(*SPAWN, size))
-    assert ring(2500) == (drops.SPAWN_CLEAR, 1250 - drops.BORDER_MARGIN)   # before the first act: past spawn
-    assert ring(4000) == (1250, 2000 - drops.BORDER_MARGIN)                # act 2: the new ring only
-    assert ring(6000) == (2000, 3000 - drops.BORDER_MARGIN)
-    assert ring(5000) == (2000, 2500 - drops.BORDER_MARGIN)                # between acts: past the last one
+    assert ring(5000) == (drops.SPAWN_CLEAR, 2500 - drops.BORDER_MARGIN)   # before the first act: past spawn
+    assert ring(5500) == (2500, 2750 - drops.BORDER_MARGIN)                # act 2: the new ring only
+    assert ring(6000) == (2750, 3000 - drops.BORDER_MARGIN)
+    assert ring(5800) == (2750, 2900 - drops.BORDER_MARGIN)                # between acts: past the last one
 
 
 def test_reads_the_border_and_every_overworld_claim(world):
-    assert drops.border_now(world) == map_border.Border(*SPAWN, 2500)
+    assert drops.border_now(world) == map_border.Border(*SPAWN, 5000)
     assert drops.claimed_chunks(world) == set(BASE) | set(WEST) | {(-5, 26)}
 
 
@@ -112,16 +112,16 @@ def test_a_bad_claim_outside_the_overworld_is_not_read(world):
 
 def test_no_claims_folder_is_no_claims(tmp_path):
     # Before anyone claims (and before Open Parties and Claims first saves), drops still land.
-    folder = FakeWorld(tmp_path / "world").border(saved_world.OVERWORLD, *SPAWN, 2500.0).path
+    folder = FakeWorld(tmp_path / "world").border(saved_world.OVERWORLD, *SPAWN, 5000.0).path
     assert drops.claimed_chunks(folder) == set()
     assert len(drops.spots(folder, "x")) == drops.SPOTS
 
 
 def test_a_moving_border_counts_at_its_smaller_size(tmp_path):
-    growing = make_world(tmp_path / "a", size=2500.0, target=4000.0)
-    assert drops.border_now(growing).size == 2500
-    shrinking = make_world(tmp_path / "b", size=4000.0, target=2500.0)
-    assert drops.border_now(shrinking).size == 2500
+    growing = make_world(tmp_path / "a", size=5000.0, target=5500.0)
+    assert drops.border_now(growing).size == 5000
+    shrinking = make_world(tmp_path / "b", size=5500.0, target=5000.0)
+    assert drops.border_now(shrinking).size == 5000
 
 
 def test_no_border_no_spots(tmp_path):
@@ -160,8 +160,8 @@ def test_a_claim_next_to_a_spot_moves_it(tmp_path):
 
 
 def test_a_world_with_everything_claimed_has_no_spots(tmp_path):
-    lo, hi = int((SPAWN[0] - 1250) // 16), int((SPAWN[0] + 1250) // 16)
-    lo_z, hi_z = int((SPAWN[1] - 1250) // 16), int((SPAWN[1] + 1250) // 16)
+    lo, hi = int((SPAWN[0] - 2500) // 16), int((SPAWN[0] + 2500) // 16)
+    lo_z, hi_z = int((SPAWN[1] - 2500) // 16), int((SPAWN[1] + 2500) // 16)
     every = [(x, z) for x in range(lo, hi + 1, drops.CLAIM_GAP) for z in range(lo_z, hi_z + 1, drops.CLAIM_GAP)]
     assert drops.spots(make_world(tmp_path, claims=[{saved_world.OVERWORLD: every}]), "s") == []
 

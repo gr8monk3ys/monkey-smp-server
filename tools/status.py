@@ -12,7 +12,7 @@ the published schedule only: never a player's name, an address or anything from 
     {"version": 1, "checked": "2026-11-15T02:00:00Z", "season": 1, "phase": "live", "opens": "2026-11-08T01:00:00Z",
      "online": true, "players": 3,
      "next": {"what": "Faction Raid I", "at": "2026-11-15T02:00:00Z"},
-     "border": {"size": 2500, "growing_to": null, "next": {"size": 4000, "at": "2026-11-22T02:00:00Z"}}}
+     "border": {"size": 5000, "growing_to": null, "next": {"size": 5500, "at": "2026-11-22T02:00:00Z"}}}
 
 - phase: "preseason" before the launch, "live" from it, "offseason" once the season's last week is over (week 12,
   the locked world). players is null unless the season is live and the server answered `list`: before the launch
@@ -49,7 +49,7 @@ LAST_WEEK = 11                # the finale; the world locks after it, and week 1
 SCHEDULE: tuple[tuple[int, str, int | None], ...] = (
     (0, "Season I opens", None),
     (1, "Faction Raid I", None),
-    (2, "The border breaks", 4000),
+    (2, "The border breaks", 5500),
     (3, "Dragon Night", None),
     (4, "Faction Raid II", None),
     (5, "Netherite age", None),

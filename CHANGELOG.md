@@ -13,6 +13,9 @@ doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: t
   Soaring and Voyager structures, Mineshafts Reimagined and Temples Reimagined, with Moog's Structure Lib; Bigger Better
   End Cities, Trek, Phantoms in the End and Iris; and ClearWaterLava, optional on the client. Server: 170 mods, up from
   151. Client pack: 178 mods and 22 resource packs, about 383 MB, up from 310 MB.
+- Rule 25: Season I's border starts 5000 wide, as the owners' group asked, not 2500. The acts become 5500 on 21 November
+  and 6000 on 26 December, so the largest border, the pre-generation radius and the finale don't change. The pack's
+  Nether default is 625 wide; Season I's stays 2500 by hand.
 - Rule B18 is back: Dungeons and Taverns' enchantments are event rewards only, and
   `config/enchantmentdisabler/config.toml` keeps all 17 out of the table, loot and trades.
 - The Enchant Disabler for Dungeons and Taverns data pack (4.4), pinned so every new world has it from its first start.

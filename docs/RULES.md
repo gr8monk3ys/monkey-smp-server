@@ -70,7 +70,7 @@ vanilla+ quality-of-life mods that support the gameplay and performance. We hope
     - When the hour is up, PvP and **only** the Nether open.
 24. Until notified, players **can't** craft or use Netherite armor, but **can** use Netherite tools and
     weapons.
-25. A world border is set at 2500 x 2500.
+25. A world border is set at 5000 x 5000.
     - Leaving or breaking the world border is prohibited.
     - The border is expected to grow as the server progresses or as more players join.
     - From Season II, on the season's finale evening (its last week) the border shrinks to 256 x 256 around the
@@ -277,12 +277,12 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   and horse armor are untouched. To lift the rule: `datapack disable "file/monkey-no-netherite-armor"`.
   The world remembers that across restarts and updates. `datapack enable` turns the rule back on.
 - **Rule 25, the border.** The first time the server starts with the pack, the border is set to
-  2500 x 2500, centred on spawn. On Minecraft 26.2 every dimension has its own border, so the pack also
-  gives the Nether the matching one at its 1:8 scale (312.5 wide, centred on spawn / 8). The End's is left
-  alone. After that the borders are yours to grow, e.g. `worldborder set 4000 12000` (12000 ticks, 10 minutes,
-  to widen) and `execute in minecraft:the_nether run worldborder set 500 12000`. The pack never touches them again.
+  5000 x 5000, centred on spawn. On Minecraft 26.2 every dimension has its own border, so the pack also
+  gives the Nether the matching one at its 1:8 scale (625 wide, centred on spawn / 8). The End's is left
+  alone. After that the borders are yours to grow, e.g. `worldborder set 5500 12000` (12000 ticks, 10 minutes,
+  to widen) and `execute in minecraft:the_nether run worldborder set 687.5 12000`. The pack never touches them again.
   Season I's world is the exception: staff set its Nether to 2500 by hand (docs/LIVE.md, "3.0.0"), so the border acts
-  leave the Nether alone. `worldborder set 500` there would shrink it.
+  leave the Nether alone. `worldborder set 687.5` there would shrink it.
 - **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here
   before the pack was installed (Minecraft's statistics show they've left the game before, or played over a
@@ -322,6 +322,8 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   block for an ore that touches no air, water or lava. In the Overworld every such spot shows a random ore, so
   x-ray sees noise; in the Nether and the End hidden ores show as netherrack or end stone. X-ray clients and
   packs (B15), the cushion glitch (B17), F3+A and reloading shaders (B19) can only show what the server sent.
+  The client pack's own mods count as approved under B15, ClearWaterLava and No Fog included: they're ticked by
+  default, so everyone has them, and the server can't tell who keeps them.
   The rest of B15 (hacked clients, duping, CIT packs, health indicators) is still on admins, with BanHammer,
   Vanish, InvView and Ledger ("Moderation" in `docs/ADMIN.md`).
 - **B18, Nova Structures' books** (Enchantment Disabler, `defaults/config/enchantmentdisabler/config.toml`).

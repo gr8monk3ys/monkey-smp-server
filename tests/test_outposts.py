@@ -38,7 +38,7 @@ def put_storage(world, contents: dict) -> None:
     path.write_bytes(nbt({"DataVersion": 5023, "data": {"contents": contents}}, gzipped=True))
 
 
-def make_world(root, size=2500.0, target=None, claims=(), scores=(LAUNCHED,), spots=None):
+def make_world(root, size=5000.0, target=None, claims=(), scores=(LAUNCHED,), spots=None):
     fake = FakeWorld(root / "world").border(saved_world.OVERWORLD, *SPAWN, size, target)
     (fake.path / "data" / "openpartiesandclaims" / "player-claims").mkdir(parents=True)
     for i, chunks in enumerate(claims):
@@ -69,7 +69,7 @@ def test_nothing_before_the_launch_while_locked_or_while_the_border_grows(tmp_pa
     assert outposts.plan(make_world(tmp_path / "a", scores=()), NOON) == ([], "the season hasn't launched")
     locked = make_world(tmp_path / "b", scores=(LAUNCHED, ("ev.state", "#season_locked", 1)))
     assert outposts.plan(locked, NOON) == ([], "the season is locked")
-    growing = make_world(tmp_path / "c", size=2500.0, target=4000.0)
+    growing = make_world(tmp_path / "c", size=5000.0, target=5500.0)
     assert outposts.plan(growing, NOON)[0] == []
     assert outposts.commands(growing, NOON) == []
 
@@ -77,10 +77,10 @@ def test_nothing_before_the_launch_while_locked_or_while_the_border_grows(tmp_pa
 def test_the_first_run_places_four_outposts_one_in_each_quarter_of_the_ring(tmp_path):
     world = make_world(tmp_path, claims=[BASE])
     out, why = outposts.plan(world, NOON)
-    assert why == "" and len(out) == 1 and survey_of(out) == "function monkey:outposts/survey {ring:2500,fresh:1}"
+    assert why == "" and len(out) == 1 and survey_of(out) == "function monkey:outposts/survey {ring:5000,fresh:1}"
     assert all(c.isascii() and len(c.encode()) <= rcon.LIMIT for c in out)
     found = cands(out)
-    inner, outer = drops.ring(map_border.Border(*SPAWN, 2500.0))
+    inner, outer = drops.ring(map_border.Border(*SPAWN, 5000.0))
     claimed = {c for c in BASE}
     assert [c["i"] for c in found[:4]] == [1, 2, 3, 4]       # the first spot for each outpost first
     for c in found:
@@ -107,7 +107,7 @@ def test_the_spots_come_from_drops_sampler_and_claim_check(monkeypatch):
         yield (0, -40), 8, -632
     monkeypatch.setattr(drops, "ring_chunks", ring_chunks)
     monkeypatch.setattr(drops, "near_claim", lambda chunk, claims, gap=drops.CLAIM_GAP: False)
-    border = map_border.Border(*SPAWN, 2500.0)
+    border = map_border.Border(*SPAWN, 5000.0)
     assert outposts.candidates(border, set(), "s", [1, 2]) == [{"i": 1, "x": 8, "z": -632}]
     assert drawn == [border] and not hasattr(outposts, "near_claim") and not hasattr(outposts, "DRAWS")
 
@@ -130,7 +130,7 @@ def placed():
 
 
 def test_with_every_outpost_placed_for_this_border_nothing_is_sent(tmp_path):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     assert outposts.plan(world, NOON) == ([], "every outpost has its spot")
 
 
@@ -138,22 +138,22 @@ def test_a_claim_close_to_one_outpost_moves_only_that_one_and_a_missing_one_is_t
     spots = placed()
     del spots[4]
     near_east = [(744 // 16 + 2, 424 // 16)]                 # 2 chunks from the East outpost
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=spots, claims=[near_east])
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=spots, claims=[near_east])
     out, _ = outposts.plan(world, NOON)
-    assert survey_of(out) == "function monkey:outposts/survey {ring:2500,fresh:0}"
+    assert survey_of(out) == "function monkey:outposts/survey {ring:5000,fresh:0}"
     assert {c["i"] for c in cands(out)} == {2, 4}
 
 
 def test_a_finished_border_act_places_them_all_again(tmp_path):
-    world = make_world(tmp_path, size=4000.0, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    world = make_world(tmp_path, size=5500.0, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     out, _ = outposts.plan(world, NOON)
-    assert survey_of(out) == "function monkey:outposts/survey {ring:4000,fresh:1}"
-    inner, _ = drops.ring(map_border.Border(*SPAWN, 4000.0))
-    assert inner == 1250 and all(max(abs(c["x"] - SPAWN[0]), abs(c["z"] - SPAWN[1])) >= inner for c in cands(out))
+    assert survey_of(out) == "function monkey:outposts/survey {ring:5500,fresh:1}"
+    inner, _ = drops.ring(map_border.Border(*SPAWN, 5500.0))
+    assert inner == 2500 and all(max(abs(c["x"] - SPAWN[0]), abs(c["z"] - SPAWN[1])) >= inner for c in cands(out))
 
 
 def test_the_survey_answer_is_logged_in_words():
-    survey = "function monkey:outposts/survey {ring:2500,fresh:1,cands:[{i:1,x:8,z:-632}]}"
+    survey = "function monkey:outposts/survey {ring:5000,fresh:1,cands:[{i:1,x:8,z:-632}]}"
     assert outposts.meaning(survey, "Function monkey:outposts/survey returned 13") == (
         "function monkey:outposts/survey: already placed for this border")
     assert outposts.meaning(survey, "Function monkey:outposts/survey returned 1").endswith("checking the ground at "
@@ -186,7 +186,7 @@ def map_conf(world):
 
 
 def test_send_writes_the_map_marker_set_once_then_only_the_survey(tmp_path):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     maps = map_conf(world)
     nether = (maps / "world_the_nether.conf").read_text(encoding="utf-8")
     assert outposts.commands(world, NOON) == ["bluemap reload"]
@@ -203,7 +203,7 @@ def test_send_writes_the_map_marker_set_once_then_only_the_survey(tmp_path):
 
 
 def test_a_failed_map_write_sends_no_reload(tmp_path, monkeypatch):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     maps = map_conf(world)
     before = (maps / "world.conf").read_text(encoding="utf-8")
 
@@ -217,7 +217,7 @@ def test_a_failed_map_write_sends_no_reload(tmp_path, monkeypatch):
 
 
 def test_a_map_config_that_cant_be_written_is_warned_about_and_never_reloads(tmp_path):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed())
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     conf = map_conf(world) / "world.conf"
     conf.chmod(0o444)
     try:
@@ -396,7 +396,7 @@ def test_hours_count_only_while_a_rival_is_online_and_a_gone_faction_keeps_nothi
 
 
 def test_a_gone_factions_minutes_are_reset_by_the_hourly_run(tmp_path):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500), ("op.min", "#f1", 90),
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000), ("op.min", "#f1", 90),
                                          ("op.min", "#f2", 30), ("op.min", "#f12", 5)), spots=placed())
     put_storage(world, {"factions": {"names": {"f1": {"text": "Red Monkeys"}}},
                         "outposts": {"at": {f"o{i}": s for i, s in placed().items()}}})
@@ -499,7 +499,7 @@ def test_the_script_is_a_timed_job_and_the_timer_runs_hourly():
 
 
 def test_status_runs_on_a_fresh_world(tmp_path, capsys):
-    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 2500)), spots=placed(), claims=[BASE])
+    world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed(), claims=[BASE])
     assert outposts.main(["status", str(world), "--at", "2026-11-22T20:00:00Z"]) == 0
     out = capsys.readouterr().out
     assert "East: 744 64 424, held by nobody" in out and "every outpost has its spot" in out

@@ -11,7 +11,7 @@ export const rules: Tablet[] = [
     text: <>Launch: <LaunchTime template="{date} at {pacific} ({eastern})" />, everyone let in at once. For the first
       hour, PvP, the Nether and the End are closed; then PvP and only the Nether open, and the End opens when we
       announce it. No Netherite armor until we say so: the smithing table won&apos;t make it, and armor you find
-      comes off at your feet (Netherite tools and weapons are fine). The world border is 2500 &times; 2500 around
+      comes off at your feet (Netherite tools and weapons are fine). The world border is 5000 &times; 5000 around
       spawn and grows as the server does.</>,
   },
   {

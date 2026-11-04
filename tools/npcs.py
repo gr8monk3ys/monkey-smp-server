@@ -60,12 +60,12 @@ SECURITY = {
 # event moves, change it here, regenerate, release, and place the Crier again (docs/ADMIN.md, "Spawn NPCs").
 EVENTS = {
     1: "Faction Raid I",
-    2: "the border breaks, from 2500 to 4000 blocks",
+    2: "the border breaks, from 5000 to 5500 blocks",
     3: "Dragon Night: the End opens, then 90 minutes of Anarchy",
     4: "Faction Raid II",
     5: "the Netherite age begins, with a small event",
     6: "Arena Glory I, for Midwinter",
-    7: "the border breaks again, from 4000 to 6000 blocks",
+    7: "the border breaks again, from 5500 to 6000 blocks",
     8: "Build Battle II",
     9: "Arena Glory II",
     10: "Faction Raid III",

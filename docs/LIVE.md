@@ -60,8 +60,8 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
    To keep an existing world, copy its `server` folder into `/srv/monkey/MonkeySMP-Server/` now. Run the
    script again: it downloads about 500 MB, starts the server and records the deployed commit.
 6. **Pre-generate the world** before anyone joins: exploring new land costs far more tick time than
-   anything else. Leave the border alone: the `monkey-rules` pack sets Season I's starting border (2500
-   wide, 312.5 in the Nether, centred on spawn) and the border acts in docs/SEASONS.md grow it by hand.
+   anything else. Leave the border alone: the `monkey-rules` pack sets Season I's starting border (5000
+   wide, 625 in the Nether, centred on spawn) and the border acts in docs/SEASONS.md grow it by hand.
    Generate out to the season's largest border (6000) plus the view distance. In the console:
    `chunky worldborder` (centres Chunky on the border, not on 0,0), `chunky radius 3200` and `chunky start`
    (hours). The Nether is 1/8 the size: `chunky world minecraft:the_nether`, `chunky worldborder`,
@@ -107,7 +107,7 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | Console | `cd /srv/monkey/MonkeySMP-Server/docker && docker compose attach monkey` (leave with Ctrl+P, Ctrl+Q) |
 | A command | `docker compose exec monkey monkey rcon "say hi"` |
 | Let a player in by hand | `docker compose exec monkey monkey add-player NAME` |
-| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 4000 12000"` and `... "execute in minecraft:the_nether run worldborder set 500 12000"` (the time is in ticks: 12000 is 10 minutes), then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
+| Grow the border (a border act) | `docker compose exec monkey monkey rcon "worldborder set 5500 12000"` and `... "execute in minecraft:the_nether run worldborder set 687.5 12000"` (the time is in ticks: 12000 is 10 minutes), then fit the map to it: docs/ADMIN.md, "The live map". From Season II the border timer does all of it (below) |
 | Store or staff grants (wardrobe) | `docker compose exec monkey monkey rcon "scoreboard players set NAME rw.tier 2"`; the full list is in docs/RETENTION.md |
 | Retention numbers | `python3 /srv/monkey/repo/tools/retention.py /srv/monkey/MonkeySMP-Server/server/logs` |
 | Joins per join address | `python3 /srv/monkey/repo/tools/join_addresses.py /srv/monkey/MonkeySMP-Server/server/logs` (docs/PROMOTION.md) |
@@ -196,7 +196,7 @@ section with an `an:` biome, which falls back to a default. It looks alarming an
 the disable-then-enable steps in its FAQ aren't needed. Check with `monkey rcon "datapack list enabled"`.
 
 The launch world then follows the next section. The new jars change one number in its steps: the seed now has a fortress
-about 410 blocks from the Nether's centre and a bastion about 840, both still outside the pack's 312.5, so the Nether's
+about 410 blocks from the Nether's centre and a bastion about 840, both still outside the pack's 625 (312 either way), so the Nether's
 border stays 2500 (the 440 and 1500 below are the 3.0.0 terrain). The spawn area, monuments and NPC spots still need the
 walk, on land this release changed again.
 
@@ -231,7 +231,7 @@ Changes to the steps below:
 - **Step 5:** carry from that folder, still `--season 1`. The wardrobe scores, tiers and grants come across, and
   so do `rw.months` and tier from any staff test purchase. Skip the step if the owners want those gone.
 - **Step 6: the seed is the owners' call.** The land differs either way, because the terrain mods left.
-- **After the first start: the Nether's border goes to 2500.** On this seed nothing is inside the pack's 312.5: the
+- **After the first start: the Nether's border goes to 2500.** On this seed nothing is inside the pack's 625 (312 either way): the
   nearest fortress is about 440 blocks from the Nether's centre and the nearest bastion about 1500. Without a
   fortress there are no blaze rods, so no eyes of ender for Dragon Night. So on every copy of this seed, the fresh
   launch world included: `monkey rcon "execute in minecraft:the_nether run worldborder set 2500"`, before the map
@@ -293,7 +293,7 @@ As `monkey` (`sudo -iu monkey`), in `/srv/monkey/MonkeySMP-Server/docker` (`monk
    new structures. A new seed is the owners' call; it stays as secret as the old one (docs/ADMIN.md, "World
    generation").
 7. Start: `docker compose up -d`. The installer adds the data packs, the rules pack sets the starting border
-   (2500 wide, 312.5 in the Nether) and keeps the End closed, and the console says "Carried N players' wardrobe
+   (5000 wide, 625 in the Nether) and keeps the End closed, and the console says "Carried N players' wardrobe
    scores and K teams into season 1."
 8. Check:
 
@@ -302,7 +302,7 @@ As `monkey` (`sudo -iu monkey`), in `/srv/monkey/MonkeySMP-Server/docker` (`monk
    monkey rcon "scoreboard players get #season rw.day"      # 1
    monkey rcon "scoreboard players get NAME rw.tier"        # a supporter: the same as in the old world
    monkey rcon "gamerule keep_inventory"                    # false
-   monkey rcon "worldborder get"                            # 2500
+   monkey rcon "worldborder get"                            # 5000
    grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l   # 17 (rule B18)
    grep -E '^(reset_time_value|reset_time_unit|only_reset_when_empty)=' ../server/lootrestock.properties   # 7, days, true
    ```

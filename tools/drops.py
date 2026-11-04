@@ -72,7 +72,7 @@ DESPAWN = 20 * 60           # the chests go this long after landing
 WARN_AT = (300, 60)         # seconds left in the countdown when chat is reminded
 METEOR_COUNTDOWN = 5 * 60   # a Meteor (an omen, tools/omens.py) lands this soon after it is announced, in 1 chest
 
-ACTS = (2500, 4000, 6000)   # the border's sizes through a season (docs/SEASONS.md, the acts)
+ACTS = (5000, 5500, 6000)   # the border's sizes through a season (docs/SEASONS.md, the acts)
 SPAWN_CLEAR = 400           # no drop this close to spawn (the border's centre), in blocks either way
 BORDER_MARGIN = 64          # nor this close to the border
 CLAIM_GAP = 6               # chunks between a drop's chunk and the nearest claimed chunk (96 blocks and more)

@@ -27,8 +27,8 @@ def test_the_site_check_builds_the_site_then_checks_its_pages():
     site = next(c for c in checks.CHECKS if c.name == "site")
     assert (site.needs, site.cwd) == ("bun", "site")
     commands = site.command(REPO.root)
-    assert commands[:4] == [["bun", "install", "--frozen-lockfile"], ["bun", "run", "lint"],
-                            ["bun", "run", "typecheck"], ["bun", "run", "build"]]
+    assert commands[:5] == [["bun", "install", "--frozen-lockfile"], ["bun", "run", "lint"],
+                            ["bun", "run", "typecheck"], ["bun", "run", "test"], ["bun", "run", "build"]]
     assert commands[-1][-4:] == ["../tools/site_links.py", "--check", "--built", "out"]
 
 

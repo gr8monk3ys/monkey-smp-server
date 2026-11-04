@@ -12,6 +12,11 @@ export type Config = {
   MAP_URL: string;
   /** The server's status file (tools/status.py), served beside the live map. Empty: the site shows no status. */
   STATUS_URL: string;
+  /** The weekly standings file (tools/standings.py's public copy), served beside status.json. Empty: the page
+   * shows no standings. */
+  STANDINGS_URL: string;
+  /** Season I's calendar file (tools/season_ics.py), served from public/. */
+  CALENDAR_URL: string;
   /** When the season opens: ISO 8601 with its offset. */
   LAUNCH_AT: string;
 };
@@ -19,7 +24,7 @@ export type Config = {
 export const config: Config = settings;
 
 /** The settings a page can link to. */
-export type LinkKey = Exclude<keyof Config, "ADDRESS" | "LAUNCH_AT" | "STATUS_URL">;
+export type LinkKey = Exclude<keyof Config, "ADDRESS" | "LAUNCH_AT" | "STATUS_URL" | "STANDINGS_URL">;
 
 export const SITE_URL = "https://monkeysmp.lscaturchio.xyz";
 

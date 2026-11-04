@@ -22,6 +22,7 @@ import entries
 import launcher_profile
 import patches
 import pwsh_lock
+import season_ics
 import site_links
 from repo import REPO, load_json
 from upstream import LiveHttp, Upstream
@@ -188,6 +189,7 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
     if repo.root == REPO.root:  # the generators are this checkout's; an older release's packs came from older ones
         errors += [f"{p} is out of date (run python tools/datapacks.py)" for p in datapacks.differences(repo)]
         errors += datapacks.problems(datapacks.all_files(repo))
+        errors += season_ics.problems(repo)
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
         errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)

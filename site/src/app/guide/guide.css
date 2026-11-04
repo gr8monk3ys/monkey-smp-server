@@ -71,6 +71,28 @@
 .doc .week .omens h2 { color: var(--bone); }
 .week + .small { max-width: var(--measure); margin-top: 14px; }
 
+/* The weekly standings (components/standings.tsx): a quiet shade block while there is no table, then a table, a
+ * faction a row. A name is player-chosen text of any length, so it wraps anywhere and the table never grows wider
+ * than the screen. */
+.standings-empty {
+  max-width: 48rem; padding: 14px 18px 16px;
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.doc .standings-empty h2, .doc .standings-week h2 { margin: 0 0 6px; font-size: 1.4rem; }
+.standings-empty p { margin: 0; color: var(--bone-2); }
+.standings-week { max-width: 48rem; }
+.standings-week + .standings-week { margin-top: 48px; }
+.standings-week .small { margin: 0 0 14px; }
+.standings-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.standings-table th { padding: 6px 8px; text-align: left; font: 700 0.875rem/1.5 var(--body); color: var(--sage); border-bottom: 2px solid var(--leaf-2); }
+.standings-table td { padding: 10px 8px; vertical-align: top; border-bottom: 2px solid var(--leaf-2); }
+.standings-table th:first-child, .standings-table .rank { width: 4rem; }
+.standings-table th:last-child, .standings-table .points { width: 5.5rem; text-align: right; }
+.standings-table .rank { font: 700 1.25rem/1.2 var(--display); color: var(--gold); }
+.standings-table .name { font-weight: 700; color: var(--bone); overflow-wrap: anywhere; }
+.standings-table .points { font-variant-numeric: tabular-nums; }
+.standings-table .none { color: var(--sage); text-align: left; }
+
 /* What each rank can do, one row a rank; the rank leads in the display face. */
 .ranks { margin: 0 0 28px; max-width: 52rem; }
 .ranks div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 2px solid var(--leaf-2); }
@@ -118,6 +140,8 @@
   #guide-pages { padding: 20px 14px 4px; }
 }
 @media (max-width: 760px) {
+  .standings-table th:first-child, .standings-table .rank { width: 3rem; }
+  .standings-table th:last-child, .standings-table .points { width: 4.5rem; }
   .cmds div, .ranks div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .doc .week h2 { flex-basis: 100%; }
   .doc h2 { margin-top: 44px; }

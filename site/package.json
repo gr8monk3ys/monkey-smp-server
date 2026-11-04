@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint . --max-warnings 0",
+    "test": "bun test",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

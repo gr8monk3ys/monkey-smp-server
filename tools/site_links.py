@@ -36,9 +36,9 @@ from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
 KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "STATUS_URL",
-        "LAUNCH_AT")
+        "STANDINGS_URL", "CALENDAR_URL", "LAUNCH_AT")
 # Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
-GUIDE = ("guide", "guide/factions", "guide/week", "guide/commands", "guide/discord",
+GUIDE = ("guide", "guide/factions", "guide/week", "guide/standings", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
 PAGES = ("index.html", "changes.html", "creators.html", *(f"{page}.html" for page in GUIDE))
 # The page for a missing address (and Next's own copy of it): never in the sitemap.
@@ -120,6 +120,21 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
         return [f"site: site/public/{url.lstrip('/')} is the {served} client pack, but the manifest is {pinned}: "
                 f"copy MonkeySMP-Client-{pinned}.mrpack and MonkeySMP-Player-{pinned}.zip into site/public/pack/ "
                 "and point MODPACK_URL and INSTALLER_URL in site/config.json at them (docs/MAINTAINING.md, Releasing)"]
+    return []
+
+
+def local_file(url: str) -> str:
+    """The path under site/public a setting names ("/a.ics" and "a.ics" are a.ics), or "" for a link elsewhere."""
+    return "" if not url or re.match(r"[a-z]+:", url) else url.lstrip("/")
+
+
+def calendar_problems(links: dict[str, str], repo=REPO) -> list[str]:
+    """CALENDAR_URL, when it is a file of the site's own, must be there (tools/season_ics.py makes it and
+    validate.py checks it is current)."""
+    name = local_file(links.get("CALENDAR_URL", ""))
+    if name and not (site(repo) / "public" / name).is_file():
+        return [f"site: CALENDAR_URL is {links['CALENDAR_URL']}, but site/public/{name} doesn't exist "
+                "(run python tools/season_ics.py)"]
     return []
 
 
@@ -238,6 +253,12 @@ def built_problems(out: Path, links: dict[str, str]) -> list[str]:
     for page in sorted(out.rglob("*.html")):  # the guide's pages sit in out/guide/
         errors += [f"{out.name}/{page.relative_to(out).as_posix()}: {e}"
                    for e in page_problems(page.read_text(encoding="utf-8"), links)]
+    if name := local_file(links.get("CALENDAR_URL", "")):
+        if not (out / name).is_file():
+            errors.append(f"{out}: no {name} (CALENDAR_URL; it is site/public/{name})")
+        week = out / "guide" / "week.html"
+        if week.is_file() and 'data-link="CALENDAR_URL"' not in week.read_text(encoding="utf-8"):
+            errors.append(f"{out.name}/guide/week.html: no link to CALENDAR_URL (players look for the schedule there)")
     return errors + sitemap_problems(out)
 
 
@@ -253,7 +274,7 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
     errors = config_problems(settings)
     if errors:
         return errors
-    errors += pack_problems(settings, repo) + stylesheet_problems(repo, write)
+    errors += pack_problems(settings, repo) + calendar_problems(settings, repo) + stylesheet_problems(repo, write)
     if built is not None:
         errors += built_problems(built, settings)
     return errors

@@ -22,7 +22,7 @@ def commands(text):
 
 def test_every_speed_patch_is_pinned_in_the_manifest():
     mods = {e["slug"]: e for e in load_json(REPO.monkey / "manifest.json")["mods"]}
-    for slug in ("amethyst-nether", "dynamic-lights", "silvers_strength-restrictions-season-5",
+    for slug in ("dynamic-lights", "silvers_strength-restrictions-season-5",
                  "silvers_strength-smp-season-5", "silvers_effects-library", "warden-with-loot"):
         assert mods[slug]["patch"] == patches.reference(slug, mods[slug]["hashes"]["sha512"])
 
@@ -70,13 +70,6 @@ def test_fire_is_still_read_for_both_effects_that_use_it():
     fire = [line for line in commands(text) if "store result score @s s_effects_lib+Fire" in line]
     effects = ["s_effects_lib+eternal_flame_duration", "s_effects_lib+undead_curse_duration"]
     assert sorted(line.split()[4] for line in fire) == effects
-
-
-def test_bombs_arm_in_every_entity_that_can_hold_one():
-    lines = commands(patched("amethyst-nether", "data/an/function/timer/tick.mcfunction"))
-    arming = [line for line in lines if line.endswith("function an:items/bomb/add_marker")]
-    kinds = {line.split("@e[type=minecraft:", 1)[1].split(",", 1)[0] for line in arming}
-    assert kinds == {"snowball", "item", "item_frame", "glow_item_frame"}
 
 
 def test_tnt_is_counted_every_tick_and_a_fuse_ending_forces_a_light_pass():

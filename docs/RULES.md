@@ -246,7 +246,8 @@ Open items from the owners' draft:
 - Rules 44 to 46 (2.8.0, Breaking Bedrock): the owners adopted all three on 27 October 2026. 44 and 45 stop
   griefing nobody can undo (a void hole under a base, a broken exit portal); 46 is the usual SMP ban, because
   the roof is a flat, empty, mob-free road over the whole Nether and the easiest escape route there is (compare
-  B12). The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
+  B12). Amethyst Nether killed ender pearls that reached the underside of its bedrock roof; it left in 3.1.0 and
+  nothing replaces that, so 46 now rests on the rule alone. The short rules (`codeofconduct/en_us.txt`) quote them since 2.8.0, before anyone joins Season I.
 - Friends & Foes (2.8.0) adds the Totem of Freezing (from Iceologers) and the Totem of Illusion (from
   Illusioners). They aren't Totems of Undying, so B4 doesn't cover them as written; both are panic buttons
   when you're hurt (one freezes whoever is close, the other turns you invisible and spawns copies of you).
@@ -327,7 +328,9 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   All 17 of Dungeons and Taverns' own enchantments (`nova_structures:*`) are out of the enchanting table, loot
   and villager trades, so nobody finds them; staff make event rewards with `/give` or `enchant`, which still
   work. A server without the file gets it from the installer. If Dungeons and Taverns adds an enchantment, add
-  it to the file (and to `tests/test_mod_defaults.py`).
+  it to the file (and to `tests/test_mod_defaults.py`). The Enchant Disabler data pack is pinned too: its tags take DnT's
+  enchantments out of DnT's loot and trades a second way, but its inventory strip does nothing with the mod installed,
+  so the mod is what lets event books survive in a player's inventory. Remove the mod and those books get stripped.
 - **Rule 43, shops** (Universal Shops). Shelved on 26 October 2026: the mod isn't in the pack, so the server
   enforces nothing for rule 43 now, and scams are on admins. The claims entry for shops stays in
   `defaults/config/openpartiesandclaims-server.toml`, dormant until they return. With shops back, anyone may

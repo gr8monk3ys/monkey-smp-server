@@ -95,8 +95,9 @@ What keeps it there:
   `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.
 - **A patch in Silver's Effects Library** (docs/MAINTAINING.md lists it). Unpatched, it ran 97 commands per
   loaded mob per tick and went past Minecraft's limit of 65,536, which cut off whatever ran next.
-- **The speed patches of 3.1.0** (docs/MAINTAINING.md). Six datapacks do less per tick. On this PC with 30 fake
-  players carrying a survival inventory, the median tick went from 185 ms to about 69 ms (docs/LIVE.md, "Load test").
+- **The speed patches of 3.1.0** (docs/MAINTAINING.md). Five datapacks do less per tick. On this PC with 30 fake
+  players carrying a survival inventory, the median tick went from 185 ms to about 69 ms, and to about 53 ms in the
+  final build without the Nether mods (docs/LIVE.md, "Load test").
 - **Extras stay out of the pack.** To add a mod anyway, drop its jar into `server\mods` (and players into their
   mods folder): the installer leaves files it doesn't manage alone.
 
@@ -384,13 +385,14 @@ values.
   the End's exit portal break the same way (only the Overworld floor was tried). Rules 44 to 46 cover the rest.
 - **Enchantment Disabler** (`config/enchantmentdisabler/config.toml`) keeps all 17 of Dungeons and Taverns' own
   enchantments (`nova_structures:*`) out of the enchanting table, loot and villager trades, so rule B18 (event
-  rewards only) holds by itself. `/give` and `enchant` still work for event books.
+  rewards only) holds by itself. `/give` and `enchant` still work for event books. The Enchant Disabler data pack is
+  pinned as well; with this mod installed its inventory strip does nothing, so those books stay as given.
 
 ## World generation
 
 The Overworld and the End generate as in vanilla 26.2 plus the mods' structures and biomes (Grand Capitals,
-Crazy Chambers, Streams Reflowing, Sulfur Caves Plus and others), and Amethyst Nether replaces the Nether: 160
-tall, with its own biomes as well as vanilla's, and fortresses and bastions still in it. The seed is pinned in the manifest, so every copy of the
+Crazy Chambers, Streams Reflowing, Sulfur Caves Plus and others). The Nether is vanilla's terrain, 128 tall, with
+its structures reworked or added by Dungeons and Taverns and Moog's. The seed is pinned in the manifest, so every copy of the
 server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
 rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
 can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
@@ -431,8 +433,8 @@ No need to fit it to the finale's shrinking border: the land outside was open al
 From Season II the border timer (`deploy/monkey-border.sh`, docs/LIVE.md) grows the border and does this fit,
 the reload and the purges by itself.
 
-The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. Amethyst
-Nether's roof is near y 160, so BlueMap's own cut (y 90 to 127) would leave it covering the map. Where
+The Nether map leaves out everything from y 90 up, so it shows the caves rather than the roof. BlueMap's own
+cut (y 90 to 127) would leave anything built on the roof covering the map. Where
 BlueMap wrote `world_the_nether.conf` itself, delete the `max-y: 127` line under `min-y: 90` in its second
 `render-mask` layer, then `bluemap reload` and `bluemap purge world_the_nether`.
 

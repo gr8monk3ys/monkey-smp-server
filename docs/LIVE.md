@@ -178,15 +178,27 @@ run `migrate_names.py` on it first.
 3.1.0 stays on Minecraft 26.2, so the deploy loads the world it finds. Its new structures only appear in land
 generated after it, so nothing else about the world changes until the launch world replaces it.
 
-**One config a deploy doesn't replace.** The live server keeps the Enchantment Disabler config 3.0.0 made, which
-disables nothing, so rule B18 doesn't hold until it is copied. Do this while the server is stopped for the launch
-world: `diff ../server/config/enchantmentdisabler/config.toml ../monkey/defaults/config/enchantmentdisabler/config.toml`,
-then `cp ../monkey/defaults/config/enchantmentdisabler/config.toml ../server/config/enchantmentdisabler/config.toml`.
-Check with `grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l`, which prints `17`.
+A world Amethyst Nether generated still loads without it. That was tested on a small fresh Nether, not the test world
+itself: the log warns of two missing data packs and prints a "Recoverable errors when loading section" line for each
+section with an `an:` biome, which falls back to a default. It looks alarming and is harmless until the reset.
 
-The launch world then follows the next section. The new jars don't change its steps: the seed still has a fortress
-about 440 blocks from the Nether's centre and a bastion about 1500, so the Nether's border stays 2500. The spawn area,
-monuments and NPC spots still need the walk, on land this release changed again.
+**Two configs a deploy doesn't replace.** Do both while the server is stopped for the launch world.
+
+- The live server keeps the Enchantment Disabler config 3.0.0 made, which disables nothing, so rule B18 doesn't hold
+  until it is copied: `diff ../server/config/enchantmentdisabler/config.toml ../monkey/defaults/config/enchantmentdisabler/config.toml`,
+  then `cp ../monkey/defaults/config/enchantmentdisabler/config.toml ../server/config/enchantmentdisabler/config.toml`.
+  Check with `grep -o 'nova_structures:' ../server/config/enchantmentdisabler/config.toml | wc -l`, which prints `17`.
+- Anti-xray still stops at Amethyst Nether's height: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml`,
+  then `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 128 tall again).
+
+**The data pack needs no console step.** The Enchant Disabler data pack is a manifest pin, so the installer puts it in
+`world/datapacks` before a new world's first start. It loads after Dungeons and Taverns' own packs, so its tags win, and
+the disable-then-enable steps in its FAQ aren't needed. Check with `monkey rcon "datapack list enabled"`.
+
+The launch world then follows the next section. The new jars change one number in its steps: the seed now has a fortress
+about 410 blocks from the Nether's centre and a bastion about 840, both still outside the pack's 312.5, so the Nether's
+border stays 2500 (the 440 and 1500 below are the 3.0.0 terrain). The spawn area, monuments and NPC spots still need the
+walk, on land this release changed again.
 
 ### 3.0.0: Minecraft 26.2 and a new world
 
@@ -208,8 +220,8 @@ Before the first start on 3.0.0, while the server is stopped:
 2. **Configs a deploy doesn't replace.** The live server keeps its own copy of a config, so copy the one that
    changed: `diff ../server/config/antixray.toml ../monkey/defaults/config/antixray.toml` first, as the copy
    replaces any tuning made on the server, then
-   `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether is 160 tall
-   now). Leftovers from mods that left (Carry On, Tectonic, Distant Horizons, MinerTrack) are harmless; delete
+   `cp ../monkey/defaults/config/antixray.toml ../server/config/antixray.toml` (the Nether was 160 tall
+   then; 3.1.0 sets it back to 128). Leftovers from mods that left (Carry On, Tectonic, Distant Horizons, MinerTrack) are harmless; delete
    them if you like.
 
 Changes to the steps below:
@@ -918,9 +930,27 @@ with each other. 30 fake players with a kit, standing, all 30 online, no command
 |---|---|---|---|---|---|
 | 3.1.0's mods, no speed patches | 185.1 ms | 335.8 ms | 5.4 | mob cap 60%, simulation 5 | https://spark.lucko.me/Dzh1y2KSog |
 | With the speed patches | 68.5 ms | 153.5 ms | 14.1 | mob cap 40%, simulation 4, view 7 | not captured |
+| Final build: Nether mods gone, data pack in, fresh world on the launch seed | 52.5 ms | 88.9 ms | 18.0 | mob cap 40%, simulation 4, view 8 | not captured |
 
-Those two runs ended on different settings, so not all of the gain is the patches. Datapack commands are still 64% of
-the tick. The worst p99 is about 6.3 s, one stall each autosave: the main thread writes 30 players' `.dat` files
+Those runs ended on different settings, and the last is a newer world, so not all of the gain is the patches or the
+Nether mods. In the second run datapack commands were still 64% of the tick.
+
+**What the Enchant Disabler data pack costs.** The final build again, with a throwaway datapack giving and clearing one
+stone per player per second, because the pack's advancement only fires on an inventory change:
+
+| Run | Median tick | Worst p95 | TPS |
+|---|---|---|---|
+| Mod and pack | 54.8 ms | 108.0 ms | 17.2 |
+| Mod and pack, repeated | 54.0 ms | 86.6 ms | 17.7 |
+| Mod only | 54.0 ms | 89.0 ms | 17.6 |
+| Pack only | 54.1 ms | 90.6 ms | 17.0 |
+| Mod and pack, all 30 holding a DnT book | 59.6 ms | 127.6 ms | 16.0 |
+
+The repeat shows the noise, about 0.8 ms, so the pack's own cost doesn't show. The last row is the worst case: with the
+mod installed the pack can't strip a book, so it checks every slot again on each change. That is about 5 ms if all 30
+hold one, and event books are rare.
+
+The worst p99 is about 6 s, and up to 13 s in these runs, one stall each autosave: the main thread writes 30 players' `.dat` files
 (`PlayerList.saveAll` in a JFR recording) and this PC's disk is slow. Holding the view distance at 8 didn't remove it.
 The VPS's p99s above (547 ms and 1,055 ms) may be the same thing; nobody has checked.
 

@@ -492,25 +492,6 @@
   "items": 0,
   "entity_textures": 0
  },
- "9EFaPoo8": {
-  "slug": "amethyst-nether",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "mr_amethyst_nether",
-  "environment": "*",
-  "ids": [
-   "mr_amethyst_nether"
-  ],
-  "depends": [
-   "fabric-resource-loader-v0"
-  ],
-  "code": false,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
  "9Pk89J3g": {
   "slug": "justenoughbreeding",
   "modrinth": {
@@ -1585,6 +1566,23 @@
   "environment": "client",
   "ids": [
    "norecipebook"
+  ],
+  "depends": [],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
+ "UFRJve4V": {
+  "slug": "clear-waterlavapowdersnow",
+  "modrinth": {
+   "client": "required",
+   "server": "unsupported"
+  },
+  "id": "clearwaterlava",
+  "environment": "client",
+  "ids": [
+   "clearwaterlava"
   ],
   "depends": [],
   "code": true,
@@ -3327,23 +3325,6 @@
    "yet_another_config_lib_v3"
   ],
   "code": true,
-  "blockstates": 0,
-  "items": 0,
-  "entity_textures": 0
- },
- "wXiGiyGX": {
-  "slug": "amplified-nether",
-  "modrinth": {
-   "client": "optional",
-   "server": "required"
-  },
-  "id": "amplified_nether",
-  "environment": "*",
-  "ids": [
-   "amplified_nether"
-  ],
-  "depends": [],
-  "code": false,
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0

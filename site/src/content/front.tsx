@@ -13,8 +13,8 @@ export const features: { fig?: string; title: string; text: ReactNode }[] = [
   },
   {
     title: "Land worth fighting over",
-    text: <>Amethyst Nether remakes the Nether, Grand Capitals rebuilds villages and illager strongholds, and Crazy
-      Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them.</>,
+    text: <>Grand Capitals rebuilds villages and illager strongholds, Dungeons and Taverns adds dungeons worth the trip, and
+      Crazy Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them.</>,
   },
   {
     fig: "3D",

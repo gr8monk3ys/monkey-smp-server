@@ -20,7 +20,7 @@ to a minute. That's normal: don't close the window, and choose **Wait** if Windo
 1. Install the [Modrinth App](https://modrinth.com/app) (free) and sign in with the Microsoft account you
    play Minecraft with. You don't buy Minecraft again.
 2. Open the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp) and press **Install** (or search
-   for "Monkey SMP" in the app's Discover). It downloads about 385 MB: the mods and resource packs.
+   for "Monkey SMP" in the app's Discover). It downloads about 383 MB: the mods and resource packs.
 3. Give the game enough memory: the instance's settings > **Java and memory**, 6 GB (8 GB if the computer has more
    than 16 GB of RAM).
    Too little memory makes the game stutter or crash.
@@ -39,7 +39,7 @@ If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
    If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
-   It downloads about 385 MB (mods and resource packs) from their official websites and checks
+   It downloads about 383 MB (mods and resource packs) from their official websites and checks
    every file, and sets the game's memory from your computer's RAM. When it's done, press a key to close
    the window.
 3. Open the launcher, click the version box next to the green **Play** button, choose **Monkey SMP**,
@@ -143,7 +143,7 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
 - **New in 3.0.0:** a new world on Minecraft 26.2. Amethyst Nether remakes the Nether, Grand Capitals rebuilds
   villages and illager structures, Crazy Chambers makes trial chambers bigger, and there are mobs of random sizes,
   emotes (Emotecraft) and more recipes. If two recipes clash, Polymorph+ lets you pick the result.
-- **New in 3.1.0:** Dungeons and Taverns reworks strongholds, ancient cities, fortresses, monuments, mansions, outposts,
+- **New in 3.1.0:** Amethyst Nether is gone, so the Nether is vanilla's terrain again, with new structures in it. Dungeons and Taverns reworks strongholds, ancient cities, fortresses, monuments, mansions, outposts,
   temples and mineshafts, and Moog's structures and bigger End cities add more to find. Their enchantments are event
   rewards only ([rule B18](RULES.md)).
 - There is no land capture (that was Towns & Nations on the 1.x Paper server).

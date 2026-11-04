@@ -90,34 +90,6 @@
       }
     },
     {
-      "slug": "amethyst-nether",
-      "project_id": "9EFaPoo8",
-      "version": "v4.3.2+mod",
-      "version_id": "ItSnSx09",
-      "file": "amethyst-nether-v4.3.2.jar",
-      "url": "https://cdn.modrinth.com/data/9EFaPoo8/versions/ItSnSx09/amethyst-nether-v4.3.2.jar",
-      "size": 1722266,
-      "hashes": {
-        "sha512": "357ddd7ada8c77678dc326e521f8e6b313fd2a5f925c5d0deefe323fd283986b7268c894e10ce73005598e58e056c589a8f1f5866fbfc6edf0b420218387be2d"
-      },
-      "patch": {
-        "path": "patches/amethyst-nether",
-        "base_sha512": "357ddd7ada8c77678dc326e521f8e6b313fd2a5f925c5d0deefe323fd283986b7268c894e10ce73005598e58e056c589a8f1f5866fbfc6edf0b420218387be2d"
-      }
-    },
-    {
-      "slug": "amplified-nether",
-      "project_id": "wXiGiyGX",
-      "version": "1.2.16",
-      "version_id": "agiByWs3",
-      "file": "Amplified_Nether_26.2_v1.2.16.jar",
-      "url": "https://cdn.modrinth.com/data/wXiGiyGX/versions/agiByWs3/Amplified_Nether_26.2_v1.2.16.jar",
-      "size": 108430,
-      "hashes": {
-        "sha512": "1d778f0df10a97b967dea225b7e30e2699a3cd90682fcc1035eb386c6620a682104ac88a5bc24ea87b61ba8b0098a824008a2a8c4f3d3b42f809666f588f9679"
-      }
-    },
-    {
       "slug": "animal_feeding_trough",
       "project_id": "bRFWnJ87",
       "version": "1.2.1+26.2",
@@ -2158,5 +2130,18 @@
       }
     }
   ],
-  "datapacks": []
+  "datapacks": [
+    {
+      "slug": "dnt-enchant-disabler",
+      "project_id": "jr7t09l6",
+      "version": "4.4",
+      "version_id": "cLq5AoVs",
+      "file": "Enchant Disabler for DnT 5.3.0.zip",
+      "url": "https://cdn.modrinth.com/data/jr7t09l6/versions/cLq5AoVs/Enchant%20Disabler%20for%20DnT%205.3.0.zip",
+      "size": 61737,
+      "hashes": {
+        "sha512": "1dc3f753967b4c92d17f70dfb2b545e5944cb15951d908703cc71615dcd3367903dcb4b8367005ee18cb8fb2d8f1b45166bc606049e778ce1b387d43e75f44c9"
+      }
+    }
+  ]
 }

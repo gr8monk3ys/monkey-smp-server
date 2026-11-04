@@ -136,6 +136,11 @@ it applies to mods the same way). To take it, put the new upstream file in the s
 `mod-originals/` or `datapack-originals/` and the edited copy in `mods/` or the world's datapacks
 folder, then snapshot the server as below; that re-makes the patch against the new file.
 
+The Enchant Disabler data pack names Dungeons and Taverns' enchantments and replaces 30 of its tags, so an update to
+either needs checking against the other: its file is named for DnT 5.3.0 while DnT is pinned at 5.3.2. It has to load after
+DnT's own packs for its tags to win, which it does on a new world. Its inventory strip does nothing while the Enchantment
+Disabler mod is installed (docs/RULES.md, B18).
+
 `python tools/build.py` writes three files to `dist/` (it fails if `player/` is missing):
 
 | File | For | Contents |
@@ -305,7 +310,6 @@ patch against the new upstream file: carry the change below over, then check it 
 | `silvers_strength-restrictions-season-5` | `data/strength_restrictions/function/technical/main/tick/public.mcfunction` | Upstream calls a 41-slot macro 22 times per player per tick, 20 of them the same two calls repeated. Shared with other packs' argument sets, the macro is re-parsed on most calls. Each call now runs only when an `if items` check finds the item in a slot, and fire enchants are only removed from items that have them. |
 | `silvers_strength-smp-season-5` | `overlay_26.2/data/strength_smp/function/technical/main/powers/spear.mcfunction`, `enchant/main.mcfunction` | The same guard on its 9 calls to that macro. The armor power stays upstream: a guard on its `HurtTime` read stopped the hit counter ever starting (`tests/test_perf_patches.py`). |
 | `silvers_effects-library` | `overlay_26.2/data/s_effects_lib/function/technical/tick/public.mcfunction` | Upstream encodes each whole player every tick to copy `Fire` into a score that only eternal flame and undead curse read. It now reads `Fire` only while one of those is running. |
-| `amethyst-nether` | `data/an/function/timer/tick.mcfunction` | Upstream runs an NBT predicate on every entity in the world every tick to find bombs. Now only the four kinds that can hold one are checked: thrown snowballs, dropped items and both item frames. |
 | `dynamic-lights` | `data/dynamiclights/function/internal/main.mcfunction` | Lights update every other tick instead of every tick. TNT is still counted every tick and a fuse about to end forces a pass, because a light block stops explosion damage. Walking with a torch, the light can trail by one tick. |
 | `warden-with-loot` | `data/warden_with_loot/advancement/deep_dark/spawn_warden.json`, `trigger_sculk_shrieker.json` | Two cosmetic `tick` advancements encode the whole player twice per player per tick: 15% of the main thread at 30 players. They now test the biome first, as conditions run in order. A warning raised just outside the deep dark unlocks on next entering it. |
 

@@ -57,8 +57,8 @@ def test_the_shipped_maps_are_the_worlds_bluemap_would_make():
 
 
 def test_the_nether_map_cuts_everything_from_y_90_up():
-    # Amethyst Nether's roof is near y 160: a ceiling cut that stops at 127 (BlueMap's own) leaves it covering
-    # the map, so the cut has no top.
+    # A ceiling cut that stops at 127 (BlueMap's own) leaves anything built on the roof covering the map, so the
+    # cut has no top.
     nether = (DEFAULT_MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
     ceiling = nether.split("subtract: true", 1)[1].split("}", 1)[0]
     assert "min-y: 90" in ceiling

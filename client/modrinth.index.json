@@ -51,36 +51,6 @@
       "fileSize": 33198
     },
     {
-      "path": "mods/amethyst-nether-v4.3.2.jar",
-      "hashes": {
-        "sha1": "1e8c73df635309127e64cfee48dfce4e28559067",
-        "sha512": "357ddd7ada8c77678dc326e521f8e6b313fd2a5f925c5d0deefe323fd283986b7268c894e10ce73005598e58e056c589a8f1f5866fbfc6edf0b420218387be2d"
-      },
-      "env": {
-        "client": "optional",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/9EFaPoo8/versions/ItSnSx09/amethyst-nether-v4.3.2.jar"
-      ],
-      "fileSize": 1722266
-    },
-    {
-      "path": "mods/Amplified_Nether_26.2_v1.2.16.jar",
-      "hashes": {
-        "sha1": "66c053e74379607c614ad252b8f838d3a2533e32",
-        "sha512": "1d778f0df10a97b967dea225b7e30e2699a3cd90682fcc1035eb386c6620a682104ac88a5bc24ea87b61ba8b0098a824008a2a8c4f3d3b42f809666f588f9679"
-      },
-      "env": {
-        "client": "optional",
-        "server": "unsupported"
-      },
-      "downloads": [
-        "https://cdn.modrinth.com/data/wXiGiyGX/versions/agiByWs3/Amplified_Nether_26.2_v1.2.16.jar"
-      ],
-      "fileSize": 108430
-    },
-    {
       "path": "mods/animal_feeding_trough-1.2.1+26.2.jar",
       "hashes": {
         "sha1": "726a59744768847c05000c98486b4cc74e672bc9",
@@ -424,6 +394,21 @@
         "https://cdn.modrinth.com/data/uUn9PlWe/versions/c3pIM9oe/clean-f3-1.2.0.jar"
       ],
       "fileSize": 28527
+    },
+    {
+      "path": "mods/ClearWaterLava-Fabric-26.2.jar",
+      "hashes": {
+        "sha1": "4966fb0678d7fccb02c5cbd50e298ef16880f150",
+        "sha512": "555df2b0835bf32f9849e9e4ec68936f759291608b960399567853b5304a2bea9bceb225de7a668a3c7d69e8cfbb71c1d0faed244c527b014aaea90180fedcf5"
+      },
+      "env": {
+        "client": "optional",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/UFRJve4V/versions/CfrLhK7U/ClearWaterLava-Fabric-26.2.jar"
+      ],
+      "fileSize": 6022
     },
     {
       "path": "mods/cloth-config-26.2.155.jar",

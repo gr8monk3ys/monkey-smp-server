@@ -47,6 +47,7 @@ OPTIONAL_MODS = {
     "BdKIyOLe": ("boat-item-view", "visuals"),
     "kcoiKSkz": ("brighter", "visuals"),
     "46n24c6r": ("clear-fog", "visuals"),
+    "UFRJve4V": ("clear-waterlavapowdersnow", "visuals"),
     "1IjD5062": ("continuity", "visuals"),
     "7YjclEGc": ("dynamic-lights", "visuals"),
     "zS8uflwP": ("easegui", "visuals"),
@@ -112,8 +113,6 @@ OPTIONAL_MODS = {
     "Y8uFrUil": ("ukulib", "library"),
     # server
     "dzG7pw5M": ("advancements_plus", "server"),
-    "9EFaPoo8": ("amethyst-nether", "server"),
-    "wXiGiyGX": ("amplified-nether", "server"),
     "pcN1B3cK": ("banner-bedsheets", "server"),
     "vz3NiXrd": ("bat-membrane", "server"),
     "UT8WxaW1": ("blaze-attack-animation", "server"),
@@ -164,6 +163,9 @@ OPTIONAL_MODS = {
 # Optional mods that have left the client pack (project id -> slug). They stay optional so the indexes of
 # earlier releases (tests/fixtures/manifests) still validate; none may be in the current pack.
 RETIRED_OPTIONAL = {
+    # 3.1.0: gone from the shared mod folder
+    "9EFaPoo8": "amethyst-nether",
+    "wXiGiyGX": "amplified-nether",
     # 2.8.0: gone from the shared mod folder
     "kzwxhsjp": "accurate-block-placement-reborn",
     "fM515JnW": "ambientsounds",

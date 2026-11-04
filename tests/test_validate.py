@@ -373,6 +373,7 @@ def test_verify_online_downloads_every_java_build(capsys):
     m["server"] = {**m["server"]}
     serve(http, m["server"], b"server", "sha256")
     m["mods"] = []
+    m["datapacks"] = []
     assert validate.verify_online(m, Upstream(http)) == []
     assert capsys.readouterr().out.count("ok  java ") == 5
 

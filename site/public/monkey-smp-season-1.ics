@@ -10,9 +10,11 @@ REFRESH-INTERVAL;VALUE=DURATION:P1D
 X-PUBLISHED-TTL:P1D
 BEGIN:VEVENT
 UID:season-1-week-00-launch@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261108T010000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Season I opens
 DESCRIPTION:Season I opens and everyone is let in at once. 5 PM Pacific\, 8
   PM Eastern. Your calendar shows it in your own time. Server address: monk
@@ -23,9 +25,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-01-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261115T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -37,9 +41,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-01-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261116T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -50,9 +56,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-02-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261122T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -64,9 +72,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-02-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261123T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -77,9 +87,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-03-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261129T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -91,9 +103,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-03-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261130T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -104,9 +118,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-04-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261206T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -118,9 +134,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-04-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261207T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -131,9 +149,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-05-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261213T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -145,9 +165,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-05-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261214T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -158,9 +180,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-06-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261220T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -172,9 +196,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-06-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261221T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -185,9 +211,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-07-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261227T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -199,9 +227,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-07-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20261228T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -212,9 +242,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-08-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270103T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -226,9 +258,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-08-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270104T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -239,9 +273,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-09-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270110T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -253,9 +289,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-09-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270111T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -266,9 +304,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-10-event@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270117T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Saturday event
 DESCRIPTION:The week's event: a Faction Raid\, Arena Glory\, a Build Battle
  \, or the border breaking open. The Town Crier at spawn has the next two. 
@@ -280,9 +320,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-10-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270118T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s
@@ -293,9 +335,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-11-finale@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270124T020000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: Season I finale
 DESCRIPTION:The finale ends the season\, and then the world locks. 6 PM Pac
  ific\, 9 PM Eastern. Your calendar shows it in your own time. Server addre
@@ -306,9 +350,11 @@ STATUS:CONFIRMED
 END:VEVENT
 BEGIN:VEVENT
 UID:season-1-week-11-close@monkeysmp.lscaturchio.xyz
+SEQUENCE:0
 DTSTAMP:20261104T000000Z
 LAST-MODIFIED:20261104T000000Z
 DTSTART:20270125T030000Z
+DURATION:PT1H
 SUMMARY:Monkey SMP: weekly standings close
 DESCRIPTION:The week's faction standings close and go up in the Discord. 7 
  PM Pacific\, 10 PM Eastern. Your calendar shows it in your own time. The s

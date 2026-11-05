@@ -36,18 +36,22 @@ function time(value: unknown): number {
 }
 
 /** A table of factions, or null if any row of it is wrong: a table is shown whole or not at all. Ranks run from 1
- * in order (ties share one, so a rank never passes its place), points never go up down the table. */
+ * in order. A tie shares a rank and its points, and the next rank is that row's place (1, 1, 3). Points never go up
+ * down the table, and equal points can still rank apart: the tie-breaks are Cup points, then kills. */
 function table(value: unknown): Row[] | null {
   if (!Array.isArray(value) || value.length > MAX_FACTIONS) return null;
   const rows: Row[] = [];
   for (const [i, item] of value.entries()) {
     if (!item || typeof item !== "object") return null;
     const { rank, name, points } = item as Record<string, unknown>;
-    if (typeof rank !== "number" || !Number.isInteger(rank) || rank < 1 || rank > i + 1) return null;
+    if (typeof rank !== "number" || !Number.isInteger(rank)) return null;
     if (typeof points !== "number" || !Number.isFinite(points) || points < 0 || points > 1_000_000) return null;
     if (name !== null && typeof name !== "string") return null;
     const before = rows[i - 1];
-    if (before && (rank < before.rank || points > before.points)) return null;
+    if (!before && rank !== 1) return null;
+    if (before && (rank === before.rank ? points !== before.points : rank !== i + 1 || points > before.points)) {
+      return null;
+    }
     rows.push({ rank, name: cleanName(name), points });
   }
   return rows;
@@ -76,24 +80,39 @@ export function parseStandings(data: unknown): Standings | null {
   return { checked, season: d.season, closes, factions, last };
 }
 
-/** Whether the file can be shown at `now`: "ok", "stale" (written too long ago) or "ahead" (dated in the future). */
+/** Whether the file can be shown at `now`: "ok", "stale" (written too long ago) or "ahead" (dated in the future). Once
+ * the season's last week has closed, nothing more is coming: the final table stays up however old the file gets. */
 export function freshness(file: Standings, now: number): "ok" | "stale" | "ahead" {
   const age = now - file.checked;
   if (age < -AHEAD_MS) return "ahead";
-  return age > STALE_MS ? "stale" : "ok";
+  return age > STALE_MS && file.closes !== null ? "stale" : "ok";
 }
 
-// Characters that don't show or that bend the text around them: controls, zero-width and bidirectional marks.
-const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f​‎‏‪-‮⁠-⁩﻿]/g;
-// Minecraft's formatting codes ("§c"), which a name typed in game can carry.
-const FORMATTING = /§[0-9a-fk-orx]/gi;
+/** What a poll's answer leaves on show. A 5xx (a proxy reloading, say) says nothing about the file, so what was shown
+ * stays, and goes stale by itself. Any other failure, or an answer that is no file (a 404 before the first one, a page
+ * of HTML), is no standings. */
+export function afterAnswer(shown: Standings | null, status: number, body: string | null): Standings | null {
+  if (status >= 500) return shown;
+  if (status < 200 || status >= 300 || body === null) return null;
+  try {
+    return parseStandings(JSON.parse(body));
+  } catch {
+    return null;
+  }
+}
+
+// What tools/standings.py strips, in the same order, so the page holds up without it: controls, format characters
+// (bidi marks among them, but not the emoji joiner), and the other characters that draw nothing.
+const HIDDEN_CHARS = /(?!\u200d)[\p{Cc}\p{Cf}\p{Cs}\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2065\u2800\u3164\ufe00-\ufe0e\uffa0\ufff0-\ufff8\u{e0000}-\u{e0fff}]/gu;
+// Minecraft's formatting: a section sign and whatever follows it.
+const FORMATTING = /§[\u200d\ufe0f]*[\s\S]?/gu;
 
 /** A faction's name as plain text for the page: no hidden or formatting characters, spaces tidied, cut at
  * NAME_LENGTH characters, and "A faction" for a name that is null (hidden by staff) or has nothing left. The
  * page puts the result in a text node, never in markup. */
 export function cleanName(name: string | null): string {
   if (name === null) return HIDDEN;
-  const plain = name.replace(FORMATTING, "").replace(HIDDEN_CHARS, "").replace(/\s+/g, " ").trim();
+  const plain = name.replace(HIDDEN_CHARS, "").replace(FORMATTING, "").replace(/\s+/g, " ").trim();
   if (!plain) return HIDDEN;
   const chars = Array.from(plain);
   return chars.length > NAME_LENGTH ? chars.slice(0, NAME_LENGTH - 1).join("").trimEnd() + "…" : plain;

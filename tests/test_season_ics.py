@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 import re
 import subprocess
 import sys
@@ -120,7 +121,8 @@ def test_the_file_parses_and_has_the_required_properties():
     for e in events:
         for name in ("UID", "DTSTAMP", "DTSTART", "SUMMARY"):
             assert e[name], name
-        assert "DTEND" not in e and "DURATION" not in e   # the site gives no length
+        assert e["DURATION"] == season_ics.LENGTH and "DTEND" not in e   # the site gives no length: one for all
+        assert e["SEQUENCE"] == str(season_ics.SEQUENCE)
         instant(e["DTSTART"])
 
 
@@ -141,6 +143,18 @@ def test_dtstamp_comes_from_the_data_not_the_clock():
     assert season_ics.PUBLISHED < season_calendar.LAUNCH
     assert "datetime.now" not in (REPO.root / "tools" / "season_ics.py").read_text(encoding="utf-8")
     assert season_ics.render() == season_ics.render()
+
+
+# The events as of the last SEQUENCE bump. When this fails: bump SEQUENCE and PUBLISHED in tools/season_ics.py, rerun
+# it, then copy the digest and the new values here.
+EVENTS_AS_PUBLISHED = ("ffd9f8d0daa24804dba65cc0d6e0715f9b4f7bbea453cbece44ab8df2217d02d", 0, "20261104T000000Z")
+
+
+def test_changed_events_come_with_a_new_sequence_so_phones_take_them():
+    words = "\n".join(f"{e.uid}|{season_ics.utc(e.start)}|{e.summary}|{e.description}|{e.url}"
+                      for e in season_ics.events())
+    digest = hashlib.sha256(words.encode("utf-8")).hexdigest()
+    assert (digest, season_ics.SEQUENCE, season_ics.utc(season_ics.PUBLISHED)) == EVENTS_AS_PUBLISHED
 
 
 def test_events_are_in_time_order_and_nothing_is_before_the_launch():

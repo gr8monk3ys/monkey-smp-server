@@ -12,14 +12,16 @@ What goes in is what the site already tells players, and no more:
     its date (What changed, 29 October: "the finale is on 23 January");
   - the week's standings closing, Sundays at 7 PM Pacific (/guide/week).
 The other names in status.SCHEDULE stay out until the site publishes them: add one to ANNOUNCED then. A moved event
-needs no edit here: the times come from season_calendar and status.dates(), and PUBLISHED is the one line to bump.
+needs no edit here: the times come from status.event_time() and status.close_time(), which status.dates() uses too.
+Bump SEQUENCE and PUBLISHED together whenever the events change (a test holds the two to the events).
 
 The file follows RFC 5545: CRLF line endings, lines folded at 75 octets (never inside a UTF-8 character), text
 escaped, one VEVENT a moment, and times as UTC instants worked out from Pacific time with the time zone database,
 so 6 PM Pacific stays 6 PM Pacific across a daylight saving change (Season I is all standard time; a later
 season's isn't). Nothing reads the clock: DTSTAMP is PUBLISHED, so the output is the same on any day. UIDs come
 from the season, the week and the kind of event, never from the time, so moving an event updates it in a phone's
-calendar instead of adding a copy. Events have a start and no end: the site gives no length.
+calendar instead of adding a copy, and calendars take the change by SEQUENCE. The site gives no length, so every event
+says an hour (LENGTH), for calendars to draw and remind about them alike.
 
 Stdlib only, Python 3.11 or newer, with tools/ on the path like the rest.
 """
@@ -39,9 +41,12 @@ ADDRESS = "monkeysmp.lscaturchio.xyz"        # the server address (site/config.j
 NAME = "monkey-smp-season-1.ics"
 DOMAIN = "monkeysmp.lscaturchio.xyz"         # UIDs end @DOMAIN
 PRODID = "-//Monkey SMP//Season I calendar//EN"
-# When the schedule below was last set, for DTSTAMP: bump it when an event moves or a name is added, so a phone
-# that has the old file takes the new one. Not the clock: the file has to come out the same every time.
+# The events' revision: bump both when an event moves or its words change, so a phone that has the old file takes the
+# new one (calendars rank by SEQUENCE). PUBLISHED, for DTSTAMP, is not the clock: the file has to come out the same
+# every time.
+SEQUENCE = 0
 PUBLISHED = dt.datetime(2026, 11, 4, tzinfo=calendar.UTC)
+LENGTH = "PT1H"
 # The names the site already gives players (the module docstring); every other Saturday is "Saturday event".
 ANNOUNCED = {"Season I opens": "Season I opens", "The finale": "Season I finale"}
 SATURDAY = "Saturday event"
@@ -61,12 +66,11 @@ class Event:
 
 
 def events(season: calendar.Season = calendar.SEASON, number: int = 1) -> list[Event]:
-    """Every event of a season, first first. Times come from the season; the kinds from status.SCHEDULE, whose
-    names are held back unless ANNOUNCED."""
+    """Every event, first first. The kinds and words are Season I's (status.SCHEDULE, whose names are held back unless
+    ANNOUNCED): another season moves only the times and UIDs, until its release gives it words of its own."""
     found = []
     for week, what, _ in status.SCHEDULE:
-        start = season.launch if week == 0 else dt.datetime.combine(
-            season.saturday(week), status.EVENT_TIME, calendar.PACIFIC)
+        start = status.event_time(week, season)
         kind = "launch" if week == 0 else "finale" if week == status.LAST_WEEK else "event"
         title = ANNOUNCED.get(what, SATURDAY)
         about = {
@@ -79,8 +83,7 @@ def events(season: calendar.Season = calendar.SEASON, number: int = 1) -> list[E
                            f"{about} {when(start)} Server address: {ADDRESS}.",
                            f"{SITE}/guide" if kind == "launch" else f"{SITE}/guide/week"))
     for week in range(1, status.LAST_WEEK + 1):
-        start = dt.datetime.combine(season.week_start(week) + dt.timedelta(days=6), status.CLOSE_TIME,
-                                    calendar.PACIFIC)
+        start = status.close_time(week, season)
         found.append(Event(f"season-{number}-week-{week:02}-close@{DOMAIN}", start,
                            "Monkey SMP: weekly standings close",
                            f"The week's faction standings close and go up in the Discord. {when(start)} "
@@ -123,7 +126,7 @@ def fold(line: str) -> list[str]:
     return [out[0], *(" " + part for part in out[1:])]
 
 
-def render(season: calendar.Season = calendar.SEASON, number: int = 1) -> bytes:
+def render() -> bytes:
     """The calendar file, as the bytes to commit."""
     stamp = utc(PUBLISHED)
     lines = [
@@ -132,9 +135,10 @@ def render(season: calendar.Season = calendar.SEASON, number: int = 1) -> bytes:
         f"X-WR-CALDESC:{escape('The weekly event and standings of Monkey SMP Season I, in your own time zone.')}",
         "REFRESH-INTERVAL;VALUE=DURATION:P1D", "X-PUBLISHED-TTL:P1D",
     ]
-    for e in events(season, number):
+    for e in events():
         lines += [
-            "BEGIN:VEVENT", f"UID:{e.uid}", f"DTSTAMP:{stamp}", f"LAST-MODIFIED:{stamp}", f"DTSTART:{utc(e.start)}",
+            "BEGIN:VEVENT", f"UID:{e.uid}", f"SEQUENCE:{SEQUENCE}", f"DTSTAMP:{stamp}", f"LAST-MODIFIED:{stamp}",
+            f"DTSTART:{utc(e.start)}", f"DURATION:{LENGTH}",
             f"SUMMARY:{escape(e.summary)}", f"DESCRIPTION:{escape(e.description)}",
             f"LOCATION:{escape('Monkey SMP, Minecraft Java: ' + ADDRESS)}", f"URL:{e.url}", "STATUS:CONFIRMED",
             "END:VEVENT",

@@ -124,8 +124,11 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
 
 
 def local_file(url: str) -> str:
-    """The path under site/public a setting names ("/a.ics" and "a.ics" are a.ics), or "" for a link elsewhere."""
-    return "" if not url or re.match(r"[a-z]+:", url) else url.lstrip("/")
+    """The path under site/public a setting names ("/a.ics", "a.ics" and "/a.ics?v=2" are a.ics), or "" for a link
+    elsewhere ("https://...", "//host/...")."""
+    if not url or url.startswith("//") or re.match(r"[a-z][a-z0-9+.-]*:", url, re.IGNORECASE):
+        return ""
+    return re.split(r"[?#]", url, maxsplit=1)[0].lstrip("/")
 
 
 def calendar_problems(links: dict[str, str], repo=REPO) -> list[str]:

@@ -271,6 +271,8 @@ def test_a_calendar_kept_elsewhere_is_not_looked_for(tmp_path):
     assert site_links.local_file("https://cal.example.com/season.ics") == ""
     assert site_links.local_file("/season.ics") == site_links.local_file("season.ics") == "season.ics"
     assert site_links.local_file("") == ""
+    assert site_links.local_file("//cdn.example.com/season.ics") == ""
+    assert site_links.local_file("/season.ics?v=2") == site_links.local_file("season.ics#top") == "season.ics"
 
 
 def test_the_build_must_hold_the_calendar_and_link_it_from_the_week(tmp_path):

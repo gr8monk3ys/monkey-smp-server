@@ -2,7 +2,7 @@
 // nothing.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cleanName, freshness, HIDDEN, NAME_LENGTH, parseStandings, roman } from "./standings";
+import { afterAnswer, cleanName, freshness, HIDDEN, NAME_LENGTH, parseStandings, roman } from "./standings";
 
 const rows = [{ rank: 1, name: "Red Wolves", points: 87 }, { rank: 2, name: "Blue Herons", points: 60 }];
 const good = () => ({
@@ -39,6 +39,11 @@ test("ties share a rank", () => {
   assert.equal(parseStandings({ ...good(), factions: tied })?.factions.length, 3);
 });
 
+test("equal points can rank apart: the tie-breaks are Cup points, then kills", () => {
+  const apart = [{ rank: 1, name: "A", points: 50 }, { rank: 2, name: "B", points: 50 }];
+  assert.equal(parseStandings({ ...good(), factions: apart })?.factions.length, 2);
+});
+
 test("a null name becomes A faction", () => {
   const hidden = [{ rank: 1, name: null, points: 5 }];
   assert.equal(parseStandings({ ...good(), factions: hidden })?.factions[0].name, "A faction");
@@ -70,6 +75,16 @@ const bad: [string, unknown][] = [
   }],
   ["points going up", {
     ...good(), factions: [{ rank: 1, name: "A", points: 1 }, { rank: 2, name: "B", points: 9 }],
+  }],
+  ["a shared rank with different points", {
+    ...good(), factions: [{ rank: 1, name: "A", points: 9 }, { rank: 1, name: "B", points: 5 }],
+  }],
+  ["a rank that isn't its place after a tie", {
+    ...good(),
+    factions: [{ rank: 1, name: "A", points: 9 }, { rank: 1, name: "B", points: 9 }, { rank: 2, name: "C", points: 1 }],
+  }],
+  ["a rank that skips with no tie", {
+    ...good(), factions: [{ rank: 1, name: "A", points: 9 }, { rank: 3, name: "B", points: 5 }],
   }],
   ["negative points", { ...good(), factions: row({ points: -1 }) }],
   ["points in words", { ...good(), factions: row({ points: "9" }) }],
@@ -110,6 +125,23 @@ test("a file is fresh for three hours, then stale, and one from the future is no
   assert.equal(freshness(file, at(-90)), "ahead");
 });
 
+test("after the season's last close, the final table stays up however old the file is", () => {
+  const over = parseStandings({ ...good(), week_closes: null })!;
+  assert.equal(freshness(over, over.checked + 100 * 24 * 60 * 60_000), "ok");
+  assert.equal(freshness(over, over.checked - 90 * 60_000), "ahead");
+});
+
+test("a 5xx keeps what was shown, and any other bad answer is no standings", () => {
+  const shown = parseStandings(good())!;
+  const body = JSON.stringify(good());
+  assert.equal(afterAnswer(shown, 502, null), shown);
+  assert.equal(afterAnswer(null, 503, null), null);
+  assert.equal(afterAnswer(shown, 404, null), null);
+  assert.equal(afterAnswer(shown, 200, "<html>"), null);
+  assert.equal(afterAnswer(shown, 200, JSON.stringify({ version: 2 })), null);
+  assert.deepEqual(afterAnswer(null, 200, body), shown);
+});
+
 test("names are plain text: markup stays characters", () => {
   assert.equal(cleanName("<img src=x onerror=alert(1)>"), "<img src=x onerror=alert(1)>");
   assert.equal(cleanName("[click](https://evil.example)"), "[click](https://evil.example)");
@@ -122,6 +154,15 @@ test("names lose hidden and formatting characters and extra spaces", () => {
   assert.equal(cleanName("   "), HIDDEN);
   assert.equal(cleanName("​‮"), HIDDEN);
   assert.equal(cleanName(""), HIDDEN);
+});
+
+test("names hold up without the server's own cleaning", () => {
+  assert.equal(cleanName("§\u200bcRed"), "Red");     // a hidden character can't split a code from its letter
+  assert.equal(cleanName("§zRed§"), "Red");          // any code, and a sign on its own
+  assert.equal(cleanName("\u00adRed\u061c\ufff9"), "Red");
+  assert.equal(cleanName("Red\u{e0041}\ufe00"), "Red");
+  assert.equal(cleanName("\u3164\u115f \u2800"), HIDDEN);
+  assert.equal(cleanName("\u{1F468}\u200d\u{1F469}\ufe0f"), "\u{1F468}\u200d\u{1F469}\ufe0f");   // one emoji stays one
 });
 
 test("a very long name is cut, by whole characters", () => {

@@ -73,12 +73,20 @@ def pacific(day: dt.date, time: dt.time) -> dt.datetime:
     return dt.datetime.combine(day, time, calendar.PACIFIC)
 
 
+def event_time(week: int, season: calendar.Season = calendar.SEASON) -> dt.datetime:
+    """When a week's item of SCHEDULE happens: its Saturday's event, and week 0's the launch."""
+    return season.launch if week == 0 else pacific(season.saturday(week), EVENT_TIME)
+
+
+def close_time(week: int, season: calendar.Season = calendar.SEASON) -> dt.datetime:
+    """When a week's standings close: its Sunday."""
+    return pacific(season.week_start(week) + dt.timedelta(days=6), CLOSE_TIME)
+
+
 def dates() -> list[tuple[dt.datetime, str, int | None]]:
     """Every dated item of the season, first first: (when, what, the border it grows to)."""
-    out = [(calendar.LAUNCH if week == 0 else pacific(calendar.saturday(week), EVENT_TIME), what, size)
-           for week, what, size in SCHEDULE]
-    out += [(pacific(calendar.week_start(week) + dt.timedelta(days=6), CLOSE_TIME), CLOSE, None)
-            for week in range(1, LAST_WEEK + 1)]
+    out = [(event_time(week), what, size) for week, what, size in SCHEDULE]
+    out += [(close_time(week), CLOSE, None) for week in range(1, LAST_WEEK + 1)]
     return sorted(out, key=lambda item: item[0])
 
 

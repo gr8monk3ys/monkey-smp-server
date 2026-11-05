@@ -920,6 +920,15 @@ curl -sI https://staff.monkeysmp.lscaturchio.xyz | head -1   # 401
 The first reading comes within 2 minutes; until then the page says "No reading yet". Run `--install` again when a
 release changes the units or `deploy/Caddyfile.staff`.
 
+To set it up before a release has it, with no tag, deploy or restart, take its files from `main` before step 2. The
+checkout stays on the running tag, the package a deploy copies doesn't change, and the next deploy's forced checkout
+replaces them with the release's own copies:
+
+```sh
+sudo -u monkey git -C /srv/monkey/repo fetch --quiet origin main
+sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/Caddyfile.staff tools/staff_status.py
+```
+
 A new person or a new password is `--login NAME` again, and `--remove-login NAME` takes one away; either works at once,
 with no restart. To close the page (the `import` line stays and then matches nothing, which Caddy accepts):
 

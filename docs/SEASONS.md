@@ -40,7 +40,9 @@ Twelve weeks fits a factions server with Strength. Strength and gear pile up, so
 months new players can't catch up, and the veterans have nothing left to chase. Shorter seasons
 (Lifesteal's 2 to 4 weeks) don't give factions time to build bases or alliances. Twelve weeks is
 also about three months, so a season is an easy thing to sell: "Season II starts March 7, three months."
-A 2-month pass doesn't last a whole season, so its buyers need a second pass for the last weeks.
+A 2-month pass doesn't last a whole season, so its buyers need a second pass for the last weeks, bought after the
+first ends: the first pass's removal takes them off the whitelist and removes SMP Member even if a second is running
+(read from the package's commands, not tested live).
 
 Each season has:
 
@@ -123,8 +125,8 @@ launch, and starts again on 14 March 2027, after the season: every Season I time
 | 5 | 12 Dec | Netherite age (rule 24 lifted), plus a small event from the catalog | Midwinter decorating at spawn starts |
 | 6 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | |
 | 7 | 26 Dec | The border breaks again: 5500 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
-| 8 | 2 Jan 2027 | Build Battle II | Town Hall. The first Base of the Month (entries by 25 Dec). |
-| 9 | 9 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set. 2-month passes bought on launch day ended on Wednesday 6 Jan |
+| 8 | 2 Jan 2027 | Build Battle II | Town Hall. The first Base of the Month (entries by 25 Dec). Remind launch-day 2-month buyers: their passes end on Wednesday 6 Jan, before the finale. |
+| 9 | 9 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
 | 10 | 16 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
 | 11 | 23 Jan | **The finale**. The world locks after it. | The second Base of the Month (entries by 17 Jan) |
 | 12 | 30 Jan | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | |

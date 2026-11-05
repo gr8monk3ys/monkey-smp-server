@@ -773,7 +773,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | Package | Price | Charged | Commands (docs/RETENTION.md) |
 | --- | --- | --- | --- |
 | Server Pass | $5 | monthly subscription | whitelist, `rw.months 1` on renewal |
-| Server Pass, 2 months | $8 | once; Remove After 60 days | whitelist, `rw.months 2` |
+| Server Pass, 2 months | $8 | once; Remove After 60 days | whitelist, `rw.months 2`, taken back on refund or chargeback |
 | Ember, Banner, Crown | $3, $7, $15 | monthly subscription | `rw.tier`, `tier_*` team |
 
 - **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price

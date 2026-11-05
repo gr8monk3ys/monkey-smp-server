@@ -10,14 +10,15 @@ Caddyfile (docs/LIVE.md, "The website's standings").
 - Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
   and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
   last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in
-  game. Nothing is written before the launch, and a failed write never stops the board or the close.
+  game. Nothing is written before the launch. A failed write stops nothing else: the board and the close finish, then
+  the run reports the failure.
 - `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
   touching the game.
 
 ### Fixed
 
 - The hosting smoke test could fail a clean shutdown: stopping right after `Done` landed in the post-start save, and
-  the saved line never printed. It now waits 20 seconds first, and a clean container exit counts as evidence too.
+  the saved line never printed. It now waits 20 seconds first.
 
 ## [3.1.1] - 2026-11-04
 

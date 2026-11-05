@@ -35,7 +35,8 @@ if [ "$reached" = yes ]; then sleep "${AFTER_DONE_SECONDS:-20}"; fi
 # "stop" sends SIGTERM; Minecraft saves the world and shuts down on it.
 docker compose stop -t 180 || true
 docker compose logs --no-color monkey > compose.log 2>&1 || true
-# "false 143": stopped, by the SIGTERM (0 if the server's own stop got there first). 137 is the kill after the -t wait.
+# Only for the message below. "false 143": stopped by the SIGTERM (0 if the server's own stop got there first); 137 is the
+# kill after the -t wait. A clean exit proves no save, so the saved line stays the test.
 cid=$(docker compose ps --all --quiet monkey 2>/dev/null | head -n 1) || true
 stopped=$(docker inspect --format '{{.State.Running}} {{.State.ExitCode}}' "${cid:-none}" 2>/dev/null) || stopped=unknown
 docker compose down || true
@@ -46,10 +47,7 @@ if grep -nE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop
     echo "errors in the server log"; fail=1
 fi
 if [ "$reached" = yes ] && ! grep -qE 'All dimensions are saved|Saving worlds' compose.log; then
-    case "$stopped" in
-        'false 0' | 'false 143') echo "no saved line in the log, but the container stopped cleanly ($stopped)" ;;
-        *) echo "no clean shutdown in the log, and the container's state is: $stopped"; fail=1 ;;
-    esac
+    echo "no clean shutdown in the log, and the container's state is: $stopped"; fail=1
 fi
 grep -E 'Loading [0-9]+ mods|Done \(' compose.log | head -n 3 || true
 if [ "$fail" -eq 0 ]; then echo "HOSTING SMOKE TEST PASSED"; else tail -n 60 compose.log; echo "HOSTING SMOKE TEST FAILED"; exit 1; fi

@@ -461,18 +461,23 @@ renamed over the old one with mode 644: the timers run as `monkey`, Caddy reads 
 coordinate, a kill count or a claim (`public_rows` in `tools/standings.py` is the allow-list, and a test feeds it a
 full world). Many players are under 18 and faction names get no review, so:
 
-- Formatting codes, control characters and invisible characters are stripped, and a name is cut at 32 characters.
+- Formatting codes, control characters and invisible characters are stripped, piles of combining marks are thinned,
+  and a name is cut at 32 characters. A name left with no letter or digit (blank, or only symbols or emoji) shows as
+  `null`.
 - A name that is a player's (the "NAME's faction" of a party with no name, or a faction called exactly what a player
-  is called) shows as `null`, and the page says "A faction".
+  is called) shows as `null`, and the page says "A faction". This needs `server/usercache.json`: with it missing or
+  empty nothing is written.
 - `/srv/monkey/standings/hidden-names.txt` (`STANDINGS_DIR`, not the public folder) hides a name, which also shows as
   `null`. See below for how staff use it.
 - Nothing is written before the launch (`#launched rw.day`), so test play never shows, and a week closed before the
   launch is never `last_week`. A world made later keeps the old file until its own launch; `rm` it to take it down.
 
-A write that fails (a bad folder, bad permissions, a `hidden-names.txt` that can't be read) is logged in
-`journalctl -u monkey-standings-board -u monkey-standings` and changes nothing else: the board and the close go on,
-the unit doesn't fail, and the last good file stays up. `checked` in the file says how old it is. It updates at 20 past
-each hour, and skips the hour a deploy, restart or backup holds the deploy lock.
+A write that fails (a bad folder, bad permissions, a `hidden-names.txt` that can't be read, no `usercache.json`) is logged
+in `journalctl -u monkey-standings-board -u monkey-standings`, and the last good file stays up. The board and the close
+still do everything else, then the run ends in failure so it shows in `systemctl --failed`. The board tries again next
+hour; the close retries every 10 minutes, and its retries post and close nothing twice. `checked` in the file says how
+old it is, and `week_closes` is `null` after the season's last close. The file updates at 20 past each hour, and skips the
+hour a deploy, restart or backup holds the deploy lock.
 
 Ranks are the board's: ties on points go to more Cup points, then more kills, and only a tie on all three shares a
 rank. So two factions can show the same points on different ranks.
@@ -493,19 +498,25 @@ python3 -m json.tool /srv/monkey/status/standings.json
 curl -sI https://map.monkeysmp.lscaturchio.xyz/standings.json   # 200, with access-control-allow-origin
 ```
 
-To hide a name, staff with a shell on the VPS add it to the list, one name per line:
+To hide a name, staff with a shell on the VPS add it to the list, one name per line (the leading newline keeps it off the
+end of a last line with none). `checked` moving on confirms the file was rewritten; if it hasn't, the start above failed
+and the journal says why:
 
 ```sh
-echo 'The bad name' | sudo -u monkey tee -a /srv/monkey/standings/hidden-names.txt
+printf '\n%s\n' 'The bad name' | sudo -u monkey tee -a /srv/monkey/standings/hidden-names.txt
 sudo systemctl start monkey-standings-board   # or wait for 20 past the hour
+grep -o '"checked":"[^"]*"' /srv/monkey/status/standings.json; date -u +%FT%TZ
 ```
+
+A line starting with `#` is a comment. A comment can't follow a name on its line, since `#` can be part of a name; a name
+that starts with `#` goes in without it, as only letters and digits count.
 
 It is compared on letters and digits alone, without regard to case, accents, colours, spacing or symbols, so colour
 codes can't dodge it, and staff can paste the name from the page or the game. It works on the whole name, not on words
 in it. It applies when the file is written, so hiding a name fixes last week's table too, and deleting the line brings
 the name back. The game, the board and the Discord post are untouched: a name bad enough to hide is also a matter for
-staff in game. The file must be UTF-8 and readable by `monkey`: if it can't be read, nothing is written until it can,
-so a hidden name never comes back by accident (the journal says why).
+staff in game. The file should be UTF-8 (a bad byte spoils only its own line, and the journal says so) and must be
+readable by `monkey`: if it can't be read, nothing is written until it can, so a hidden name never comes back by accident.
 
 ### The sieges timer (the release with outpost sieges and 7-day wars)
 

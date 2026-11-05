@@ -66,7 +66,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import wanted
-from status import CLOSE_TIME, SEASON, iso
+from status import CLOSE_TIME, LAST_WEEK, SEASON, iso, pacific
 from status import write as write_public
 
 import diplomacy
@@ -143,7 +143,8 @@ def read_parties(world: Path, names: dict[str, str]) -> list[Party]:
             continue
         members = [names.get(m.uuid, m.username or m.uuid[:8]) for m in p.members]
         owner = members[0]
-        parties.append(Party(p.id, p.name or f"{owner}'s faction", owner, members, [m.uuid for m in p.members]))
+        name = saved_world.faction_name(p.name, owner)
+        parties.append(Party(p.id, name, owner, members, [m.uuid for m in p.members]))
     return parties
 
 
@@ -461,40 +462,64 @@ def post_discord(url: str, content: str, urlopen=urllib.request.urlopen) -> str 
 PUBLIC_VERSION = 1
 PUBLIC_NAME_LIMIT = 32            # characters of a faction's name in the public file
 HIDDEN_NAMES = "hidden-names.txt"  # in the state folder: names staff hide, one per line
-AUTO_NAME = "'s faction"          # what read_parties calls a party with no name: it holds its owner's name
-_CODE = re.compile("§.?", re.DOTALL)   # Minecraft's formatting: a section sign and the character after it
+MAX_MARKS = 3                     # combining marks kept on one character: more only pile up over the text around it
+ZWJ = "\u200d"                    # kept: it builds one emoji out of several, and names are compared without it
+_DROPPED = {"Cc", "Cf", "Cs"}     # controls, format characters (bidi controls among them) and lone surrogates
+# Unicode's other default-ignorable characters (variation selectors, but not the emoji one, U+FE0F; tags), and two more
+# that draw nothing: U+3164 and its kin count as letters, U+2800 as a symbol.
+_BLANK = re.compile("[\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2065\u2800\u3164\ufe00-\ufe0e\uffa0\ufff0-\ufff8"
+                    "\U000e0000-\U000e0fff]")
+_CODE = re.compile("§[\u200d\ufe0f]*.?", re.DOTALL)   # Minecraft's formatting: a section sign, the character after it
+
+
+def capped_marks(text: str) -> str:
+    """Text with at most MAX_MARKS combining marks on a character. A joiner between them doesn't restart the count."""
+    out, marks = [], 0
+    for c in text:
+        if unicodedata.category(c).startswith("M"):
+            marks += 1
+            if marks > MAX_MARKS:
+                continue
+        elif c != ZWJ:
+            marks = 0
+        out.append(c)
+    return "".join(out)
 
 
 def plain_name(value) -> str:
-    """A name with no formatting, no control or invisible characters (category C: they could reorder or hide the
-    text around them) and single spaces. Those characters go first, so one can't split a code from its letter.
-    "" for what isn't a string."""
+    """A name with no formatting, no control or invisible characters (they could reorder or hide the text around them),
+    no pile of combining marks and single spaces. The invisible ones go first, so one can't split a code from its
+    letter. A character this Python has no data for (category Cn) stays: it may be a new emoji. "" for what isn't a
+    string."""
     if not isinstance(value, str):
         return ""
-    return " ".join(_CODE.sub("", "".join(c for c in value if not unicodedata.category(c).startswith("C"))).split())
+    seen = "".join(c for c in _BLANK.sub("", value) if c == ZWJ or unicodedata.category(c) not in _DROPPED)
+    return " ".join(capped_marks(_CODE.sub("", seen)).split())
 
 
 def public_name(value) -> str | None:
-    """A player-chosen name as it may show, at most PUBLIC_NAME_LIMIT characters; None if nothing is left of it."""
-    return plain_name(value)[:PUBLIC_NAME_LIMIT].rstrip() or None
+    """A name fit to show, cut to PUBLIC_NAME_LIMIT, or None: nothing there, or no letter or digit to read."""
+    name = plain_name(value)[:PUBLIC_NAME_LIMIT].rstrip()
+    return name if any(c.isalnum() for c in name) else None
 
 
 def name_key(text: str) -> str:
-    """What hidden names and players' names are compared on: letters and digits, no case, no accents, so colour codes,
-    capitals, spacing and symbols can't dodge a match. Hiding one name too many costs a "A faction"; a name of symbols
-    alone is compared whole."""
-    return norm(unicodedata.normalize("NFKD", text)) or text.casefold()
+    """What a name is compared on: its letters and digits, with no case or accents, and compatibility forms folded."""
+    return norm(unicodedata.normalize("NFKD", text))
 
 
 def hidden_names(state: Path) -> frozenset[str]:
-    """The keys of STATE/hidden-names.txt. Compared as public_name leaves them, so a name works whether staff copy
-    it from the page (cut short, no colours) or from the game. No file: none hidden. A file that can't be read
-    raises: no write beats showing a name it may hide."""
+    """The names staff hide (HIDDEN_NAMES), one per line; a line starting with # is a comment. A comment can't follow a
+    name on its line, since # can be part of a name. No file: none. A byte that isn't UTF-8 spoils its own line and is
+    logged. A file that can't be read at all is an error: an old file is better than a hidden name coming back."""
     try:
-        text = (state / HIDDEN_NAMES).read_text(encoding="utf-8-sig")
+        text = (state / HIDDEN_NAMES).read_text(encoding="utf-8-sig", errors="replace")
     except FileNotFoundError:
         return frozenset()
-    return frozenset(name_key(name) for name in map(public_name, text.splitlines()) if name)
+    if "\ufffd" in text:
+        warn(f"{state / HIDDEN_NAMES} is not all UTF-8: a name with a bad byte may not match")
+    names = (line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    return frozenset(name_key(name) for name in map(public_name, names) if name)
 
 
 def shown_name(row: dict, hidden: frozenset[str], people: frozenset[str]) -> str | None:
@@ -505,7 +530,8 @@ def shown_name(row: dict, hidden: frozenset[str], people: frozenset[str]) -> str
     if name is None or name_key(name) in hidden:
         return None
     whole = plain_name(row.get("name"))
-    owner = whole[:-len(AUTO_NAME)] if whole.casefold().endswith(AUTO_NAME) else whole
+    suffix = saved_world.UNNAMED_PARTY
+    owner = whole[:-len(suffix)] if whole.casefold().endswith(suffix) else whole
     members = row.get("members")
     named = {name_key(m) for m in members if isinstance(m, str)} if isinstance(members, list) else set()
     return None if name_key(owner) in people | named else name
@@ -540,43 +566,49 @@ def public_last_week(state: Path, hidden: frozenset[str], people: frozenset[str]
     return {"closed": iso(closed), "factions": public_rows(week.get("rows"), hidden, people)}
 
 
-def next_close(now: dt.datetime, begun: dt.datetime | None = None) -> dt.datetime:
-    """When the timer next ends the week, in UTC: the next Sunday at 7 PM Pacific (monkey-standings.timer), as the
-    clock there says it, whichever side of a daylight-saving change it falls on. A week begun under MIN_WEEK_DAYS
-    before a Sunday isn't closed that Sunday (close), so its close is the one after."""
-    day = now.astimezone(season_calendar.PACIFIC).date()
-    day += dt.timedelta(days=(6 - day.weekday()) % 7)
-    while True:
-        when = dt.datetime.combine(day, CLOSE_TIME, season_calendar.PACIFIC).astimezone(season_calendar.UTC)
-        if when > now and (begun is None or when - begun >= dt.timedelta(days=MIN_WEEK_DAYS)):
-            return when
-        day += dt.timedelta(days=7)
+def season_closes() -> list[dt.datetime]:
+    """Every Sunday 7 PM Pacific the season's week ends (monkey-standings.timer), first first: the launch weekend's,
+    which status.dates() doesn't list, then each week's to the finale's."""
+    return [pacific(season_calendar.week_start(week) - dt.timedelta(days=1), CLOSE_TIME)
+            for week in range(1, LAST_WEEK + 2)]
+
+
+def next_close(now: dt.datetime, begun: dt.datetime | None = None) -> dt.datetime | None:
+    """When this week ends, or None after the season's last close. A week begun under MIN_WEEK_DAYS before a Sunday
+    isn't closed that Sunday (close), so its close is the one after."""
+    young = dt.timedelta(days=MIN_WEEK_DAYS)
+    return next((when for when in season_closes() if when > now and (begun is None or when - begun >= young)), None)
 
 
 def public_standings(world: Path, data: World, week: dict | None, state: Path, now: dt.datetime) -> dict:
     """The file's contents (the contract with the site's standings page): this week so far and last week's table."""
     hidden = hidden_names(state)
     people = frozenset(name_key(n) for n in usernames(world).values() if isinstance(n, str))
+    if not people:   # without it a faction named after a player would show
+        raise ValueError(f"{world.parent / 'usercache.json'} is missing or empty: players' names can't be kept out")
+    closes = next_close(now, since(week))
     return {"version": PUBLIC_VERSION, "checked": iso(now), "season": SEASON,
-            "week_closes": iso(next_close(now, since(week))),
+            "week_closes": iso(closes) if closes else None,
             "factions": public_rows([asdict(r) for r in table(data, week)], hidden, people),
             "last_week": public_last_week(state, hidden, people)}
 
 
-def publish(out: Path | None, world: Path, data: World, week: dict | None, state: Path, now: dt.datetime) -> None:
-    """Writes the website's file, unless the world hasn't launched. Whatever goes wrong is logged and goes no
-    further: the board and the close never depend on it. The last good file then stays up, `checked` showing its age."""
+def publish(out: Path | None, world: Path, data: World, week: dict | None, state: Path, now: dt.datetime) -> int:
+    """Writes the website's file, once there is a launch: 1 if that failed, for the caller to return when all else is
+    done. Whatever goes wrong here, nothing is lost: the file only ever holds what the next run works out again, and the
+    last good one stays up. A close's retries do the file again, and post and close nothing twice."""
     if out is None:
-        return
+        return 0
     if not recap.launched(data):
         print("no public standings before the launch (#launched rw.day)")
-        return
+        return 0
     try:
         write_public(out, public_standings(world, data, week, state, now))
     except Exception as e:   # anything at all: this is never worth a missed board or close
         print(f"could not write the public standings to {out}: {type(e).__name__}: {e}", file=sys.stderr)
-    else:
-        print(f"public standings written ({out})")
+        return 1
+    print(f"public standings written ({out})")
+    return 0
 
 
 # ---------------------------------------------------------------- the commands
@@ -640,7 +672,7 @@ def board(world: Path, state: Path, rcon, now: dt.datetime, out: Path | None = N
     week = read_json(week_file(state))
     last_path = latest_week(state)
     data = read_world(world)
-    publish(out, world, data, week, state, now)   # first: it needs no RCON, so a stopped server still gets it
+    published = publish(out, world, data, week, state, now)   # first: it needs no RCON, so a stopped server gets it
     status = 0
     try:   # never in the board's way: the board goes up whatever happens here
         sent = sync_factions(rcon, world, data)
@@ -656,7 +688,7 @@ def board(world: Path, state: Path, rcon, now: dt.datetime, out: Path | None = N
         print(f"could not update the in-game board: {e}", file=sys.stderr)
         return 1
     print(f"board updated ({clock(now)})")
-    return status
+    return status or published
 
 
 def closing(world: Path, data: World, rows: list[Row], week: dict | None, state: Path, now: dt.datetime,
@@ -709,7 +741,8 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
           out: Path | None = None) -> int:
     """Ends the week (unless it began under MIN_WEEK_DAYS ago, so a re-run or a retry closes nothing twice), then
     does whatever the newest closed week still lacks: the board, the chat announcement, the Discord post (only
-    for a week that closed after the launch). The website's file goes out once the week is closed, on every run."""
+    for a week that closed after the launch). The website's file goes out once the week is closed, on every run; if it
+    fails, the rest still happens and the run ends in 1, so the unit's retries try it again."""
     week = read_json(week_file(state))
     start_ = since(week)
     data = read_world(world)
@@ -726,12 +759,11 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     else:
         print(f"this week began {clock(start_)}, under {MIN_WEEK_DAYS} days ago: not closing it (a re-run or a "
               "retry); finishing the last closed week, if anything is left")
-    publish(out, world, data, week, state, now)
+    status = publish(out, world, data, week, state, now)
     path = latest_week(state)
     last = read_json(path) if path else None
     if path is None or last is None:
-        return 0
-    status = 0
+        return status
     try:
         update_board(rcon, rows, week, last, now, data.scores)
         if last.get("announced"):

@@ -19,7 +19,10 @@ case "$*" in
     'compose logs --no-color monkey') cat "$FAKE/log" ;;
     'compose ps --status running --services') echo monkey ;;
     'compose ps --all --quiet monkey') echo abc123 ;;
-    inspect*) [ -f "$FAKE/state" ] || exit 1; cat "$FAKE/state" ;;
+    'compose up -d' | 'compose stop -t 180' | 'compose down') ;;
+    'inspect --format {{.State.Running}} {{.State.ExitCode}} abc123')
+        [ -f "$FAKE/state" ] || exit 1; cat "$FAKE/state" ;;
+    *) echo "the script called docker in a way this stand-in doesn't know: $*" >&2; exit 64 ;;
 esac
 """
 
@@ -54,25 +57,24 @@ def test_the_saved_line_passes(tmp_path):
 
 
 @needs_posix
-@pytest.mark.parametrize("state", ["false 0", "false 143"])
-def test_a_clean_exit_passes_without_the_saved_line(tmp_path, state):
-    """CI run 41883500387: stopped during the post-start save, the saved line never printed, a clean exit."""
-    done = run(tmp_path, DONE, state)
-    assert done.returncode == 0 and "HOSTING SMOKE TEST PASSED" in done.stdout and state in done.stdout
-
-
-@needs_posix
-@pytest.mark.parametrize("state", ["false 137", "false 1", "true 0", None])   # killed; crashed; still running; unknown
-def test_no_saved_line_and_no_clean_exit_fails(tmp_path, state):
+@pytest.mark.parametrize("state", ["false 0", "false 143", "false 137", "false 1", "true 0", None])
+def test_no_saved_line_fails_however_the_container_stopped(tmp_path, state):
+    """A clean exit proves no save: the world could have stopped short of it."""
     done = run(tmp_path, DONE, state)
     assert done.returncode == 1 and "no clean shutdown in the log" in done.stdout
     assert "HOSTING SMOKE TEST FAILED" in done.stdout
 
 
 @needs_posix
-def test_a_clean_exit_doesnt_excuse_errors_in_the_log(tmp_path):
-    done = run(tmp_path, DONE + "Exception in server tick loop\n", "false 143")
+def test_errors_in_the_log_fail_even_with_the_saved_line(tmp_path):
+    done = run(tmp_path, SAVED + "Exception in server tick loop\n", "false 143")
     assert done.returncode == 1 and "errors in the server log" in done.stdout
+
+
+@needs_posix
+def test_the_script_makes_no_docker_call_the_stand_in_doesnt_know(tmp_path):
+    done = run(tmp_path, SAVED, "false 143")
+    assert done.returncode == 0 and "doesn't know" not in done.stderr
 
 
 @needs_posix

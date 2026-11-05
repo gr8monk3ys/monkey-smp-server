@@ -1001,6 +1001,8 @@ ServerCore's status); the headline goes to the staff webhook.
 | 2026-11-04 | v3.1.0, walk, kit | 30 of 30 | 53.2 ms | 145.1 ms | 18.2 | https://spark.lucko.me/Jj9CMiEacO |
 | 2026-11-04 | v3.1.1, still, kit, map on | 30 of 30 | 57.4 ms | 171.5 ms | 17.0 | https://spark.lucko.me/a4GsPv9toP |
 | 2026-11-04 | v3.1.1, walk, kit, map on | 30 of 30 | 63.4 ms | 278.9 ms | 14.7 | https://spark.lucko.me/0iiEUSnbat |
+| 2026-11-04 | v3.1.1, still, kit | 30 of 30 | 49.0 ms | 91.4 ms | 20.0 | https://spark.lucko.me/LGNIWKwj2K |
+| 2026-11-04 | v3.1.1, walk, kit | 30 of 30 | 55.8 ms | 142.6 ms | 17.8 | https://spark.lucko.me/thVMPRbhTA |
 
 The first run, on 2026-10-25 at 22:30 Pacific. One fake player (Load08) didn't join, so it ran with 24. The
 median sample stayed at 13-31 ms: about 30 ms for a minute or two, then about 15 ms. No 10-second sample
@@ -1036,9 +1038,15 @@ before the script's second copy, so the copy had `render-threads-enabled: true`.
 the CPU, against about 51-75% in the 3.1.0 runs, and `BlueMap-RenderThread-0` shows real work only in these two profiles.
 `still` had 23 of 30 samples over 50 ms and ended on mob cap 80%, chunk-tick distance 6, simulation 6 and view 8. `walk`
 had 29 of 30, one 2164 ms old-generation collection, and ended on mob cap 40%, chunk-tick distance 3, simulation 4 and
-view 7. That points to the renderer, but doesn't prove it: 3.1.1 also added Mace Limiter, and only a run with the map
-stopped separates the two. Until one exists there is no measured map-off number for 3.1.1. Read these rows as what launch
-night could look like if the 4:30 PM `bluemap stop` (docs/LAUNCH.md) is missed.
+view 7. Read these rows as what launch night could look like if the 4:30 PM `bluemap stop` (docs/LAUNCH.md) is missed.
+
+**3.1.1 with the map stopped**, 2026-11-04 at 22:44 Pacific, the rows to compare with 3.1.0. The copy had
+`render-threads-enabled: false`, spark's process CPU was about 59% and 71%, and no render thread appears in either profile.
+So the map was most of the difference above. Against 3.1.0, `still` is 1.5 ms slower at the same 20.0 TPS, ending on
+chunk-tick distance 7 instead of 9. `walk` is 2.6 ms slower at 17.8 TPS against 18.2, ending on mob cap 40% instead of 50%,
+with 23 of 30 samples over 50 ms against 25. That's one run each, so it doesn't separate any cost of Mace Limiter from
+ordinary variation between runs. `walk` is now just under the 18 TPS named in the decision above, which is about real
+players on launch night, so the decision stands.
 
 **3.1.0 on the home PC.** The table above is the VPS; these are the i7-8700K with its slow disk, so compare them only
 with each other. 30 fake players with a kit, standing, all 30 online, no command-limit hits:

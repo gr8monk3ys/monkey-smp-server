@@ -65,12 +65,10 @@ order and the dates.
 - [x] **Tue 27 Oct: Submit for Review** (done; Tebex says review takes up to 2 working days). If the store isn't
   approved by **Thu 5 Nov**, launch with passes by hand (below); the site already says that while
   `STORE_URL` is empty.
-- [ ] **Once approved: open the `STORE_URL` pull request** (the one-line change in `site/config.json`) and
-  leave it unmerged. It merges **at 5 PM on launch day** (launch day, below), or on Sunday 8 November if the founding roster is over 30. Until it merges the site says passes are
-  arranged in the Discord, which stays true. Site-only pull requests are fine during the release freeze.
-- [ ] **Keep the storefront's address to staff until it merges.** A pass bought there goes on the whitelist
-  within a minute, and that player could walk into the world before everyone else. Staff check the whitelist
-  daily until launch (below).
+- [x] **`STORE_URL` merged early, 2026-11-04 at 11:16 PM Pacific (#110),** an owner's call so people can see the store
+  before launch. The plan had been 5 PM on launch day. The test purchase above hadn't passed yet.
+- [ ] **The store is public, so a pass bought now goes on the whitelist within a minute,** and that player could walk
+  into the world before everyone else. Staff check the whitelist daily until launch (below).
 
 ### Refunds before the money settles
 
@@ -193,6 +191,7 @@ below).
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
   only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
+  Buyers show up here now that the store is open.
 
 ### Passes and the whitelist by hand
 
@@ -251,10 +250,10 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | 9 AM | an owner | `monkey-deploy.sh --status`: the release from 4 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
-| 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
+| 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. |
 | 4:30 PM | an owner | `bluemap stop` in the console, so the map's renderer doesn't share the two threads with the launch crowd: the load test's numbers are without it (docs/LIVE.md, "Load test"). `bluemap` should say the render threads are stopped. |
 | 4:45 PM | the camera | Recording starts (below). |
-| 5:00 PM | an owner | Paste the whitelist line. In the console: `function monkey:rules/launch`. Merge the `STORE_URL` pull request (if the roster is 30 or under and the store is approved). Post the launch announcement. |
+| 5:00 PM | an owner | Paste the whitelist line. In the console: `function monkey:rules/launch`. Post the launch announcement. |
 | 5:00 PM | an owner | Season Wrapped's starting point, on the VPS: `monkey rcon "save-all flush"`, then `python3 /srv/monkey/repo/tools/wrapped.py start /srv/monkey/MonkeySMP-Server/server/world --out /srv/monkey/seasons/season-I-wrapped-start.json`. It says how many players' counts it kept; it refuses before `rules/launch`, and to replace the file (a rerun needs `--force`). Without it, Season Wrapped counts staff test play (docs/SEASONS.md, "Ending a season"). |
 | 5:00 PM | an owner | `python tools/block_wheel.py "S1 launch"` on the maintainer's computer; paste its `tellraw` into the console and the three blocks into `#monkey-smp`. |
 | 5:00 to 6 PM | moderators | The launch hour (rule 23): PvP and the Nether are closed, the End stays closed. Answer install questions in `#help` and tickets. The hourly backup runs at 5:00 and takes a minute or two; a short stutter then is that. |
@@ -278,8 +277,8 @@ with the world, so run it once.
 - [ ] **Midnight:** launch weekend ends, and with it Founder's Circlet's window: `monkey-week.timer` closes it
   at 12:00:30 AM. Then `monkey rcon "scoreboard players get #founder.open rw.day"` should say 0; if it says
   1, `monkey rcon "function monkey:wardrobe/founder/close"`.
-- [ ] **Roster over 30:** merge the `STORE_URL` pull request in the morning, after the waitlist has had its
-  message the night before (founding roster, below).
+- [ ] **Roster over 30:** the store was meant to stay shut until this morning, after the waitlist has had its message
+  the night before (founding roster, below), but it opened early. To hold sales back, an owner reverts #110 on Saturday.
 
 ## Recording real footage
 

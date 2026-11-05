@@ -68,7 +68,8 @@ order and the dates.
 - [x] **`STORE_URL` merged early, 2026-11-04 at 11:16 PM Pacific (#110),** an owner's call so people can see the store
   before launch. The plan had been 5 PM on launch day. The test purchase above hadn't passed yet.
 - [ ] **The store is public, so a pass bought now goes on the whitelist within a minute,** and that player could walk
-  into the world before everyone else. Staff check the whitelist daily until launch (below).
+  into the world before everyone else. That's the early access the founding roster's rules say isn't for sale (below),
+  so staff check the whitelist daily until launch (below).
 
 ### Refunds before the money settles
 
@@ -191,7 +192,7 @@ below).
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
   only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
-  Buyers show up here now that the store is open.
+  Buyers show up here now that the store is open. A buyer who isn't on the founding roster is an owner's call.
 
 ### Passes and the whitelist by hand
 
@@ -277,8 +278,8 @@ with the world, so run it once.
 - [ ] **Midnight:** launch weekend ends, and with it Founder's Circlet's window: `monkey-week.timer` closes it
   at 12:00:30 AM. Then `monkey rcon "scoreboard players get #founder.open rw.day"` should say 0; if it says
   1, `monkey rcon "function monkey:wardrobe/founder/close"`.
-- [ ] **Roster over 30:** the store was meant to stay shut until this morning, after the waitlist has had its message
-  the night before (founding roster, below), but it opened early. To hold sales back, an owner reverts #110 on Saturday.
+- [ ] **Roster over 30, if #110 was reverted on Saturday:** put `STORE_URL` back this morning, after the waitlist has had
+  its message the night before (founding roster, below).
 
 ## Recording real footage
 
@@ -340,7 +341,7 @@ higher on the roster.
 - **First come, first served.** The order is the time of the sign-up message, which Discord records. The
   first 30 are the roster; everyone after is on the waitlist, in order.
 - **Up to 30, because 30 is the server's slot count** (`max-players=30`). If 30 or fewer sign up, there is no
-  waitlist and the store opens to everyone at 5 PM.
+  waitlist. The store has been open to everyone since 4 November.
 
 ### The announcement (draft, T-9, Thursday 29 October, `#announcements`)
 
@@ -390,9 +391,10 @@ Staff steps:
 7. **Over 30 only:** members without a pass arranged by Friday 5 PM get a message: arrange one by Saturday
    12 PM or the place passes on. On Saturday at 12 PM, each empty place goes to the next on the waitlist, who
    gets a message the same evening. Fill places only while the next person can still arrange a pass in time.
-8. **Sat 7 Nov, 12 PM: the roster is final.** Write the add-player line from it (above).
-9. **Over 30, Saturday night:** message the waitlist that the store opens Sunday morning, and merge the
-   `STORE_URL` pull request on Sunday. From then on the slots are first come, first served on the server
+8. **Sat 7 Nov, 12 PM: the roster is final.** Write the add-player line from it (above). Over 30, an owner decides
+   whether to revert #110 now, so sales wait until Sunday. That takes down the site's buy buttons, not the store itself.
+9. **Over 30, Saturday night, if #110 was reverted:** message the waitlist that the store's link is back Sunday morning,
+   and put `STORE_URL` back on Sunday. From then on the slots are first come, first served on the server
    itself, as on any night.
 
 ## Moderator recruitment

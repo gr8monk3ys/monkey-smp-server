@@ -144,8 +144,8 @@ docs/LAUNCH.md too. Like everything here, nothing is posted until an owner says 
 - **Lines marked [needs ...]** mention work that isn't merged yet. Each stays only if that work is in the
   last release, tagged by Wednesday 4 November (docs/LAUNCH.md, "Copy that depends on unmerged work"). Delete the
   marker before posting.
-- **Lines marked [store]** or **[by hand]**: keep the one that is true on the day. The store's link goes on the
-  site at 5 PM on launch day (docs/LAUNCH.md, "The store").
+- **Lines marked [store]** or **[by hand]**: keep the one that is true on the day. The store's link has been on the
+  site since 4 November (docs/LAUNCH.md, "The store"), so keep [store].
 - **Addresses.** The lists use their join addresses from the table above. Reddit and the Discord have none of
   their own yet, so they use the main address. To count Reddit on its own, add `rd.monkeysmp` records (as in
   "The DNS records") before the Reddit post (31 October) and use `rd.monkeysmp.lscaturchio.xyz` in the Reddit post.
@@ -241,7 +241,7 @@ registration and asks players to install the pack; the T-7 post says both again.
 > - Weekly challenges. [needs weekly challenges]
 > - Play launch weekend and keep the Founder skin for good. Never sold. [needs the Founder skin]
 >
-> A pass is $5 a month, the same for everyone. [store] The store opens at 5 PM on launch day. [by hand]
+> A pass is $5 a month, the same for everyone. [store] Get one on the website. [by hand]
 > Until the store opens, arrange yours in a ticket.
 
 **T-1, Friday 6 November, 5 PM, `#announcements` and `#monkey-smp`:**
@@ -251,7 +251,7 @@ registration and asks players to install the pack; the T-7 post says both again.
 > Tonight:
 > 1. **Update the modpack** from https://monkeysmp.lscaturchio.xyz/#join, start it and get to the main menu.
 >    Stuck? Open a ticket tonight, not at 5 tomorrow.
-> 2. **Sort out your pass.** [store] The store opens at 5 PM tomorrow, on the website. [by hand] Arrange it in
+> 2. **Sort out your pass.** [store] Get it on the website. [by hand] Arrange it in
 >    a ticket by tonight.
 > 3. **Hit "Interested"** on the launch event for a reminder.
 >

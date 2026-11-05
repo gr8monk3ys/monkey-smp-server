@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "minecraft": "26.2",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -1115,6 +1115,22 @@
       "size": 1634800,
       "hashes": {
         "sha512": "37de9e16272b6bbf82f422ddf012fa810d32c617c5621919157b662b4edfe956a870c5bc3ca4b05f32c90d7135f0ac2580ea16cd7c481c26a04778f639c3f89c"
+      }
+    },
+    {
+      "slug": "mace-limiterrr",
+      "project_id": "gfapiKeE",
+      "version": "1.0.1",
+      "version_id": "KsgakHsw",
+      "file": "macelimiter-1.0.0+26.2.jar",
+      "url": "https://cdn.modrinth.com/data/gfapiKeE/versions/KsgakHsw/macelimiter-1.0.0%2B26.2.jar",
+      "size": 69093,
+      "hashes": {
+        "sha512": "b1ead7f12320372898564d245e03969899fa83285afe69bdb9cb3fbb558fcb12e6281a2407be3eb5fe47e6cef63811a30ea4cb8c1f47bca49628d0e18e147bdb"
+      },
+      "patch": {
+        "path": "patches/mace-limiterrr",
+        "base_sha512": "b1ead7f12320372898564d245e03969899fa83285afe69bdb9cb3fbb558fcb12e6281a2407be3eb5fe47e6cef63811a30ea4cb8c1f47bca49628d0e18e147bdb"
       }
     },
     {

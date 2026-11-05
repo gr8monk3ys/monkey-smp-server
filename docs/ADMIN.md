@@ -369,6 +369,15 @@ These configs ship in `package/monkey/defaults/` and are copied on start only wh
 edit on the server sticks. Stop the server before editing one. `tests/test_mod_defaults.py` keeps the shipped
 values.
 
+- **Mace Limiter** (`/macelimit`, ops only; kept per world in `world\macelimiter_maces.json`). Only 3 crafted maces can
+  exist on a world at a time, and a crafting table, the inventory grid or a crafter makes no more until one breaks or is
+  destroyed. A mace in a chest, in a mob's hand or carried by someone offline still counts. Maces from `/give`, the
+  creative menu and the arena kit aren't counted. `/macelimit count` and `/macelimit players` show what exists and who
+  holds it, `/macelimit set <n>` changes the limit, and `/macelimit help` lists the rest (cooldown, damage cap, what
+  death does, storage), all left at the mod's defaults. Removing a counted mace with `/clear` or the arena's clear of
+  unmarked items doesn't free its slot (a patch, docs/MAINTAINING.md), and neither does losing one while it's on Strength
+  Restrictions' cooldown, when it's a look-alike potato. `/macelimit reset` stops counting every mace that exists so far,
+  and they stay in the game, so use it only when the count is wrong.
 - **Loot Restock** (`server\lootrestock.properties`). A structure loot chest refills from its loot table 7 days
   after it was emptied, and only when it is completely empty. Barrels, item frames and trial vaults are left
   alone. Only ops can break a tracked loot chest. It tracks only chests opened while they still have a loot

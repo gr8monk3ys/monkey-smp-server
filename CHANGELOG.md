@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.1.1] - 2026-11-04
+
+Mace Limiter, the one jar the shared folder gained after 3.1.0. It runs on the server only, so players keep the 3.1.0
+pack and no world moves (docs/LIVE.md, "3.1.1: Mace Limiter").
+
+### Added
+
+- Mace Limiter 1.0.1: only 3 crafted maces can exist on a world at a time. Once all 3 exist, a crafting table, the
+  inventory grid or a crafter makes no more until one breaks or is destroyed. Maces from `/give`, the creative menu and
+  the arena kit aren't counted. Staff run it with `/macelimit` (docs/ADMIN.md, "Mod settings"). Server: 171 mods, up from
+  170. Client pack: unchanged, 177 mods and 22 resource packs.
+- Speed: no cost measured. With 30 fake players on the i7-8700K the mean tick was 139.5 and 133.7 ms with the mod and
+  197.0 and 134.7 ms without, and it never shows in the main thread's profile. Don't compare those with 3.1.0's 52.5 ms:
+  the rig from that test measured 95.4 ms the same evening, against 55.7 ms the day before.
+
+### Fixed
+
+- Two patches, so the cap holds in this pack (docs/MAINTAINING.md, "Patches this pack carries"). Upstream freed a mace's
+  slot when a player picked a fresh mace up off the ground, so craft, drop, pick up, repeat beat the cap: a one-byte
+  change to one class turns that off (`tools/macelimiter_patch.py` rebuilds it; CC0-1.0 like the mod). And Strength
+  Restrictions' mace cooldown wiped the id Mace Limiter writes on a mace, so a mace that had been used could never free
+  its slot: the cooldown's item modifier now merges its marker in.
+- The same merge keeps the arena kit's mark on a kit mace through that cooldown, so the arena no longer clears the mace
+  at its first hit.
+
 ## [3.1.0] - 2026-11-03
 
 The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on

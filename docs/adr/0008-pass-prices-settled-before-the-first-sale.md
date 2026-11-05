@@ -3,6 +3,8 @@ status: accepted
 ---
 # Pass prices and perks are settled before the first sale
 
+> The 3-month pass below was replaced by a 2-month pass on 2026-11-04: see "Changed on 2026-11-04".
+
 Access to the server is a server pass: $5 a month (a Tebex subscription) or $14 for 3 months (a one-off
 package that Tebex removes after 90 days). Supporter tiers (Ember, Banner, Crown at $3, $7 and $15 a month)
 buy cosmetics only. Crown's extra is a landmark the player names in each season's world, not a vote: every
@@ -34,3 +36,11 @@ payers whichever pass they choose.
 - Creator codes with a 5-10% buyer discount: the usual setup, but a second price for the same access.
 - Per-person coupons as a trial (a free first week for named players): not open to everyone, so a second
   price.
+
+## Changed on 2026-11-04
+
+Before the store opened, the owner replaced the 3-month pass with a 2-month pass at $8, a one-off package that Tebex
+removes after 60 days and that adds `rw.months 2`. No 3-month pass had been sold. After fees it keeps about $7.10, or
+$3.55 a month against the monthly pass's $4.33, so break-even is about 15 payers on it instead of 12. It is 20% off two
+monthly passes, the same discount turned down above at $12. And it ends before a 12-week season does: one bought on
+launch day ends on 6 January 2027, before the 23 January finale.

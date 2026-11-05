@@ -774,7 +774,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | Package | Price | Charged | Commands (docs/RETENTION.md) |
 | --- | --- | --- | --- |
 | Server Pass | $5 | monthly subscription | whitelist, `rw.months 1` on renewal |
-| Server Pass, 3 months | $14 | once; Remove After 90 days | whitelist, `rw.months 3` |
+| Server Pass, 2 months | $8 | once; Remove After 60 days | whitelist, `rw.months 2`, taken back on refund or chargeback |
 | Ember, Banner, Crown | $3, $7, $15 | monthly subscription | `rw.tier`, `tier_*` team |
 
 - **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price
@@ -792,7 +792,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
   "**Can I try it first?** Yes: the monthly pass starts with 7 free days. Tebex asks for a card and charges
   the first month when the 7 days end, unless you cancel before then on its payment history page."
 - **Creator codes** (Creator Codes in the Tebex panel): a 20% revenue share, no customer discount, limited
-  to the 3-month pass if Tebex offers that. Tebex pays a code's share only on a subscription's first
+  to the 2-month pass if Tebex offers that. Tebex pays a code's share only on a subscription's first
   payment, takes 1% more on payments made with a code, and settles the creator's Tebex Wallet after 30
   working days. The public terms are the site's `/creators` page (`terms` in `site/src/content/rules.tsx`);
   finding creators is in docs/PROMOTION.md.

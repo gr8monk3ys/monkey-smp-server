@@ -225,10 +225,9 @@ def follow(payments: list[Payment], played: dict[str, list[tuple[dt.datetime, dt
 
 def report(buyers: list[Buyer], as_of: dt.date, logs_from: dt.date | None) -> list[str]:
     lines = []
-    for months, label in ((1, "Month-2 renewal, monthly passes"), (3, "Renewal, 3-month passes")):
+    for months in sorted({1} | {b.months for b in buyers}):
+        label = "Month-2 renewal, monthly passes" if months == 1 else f"Renewal, {months}-month passes"
         group = [b for b in buyers if b.months == months]
-        if not group and months != 1:
-            continue
         due = [b for b in group if b.renewed is not None]
         renewed = sum(1 for b in due if b.renewed)
         result = f"{renewed} of {len(due)} renewed ({100 * renewed // len(due)}%)" if due else "none due yet"

@@ -82,6 +82,15 @@ def test_as_of_moves_what_is_due(logs, capsys):
     assert "NoShowFake" not in out and "Came back later" not in out
 
 
+def test_a_two_month_pass_is_due_after_two_months(logs, capsys):
+    payments = logs / "two-month.csv"
+    payments.write_text("Transaction ID,Date,Username,UUID,Email,Packages,Price,Currency,Status,Gateway,IP Address\n"
+                        'tbx-fake-1,2026-09-15 19:30:00,KaiFake,,kai@example.com,"Server Pass, 2 months",8.00,USD,'
+                        "Complete,PayPal,203.0.113.13\n", encoding="utf-8")
+    funnel.main([str(payments), str(logs), "--as-of", "2026-11-20"])
+    assert "Renewal, 2-month passes: 0 of 1 renewed (0%); 0 not due yet" in capsys.readouterr().out
+
+
 def test_columns_are_found_by_name_or_given():
     cols = funnel.find_columns(["Txn", "Created At", "Minecraft Username", "Package Name"], {})
     assert cols == {"username": "Minecraft Username", "date": "Created At", "package": "Package Name"}

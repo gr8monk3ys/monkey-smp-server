@@ -39,7 +39,8 @@ controlled studies, so treat them as patterns rather than proof.
 Twelve weeks fits a factions server with Strength. Strength and gear pile up, so after about three
 months new players can't catch up, and the veterans have nothing left to chase. Shorter seasons
 (Lifesteal's 2 to 4 weeks) don't give factions time to build bases or alliances. Twelve weeks is
-also three months of pass, so a season is an easy thing to sell: "Season II starts March 7, three months."
+also about three months, so a season is an easy thing to sell: "Season II starts March 7, three months."
+A 2-month pass doesn't last a whole season, so its buyers need a second pass for the last weeks.
 
 Each season has:
 
@@ -123,10 +124,10 @@ launch, and starts again on 14 March 2027, after the season: every Season I time
 | 6 | 19 Dec | Arena Glory I, as **Midwinter**: a snowball round in the arena, then gifts at spawn and the Midwinter Cap | |
 | 7 | 26 Dec | The border breaks again: 5500 to 6000 | Midwinter comes down. The day after Christmas: expect a thin crowd, which a border break doesn't need. |
 | 8 | 2 Jan 2027 | Build Battle II | Town Hall. The first Base of the Month (entries by 25 Dec). |
-| 9 | 9 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set |
+| 9 | 9 Jan | Arena Glory II | "Two weeks before the end" (Ending a season, below): the end date again, the twist vote opens, Season II's date set. 2-month passes bought on launch day ended on Wednesday 6 Jan |
 | 10 | 16 Jan | Faction Raid III | The Cup standings set the finale's spawn order |
 | 11 | 23 Jan | **The finale**. The world locks after it. | The second Base of the Month (entries by 17 Jan) |
-| 12 | 30 Jan | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | 3-month passes bought on launch day end on Friday 5 Feb |
+| 12 | 30 Jan | Off-season weekend in the locked world: the download, the twist vote, a creative or minigame night | |
 | | 6 Feb | Season II opens (proposed; owners confirm it by 9 Jan) | |
 
 - **The end date to announce on day one:** Season I ends with the finale on Saturday 23 January 2027. The

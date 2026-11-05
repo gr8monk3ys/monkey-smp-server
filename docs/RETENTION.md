@@ -59,7 +59,7 @@ Why these counters:
 - **Tenure** (`rw.months`) rewards renewing the pass: the Oathblades, the Old Guard and the Wanderer's
   Hood can't be bought, only kept. The ladder starts at month 1 and steps at 2 and 3, so a new buyer gets
   something at each early renewal, when most passes lapse, instead of waiting six months. Steps add up:
-  a 3-month pass unlocks the first three at once.
+  a 2-month pass unlocks the first two at once.
 - **Events attended** (`rw.events`): Rallier at 3 and the Plumed Helm at 10. The events pack counts one
   per event when staff run `attend` (`docs/ADMIN.md`, "Attendance").
 - **Holidays** (Gravelight, Midwinter Cap, Solstice) come only from being at that holiday's event
@@ -200,7 +200,7 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | A Banner or Crown player picks a title, or earns Herald (staff) | see "Titles" below |
 | A Crown player names a landmark (staff, once a season) | see "Crown landmarks" below |
 | A monthly pass renews | `scoreboard players add {username} rw.months 1` |
-| A 3-month pass is bought | `scoreboard players add {username} rw.months 3` |
+| A 2-month pass is bought | `scoreboard players add {username} rw.months 2` |
 | A friend they invited buys a pass (staff) | `scoreboard players add NAME rw.invites 1` |
 | A referral (Front Desk posts these in the mod channel, or sends them itself) | `scoreboard players set BUYER rw.kin 1`, `scoreboard players set NAME rw.kin 1`, `scoreboard players add NAME rw.invites 1` |
 | That purchase is refunded or charged back (only if staff decide to) | `scoreboard players remove NAME rw.invites 1`, `scoreboard players reset BUYER rw.kin` (the referrer keeps theirs) |
@@ -309,7 +309,7 @@ that first join (D7), and the pass renewed. It prints:
 - **Month-2 renewal**, the headline: of the monthly passes whose first month is over, the share that
   paid for a second. The budget below runs on this number. Passes whose month isn't over yet are counted
   as "not due yet", not as lost.
-- The same for 3-month passes, once their three months are up.
+- The same for 2-month passes, once their two months are up.
 - A row for each month's new buyers: how many joined, played 30 minutes, came back after a week, and
   renewed.
 - **Bought a pass but never joined**: send each of them the install help (`docs/SHARING.md`) that day.
@@ -331,18 +331,20 @@ bought before the oldest log, since it can't follow them.
 ## Churn and the budget
 
 Tebex takes a 5% platform fee and card processing about 2.49% + $0.30 of each payment. After both, the $5
-monthly pass brings in about $4.33 and the $14 three-month pass about $12.65, or $4.22 a month. The server
+monthly pass brings in about $4.33 and the $8 two-month pass about $7.10, or $3.55 a month. The server
 costs about $50 a month (the $45 VPS in docs/LIVE.md, plus off-site backups and the fallback tunnel), so it
-breaks even at 12 paying players whichever pass they choose. The table below assumes monthly passes.
+breaks even at 12 paying players on monthly passes, or 15 on two-month passes. The table below assumes
+monthly passes.
 
-Three monthly passes cost $15, so the three-month pass is about 7% cheaper. Mojang's rule is that access
+Two monthly passes cost $10, so the two-month pass is 20% cheaper. Mojang's rule is that access
 costs the same for everyone, which the official server list reads as payment options "equal in value, or
-close to". At $12 (20% off) the three-month pass stretched that reading and earned less than monthly
-passes: about $10.80, or $3.60 a month. Tebex can't change the price of a subscription already sold, so
-the prices were settled before the first sale (docs/adr/0008-pass-prices-settled-before-the-first-sale.md).
+close to". The first prices turned down 20% off ($12 for 3 months) for stretching that reading and earning
+less than monthly passes. The owner chose $8 for 2 months on 4 November 2026, before the first sale
+(docs/adr/0008-pass-prices-settled-before-the-first-sale.md). Tebex can't change the price of a subscription
+already sold, so the monthly pass's $5 has to hold.
 
-A creator code (the site's /creators page) pays its creator 20% of a three-month pass, and Tebex takes 1% more on
-payments made with a code, which leaves about $9.70 ($3.24 a month). Codes are for finding players, not
+A creator code (the site's /creators page) pays its creator 20% of a two-month pass, and Tebex takes 1% more on
+payments made with a code, which leaves about $5.42 ($2.71 a month). Codes are for finding players, not
 for paying the server.
 
 | Monthly pass churn | Months a payer stays | Lifetime value | New payers a month to hold 30 |

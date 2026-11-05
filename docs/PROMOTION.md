@@ -5,8 +5,8 @@ Nothing in here is posted, submitted or sent without an owner's OK. The accounts
 
 Three ground rules, everywhere:
 
-- **Price and requirements up front.** Every listing says the server needs a paid pass ($5 a month or $14 for
-  3 months) and Minecraft Java Edition on a PC with 16 GB of RAM. A player who finds out at the whitelist step
+- **Price and requirements up front.** Every listing says the server needs a paid pass ($5 a month or $8 for
+  2 months) and Minecraft Java Edition on a PC with 16 GB of RAM. A player who finds out at the whitelist step
   feels tricked, and lists remove servers that hide a paywall.
 - **Free placements only.** No paid list slots, auctions or vote buying. The pass and supporter tiers pay for
   the server (docs/RETENTION.md, "Budget"), not for ads.
@@ -35,7 +35,7 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 > - One event a week (Saturday, 6 pm Pacific): faction raids, arena nights, Dragon Night.
 > - Up to 30 online, a pre-generated world on a dedicated CPU, 20 TPS.
 >
-> Access is a server pass: $5 a month or $14 for 3 months, the same for everyone. Supporter tiers are cosmetic
+> Access is a server pass: $5 a month or $8 for 2 months, the same for everyone. Supporter tiers are cosmetic
 > only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a PC
 > (Windows, macOS or Linux) with 16 GB of RAM; the modpack installs in one click from the website. If it won't
 > run in your first 48 hours, you get your money back.
@@ -203,7 +203,7 @@ answer comments from the same account that day. Other subreddits only after read
 > - Proximity voice chat and a public live map.
 > - Up to 30 online, a pre-generated world, 20 TPS.
 >
-> **It's paid:** a server pass, $5 a month or $14 for 3 months, the same for everyone. Supporter tiers are
+> **It's paid:** a server pass, $5 a month or $8 for 2 months, the same for everyone. Supporter tiers are
 > cosmetic only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a
 > PC with 16 GB of RAM; the modpack installs in one click from the website. If it won't run in your first 48
 > hours, you get your money back.
@@ -301,7 +301,7 @@ modded-survival videos, or who run roleplay or faction series and need a server 
 here every week for a season is worth more than one big video. Not: channels aimed at young children, or
 anyone whose recent videos are drama about other servers.
 
-The terms are on https://monkeysmp.lscaturchio.xyz/creators: 20% of each 3-month pass bought with their
+The terms are on https://monkeysmp.lscaturchio.xyz/creators: 20% of each 2-month pass bought with their
 code, no discount for the buyer, and the #ad disclosure. Send them the page, don't restate it.
 
 Message template (Discord DM, email from the channel's About page, or a reply on their Discord; one message,
@@ -311,7 +311,7 @@ no follow-up spam):
 > (factions of four, territory, Strength SMP, proximity voice, a weekly raid or arena night).
 >
 > I liked VIDEO. If you're looking for a server for a series, you'd be welcome to play here for free, and you
-> can have a creator code that pays you 20% of each 3-month pass your viewers buy with it. The terms are
+> can have a creator code that pays you 20% of each 2-month pass your viewers buy with it. The terms are
 > here: https://monkeysmp.lscaturchio.xyz/creators
 >
 > No pressure either way. If it's not for you, no reply needed.

@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Store: the 3-month pass ($14) is now a 2-month pass ($8), removed after 60 days, adding 2 to `rw.months`. Creator
+  codes pay 20% of it, $1.60. `tools/funnel.py` reports renewals for any pass length.
+
 ## [3.1.0] - 2026-11-03
 
 The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on

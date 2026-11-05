@@ -26,6 +26,10 @@ test("last_week is null until a week has closed, and may be left out", () => {
   assert.equal(parseStandings({ ...good(), last_week: undefined })?.last, null);
 });
 
+test("week_closes is null once the season's last week has closed", () => {
+  assert.equal(parseStandings({ ...good(), week_closes: null })?.closes, null);
+});
+
 test("an empty table is a table: nobody has points yet", () => {
   assert.deepEqual(parseStandings({ ...good(), factions: [] })?.factions, []);
 });
@@ -50,7 +54,9 @@ const bad: [string, unknown][] = [
   ["a date with no time", { ...good(), checked: "2026-11-15" }],
   ["a time with no offset", { ...good(), checked: "2026-11-15T02:00:00" }],
   ["a checked number", { ...good(), checked: 1763172000 }],
-  ["no week_closes", { ...good(), week_closes: null }], ["no season", { ...good(), season: undefined }],
+  ["no week_closes", { ...good(), week_closes: undefined }],
+  ["a week_closes that is no time", { ...good(), week_closes: "soon" }],
+  ["no season", { ...good(), season: undefined }],
   ["season 0", { ...good(), season: 0 }], ["season 1.5", { ...good(), season: 1.5 }],
   ["a season in words", { ...good(), season: "1" }],
   ["factions missing", { ...good(), factions: undefined }], ["factions an object", { ...good(), factions: {} }],

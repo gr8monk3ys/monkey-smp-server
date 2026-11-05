@@ -12,8 +12,8 @@ export type Standings = {
   /** When the server wrote the file, ms since 1970. */
   checked: number;
   season: number;
-  /** When this week's standings close, ms. */
-  closes: number;
+  /** When this week's standings close, ms; null once the season's last week has closed. */
+  closes: number | null;
   factions: Row[];
   last: { closed: number; factions: Row[] } | null;
 };
@@ -59,8 +59,8 @@ export function parseStandings(data: unknown): Standings | null {
   const d = data as Record<string, unknown>;
   if (d.version !== 1) return null;
   const checked = time(d.checked);
-  const closes = time(d.week_closes);
-  if (isNaN(checked) || isNaN(closes)) return null;
+  const closes = d.week_closes === null ? null : time(d.week_closes);
+  if (isNaN(checked) || (closes !== null && isNaN(closes))) return null;
   if (typeof d.season !== "number" || !Number.isInteger(d.season) || d.season < 1 || d.season > 39) return null;
   const factions = table(d.factions);
   if (!factions) return null;

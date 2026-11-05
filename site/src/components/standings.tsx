@@ -64,7 +64,7 @@ function Tables({ file, now }: { file: Standings; now: number }) {
         <h2 id="standings-this">This week, so far</h2>
         <p className="small">
           {season}. Updated {ago(now - file.checked)}.
-          {file.closes > now && <> The week closes {shortWhen(new Date(file.closes))}.</>}
+          {file.closes !== null && file.closes > now && <> The week closes {shortWhen(new Date(file.closes))}.</>}
         </p>
         <Table title="Factions this week, so far" caption="No faction has points yet." rows={file.factions} />
       </section>

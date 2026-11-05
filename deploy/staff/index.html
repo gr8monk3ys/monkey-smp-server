@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#1f6142">
+  <title>Monkey SMP staff</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="staff.css">
+  <script src="staff.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <p class="brand">Monkey <b>SMP</b> <span>staff</span></p>
+    <p class="checked" id="checked">Getting the latest reading</p>
+  </header>
+
+  <main>
+    <section class="verdict" aria-live="polite">
+      <h1><svg class="mark" id="mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="word">Checking</span></h1>
+      <p class="sentence" id="sentence">Asking the server how it is doing.</p>
+      <p class="aside" id="note" hidden></p>
+      <p class="attention" id="attention" hidden></p>
+      <p class="attention" id="trouble" hidden></p>
+    </section>
+
+    <div class="layout" id="layout">
+      <aside class="now" aria-label="Right now">
+        <section>
+          <h2>The game</h2>
+          <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>
+          <dl id="game"></dl>
+          <ul class="names" id="names"></ul>
+        </section>
+        <section>
+          <h2>The machine</h2>
+          <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>
+          <dl id="machine"></dl>
+        </section>
+        <section>
+          <h2>Upkeep</h2>
+          <div class="skeleton" aria-hidden="true"><i></i><i></i></div>
+          <dl id="upkeep"></dl>
+        </section>
+      </aside>
+
+      <div class="column">
+        <section class="problems" aria-labelledby="problems-title">
+          <h2 id="problems-title">Recent problems</h2>
+          <div class="skeleton" aria-hidden="true"><i></i></div>
+          <ul class="problem-list" id="problems"></ul>
+          <p class="fine" id="problems-fine"></p>
+        </section>
+
+        <section class="history" aria-labelledby="history">
+          <div class="history-head">
+            <h2 id="history">Over time</h2>
+            <div class="range" role="group" aria-label="How far back to show">
+              <button type="button" data-hours="1" aria-pressed="false">1 hour</button>
+              <button type="button" data-hours="6" aria-pressed="true">6 hours</button>
+              <button type="button" data-hours="24" aria-pressed="false">24 hours</button>
+            </div>
+          </div>
+
+          <figure class="chart" id="tick-chart">
+            <figcaption>
+              <h3>Time per tick</h3>
+              <p>Lower is better. Past the 50 ms line, the game falls behind and players feel lag.</p>
+            </figcaption>
+            <p class="readout" id="tick-readout"></p>
+            <div class="plot" id="tick-plot"></div>
+          </figure>
+
+          <figure class="chart" id="players-chart">
+            <figcaption>
+              <h3>Players online</h3>
+            </figcaption>
+            <p class="readout" id="players-readout"></p>
+            <div class="plot" id="players-plot"></div>
+          </figure>
+
+          <p class="fine" id="how">A reading is taken every 2 minutes and covers about 5 seconds, so a short spike between
+            readings won't show. P95 means 19 ticks in 20 were faster than this. Shaded stretches had no reading: the
+            server was restarting, stopped or not answering.</p>
+
+          <details class="table" id="table">
+            <summary>The readings as a table</summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="The readings">
+              <table>
+                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th></tr></thead>
+                <tbody id="rows"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>Look, don't touch: nothing on this page can change the server. Please keep the address and your password to yourself.</p>
+  </footer>
+
+  <noscript><p class="attention">This page draws its numbers with JavaScript, so it needs that turned on.</p></noscript>
+</body>
+</html>

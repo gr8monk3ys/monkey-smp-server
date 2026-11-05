@@ -315,16 +315,7 @@ def test_the_rulebook_page_is_the_players_part_of_the_rulebook():
 def test_a_stale_rulebook_is_reported_or_replaced(tmp_path):
     repo = Repo(tmp_path)
     (tmp_path / "docs").mkdir()
-    book = "# Title
-
-Hosted by us.
-
-1. Rule.
-
-## Notes for admins
-
-Secret
-"
+    book = "# Title\n\nHosted by us.\n\n1. Rule.\n\n## Notes for admins\n\nSecret\n"
     (tmp_path / "docs" / "RULES.md").write_text(book, encoding="utf-8")
     assert "run python tools/site_links.py" in site_links.rulebook_problems(repo)[0]
     assert site_links.rulebook_problems(repo, write=True) == []

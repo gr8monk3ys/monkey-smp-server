@@ -254,7 +254,8 @@ The rules are in docs/SEASONS.md, "Build Battle"; the staff commands in docs/ADM
 
 The texts are in docs/PROMOTION.md, "Season I launch announcements", except the founding roster post, which
 is below. Times are Pacific. Each Discord draft writes the time as a Discord timestamp, so every reader sees
-it in their own time zone.
+it in their own time zone. The Discord is optional, so the T-1 and launch posts also go on the site's What changed
+page (docs/ADMIN.md, "Telling players what changed"), with the time in Pacific and Eastern.
 
 | When | Where | What |
 | --- | --- | --- |

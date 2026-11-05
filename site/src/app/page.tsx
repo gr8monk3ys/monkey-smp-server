@@ -101,7 +101,7 @@ export default function Home() {
               <Store when="open">
                 <p><ConfigLink to="STORE_URL">Buy it</ConfigLink> with your Minecraft Java name. You&apos;re on the
                   whitelist within a minute or two. Connecting your Discord is optional: it gets you the member
-                  role there, at checkout or later from your receipt.</p>
+                  role there, at checkout or later from the follow-up email.</p>
               </Store>
               <Store when="soon">
                 <p>The store isn&apos;t open yet. Until it is, passes are arranged in{" "}

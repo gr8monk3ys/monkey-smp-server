@@ -17,10 +17,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DATA = Path(os.environ.get("MONKEY_MARKETING", r"D:\DevData\monkey-smp-marketing"))
+DATA = Path(os.environ.get("MONKEY_MARKETING", r"D:\DevData\monkey-smp\marketing"))
 OUT = DATA / "out"
 FONTS = DATA / "fonts"
-SHOTS = Path(os.environ.get("MONKEY_SHOTS", r"D:\DevData\monkey-photos\shots"))
+SHOTS = Path(os.environ.get("MONKEY_SHOTS", r"D:\DevData\monkey-smp\photos\shots"))
 CACHE = DATA / "cache"
 
 INK = (26, 31, 35)

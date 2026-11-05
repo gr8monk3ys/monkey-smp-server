@@ -10,6 +10,7 @@ players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchi
                                                      \-> failover: SRV target swapped to the playit.gg address
 browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
                                                                       \-> /status.json: /srv/monkey/status (monkey-status.timer)
+staff --> https://staff.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443, password --> the page: deploy/staff, /srv/monkey/staff (monkey-staff.timer)
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: monkey-deploy.timer --> docker compose (the release's docker/)
 ```
 
@@ -811,6 +812,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | `monkey-standings.timer` | the VPS | Sundays at 7 PM Pacific: closes the week's faction standings and posts them (below) |
 | `monkey-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
 | `monkey-news.timer` | the VPS | every 10 minutes: Monkey SMP news to the public channel, a few lines a week ("The news timer") |
+| `monkey-staff.timer` | the VPS | every 2 minutes: a reading for the staff page; it alerts nobody ("The staff page") |
 
 Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
 the time anyway. The update check runs on the VPS rather than the home PC: it uses the webhook that is already
@@ -870,6 +872,66 @@ tries again every 10 minutes for 2 hours; a retry finishes what is left and neve
 week closes only when it is at least 3 days old). The hourly board update skips its turn when the lock is
 busy. To run the Sunday job now (it still closes only a week at least 3 days old):
 `sudo systemctl start monkey-standings`; log: `journalctl -u monkey-standings -n 50`.
+
+## The staff page
+
+`https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
+word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time and
+players over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Nothing
+on it can change the server. It names players, which the public status never does, so it is not linked from the website: pass the
+address on privately. Uptime Kuma still does the alerting; this page only answers "how is it doing right now?".
+
+`monkey-staff.timer` runs `deploy/monkey-staff.sh` as `monkey` every 2 minutes, which writes
+`/srv/monkey/staff/staff.json` (`tools/staff_status.py`) from `tick query` and `list` through the container's own
+`monkey rcon`, plus `/proc`, the disk, the backup folder and the server's log. It takes no deploy lock: during a
+deploy or the daily restart the page says offline, which is true. The file keeps 24 hours of readings. Caddy serves
+it, the page (`deploy/staff/`, from the checkout, so a deploy updates it) and the site's fonts, and nothing else.
+
+Recent problems comes from `server/logs/latest.log` and `server/crash-reports/`: errors since the server finished
+starting, stalls of 2 seconds or more (`Can't keep up!`) and crashes, each kept for a day after its last line. Warnings
+and the errors logged during a start aren't listed. A mod can log an error that does no harm, so a listed error is
+worth a look, not a reason to act. Each reading reads only what is new in the log, so it costs next to nothing. Log
+text is filtered first: a line that mentions a secret is replaced whole, addresses, links and long numbers are masked,
+and only the description of a crash report is read, because the rest can hold the seed. Lines logged between the last
+reading and a restart are missed, since each start replaces the log; a crash still shows, from its report.
+
+Set it up once, on a quiet day, after a release that has it is live:
+
+1. In Cloudflare, an `A` record `staff.monkeysmp` to the same address as `map.monkeysmp`, "DNS only": Caddy gets the
+   certificate itself. Without its own record the name falls to the zone's wildcard and lands on Vercel.
+2. A login for each person. The password is random, shown once and kept only as a hash in `/etc/caddy/staff-logins`,
+   so put it straight in a password manager and pass it on privately:
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --login NAME
+```
+
+3. The status job and the site. `--install` refuses without a login, adds one `import` line to the live Caddyfile
+   rather than copying the repo's over it, and takes the site back out if a visit with no password gets anything but
+   a 401. `--check` repeats that test and changes nothing:
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --check
+curl -sI https://staff.monkeysmp.lscaturchio.xyz | head -1   # 401
+```
+
+The first reading comes within 2 minutes; until then the page says "No reading yet". Run `--install` again when a
+release changes the units or `deploy/Caddyfile.staff`.
+
+A new person or a new password is `--login NAME` again, and `--remove-login NAME` takes one away; either works at once,
+with no restart. To close the page (the `import` line stays and then matches nothing, which Caddy accepts):
+
+```sh
+sudo rm /etc/caddy/staff.caddy && sudo systemctl reload caddy
+sudo systemctl disable --now monkey-staff.timer
+```
+
+What it costs on the 2-thread machine: a reading took about 0.9 CPU-seconds, at low priority (measured on the VPS on
+4 November 2026, nobody online, `Nice=10`). A password check is bcrypt at cost 8, about 25 ms, not Caddy's default of 14,
+about 600 ms: the machine has no spare CPU for slow hashes, and a random 24-character password doesn't need one.
+Caddy has no limit on guesses. They can't get in, but a flood of them does take CPU from the game; if a tick time
+ever climbs with Caddy near the top of `top`, close the page as above.
 
 ## Load test
 

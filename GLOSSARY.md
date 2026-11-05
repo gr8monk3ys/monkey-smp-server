@@ -102,6 +102,10 @@ _Avoid_: export, server pack, server package
 A second hostname for the live server, one per place it's promoted (`yt.monkeysmp.lscaturchio.xyz`), with its own SRV and A records, so joins can be counted by where players found it (docs/PROMOTION.md).
 _Avoid_: vanity domain, referral link, alias
 
+**Staff page**:
+The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included (docs/LIVE.md). It reads and changes nothing, and is separate from the public status on the website, which only ever has a count.
+_Avoid_: dashboard, portal, admin panel
+
 **Timed job**:
 A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly), the border acts (hourly, from Season II) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)

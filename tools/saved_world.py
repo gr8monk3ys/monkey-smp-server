@@ -49,6 +49,7 @@ PLAYER_CONFIGS = OPAC / "player-configs"
 PLAYER_CLAIMS = OPAC / "player-claims"
 ADVANCEMENTS = Path("players") / "advancements"
 OVERWORLD = "minecraft:overworld"
+UNNAMED_PARTY = "'s faction"   # what a party with no name is called, after its leader's name (faction_name)
 
 
 @contextmanager
@@ -143,6 +144,11 @@ class Party:
     owner: Member | None    # None when the file has no owner
     members: list[Member]   # the owner first, then the members, each once; empty without an owner
     name: str               # the owner's parties.name setting, "" when unset or unreadable
+
+
+def faction_name(name: str, leader: str) -> str:
+    """What a party is called everywhere: the name its owner set, else after its leader."""
+    return name or f"{leader}{UNNAMED_PARTY}"
 
 
 def parties(folder: Path) -> list[Party] | None:

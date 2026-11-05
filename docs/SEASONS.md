@@ -190,6 +190,9 @@ the factions share the rank. Strength below zero counts as zero.
   (`STANDINGS_WEBHOOK_URL`, else the main channel), announced in chat, and kept on the board. The board is
   a text display at spawn, and `/trigger standings` shows it in chat anywhere. It has this week so far,
   updated every hour, and last week's final top five.
+- **On the website** (from 3.2.0). The site's standings page shows every faction's rank, name and points, this week
+  so far and last week's final table, and nothing else: no members, players, kills or claims. It starts at the
+  launch, updates every hour, and staff can hide a name there (docs/LIVE.md, "The website's standings").
 - **The Sunday recap.** The Discord post is "Monkey SMP Weekly": the final table, then a line each for
   what happened that week, when anything did: the biggest mover (places climbed since last week's final
   table, matched by party, so a renamed faction still counts), the top fighter (most PvP kills outside the

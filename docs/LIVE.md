@@ -10,6 +10,7 @@ players --> monkeysmp.lscaturchio.xyz (SRV record) --> play.monkeysmp.lscaturchi
                                                      \-> failover: SRV target swapped to the playit.gg address
 browsers --> https://map.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443 --> BlueMap 127.0.0.1:8100
                                                                       \-> /status.json: /srv/monkey/status (monkey-status.timer)
+                                                                      \-> /standings.json: /srv/monkey/status (monkey-standings timers)
 staff --> https://staff.monkeysmp.lscaturchio.xyz (A) --> VPS: Caddy :443, password --> the page: deploy/staff, /srv/monkey/staff (monkey-staff.timer)
 repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: monkey-deploy.timer --> docker compose (the release's docker/)
 ```
@@ -448,6 +449,75 @@ daily restart the file says offline, which is true. Before the launch it writes 
 are on). `python3 /srv/monkey/repo/tools/status.py schedule` prints the dates it counts down to; they come from
 `tools/season_calendar.py` and the event names from `tools/status.py`'s `SCHEDULE` (a copy of the Season I table
 in docs/SEASONS.md, kept in step by a test). A new season needs its rows there.
+
+### The website's standings (3.2.0)
+
+The site's standings page reads `https://map.monkeysmp.lscaturchio.xyz/standings.json`. The hourly and the Sunday
+standings runs write it (below, "The weekly standings"), from what they already read from the saved world: no new
+timer, no RCON, nothing in game. They write `STATUS_DIR/standings.json`, next to `status.json`, as a temporary file
+renamed over the old one with mode 644: the timers run as `monkey`, Caddy reads as `caddy`.
+
+**The file is public, so it holds faction names, ranks and points only:** never a member, a player's name, a
+coordinate, a kill count or a claim (`public_rows` in `tools/standings.py` is the allow-list, and a test feeds it a
+full world). Many players are under 18 and faction names get no review, so:
+
+- Formatting codes, control characters and invisible characters are stripped, piles of combining marks are thinned,
+  and a name is cut at 32 characters. A name left with no letter or digit (blank, or only symbols or emoji) shows as
+  `null`.
+- A name that is a player's (the "NAME's faction" of a party with no name, or a faction called exactly what a player
+  is called) shows as `null`, and the page says "A faction". This needs `server/usercache.json`: with it missing or
+  empty nothing is written.
+- `/srv/monkey/standings/hidden-names.txt` (`STANDINGS_DIR`, not the public folder) hides a name, which also shows as
+  `null`. See below for how staff use it.
+- Nothing is written before the launch (`#launched rw.day`), so test play never shows, and a week closed before the
+  launch is never `last_week`. A world made later keeps the old file until its own launch; `rm` it to take it down.
+
+A write that fails (a bad folder, bad permissions, a `hidden-names.txt` that can't be read, no `usercache.json`) is logged
+in `journalctl -u monkey-standings-board -u monkey-standings`, and the last good file stays up. The board and the close
+still do everything else, then the run ends in failure so it shows in `systemctl --failed`. The board tries again next
+hour; the close retries every 10 minutes, and its retries post and close nothing twice. `checked` in the file says how
+old it is, and `week_closes` is `null` after the season's last close. The file updates at 20 past each hour, and skips the
+hour a deploy, restart or backup holds the deploy lock.
+
+Ranks are the board's: ties on points go to more Cup points, then more kills, and only a tie on all three shares a
+rank. So two factions can show the same points on different ranks.
+
+Once 3.2.0 is live, one step by hand, as the owner:
+
+```sh
+sudo cp /srv/monkey/repo/deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+```
+
+The timers need nothing: the service files don't change, and the deploy brings the new script. To check it, after the
+launch (the first file comes at 20 past the hour, or start it now):
+
+```sh
+sudo systemctl start monkey-standings-board
+stat -c '%a %U %n' /srv/monkey/status/standings.json   # 644 monkey
+python3 -m json.tool /srv/monkey/status/standings.json
+curl -sI https://map.monkeysmp.lscaturchio.xyz/standings.json   # 200, with access-control-allow-origin
+```
+
+To hide a name, staff with a shell on the VPS add it to the list, one name per line (the leading newline keeps it off the
+end of a last line with none). `checked` moving on confirms the file was rewritten; if it hasn't, the start above failed
+and the journal says why:
+
+```sh
+printf '\n%s\n' 'The bad name' | sudo -u monkey tee -a /srv/monkey/standings/hidden-names.txt
+sudo systemctl start monkey-standings-board   # or wait for 20 past the hour
+grep -o '"checked":"[^"]*"' /srv/monkey/status/standings.json; date -u +%FT%TZ
+```
+
+A line starting with `#` is a comment. A comment can't follow a name on its line, since `#` can be part of a name; a name
+that starts with `#` goes in without it, as only letters and digits count.
+
+It is compared on letters and digits alone, without regard to case, accents, colours, spacing or symbols, so colour
+codes can't dodge it, and staff can paste the name from the page or the game. It works on the whole name, not on words
+in it. It applies when the file is written, so hiding a name fixes last week's table too, and deleting the line brings
+the name back. The game, the board and the Discord post are untouched: a name bad enough to hide is also a matter for
+staff in game. The file should be UTF-8 (a bad byte spoils only its own line, and the journal says so) and must be
+readable by `monkey`: if it can't be read, nothing is written until it can, so a hidden name never comes back by accident.
+
 ### The sieges timer (the release with outpost sieges and 7-day wars)
 
 Once that release is live, install `monkey-sieges.timer` (`docs/SEASONS.md`, "Outpost sieges" and "7-day
@@ -882,6 +952,8 @@ week closes only when it is at least 3 days old). The hourly board update skips 
 busy. To run the Sunday job now (it still closes only a week at least 3 days old):
 `sudo systemctl start monkey-standings`; log: `journalctl -u monkey-standings -n 50`.
 
+Both runs also write the public `standings.json` for the website, after the launch ("The website's standings", above).
+A retry of the close writes it again, the same but for `checked`.
 ## The staff page
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one

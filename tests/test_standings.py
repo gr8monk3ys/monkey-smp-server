@@ -2,19 +2,27 @@ import copy
 import datetime as dt
 import io
 import json
+import os
 import re
 import shutil
+import stat
 import subprocess
+import tempfile
 import urllib.error
 import uuid
+from dataclasses import asdict
 
 import pytest
+import status
 from fake_world import OVERWORLD, FakeWorld, member, score_rows
 from nbt_writer import nbt
 
 import events
+import news
 import rcon
 import recap
+import saved_world
+import season_calendar
 import standings
 from repo import REPO
 
@@ -424,3 +432,521 @@ def test_units_run_the_script_as_monkey_on_sunday_evening():
     script = (DEPLOY / "monkey-standings.sh").read_text()
     assert "deploy_lock 1800" in script and "export STANDINGS_WEBHOOK_URL" in script
     assert "STANDINGS_WEBHOOK_URL=" in (DEPLOY / "monkey-deploy.env.example").read_text()
+
+
+# ---------------------------------------------------------------- the website's file
+
+
+NOW = dt.datetime(2026, 11, 14, 18, 0, tzinfo=season_calendar.PACIFIC)   # Saturday, 02:00 UTC on the 15th
+STOLEN = (*PLAYERS, "OldSam", *PLAYERS.values(), "p-red", "p-blue", "p-lone", "members", "kills", "bounties", "land",
+          "strength", "cup", "claims", "uuid", "owner", "recap", "outposts")
+
+
+def unlaunched(scoreboard=SCOREBOARD):
+    board = copy.deepcopy(scoreboard)
+    board["data"]["PlayerScores"] = [r for r in board["data"]["PlayerScores"] if r["Name"] != "#launched"]
+    return board
+
+
+def public_board(world, tmp_path, now=NOW, server=None):
+    """The hourly run with a website file: (its exit status, the file, the state folder)."""
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    code = standings.board(world, state, server or FakeRcon(), now, out)
+    return code, out, state
+
+
+def closed_week(state, day="2026-11-08", end="2026-11-08T19:00:00-08:00", **fields):
+    path = state / "weeks" / f"{day}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"start": None, "end": end, "launched": True, "rows": [
+        {"rank": 1, "name": "Red Monkeys", "points": 87, "members": ["AlexFake", "SamFake"], "kills": 3, "id": "p-red"},
+        {"rank": 2, "name": "LoneFake's faction", "points": 5, "members": ["LoneFake"], "kills": 1, "id": "p-lone"},
+    ], **fields}), encoding="utf-8")
+    return path
+
+
+def test_the_file_is_the_contract(world, tmp_path):
+    code, out, state = public_board(world, tmp_path)
+    assert code == 0
+    data = json.loads(out.read_bytes())
+    assert list(data) == ["version", "checked", "season", "week_closes", "factions", "last_week"]
+    assert data == {
+        "version": 1, "checked": "2026-11-15T02:00:00Z", "season": 1, "week_closes": "2026-11-16T03:00:00Z",
+        "factions": [{"rank": 1, "name": "Red Monkeys", "points": 103},
+                     {"rank": 2, "name": "Blue Herons", "points": 61},
+                     {"rank": 3, "name": "Green Team", "points": 7},
+                     {"rank": 4, "name": None, "points": 5}],
+        "last_week": None}
+    closed_week(state)
+    public_board(world, tmp_path)
+    assert json.loads(out.read_bytes())["last_week"] == {
+        "closed": "2026-11-09T03:00:00Z",
+        "factions": [{"rank": 1, "name": "Red Monkeys", "points": 87}, {"rank": 2, "name": None, "points": 5}]}
+
+
+def only_allowed_keys(value):
+    if isinstance(value, dict):
+        assert set(value) <= {"version", "checked", "season", "week_closes", "factions", "last_week", "closed", "rank",
+                              "name", "points"}
+        for v in value.values():
+            only_allowed_keys(v)
+    elif isinstance(value, list):
+        for v in value:
+            only_allowed_keys(v)
+
+
+def test_only_names_ranks_and_points_get_out(world, tmp_path):
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    state.mkdir()
+    (state / "week.json").write_text(json.dumps({**BASELINE, "start": "2026-11-01T19:00:00-08:00"}))
+    # A close, whose week's file holds every player's name and count (the recap too), then an hour, then a retry.
+    close_at = dt.datetime(2026, 11, 8, 19, 0, tzinfo=season_calendar.PACIFIC)
+    for run in (lambda: standings.close(world, state, FakeRcon(), close_at, "", FakeDiscord(), out=out),
+                lambda: standings.board(world, state, FakeRcon(), close_at + dt.timedelta(hours=1), out),
+                lambda: standings.close(world, state, FakeRcon(), close_at + dt.timedelta(hours=2), "", FakeDiscord(),
+                                        out=out)):
+        assert run() == 0
+        raw = out.read_bytes()
+        for secret in STOLEN:
+            assert secret.lower().encode() not in raw.lower(), secret
+        data = json.loads(raw)
+        only_allowed_keys(data)
+        assert data["last_week"]["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 98}
+    # The week's own file really did hold them: the test would catch them getting out.
+    kept = next((state / "weeks").glob("*.json")).read_text()
+    assert "AlexFake" in kept and "kills" in kept
+
+
+def test_a_close_shows_the_closed_week_and_the_new_one(world, tmp_path):
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    state.mkdir()
+    (state / "week.json").write_text(json.dumps({**BASELINE, "start": "2026-11-01T19:00:00-08:00"}))
+    close_at = dt.datetime(2026, 11, 8, 19, 0, tzinfo=season_calendar.PACIFIC)
+    assert standings.close(world, state, FakeRcon(), close_at, "", FakeDiscord(), out=out) == 0
+    data = json.loads(out.read_bytes())
+    assert data["last_week"]["closed"] == "2026-11-09T03:00:00Z"
+    assert data["week_closes"] == "2026-11-16T03:00:00Z"
+    # The new week has no kills or bounties yet, so it has fewer points than the week it follows.
+    assert data["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 80}
+
+
+def test_nothing_is_written_before_the_launch(tmp_path, capsys):
+    world = make_world(tmp_path, unlaunched())
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    assert standings.board(world, state, FakeRcon(), NOW, out) == 0
+    assert standings.close(world, state, FakeRcon(), NOW, "", FakeDiscord(), out=out) == 0
+    assert not out.exists() and not out.parent.exists()
+    assert "before the launch" in capsys.readouterr().out
+
+
+def test_a_week_closed_in_test_play_is_no_last_week(world, tmp_path):
+    state = tmp_path / "state"
+    closed_week(state, day="2026-11-01", end="2026-11-01T19:00:00-08:00", launched=False)
+    assert json.loads(public_board(world, tmp_path)[1].read_bytes())["last_week"] is None
+    # From before the launch flag was kept: its end tells.
+    path = closed_week(state, day="2026-11-02", end="2026-11-02T19:00:00-08:00")
+    week = json.loads(path.read_text())
+    del week["launched"]
+    path.write_text(json.dumps(week))
+    assert json.loads(public_board(world, tmp_path)[1].read_bytes())["last_week"] is None
+
+
+def test_the_write_is_atomic_in_the_same_folder(world, tmp_path, monkeypatch):
+    made = []
+    real = tempfile.mkstemp
+
+    def mkstemp(**kw):
+        made.append(kw["dir"])
+        return real(**kw)
+    monkeypatch.setattr(tempfile, "mkstemp", mkstemp)
+    code, out, _ = public_board(world, tmp_path)
+    assert code == 0 and made == [out.parent] and [p.name for p in out.parent.iterdir()] == ["standings.json"]
+    # A rename that fails leaves the old file whole, and no temporary file.
+    before = out.read_bytes()
+
+    def no_rename(src, dst):
+        raise PermissionError("no")
+    monkeypatch.setattr(os, "replace", no_rename)
+    assert public_board(world, tmp_path, NOW + dt.timedelta(hours=1))[0] == 1
+    assert out.read_bytes() == before and [p.name for p in out.parent.iterdir()] == ["standings.json"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
+def test_caddy_can_read_the_file_whatever_the_umask(world, tmp_path):
+    """mkstemp makes 0600 files and the timers run as monkey, so without the chmod Caddy (as caddy) gets a 403."""
+    old = os.umask(0o077)
+    try:
+        code, out, _ = public_board(world, tmp_path)
+    finally:
+        os.umask(old)
+    assert code == 0 and stat.S_IMODE(out.stat().st_mode) == 0o644
+
+
+def failing_write(monkeypatch):
+    def write(path, data):
+        raise PermissionError(13, "Permission denied", str(path))
+    monkeypatch.setattr(standings, "write_public", write)
+
+
+def test_a_bad_folder_never_stops_the_board(world, tmp_path, capsys):
+    state = tmp_path / "state"
+    (tmp_path / "a-file").write_text("x")
+    for out in (tmp_path / "a-file" / "standings.json", tmp_path):   # a file for a folder; a folder for the file
+        server = FakeRcon()
+        assert standings.board(world, state, server, NOW, out) == 1
+        assert "function monkey:standings/publish" in server.sent
+        assert "could not write the public standings" in capsys.readouterr().err
+    assert (tmp_path / "a-file").read_text() == "x"
+
+
+def test_bad_permissions_never_stop_the_board(world, tmp_path, monkeypatch, capsys):
+    failing_write(monkeypatch)
+    server = FakeRcon()
+    assert standings.board(world, tmp_path / "state", server, NOW, tmp_path / "standings.json") == 1
+    assert "function monkey:standings/publish" in server.sent
+    assert "Permission denied" in capsys.readouterr().err
+
+
+def test_a_failed_write_never_stops_the_close_which_stays_idempotent(world, tmp_path, monkeypatch, capsys):
+    failing_write(monkeypatch)
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    server, discord = FakeRcon(), FakeDiscord()
+    assert standings.close(world, state, server, SUNDAY, WEBHOOK, discord, out=out) == 1   # so the unit's retries run
+    assert "could not write the public standings" in capsys.readouterr().err
+    week = (state / "week.json").read_text()
+    closed = json.loads((state / "weeks" / "2026-11-01.json").read_text())
+    assert closed["posted"] and closed["announced"] and len(discord.posts) == 1
+    # A retry closes nothing twice, and once the folder is back the file goes out with the closed week.
+    monkeypatch.undo()
+    later = SUNDAY + dt.timedelta(minutes=10)
+    assert standings.close(world, state, server, later, WEBHOOK, discord, out=out) == 0
+    assert (state / "week.json").read_text() == week and len(discord.posts) == 1
+    assert len(list((state / "weeks").iterdir())) == 1
+    assert server.sent.count("function monkey:standings/announce") == 1
+    assert json.loads(out.read_bytes())["last_week"]["closed"] == "2026-11-02T02:00:00Z"
+
+
+def test_anything_going_wrong_in_the_file_stops_nothing(world, tmp_path, monkeypatch, capsys):
+    def broken(*args):
+        raise RuntimeError("a bug in the public file")
+    monkeypatch.setattr(standings, "public_standings", broken)
+    server = FakeRcon()
+    assert standings.board(world, tmp_path / "state", server, NOW, tmp_path / "standings.json") == 1
+    assert "function monkey:standings/publish" in server.sent and "a bug" in capsys.readouterr().err
+
+
+def test_a_server_that_is_down_still_gets_the_file_written(world, tmp_path):
+    code, out, _ = public_board(world, tmp_path, server=FakeRcon(fail=99))
+    assert code == 1 and json.loads(out.read_bytes())["factions"]    # the board's failure stays the board's
+
+
+@pytest.mark.parametrize(("raw", "shown"), [
+    ("Red Wolves", "Red Wolves"),
+    ("§cRed §lWolves§r", "Red Wolves"),
+    ("§", None),
+    ("§c§l", None),
+    ("Red\x00\x07\x1b[31m Wolves\n\t", "Red[31m Wolves"),
+    ("‮Red​ Wolves﻿", "Red Wolves"),
+    ("§​cRed", "Red"),
+    ("  many   spaces  ", "many spaces"),
+    ("Café サル \U0001f412", "Café サル \U0001f412"),
+    ("x" * 200, "x" * standings.PUBLIC_NAME_LIMIT),
+    ("x" * (standings.PUBLIC_NAME_LIMIT - 1) + " yy", "x" * (standings.PUBLIC_NAME_LIMIT - 1)),
+    ("", None),
+    ("   ", None),
+    ("\u3164", None),                                # draws nothing, though it counts as a letter
+    ("\u115f\u1160\uffa0 \u2800", None),
+    ("\u3164Red\u2800", "Red"),
+    ("!!!", None),                                   # no letter or digit
+    ("\U0001f412", None),
+    ("\u200d\ufe0f", None),
+    ("!" * standings.PUBLIC_NAME_LIMIT + "a", None),  # the letter was past the cut
+    ("R\u00aded\u034f\ufe00\U000e0041", "Red"),      # soft hyphen, grapheme joiner, variation selector, tag
+    ("\u2066Red\u2069\u200e", "Red"),                # bidi controls
+    ("Red \U000effff", "Red \U000effff"),            # no data for it: stays, as a new emoji would
+    ("Red \U0001f468\u200d\U0001f469\ufe0f", "Red \U0001f468\u200d\U0001f469\ufe0f"),   # one emoji, built of two
+    ("Se\u0301n", "Se\u0301n"),
+    ("a" + "\u0301" * 9 + "b", "a\u0301\u0301\u0301b"),   # no tower of marks
+    ("a" + "\u0301\u200d" * 9, "a\u0301\u200d\u0301\u200d\u0301" + "\u200d" * 7),   # nor one with joiners between
+    (None, None),
+    (7, None),
+    (["Red"], None),
+    ({"text": "Red"}, None),
+    (True, None),
+])
+def test_names_are_cleaned_and_capped(raw, shown):
+    assert standings.public_name(raw) == shown
+
+
+def test_rows_of_any_shape_in_a_closed_week(world, tmp_path):
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    path = closed_week(state)
+    week = json.loads(path.read_text())
+    week["rows"] = [{"rank": 1, "points": 9}, {"rank": 2, "name": 5, "points": 8},
+                    {"rank": True, "name": "no", "points": 7}, {"rank": 3, "name": "no", "points": "many"}, "not a row",
+                    {"rank": 4, "name": "§eFine", "points": 1, "members": "not a list"}]
+    path.write_text(json.dumps(week))
+    standings.publish(out, world, standings.read_world(world), None, state, NOW)
+    assert json.loads(out.read_bytes())["last_week"]["factions"] == [
+        {"rank": 1, "name": None, "points": 9}, {"rank": 2, "name": None, "points": 8},
+        {"rank": 4, "name": "Fine", "points": 1}]
+
+
+@pytest.mark.parametrize("damage", [
+    "{broken", "[]", json.dumps({"launched": True}), json.dumps({"launched": True, "end": 7}),
+    json.dumps({"launched": True, "end": "2026-11-08T19:00:00"})])
+def test_a_damaged_closed_week_leaves_last_week_out_and_nothing_else(world, tmp_path, damage, capsys):
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    closed_week(state).write_text(damage)
+    standings.publish(out, world, standings.read_world(world), None, state, NOW)
+    assert "left out of the public standings" in capsys.readouterr().err
+    written = json.loads(out.read_bytes())
+    assert written["last_week"] is None and len(written["factions"]) == 4
+
+
+def write_hidden(state, text, encoding="utf-8"):
+    state.mkdir(parents=True, exist_ok=True)
+    (state / standings.HIDDEN_NAMES).write_bytes(text.encode(encoding))
+
+
+@pytest.mark.parametrize("line", ["red monkeys", "RED MONKEYS", "  Red   Monkeys  ", "§cRed §lMonkeys",
+                                  "red-monkeys"])
+def test_a_hidden_name_is_null_in_any_case_or_colour(world, tmp_path, line):
+    state = tmp_path / "state"
+    write_hidden(state, f"Something Else\n\n{line}\n")
+    closed_week(state)
+    _, out, _ = public_board(world, tmp_path)
+    data = json.loads(out.read_bytes())
+    assert data["factions"][0] == {"rank": 1, "name": None, "points": 103}
+    assert data["factions"][1]["name"] == "Blue Herons"
+    # At read time: hiding a name fixes old weeks too.
+    assert data["last_week"]["factions"][0] == {"rank": 1, "name": None, "points": 87}
+    assert b"Red" not in out.read_bytes()
+
+
+@pytest.mark.parametrize("name", ["§cBad §nName", "BAD§r NAME", "B​ad‮ Name", "b.a.d n.a.m.e",
+                                  "Bàd Name", "Ｂａｄ Name", "B\u200dad Name", "§\u200dcBad Name", "\u3164Bad Name"])
+def test_colour_codes_and_tricks_cant_dodge_a_hidden_name(name):
+    hidden = frozenset({standings.name_key("Bad Name")})
+    assert standings.shown_name({"name": name}, hidden, frozenset()) is None
+    assert standings.shown_name({"name": "Good Name"}, hidden, frozenset()) == "Good Name"
+
+
+def test_a_long_name_hides_copied_whole_or_cut_short(tmp_path):
+    state, long = tmp_path / "state", "A" * 40 + " end"
+    for line in (long, standings.public_name(long)):
+        write_hidden(state, line + "\n")
+        assert standings.shown_name({"name": long}, standings.hidden_names(state), frozenset()) is None
+
+
+def test_a_name_of_symbols_alone_shows_as_no_name_and_hides_nothing(tmp_path):
+    state = tmp_path / "state"
+    write_hidden(state, "!!!\n\u3164\n")
+    hidden = standings.hidden_names(state)
+    assert hidden == frozenset()
+    assert standings.shown_name({"name": "!!!"}, hidden, frozenset()) is None
+    assert standings.shown_name({"name": "Red"}, hidden, frozenset()) == "Red"
+
+
+def test_comment_lines_in_the_hidden_list(tmp_path):
+    state = tmp_path / "state"
+    write_hidden(state, "# Red Monkeys was renamed\n  # so was Blue Herons\nTeam #1\n1 Up\n")
+    assert standings.hidden_names(state) == {standings.name_key("Team #1"), standings.name_key("1 Up")}
+    assert standings.shown_name({"name": "#1 Up"}, standings.hidden_names(state), frozenset()) is None
+
+
+def test_a_bad_byte_spoils_only_its_own_line_and_says_so(world, tmp_path, capsys):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / standings.HIDDEN_NAMES).write_bytes(b"caf\xe9\nRed Monkeys\n")
+    code, out, _ = public_board(world, tmp_path)
+    assert code == 0 and json.loads(out.read_bytes())["factions"][0]["name"] is None
+    assert "not all UTF-8" in capsys.readouterr().err
+
+
+def test_the_hidden_list_from_a_windows_editor(tmp_path):
+    state = tmp_path / "state"
+    write_hidden(state, "Red Monkeys\r\nBlue Herons\r\n", "utf-8-sig")
+    assert standings.hidden_names(state) == {standings.name_key("Red Monkeys"), standings.name_key("Blue Herons")}
+
+
+def test_no_hidden_file_is_fine(tmp_path):
+    assert standings.hidden_names(tmp_path) == frozenset()
+
+
+def test_a_hidden_list_that_cant_be_read_writes_nothing(world, tmp_path, capsys):
+    """Showing a name staff hid is worse than an old file, so the old file stays, and the board goes on."""
+    state = tmp_path / "state"
+    state.mkdir()
+    _, out, _ = public_board(world, tmp_path)
+    before = out.read_bytes()
+    (state / standings.HIDDEN_NAMES).mkdir()
+    server = FakeRcon()
+    assert standings.board(world, state, server, NOW + dt.timedelta(hours=1), out) == 1
+    assert "function monkey:standings/publish" in server.sent
+    assert out.read_bytes() == before and "could not write the public standings" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("cache", [None, "[]", "not json", '[{"uuid": "x", "name": 7}]'])
+def test_no_player_names_to_check_against_writes_nothing(world, tmp_path, cache, capsys):
+    """Without them, a faction named after a player would show."""
+    state = tmp_path / "state"
+    _, out, _ = public_board(world, tmp_path)
+    before = out.read_bytes()
+    path = world.parent / "usercache.json"
+    path.unlink()
+    if cache is not None:
+        path.write_text(cache)
+    server = FakeRcon()
+    assert standings.board(world, state, server, NOW + dt.timedelta(hours=1), out) == 1
+    assert out.read_bytes() == before and "usercache.json is missing or empty" in capsys.readouterr().err
+
+
+def test_a_players_name_never_shows_as_a_faction():
+    people = frozenset({standings.name_key("RiaFake")})
+    show = standings.shown_name
+    # read_parties' name for a party with none, however its case reads
+    assert show({"name": "AlexFake's faction", "members": ["AlexFake"]}, frozenset(), frozenset()) is None
+    assert show({"name": "ALEXFAKE'S FACTION", "members": ["AlexFake"]}, frozenset(), frozenset()) is None
+    assert show({"name": "RiaFake's faction", "members": []}, frozenset(), people) is None
+    # a faction, or a loose Cup entry, called just what a player is called
+    assert show({"name": "RiaFake", "members": []}, frozenset(), people) is None
+    assert show({"name": "§cAlex_Fake", "members": ["AlexFake"]}, frozenset(), frozenset()) is None
+    # a name that merely has a word in common is the faction's own
+    assert show({"name": "Ria's Fake Army", "members": ["AlexFake"]}, frozenset(), people) == "Ria's Fake Army"
+
+
+def test_a_cup_entry_named_for_a_player_stays_out(tmp_path):
+    board = copy.deepcopy(SCOREBOARD)
+    board["data"]["PlayerScores"] += score_rows(("ev.cup", "TomFake", 7),
+                                                ("ev.cup", "gold", 6, {"display": "§eGold Team"}))
+    world = make_world(tmp_path, board)
+    raw = public_board(world, tmp_path)[1].read_bytes()
+    assert b"TomFake" not in raw and b'"Gold Team"' in raw and b"u00a7" not in raw
+
+
+def test_ties_share_a_rank_as_on_the_board():
+    rows = standings.rank([standings.Row("B", cup=5, land=5), standings.Row("A", cup=5, land=5), standings.Row("C")])
+    assert standings.public_rows([asdict(r) for r in rows], frozenset(), frozenset()) == [
+        {"rank": 1, "name": "A", "points": 60}, {"rank": 1, "name": "B", "points": 60},
+        {"rank": 3, "name": "C", "points": 0}]
+    # A tie on points alone goes to Cup, then kills, as on the board and in Discord; the public file keeps that rank.
+    rows = standings.rank([standings.Row("Land", land=10, strength=10), standings.Row("Cup", cup=10)])
+    assert standings.public_rows([asdict(r) for r in rows], frozenset(), frozenset()) == [
+        {"rank": 1, "name": "Cup", "points": 40}, {"rank": 2, "name": "Land", "points": 40}]
+
+
+def pacific(*when):
+    return dt.datetime(*when, tzinfo=season_calendar.PACIFIC)
+
+
+def utc(when):
+    return when.astimezone(season_calendar.UTC).isoformat().replace("+00:00", "Z")
+
+
+@pytest.mark.parametrize(("now", "closes"), [
+    (pacific(2026, 11, 7, 17), "2026-11-09T03:00:00Z"),                 # the launch: the launch weekend's close first
+    (pacific(2026, 11, 8, 19), "2026-11-16T03:00:00Z"),                 # at that close: week 1's
+    (pacific(2026, 11, 14, 18), "2026-11-16T03:00:00Z"),                # the contract's example
+    (pacific(2026, 11, 15, 18, 59, 59), "2026-11-16T03:00:00Z"),        # a second before
+    (pacific(2026, 11, 15, 19), "2026-11-23T03:00:00Z"),                # at the close: the next week's
+    (pacific(2026, 11, 16, 0), "2026-11-23T03:00:00Z"),                 # Monday
+    (pacific(2027, 1, 24, 18, 59), "2027-01-25T03:00:00Z"),             # the finale's week
+])
+def test_week_closes_at_7_pm_pacific(now, closes):
+    assert utc(standings.next_close(now)) == closes
+    assert utc(standings.next_close(now.astimezone(season_calendar.UTC))) == closes
+
+
+@pytest.mark.parametrize("now", [pacific(2027, 1, 24, 19), pacific(2027, 1, 25, 0), pacific(2027, 3, 14, 12)])
+def test_no_close_after_the_last(now):
+    assert standings.next_close(now) is None
+
+
+def test_the_closes_are_the_calendars_and_the_launch_weekends():
+    closes = standings.season_closes()
+    assert closes[1:] == [when for when, what, _ in status.dates() if what == status.CLOSE]
+    assert utc(closes[0]) == "2026-11-09T03:00:00Z"
+    assert all(when.astimezone(season_calendar.PACIFIC).weekday() == 6 for when in closes)
+
+
+def test_a_week_too_young_to_close_on_sunday_closes_the_sunday_after():
+    friday = pacific(2026, 11, 13, 12)
+    assert utc(standings.next_close(friday, friday)) == "2026-11-23T03:00:00Z"
+    # Three days and more is old enough (close: MIN_WEEK_DAYS).
+    thursday = pacific(2026, 11, 12, 19)
+    assert utc(standings.next_close(thursday, thursday)) == "2026-11-16T03:00:00Z"
+
+
+def test_the_board_gives_the_file_its_weeks_start(world, tmp_path):
+    state, out = tmp_path / "state", tmp_path / "status" / "standings.json"
+    friday = pacific(2026, 11, 13, 12)
+    state.mkdir()
+    (state / "week.json").write_text(json.dumps({**BASELINE, "start": friday.isoformat()}))
+    assert standings.board(world, state, FakeRcon(), friday + dt.timedelta(hours=1), out) == 0
+    assert json.loads(out.read_bytes())["week_closes"] == "2026-11-23T03:00:00Z"
+
+
+def test_the_file_has_no_close_after_the_last(world, tmp_path):
+    code, out, _ = public_board(world, tmp_path, now=pacific(2027, 1, 25, 0))
+    assert code == 0 and json.loads(out.read_bytes())["week_closes"] is None
+
+
+def test_last_weeks_table_keeps_a_players_name_out_too(world, tmp_path):
+    """TomFake isn't in this row's members: only the roster from usercache can catch it."""
+    state = tmp_path / "state"
+    closed_week(state, rows=[{"rank": 1, "name": "TomFake", "points": 9, "members": []},
+                             {"rank": 2, "name": "Red Monkeys", "points": 8, "members": []}])
+    _, out, _ = public_board(world, tmp_path)
+    assert [row["name"] for row in json.loads(out.read_bytes())["last_week"]["factions"]] == [None, "Red Monkeys"]
+
+
+def test_an_unnamed_faction_is_called_one_thing_everywhere(world):
+    party = next(p for p in standings.read_parties(world, standings.usernames(world)) if p.id == "p-lone")
+    assert party.name == saved_world.faction_name("", "LoneFake") == "LoneFake" + saved_world.UNNAMED_PARTY
+    assert standings.shown_name({"name": party.name}, frozenset(), frozenset({standings.name_key("LoneFake")})) is None
+    line = news.faction_line([{"text": json.dumps({"name": party.name, "leader": "LoneFake"})}])
+    assert line == "New faction: LoneFake's faction."   # no "led by" for one named after its leader
+    assert "led by" in news.faction_line([{"text": json.dumps({"name": "Red", "leader": "LoneFake"})}])
+
+
+def test_main_passes_the_file_on(world, tmp_path, monkeypatch):
+    monkeypatch.delenv("STANDINGS_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    monkeypatch.setattr(standings, "Docker", lambda folder: FakeRcon())
+    monkeypatch.setattr(standings.season_calendar, "now", lambda: NOW)
+    out, state = tmp_path / "status" / "standings.json", tmp_path / "state"
+    assert standings.main(["board", str(world), "--state", str(state), "--docker", "d", "--out", str(out)]) == 0
+    assert json.loads(out.read_bytes())["checked"] == "2026-11-15T02:00:00Z"
+    out.unlink()
+    assert standings.main(["board", str(world), "--state", str(state), "--docker", "d"]) == 0   # no --out, no file
+    assert not out.exists()
+    assert standings.main(["close", str(world), "--state", str(state), "--docker", "d", "--out", str(out)]) == 0
+    assert json.loads(out.read_bytes())["last_week"] is not None
+
+
+def test_the_script_writes_next_to_the_status_and_nothing_new_runs():
+    script = (DEPLOY / "monkey-standings.sh").read_text()
+    assert "STATUS_DIR=${STATUS_DIR:-/srv/monkey/status}\n" in script
+    assert '--docker "$LIVE_DIR/docker" --out "$STATUS_DIR/standings.json"\n' in script
+    assert script.count("--out") == 1   # never from show or preview, which change nothing
+    # The same folder as the status's, with the same default.
+    assert "$(setting STATUS_DIR /srv/monkey/status)" in (DEPLOY / "monkey-status.sh").read_text()
+    # Both timers' services run as monkey, the status folder's owner, so the file can be replaced.
+    for unit in ("monkey-standings.service", "monkey-standings-board.service", "monkey-status.service"):
+        assert "User=monkey\n" in (DEPLOY / unit).read_text()
+    assert (status.CLOSE_TIME.hour, status.CLOSE_TIME.minute) == (19, 0)   # monkey-standings.timer
+
+
+def caddy_block(caddy, head):
+    block = caddy[caddy.index(head):]
+    return block[len(head):block.index("\n\t}")]
+
+
+def test_caddy_serves_the_standings_as_it_serves_the_status():
+    caddy = (DEPLOY / "Caddyfile").read_text()
+    block = caddy_block(caddy, "handle /standings.json {")
+    assert block == caddy_block(caddy, "handle /status.json {")
+    assert "root * /srv/monkey/status" in block and "file_server" in block
+    assert 'Access-Control-Allow-Origin "*"' in block and 'Cache-Control "public, max-age=60"' in block
+    assert caddy.index("handle /standings.json {") < caddy.index("\thandle {\n")   # before the map's catch-all

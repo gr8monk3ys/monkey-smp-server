@@ -525,6 +525,10 @@ the week's kills and holds the board; the VPS works the standings out and posts 
 /function monkey:wanted/off                                             # (docs/SEASONS.md, "Switches")
 ```
 
+A bad faction name on the website's standings page is hidden from the VPS, not in game: add it to
+`/srv/monkey/standings/hidden-names.txt`, one name per line, `#` starting a comment line (docs/LIVE.md, "The website's
+standings").
+
 - **Bounties.** Post them on the top Strength holders. Claim one only for a fair kill outside the arena
   (not a friend handing over a kill, B13). The hunter's faction gets +5 standings points that week, and
   the hunter the Bounty Hunter title (a red `[Bounty Hunter]` before the name) if they show no other

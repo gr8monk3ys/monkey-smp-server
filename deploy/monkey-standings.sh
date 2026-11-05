@@ -8,6 +8,10 @@
 #   sh monkey-standings.sh show    prints this week so far; changes nothing
 #   sh monkey-standings.sh preview prints the Sunday recap as it would post if the week closed now; changes nothing
 #
+# close and board also write the website's standings file, STATUS_DIR/standings.json, next to status.json (Caddy
+# serves it: deploy/Caddyfile; docs/LIVE.md, "The website's standings"): faction names, ranks and points, from the
+# same saved files, after the launch. A failed write is logged and changes nothing else.
+#
 # Run it as monkey (the services do), so the files it keeps stay monkey's and the deploy lock stays usable:
 #   sudo -u monkey sh /srv/monkey/repo/deploy/monkey-standings.sh show
 #
@@ -16,9 +20,9 @@
 # every 5 minutes) and writes the board through the container's own `monkey rcon`.
 #
 # Settings come from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV): REPO_DIR, LIVE_DIR, LOCK_FILE,
-# STANDINGS_DIR (default /srv/monkey/standings) and the webhook STANDINGS_WEBHOOK_URL (empty =
-# DISCORD_WEBHOOK_URL). The webhook goes to the tool in its environment and is never printed. Needs python3
-# (3.11 or newer).
+# STANDINGS_DIR (default /srv/monkey/standings), STATUS_DIR (default /srv/monkey/status) and the webhook
+# STANDINGS_WEBHOOK_URL (empty = DISCORD_WEBHOOK_URL). The webhook goes to the tool in its environment and is never
+# printed. Needs python3 (3.11 or newer).
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -39,6 +43,7 @@ REPO_DIR=${REPO_DIR:-/srv/monkey/repo}
 LIVE_DIR=${LIVE_DIR:-/srv/monkey/MonkeySMP-Server}
 LOCK_FILE=${LOCK_FILE:-/tmp/monkey-deploy.lock}
 STANDINGS_DIR=${STANDINGS_DIR:-/srv/monkey/standings}
+STATUS_DIR=${STATUS_DIR:-/srv/monkey/status}
 DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 STANDINGS_WEBHOOK_URL=${STANDINGS_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 export STANDINGS_WEBHOOK_URL
@@ -61,4 +66,4 @@ else
 fi
 
 mkdir -p "$STANDINGS_DIR"
-python3 -B "$TOOL" "$MODE" "$WORLD" --state "$STANDINGS_DIR" --docker "$LIVE_DIR/docker"
+python3 -B "$TOOL" "$MODE" "$WORLD" --state "$STANDINGS_DIR" --docker "$LIVE_DIR/docker" --out "$STATUS_DIR/standings.json"

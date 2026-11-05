@@ -197,7 +197,7 @@ def faction_items(world: Path, saved: Saved) -> list[Item]:
             continue
         leader = saved.names.get(p.owner.uuid, p.owner.username or p.owner.uuid[:8])
         items.append(Item(f"{FACTION}:{p.id}", FACTION,
-                          json.dumps({"name": p.name or f"{leader}'s faction", "leader": leader})))
+                          json.dumps({"name": saved_world.faction_name(p.name, leader), "leader": leader})))
     return items
 
 
@@ -430,7 +430,7 @@ def faction_line(entries: list[dict]) -> str:
     factions = [json.loads(e["text"]) for e in entries]
     if len(factions) == 1:
         f = factions[0]
-        if f["name"] == f"{f['leader']}'s faction":   # an unnamed party
+        if f["name"] == saved_world.faction_name("", f["leader"]):   # an unnamed party
             return f"New faction: {md(f['name'])}."
         return f"New faction: {md(f['name'])}, led by {md(f['leader'])}."
     return f"New factions: {listed([md(f['name']) for f in factions], FACTIONS_LISTED)}."

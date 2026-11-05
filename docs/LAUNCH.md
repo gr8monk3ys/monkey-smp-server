@@ -191,8 +191,8 @@ below).
   ancient debris, mace or elytra in a chest, ender chest or shulker box: taken out after launch, it could claim
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
-  only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day.
-  Buyers show up here now that the store is open. A buyer who isn't on the founding roster is an owner's call.
+  only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day if it's on the founding
+  roster. Buyers show up here now that the store is open. A buyer who isn't on the roster stays off until an owner decides.
 
 ### Passes and the whitelist by hand
 

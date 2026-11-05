@@ -89,7 +89,7 @@ more than these numbers (see the next section).
 What keeps it there:
 
 - **ServerCore** (`server\config\servercore\config.yml`). Mobs far from every player tick less often
-  (`activation-range`), and while a tick takes over 45 ms it steps mob caps and tick/view distances down, then
+  (`activation-range`), and while ticks average over 50 ms it steps mob caps and tick/view distances down, then
   back up when the server recovers (`dynamic`; never above view distance 8 / simulation distance 6).
   `/servercore status` shows the current values. Mob farms that depend on distant mobs can be slower: set
   `activation-range.enabled: false` for vanilla behaviour, at about a quarter more tick time.

@@ -166,7 +166,8 @@ below).
   button and check the message arrives in the staff channel.
 - [ ] **Fri 6 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
-  Over about 40 ms median at 30 players: follow the decision rule there before launch.
+  Over about 40 ms median at 30 players: follow the decision rule there before launch. 3.1.0 was over it on 2026-11-04,
+  and the decision recorded there is to launch on this plan.
 - [ ] **By Fri 6 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
   `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:

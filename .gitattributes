@@ -8,6 +8,8 @@ player/*.txt text eol=crlf
 # Read by Linux inside the container: LF even when checked out on Windows.
 package/docker/** text eol=lf
 *.png binary
+# An iCalendar file must keep its CRLF line endings (RFC 5545): tools/season_ics.py writes it, byte for byte.
+*.ics -text
 *.zip binary
 *.mrpack binary
 *.jar binary

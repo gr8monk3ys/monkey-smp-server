@@ -26,6 +26,11 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
         description: "The week's rhythm on Monkey SMP: challenges, supply drops, omens, outposts, standings and the "
           + "Saturday event.",
       },
+      {
+        href: "/guide/standings", title: "Weekly standings",
+        description: "Monkey SMP's weekly faction standings: this week's table, last week's final one, and how a "
+          + "faction's points add up.",
+      },
     ],
   },
   {

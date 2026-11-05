@@ -8,7 +8,7 @@
     python tools/checks.py --boots       which of CI's boot jobs this run needs (ci.yml; see boots())
 
 The checks: ruff, pytest, validate.py, the generated packs (datapacks.py --check), `dash -n` on every POSIX sh
-script, Pester, and the site (in site/, with bun: install from the lockfile, lint, typecheck and build, then
+script, Pester, and the site (in site/, with bun: install from the lockfile, lint, typecheck, unit tests and build, then
 tools/site_links.py --built checks the built pages against site/config.json). None of them boots the server;
 that is CI's boot jobs and tests/smoke.ps1. On Windows, Git for Windows' own dash is used when dash isn't on
 PATH, for `dash -n` and for the pytest tests that run deploy/lib.sh under dash. Exit status 1 if any check failed.
@@ -61,7 +61,7 @@ def pester(root: Path) -> list[list[str]]:
 def site() -> list[list[str]]:
     """The site's own checks, run in site/ (site/README.md), then its built pages against config.json."""
     return [["bun", "install", "--frozen-lockfile"],
-            *(["bun", "run", script] for script in ("lint", "typecheck", "build")),
+            *(["bun", "run", script] for script in ("lint", "typecheck", "test", "build")),
             [sys.executable, "-X", "utf8", "../tools/site_links.py", "--check", "--built", "out"]]
 
 

@@ -896,7 +896,8 @@ won't run twice). Delete its folder at the next restart to tidy up.
 Season II is planned for **Saturday 6 February 2027 at 5 PM Pacific**, two weeks after Season I's finale
 (the off-season week in between). It is 12 weeks like Season I, from the plan in "The acts of a season".
 Nothing is decided until the owners confirm the date by 9 January (Season I's week 9); everything below
-follows from that one date, `SEASON_II` in `tools/season_calendar.py`.
+follows from that one date, `SEASON_II` in `tools/season_calendar.py`. The site's calendar file
+(`python tools/season_ics.py`) follows the same dates and must be regenerated when one moves.
 
 ### Season II calendar
 

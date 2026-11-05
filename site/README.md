@@ -37,8 +37,10 @@ runs it with the other checks.
 | The creator code page | `src/app/creators/page.tsx` |
 | The header and footer | `src/components/chrome.tsx`. The footer adds "Season I Wrapped" (`src/lib/wrapped.ts`) once a season's `public/wrapped/season-<n>/index.html` is there at build time |
 | The server status (front page under the ways in, and one line on `/guide`) | `src/components/status.tsx`: it fetches `STATUS_URL` in the browser every 2 minutes and shows online or offline, the player count, the next event and the border. The page is built with a quiet fallback for the season's phase, which also shows without JavaScript and when the file is missing, more than 10 minutes old, or blocked; every state takes the same room |
+| The weekly standings (`/guide/standings`) | `src/components/standings.tsx` fetches `STANDINGS_URL` in the browser every 5 minutes and shows rank, faction name and points for this week so far and last week's final table, with `src/lib/standings.ts` reading the file all-or-nothing (a missing, unreadable, more than 3 hours old or future-dated file shows a quiet empty state, never part of a table). Names are plain text. Without JavaScript the page still says what the standings are and how points work (`src/content/guide/standings.mdx`). Unit tests: `bun test` |
 | Search and link previews | Each page's title, description and canonical address through `pageMetadata` in `src/lib/seo.ts`, which also holds the structured data (the site, Season I's launch as an event, the guide's breadcrumbs); `src/app/sitemap.ts`, `robots.ts` and `manifest.ts` build `/sitemap.xml`, `/robots.txt` and `/manifest.webmanifest`. A new page gets its own `pageMetadata` and a line in `sitemap.ts` (guide pages come from `pages.ts`); `tools/site_links.py --built` fails the build check when a built page is missing from `sitemap.xml` |
 | The page for a missing address | `src/app/not-found.tsx` (built as `out/404.html`) |
+| Add to calendar (a link on `/guide/week`) | `public/monkey-smp-season-1.ics`, made by `python tools/season_ics.py` (not edited by hand); `CALENDAR_URL` points at it |
 | Images, fonts, video, the press kit, the modpack | `public/` (served as they are: `public/img/og.jpg` is `/img/og.jpg`) |
 | Season Wrapped | `public/wrapped/season-<n>/`, made by `tools/wrapped.py` (docs/SEASONS.md, "Ending a season"): build it again rather than edit it. Its pages load `public/wrapped/site.css`, a copy of `src/app/style.css` that `python tools/site_links.py` refreshes (validate.py fails while it is stale) |
 
@@ -58,6 +60,8 @@ buttons point at the Discord with a "Coming soon" title.
 | `INSTALLER_URL` | The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same `.mrpack`, also in `public/pack/` |
 | `MAP_URL` | The live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone |
 | `STATUS_URL` | The server's status file (`tools/status.py`), served beside the live map with a short cache and an allow-origin header (docs/LIVE.md, "The website's status"). Empty: no status block |
+| `STANDINGS_URL` | The server's weekly standings file (`standings.json`), served beside the live map with a short cache and an allow-origin header, like `STATUS_URL`. Until the server publishes it the page shows its empty state |
+| `CALENDAR_URL` | The season's calendar file: `/monkey-smp-season-1.ics` (in `public/`, checked by `site_links.py`), or a full address if it is kept elsewhere |
 | `LAUNCH_AT` | When the season opens: ISO 8601 with its offset (`2026-11-08T01:00:00Z` is Saturday 7 November 2026, 5 PM Pacific). The pages spell it out in Pacific and Eastern time; the countdown adds the visitor's own time, then says the season is live once it has passed (docs/LAUNCH.md). It must match `tools/season_calendar.py`'s launch |
 
 A change to it is a commit like any other: the next deploy builds it into the pages.

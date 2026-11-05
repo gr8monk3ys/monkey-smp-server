@@ -16,6 +16,8 @@ SETTINGS = {
     "INSTALLER_URL": "pack/MonkeySMP-Player-1.2.3.zip",
     "MAP_URL": "https://map.example.com/?a=1&b=2",
     "STATUS_URL": "https://map.example.com/status.json",
+    "STANDINGS_URL": "https://map.example.com/standings.json",
+    "CALENDAR_URL": "https://cal.example.com/season.ics",
     "LAUNCH_AT": LAUNCH,
 }
 
@@ -251,6 +253,42 @@ def test_built_checks_pages_in_folders_too(tmp_path):
 
 def test_a_repo_without_the_site_has_nothing_to_check(tmp_path):
     assert site_links.problems(Repo(tmp_path)) == []
+
+
+def test_a_missing_calendar_file_is_reported(tmp_path):
+    repo = fake_site(tmp_path, settings=links(CALENDAR_URL="/season.ics"))
+    site_links.main([], repo=repo)
+    assert site_links.problems(repo) == ["site: CALENDAR_URL is /season.ics, but site/public/season.ics doesn't "
+                                         "exist (run python tools/season_ics.py)"]
+    (tmp_path / "site" / "public" / "season.ics").write_bytes(b"BEGIN:VCALENDAR\r\n")
+    assert site_links.problems(repo) == []
+
+
+def test_a_calendar_kept_elsewhere_is_not_looked_for(tmp_path):
+    repo = fake_site(tmp_path)
+    site_links.main([], repo=repo)
+    assert site_links.problems(repo) == []
+    assert site_links.local_file("https://cal.example.com/season.ics") == ""
+    assert site_links.local_file("/season.ics") == site_links.local_file("season.ics") == "season.ics"
+    assert site_links.local_file("") == ""
+    assert site_links.local_file("//cdn.example.com/season.ics") == ""
+    assert site_links.local_file("/season.ics?v=2") == site_links.local_file("season.ics#top") == "season.ics"
+
+
+def test_the_build_must_hold_the_calendar_and_link_it_from_the_week(tmp_path):
+    repo = fake_site(tmp_path, settings=links(CALENDAR_URL="/season.ics"))
+    (tmp_path / "site" / "public" / "season.ics").write_bytes(b"BEGIN:VCALENDAR\r\n")
+    site_links.main([], repo=repo)
+    out = tmp_path / "site" / "out"
+    write_build(out)
+    errors = site_links.problems(repo, built=out)
+    assert errors[0].endswith("no season.ics (CALENDAR_URL; it is site/public/season.ics)")
+    (out / "season.ics").write_bytes(b"x")
+    [error] = site_links.problems(repo, built=out)
+    assert error == "out/guide/week.html: no link to CALENDAR_URL (players look for the schedule there)"
+    link = '<a data-link="CALENDAR_URL" href="/season.ics">Add to calendar</a>'
+    (out / "guide" / "week.html").write_text(GOOD_LINKS + GOOD_LAUNCH + link, encoding="utf-8")
+    assert site_links.problems(repo, built=out) == []
 
 
 def test_the_real_site_matches_its_config():

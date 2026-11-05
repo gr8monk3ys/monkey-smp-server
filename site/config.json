@@ -6,5 +6,7 @@
   "INSTALLER_URL": "pack/MonkeySMP-Player-3.1.1.zip",
   "MAP_URL": "https://map.monkeysmp.lscaturchio.xyz",
   "STATUS_URL": "https://map.monkeysmp.lscaturchio.xyz/status.json",
+  "STANDINGS_URL": "https://map.monkeysmp.lscaturchio.xyz/standings.json",
+  "CALENDAR_URL": "/monkey-smp-season-1.ics",
   "LAUNCH_AT": "2026-11-08T01:00:00Z"
 }

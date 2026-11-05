@@ -34,7 +34,7 @@ function read(data: unknown): Report | null {
   return r;
 }
 
-function ago(ms: number): string {
+export function ago(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes} min ago`;

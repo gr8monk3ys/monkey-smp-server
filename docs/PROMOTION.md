@@ -165,7 +165,7 @@ one. Everything else in the listing kit stays.
 
 **First line of the long description:**
 
-> **Season I opens Saturday 7 November 2026 at 5 PM Pacific (8 PM Eastern).** Everyone gets in at the same
+> **Season I opens Saturday 7 November 2026 at 5 PM Pacific (8 PM Eastern).** Everyone starts at the same
 > moment: the first hour is peaceful, then PvP and the Nether open. Sign up for the founding roster in the
 > Discord; it's free, and the order is first come, first served.
 
@@ -190,7 +190,7 @@ answer comments from the same account that day. Other subreddits only after read
 
 > **Monkey SMP** is a small modded factions server on Minecraft Java 26.2 (Fabric), for people who play
 > evenings, Pacific time. **Season I opens Saturday 7 November at 5 PM Pacific / 8 PM Eastern**, with
-> everyone let in at the same moment, and runs to 23 January 2027.
+> everyone starting at the same moment, and runs to 23 January 2027.
 >
 > - Factions of up to four, alliances, and banner-marked territory nobody may grief. Everything outside it is
 >   contested.
@@ -218,6 +218,13 @@ answer comments from the same account that day. Other subreddits only after read
 > - Live map: https://map.monkeysmp.lscaturchio.xyz
 
 ### Discord
+
+**Test play, once an owner says so, pinned (docs/LAUNCH.md, "Test play before launch"):**
+
+> **Want to help test Monkey SMP before Season I?** With a pass you can join now and try to break things: PvP and the
+> Nether are on, the End is closed. It's only a test. Everything you build or collect is wiped on Saturday at 10 AM
+> Pacific, and everyone starts from zero at 5 PM. Your pass's time starts when you buy it, so test days count. Tell us
+> what breaks in a ticket.
 
 **T-9, Thursday 29 October:** the founding roster post in docs/LAUNCH.md. It already opens faction
 registration and asks players to install the pack; the T-7 post says both again.
@@ -256,7 +263,7 @@ registration and asks players to install the pack; the T-7 post says both again.
 > 3. **Hit "Interested"** on the launch event for a reminder.
 >
 > How launch works:
-> - Everyone gets in at 5 PM. For the first hour there's no PvP and no Nether. PvP and the Nether open at
+> - Everyone starts from zero at 5 PM. For the first hour there's no PvP and no Nether. PvP and the Nether open at
 >   6 PM; the End stays closed until we announce it.
 > - The Build Battle wheel spins at 5: three bonus blocks. Factions build on their plot next to spawn, and
 >   judging is Sunday at 6 PM (<t:1794189600:F>).

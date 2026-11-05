@@ -59,7 +59,7 @@ connects without needing help.
 
 ## Capabilities and Constraints
 
-- Prices on the page: Server Pass $5 a month or $14 for 3 months; supporter tiers Ember $3, Banner $7,
+- Prices on the page: Server Pass $5 a month or $8 for 2 months; supporter tiers Ember $3, Banner $7,
   Crown $15 a month; the invite ladder (1, 3, 5, 10 friends). Refund if the pack won't run in the first
   48 hours. Running cost about $50 a month, reported monthly in the Discord.
 - Needs Minecraft Java Edition on a computer (Windows, macOS or Linux) with 16 GB of RAM; no Bedrock, console

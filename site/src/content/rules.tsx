@@ -71,13 +71,13 @@ export const rules: Tablet[] = [
 export const terms: Tablet[] = [
   {
     title: "What you earn",
-    text: "20% of every 3-month pass bought with your code: $2.80 of the $14. Tebex, our store, pays it into "
+    text: "20% of every 2-month pass bought with your code: $1.60 of the $8. Tebex, our store, pays it into "
       + "your Tebex Wallet and holds each payment for 30 working days first, in case of refunds and chargebacks.",
   },
   {
-    title: "Codes are for the 3-month pass",
+    title: "Codes are for the 2-month pass",
     text: "Tebex pays a code's share only on the first payment of a subscription, and the first payment of a "
-      + "monthly pass is $5. So send people to the 3-month pass, where your share is worth having.",
+      + "monthly pass is $5. So send people to the 2-month pass, where your share is worth having.",
   },
   {
     title: "No discount for buyers",

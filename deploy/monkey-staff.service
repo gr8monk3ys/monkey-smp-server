@@ -1,0 +1,13 @@
+# Writes the staff page's status file (deploy/monkey-staff.sh, tools/staff_status.py). Started every 2 minutes by
+# monkey-staff.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` (docs/LIVE.md).
+[Unit]
+Description=Monkey SMP: staff page status
+After=docker.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-staff.sh
+TimeoutStartSec=2min
+Nice=10

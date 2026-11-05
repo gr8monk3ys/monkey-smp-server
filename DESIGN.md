@@ -291,6 +291,21 @@ beside "Server" is lit sage while the server is online, a hollow sage outline wh
 otherwise. Every state, the quiet fallback included, fills the same two lines a cell, so nothing moves when the
 status arrives. The guide hub has the same status as one line under its lede.
 
+### Staff page
+Not part of `site/`: plain HTML, CSS and JS in `deploy/staff/`, served by Caddy behind a password, under a policy that
+allows no inline script or style. A tool for a quick look, so it keeps the ground, faces and frames and drops the
+show: no placed blocks, no gallery. One word in the display face says how the server is, with the sentence that
+explains it; the numbers sit in a rail on the left and the charts on the right (one column on phones), with recent
+problems above the charts, each marked with a shape and a word. The numbers use the body face, not the display face:
+at this size the display face's 2 reads as an 8. The chosen time range is the only gold fill, since it can be pressed.
+
+The only status colours in the system live here: green for good, amber `#f0a13c` for busy, coral `#ff8675` for slow.
+Each always comes with its word and its own pixel shape (filled square, triangle, octagon; a hollow square for offline,
+with a dot when it can't tell). The chart lines are their own colours, never the status ones: Average `#c2871a` and P95
+`#49a36e`, checked for colour blindness against the panel `#0e3122`, or `#b3dcbf` for a single line. Text stays bone and
+sage; the colour is on the line and on the small swatch beside its label. Times without a reading are shaded and the
+line breaks over them rather than drawing through. The same numbers are there as a table.
+
 ### Placed blocks
 The countdown's move, on scroll. The blocks of a list marked `data-place` (the gallery, the steps, the plans,
 the rules, the kit, the changes, the week) that start below the fold wait out of sight, then drop 18 px into

@@ -1,0 +1,11 @@
+# Runs monkey-staff.service every 2 minutes, 45 seconds past (half a minute after the website's status, so the two
+# don't ask the server at once). No catching up at boot: a missed reading is a gap on the staff page's charts.
+[Unit]
+Description=Monkey SMP: staff page status, every 2 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/2:45
+Persistent=false
+
+[Install]
+WantedBy=timers.target

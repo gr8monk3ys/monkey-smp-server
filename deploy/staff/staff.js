@@ -263,16 +263,20 @@ function renderNow() {
 
 // ---------------------------------------------------------------- what went wrong
 
-function problem(kind, word, when, text) {
-  const row = el("li", "problem");
+function problem(kind, label, when, text) {
+  const item = el("li", "problem");
   const head = el("p", "problem-head");
-  head.append(mark(kind), el("span", "word", word), el("span", "problem-when", when));
-  row.appendChild(head);
-  if (text) row.appendChild(el("p", "problem-text", text));
-  return row;
+  head.append(mark(kind), el("span", "word", label), el("span", "problem-when", when));
+  item.appendChild(head);
+  if (text) item.appendChild(el("p", "problem-text", text));
+  return item;
 }
 
 function howOften(group, now) {
+  if (group.older) {
+    const before = "before this page started watching";
+    return group.count === 1 ? `Sometime ${before}` : `${plural(group.count, "time")} ${before}`;
+  }
   const last = ago(now - Date.parse(group.last));
   if (group.count === 1) return last;
   return `${plural(group.count, "time")} since ${DAY_CLOCK.format(new Date(group.first))}, last ${last}`;

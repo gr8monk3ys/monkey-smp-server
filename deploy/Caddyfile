@@ -19,4 +19,4 @@ map.monkeysmp.lscaturchio.xyz {
 }
 
 # The staff page, if it is set up (deploy/monkey-staff.sh).
-import /etc/caddy/staff.caddy*
+import /etc/caddy/staff*.caddy

@@ -56,7 +56,7 @@ HOST=staff.monkeysmp.lscaturchio.xyz
 LOGINS=$CADDY_DIR/staff-logins
 SITE=$CADDY_DIR/staff.caddy
 MAIN=$CADDY_DIR/Caddyfile
-IMPORT='import /etc/caddy/staff.caddy*'
+IMPORT='import /etc/caddy/staff*.caddy'
 
 # Whether Caddy would take the config, and that it can read the logins as its own user.
 caddy_ok() {
@@ -72,6 +72,15 @@ no_password() {
 # How many logins there are; nothing when the file can't be read.
 logins_count() { [ -r "$LOGINS" ] && grep -c '^[A-Za-z0-9_-]* ' "$LOGINS" || true; }
 
+# The first thing Caddy's own user can't read of what the site serves, if any: a visit with the password would fail
+# while one without it still gets its 401.
+caddy_cannot_read() {
+    for wanted in "$REPO_DIR/deploy/staff/index.html" "$REPO_DIR/site/public/fonts" "$STAFF_DIR" "$STAFF_DIR/staff.json"; do
+        [ "$wanted" != "$STAFF_DIR/staff.json" ] || [ -e "$wanted" ] || continue
+        runuser -u caddy -- test -r "$wanted" 2>/dev/null || { echo "$wanted"; return 0; }
+    done
+}
+
 # "gate_or_remove": takes the site back out of Caddy if a visit with no password gets anything but a 401. Retries
 # while there is no answer (the first certificate takes a moment).
 gate_or_remove() {
@@ -79,7 +88,7 @@ gate_or_remove() {
     while :; do
         gate_page=$(no_password /)
         gate_data=$(no_password /staff.json)
-        [ "$gate_page" = 000 ] && [ "$gate_tries" -lt 12 ] || break
+        { [ "$gate_page" = 000 ] || [ "$gate_data" = 000 ]; } && [ "$gate_tries" -lt 12 ] || break
         gate_tries=$((gate_tries + 1))
         sleep 5
     done
@@ -148,7 +157,8 @@ if [ "$MODE" = install ]; then
     [ "$(logins_count)" -gt 0 ] 2>/dev/null || die "no logins yet: run sudo sh $0 --login NAME first, so the site never opens without a password"
     install -d -m 755 -o monkey -g monkey "$STAFF_DIR"
     log "status folder: $STAFF_DIR"
-    install_timer monkey-staff.timer $UNITS
+    UNREADABLE=$(caddy_cannot_read)
+    [ -z "$UNREADABLE" ] || die "the caddy user can't read $UNREADABLE: nothing was added to Caddy"
 
     BACKUP=$(mktemp -d "$CADDY_DIR/.staff-backup.XXXXXX")
     trap 'rm -rf "$BACKUP"' EXIT
@@ -165,6 +175,7 @@ if [ "$MODE" = install ]; then
     systemctl reload caddy
     log "site: https://$HOST"
     gate_or_remove
+    install_timer monkey-staff.timer $UNITS
     log "logins: $(logins_count)"
     exit 0
 fi
@@ -182,6 +193,12 @@ if [ "$MODE" = check ]; then
         log "logins:$(sed -n 's/^\([A-Za-z0-9_-]*\) .*/ \1/p' "$LOGINS" 2>/dev/null | tr -d '\n')"
         if [ -e "$SITE" ]; then
             log "a visit with no password gets: $(no_password /) (401 is right; 000 is no answer yet)"
+            UNREADABLE=$(caddy_cannot_read)
+            if [ -n "$UNREADABLE" ]; then
+                log "PROBLEM: the caddy user can't read $UNREADABLE, so a visit with the password fails"
+            else
+                log 'the caddy user can read the page and the status file'
+            fi
         else
             log "site: not added to Caddy yet (sudo sh $0 --install)"
         fi

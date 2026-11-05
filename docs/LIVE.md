@@ -892,7 +892,8 @@ starting, stalls of 2 seconds or more (`Can't keep up!`) and crashes, each kept 
 and the errors logged during a start aren't listed. A mod can log an error that does no harm, so a listed error is
 worth a look, not a reason to act. Each reading reads only what is new in the log, so it costs next to nothing. Log
 text is filtered first: a line that mentions a secret is replaced whole, addresses, links and long numbers are masked,
-and only the description of a crash report is read, because the rest can hold the seed. Lines logged between the last
+and only the description of a crash report is read, because the rest can hold the seed. Log lines carry no date, so
+what the very first reading finds is marked as from before the page started watching. Lines logged between the last
 reading and a restart are missed, since each start replaces the log; a crash still shows, from its report.
 
 Set it up once, on a quiet day, after a release that has it is live:

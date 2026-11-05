@@ -23,6 +23,7 @@ MEMINFO = ("MemTotal:       16000000 kB\nMemAvailable:    4000000 kB\n"
            "SwapTotal:       2000000 kB\nSwapFree:        1500000 kB\n")
 NOW = rcon.parse_time("2026-11-15T02:00:00Z")
 SEED = "1234567890123"
+iso = staff_status.public.iso
 
 
 def docker(ps=PS, ps_code=0, answers=None):
@@ -192,14 +193,10 @@ def test_errors_after_the_start_are_listed_and_those_during_it_only_counted(box)
                      "[10:01:02] [Server thread/INFO]: Alpha joined the game\n")
     found = problems(box)
     assert [row["text"] for row in found["errors"]] == ["Error sending packet"]
-    assert found["errors"][0] == {"text": "Error sending packet", "count": 1, "first": rcon_iso(NOW),
-                                  "last": rcon_iso(NOW)}
+    assert found["errors"][0] == {"text": "Error sending packet", "count": 1, "first": iso(NOW), "last": iso(NOW),
+                                  "older": True}
     assert found["read"] is True and found["log"]["up"] is True and found["log"]["startup"] == 1
     assert found["lag"] is None and found["crashes"] == []
-
-
-def rcon_iso(when):
-    return when.astimezone(rcon.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def test_a_fatal_line_is_listed_even_before_the_start_finishes(box):
@@ -216,7 +213,8 @@ def test_falling_behind_is_counted_with_the_worst_of_it(box):
              "behind\n"
              "[10:02:00] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 3100ms or 62 ticks "
              "behind\n")
-    assert problems(box)["lag"] == {"worst": 3100, "count": 2, "first": rcon_iso(NOW), "last": rcon_iso(NOW)}
+    assert problems(box)["lag"] == {"worst": 3100, "count": 2, "first": iso(NOW), "last": iso(NOW),
+                                  "older": True}
 
 
 @pytest.mark.parametrize("line", [
@@ -246,7 +244,15 @@ def test_a_reading_only_reads_what_is_new(box):
     log(box, "[10:03:00] [Server thread/ERROR]: Error sending packet\n", "a")
     later += dt.timedelta(minutes=2)
     row = problems(box, later)["errors"][0]
-    assert row["count"] == 2 and row["first"] == rcon_iso(NOW) and row["last"] == rcon_iso(later)
+    assert row["count"] == 2 and row["first"] == iso(NOW) and row["last"] == iso(later) and "older" not in row
+
+
+def test_only_the_first_reading_calls_what_it_finds_older(box):
+    log(box, START + "[10:01:00] [Server thread/ERROR]: Error sending packet\n")
+    assert problems(box)["errors"][0]["older"] is True
+    log(box, "[10:03:00] [Server thread/ERROR]: Something else broke\n", "a")
+    rows = {row["text"]: row for row in problems(box, NOW + dt.timedelta(minutes=2))["errors"]}
+    assert rows["Error sending packet"]["older"] is True and "older" not in rows["Something else broke"]
 
 
 def test_a_line_still_being_written_waits_for_its_end(box):
@@ -306,11 +312,19 @@ def test_only_the_newest_groups_are_kept(box):
 
 
 @pytest.mark.parametrize("word", ["seed", "level-seed=1", "worldSeed", "SECRET", "rcon.password", "passwd", "token",
-                                  "api_key", "apikey", "api key", "discord_webhook", "Authorization:", "Bearer abc"])
+                                  "api_key", "apikey", "api key", "discord_webhook", "Authorization:", "Bearer abc",
+                                  "pass=abc", "rcon.pass abc", "pwd=abc", "key: abc", "store key abc", "storeKey=abc",
+                                  "tebex", "credentials"])
 def test_a_line_that_mentions_a_secret_is_left_out_whole(box, word):
     log(box, START + f"[10:01:00] [Server thread/ERROR]: Failed with {word} and more\n")
     assert [row["text"] for row in problems(box)["errors"]] == [staff_status.LEFT_OUT]
     assert word not in json.dumps(json.loads(box.out.read_text())["problems"])
+
+
+@pytest.mark.parametrize("said", ["Bad ResourceKey[minecraft:made_up]", "Could not bypass the check", "Monkey escaped"])
+def test_a_word_that_only_looks_like_a_secret_stays(box, said):
+    log(box, START + f"[10:01:00] [Server thread/ERROR]: {said}\n")
+    assert [row["text"] for row in problems(box)["errors"]] == [said]
 
 
 @pytest.mark.parametrize("said, shown", [
@@ -342,8 +356,9 @@ def test_a_line_longer_than_a_reading_is_stepped_over(box, monkeypatch):
     problems(box)
     monkeypatch.setattr(staff_status, "LOG_READ", 100)
     log(box, "x" * 250 + "\n[10:01:00] [Server thread/ERROR]: Error sending packet\n", "a")
-    assert [row["text"] for row in (problems(box), problems(box), problems(box), problems(box))[-1]["errors"]] == [
-        "Error sending packet"]
+    for _ in range(3):
+        problems(box)
+    assert [row["text"] for row in problems(box)["errors"]] == ["Error sending packet"]
 
 
 def test_a_log_that_cannot_be_read_says_so_and_keeps_what_was_found(box):
@@ -377,7 +392,7 @@ def test_a_crash_report_gives_its_description_and_nothing_else(box):
     crash(box, "crash-new.txt", 1, f"---- Minecraft Crash Report ----\n// A joke\n\nTime: today\n"
                                    f"Description: Exception in server tick loop\r\n\nlevel-seed {SEED}\nmade.up\n")
     found = problems(box)
-    assert found["crashes"] == [{"when": rcon_iso(NOW - dt.timedelta(hours=1)),
+    assert found["crashes"] == [{"when": iso(NOW - dt.timedelta(hours=1)),
                                  "text": "Exception in server tick loop"}]
     assert SEED not in json.dumps(found) and "made.up" not in json.dumps(found)
 
@@ -406,6 +421,18 @@ def test_a_crash_folder_that_cannot_be_read_is_no_reading(box, monkeypatch):
         raise PermissionError("no")
     monkeypatch.setattr(staff_status.os, "scandir", refused)
     assert staff_status.recent_crashes(box.live / "server" / "crash-reports", 0) is None
+
+
+def test_a_crash_report_removed_mid_scan_does_not_hide_the_others(box, monkeypatch):
+    crash(box, "crash-1.txt", 1, "Description: Still here\n")
+    folder = box.live / "server" / "crash-reports"
+    real = list(os.scandir(folder))
+
+    def gone():
+        raise FileNotFoundError("removed")
+    monkeypatch.setattr(staff_status.os, "scandir",
+                        lambda _: [SimpleNamespace(name="crash-0.txt", path="crash-0.txt", stat=gone), *real])
+    assert [row["text"] for row in staff_status.recent_crashes(folder, 0)] == ["Still here"]
 
 
 def test_the_log_reader_keeps_no_log_text_and_a_full_day_stays_small(box):
@@ -492,7 +519,7 @@ def test_the_password_only_guards_a_page_that_loads_nothing_from_elsewhere():
 
 
 def test_the_main_caddyfile_only_imports_the_staff_site_if_it_is_there():
-    assert (DEPLOY / "Caddyfile").read_text().rstrip().endswith("import /etc/caddy/staff.caddy*")
+    assert (DEPLOY / "Caddyfile").read_text().rstrip().endswith("import /etc/caddy/staff*.caddy")
 
 
 def test_the_page_runs_under_the_strict_policy():
@@ -515,7 +542,9 @@ FAKES = {
     "python3": "echo FAKEPASSWORD",
     "sleep": 'echo "sleep $*" >>"$FAKE_CALLS"',
     "systemctl": 'echo "systemctl $*" >>"$FAKE_CALLS"',
-    "runuser": 'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"',
+    # FAKE_NO_READ is a path the caddy user can't read.
+    "runuser": 'while [ "$1" != -- ]; do shift; done\nshift\n'
+               'case "$*" in *"${FAKE_NO_READ:-@nothing@}"*) exit 1 ;; esac\nexec "$@"',
     # What a visit with no password gets: FAKE_DATA for the status file, FAKE_CODE for the rest.
     "curl": 'case "$*" in\n  *staff.json*) printf %s "${FAKE_DATA:-${FAKE_CODE:-401}}" ;;\n'
             '  *) printf %s "${FAKE_CODE:-401}" ;;\nesac',
@@ -559,7 +588,7 @@ def staff(tmp_path):
 
 
 RELOAD = "systemctl reload caddy"
-IMPORT = "import /etc/caddy/staff.caddy*"
+IMPORT = "import /etc/caddy/staff*.caddy"
 
 
 def test_the_site_never_goes_in_without_a_login(staff):
@@ -624,6 +653,17 @@ def test_a_visit_that_is_not_refused_takes_the_site_back_out(staff, page, data):
     done = staff.run("--install", FAKE_CODE=page, FAKE_DATA=data)
     assert done.code == 1 and "out of Caddy again" in done.out
     assert not staff.site.exists() and done.calls.count(RELOAD) == 2
+    assert "systemctl enable --now monkey-staff.timer" not in done.calls
+
+
+@pytest.mark.parametrize("path", ["deploy/staff", "site/public/fonts", "staff"])
+def test_a_page_caddy_cannot_read_never_goes_in(staff, path):
+    staff.run("--login", "diego")
+    before = staff.main.read_text()
+    done = staff.run("--install", FAKE_NO_READ=path)
+    assert done.code == 1 and "caddy user can't read" in done.out
+    assert not staff.site.exists() and staff.main.read_text() == before
+    assert RELOAD not in done.calls and "systemctl enable --now monkey-staff.timer" not in done.calls
 
 
 def test_no_answer_yet_waits_for_the_certificate_then_says_why(staff):
@@ -639,6 +679,7 @@ def test_caddy_refusing_the_site_puts_everything_back(staff):
     done = staff.run("--install", FAKE_RC_validate="1")
     assert done.code == 1 and "caddy refused" in done.out
     assert staff.main.read_text() == before and not staff.site.exists() and RELOAD not in done.calls
+    assert "systemctl enable --now monkey-staff.timer" not in done.calls
     # The same over a site that is already in: the old one comes back rather than none.
     assert staff.run("--install").code == 0
     installed = staff.main.read_text()
@@ -689,6 +730,9 @@ def test_check_names_the_logins_without_their_hashes_and_changes_nothing(staff):
     assert done.code == 0 and "logins: diego\n" in done.out and "gets: 401" in done.out
     assert "$2a$" not in done.out and "check finished: nothing was changed" in done.out
     assert (staff.logins.read_text(), staff.main.read_text()) == before and RELOAD not in done.calls
+    assert "caddy user can read" in done.out and "PROBLEM" not in done.out
+    done = staff.run("--check", FAKE_NO_READ="deploy/staff")
+    assert done.code == 0 and "PROBLEM: the caddy user can't read" in done.out
 
 
 def test_the_status_job_refuses_root_and_needs_its_folder(staff):

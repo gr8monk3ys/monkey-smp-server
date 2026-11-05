@@ -35,7 +35,8 @@ one has the names of who is online and the machine's numbers, so it never goes n
   least 2 seconds behind ("Can't keep up!"), and crash reports. Warnings aren't kept, nor errors from while it starts:
   every start logs the same dozen, so startup only counts them. Log lines carry no date, so first and last are the
   readings that saw a line, up to 2 minutes late; what is logged just before a restart, after the last reading, is
-  missed. A group goes once a day has passed since its last line. log is where the reader got to, so that a reading
+  missed. The very first reading can't say when anything in the log happened, so what it finds is marked older.
+  A group goes once a day has passed since its last line. log is where the reader got to, so that a reading
   only reads what is new. read is false when the log couldn't be read and crashes is null when the reports couldn't,
   which says nothing about whether anything went wrong.
 - history is the last day's readings, oldest first, as [unix time, avg, p95, players], with nulls for a reading the
@@ -49,6 +50,7 @@ addresses, links and long numbers are masked. Stdlib only (plus tools/), Python 
 from the checkout.
 """
 import argparse
+import contextlib
 import datetime as dt
 import hashlib
 import json
@@ -84,7 +86,8 @@ _UP = re.compile(r"Up (.+?)(?: \(.*\))?$")
 _LOG_LINE = re.compile(rb"^\[\d\d:\d\d:\d\d\] \[([^\]\n]*)/(ERROR|FATAL|WARN|INFO)\](?: \[[^\]\n]*\])?: ([^\n]*)$",
                        re.M)
 _BEHIND = re.compile(rb"Can't keep up! .*?Running (\d+)ms")
-_SECRET = re.compile(r"seed|secret|passw|token|api.?key|webhook|authorization|bearer", re.I)
+_SECRET = re.compile(r"seed|secret|pass.?w|\bpass\b|\bpwd\b|token|api.?key|\bkey\b|key\s*[=:]|webhook|authorization"
+                     r"|bearer|tebex|credential", re.I)
 _LINK = re.compile(r"[a-z][a-z0-9+.-]*://\S+", re.I)
 _ADDRESS = re.compile(r"\[[0-9a-f.%]*:[0-9a-f.%]*:[0-9a-f:.%]*\](?::\d+)?"                  # [2001:db8::1]:5678
                       r"|(?<![\w:.])(?=[0-9a-f:]*(?:::|(?:[0-9a-f]{1,4}:){4}))[0-9a-f:]{3,}(?![\w:.])"  # 2001:db8::1
@@ -234,15 +237,18 @@ def new_lines(log: Path, reader) -> tuple[bytes, dict]:
 def recent_crashes(folder: Path, since: float) -> list[dict] | None:
     """The newest crash reports from the last day, None when the folder can't be read. Only the Description line is
     taken: the rest of a report describes the server, the seed included."""
+    found = []
     try:
-        found = sorted(((e.stat().st_mtime, e.path) for e in os.scandir(folder) if e.name.endswith(".txt")),
-                       reverse=True)
+        for e in os.scandir(folder):
+            if e.name.endswith(".txt"):
+                with contextlib.suppress(FileNotFoundError):    # removed since the listing: the others still count
+                    found.append((e.stat().st_mtime, e.path))
     except FileNotFoundError:   # the game makes the folder at its first crash
         return []
     except OSError:
         return None
     out = []
-    for made, path in found[:CRASHES_KEPT]:
+    for made, path in sorted(found, reverse=True)[:CRASHES_KEPT]:
         if made <= since:
             break
         try:
@@ -261,6 +267,14 @@ def is_current(row, fields: dict, since: str) -> bool:
             and row["last"] > since)
 
 
+def mark_older(group: dict, first: bool) -> None:
+    """A group the first reading found may be from any time before it; a line seen after that is known to be new."""
+    if first:
+        group["older"] = True
+    else:
+        group.pop("older", None)
+
+
 def problems(live: Path, now: dt.datetime, old) -> dict:
     """What has gone wrong lately: the log's new lines added to the groups from the reading before."""
     old = old if isinstance(old, dict) else {}
@@ -269,6 +283,7 @@ def problems(live: Path, now: dt.datetime, old) -> dict:
     errors = {_VARIES.sub("#", row["text"])[:100]: row for row in rows if is_current(row, _ERROR_FIELDS, since)}
     lag = old.get("lag") if is_current(old.get("lag"), _LAG_FIELDS, since) else None
     reader, read = old.get("log"), True
+    first = not isinstance(reader, dict)    # nothing says when these lines were written, only that it was by now
     chunk = b""
     try:
         chunk, reader = new_lines(live / "server" / "logs" / "latest.log", reader)
@@ -284,10 +299,12 @@ def problems(live: Path, now: dt.datetime, old) -> dict:
             if behind:
                 lag = lag or {"worst": 0, "count": 0, "first": stamp, "last": stamp}
                 lag.update(worst=max(lag["worst"], int(behind[1])), count=lag["count"] + 1, last=stamp)
+                mark_older(lag, first)
         elif reader["up"] or level == b"FATAL":     # a FATAL before the start finishes is why it didn't
             text = plain(said.decode("utf-8", "replace"))
             row = errors.setdefault(_VARIES.sub("#", text)[:100], {"text": text, "count": 0, "first": stamp})
             row.update(text=text, count=row["count"] + 1, last=stamp)
+            mark_older(row, first)
         else:
             reader["startup"] += 1
     newest = sorted(errors.values(), key=lambda row: row["last"], reverse=True)[:ERRORS_KEPT]

@@ -47,54 +47,54 @@
       </aside>
 
       <div class="column">
-      <section class="problems" aria-labelledby="problems-title">
-        <h2 id="problems-title">Recent problems</h2>
-        <div class="skeleton" aria-hidden="true"><i></i></div>
-        <ul class="problem-list" id="problems"></ul>
-        <p class="fine" id="problems-fine"></p>
-      </section>
+        <section class="problems" aria-labelledby="problems-title">
+          <h2 id="problems-title">Recent problems</h2>
+          <div class="skeleton" aria-hidden="true"><i></i></div>
+          <ul class="problem-list" id="problems"></ul>
+          <p class="fine" id="problems-fine"></p>
+        </section>
 
-      <section class="history" aria-labelledby="history">
-        <div class="history-head">
-          <h2 id="history">Over time</h2>
-          <div class="range" role="group" aria-label="How far back to show">
-            <button type="button" data-hours="1" aria-pressed="false">1 hour</button>
-            <button type="button" data-hours="6" aria-pressed="true">6 hours</button>
-            <button type="button" data-hours="24" aria-pressed="false">24 hours</button>
+        <section class="history" aria-labelledby="history">
+          <div class="history-head">
+            <h2 id="history">Over time</h2>
+            <div class="range" role="group" aria-label="How far back to show">
+              <button type="button" data-hours="1" aria-pressed="false">1 hour</button>
+              <button type="button" data-hours="6" aria-pressed="true">6 hours</button>
+              <button type="button" data-hours="24" aria-pressed="false">24 hours</button>
+            </div>
           </div>
-        </div>
 
-        <figure class="chart" id="tick-chart">
-          <figcaption>
-            <h3>Time per tick</h3>
-            <p>Lower is better. Past the 50 ms line, the game falls behind and players feel lag.</p>
-          </figcaption>
-          <p class="readout" id="tick-readout"></p>
-          <div class="plot" id="tick-plot"></div>
-        </figure>
+          <figure class="chart" id="tick-chart">
+            <figcaption>
+              <h3>Time per tick</h3>
+              <p>Lower is better. Past the 50 ms line, the game falls behind and players feel lag.</p>
+            </figcaption>
+            <p class="readout" id="tick-readout"></p>
+            <div class="plot" id="tick-plot"></div>
+          </figure>
 
-        <figure class="chart" id="players-chart">
-          <figcaption>
-            <h3>Players online</h3>
-          </figcaption>
-          <p class="readout" id="players-readout"></p>
-          <div class="plot" id="players-plot"></div>
-        </figure>
+          <figure class="chart" id="players-chart">
+            <figcaption>
+              <h3>Players online</h3>
+            </figcaption>
+            <p class="readout" id="players-readout"></p>
+            <div class="plot" id="players-plot"></div>
+          </figure>
 
-        <p class="fine" id="how">A reading is taken every 2 minutes and covers about 5 seconds, so a short spike between
-          readings won't show. P95 means 19 ticks in 20 were faster than this. Shaded stretches had no reading: the
-          server was restarting, stopped or not answering.</p>
+          <p class="fine" id="how">A reading is taken every 2 minutes and covers about 5 seconds, so a short spike between
+            readings won't show. P95 means 19 ticks in 20 were faster than this. Shaded stretches had no reading: the
+            server was restarting, stopped or not answering.</p>
 
-        <details class="table" id="table">
-          <summary>The readings as a table</summary>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="The readings">
-            <table>
-              <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th></tr></thead>
-              <tbody id="rows"></tbody>
-            </table>
-          </div>
-        </details>
-      </section>
+          <details class="table" id="table">
+            <summary>The readings as a table</summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="The readings">
+              <table>
+                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th></tr></thead>
+                <tbody id="rows"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
       </div>
     </div>
   </main>

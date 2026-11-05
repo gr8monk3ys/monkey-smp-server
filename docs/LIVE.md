@@ -1003,7 +1003,8 @@ and still over 40 ms. BlueMap's render threads were paused (`render-threads-enab
 100%, simulation 6 and view 8, with chunk-tick distance at 9; 4 of its 30 samples averaged over 50 ms. `walk` ended on
 mob cap 50%, chunk-tick distance 3, simulation 4 and view 8, with 25 of 30 samples over 50 ms. So steps 1 and 2 of the
 rule below are already in the `walk` number, and what's left is a bigger plan. On 2026-11-04 Reizor's Dallas page listed
-3 threads and 24 GB at $67.50 a month, and 4 threads and 32 GB at $90 as sold out. **Decision: open, the owners' call.**
+3 threads and 24 GB at $67.50 a month, and 4 threads and 32 GB at $90 as sold out. **Decision (2026-11-04): launch on
+this plan**, and look again if `spark tps` stays under 18 TPS on launch night.
 
 In `walk`, data pack and other commands were 47.8% of the main thread's samples, and the main thread waited for only
 5.2% of the tick. Game logic runs on that one thread, so more threads help only as far as the renderer and the garbage

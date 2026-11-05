@@ -1034,7 +1034,7 @@ about 7%. Fake players also have no farms, fights or building, so read this as a
 Real players could land on either side of it.
 
 **3.1.1 with the map on**, 2026-11-04 at 22:14 Pacific. Not comparable with the 3.1.0 rows: `bluemap start` went in
-before the script's second copy, so the copy had `render-threads-enabled: true`. The server process used about 90-99% of
+before the script's second copy, so the copy had `render-threads-enabled: true`. The server process used about 89-99% of
 the CPU, against about 51-75% in the 3.1.0 runs, and `BlueMap-RenderThread-0` shows real work only in these two profiles.
 `still` had 23 of 30 samples over 50 ms and ended on mob cap 80%, chunk-tick distance 6, simulation 6 and view 8. `walk`
 had 29 of 30, one 2164 ms old-generation collection, and ended on mob cap 40%, chunk-tick distance 3, simulation 4 and
@@ -1045,8 +1045,8 @@ view 7. Read these rows as what launch night could look like if the 4:30 PM `blu
 So the map was most of the difference above. Against 3.1.0, `still` is 1.5 ms slower at the same 20.0 TPS, ending on
 chunk-tick distance 7 instead of 9. `walk` is 2.6 ms slower at 17.8 TPS against 18.2, ending on mob cap 40% instead of 50%,
 with 23 of 30 samples over 50 ms against 25. That's one run each, so it doesn't separate any cost of Mace Limiter from
-ordinary variation between runs. `walk` is now just under the 18 TPS named in the decision above, which is about real
-players on launch night, so the decision stands.
+ordinary variation between runs. `walk` is now just under the 18 TPS named in the decision above. That line is about
+`spark tps` with real players on launch night, so this row doesn't trigger it.
 
 **3.1.0 on the home PC.** The table above is the VPS; these are the i7-8700K with its slow disk, so compare them only
 with each other. 30 fake players with a kit, standing, all 30 online, no command-limit hits:

@@ -772,7 +772,7 @@ the store takes real payments. Delivery (`tebex secret` in the console), all fiv
 against the table below), the support contact, the payout wallet and the storefront are all done. The paid role is
 **SMP Member**, given by Tebex's bot; its role must stay above that one.
 The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
-belongs to another server). Nothing links to it until `STORE_URL` merges, so keep it to staff.
+belongs to another server). The site has linked to it since `STORE_URL` merged on 2026-11-04 (#110).
 Make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
 only after that fill in `STORE_URL` (below). If Tebex's review asked for package changes, check the prices
 and terms against the table below before the first real sale.

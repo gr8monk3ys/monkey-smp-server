@@ -7,6 +7,8 @@ Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Added
 
+- The website has the full rulebook (`/guide/rules`, copied from `docs/RULES.md` by `tools/site_links.py`) and a
+  `CONTACT_URL` setting for reaching staff without the Discord.
 - Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
   and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
   last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in
@@ -14,6 +16,10 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   the run reports the failure.
 - `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
   touching the game.
+
+### Changed
+
+- The Discord is optional: the site, the rulebook and the docs say so, and what it announces goes on What changed too.
 
 ### Fixed
 

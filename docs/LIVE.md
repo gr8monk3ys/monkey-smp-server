@@ -831,7 +831,9 @@ Only one copy may run the world at a time: two live copies split the world into 
   3.0.0 Tebex's Fabric mod (2.4.6) is in the manifest like any other mod, so a deploy, a restore or a new VPS
   gets it by itself. Its secret key is not in the repo: it sits in `server/mods/tebex`, outside the world, and
   `tebex secret` in the console sets it.
-- **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
+- **Discord**: optional for buyers. Tebex's Discord integration gives the paid role to those who connect it, at
+  checkout or afterwards ("Discord after checkout" in the panel's Discord Servers, on since 2026-11-05); a buyer
+  who skips it still gets the whitelist and the pass. The forum, announcements, ban
   appeals and the `monkey` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
 

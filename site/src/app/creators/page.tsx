@@ -43,8 +43,8 @@ export default function Creators() {
 
         <section id="apply">
           <h2>Getting a code</h2>
-          <p className="note">Open a ticket in the Discord with a link to your channel and the code you&apos;d like
-            (your channel name works). We&apos;ll make it in the store and tell you when it works. To be paid, set up
+          <p className="note"><ConfigLink to="CONTACT_URL">Contact us</ConfigLink> or open a ticket in the Discord
+            with a link to your channel and the code you&apos;d like (your channel name works). We&apos;ll make it in the store and tell you when it works. To be paid, set up
             a Tebex Wallet when Tebex asks you to.</p>
           <Store when="soon">
             <p className="note">The store isn&apos;t open yet, so no code pays out until it opens. Until then, passes

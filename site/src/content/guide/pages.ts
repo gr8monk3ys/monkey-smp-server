@@ -16,6 +16,10 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
         href: "/guide/factions", title: "Factions and land",
         description: "Factions of up to four, claiming land, allies, war and pacts, and trading by hand.",
       },
+      {
+        href: "/guide/rules", title: "The full rulebook",
+        description: "Monkey SMP's Season I rulebook: every numbered rule and ban, how they're enforced, and appeals.",
+      },
     ],
   },
   {

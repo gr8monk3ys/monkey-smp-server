@@ -960,6 +960,10 @@ systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min sh /srv/mon
 journalctl -fu monkey-loadtest
 ```
 
+To compare with the 3.1.0 rows below, run `monkey rcon "bluemap stop"` first, because the copy inherits that state, and
+add `--setenv=SCENARIOS='still walk'` (the default is `still` only). Both scenarios took about 20 minutes offline on
+2026-11-04. Run `monkey rcon "bluemap start"` when it's done.
+
 Before a release ships the script, copy `deploy/monkey-loadtest.sh`, `deploy/lib.sh` (it sources it from its own folder) and `tools/loadtest.py` together to `/root/`, as the script passes `--kit`, and
 run `systemd-run --unit=monkey-loadtest --collect -p TimeoutStopSec=20min --setenv=LOADTEST_PY=/root/loadtest.py sh /root/monkey-loadtest.sh`.
 
@@ -983,6 +987,8 @@ ServerCore's status); the headline goes to the staff webhook.
 | 2026-10-25 | v2.4.1 | 24 of 25 | 23.6 ms | 74.3 ms | 20.0 | https://spark.lucko.me/fyE6dSvpV0 |
 | 2026-11-02 | v3.0.0, still, no kit | 30 of 30 | 53.8 ms | 129.7 ms | 18.0 | https://spark.lucko.me/yHTlfc2FXO |
 | 2026-11-02 | v3.0.0, walk, no kit | 30 of 30 | 63.5 ms | 170.3 ms | 15.2 | https://spark.lucko.me/S9do0Sa6Ff |
+| 2026-11-04 | v3.1.0, still, kit | 30 of 30 | 47.5 ms | 85.0 ms | 20.0 | https://spark.lucko.me/z6sharFj5R |
+| 2026-11-04 | v3.1.0, walk, kit | 30 of 30 | 53.2 ms | 145.1 ms | 18.2 | https://spark.lucko.me/Jj9CMiEacO |
 
 The first run, on 2026-10-25 at 22:30 Pacific. One fake player (Load08) didn't join, so it ran with 24. The
 median sample stayed at 13-31 ms: about 30 ms for a minute or two, then about 15 ms. No 10-second sample
@@ -994,6 +1000,24 @@ leave it.** The run's `summary.json` and staff post hold a docs link that spark 
 **Don't rely on that row.** Until 3.0.0 the tool lost most of its fake players in the first two minutes and didn't
 say so (CHANGELOG, 3.0.0), and the tick dropping from about 30 ms to about 15 ms fits that. The tool now records
 `players_online_min` and the staff post gives it: a run only counts if it equals the players asked for.
+
+**3.1.0 on the launch world**, 2026-11-04 at 19:00 Pacific, after pre-generation. Lower than the 3.0.0 rows in both
+scenarios, though the runs differ: these had a kit and the launch world, and the map's state in 3.0.0's isn't recorded.
+Still over 40 ms. BlueMap's render threads were paused (`render-threads-enabled: false` in
+`bluemap/pluginState.json`, which the copy inherits), so neither row has the map's renderer in it. `still` kept mob cap
+100%, simulation 6 and view 8, with chunk-tick distance at 9; 4 of its 30 samples averaged over 50 ms. `walk` ended on
+mob cap 50%, chunk-tick distance 3, simulation 4 and view 8, with 25 of 30 samples over 50 ms. So in `walk`, steps 1 and 2
+of the rule below are already in the number. `still` stayed at simulation 6 because nothing moves between 40 and 50 ms,
+so step 2 hasn't been tried there: a fixed lower distance is the next free test, and a bigger plan comes after that. On
+2026-11-04 Reizor's Dallas page listed
+3 threads and 24 GB at $67.50 a month, and 4 threads and 32 GB at $90 as sold out. **Decision (2026-11-04): launch on
+this plan**, and look again if `spark tps` stays under 18 TPS on launch night.
+
+In `walk`, data pack and other commands were 47.8% of the main thread's samples, and the main thread waited for only
+5.2% of the tick. Game logic runs on that one thread, so more threads help only as far as the renderer and the garbage
+collector are taking its turn, which nobody has measured. Carpet's own frames, which real players don't have, were
+about 7%. Fake players also have no farms, fights or building, so read this as a number to compare releases with, not a forecast.
+Real players could land on either side of it.
 
 **3.1.0 on the home PC.** The table above is the VPS; these are the i7-8700K with its slow disk, so compare them only
 with each other. 30 fake players with a kit, standing, all 30 online, no command-limit hits:
@@ -1031,11 +1055,15 @@ that, change one thing at a time, in this order, and run the test again after ea
 
 1. **Pause BlueMap in the evening** if it shows up. It already renders on one thread
    (`render-thread-count: 1`); `bluemap stop` over RCON pauses it and `bluemap start` resumes it.
-2. **Lower `simulation-distance`** in the live `server.properties` from 6 to 5, then 4. Players still see 8
-   chunks; mobs, crops and farms only run nearer. If `servercore_status` in `summary.json` shows lower
-   distances than these, ServerCore's dynamic mode was already cutting them during the test because ticks
-   were over 45 ms, so the real cost is higher than the number.
-4. **A plan with 4 or more threads** if it is still over 40 ms.
+2. **Lower `simulation-distance`** in the live `server.properties` from 6 to 5, then 4, and the `max` of
+   `SIMULATION_DISTANCE` in `server/config/servercore/config.yml` with it: ServerCore raises the distance back to that
+   `max` once ticks recover. Players still see 8 chunks; mobs, crops and farms only run nearer. If
+   `servercore_status` in `summary.json` shows lower distances than these, ServerCore's dynamic mode was already
+   cutting them during the test because ticks averaged over 50 ms, so the real cost is higher than the number. It cuts
+   above `target-mspt` plus 5 and raises below `target-mspt` minus 5, so at this server's 45, nothing moves between 40
+   and 50 ms. That's
+   from ServerCore's source (`DynamicManager`, `LinkedSetting`), not tried on this server.
+3. **A plan with 4 or more threads** if it is still over 40 ms.
 
 ## DDoS protection
 

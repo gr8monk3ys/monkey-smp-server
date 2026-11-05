@@ -166,7 +166,8 @@ below).
   button and check the message arrives in the staff channel.
 - [ ] **Fri 6 Nov: load test** after the last release, as in docs/LIVE.md, "Load test" (as root, at a quiet
   hour, not near 4 PM Pacific, which is midnight UTC). Add its row to the table there in a docs pull request.
-  Over about 40 ms median at 30 players: follow the decision rule there before launch.
+  Over about 40 ms median at 30 players: follow the decision rule there before launch. 3.1.0 was over it on 2026-11-04,
+  and the decision recorded there is to launch on this plan.
 - [ ] **By Fri 6 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
   `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
@@ -251,6 +252,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. The `STORE_URL` pull request approved and ready to merge. |
+| 4:30 PM | an owner | `bluemap stop` in the console, so the map's renderer doesn't share the two threads with the launch crowd: the load test's numbers are without it (docs/LIVE.md, "Load test"). `bluemap` should say the render threads are stopped. |
 | 4:45 PM | the camera | Recording starts (below). |
 | 5:00 PM | an owner | Paste the whitelist line. In the console: `function monkey:rules/launch`. Merge the `STORE_URL` pull request (if the roster is 30 or under and the store is approved). Post the launch announcement. |
 | 5:00 PM | an owner | Season Wrapped's starting point, on the VPS: `monkey rcon "save-all flush"`, then `python3 /srv/monkey/repo/tools/wrapped.py start /srv/monkey/MonkeySMP-Server/server/world --out /srv/monkey/seasons/season-I-wrapped-start.json`. It says how many players' counts it kept; it refuses before `rules/launch`, and to replace the file (a rerun needs `--force`). Without it, Season Wrapped counts staff test play (docs/SEASONS.md, "Ending a season"). |
@@ -260,6 +262,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | 6:00 PM | — | PvP and the Nether open by themselves. Say so in chat and `#monkey-smp`. |
 | 7 PM | the camera | Stop recording (or carry on while something is happening). |
 | 10 PM | an owner | Post the first night's notes in the staff channel: online peak, problems, who couldn't join. |
+| Late, once few are online | an owner | `bluemap start` in the console, so the map catches up. |
 
 If the server won't start or falls over at launch: say so in `#announcements` straight away with a new time,
 fix it, and run `function monkey:rules/launch` only once everyone can join. The launch hour's timer is kept

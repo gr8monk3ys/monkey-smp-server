@@ -67,9 +67,8 @@ order and the dates.
   `STORE_URL` is empty.
 - [x] **`STORE_URL` merged early, 2026-11-04 at 11:16 PM Pacific (#110),** an owner's call so people can see the store
   before launch. The plan had been 5 PM on launch day. The test purchase above hadn't passed yet.
-- [ ] **The store is public, so a pass bought now goes on the whitelist within a minute,** and that player could walk
-  into the world before everyone else. That's the early access the founding roster's rules say isn't for sale (below),
-  so staff check the whitelist daily until launch (below).
+- [x] **The store is public, so a pass bought now goes on the whitelist within a minute,** and that player can play
+  before launch: an owner's call on 2026-11-05 ("Test play before launch", below).
 
 ### Refunds before the money settles
 
@@ -191,8 +190,34 @@ below).
   ancient debris, mace or elytra in a chest, ender chest or shulker box: taken out after launch, it could claim
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
-  only. Anyone else: `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day if it's on the founding
-  roster. Buyers show up here now that the store is open. A buyer who isn't on the roster stays off until an owner decides.
+  and buyers, whom Tebex adds within a minute. Buyers stay on, on the founding roster or not. Anyone else:
+  `whitelist remove NAME`, note the name, and add it back at 5 PM on launch day if it's on the roster.
+
+### Test play before launch
+
+An owner decided on 2026-11-05 that anyone with a pass can play now, in the launch world, because the server needs
+testers. It's the same for every buyer at the same price, and it's wiped before launch, so it buys no head start.
+
+- **During test play** PvP and the Nether are on. The End stays closed: the rules pack sends players out until
+  `#end_open` is 1.
+- **Staff work goes in before the first buyer joins, or after the wipe.** Build Battle plots or anything else built in
+  between goes back with the world.
+- [ ] **Before telling anyone: note the snapshot.** `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots`
+  on the VPS, and note the newest ID from before any outside player has joined. Hourly snapshots last 48 hours, and after
+  that only the last one of each day is kept, so check it's still listed before the wipe.
+- [ ] **Fri 6 Nov: tell testers when it ends**, with the post in docs/PROMOTION.md, "Test play".
+- [ ] **Sat 7 Nov, 10 AM: wipe test play,** just after the hourly backup, and only if Friday's restore drill passed.
+  Follow docs/LIVE.md, "Restore", on the VPS, with the noted ID in place of `latest`. Only the world goes back, so
+  inventories, builds, claims, parties, Strength, maces and scoreboards start again, while the whitelist, bans,
+  LuckPerms and the mods stay. Then:
+  - `monkey rcon "macelimit count"` says 0 of 3.
+  - A supporter tier or wardrobe grant bought since the snapshot is in the scoreboard, so it went back too. Check the
+    Tebex payment history and grant those again.
+  - BlueMap's tiles aren't in the snapshot, so the map can show test builds until those chunks render again.
+- [ ] **Install the news timer after the wipe, not before** (`monkey-news.sh --install`). It keeps what it has seen
+  outside the world, so a first from test play would be posted, and could stop the real first being posted.
+- **If the wipe doesn't happen,** test play carries into Season I. An owner then tells buyers, and the docs/PROMOTION.md
+  lines saying everyone starts at the same moment come out. On launch, Server Firsts, challenges and grace still reset.
 
 ### Passes and the whitelist by hand
 
@@ -248,7 +273,8 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 
 | Time | Who | Step |
 | --- | --- | --- |
-| 9 AM | an owner | `monkey-deploy.sh --status`: the release from 4 November is live and nothing is waiting. `whitelist list`: staff only. Uptime Kuma green. |
+| 9 AM | an owner | `monkey-deploy.sh --status`: the release from 4 November is live and nothing is waiting. `whitelist list`: staff and buyers. Uptime Kuma green. |
+| 10 AM | an owner | Wipe test play, then install the news timer ("Test play before launch", above). |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. |
@@ -336,12 +362,14 @@ later: it is not a pass and doesn't replace one. Everyone pays the same for a pa
 higher on the roster.
 
 - **One price.** Mojang's usage guidelines ask for one price for access, so there are no priority slots,
-  reserved places, early access or "founder packs" for sale (docs/LIVE.md, "The store"). The Founder skin is
-  earned by playing launch weekend and is never sold.
+  reserved places, early access or "founder packs" for sale (docs/LIVE.md, "The store"). Test play is open to every
+  buyer and wiped before launch, so it isn't early access. The Founder skin is earned by playing launch weekend and
+  is never sold.
 - **First come, first served.** The order is the time of the sign-up message, which Discord records. The
   first 30 are the roster; everyone after is on the waitlist, in order.
 - **Up to 30, because 30 is the server's slot count** (`max-players=30`). If 30 or fewer sign up, there is no
-  waitlist. The store has been open to everyone since 4 November.
+  waitlist. The store has been open to everyone since 4 November. A buyer who isn't on the roster stays on the
+  whitelist, so at 5 PM a roster player can find the server full if more than 30 try at once.
 
 ### The announcement (draft, T-9, Thursday 29 October, `#announcements`)
 

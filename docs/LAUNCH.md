@@ -30,7 +30,7 @@ change the dates in this file, in the Season I calendar (docs/SEASONS.md) and in
 | Mon 2 Nov | T-5 | **3.0.0 tagged and deployed early** for a test night: Minecraft 26.2, the owners' mod list, a test world on the launch seed. |
 | Wed 4 Nov | T-3 | **Last day to tag 3.1.0:** the owners' final mod list, the speed patches and any fix from the test. It deploys at 4-5 AM on Thursday, and players reinstall the pack. |
 | Thu 5 Nov | T-2 | The freeze starts. **The launch world:** a fresh copy of the seed, replacing the test world, then Chunky, the map rendered and fitted. Trial decided and a test purchase. New screenshots for the site gallery and the banners (`marketing/build.py`: the banners and `og.jpg` still show the old world, and the server-list banner still says 26.3). Build Battle plots built. Moderators onboarded, and their shadowed evening. |
-| Fri 6 Nov | T-1 | Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. Test joins, the trailer. Staff stashes checked. T-1 announcement. 5 PM: founding roster closes. |
+| Fri 6 Nov | T-1 | Chunky finished. Load test on the VPS; restore drill and launch rehearsal on the home PC. Test joins, the trailer. T-1 announcement. 5 PM: founding roster closes. |
 | Sat 7 Nov | T-0 | 12 PM: the roster is final. 4 PM the last call; **5 PM launch**, the launch hour and the Build Battle wheel; 6 PM PvP and the Nether open. Recorded. |
 | Sun 8 Nov | T+1 | Day-1 check. 6 PM Build Battle judging. Launch weekend ends at midnight. |
 | Mon 9 Nov | T+2 | The freeze ends. Day-1 retention. |
@@ -52,7 +52,7 @@ order and the dates.
   this repo or a chat.
 - [ ] **Test purchase** of the $5 pass on an alt that isn't on the whitelist (a staff account can't prove `whitelist add` ran). Check that `whitelist add` ran, `rw.months` didn't
   move (the monthly pass adds 1 on each renewal, not on purchase), and the Discord role arrived. Then refund it in the panel (if the package has refund commands,
-  check they ran), and leave only staff on the whitelist.
+  check they ran), and check the alt is off the whitelist.
 
   **Result, 2026-11-02, with the $5 pass on a staff account:** `whitelist add` ran about a minute after paying
   (it replied "already whitelisted", so the command is proved, not the list changing), `rw.months` stayed at 0,
@@ -186,7 +186,7 @@ below).
   and paste its `tellraw`. Shut the copy down afterwards (it uses BlueMap's port 8100). On the live world a
   launch before 5 PM on the day would open Founder's Circlet's window early and spend the one-time wipe of
   test play's challenges, and the real launch wouldn't open the window again.
-- [ ] **Fri 6 Nov: staff stashes.** Anyone who played in the Season I world before launch leaves no diamond,
+- [ ] **Sat 7 Nov, after the wipe: staff stashes.** Anyone who played in the Season I world before launch leaves no diamond,
   ancient debris, mace or elytra in a chest, ender chest or shulker box: taken out after launch, it could claim
   that Server First (one carried on a player can't; docs/ADMIN.md, "Server Firsts").
 - [ ] **Daily until launch: the whitelist.** `monkey rcon "whitelist list"`. Before launch it holds staff
@@ -196,7 +196,8 @@ below).
 ### Test play before launch
 
 An owner decided on 2026-11-05 that anyone with a pass can play now, in the launch world, because the server needs
-testers. It's the same for every buyer at the same price, and it's wiped before launch, so it buys no head start.
+testers. It's the same for every buyer at the same price, and it's wiped before launch, so nobody keeps items, builds or
+claims. Testers do keep what they learned about where things are.
 
 - **During test play** PvP and the Nether are on. The End stays closed: the rules pack sends players out until
   `#end_open` is 1.
@@ -204,18 +205,20 @@ testers. It's the same for every buyer at the same price, and it's wiped before 
   between goes back with the world.
 - [ ] **Before telling anyone: note the snapshot.** `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots`
   on the VPS, and note the newest ID from before any outside player has joined. Hourly snapshots last 48 hours, and after
-  that only the last one of each day is kept, so check it's still listed before the wipe.
+  that only the last one of each day is kept, so for Saturday at 10 AM use one from after 10 AM Thursday. If it's gone,
+  use the last snapshot of an earlier clean day, such as `c34195a5` (4 Nov, 11:03 PM), and redo staff work since then.
+- [ ] **Before telling anyone: the store's page.** An owner adds the wipe to the pass's description on Tebex, because
+  a buyer from the website may never read Discord.
 - [ ] **Fri 6 Nov: tell testers when it ends**, with the post in docs/PROMOTION.md, "Test play".
 - [ ] **Sat 7 Nov, 10 AM: wipe test play,** just after the hourly backup, and only if Friday's restore drill passed.
   Follow docs/LIVE.md, "Restore", on the VPS, with the noted ID in place of `latest`. Only the world goes back, so
   inventories, builds, claims, parties, Strength, maces and scoreboards start again, while the whitelist, bans,
   LuckPerms and the mods stay. Then:
   - `monkey rcon "macelimit count"` says 0 of 3.
-  - A supporter tier or wardrobe grant bought since the snapshot is in the scoreboard, so it went back too. Check the
-    Tebex payment history and grant those again.
+  - A supporter tier, wardrobe grant or 2-month pass's `rw.months` bought since the snapshot is in the scoreboard, so it
+    went back too. Check the Tebex payment history and grant those again.
+  - Walk spawn: the Guide, the Town Crier and the Build Battle plots are there. Then the staff stash check (above).
   - BlueMap's tiles aren't in the snapshot, so the map can show test builds until those chunks render again.
-- [ ] **Install the news timer after the wipe, not before** (`monkey-news.sh --install`). It keeps what it has seen
-  outside the world, so a first from test play would be posted, and could stop the real first being posted.
 - **If the wipe doesn't happen,** test play carries into Season I. An owner then tells buyers, and the docs/PROMOTION.md
   lines saying everyone starts at the same moment come out. On launch, Server Firsts, challenges and grace still reset.
 
@@ -274,7 +277,7 @@ the RSVP and the bot reminds people 15 minutes before (docs/SEASONS.md, "A weekl
 | Time | Who | Step |
 | --- | --- | --- |
 | 9 AM | an owner | `monkey-deploy.sh --status`: the release from 4 November is live and nothing is waiting. `whitelist list`: staff and buyers. Uptime Kuma green. |
-| 10 AM | an owner | Wipe test play, then install the news timer ("Test play before launch", above). |
+| 10 AM | an owner | Wipe test play, and the checks after it ("Test play before launch", above). |
 | 3 PM | staff | In Discord voice. Each staff member logs in, checks their rank (`lp user NAME info`) and `vanish` works. |
 | 4 PM | an owner | Post the T-1h announcement. |
 | 4:30 PM | staff | Last whitelist check. The add-player line ready to paste. |
@@ -363,7 +366,7 @@ higher on the roster.
 
 - **One price.** Mojang's usage guidelines ask for one price for access, so there are no priority slots,
   reserved places, early access or "founder packs" for sale (docs/LIVE.md, "The store"). Test play is open to every
-  buyer and wiped before launch, so it isn't early access. The Founder skin is earned by playing launch weekend and
+  buyer and wiped before launch, so nobody keeps anything from it. The Founder skin is earned by playing launch weekend and
   is never sold.
 - **First come, first served.** The order is the time of the sign-up message, which Discord records. The
   first 30 are the roster; everyone after is on the waitlist, in order.

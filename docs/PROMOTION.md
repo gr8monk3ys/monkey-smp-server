@@ -219,11 +219,12 @@ answer comments from the same account that day. Other subreddits only after read
 
 ### Discord
 
-**Test play, once an owner says so (docs/LAUNCH.md, "Test play before launch"):**
+**Test play, once an owner says so, pinned (docs/LAUNCH.md, "Test play before launch"):**
 
 > **Want to help test Monkey SMP before Season I?** With a pass you can join now and try to break things: PvP and the
 > Nether are on, the End is closed. It's only a test. Everything you build or collect is wiped on Saturday at 10 AM
-> Pacific, and everyone starts from zero at 5 PM. Tell us what breaks in a ticket.
+> Pacific, and everyone starts from zero at 5 PM. Your pass's time starts when you buy it, so test days count. Tell us
+> what breaks in a ticket.
 
 **T-9, Thursday 29 October:** the founding roster post in docs/LAUNCH.md. It already opens faction
 registration and asks players to install the pack; the T-7 post says both again.

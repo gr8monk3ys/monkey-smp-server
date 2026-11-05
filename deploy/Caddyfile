@@ -17,3 +17,6 @@ map.monkeysmp.lscaturchio.xyz {
 		reverse_proxy 127.0.0.1:8100
 	}
 }
+
+# The staff page, if it is set up (deploy/monkey-staff.sh).
+import /etc/caddy/staff*.caddy

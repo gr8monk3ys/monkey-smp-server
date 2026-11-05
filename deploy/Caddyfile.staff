@@ -1,0 +1,35 @@
+# The staff page (deploy/monkey-staff.sh, docs/LIVE.md, "The staff page"). `sudo sh monkey-staff.sh --install` copies
+# this to /etc/caddy/staff.caddy, which the main Caddyfile imports if it is there. The script never adds it until
+# there is a login, and takes it back out if a visit with no password gets in. The logins are in
+# /etc/caddy/staff-logins (root:caddy, 640), never in this repo, which is public.
+staff.monkeysmp.lscaturchio.xyz {
+	encode zstd gzip
+
+	basic_auth bcrypt "Monkey SMP staff" {
+		import /etc/caddy/staff-logins
+	}
+
+	# Nothing loads from elsewhere, nothing is kept by a browser or a search engine, and no other site can frame it.
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Cache-Control "no-store"
+		X-Robots-Tag "noindex, nofollow"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	handle /staff.json {
+		root * /srv/monkey/staff
+		file_server
+	}
+
+	handle /fonts/* {
+		root * /srv/monkey/repo/site/public
+		file_server
+	}
+
+	handle {
+		root * /srv/monkey/repo/deploy/staff
+		file_server
+	}
+}

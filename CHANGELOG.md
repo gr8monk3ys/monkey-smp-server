@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- The staff page: a private, password-protected look at how the server is doing, for the people who run it. One word
+  for how the game is keeping up, recent errors, stalls and crashes, tick time and players over 24 hours, who is
+  online, the machine's memory, load and disk, the release and the last backup. It can change nothing and isn't linked
+  from the website. Set up by hand once a release has it (docs/LIVE.md, "The staff page"); nothing about the server
+  changes until then.
+
 ## [3.1.0] - 2026-11-03
 
 The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on

@@ -146,4 +146,6 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
 - **New in 3.1.0:** Amethyst Nether is gone, so the Nether is vanilla's terrain again, with new structures in it. Dungeons and Taverns reworks strongholds, ancient cities, fortresses, monuments, mansions, outposts,
   temples and mineshafts, and Moog's structures and bigger End cities add more to find. Their enchantments are event
   rewards only ([rule B18](RULES.md)).
+- **New in 3.1.1:** only a few crafted maces can exist at once. When the cap is reached, no more can be crafted until one
+  breaks or is destroyed.
 - There is no land capture (that was Towns & Nations on the 1.x Paper server).

@@ -174,6 +174,15 @@ stopped, before 2.10.0 deploys. In this order, as root:
 Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
 run `migrate_names.py` on it first.
 
+### 3.1.1: Mace Limiter
+
+3.1.1 adds one server-only mod. Players keep the 3.1.0 pack and nothing they install changes. It adds no blocks, items
+or world generation, so it stays on the world it finds.
+
+Its settings and its count live in `world/macelimiter_maces.json`, made on the first start with a limit of 3. They belong
+to the world, so a new world starts at 3 again. For another limit, `monkey rcon "macelimit set 5"`. Check with
+`monkey rcon "macelimit"` and `monkey rcon "macelimit count"`.
+
 ### 3.1.0: the final mod list and the speed patches
 
 3.1.0 stays on Minecraft 26.2, so the deploy loads the world it finds. Its new structures only appear in land

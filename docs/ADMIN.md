@@ -376,7 +376,7 @@ values.
   holds it, `/macelimit set <n>` changes the limit, and `/macelimit help` lists the rest (cooldown, damage cap, what
   death does, storage), all left at the mod's defaults. Removing a counted mace with `/clear` or the arena's clear of
   unmarked items doesn't free its slot (a patch, docs/MAINTAINING.md), and neither does losing one while it's on Strength
-  Restrictions' cooldown, when it's a look-alike potato. `/macelimit reset` stops counting every mace that exists so far,
+  Restrictions' cooldown, when it's a look-alike potato, or using one up to repair another. `/macelimit reset` stops counting every mace that exists so far,
   and they stay in the game, so use it only when the count is wrong.
 - **Loot Restock** (`server\lootrestock.properties`). A structure loot chest refills from its loot table 7 days
   after it was emptied, and only when it is completely empty. Barrels, item frames and trial vaults are left

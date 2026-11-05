@@ -20,7 +20,10 @@ def test_the_patch_replaces_only_the_item_stack_mixin():
 
 
 def test_a_count_of_zero_no_longer_frees_a_slot():
-    assert ml.releases_on_zero(committed()[ml.CLASS]) is False
+    data = committed()[ml.CLASS]
+    assert ml.releases_on_zero(data) is False
+    start, _ = ml.ClassFile(data).code[ml.METHOD]
+    assert (data[start], data[start + 1]) == (ml.ICONST_1, ml.IFGT)
 
 
 def test_patching_an_already_patched_class_is_refused():

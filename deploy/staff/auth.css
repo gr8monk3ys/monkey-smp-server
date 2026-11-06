@@ -8,8 +8,8 @@
 }
 .card h1 { color: var(--bone); font: 700 1.75rem/1.1 var(--display); }
 .card form { display: grid; gap: 12px; }
-.field { display: grid; gap: 4px; }
-.field label { color: var(--sage); font-size: 0.9375rem; }
+.form-field { display: grid; gap: 4px; }
+.form-field label { color: var(--sage); font-size: 0.9375rem; }
 .card .attention, .card .note { max-width: none; margin-top: 0; }
 .card .actions { align-items: center; }
 .card .btn.primary { min-width: 8rem; }
@@ -20,13 +20,6 @@
 .link:hover { color: var(--bone); }
 a.link { display: inline-block; }
 
-input[type="password"], input[type="email"], select {
-  min-height: 44px; min-width: 0; padding: 0 8px;
-  color: var(--bone); font: 400 0.9375rem/1.45 var(--body);
-  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
-}
-.card input, .box input, .box select { background-color: var(--ground); }
-input[type="password"]:focus-visible, input[type="email"]:focus-visible, select:focus-visible { outline-offset: 0; }
 
 /* The account menu, top right of the staff page. */
 .account { position: relative; color: var(--bone); }
@@ -52,8 +45,9 @@ input[type="password"]:focus-visible, input[type="email"]:focus-visible, select:
 .users .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
 .users .who b { color: var(--bone); }
 .users .meta { color: var(--sage); font-size: 0.9375rem; overflow-wrap: anywhere; }
-.add-user { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; }
-.add-user .field { flex: 1 1 10rem; }
+.add-user { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.add-user .form-field { flex: 1 1 12rem; }
+.users .actions { align-items: center; }
 .handover { display: grid; gap: 6px; }
 .handover input { width: 100%; }
 

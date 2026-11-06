@@ -143,6 +143,23 @@
 
   const emptyRow = (text) => el("li", "empty-row", text);
 
+  // A list row with a title, a line of facts, an optional description and its buttons on the right.
+  function item(title, facts, about, buttons) {
+    const li = el("li", "item");
+    const main = el("div", "item-main");
+    const what = el("span", "what", title);
+    if (facts) what.appendChild(el("span", "meta", ` ${facts}`));
+    main.appendChild(what);
+    if (about) main.appendChild(el("span", "about", about));
+    li.appendChild(main);
+    if (buttons && buttons.length) {
+      const side = el("div", "item-actions");
+      side.append(...buttons);
+      li.appendChild(side);
+    }
+    return li;
+  }
+
   // ---------------------------------------------------------------- settings (server.properties)
 
   const settings = { data: null };
@@ -158,7 +175,7 @@
       const choices = field.choices.includes(field.value) ? field.choices : [field.value, ...field.choices];
       node = select(choices.map((c) => [c, c]), field.value);
     } else {
-      node = input("text", { value: field.value, maxLength: field.max || 500, spellcheck: false });
+      node = input("text", { value: field.value, maxLength: field.max || 500, spellcheck: false, className: "mono" });
     }
     node.id = `set-${field.key}`;
     node.disabled = !editable;
@@ -171,6 +188,13 @@
     return node.value;
   }
 
+  // How many settings differ from the file, on the bar with the Save button.
+  function countChanges() {
+    const n = $("settings-fields").querySelectorAll(".field.changed").length;
+    $("settings-count").textContent = n ? `${n} unsaved change${n === 1 ? "" : "s"}.` : "No unsaved changes.";
+    $("settings-bar").classList.toggle("dirty", n > 0);
+  }
+
   function renderSettings(data) {
     settings.data = data;
     const boxes = [];
@@ -181,13 +205,16 @@
       box.appendChild(el("h3", "", group));
       const list = el("div", "fields");
       for (const field of fields) {
-        const row = el("div", "field");
+        const node = control(field);
+        const row = el("div", node.type === "text" ? "field long" : "field");
         const label = el("label", "", field.key);
         label.htmlFor = `set-${field.key}`;
         const holder = el("div", "control");
-        const node = control(field);
         node.dataset.key = field.key;
-        const mark = () => row.classList.toggle("changed", current(field, node) !== field.value);
+        const mark = () => {
+          row.classList.toggle("changed", current(field, node) !== field.value);
+          countChanges();
+        };
         node.addEventListener("input", mark);
         node.addEventListener("change", mark);
         holder.appendChild(node);
@@ -200,14 +227,19 @@
     }
     if ((data.other || []).length) {
       const box = el("section", "box");
-      box.appendChild(el("h3", "", "Other keys (read-only here)"));
-      const ul = el("ul", "entries");
-      for (const row of data.other) ul.appendChild(entry(`${row.key} = ${row.value}`, `(${row.locked})`));
+      box.appendChild(el("h3", "", "Locked here, and other keys"));
+      const ul = el("ul", "other");
+      for (const row of data.other) {
+        const li = el("li");
+        li.append(el("code", "", `${row.key}=${row.value}`), el("span", "", row.locked));
+        ul.appendChild(li);
+      }
       box.appendChild(ul);
       boxes.push(box);
     }
     $("settings-fields").replaceChildren(...boxes);
     $("settings-save").disabled = !can("admin");
+    countChanges();
   }
 
   async function loadSettings() {
@@ -346,18 +378,14 @@
     const typed = $("mods-search").value.trim().toLowerCase();
     const rows = mods.rows.filter((m) => !typed || [m.name, m.id, m.file, m.description].join(" ").toLowerCase().includes(typed));
     const items = rows.map((m) => {
-      const li = el("li");
-      const what = el("span", "what", m.error ? m.file : `${m.name} ${m.version || ""}`.trim());
       const side = { client: "client only", server: "server only", both: "client and server" }[m.environment] || "";
       const flags = [m.enabled === false ? "off" : "", m.pinned ? "pinned" : ""].filter(Boolean);
-      what.appendChild(el("span", "meta", m.error ? ` (${m.error})` : ` (${[m.id, side, size(m.size), ...flags].filter(Boolean).join(", ")})`));
-      li.appendChild(what);
-      if (m.description) li.appendChild(el("span", "meta", m.description));
-      if (can("admin") && m.file) li.append(...modButtons(m));
-      return li;
+      return item(m.error ? m.file : `${m.name} ${m.version || ""}`.trim(),
+        m.error ? `(${m.error})` : `(${[m.id, side, size(m.size), ...flags].filter(Boolean).join(", ")})`,
+        m.description, can("admin") && m.file ? modButtons(m) : []);
     });
     $("mods-list").replaceChildren(...(items.length ? items : [emptyRow(typed ? "No mod matches." : "No mods found.")]));
-    $("mods-count").textContent = `${rows.length} of ${mods.rows.length} mods`;
+    $("mods-count").textContent = typed ? `(${rows.length} of ${mods.rows.length})` : `(${mods.rows.length})`;
   }
 
   async function loadMods() {
@@ -403,14 +431,11 @@
     try {
       const data = await api("GET", `/api/modrinth?${new URLSearchParams({ q })}`);
       $("modrinth-version").textContent = `Fabric mods for ${data.game_version} that run on a server.`;
-      const items = (data.hits || []).map((h) => {
-        const li = entry(`${h.title} (${h.slug})`, [h.downloads !== null ? `${h.downloads} downloads` : "",
-          `players need it: ${h.client_side}`].filter(Boolean).join(", "),
-        button("Install", "", () => modStep(`Install ${h.title} from Modrinth? The newest release for this game version is downloaded and its sha512 checked.`,
-          "Install", h.slug, (typed) => installModrinth(h.slug, typed)), "admin"));
-        if (h.description) li.appendChild(el("span", "meta", h.description));
-        return li;
-      });
+      const items = (data.hits || []).map((h) => item(`${h.title} (${h.slug})`,
+        [h.downloads !== null ? `${h.downloads} downloads` : "", `players need it: ${h.client_side}`].filter(Boolean).join(", "),
+        h.description,
+        [button("Install", "", () => modStep(`Install ${h.title} from Modrinth? The newest release for this game version is downloaded and its sha512 checked.`,
+          "Install", h.slug, (typed) => installModrinth(h.slug, typed)), "admin")]));
       $("modrinth-list").replaceChildren(...(items.length ? items : [emptyRow("No Fabric mod for this version matches.")]));
     } catch (error) {
       $("modrinth-list").replaceChildren();
@@ -604,6 +629,7 @@
         o.value = t.tag;
         return o;
       }));
+      $("version-tag").hidden = $("version-go").hidden = !(data.tags || []).length;
       $("version-go").disabled = !data.installed || !(data.tags || []).length;
       $("version-missing").hidden = data.installed;
     } catch (error) {

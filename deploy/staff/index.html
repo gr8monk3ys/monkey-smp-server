@@ -188,8 +188,10 @@
 
     <div class="pane" id="tab-server" hidden>
       <h2>Server</h2>
+      <p class="fine">Power, backups, the world, versions and timed jobs. A big step asks you to type a word to confirm it.</p>
       <p class="attention" id="server-error" role="alert" hidden></p>
       <p class="note" id="server-note" role="status" hidden></p>
+      <div class="cols wide">
       <section class="box">
         <h3>Power</h3>
         <p class="state" id="power-state"><svg class="mark unknown" id="power-mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="power-word">Checking</span></p>
@@ -205,7 +207,7 @@
         <h3>Last backup</h3>
         <dl id="backup"></dl>
       </section>
-      <section class="box">
+      <section class="box span">
         <h3>Backups from here</h3>
         <p class="attention" id="helper-error" role="alert" hidden></p>
         <p class="note" id="helper-note" role="status" hidden></p>
@@ -240,8 +242,8 @@
         <p class="fine" id="versions-state"></p>
         <p class="fine" id="version-missing" hidden>Switching needs the root helper (the owner's step: --install-helper).</p>
         <div class="add">
-          <select id="version-tag" aria-label="Release"></select>
-          <button class="btn" id="version-go" type="button" data-need="admin">Switch to this release</button>
+          <select id="version-tag" aria-label="Release" hidden></select>
+          <button class="btn" id="version-go" type="button" data-need="admin" hidden>Switch to this release</button>
         </div>
         <div class="confirm" id="versions-confirm" hidden></div>
       </section>
@@ -278,17 +280,18 @@
           server folder.</p>
         <dl id="sftp-info" hidden></dl>
       </section>
-      <section class="box">
-        <h3>Schedules</h3>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Schedules">
+      <section class="box span">
+        <h3>Timed jobs on the machine</h3>
+        <p class="fine">The machine's own jobs: the daily restart, backups and deploys. Change them on the machine.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Timed jobs on the machine">
           <table>
             <thead><tr><th scope="col">Job</th><th scope="col">Next run</th><th scope="col">Last run</th></tr></thead>
             <tbody id="timers"></tbody>
           </table>
         </div>
       </section>
-      <section class="box" id="schedules-box" hidden>
-        <h3>Schedules made here</h3>
+      <section class="box span" id="schedules-box" hidden>
+        <h3>Your schedules</h3>
         <p class="fine" id="schedules-zone"></p>
         <p class="attention" id="schedules-error" role="alert" hidden></p>
         <p class="note" id="schedules-note" role="status" hidden></p>
@@ -317,10 +320,11 @@
           </div>
         </div>
       </section>
-      <section class="box">
+      <section class="box span">
         <h3>Recent changes made here</h3>
         <ul class="entries" id="actions"></ul>
       </section>
+      </div>
     </div>
     <div class="pane" id="tab-users" hidden><h2>Users</h2><p class="fine">The logins of the page's own login page. Owners only: the last owner can't be demoted, disabled or deleted.</p><p class="attention" id="users-error" role="alert" hidden></p><p class="note" id="users-note" role="status" hidden></p><div id="users-body"></div></div>
 
@@ -330,11 +334,14 @@
         RCON, the seed, the world's name and online mode are locked here. Every save keeps the old file in Files, history.</p>
       <p class="attention" id="settings-error" role="alert" hidden></p>
       <p class="note" id="settings-note" role="status" hidden></p>
-      <div class="actions">
-        <button class="btn primary" id="settings-save" type="button" data-need="admin">Save changes</button>
-        <button class="btn" id="settings-reload" type="button">Reload</button>
+      <div class="stack" id="settings-fields"></div>
+      <div class="savebar" id="settings-bar">
+        <p class="fine" id="settings-count" role="status">No unsaved changes.</p>
+        <div class="actions">
+          <button class="btn" id="settings-reload" type="button">Reload</button>
+          <button class="btn primary" id="settings-save" type="button" data-need="admin">Save changes</button>
+        </div>
       </div>
-      <div class="cols" id="settings-fields"></div>
       <section class="box" id="gamerules" hidden>
         <h3>Game rules</h3>
         <p class="fine">Read from the running server. A change takes effect at once, no restart. The launch, Truce Hour and
@@ -354,25 +361,32 @@
       <p class="attention" id="mods-error" role="alert" hidden></p>
       <p class="note" id="mods-note" role="status" hidden></p>
       <div class="confirm" id="mods-confirm" hidden></div>
-      <section class="box" data-need="admin">
-        <h3>Add a mod</h3>
-        <div class="add">
-          <input id="mod-file" type="file" accept=".jar" aria-label="Mod jar file" data-need="admin">
-          <button class="btn primary" id="mod-upload" type="button" data-need="admin">Upload the jar</button>
-        </div>
-        <p class="fine">A Fabric jar of up to 64 MB. Client-only mods are refused: they go in the players' pack.</p>
-        <div class="add">
-          <input id="modrinth-q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Search Modrinth" aria-label="Search Modrinth" data-need="admin">
-          <button class="btn" id="modrinth-go" type="button" data-need="admin">Search</button>
-        </div>
-        <p class="fine" id="modrinth-version"></p>
-        <ul class="entries" id="modrinth-list"></ul>
-      </section>
-      <div class="add">
-        <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search mods" aria-label="Search mods">
+      <div class="cols wide">
+        <section class="box" data-need="admin">
+          <h3>Upload a jar</h3>
+          <p class="fine">A Fabric jar of up to 64 MB. Client-only mods are refused: they go in the players' pack.</p>
+          <div class="add">
+            <input id="mod-file" type="file" accept=".jar" aria-label="Mod jar file" data-need="admin">
+            <button class="btn primary" id="mod-upload" type="button" data-need="admin">Upload the jar</button>
+          </div>
+        </section>
+        <section class="box" data-need="admin">
+          <h3>Find one on Modrinth</h3>
+          <div class="add">
+            <input id="modrinth-q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mod name" aria-label="Search Modrinth" data-need="admin">
+            <button class="btn" id="modrinth-go" type="button" data-need="admin">Search</button>
+          </div>
+          <p class="fine" id="modrinth-version"></p>
+          <ul class="entries" id="modrinth-list"></ul>
+        </section>
+        <section class="box span">
+          <div class="box-head">
+            <h3>Installed mods <span class="meta" id="mods-count"></span></h3>
+            <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Filter by name" aria-label="Filter the installed mods">
+          </div>
+          <ul class="entries" id="mods-list"></ul>
+        </section>
       </div>
-      <p class="fine" id="mods-count"></p>
-      <ul class="entries" id="mods-list"></ul>
     </div>
   </main>
 

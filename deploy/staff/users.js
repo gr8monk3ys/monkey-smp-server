@@ -23,7 +23,7 @@
   }
 
   function field(label, input) {
-    const box = el("div", "field");
+    const box = el("div", "form-field");
     const id = input.id || `f-${Math.random().toString(36).slice(2)}`;
     input.id = id;
     const tag = el("label", "", label);
@@ -257,9 +257,12 @@
     const list = el("ul", "users");
     for (const u of data.users) list.append(userRow(u, extrasBox));
     if (!data.users.length) list.append(el("li", "meta", "No logins on the login page yet: add the first owner below."));
+    const people = el("section", "box");
+    people.append(el("h3", "", `Logins (${data.users.length})`), list);
     const add = el("section", "box");
     add.append(el("h3", "", "Add a login"), addForm(extrasBox, data.mail));
-    body.replaceChildren(extrasBox, list, add);
+    body.className = "stack";
+    body.replaceChildren(extrasBox, people, add);
   }
 
   async function start() {

@@ -1,5 +1,6 @@
 // The staff page's hosting-panel controls (tools/staff_apex.py answers them): the Settings and Mods tabs, and on the
-// Players and Server tabs the bans by address, backups from the page, the page's own schedules and the world download.
+// Players and Server tabs the bans by address, backups from the page, the page's own schedules, the world download,
+// and (tools/staff_host.py) the mod manager, the version switch, the world reset and upload, and the SFTP card.
 // The same rules as panel.js: everything from the server goes in with textContent, no style attributes, no forms, no
 // confirm() or alert(). The panel itself checks every role; GET /api/me only greys out or hides what a login can't use.
 "use strict";
@@ -54,10 +55,14 @@
     return node;
   }
 
+  // A File as the body goes as application/octet-stream (the jar and world uploads); anything else as JSON.
   async function api(method, url, body) {
     const headers = { "X-Monkey-Staff": "1" };
     let payload;
-    if (body !== undefined) {
+    if (body instanceof Blob) {
+      headers["Content-Type"] = "application/octet-stream";
+      payload = body;
+    } else if (body !== undefined) {
       headers["Content-Type"] = "application/json";
       payload = JSON.stringify(body);
     }
@@ -297,6 +302,46 @@
 
   const mods = { rows: [] };
 
+  // The typed step for a change to one jar: the jar's file name is the word to type.
+  function modStep(message, yes, file, onYes) {
+    confirmIn("mods-confirm", `${message} Type ${file} to confirm.`, yes, (typed) => {
+      if (typed !== file) {
+        say("mods-error", `Nothing changed: type ${file} exactly.`);
+        return;
+      }
+      onYes(typed);
+    }, { label: "Jar file name", placeholder: file });
+  }
+
+  const PINNED_NOTE = " It is one of this release's pinned mods, so the server puts the pinned jar back when it next starts.";
+
+  function modDone(text, done) {
+    say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${done.pinned ? PINNED_NOTE : ""} Restart the server (Server tab) for it to take effect.`);
+    loadMods();
+  }
+
+  async function modCall(url, body, words) {
+    say("mods-error", null);
+    say("mods-note", null);
+    try {
+      modDone(words, await api("POST", url, body));
+    } catch (error) {
+      say("mods-error", error);
+    }
+  }
+
+  function modButtons(m) {
+    const on = m.enabled !== false;
+    return [
+      button(on ? "Turn off" : "Turn on", "", () => modStep(on
+        ? `Turn off ${m.file}? It is renamed to .jar.disabled and the server stops loading it at the next restart.`
+        : `Turn ${m.file} back on?`, on ? "Turn off" : "Turn on", m.file,
+      (typed) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed }, on ? "Turned off." : "Turned on.")), "admin"),
+      button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.`,
+        "Remove", m.file, (typed) => modCall("/api/mod-remove", { file: m.file, confirm: typed }, "Removed.")), "admin"),
+    ];
+  }
+
   function renderMods() {
     const typed = $("mods-search").value.trim().toLowerCase();
     const rows = mods.rows.filter((m) => !typed || [m.name, m.id, m.file, m.description].join(" ").toLowerCase().includes(typed));
@@ -304,9 +349,11 @@
       const li = el("li");
       const what = el("span", "what", m.error ? m.file : `${m.name} ${m.version || ""}`.trim());
       const side = { client: "client only", server: "server only", both: "client and server" }[m.environment] || "";
-      what.appendChild(el("span", "meta", m.error ? ` (${m.error})` : ` (${[m.id, side, size(m.size)].filter(Boolean).join(", ")})`));
+      const flags = [m.enabled === false ? "off" : "", m.pinned ? "pinned" : ""].filter(Boolean);
+      what.appendChild(el("span", "meta", m.error ? ` (${m.error})` : ` (${[m.id, side, size(m.size), ...flags].filter(Boolean).join(", ")})`));
       li.appendChild(what);
       if (m.description) li.appendChild(el("span", "meta", m.description));
+      if (can("admin") && m.file) li.append(...modButtons(m));
       return li;
     });
     $("mods-list").replaceChildren(...(items.length ? items : [emptyRow(typed ? "No mod matches." : "No mods found.")]));
@@ -320,6 +367,65 @@
       renderMods();
       say("mods-error", null);
     } catch (error) {
+      say("mods-error", error);
+    }
+  }
+
+  function uploadJar() {
+    const file = $("mod-file").files[0];
+    say("mods-error", null);
+    say("mods-note", null);
+    if (!file) {
+      say("mods-error", "Pick a .jar file first.");
+      return;
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.jar$/.test(file.name)) {
+      say("mods-error", "A jar's name has letters, digits, . _ + - only and ends in .jar: rename the file first.");
+      return;
+    }
+    modStep(`Put ${file.name} (${size(file.size)}) in the server's mods folder? A jar with the same name or the same mod id is moved to mods-removed/ first.`,
+      "Upload the mod", file.name, async (typed) => {
+        try {
+          const done = await api("POST", `/api/mod-upload?${new URLSearchParams({ name: file.name, confirm: typed })}`, file);
+          $("mod-file").value = "";
+          modDone(`Installed ${done.name} ${done.version || ""}.`, done);
+        } catch (error) {
+          say("mods-error", error);
+        }
+      });
+  }
+
+  async function searchModrinth() {
+    const q = $("modrinth-q").value.trim();
+    say("mods-error", null);
+    if (!q) return;
+    $("modrinth-list").replaceChildren(emptyRow("Searching..."));
+    try {
+      const data = await api("GET", `/api/modrinth?${new URLSearchParams({ q })}`);
+      $("modrinth-version").textContent = `Fabric mods for ${data.game_version} that run on a server.`;
+      const items = (data.hits || []).map((h) => {
+        const li = entry(`${h.title} (${h.slug})`, [h.downloads !== null ? `${h.downloads} downloads` : "",
+          `players need it: ${h.client_side}`].filter(Boolean).join(", "),
+        button("Install", "", () => modStep(`Install ${h.title} from Modrinth? The newest release for this game version is downloaded and its sha512 checked.`,
+          "Install", h.slug, (typed) => installModrinth(h.slug, typed)), "admin"));
+        if (h.description) li.appendChild(el("span", "meta", h.description));
+        return li;
+      });
+      $("modrinth-list").replaceChildren(...(items.length ? items : [emptyRow("No Fabric mod for this version matches.")]));
+    } catch (error) {
+      $("modrinth-list").replaceChildren();
+      say("mods-error", error);
+    }
+  }
+
+  async function installModrinth(project, typed) {
+    say("mods-note", "Downloading from Modrinth...");
+    try {
+      const done = await api("POST", "/api/modrinth-install", { project, confirm: typed });
+      const needs = (done.requires || []).length ? ` It needs these mods too (Modrinth IDs): ${done.requires.join(", ")}.` : "";
+      modDone(`Installed ${done.name} ${done.version || ""}.${needs}`, done);
+    } catch (error) {
+      say("mods-note", null);
       say("mods-error", error);
     }
   }
@@ -409,19 +515,31 @@
     }
   }
 
-  async function ask(url, body, words) {
-    say("helper-error", null);
-    say("helper-note", null);
+  // Asks the root helper for a job and waits for its result; `box` names the box's -note and -error lines.
+  async function ask(url, body, words, box = "helper") {
+    say(`${box}-error`, null);
+    say(`${box}-note`, null);
     try {
       const done = await api("POST", url, body || {});
-      say("helper-note", `${words} The helper picks it up in a few seconds.`);
+      say(`${box}-note`, `${words} The helper picks it up in a few seconds.`);
       const job = await waitFor(done.request);
-      if (job) say("helper-note", job.message);
+      if (job) say(`${box}-${job.state === "failed" ? "error" : "note"}`, job.message);
       return job;
     } catch (error) {
-      say("helper-error", error);
+      say(`${box}-error`, error);
       return null;
     }
+  }
+
+  // The typed step for a big world or version job: `word` must be typed exactly.
+  function bigStep(box, message, yes, word, onYes) {
+    confirmIn(`${box}-confirm`, `${message} Type ${word} to confirm.`, yes, (typed) => {
+      if (typed !== word) {
+        say(`${box}-error`, `Nothing done: type ${word} exactly.`);
+        return;
+      }
+      onYes(typed);
+    }, { label: "Confirmation", placeholder: word });
   }
 
   async function loadSnapshots() {
@@ -466,6 +584,117 @@
       say("world-note", "The download started. Saving is off while it runs and comes back on when it ends.");
     } catch (error) {
       say("world-error", error);
+    }
+  }
+
+  // ---------------------------------------------------------------- version switch (Server tab)
+
+  async function loadVersions() {
+    if (!can("admin")) return;
+    try {
+      const data = await api("GET", "/api/versions");
+      const live = (data.tags || []).find((t) => t.live);
+      $("versions-state").textContent = [
+        live ? `Running ${live.tag}.` : (data.deployed ? `Running commit ${data.deployed}.` : "Nothing deployed yet."),
+        data.newest ? `Newest release: ${data.newest}.` : "",
+        data.pinned ? `Pinned to ${data.pinned}: the nightly deploy stays on it until the newest release is picked.` : "",
+      ].filter(Boolean).join(" ");
+      $("version-tag").replaceChildren(...(data.tags || []).map((t) => {
+        const o = el("option", "", `${t.tag}${t.live ? " (running)" : ""}${t.tag === data.newest ? " (newest)" : ""}`);
+        o.value = t.tag;
+        return o;
+      }));
+      $("version-go").disabled = !data.installed || !(data.tags || []).length;
+      $("version-missing").hidden = data.installed;
+    } catch (error) {
+      say("versions-error", error);
+    }
+  }
+
+  function switchVersion() {
+    const tag = $("version-tag").value;
+    if (!tag) return;
+    bigStep("versions", `Switch the server to ${tag}? Players are warned, the server restarts on that release's files, and its pinned mods come back. An older release stays until the newest one is picked again.`,
+      "Switch version", tag, (typed) => ask("/api/version-switch", { tag, confirm: typed }, `Switch to ${tag} asked for.`, "versions").then(loadVersions));
+  }
+
+  // ---------------------------------------------------------------- world reset and upload (Server tab)
+
+  function resetWorld() {
+    const seed = $("reset-seed").value.trim();
+    bigStep("reset", `Reset the world${seed ? " with a new seed" : ""}? Players are warned, the server stops, the overworld, nether and end move aside (kept in backups/ on the machine), and a new world is made when it starts.`,
+      "Reset the world", "RESET", (typed) => {
+        $("reset-seed").value = "";
+        ask("/api/world-reset", seed ? { confirm: typed, seed } : { confirm: typed }, "Reset asked for.", "reset");
+      });
+  }
+
+  const uploaded = { id: null };
+
+  function renderUpload(data) {
+    uploaded.id = data.upload || null;
+    $("upload-waiting").hidden = !data.upload;
+    $("upload-apply").disabled = !data.upload;
+    $("upload-waiting").textContent = data.upload
+      ? `Waiting to be swapped in: an upload from ${when(data.time)}, ${size(data.size)}${data.files ? `, ${data.files} files` : ""}.`
+      : "";
+  }
+
+  async function loadUpload() {
+    if (!can("admin")) return;
+    try {
+      renderUpload(await api("GET", "/api/world-upload"));
+    } catch (error) {
+      say("upload-error", error);
+    }
+  }
+
+  async function uploadWorld() {
+    const file = $("upload-file").files[0];
+    say("upload-error", null);
+    say("upload-note", null);
+    if (!file) {
+      say("upload-error", "Pick a .zip of a world folder first.");
+      return;
+    }
+    if (file.size > 8_000_000_000) {
+      say("upload-error", "A world upload is at most 8 GB.");
+      return;
+    }
+    $("upload-send").disabled = true;
+    say("upload-note", `Uploading ${size(file.size)}... keep this page open.`);
+    try {
+      const done = await api("POST", "/api/world-upload", file);
+      $("upload-file").value = "";
+      say("upload-note", `Uploaded and checked: ${done.files} files${done.folder ? ` in ${done.folder}/` : ""}. Nothing has changed yet: press Swap it in.`);
+    } catch (error) {
+      say("upload-note", null);
+      say("upload-error", error);
+    }
+    $("upload-send").disabled = false;
+    loadUpload();
+  }
+
+  function applyUpload() {
+    const id = uploaded.id;
+    if (!id) return;
+    bigStep("upload", "Replace the live world with the uploaded one? Players are warned, the server stops, the current world is kept in backups/ on the machine, and the server starts on the uploaded world.",
+      "Swap it in", "REPLACE", (typed) => ask("/api/world-upload-apply", { upload: id, confirm: typed }, "Swap asked for.", "upload").then(loadUpload));
+  }
+
+  // ---------------------------------------------------------------- SFTP (Server tab)
+
+  async function loadSftp() {
+    if (!can("admin")) return;
+    try {
+      const data = await api("GET", "/api/sftp");
+      $("sftp-missing").hidden = data.set_up;
+      $("sftp-info").hidden = !data.set_up;
+      if (!data.set_up) return;
+      const rows = [["Host", data.host], ["Port", String(data.port)], ["Users", data.users.join(", ")]];
+      $("sftp-info").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", "", k), el("dd", "", v)]));
+    } catch (error) {
+      say("sftp-error", error);
     }
   }
 
@@ -539,6 +768,9 @@
     $("settings-reload").addEventListener("click", loadSettings);
     // Mods tab
     $("mods-search").addEventListener("input", renderMods);
+    $("mod-upload").addEventListener("click", uploadJar);
+    $("modrinth-go").addEventListener("click", searchModrinth);
+    $("modrinth-q").addEventListener("keydown", (event) => { if (event.key === "Enter") searchModrinth(); });
     // Players tab
     $("ipban-go").addEventListener("click", ipBan);
     // Server tab
@@ -553,6 +785,10 @@
     $("sched-when").addEventListener("change", scheduleForm);
     $("sched-add").addEventListener("click", addSchedule);
     scheduleForm();
+    $("version-go").addEventListener("click", switchVersion);
+    $("reset-go").addEventListener("click", resetWorld);
+    $("upload-send").addEventListener("click", uploadWorld);
+    $("upload-apply").addEventListener("click", applyUpload);
     // What this login can't do is greyed out or, for owners only, hidden.
     for (const node of document.querySelectorAll("[data-need]")) {
       if (can(node.dataset.need)) continue;
@@ -568,6 +804,9 @@
     server: () => {
       loadHelper();
       loadSchedules();
+      loadVersions();
+      loadUpload();
+      loadSftp();
     },
   };
 

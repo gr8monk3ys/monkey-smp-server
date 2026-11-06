@@ -944,6 +944,7 @@ NEEDS = {
 }
 ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
 PATHS.add("/api/me")
+RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 
 
@@ -1056,6 +1057,15 @@ class Handler(BaseHTTPRequestHandler):
                 size = self.length(UPLOAD_MAX)
                 result = panel.upload(user, query, self.rfile, size)
                 self.drained = True
+            elif (method, url.path) in RAW:     # staff_apex's jar and world uploads
+                ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                if ctype != "application/octet-stream":
+                    raise Refused(415, "Send the file as application/octet-stream.")
+                raw = staff_apex.Body(self.rfile, self.length(RAW[(method, url.path)]))
+                try:
+                    result = ROUTES[(method, url.path)](panel, user, query, raw)
+                finally:
+                    self.drained = raw.started      # a body read part way is never read on: the connection closes
             else:
                 body = self.json_body(SAVE_MAX if method == "PUT" else JSON_MAX) if method != "GET" else {}
                 result = ROUTES[(method, url.path)](panel, user, query, body)

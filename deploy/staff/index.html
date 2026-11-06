@@ -229,6 +229,51 @@
         <div class="actions"><button class="btn" id="world-download" type="button">Download the world</button></div>
         <div class="confirm" id="world-confirm" hidden></div>
       </section>
+      <section class="box" data-need="admin">
+        <h3>Version</h3>
+        <p class="attention" id="versions-error" role="alert" hidden></p>
+        <p class="note" id="versions-note" role="status" hidden></p>
+        <p class="fine" id="versions-state"></p>
+        <p class="fine" id="version-missing" hidden>Switching needs the root helper (the owner's step: --install-helper).</p>
+        <div class="add">
+          <select id="version-tag" aria-label="Release"></select>
+          <button class="btn" id="version-go" type="button" data-need="admin">Switch to this release</button>
+        </div>
+        <div class="confirm" id="versions-confirm" hidden></div>
+      </section>
+      <section class="box" data-need="admin">
+        <h3>Reset the world</h3>
+        <p class="fine">A new world, with a new seed if you give one. The old world is kept on the machine, never deleted.
+          The seed is never shown or logged.</p>
+        <p class="attention" id="reset-error" role="alert" hidden></p>
+        <p class="note" id="reset-note" role="status" hidden></p>
+        <div class="add">
+          <input id="reset-seed" type="text" maxlength="64" autocomplete="off" spellcheck="false" placeholder="New seed (empty: keep it)" aria-label="New seed">
+          <button class="btn" id="reset-go" type="button" data-need="admin">Reset the world</button>
+        </div>
+        <div class="confirm" id="reset-confirm" hidden></div>
+      </section>
+      <section class="box" data-need="admin">
+        <h3>Upload a world</h3>
+        <p class="fine">A .zip of a world folder (level.dat at the top or one folder in), up to 8 GB. It is checked when it
+          arrives and changes nothing until you swap it in; the live world is kept on the machine first.</p>
+        <p class="attention" id="upload-error" role="alert" hidden></p>
+        <p class="note" id="upload-note" role="status" hidden></p>
+        <div class="add">
+          <input id="upload-file" type="file" accept=".zip" aria-label="World zip file" data-need="admin">
+          <button class="btn" id="upload-send" type="button" data-need="admin">Upload</button>
+        </div>
+        <p class="fine" id="upload-waiting" hidden></p>
+        <div class="actions"><button class="btn" id="upload-apply" type="button" data-need="admin" disabled>Swap it in</button></div>
+        <div class="confirm" id="upload-confirm" hidden></div>
+      </section>
+      <section class="box" data-need="admin">
+        <h3>SFTP</h3>
+        <p class="attention" id="sftp-error" role="alert" hidden></p>
+        <p class="fine" id="sftp-missing">No SFTP login is set up: ask the owner. Each login is key-only and sees only the
+          server folder.</p>
+        <dl id="sftp-info" hidden></dl>
+      </section>
       <section class="box">
         <h3>Schedules</h3>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Schedules">
@@ -296,9 +341,28 @@
 
     <div class="pane" id="tab-mods" hidden>
       <h2>Mods</h2>
-      <p class="fine">The mods the server runs, read from each jar. They can't be added or removed here: each release pins
-        its mods, and players' mod packs must match them, so a change goes through a release.</p>
+      <p class="fine">The mods in the server's mods folder, read from each jar. Admins can add, turn off and remove them
+        here; each change asks you to type the jar's name, and every old jar is kept in mods-removed/ on the machine.</p>
+      <p class="attention">Before you change a mod: a mod that players need too must match in their mod pack, or they
+        can't join. The release's own (pinned) mods come back each time the server starts, and the next release
+        deploy puts the mods folder back to that release's list. A change takes effect when the server restarts.</p>
       <p class="attention" id="mods-error" role="alert" hidden></p>
+      <p class="note" id="mods-note" role="status" hidden></p>
+      <div class="confirm" id="mods-confirm" hidden></div>
+      <section class="box" data-need="admin">
+        <h3>Add a mod</h3>
+        <div class="add">
+          <input id="mod-file" type="file" accept=".jar" aria-label="Mod jar file" data-need="admin">
+          <button class="btn primary" id="mod-upload" type="button" data-need="admin">Upload the jar</button>
+        </div>
+        <p class="fine">A Fabric jar of up to 64 MB. Client-only mods are refused: they go in the players' pack.</p>
+        <div class="add">
+          <input id="modrinth-q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Search Modrinth" aria-label="Search Modrinth" data-need="admin">
+          <button class="btn" id="modrinth-go" type="button" data-need="admin">Search</button>
+        </div>
+        <p class="fine" id="modrinth-version"></p>
+        <ul class="entries" id="modrinth-list"></ul>
+      </section>
       <div class="add">
         <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search mods" aria-label="Search mods">
       </div>

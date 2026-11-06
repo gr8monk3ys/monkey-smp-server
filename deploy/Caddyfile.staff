@@ -20,6 +20,16 @@ staff.monkeysmp.lscaturchio.xyz {
 
 	# The controls (tools/staff_panel.py, deploy/monkey-panel.service): only this machine reaches it, and only after
 	# the password above. The login's name goes with every request; one the browser sent itself is replaced.
+	# A world upload (tools/staff_host.py) is the one bigger body; the panel checks the size and the disk again.
+	handle /api/world-upload {
+		request_body {
+			max_size 8GB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up X-Staff-User {http.auth.user.id}
+		}
+	}
+
 	handle /api/* {
 		request_body {
 			max_size 64MB

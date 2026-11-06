@@ -1097,6 +1097,99 @@ about 600 ms: the machine has no spare CPU for slow hashes, and a random 24-char
 Caddy has no limit on guesses. They can't get in, but a flood of them does take CPU from the game; if a tick time
 ever climbs with Caddy near the top of `top`, close the page as above.
 
+### Hosting controls (Settings, Mods, and more on Players and Server)
+
+`tools/staff_apex.py` and `tools/staff_host.py` add what a game host's panel has. They run inside the same controls
+(`monkey-panel.service`), with the same login, header and change checks. Every change is one line in `actions.log`.
+Who may use what: the login's role (`moderator`, `admin`, `owner`). The page greys out or hides what a login can't use;
+the controls refuse it whatever the page sends.
+
+| What | Who | What it does |
+|---|---|---|
+| Settings | admin | `server.properties` as typed fields. RCON, ports, query, seed, world name, online mode and secrets are locked. A save keeps the old file in the history. |
+| Game rules | admin | `gamerule NAME VALUE` over RCON, for known rules only. |
+| Back up now, list snapshots | admin | Asks the root helper (below). |
+| Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
+| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
+| Mods list | moderator | Each jar's name, version and side, and whether it is off or pinned. |
+| Mod manager | admin | Upload a jar, install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
+| World download | owner | A one-time link to a zip of the world. Saving is off while it streams. |
+| Bans by address | admin | `ban-ip` and `pardon-ip`. Public addresses only. The log never holds the address. |
+| Version switch | admin | The helper runs `monkey-deploy.sh --tag=vX.Y.Z` for a release tag from the checkout. Types the tag. |
+| Reset the world | admin | Types `RESET`. Optional new seed. The old world is moved aside, never deleted. |
+| Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
+| SFTP card | admin | Host, port and user names, or "ask the owner". |
+
+The mod manager:
+
+- An upload must be a Fabric jar (a zip with a `fabric.mod.json` that names a mod id), at most 64 MB, with a plain
+  file name (letters, digits, `. _ + -`, ending in `.jar`). A client-only mod is refused: it belongs in the players'
+  pack.
+- A jar with the same name, or another enabled jar with the same mod id, moves to `server/mods-removed/TIME-XXXX/`
+  first. Remove and turn-off move or rename too: nothing in `mods/` is ever deleted. To undo by hand, move the jar
+  back from `mods-removed/`.
+- Modrinth: a search asks `api.modrinth.com/v2` for Fabric mods for the server's game version
+  (`monkey/manifest.json`) that run on a server. An install takes that version's newest release file, only from
+  `cdn.modrinth.com`, and checks its sha512 against Modrinth's. It lists the required mods; it doesn't install them.
+  The API parameters are from memory, not checked against a live answer.
+- Two warnings, shown on the page too. A mod players need must match in their pack, or they can't join. And the
+  release's own mods are pinned (`server/.monkey-state.json`): the server puts a pinned jar back each time it starts,
+  so turning one off or replacing it lasts only until the next start, and the next release deploy puts `mods/` back
+  to that release's list. A change takes effect at the next restart.
+
+The root helper (`monkey-staff-helper.path` and `.service`, root) does the jobs the panel can't, as `monkey`: backups,
+restores, version switches, resets and world swaps. The panel writes a request file of fixed words and checked values
+into `/srv/monkey/staff/requests`. The helper reads only those values, and only six actions. One world or version job
+runs at a time. Install it once (owner):
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper
+```
+
+- **Version switch**: players are warned (5 minutes if anyone is on), a backup is taken, the server restarts on that
+  release's files. The tag is pinned in `/srv/monkey/MonkeySMP-Server/.deploy-pin`, so the nightly deploy stays on it.
+  Picking the newest release takes the pin away. An older release leaves the repo checkout where it is.
+  By hand: `sudo -u monkey sh /srv/monkey/repo/deploy/monkey-deploy.sh --tag=vX.Y.Z`.
+- **Reset**: a 1-minute warning, the server stops, `world`, `world_nether` and `world_the_end` and
+  `server.properties` are kept in `backups/before-reset-TIME/`, the new seed (if any) goes into `server.properties`,
+  and the server starts and makes a new world. The seed is never logged or shown: the log says "seed changed".
+- **World upload**: the zip streams to `/srv/monkey/staff/uploads/` (a free-disk check first: twice the zip and 2 GB
+  spare). It needs exactly one `level.dat`, at the top or one folder in, and no absolute path, `..`, link or
+  encrypted entry. Only one upload waits at a time. On `REPLACE`, the helper unpacks it again as `monkey` beside the
+  world (checked again), then warns, stops, keeps the live world in `backups/before-upload-TIME/`, swaps the new one
+  in and starts the server.
+
+Old worlds in `backups/` are never removed by the page. Check the disk now and then: `df -h /srv/monkey`.
+
+#### SFTP logins (owner step)
+
+An SFTP login can use SFTP only: no shell, no forwarding, no tty. It logs in with a key only and sees one folder,
+`server/` of the live release, through a chroot. The owner makes one as root, with the person's public key file:
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --add-sftp-user diego /tmp/diego.pub
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --remove-sftp-user diego
+```
+
+`--add-sftp-user` (in `deploy/monkey-sftp.sh`):
+
+- adds the group `monkey-sftp` and the user (no home, `nologin`, no password)
+- puts the key in `/etc/ssh/monkey-sftp-keys/NAME`
+- makes `/srv/monkey/sftp/NAME` (root's, as sshd needs) with `server/` in it, a bind mount (also in `/etc/fstab`; the
+  old fstab is copied first)
+- gives NAME read and write on `server/` through ACLs (needs `sudo apt install acl`)
+- writes `/etc/ssh/sshd_config.d/monkey-sftp.conf`: `Match Group monkey-sftp` with `ChrootDirectory`,
+  `ForceCommand internal-sftp`, key only, no forwarding
+- runs `sshd -t` and `sshd -T` for NAME and for root before it reloads sshd. If any check fails, the old drop-in is
+  put back and sshd is not reloaded
+- writes `/srv/monkey/staff/sftp.json` (host, port, user names: no secrets) for the page's SFTP card
+
+`/etc/ssh/sshd_config` must `Include /etc/ssh/sshd_config.d/*.conf` (Ubuntu's does). Set `SFTP_HOST` in
+`/etc/monkey-deploy.env` to show a name other than `hostname -f`. Keep a second SSH session open while you add the
+first login, in case sshd misbehaves. `--remove-sftp-user` unmounts, takes the fstab line and the ACLs out and
+removes the user and key; the server's files stay as they are. Not run on a real machine yet: the tests check only
+its arguments and its text, so watch the first run.
+
 ## Load test
 
 The player table in docs/ADMIN.md was measured on an i7-8700K with nothing else running. The VPS core is

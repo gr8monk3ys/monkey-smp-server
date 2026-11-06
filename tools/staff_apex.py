@@ -12,7 +12,7 @@ with the same login, role and change checks as its own; docs/LIVE.md, "The staff
     POST /api/world-restore {"snapshot", "confirm"}  asks the helper to put a snapshot's world back  owner
     GET  /api/schedules               the page's own schedules; POST adds, PUT changes one          admin
     POST /api/schedule-delete {"id"}                                                              admin
-    GET  /api/mods                    the mods folder's jars, read-only                           moderator
+    GET  /api/mods                    the mods folder's jars (on, off, pinned)                    moderator
     POST /api/world-download          a one-time link; GET /api/world-download?token=T streams a zip   owner
     GET  /api/ip-bans                 banned-ips.json                        admin
     POST /api/ip-ban {"target", "reason"}, POST /api/ip-pardon {"ip"}         admin
@@ -23,8 +23,9 @@ The safety rules, as in staff_panel.py, are all here rather than in the page:
   through staff_panel's own file save (the history copy, the check that nobody else saved since, the action log).
 - Game rules: a name from GAMERULES and a value of its type, nothing else, so no other command can ride along.
 - Backups: the panel runs as monkey and can't read the backup keys, so it never runs restic. It writes a request file
-  (an action from HELPER_ACTIONS, a snapshot ID in hex) to STAFF_DIR/requests; deploy/monkey-staff-helper.sh, as root,
-  reads only those and writes what happened to RESULTS, a root-owned folder the panel only reads.
+  (an action from HELPER_ACTIONS, a snapshot ID in hex, and REQUEST_FIELDS values) to STAFF_DIR/requests;
+  deploy/monkey-staff-helper.sh, as root, reads only those and writes what happened to RESULTS, a root-owned folder
+  the panel only reads.
 - Schedules: a command runs through the console's own checks (no seed, no stop), a restart through the power path
   after warnings in chat, a backup through the helper. One thread runs them; each run's slot is saved before it
   starts, so a restarted panel never runs the same one twice, and one it missed by over GRACE is skipped.
@@ -35,7 +36,11 @@ The safety rules, as in staff_panel.py, are all here rather than in the page:
 
     python3 tools/staff_apex.py snapshots < restic.json   restic's snapshot list, cut down for the page (the helper)
 
-Stdlib only, Python 3.10 or newer. Imports nothing from tools/ itself: staff_panel hands itself over in register().
+The mod manager, the version switch, the world reset and upload and the SFTP card are in tools/staff_host.py, which
+register() adds too.
+
+Stdlib only, Python 3.10 or newer. Imports nothing from tools/ at load: staff_panel hands itself over in register(),
+which imports staff_host only then (the helper runs this file alone, with python3 -I).
 """
 import argparse
 import concurrent.futures
@@ -56,10 +61,13 @@ sp = None   # tools/staff_panel.py, the module that serves these (register)
 
 HELPER_UNIT = Path("/etc/systemd/system/monkey-staff-helper.path")
 HELPER_RESULTS = Path("/var/lib/monkey-staff-helper/results")
-HELPER_ACTIONS = ("backup-now", "list-snapshots", "restore")
+HELPER_ACTIONS = ("backup-now", "list-snapshots", "restore", "deploy", "reset", "world-upload")
 HELPER_PENDING_MAX = 5
 SNAPSHOT_ID = re.compile(r"[0-9a-f]{8,64}")
 REQUEST_ID = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{8}")
+# The other words a request may carry (staff_host.py checks them first; the helper checks them again).
+REQUEST_FIELDS = {"tag": re.compile(r"v\d{1,4}\.\d{1,4}\.\d{1,4}"), "seed": re.compile(r"-?[A-Za-z0-9_]{1,64}"),
+                  "upload": REQUEST_ID}
 RESULT_MAX = 2 * 1024 * 1024
 JOBS_SHOWN = 20
 
@@ -647,14 +655,17 @@ class Extras:
         except OSError:
             return []
 
-    def request(self, user: str, action: str, snapshot: str = "") -> str:
-        """Writes one request for the helper and returns its id. The file has only fixed words and checked hex."""
+    def request(self, user: str, action: str, snapshot: str = "", **fields: str) -> str:
+        """Writes one request for the helper and returns its id. The file has only fixed words and checked values."""
         if action not in HELPER_ACTIONS:
             raise ValueError(action)
+        for key, value in fields.items():
+            if key not in REQUEST_FIELDS or not isinstance(value, str) or not REQUEST_FIELDS[key].fullmatch(value):
+                raise ValueError(key)
         if not self.installed():
-            raise sp.Refused(503, "The backup helper isn't installed, so backups can't be started or restored from "
-                                  "here. The owner installs it: sudo sh /srv/monkey/repo/deploy/monkey-staff.sh "
-                                  "--install-helper")
+            raise sp.Refused(503, "The root helper isn't installed, so backups, restores, version switches and world "
+                                  "resets or uploads can't be started from here. The owner installs it: "
+                                  "sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper")
         if snapshot and not SNAPSHOT_ID.fullmatch(snapshot):
             raise sp.Refused(400, "A snapshot ID is 8 to 64 hex digits.")
         with self._helper:
@@ -664,6 +675,7 @@ class Extras:
             lines = [f"action={action}", f"user={user if sp.USER.fullmatch(user) else 'unknown'}"]
             if snapshot:
                 lines.append(f"snapshot={snapshot}")
+            lines += [f"{key}={fields[key]}" for key in sorted(fields)]
             tmp = self.requests / f".tmp-{rid}"
             fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o640)
             with os.fdopen(fd, "w", encoding="ascii", newline="\n") as f:
@@ -952,9 +964,11 @@ class Extras:
         folder = self.p.root / "mods"
         rows = []
         try:
-            entries = sorted((e for e in os.scandir(folder) if e.name.lower().endswith(".jar")), key=lambda e: e.name)
+            entries = sorted((e for e in os.scandir(folder) if e.name.lower().endswith((".jar", ".jar.disabled"))),
+                             key=lambda e: e.name)
         except FileNotFoundError:
             entries = []
+        pinned = self.pinned()
         with self._mods_lock:
             seen = set()
             for e in entries[:MODS_MAX]:
@@ -966,11 +980,22 @@ class Extras:
                 if not cached or cached[0] != key:
                     cached = (key, mod_info(Path(e.path)))
                     self._mods[e.name] = cached
-                rows.append({**cached[1], "size": st.st_size})
+                enabled = e.name.lower().endswith(".jar")
+                base = e.name if enabled else e.name[:-len(".disabled")]
+                rows.append({**cached[1], "size": st.st_size, "enabled": enabled, "pinned": base in pinned})
                 seen.add(e.name)
             for name in set(self._mods) - seen:
                 del self._mods[name]
         return {"mods": rows, "count": len(rows)}
+
+    def pinned(self) -> set[str]:
+        """The jar names the release's install put in mods/ (server/.monkey-state.json); it puts them back at starts."""
+        try:
+            data = json.loads((self.p.root / ".monkey-state.json").read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            return set()
+        names = data.get("mods") if isinstance(data, dict) else None
+        return {n for n in names if isinstance(n, str)} if isinstance(names, list) else set()
 
     # ------------------------------------------------ the world download
 
@@ -1157,6 +1182,23 @@ class _Counted:
         self.raw.flush()
 
 
+class Body:
+    """A request body that is a file (staff_panel.RAW): read in chunks, never past `length`. `started` says whether
+    any of it was read, so a refusal before that can still read and drop it."""
+
+    def __init__(self, raw, length: int):
+        self.raw, self.length, self.left, self.started = raw, length, length, False
+
+    def chunks(self, size: int = 256 * 1024):
+        while self.left:
+            self.started = True
+            chunk = self.raw.read(min(self.left, size))
+            if not chunk:
+                raise sp.Refused(400, "The upload stopped part way.")
+            self.left -= len(chunk)
+            yield chunk
+
+
 # ---------------------------------------------------------------- wiring
 
 _extras_lock = threading.Lock()
@@ -1232,6 +1274,9 @@ def register(module) -> None:
     module.ROUTES.update(ROUTES)
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
+    # Imported here, not at the top: the helper runs this file alone (python3 -I) for its snapshot list.
+    import staff_host
+    staff_host.register(module, sys.modules[__name__])   # mods, versions, world reset and upload, SFTP
 
 
 def main(argv=None) -> int:

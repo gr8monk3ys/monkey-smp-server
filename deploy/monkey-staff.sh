@@ -17,6 +17,8 @@
 #   sudo sh monkey-staff.sh --install-helper  the owner's step: installs the backup helper (monkey-staff-helper.path
 #                                             and .service, root), so the page can start a backup, list the snapshots
 #                                             and (owners) restore one. Only with STAFF_DIR /srv/monkey/staff
+#   sudo sh monkey-staff.sh --add-sftp-user NAME KEYFILE | --remove-sftp-user NAME
+#                                             the owner's step: an SFTP-only login to the server folder (monkey-sftp.sh)
 #
 # The status job only reads: `tick query` and `list` through the container's own `monkey rcon`, and the server's log
 # and crash reports, which tools/staff_status.py filters. No deploy lock: during a deploy or the daily restart the page
@@ -43,6 +45,7 @@ case "${1:-}" in
     --check) MODE=check ;;
     --install) MODE=install ;;
     --install-helper) MODE=install-helper ;;
+    --add-sftp-user | --remove-sftp-user) exec sh "$(dirname -- "$0")/monkey-sftp.sh" "$@" ;;
     --login | --remove-login)
         MODE=${1#--}
         NAME=${2:-}
@@ -50,7 +53,7 @@ case "${1:-}" in
             '' | *[!A-Za-z0-9_-]*) echo "usage: sudo sh $0 $1 NAME (letters, digits, - and _)" >&2; exit 2 ;;
         esac
         ;;
-    *) echo "usage: sh $0 [--check | --install | --install-helper | --login NAME | --remove-login NAME]" >&2; exit 2 ;;
+    *) echo "usage: sh $0 [--check | --install | --install-helper | --login NAME | --remove-login NAME | --add-sftp-user NAME KEYFILE | --remove-sftp-user NAME]" >&2; exit 2 ;;
 esac
 
 ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}

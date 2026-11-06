@@ -546,7 +546,10 @@
       const data = await api("GET", "/api/backups");
       const b = data.backups || data;
       const dl = $("backup");
-      const rows = [["On this machine", b.local ? when(b.local) : "None found"], ["Off-site", b.offsite || "Unknown"]];
+      // The hourly backups go off-site; the copy on this machine is the one a deploy takes before it updates.
+      const offsite = { on: "On, every hour", failing: "Failing", "not set up": "Not set up" }[b.offsite];
+      const rows = [["Off-site", offsite || b.offsite || "Unknown"],
+                    ["Copy before the last update", b.local ? when(b.local) : "None found"]];
       dl.replaceChildren(...rows.map(([label, value]) => {
         const row = el("div", "row");
         row.append(el("dt", "", label), el("dd", "", value));

@@ -253,9 +253,10 @@ function renderNow() {
   const backups = d.backups || {};
   if (backups.local) {
     const when = new Date(backups.local);
-    row(upkeep, "Last copy on this machine", [word(ago(Date.now() - when.getTime()))], DAY_CLOCK.format(when));
+    // The copy a deploy takes before it updates; the hourly backups are the off-site row below.
+    row(upkeep, "Copy before the last update", [word(ago(Date.now() - when.getTime()))], DAY_CLOCK.format(when));
   } else {
-    row(upkeep, "Last copy on this machine", [word("None found")]);
+    row(upkeep, "Copy before the last update", [word("None found")]);
   }
   const offsite = { on: ["good", "On"], failing: ["slow", "Failing"], "not set up": ["busy", "Not set up"] }[backups.offsite] || ["unknown", "Unknown"];
   row(upkeep, "Off-site backups", [mark(offsite[0]), word(offsite[1])]);

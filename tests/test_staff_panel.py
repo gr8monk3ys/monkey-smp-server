@@ -226,7 +226,27 @@ def test_the_console_gives_new_lines_and_says_when_the_log_was_replaced(box):
     assert box.call("GET", "/api/console?after=-1")[0] == 400
 
 
-def test_the_first_console_read_is_the_last_64_kb_from_a_line_start(box):
+def test_the_console_leaves_out_the_rcon_connection_lines(box):
+    log = box.root / "logs" / "latest.log"
+    log.write_bytes(b"[08:42:23] [RCON Listener #1/INFO]: Thread RCON Client /127.0.0.1 started\n"
+                    b"[08:42:23] [Server thread/INFO]: Alpha joined the game\n"
+                    b"[08:42:23] [RCON Client /127.0.0.1 #855/INFO]: Thread RCON Client /127.0.0.1 shutting down\n"
+                    b"[08:42:24] [Server thread/INFO]: <Alpha> Thread RCON Client /x started\n"
+                    b"[08:42:25] [Server thread/INFO]: <Alpha> rude [RCON Client /127.0.0.1 #1/INFO]: "
+                    b"Thread RCON Client /127.0.0.1 started\n"
+                    b"[08:42:26] [RCON Listener #1/INFO]: Thread RCON Client /198.51.100.7 started\n")
+    _, read = box.call("GET", "/api/console")
+    assert read["lines"] == ["[08:42:23] [Server thread/INFO]: Alpha joined the game",
+                             "[08:42:24] [Server thread/INFO]: <Alpha> Thread RCON Client /x started",
+                             "[08:42:25] [Server thread/INFO]: <Alpha> rude [RCON Client /an address #1/INFO]: "
+                             "Thread RCON Client /an address started",
+                             "[08:42:26] [RCON Listener #1/INFO]: Thread RCON Client /an address started"]
+    assert read["offset"] == log.stat().st_size
+    _, whole = box.call("GET", "/api/file?path=logs/latest.log")
+    assert "shutting down" in whole["text"]
+
+
+def test_the_first_console_read_is_the_end_of_the_log_from_a_line_start(box):
     log = box.root / "logs" / "latest.log"
     log.write_text("".join(f"[10:00:00] [Server thread/INFO]: {i:06d}\n" for i in range(5000)), newline="\n")
     _, first = box.call("GET", "/api/console")

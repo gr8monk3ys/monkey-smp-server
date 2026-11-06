@@ -21,9 +21,31 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   password, never opens the worlds, refuses `stop` in the console, takes the deploy lock for power actions, keeps every
   file it replaces or deletes in a history, and records every change. One step by hand: `--install` again
   (docs/LIVE.md, "The staff page").
+- Hosting controls on the staff page, by role: `server.properties` as typed fields and the game rules (admin), backup
+  now and the snapshot list (admin) and restore (owner, typed short ID), the page's own schedules (admin), the mods
+  list (moderator) and a mod manager (admin: upload a jar, install from Modrinth with the sha512 checked, turn off,
+  remove; old jars kept in `mods-removed/`), the world download (owner), bans by address (admin), a version switch to
+  any release tag (admin, typed tag; pins it), a world reset (admin, typed `RESET`, optional seed that is never
+  logged) and a world upload (admin, up to 8 GB, checked, swapped in on a typed `REPLACE`). The old world is always
+  kept in `backups/`. The jobs that need root go through a new root helper, `monkey-staff-helper.path`; one step by
+  hand: `--install-helper` (docs/LIVE.md, "Hosting controls").
+- SFTP logins for staff: `monkey-staff.sh --add-sftp-user NAME KEYFILE` and `--remove-sftp-user NAME` (owner, as
+  root): SFTP only, key only, chrooted to `server/`. The staff page shows the host, port and users.
+- `monkey-deploy.sh --tag=vX.Y.Z` deploys that release now and pins it (`.deploy-pin`) until the newest is picked.
 - The staff console leaves out the two lines the game logs each time a scheduled job connects over RCON (most of the
   log); the full log is still in Files. The Server tab says the hourly backups go off-site, and that the copy on the
   machine is the one taken before the last update.
+- A login page for the staff page, off until the owner switches it on (`--use-new-login`; `--use-basic-auth` goes
+  back): each person's own name and password, roles (moderator, admin, owner), sessions that end after 12 idle hours
+  or 7 days, Log out, "Forgot password?" and email checks by one-time links, and an owners-only Users tab. Passwords
+  are scrypt hashes; wrong guesses lock a name and then an address for a while. Email is optional (Resend or SMTP,
+  `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
+  docs/LIVE.md, "The login page".
+
+### Changed
+
+- The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
+  password-box login is always treated as an owner, as before.
 
 ### Removed
 

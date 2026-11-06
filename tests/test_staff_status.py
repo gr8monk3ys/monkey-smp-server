@@ -477,7 +477,7 @@ def test_write_replaces_the_file_whole_and_show_changes_nothing(box, monkeypatch
     assert [p.name for p in box.out.parent.glob(".status-*")] == []
 
 
-@pytest.mark.parametrize("name", [*UNITS, "monkey-staff.sh", "Caddyfile.staff"])
+@pytest.mark.parametrize("name", [*UNITS, "monkey-staff.sh", "Caddyfile.staff", "Caddyfile.staff-login"])
 def test_deploy_files_are_plain_ascii_with_lf(name):
     data = (DEPLOY / name).read_bytes()
     assert data.isascii() and b"\r" not in data

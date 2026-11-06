@@ -65,8 +65,16 @@ switch ($Command) {
     'start' {
         $java = Install-Server @install
         $ram = Get-TotalMemoryBytes
-        $gb = Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:MONKEY_MEMORY_GB
-        Start-Server -Context $ctx -Java $java -MemoryGB $gb -LaunchFile $LaunchFile
+        # The staff page's memory setting (server/monkey-launch.json) wins over -MemoryGB and MEMORY_GB.
+        $launch = Read-LaunchSettings $ctx.ServerDir
+        $gb = if ($launch.MemoryGB -gt 0) { $launch.MemoryGB } else { Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:MONKEY_MEMORY_GB }
+        # The heap is taken up front: a saved setting from a bigger machine must still leave this one 2 GB.
+        $most = [int][math]::Floor($ram / 1GB - 2)
+        if ($launch.MemoryGB -gt 0 -and $ram -gt 0 -and $gb -gt $most) {
+            $gb = [math]::Max(1, $most)
+            Write-Note "monkey-launch.json asks for $($launch.MemoryGB) GB but this machine has $([math]::Round($ram / 1GB, 1)) GB: using $gb GB."
+        }
+        Start-Server -Context $ctx -Java $java -MemoryGB $gb -LaunchFile $LaunchFile -ExtraFlags $launch.Flags
     }
     'install' { [void](Install-Server @install) }
     'export-host' {

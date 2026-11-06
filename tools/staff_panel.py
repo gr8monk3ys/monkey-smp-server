@@ -25,6 +25,10 @@ on another site must not be able to make a change in a staff member's name. Answ
     GET  /api/timers                  the monkey-*.timer schedules
     GET  /api/backups                 the last backup, as the status page has it
     GET  /api/actions                 the last 100 changes made here
+    GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
+                                      /api/users/{role,disable,delete,sessions,link,2fa-off} change one
+                                      (tools/staff_auth.py)
+    /auth/*                           the login itself, asked with no X-Staff-User (tools/staff_auth.py)
 
 The safety rules, all here rather than in the page:
 - Files: every path is relative to LIVE_DIR/server and must stay inside it once links are followed. The worlds, the
@@ -63,6 +67,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
 
+import staff_apex
+import staff_auth
 import staff_status
 
 import rcon as server
@@ -285,7 +291,7 @@ class Panel:
     def __init__(self, live: Path, staff: Path, repo: Path, lock_file: Path = Path("/tmp/monkey-deploy.lock"),
                  webhook: str = "", run=subprocess.run, spawn=spawn_detached, alive=pid_alive, lock=None,
                  post=post_webhook, backup_settings: Path = staff_status.BACKUP_SETTINGS,
-                 backup_failing: Path = staff_status.BACKUP_FAILING):
+                 backup_failing: Path = staff_status.BACKUP_FAILING, auth: staff_auth.Auth | None = None):
         self.live, self.staff, self.repo = Path(live), Path(staff), Path(repo)
         self.root = self.live / "server"
         self.history = self.staff / "history"
@@ -297,6 +303,7 @@ class Panel:
         self._power = threading.Lock()
         self._busy: dict | None = None
         self._log = threading.Lock()
+        self.auth = auth or staff_auth.Auth(self.staff / "auth")
 
     # ------------------------------------------------ the record of changes
 
@@ -929,6 +936,48 @@ ROUTES = {
 }
 PATHS = {path for _, path in ROUTES}
 
+# Who may ask what. A role is X-Staff-Role from the login in front of the page; with no such header (the basic_auth
+# logins from before staff roles) the login is an owner, as both of those logins were. A request not listed needs admin.
+ROLES = ("moderator", "admin", "owner")
+NEEDS = {
+    ("GET", "/api/me"): "moderator",
+    ("GET", "/api/console"): "moderator",
+    ("GET", "/api/players"): "moderator",
+    ("GET", "/api/power"): "moderator",
+    ("GET", "/api/timers"): "moderator",
+    ("GET", "/api/backups"): "moderator",
+    ("GET", "/api/actions"): "moderator",
+}
+ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
+PATHS.add("/api/me")
+# The staff page's own logins (tools/staff_auth.py), for owners only; the last owner can't be demoted or removed.
+USER_ROUTES = {
+    ("GET", "/api/users"): lambda p, u, q, b: p.auth.list_users(),
+    ("POST", "/api/users"): lambda p, u, q, b: p.auth.add_user(u, b.get("name"), b.get("role"), b.get("email")),
+    ("POST", "/api/users/role"): lambda p, u, q, b: p.auth.set_role(u, b.get("name"), b.get("role")),
+    ("POST", "/api/users/disable"): lambda p, u, q, b: p.auth.set_disabled(u, b.get("name"), b.get("disabled")),
+    ("POST", "/api/users/delete"): lambda p, u, q, b: p.auth.delete_user(u, b.get("name")),
+    ("POST", "/api/users/sessions"): lambda p, u, q, b: p.auth.end_sessions(u, b.get("name")),
+    ("POST", "/api/users/link"): lambda p, u, q, b: p.auth.handover_link(u, b.get("name")),
+    ("POST", "/api/users/2fa-off"): lambda p, u, q, b: two_step_off(p, u, b.get("name")),
+}
+
+
+def two_step_off(panel, user: str, name) -> dict:
+    """An owner turns off someone else's two-step login (a lost phone); it goes in the record of changes."""
+    done = panel.auth.two_step_off_for(user, name)
+    panel.record(user, "2fa-off", done["name"])
+    return done
+ROUTES.update(USER_ROUTES)
+NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
+PATHS.update(path for _, path in USER_ROUTES)
+RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
+staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
+
+
+def allowed(role: str, need: str) -> bool:
+    return ROLES.index(role) >= ROLES.index(need)
+
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "monkey-panel"
@@ -950,29 +999,37 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):     # the request line holds file paths at most; nothing else is logged
         pass
 
-    def send_json(self, code: int, data: dict) -> None:
+    def send_json(self, code: int, data: dict, headers=()) -> None:
         body = json.dumps(data).encode()
         self.send_response(code)
+        for name, value in headers:
+            self.send_header(name, value)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    def checked(self, method: str) -> str:
-        """The login's name, or Refused for a request that must not get in."""
+    def checked(self, method: str) -> tuple[str, str]:
+        """The login's name and role, or Refused for a request that must not get in."""
         if self.client_address[0] not in LOOPBACK:
             raise Refused(403, "Only this machine may ask.")
         users = self.headers.get_all("X-Staff-User") or []
         if len(users) != 1 or not USER.fullmatch(users[0]):
             raise Refused(403, "No login name came with the request.")
+        roles = self.headers.get_all("X-Staff-Role") or ["owner"]
+        if len(roles) != 1 or roles[0] not in ROLES:
+            raise Refused(403, "The login's role is not one this page knows.")
         if method != "GET":
-            if self.headers.get("X-Monkey-Staff") != "1":
-                raise Refused(403, "A change must come from the staff page.")
-            site = self.headers.get("Sec-Fetch-Site")
-            if site is not None and site != "same-origin":
-                raise Refused(403, "A change must come from the staff page itself.")
-        return users[0]
+            self.from_the_page()
+        return users[0], roles[0]
+
+    def from_the_page(self) -> None:
+        if self.headers.get("X-Monkey-Staff") != "1":
+            raise Refused(403, "A change must come from the staff page.")
+        site = self.headers.get("Sec-Fetch-Site")
+        if site is not None and site != "same-origin":
+            raise Refused(403, "A change must come from the staff page itself.")
 
     def length(self, most: int) -> int:
         if self.headers.get("Transfer-Encoding"):
@@ -1018,24 +1075,41 @@ class Handler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             query = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
-            user = self.checked(method)
+            if url.path.startswith("/auth/"):
+                return self.answer_auth(method, url.path)
+            user, role = self.checked(method)
             if (method, url.path) not in ROUTES:
                 raise Refused(405 if url.path in PATHS else 404, "There is no such request.")
-            if url.path == "/api/upload":
+            if not allowed(role, NEEDS.get((method, url.path), "admin")):
+                raise Refused(403, "Your login's role can't do that.")
+            if url.path == "/api/me":
+                result = {"user": user, "role": role}
+            elif url.path == "/api/upload":
                 ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
                 if ctype != "application/octet-stream":
                     raise Refused(415, "Send the file as application/octet-stream.")
                 size = self.length(UPLOAD_MAX)
                 result = panel.upload(user, query, self.rfile, size)
                 self.drained = True
+            elif (method, url.path) in RAW:     # staff_apex's jar and world uploads
+                ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                if ctype != "application/octet-stream":
+                    raise Refused(415, "Send the file as application/octet-stream.")
+                raw = staff_apex.Body(self.rfile, self.length(RAW[(method, url.path)]))
+                try:
+                    result = ROUTES[(method, url.path)](panel, user, query, raw)
+                finally:
+                    self.drained = raw.started      # a body read part way is never read on: the connection closes
             else:
                 body = self.json_body(SAVE_MAX if method == "PUT" else JSON_MAX) if method != "GET" else {}
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if url.path == "/api/download":
                 self.send_download(*result)
+            elif hasattr(result, "stream"):     # staff_apex's world zip: it writes its own answer
+                result.stream(self)
             else:
                 self.send_json(200, {"ok": True, **result})
-        except Refused as e:
+        except (Refused, staff_auth.AuthError) as e:
             self.close_connection = True
             self.drain()
             self.send_json(e.code, {"ok": False, "error": e.message})
@@ -1045,6 +1119,22 @@ class Handler(BaseHTTPRequestHandler):
             with contextlib.suppress(OSError):
                 self.send_json(500, {"ok": False, "error": "Something went wrong on the server: see "
                                                            "journalctl -u monkey-panel."})
+
+    def answer_auth(self, method: str, path: str) -> None:
+        """The login's own requests (tools/staff_auth.py): from this machine, with no login name to trust yet, and a
+        change (a login too) only from the page itself."""
+        if self.client_address[0] not in LOOPBACK:
+            raise Refused(403, "Only this machine may ask.")
+        if method not in ("GET", "POST"):
+            raise Refused(405, "There is no such request.")
+        if method == "POST":
+            self.from_the_page()
+        body = self.json_body(staff_auth.BODY_MAX) if method == "POST" else {}
+        # Caddy puts the visitor's address last (and ignores one the visitor sent); only Caddy reaches here.
+        forwarded = [a.strip() for a in ",".join(self.headers.get_all("X-Forwarded-For") or []).split(",") if a.strip()]
+        ip = forwarded[-1][:64] if forwarded else self.client_address[0]
+        code, data, headers = self.server.panel.auth.http(method, path, body, self.headers, ip)
+        self.send_json(code, data, headers)
 
     def send_download(self, name: str, data, size: int) -> None:
         safe = re.sub(r"[^A-Za-z0-9._+-]", "_", name) or "file"
@@ -1082,7 +1172,8 @@ def from_settings(env: dict | None = None) -> Panel:
                  staff=Path(setting("STAFF_DIR", "/srv/monkey/staff")),
                  repo=Path(setting("REPO_DIR", "/srv/monkey/repo")),
                  lock_file=Path(setting("LOCK_FILE", "/tmp/monkey-deploy.lock")),
-                 webhook=setting("STAFF_WEBHOOK_URL"))    # never DISCORD_WEBHOOK_URL: that channel is public
+                 webhook=setting("STAFF_WEBHOOK_URL"),    # never DISCORD_WEBHOOK_URL: that channel is public
+                 auth=staff_auth.from_settings(Path(setting("STAFF_DIR", "/srv/monkey/staff")), env))
 
 
 def main(argv=None) -> int:
@@ -1100,6 +1191,7 @@ def main(argv=None) -> int:
         return 1
     print(f"monkey-panel: listening on 127.0.0.1:{args.port}, files in {panel.root}, history in {panel.history}",
           flush=True)
+    staff_apex.start_scheduler(panel)
     with contextlib.suppress(KeyboardInterrupt):
         httpd.serve_forever()
     return 0

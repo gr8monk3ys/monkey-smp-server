@@ -8,6 +8,9 @@
 #   sh monkey-deploy.sh --restart  the daily restart (monkey-restart.timer): warn, restart, post a spark
 #                                  health link; skipped when the server started less than
 #                                  RESTART_MIN_UPTIME hours ago (a deploy already restarted it)
+#   sh monkey-deploy.sh --tag=vX.Y.Z   deploy that release tag now (ignores DEPLOY_WINDOW, still warns players)
+#                                  and pin it: later runs keep it until --tag names the newest tag again. The staff
+#                                  page's version switch runs this (deploy/monkey-staff-helper.sh). TRACK=tags only.
 #
 # With DEPLOY_WINDOW set (e.g. 04:00-05:00, in DEPLOY_TZ), a new release waits for that window, so a
 # fix tagged in the afternoon goes live at 4 AM. The first deploy on a new machine doesn't wait.
@@ -53,28 +56,44 @@ whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
 STATE="$LIVE_DIR/.deployed"
 FAILED="$LIVE_DIR/.deploy-failed"
+PIN="$LIVE_DIR/.deploy-pin"
 
 case "$KEEP_BACKUPS" in
     '' | *[!0-9]* | 0*) die "KEEP_BACKUPS must be a whole number of at least 1, not '$KEEP_BACKUPS'" ;;
 esac
 
+# True when $1 is a release tag's name, vX.Y.Z and nothing else.
+release_tag() {
+    case $1 in v[0-9]*.[0-9]*.[0-9]*) ;; *) return 1 ;; esac
+    case ${1#v} in *[!0-9.]* | *..* | .* | *.) return 1 ;; esac
+    [ "$(printf '%s' "$1" | tr -cd . | wc -c)" -eq 2 ]
+}
+
 now=''
 status_only=''
 restart=''
+tag=''
 for arg in "$@"; do
     case "$arg" in
         --now) now=1 ;;
         --status) status_only=1 ;;
         --restart) restart=1 ;;
-        *) die "unknown option '$arg' (use --now, --status or --restart)" ;;
+        --tag=*)
+            tag=${arg#--tag=}
+            release_tag "$tag" || die "--tag takes a release tag, vX.Y.Z, not '$tag'"
+            ;;
+        *) die "unknown option '$arg' (use --now, --status, --restart or --tag=vX.Y.Z)" ;;
     esac
 done
+[ -z "$tag" ] || [ "$TRACK" = tags ] || die "--tag needs TRACK=tags (this machine follows the $TRACK branch)"
 
 # One deploy at a time: the timer and a manual run must not overlap. The daily restart takes the same
 # lock, so it never runs during a deploy (or an off-site backup, which waits for this lock too); it waits
 # for one to finish, and then usually finds the server freshly started and skips.
 if [ -n "$restart" ]; then
     deploy_lock 1800 || { log 'the deploy lock was taken for 30 minutes; skipping the daily restart'; exit 0; }
+elif [ -n "$tag" ]; then
+    deploy_lock 1800 || die "the deploy lock was taken for 30 minutes; $tag was not deployed"
 else
     deploy_lock 0 || { log 'another deploy is running; skipping'; exit 0; }
 fi
@@ -181,7 +200,7 @@ fi
 
 git -C "$REPO_DIR" fetch --quiet --tags --prune --force origin
 
-target_ref() {
+newest_ref() {
     if [ "$TRACK" = tags ]; then
         git -C "$REPO_DIR" tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1
     else
@@ -189,15 +208,42 @@ target_ref() {
     fi
 }
 
-ref=$(target_ref)
-[ -n "$ref" ] || die "no release tag (vX.Y.Z) in the repo yet"
-commit=$(git -C "$REPO_DIR" rev-parse --verify "$ref^{commit}")
+# A pin (--tag, the staff page's version switch) holds an older release until --tag names the newest again. A pin
+# that isn't a release tag in the checkout is ignored.
+pinned=''
+if [ "$TRACK" = tags ] && [ -f "$PIN" ]; then
+    pinned=$(head -n 1 "$PIN" 2>/dev/null || true)
+    if ! release_tag "$pinned" || ! git -C "$REPO_DIR" rev-parse --verify --quiet "refs/tags/$pinned^{commit}" >/dev/null; then
+        [ -z "$pinned" ] || log "ignoring the pin '$pinned' in $PIN: not a release tag in the checkout"
+        pinned=''
+    fi
+fi
+
+newest=$(newest_ref)
+[ -n "$newest" ] || die "no release tag (vX.Y.Z) in the repo yet"
+ref=${tag:-${pinned:-$newest}}
+if [ -n "$tag" ]; then
+    commit=$(git -C "$REPO_DIR" rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "there is no tag $tag in the checkout"
+else
+    commit=$(git -C "$REPO_DIR" rev-parse --verify "$ref^{commit}")
+fi
 deployed=$(cat "$STATE" 2>/dev/null || true)
 failed=$(cat "$FAILED" 2>/dev/null || true)
 
+# "set_pin": after a --tag deploy, the pin is that tag, or none when it is the newest.
+set_pin() {
+    [ -n "$tag" ] || return 0
+    if [ "$tag" = "$newest" ]; then
+        rm -f "$PIN"
+    else
+        printf '%s\n' "$tag" >"$PIN"
+    fi
+}
+
 if [ -n "$status_only" ]; then
     echo "track:    $TRACK"
-    echo "newest:   $ref ($commit)"
+    echo "newest:   $newest ($(git -C "$REPO_DIR" rev-parse --verify "$newest^{commit}"))"
+    [ -z "$pinned" ] || echo "pinned:   $pinned ($commit): the staff page's version switch; --tag=$newest unpins"
     echo "deployed: ${deployed:-nothing yet}"
     [ -z "$failed" ] || echo "failed:   $failed (skipped until a newer commit)"
     if [ -n "$DEPLOY_WINDOW" ]; then
@@ -207,12 +253,16 @@ if [ -n "$status_only" ]; then
     exit 0
 fi
 
-[ "$commit" != "$deployed" ] || exit 0
-if [ "$commit" = "$failed" ]; then
+if [ "$commit" = "$deployed" ]; then
+    set_pin
+    [ -z "$tag" ] || log "$tag is live already"
+    exit 0
+fi
+if [ "$commit" = "$failed" ] && [ -z "$tag" ]; then
     log "$ref ($commit) failed to boot before; waiting for a newer commit"
     exit 0
 fi
-if [ -z "$now" ] && [ -n "$deployed" ] && ! in_window; then
+if [ -z "$now" ] && [ -z "$tag" ] && [ -n "$deployed" ] && ! in_window; then
     log "$ref is waiting for the $DEPLOY_WINDOW $DEPLOY_TZ deploy window (--now deploys it now)"
     exit 0
 fi
@@ -230,7 +280,7 @@ sync_package() {
         --exclude '/server/' --exclude '/java/' --exclude '/backups/' --exclude '/exports/' \
         --exclude '/downloads/' --exclude '/pwsh/' --exclude '/docker/.env' \
         --exclude '/.monkey-launch' --exclude '/smoke-console.log*' \
-        --exclude '/.deployed' --exclude '/.deploy-failed' \
+        --exclude '/.deployed' --exclude '/.deploy-failed' --exclude '/.deploy-pin' \
         "$tmp/package/" "$LIVE_DIR/"
     rm -rf "$tmp"
 }
@@ -266,9 +316,15 @@ sync_package "$commit"
 if restart_and_wait; then
     echo "$commit" >"$STATE"
     rm -f "$FAILED"
+    set_pin
     # The next run uses this commit's copy of this script. git replaces files rather than writing
-    # into them, so the copy running now is unaffected.
-    git -C "$REPO_DIR" checkout --quiet --force --detach "$commit"
+    # into them, so the copy running now is unaffected. A release older than the newest (a pin) leaves the
+    # checkout where it is: an older copy of this script, and of the staff page, might not know the pin.
+    if [ "$ref" = "$newest" ] || [ "$TRACK" != tags ]; then
+        git -C "$REPO_DIR" checkout --quiet --force --detach "$commit"
+    else
+        log "pinned to $ref; the checkout stays where it is"
+    fi
     log "live: $label"
     msg="Monkey SMP is back up on $label."
     [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."

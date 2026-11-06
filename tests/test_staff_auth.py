@@ -918,7 +918,8 @@ def test_caddy_strips_the_login_headers_before_the_session_check_and_in_order():
     assert "uri /auth/check" in caddy and "copy_headers X-Staff-User X-Staff-Role" in caddy
     locked = re.search(r"@locked not path (.+)", caddy)[1].split()
     assert "/auth/*" in locked and "/login" in locked and "/api/*" not in locked and "/staff.json" not in locked
-    assert all(p.startswith(("/login", "/reset", "/verify", "/auth", "/fonts/", "/staff.css")) for p in locked)
+    assert all(p.startswith(("/login", "/reset", "/verify", "/auth", "/fonts/", "/img/", "/staff.css")) for p in locked)
+    assert "/srv/monkey/repo/site/public" in caddy[caddy.index("handle /img/*"):]     # the website's public pictures
     assert "max_size 64MB" in caddy and "header_up X-Staff-User" not in caddy
     basic = (DEPLOY / "Caddyfile.staff").read_text()
     for policy in ("default-src 'none'", "form-action 'none'", "frame-ancestors 'none'", "X-Robots-Tag", "no-store"):

@@ -246,6 +246,17 @@ def test_the_console_leaves_out_the_rcon_connection_lines(box):
     assert "shutting down" in whole["text"]
 
 
+def test_roles_decide_what_a_login_may_ask(box):
+    assert box.call("GET", "/api/me")[1] == {"ok": True, "user": "diego", "role": "owner"}   # basic_auth: no role
+    mod = {"X-Staff-Role": "moderator"}
+    assert box.call("GET", "/api/me", headers=mod)[1]["role"] == "moderator"
+    assert box.call("GET", "/api/players", headers=mod)[0] == 200
+    assert box.call("GET", "/api/files", headers=mod)[0] == 403
+    assert box.call("POST", "/api/command", {"command": "list"}, headers=mod)[0] == 403
+    assert box.call("POST", "/api/command", {"command": "list"}, headers={"X-Staff-Role": "admin"})[0] == 200
+    assert box.call("GET", "/api/me", headers={"X-Staff-Role": "root"})[0] == 403
+
+
 def test_the_first_console_read_is_the_end_of_the_log_from_a_line_start(box):
     log = box.root / "logs" / "latest.log"
     log.write_text("".join(f"[10:00:00] [Server thread/INFO]: {i:06d}\n" for i in range(5000)), newline="\n")

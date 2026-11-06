@@ -929,6 +929,25 @@ ROUTES = {
 }
 PATHS = {path for _, path in ROUTES}
 
+# Who may ask what. A role is X-Staff-Role from the login in front of the page; with no such header (the basic_auth
+# logins from before staff roles) the login is an owner, as both of those logins were. A request not listed needs admin.
+ROLES = ("moderator", "admin", "owner")
+NEEDS = {
+    ("GET", "/api/me"): "moderator",
+    ("GET", "/api/console"): "moderator",
+    ("GET", "/api/players"): "moderator",
+    ("GET", "/api/power"): "moderator",
+    ("GET", "/api/timers"): "moderator",
+    ("GET", "/api/backups"): "moderator",
+    ("GET", "/api/actions"): "moderator",
+}
+ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
+PATHS.add("/api/me")
+
+
+def allowed(role: str, need: str) -> bool:
+    return ROLES.index(role) >= ROLES.index(need)
+
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "monkey-panel"
@@ -959,20 +978,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def checked(self, method: str) -> str:
-        """The login's name, or Refused for a request that must not get in."""
+    def checked(self, method: str) -> tuple[str, str]:
+        """The login's name and role, or Refused for a request that must not get in."""
         if self.client_address[0] not in LOOPBACK:
             raise Refused(403, "Only this machine may ask.")
         users = self.headers.get_all("X-Staff-User") or []
         if len(users) != 1 or not USER.fullmatch(users[0]):
             raise Refused(403, "No login name came with the request.")
+        roles = self.headers.get_all("X-Staff-Role") or ["owner"]
+        if len(roles) != 1 or roles[0] not in ROLES:
+            raise Refused(403, "The login's role is not one this page knows.")
         if method != "GET":
             if self.headers.get("X-Monkey-Staff") != "1":
                 raise Refused(403, "A change must come from the staff page.")
             site = self.headers.get("Sec-Fetch-Site")
             if site is not None and site != "same-origin":
                 raise Refused(403, "A change must come from the staff page itself.")
-        return users[0]
+        return users[0], roles[0]
 
     def length(self, most: int) -> int:
         if self.headers.get("Transfer-Encoding"):
@@ -1018,10 +1040,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             query = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
-            user = self.checked(method)
+            user, role = self.checked(method)
             if (method, url.path) not in ROUTES:
                 raise Refused(405 if url.path in PATHS else 404, "There is no such request.")
-            if url.path == "/api/upload":
+            if not allowed(role, NEEDS.get((method, url.path), "admin")):
+                raise Refused(403, "Your login's role can't do that.")
+            if url.path == "/api/me":
+                result = {"user": user, "role": role}
+            elif url.path == "/api/upload":
                 ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
                 if ctype != "application/octet-stream":
                     raise Refused(415, "Send the file as application/octet-stream.")

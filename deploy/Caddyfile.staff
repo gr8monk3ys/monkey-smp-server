@@ -18,6 +18,17 @@ staff.monkeysmp.lscaturchio.xyz {
 		Referrer-Policy "no-referrer"
 	}
 
+	# The controls (tools/staff_panel.py, deploy/monkey-panel.service): only this machine reaches it, and only after
+	# the password above. The login's name goes with every request; one the browser sent itself is replaced.
+	handle /api/* {
+		request_body {
+			max_size 64MB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up X-Staff-User {http.auth.user.id}
+		}
+	}
+
 	handle /staff.json {
 		root * /srv/monkey/staff
 		file_server

@@ -1,23 +1,26 @@
 #!/bin/sh
-# The staff page: a private, read-only look at how the server is doing, for the people who run it. Writes its status
-# file (tools/staff_status.py), which monkey-staff.timer does every 2 minutes as the monkey user, and sets up the
-# password-protected site Caddy serves it from (deploy/Caddyfile.staff). docs/LIVE.md, "The staff page".
+# The staff page: a private look at how the server is doing, and its controls, for the people who run it. Writes its
+# status file (tools/staff_status.py), which monkey-staff.timer does every 2 minutes as the monkey user, and sets up
+# the password-protected site Caddy serves it from (deploy/Caddyfile.staff) and the controls behind it
+# (tools/staff_panel.py, monkey-panel.service). docs/LIVE.md, "The staff page".
 #
 #   sh monkey-staff.sh                        writes STAFF_DIR/staff.json
-#   sh monkey-staff.sh --check                prints what the file would say, whether the timer runs, and (as root)
-#                                             who can log in and whether the site refuses a visit with no password;
-#                                             changes nothing
+#   sh monkey-staff.sh --check                prints what the file would say, whether the timer and the controls
+#                                             run, and (as root) who can log in and whether the site refuses a visit
+#                                             with no password; changes nothing
 #   sudo sh monkey-staff.sh --login NAME      adds NAME, or gives NAME a new password. Prints the password once:
 #                                             it is random, and only its hash is kept (/etc/caddy/staff-logins)
 #   sudo sh monkey-staff.sh --remove-login NAME
-#   sudo sh monkey-staff.sh --install         makes STAFF_DIR, starts the timer and adds the site to Caddy. Needs a
-#                                             login first and the site's DNS record, and takes the site back out if a
-#                                             visit with no password gets in
+#   sudo sh monkey-staff.sh --install         makes STAFF_DIR, adds the site to Caddy, starts the timer and the
+#                                             controls. Needs a login first and the site's DNS record, and takes the
+#                                             site back out if a visit with no password gets in
 #
-# The page has no way to change anything, and the status job only reads: `tick query` and `list` through the
-# container's own `monkey rcon`, and the server's log and crash reports, which tools/staff_status.py filters. No deploy
-# lock: during a deploy or the daily restart the page simply says the server is offline. The passwords are never on a
-# command line, in the repo or in a log.
+# The status job only reads: `tick query` and `list` through the container's own `monkey rcon`, and the server's log
+# and crash reports, which tools/staff_status.py filters. No deploy lock: during a deploy or the daily restart the page
+# simply says the server is offline. The changes the page can make (console commands, the server's config files,
+# restart and stop) all go through the controls, monkey-panel.service, which listens on 127.0.0.1 only, is reached only
+# through the password, keeps every file it replaces, and says itself what it refuses (tools/staff_panel.py). This
+# script only installs and checks it. The passwords are never on a command line, in the repo or in a log.
 #
 # The hash cost is 8, not Caddy's default of 14: the machine has two threads and the game needs them, and at 14 one
 # check took about 600 ms of the VPS's CPU. A long random password doesn't need the slow hash to resist guessing.
@@ -52,6 +55,7 @@ LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}
 STAFF_DIR=${STAFF_DIR:-$(setting STAFF_DIR /srv/monkey/staff)}
 CADDY_DIR=${CADDY_DIR:-/etc/caddy}
 UNITS='monkey-staff.service monkey-staff.timer'
+PANEL=monkey-panel.service
 HOST=staff.monkeysmp.lscaturchio.xyz
 LOGINS=$CADDY_DIR/staff-logins
 SITE=$CADDY_DIR/staff.caddy
@@ -69,6 +73,26 @@ caddy_ok() {
 no_password() {
     curl -ks -m 10 -o /dev/null -w '%{http_code}' --resolve "$HOST:443:127.0.0.1" "https://$HOST$1" 2>/dev/null || true
 }
+# What the controls answer on this machine with no login name: 403 is right (it is up, and refuses a nameless
+# request), 000 is no answer.
+panel_answer() {
+    curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8130/api/power 2>/dev/null || true
+}
+# "install_panel": copies monkey-panel.service when it changed and starts it, as root, restarting it so that it runs
+# the checkout's tools/staff_panel.py (a deploy updates the file, not the running copy). A restart of the controls
+# leaves a server restart they started running (KillMode=process).
+install_panel() {
+    panel_changed=$(changed_units "$PANEL")
+    if [ -n "$panel_changed" ]; then
+        install -m 644 -o root -g root "$REPO_DIR/deploy/$PANEL" "/etc/systemd/system/$PANEL"
+        log "installed /etc/systemd/system/$PANEL"
+        systemctl daemon-reload
+    fi
+    systemctl enable --now monkey-panel.service
+    systemctl restart monkey-panel.service
+    log "running: $PANEL"
+}
+
 # How many logins there are; nothing when the file can't be read.
 logins_count() { [ -r "$LOGINS" ] && grep -c '^[A-Za-z0-9_-]* ' "$LOGINS" || true; }
 
@@ -151,9 +175,10 @@ fi
 
 if [ "$MODE" = install ]; then
     command -v curl >/dev/null 2>&1 || die 'curl is missing'
-    for unit in $UNITS Caddyfile.staff staff/index.html; do
+    for unit in $UNITS $PANEL Caddyfile.staff staff/index.html; do
         [ -r "$REPO_DIR/deploy/$unit" ] || die "$REPO_DIR/deploy/$unit is missing: is the release with the staff page deployed?"
     done
+    [ -r "$REPO_DIR/tools/staff_panel.py" ] || die "$REPO_DIR/tools/staff_panel.py is missing: is the release with the staff page controls deployed?"
     [ "$(logins_count)" -gt 0 ] 2>/dev/null || die "no logins yet: run sudo sh $0 --login NAME first, so the site never opens without a password"
     install -d -m 755 -o monkey -g monkey "$STAFF_DIR"
     log "status folder: $STAFF_DIR"
@@ -176,6 +201,7 @@ if [ "$MODE" = install ]; then
     log "site: https://$HOST"
     gate_or_remove
     install_timer monkey-staff.timer $UNITS
+    install_panel
     log "logins: $(logins_count)"
     exit 0
 fi
@@ -189,6 +215,10 @@ if [ "$MODE" = check ]; then
     log 'status for now:'
     python3 -B "$TOOL" show "$LIVE_DIR" | while IFS= read -r line; do log "  $line"; done
     timer_state monkey-staff.timer $UNITS
+    if systemctl is-active --quiet "$PANEL" 2>/dev/null; then PANEL_STATE=running; else PANEL_STATE='not running'; fi
+    PANEL_CHANGED=$(changed_units "$PANEL")
+    log "controls: $PANEL $PANEL_STATE; unit to copy:${PANEL_CHANGED:- none}"
+    log "the controls answer a request with no login: $(panel_answer) (403 is right; 000 is no answer)"
     if [ "$(id -u)" = 0 ]; then
         log "logins:$(sed -n 's/^\([A-Za-z0-9_-]*\) .*/ \1/p' "$LOGINS" 2>/dev/null | tr -d '\n')"
         if [ -e "$SITE" ]; then

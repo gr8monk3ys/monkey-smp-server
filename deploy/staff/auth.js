@@ -40,11 +40,21 @@
   }
 
   // The link's token is in the address after #, which the browser never sends anywhere; it is taken off the address
-  // at once, so it isn't left in the history.
+  // at once, so it isn't left in the history. This tab keeps it until it is used, so a reload (a phone does that when
+  // you switch apps) doesn't lose it.
+  const KEPT = `monkey-staff-link:${location.pathname.replace(/\.html$/, "")}`;   // a reset link and a verify link apart
   function linkToken() {
-    const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+    let token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
     if (location.hash) history.replaceState(null, "", location.pathname);
+    try {
+      if (token) sessionStorage.setItem(KEPT, token);
+      else token = sessionStorage.getItem(KEPT) || "";
+    } catch { /* no storage: only the address has it */ }
     return token;
+  }
+
+  function linkUsed() {
+    try { sessionStorage.removeItem(KEPT); } catch { /* nothing kept */ }
   }
 
   function busy(button, on) {
@@ -141,6 +151,7 @@
       busy($("reset"), true);
       try {
         const done = await auth("POST", "/auth/reset", { token, password });
+        linkUsed();
         $("reset-form").hidden = true;
         say("note", `The password of ${done.user} is set. Log in with it now.`);
         $("done").hidden = false;
@@ -165,6 +176,7 @@
       busy($("verify"), true);
       try {
         const done = await auth("POST", "/auth/verify", { token });
+        linkUsed();
         say("note", `${done.email} is confirmed for ${done.user}.`);
         $("verify").hidden = true;
       } catch (error) {

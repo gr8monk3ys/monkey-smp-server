@@ -115,6 +115,12 @@ live_world() {
     owner=$(stat -c %U "$LIVE_DIR")
 }
 
+# "as_owner CMD...": CMD as the live folder's user. Everything under LIVE_DIR is that user's to change, links
+# included, so root never makes, moves, reads or writes a file there itself: it would follow a link anywhere.
+as_owner() {
+    runuser -u "$owner" -- "$@"
+}
+
 # "stop_for ID ACTION WORDS": takes the deploy lock, warns players a minute ahead ("WORDS: the server stops...") and
 # stops the server; sets was_running. Returns 1, after a failed result, when the lock or docker said no.
 stop_for() {
@@ -141,14 +147,14 @@ stop_for() {
 # place; sets keep and aside. Puts everything back and returns 1, after a failed result, when a move fails.
 swap_in() {
     keep=$LIVE_DIR/backups/$4-$(date -u +%Y%m%dT%H%M%SZ)
-    if ! { mkdir -p "$keep" && chown "$owner:" "$LIVE_DIR/backups" "$keep" &&
-        { [ ! -e "$world" ] || mv "$world" "$keep/$level"; }; }; then
+    if ! { as_owner mkdir -p "$keep" &&
+        { [ ! -e "$world" ] || as_owner mv "$world" "$keep/$level"; }; }; then
         [ -z "$was_running" ] || compose up -d --no-build monkey || :
         job_failed "$1" "$2" 'Could not move the live world aside: nothing was changed.'
         return 1
     fi
-    if ! mv "$3" "$world"; then
-        [ ! -e "$keep/$level" ] || mv "$keep/$level" "$world" || :
+    if ! as_owner mv "$3" "$world"; then
+        [ ! -e "$keep/$level" ] || as_owner mv "$keep/$level" "$world" || :
         [ -z "$was_running" ] || compose up -d --no-build monkey || :
         job_failed "$1" "$2" 'Could not move the new world in: the live world is back as it was.'
         return 1
@@ -202,7 +208,9 @@ do_restore() {
         job_failed "$r_id" restore "Snapshot $short has no $level/level.dat: nothing was changed."
         return 0
     fi
-    chown -R "$owner:" "$stage/world" || { job_failed "$r_id" restore 'Could not give the restored world to the server user.'; return 0; }
+    # Only now the server user's: while restic wrote as root, nobody else could put a link in the folder.
+    chown -R "$owner:" "$stage/world" && chown "$owner:" "$stage" ||
+        { job_failed "$r_id" restore 'Could not give the restored world to the server user.'; return 0; }
 
     stop_for "$r_id" restore 'World restore' || return 0
     swap_in "$r_id" restore "$stage/world" before-restore || return 0
@@ -265,7 +273,7 @@ do_reset() {
 
     stop_for "$s_id" reset 'World reset' || return 0
     keep=$LIVE_DIR/backups/before-reset-$(date -u +%Y%m%dT%H%M%SZ)
-    if ! { mkdir -p "$keep" && chown "$owner:" "$LIVE_DIR/backups" "$keep" && cp -p "$props" "$keep/server.properties"; }; then
+    if ! { as_owner mkdir -p "$keep" && as_owner cp -p "$props" "$keep/server.properties"; }; then
         [ -z "$was_running" ] || compose up -d --no-build monkey || :
         job_failed "$s_id" reset 'Could not make the folder the old world goes to: nothing was changed.'
         return 0
@@ -273,8 +281,8 @@ do_reset() {
     moved=''
     for d in "$level" "${level}_nether" "${level}_the_end"; do
         [ -e "$server/$d" ] || continue
-        if ! mv "$server/$d" "$keep/$d"; then
-            for m in $moved; do mv "$keep/$m" "$server/$m" || :; done
+        if ! as_owner mv "$server/$d" "$keep/$d"; then
+            for m in $moved; do as_owner mv "$keep/$m" "$server/$m" || :; done
             [ -z "$was_running" ] || compose up -d --no-build monkey || :
             job_failed "$s_id" reset 'Could not move the world aside: it is back as it was.'
             return 0
@@ -285,12 +293,13 @@ do_reset() {
     if [ -n "$s_seed" ]; then
         # Written over the file in place, so its owner and mode (it holds the RCON password) stay as they were.
         p_tmp=$(mktemp)
-        if grep -q '^level-seed=' "$props"; then
-            sed "s/^level-seed=.*/level-seed=$s_seed/" "$props" >"$p_tmp"
+        as_owner cat "$props" >"$p_tmp"
+        if grep -q '^level-seed=' "$p_tmp"; then
+            sed -i "s/^level-seed=.*/level-seed=$s_seed/" "$p_tmp"
         else
-            { cat "$props"; printf 'level-seed=%s\n' "$s_seed"; } >"$p_tmp"
+            printf 'level-seed=%s\n' "$s_seed" >>"$p_tmp"
         fi
-        cat "$p_tmp" >"$props"
+        as_owner sh -c 'cat >"$1"' sh "$props" <"$p_tmp"
         rm -f "$p_tmp"
         what="$what, seed changed"
     fi

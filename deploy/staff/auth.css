@@ -1,7 +1,29 @@
 /* The login, reset and email pages (auth.js) and, on the staff page, the account menu and the Users tab (users.js).
  * The tokens and the block language come from staff.css, which loads first. */
 
-.gate { display: grid; place-items: start center; padding: 40px var(--gutter) 56px; }
+/* The world behind them: a screenshot from the website, blurred and darkened so the card stays the thing to read. */
+:is([data-page="login"], [data-page="reset"], [data-page="verify"]) {
+  display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; isolation: isolate;
+}
+:is([data-page="login"], [data-page="reset"], [data-page="verify"])::before {
+  content: ""; position: fixed; inset: -32px; z-index: -1;
+  background: url("/img/fortified-village-1600.webp") center / cover no-repeat;
+  filter: blur(5px) brightness(0.75);
+}
+:is([data-page="login"], [data-page="reset"], [data-page="verify"])::after {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgb(14 49 34 / 0.15), rgb(14 49 34 / 0.6));
+}
+@media (max-width: 800px) {
+  :is([data-page="login"], [data-page="reset"], [data-page="verify"])::before {
+    background-image: url("/img/fortified-village-800.webp");
+  }
+}
+
+.gate {
+  display: grid; flex: 1; place-items: center; align-content: center; gap: 20px; padding: 40px var(--gutter) 56px;
+}
+.gate-mark { width: 88px; height: 88px; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.4)); }
 .card {
   display: grid; gap: 14px; width: 100%; max-width: 26rem; padding: 18px 18px 20px;
   border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px; background: var(--shade) padding-box;

@@ -16,7 +16,7 @@ staff.monkeysmp.lscaturchio.xyz {
 
 	# What a visitor with no session may have: the login, reset and email pages, what they load, and the login's own
 	# requests. Everything else asks the session check first.
-	@locked not path /login /login.html /reset /reset.html /verify /verify.html /auth.js /auth.css /staff.css /fonts/* /auth/*
+	@locked not path /login /login.html /reset /reset.html /verify /verify.html /auth.js /auth.css /staff.css /fonts/* /img/* /auth/*
 
 	# In this order, which `route` keeps (Caddy would otherwise run forward_auth before request_header):
 	route {
@@ -62,6 +62,12 @@ staff.monkeysmp.lscaturchio.xyz {
 		}
 
 		handle /fonts/* {
+			root * /srv/monkey/repo/site/public
+			file_server
+		}
+
+		# The website's pictures, for the login page's background and logo: public already.
+		handle /img/* {
 			root * /srv/monkey/repo/site/public
 			file_server
 		}

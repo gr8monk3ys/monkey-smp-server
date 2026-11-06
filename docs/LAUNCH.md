@@ -209,7 +209,7 @@ claims. Testers do keep what they learned about where things are.
   use the last snapshot of an earlier clean day, such as `c34195a5` (4 Nov, 11:03 PM), and redo staff work since then.
 - [ ] **Before telling anyone: the store's page.** An owner adds the wipe to the pass's description on Tebex, because
   a buyer from the website may never read Discord.
-- [ ] **Fri 6 Nov: tell testers when it ends**, with the post in docs/PROMOTION.md, "Test play".
+- [ ] **Fri 6 Nov: tell testers when it ends**, with the pinned test-play post in docs/PROMOTION.md, under "Discord".
 - [ ] **Sat 7 Nov, 10 AM: wipe test play,** just after the hourly backup, and only if Friday's restore drill passed.
   Follow docs/LIVE.md, "Restore", on the VPS, with the noted ID in place of `latest`. Only the world goes back, so
   inventories, builds, claims, parties, Strength, maces and scoreboards start again, while the whitelist, bans,

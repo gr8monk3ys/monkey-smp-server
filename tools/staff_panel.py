@@ -101,8 +101,10 @@ _KEY_LINE = re.compile(r"^(?P<pre>\s*[\"']?)(?P<key>[^\s\"'=:#;\[\]{}]+)(?P<sep>
 _REFUSED_COMMAND = re.compile(r"(?:^|\brun\s+)(?:minecraft:)?(seed|stop)\b", re.I)
 # A log line's time, thread and level, kept as they are: "[10:00:00]" is no address.
 _LOG_HEAD = re.compile(r"^\[\d\d:\d\d:\d\d\] \[[^\]\n]*\](?: \[[^\]\n]*\])?: ")
-# The two lines the game logs each time a scheduled job (or this page) connects over RCON: left out of the console.
-_RCON_NOISE = re.compile(r"\[RCON (?:Listener|Client)[^\]\n]*\]: Thread RCON Client \S+ (?:started|shutting down)\s*$")
+# The two lines the game logs each time a scheduled job (or this page) connects over RCON from inside the container:
+# left out of the console. Whole lines from the RCON threads only, so chat can't hide itself, nor can another address.
+_RCON_NOISE = re.compile(r"^\[\d\d:\d\d:\d\d\] \[RCON (?:Listener #\d+|Client /127\.0\.0\.1 #\d+)/INFO\]: "
+                         r"Thread RCON Client /127\.0\.0\.1 (?:started|shutting down)\s*$")
 _PLAYER_VERB = re.compile(r"^(whitelist\s+(?:add|remove)|op|deop|ban|pardon|kick)(?:\s+(\S+))?", re.I)
 
 

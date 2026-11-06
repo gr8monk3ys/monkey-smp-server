@@ -10,6 +10,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="staff.css">
   <script src="staff.js" defer></script>
+  <script src="panel.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -17,7 +18,16 @@
     <p class="checked" id="checked">Getting the latest reading</p>
   </header>
 
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <a href="#status" data-tab="status" aria-current="page">Status</a>
+    <a href="#console" data-tab="console">Console</a>
+    <a href="#files" data-tab="files">Files</a>
+    <a href="#players" data-tab="players">Players</a>
+    <a href="#server" data-tab="server">Server</a>
+  </nav>
+
   <main>
+    <div id="tab-status">
     <section class="verdict" aria-live="polite">
       <h1><svg class="mark" id="mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="word">Checking</span></h1>
       <p class="sentence" id="sentence">Asking the server how it is doing.</p>
@@ -97,10 +107,99 @@
         </section>
       </div>
     </div>
+    </div>
+
+    <div class="pane" id="tab-console" hidden>
+      <h2>Console</h2>
+      <p class="fine">Commands run as the server console. To stop or restart the server, use the Server tab.</p>
+      <p class="attention" id="console-error" role="alert" hidden></p>
+      <div class="log" id="log" role="log" tabindex="0" aria-label="Server log"></div>
+      <div class="cmdbar">
+        <label class="sr" for="cmd">Command</label>
+        <input id="cmd" type="text" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="list">
+        <button class="btn primary" id="send" type="button">Send</button>
+      </div>
+    </div>
+
+    <div class="pane" id="tab-files" hidden>
+      <h2>Files</h2>
+      <p class="fine">The server's own folder. Worlds, libraries and databases are not shown. Every change is kept in history, so a save or a delete can be undone.</p>
+      <p class="attention" id="files-error" role="alert" hidden></p>
+      <p class="note" id="files-note" role="status" hidden></p>
+      <div class="confirm" id="files-confirm" hidden></div>
+      <div id="browser">
+        <nav class="crumbs" id="crumbs" aria-label="Folder"></nav>
+        <ul class="entries" id="entries"></ul>
+        <div class="actions" id="upload-bar">
+          <button class="btn" id="upload-btn" type="button">Upload a file here</button>
+          <input id="upload" type="file" hidden>
+        </div>
+      </div>
+      <div id="editor" hidden>
+        <h3 id="editor-name"></h3>
+        <p class="fine" id="editor-meta"></p>
+        <label class="sr" for="editor-text">File contents</label>
+        <textarea id="editor-text" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        <div class="actions">
+          <button class="btn primary" id="save" type="button">Save</button>
+          <button class="btn" id="cancel" type="button">Close</button>
+          <a class="btn" id="download" download>Download</a>
+          <button class="btn" id="delete" type="button">Delete</button>
+        </div>
+      </div>
+      <details class="table" id="history-box">
+        <summary>History of changes to files</summary>
+        <ul class="entries" id="history"></ul>
+      </details>
+    </div>
+
+    <div class="pane" id="tab-players" hidden>
+      <h2>Players</h2>
+      <p class="fine">These buttons type the console command for you. Names are 3 to 16 letters, digits or underscores.</p>
+      <p class="attention" id="players-error" role="alert" hidden></p>
+      <p class="note" id="players-note" role="status" hidden></p>
+      <div class="confirm" id="players-confirm" hidden></div>
+      <div class="cols" id="players-body"></div>
+    </div>
+
+    <div class="pane" id="tab-server" hidden>
+      <h2>Server</h2>
+      <p class="attention" id="server-error" role="alert" hidden></p>
+      <p class="note" id="server-note" role="status" hidden></p>
+      <section class="box">
+        <h3>Power</h3>
+        <p class="state" id="power-state"><svg class="mark unknown" id="power-mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="power-word">Checking</span></p>
+        <div class="actions" id="power-buttons">
+          <button class="btn" type="button" data-power="restart">Restart (5-minute warning)</button>
+          <button class="btn" type="button" data-power="restart-now">Restart now</button>
+          <button class="btn" type="button" data-power="stop">Stop</button>
+          <button class="btn" type="button" data-power="start">Start</button>
+        </div>
+        <div class="confirm" id="server-confirm" hidden></div>
+      </section>
+      <section class="box">
+        <h3>Last backup</h3>
+        <dl id="backup"></dl>
+        <p class="fine">Backups can't be started or restored from here.</p>
+      </section>
+      <section class="box">
+        <h3>Schedules</h3>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Schedules">
+          <table>
+            <thead><tr><th scope="col">Job</th><th scope="col">Next run</th><th scope="col">Last run</th></tr></thead>
+            <tbody id="timers"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="box">
+        <h3>Recent changes made here</h3>
+        <ul class="entries" id="actions"></ul>
+      </section>
+    </div>
   </main>
 
-  <footer class="foot">
-    <p>Look, don't touch: nothing on this page can change the server. Please keep the address and your password to yourself.</p>
+  <footer class="foot" id="foot">
+    <p>Look, don't touch: nothing on this tab can change the server. The other tabs can, and every change is logged with your name. Please keep the address and your password to yourself.</p>
   </footer>
 
   <noscript><p class="attention">This page draws its numbers with JavaScript, so it needs that turned on.</p></noscript>

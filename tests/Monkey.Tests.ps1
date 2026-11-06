@@ -858,6 +858,45 @@ Describe 'Export-HostingBundle' {
     }
 }
 
+Describe 'Read-LaunchSettings' {
+    It 'is empty without the file' {
+        $s = Read-LaunchSettings (Join-Path $TestDrive 'none')
+        $s.MemoryGB | Should -Be 0
+        @($s.Flags).Count | Should -Be 0
+    }
+
+    It 'reads the memory and the allowed flags, and leaves the rest out' {
+        $dir = Join-Path $TestDrive 'launch'
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $json = '{"memory_gb": 7, "flags": ["-XX:MaxGCPauseMillis=100", "-Dfile.encoding=UTF-8", "-XX:OnError=sh x",' +
+            ' "-XX:OnOutOfMemoryError=/tmp/x", "-Xmx99G", "-javaagent:/tmp/a.jar", 5]}'
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), $json)
+        $s = Read-LaunchSettings $dir 6>$null
+        $s.MemoryGB | Should -Be 7
+        $s.Flags | Should -Be @('-XX:MaxGCPauseMillis=100', '-Dfile.encoding=UTF-8')
+    }
+
+    It 'leaves out memory of <Gb>' -ForEach @(@{ Gb = '0' }, @{ Gb = '65' }, @{ Gb = '4.5' }, @{ Gb = '"8"' }, @{ Gb = 'true' }) {
+        $dir = Join-Path $TestDrive "mem$($Gb.GetHashCode())"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), "{""memory_gb"": $Gb}")
+        (Read-LaunchSettings $dir 6>$null).MemoryGB | Should -Be 0
+    }
+
+    It 'survives a file that is not JSON' {
+        $dir = Join-Path $TestDrive 'broken'
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), '{nope')
+        (Read-LaunchSettings $dir 6>$null).MemoryGB | Should -Be 0
+    }
+
+    It 'puts extra flags after the built-in ones, before -jar' {
+        $m = [pscustomobject]@{ server = [pscustomobject]@{ type = 'fabric' } }
+        $a = @(Get-LaunchArguments -Manifest $m -MemoryGB 4 -ExtraFlags @('-XX:MaxGCPauseMillis=100'))
+        $a[-4..-1] | Should -Be @('-XX:MaxGCPauseMillis=100', '-jar', 'fabric-server-launch.jar', 'nogui')
+    }
+}
+
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },

@@ -649,6 +649,8 @@ def register(module, apex) -> None:
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
     module.RAW.update(RAW)
+    import staff_more
+    staff_more.register(module, apex, sys.modules[__name__])   # Java, data packs, the icon and modpacks
 
 
 def main(argv=None) -> int:

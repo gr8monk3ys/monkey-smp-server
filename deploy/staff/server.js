@@ -455,6 +455,209 @@
     }
   }
 
+  function installPack() {
+    const file = $("mrpack-file").files[0];
+    say("mods-error", null);
+    say("mods-note", null);
+    if (!file) {
+      say("mods-error", "Pick a .mrpack file first.");
+      return;
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9 ._+()-]{0,123}\.mrpack$/.test(file.name)) {
+      say("mods-error", "A modpack's name has letters, digits, spaces and . _ + ( ) - only and ends in .mrpack: rename the file first.");
+      return;
+    }
+    modStep(`Install the server mods from ${file.name} (${size(file.size)})? A jar with the same name or mod id is moved to mods-removed/ first.`,
+      "Install the pack", file.name, async (typed) => {
+        say("mods-note", "Downloading and checking every mod... keep this page open.");
+        $("mrpack-go").disabled = true;
+        try {
+          const done = await api("POST", `/api/modpack?${new URLSearchParams({ name: file.name, confirm: typed })}`, file);
+          $("mrpack-file").value = "";
+          const skipped = done.skipped ? ` ${done.skipped} client-only mod(s) skipped.` : "";
+          modDone(`Installed ${done.installed.length} mod(s) from ${done.pack}.${skipped}`, {});
+        } catch (error) {
+          say("mods-note", null);
+          say("mods-error", error);
+        }
+        $("mrpack-go").disabled = false;
+      });
+  }
+
+  // ---------------------------------------------------------------- data packs (Mods tab)
+
+  function packStep(message, yes, name, onYes) {
+    confirmIn("packs-confirm", `${message} Type ${name} to confirm.`, yes, (typed) => {
+      if (typed !== name) {
+        say("packs-error", `Nothing changed: type ${name} exactly.`);
+        return;
+      }
+      onYes(typed);
+    }, { label: "Data pack name", placeholder: name });
+  }
+
+  async function packCall(url, body, words) {
+    say("packs-error", null);
+    say("packs-note", null);
+    try {
+      const done = await api("POST", url, body);
+      say("packs-note", `${words}${done.kept_in ? ` The old copy is kept in ${done.kept_in}.` : ""}`);
+    } catch (error) {
+      say("packs-error", error);
+    }
+    loadPacks();
+  }
+
+  function packButtons(p, running) {
+    const out = [];
+    if (running && p.enabled !== null) {
+      out.push(button(p.enabled ? "Turn off" : "Turn on", "", () => packCall("/api/datapack-toggle",
+        { name: p.name, enabled: !p.enabled }, p.enabled ? "Turned off." : "Turned on."), "admin"));
+    }
+    if (!p.release) {
+      out.push(button("Remove", "", () => packStep(`Remove ${p.name}? It is moved to staff-removed/ on the machine, never deleted. Its changes to the world stay until the server reloads.`,
+        "Remove", p.name, (typed) => packCall("/api/datapack-remove", { name: p.name, confirm: typed }, "Removed. Press Reload to unload it.")), "admin"));
+    }
+    return out;
+  }
+
+  async function loadPacks() {
+    try {
+      const data = await api("GET", "/api/datapacks");
+      const packs = data.packs || [];
+      const items = packs.map((p) => {
+        const state = p.enabled === null ? "" : p.enabled ? "on" : "off";
+        const facts = [p.kind === "folder" ? "folder" : size(p.size), state, p.release ? "release" : ""].filter(Boolean);
+        return item(p.name, `(${facts.join(", ")})`, p.description, can("admin") ? packButtons(p, data.running) : []);
+      });
+      $("packs-list").replaceChildren(...(items.length ? items : [emptyRow("No data packs in this world.")]));
+      $("packs-count").textContent = `(${packs.length})`;
+      $("packs-reload").disabled = !data.running || !can("admin");
+      $("packs-reload").title = data.running ? "" : "The server isn't running.";
+      say("packs-error", data.running ? null : "The server isn't running, so on and off can't be read or changed. Uploads and removals still work.");
+    } catch (error) {
+      $("packs-list").replaceChildren();
+      say("packs-error", error);
+    }
+  }
+
+  function uploadPack() {
+    const file = $("pack-file").files[0];
+    say("packs-error", null);
+    say("packs-note", null);
+    if (!file) {
+      say("packs-error", "Pick a data pack .zip first.");
+      return;
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.zip$/.test(file.name)) {
+      say("packs-error", "A data pack's name has letters, digits, . _ + - only and ends in .zip: rename the file first.");
+      return;
+    }
+    packStep(`Put ${file.name} (${size(file.size)}) in the world's datapacks folder? A pack with the same name is moved to staff-removed/ first.`,
+      "Upload the pack", file.name, async (typed) => {
+        try {
+          const done = await api("POST", `/api/datapack-upload?${new URLSearchParams({ name: file.name, confirm: typed })}`, file);
+          $("pack-file").value = "";
+          say("packs-note", `Added ${done.name}.${done.kept_in ? ` The old copy is kept in ${done.kept_in}.` : ""} ${done.running ? "Press Reload data packs to turn it on." : "It is turned on when the server starts."}`);
+        } catch (error) {
+          say("packs-error", error);
+        }
+        loadPacks();
+      });
+  }
+
+  // ---------------------------------------------------------------- server icon (Settings tab)
+
+  function renderIcon(data) {
+    const has = Boolean(data.icon);
+    $("icon-none").hidden = has;
+    $("icon-remove").hidden = !has;
+    // Made here, not in the page, so the page never has an <img> without a picture.
+    document.querySelector("#icon-box .server-icon")?.remove();
+    if (has) {
+      const img = el("img", "server-icon");
+      img.width = img.height = 64;
+      img.alt = "The server icon now";
+      img.src = data.icon;
+      $("icon-none").before(img);
+    }
+  }
+
+  async function loadIcon() {
+    try {
+      renderIcon(await api("GET", "/api/server-icon"));
+      say("icon-error", null);
+    } catch (error) {
+      say("icon-error", error);
+    }
+  }
+
+  async function iconCall(url, body, words) {
+    say("icon-error", null);
+    say("icon-note", null);
+    try {
+      const done = await api("POST", url, body);
+      renderIcon(done);
+      say("icon-note", `${words}${done.kept_in ? ` The old icon is kept in ${done.kept_in}.` : ""} It shows after the next restart.`);
+    } catch (error) {
+      say("icon-error", error);
+    }
+  }
+
+  async function uploadIcon() {
+    const file = $("icon-file").files[0];
+    say("icon-error", null);
+    if (!file) {
+      say("icon-error", "Pick a PNG first.");
+      return;
+    }
+    if (file.size > 1048576) {
+      say("icon-error", "An icon is at most 1 MB.");
+      return;
+    }
+    await iconCall("/api/server-icon", file, "Icon saved.");
+    $("icon-file").value = "";
+  }
+
+  // ---------------------------------------------------------------- Java and memory (Server tab)
+
+  async function loadJava() {
+    try {
+      const data = await api("GET", "/api/java");
+      $("java-state").textContent = `${data.java || "Java"}, pinned by the release.${data.total_gb ? ` The machine has ${data.total_gb} GB.` : ""}`;
+      const memory = $("java-memory");
+      memory.max = String(data.most_gb);
+      memory.placeholder = String(data.default_gb);
+      memory.value = data.memory_gb === null ? "" : String(data.memory_gb);
+      $("java-memory-about").textContent = `Empty: picked from the machine (${data.default_gb} GB now). At most ${data.most_gb}: the machine keeps 1 GB for itself.`;
+      $("java-flags").value = (data.flags || []).join("\n");
+      say("java-error", null);
+    } catch (error) {
+      say("java-error", error);
+    }
+  }
+
+  async function saveJava() {
+    say("java-error", null);
+    say("java-note", null);
+    const typed = $("java-memory").value.trim();
+    if (typed && !/^\d+$/.test(typed)) {
+      say("java-error", "Memory is a whole number of GB, or empty.");
+      return;
+    }
+    const body = {
+      memory_gb: typed ? Number(typed) : null,
+      flags: $("java-flags").value.split("\n").map((f) => f.trim()).filter(Boolean),
+    };
+    try {
+      const done = await api("PUT", "/api/java", body);
+      say("java-note", `Saved.${done.running ? " Restart the server for it to take effect." : " It is used when the server starts."}`);
+      loadJava();
+    } catch (error) {
+      say("java-error", error);
+    }
+  }
+
   // ---------------------------------------------------------------- bans by address (Players tab)
 
   async function loadIpBans() {
@@ -797,6 +1000,15 @@
     $("mod-upload").addEventListener("click", uploadJar);
     $("modrinth-go").addEventListener("click", searchModrinth);
     $("modrinth-q").addEventListener("keydown", (event) => { if (event.key === "Enter") searchModrinth(); });
+    $("mrpack-go").addEventListener("click", installPack);
+    $("pack-upload").addEventListener("click", uploadPack);
+    $("packs-reload").addEventListener("click", () => packCall("/api/datapack-reload", {}, "Reloaded."));
+    // Settings tab: the icon
+    $("icon-upload").addEventListener("click", uploadIcon);
+    $("icon-remove").addEventListener("click", () => confirmIn("icon-confirm",
+      "Remove the server icon? It is moved to staff-removed/ on the machine.", "Remove", () => iconCall("/api/server-icon-remove", {}, "Icon removed.")));
+    // Server tab: Java and memory
+    $("java-save").addEventListener("click", saveJava);
     // Players tab
     $("ipban-go").addEventListener("click", ipBan);
     // Server tab
@@ -824,10 +1036,17 @@
   }
 
   const VIEWS = {
-    settings: loadSettings,
-    mods: loadMods,
+    settings: () => {
+      loadSettings();
+      loadIcon();
+    },
+    mods: () => {
+      loadMods();
+      loadPacks();
+    },
     players: loadIpBans,
     server: () => {
+      loadJava();
       loadHelper();
       loadSchedules();
       loadVersions();

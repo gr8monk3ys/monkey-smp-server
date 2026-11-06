@@ -65,8 +65,10 @@ switch ($Command) {
     'start' {
         $java = Install-Server @install
         $ram = Get-TotalMemoryBytes
-        $gb = Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:MONKEY_MEMORY_GB
-        Start-Server -Context $ctx -Java $java -MemoryGB $gb -LaunchFile $LaunchFile
+        # The staff page's memory setting (server/monkey-launch.json) wins over -MemoryGB and MEMORY_GB.
+        $launch = Read-LaunchSettings $ctx.ServerDir
+        $gb = if ($launch.MemoryGB -gt 0) { $launch.MemoryGB } else { Get-MemoryGB -TotalBytes $ram -Requested $MemoryGB -EnvValue $env:MONKEY_MEMORY_GB }
+        Start-Server -Context $ctx -Java $java -MemoryGB $gb -LaunchFile $LaunchFile -ExtraFlags $launch.Flags
     }
     'install' { [void](Install-Server @install) }
     'export-host' {

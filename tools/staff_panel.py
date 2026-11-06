@@ -26,7 +26,8 @@ on another site must not be able to make a change in a staff member's name. Answ
     GET  /api/backups                 the last backup, as the status page has it
     GET  /api/actions                 the last 100 changes made here
     GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
-                                      /api/users/{role,disable,delete,sessions,link} change one (tools/staff_auth.py)
+                                      /api/users/{role,disable,delete,sessions,link,2fa-off} change one
+                                      (tools/staff_auth.py)
     /auth/*                           the login itself, asked with no X-Staff-User (tools/staff_auth.py)
 
 The safety rules, all here rather than in the page:
@@ -958,7 +959,15 @@ USER_ROUTES = {
     ("POST", "/api/users/delete"): lambda p, u, q, b: p.auth.delete_user(u, b.get("name")),
     ("POST", "/api/users/sessions"): lambda p, u, q, b: p.auth.end_sessions(u, b.get("name")),
     ("POST", "/api/users/link"): lambda p, u, q, b: p.auth.handover_link(u, b.get("name")),
+    ("POST", "/api/users/2fa-off"): lambda p, u, q, b: two_step_off(p, u, b.get("name")),
 }
+
+
+def two_step_off(panel, user: str, name) -> dict:
+    """An owner turns off someone else's two-step login (a lost phone); it goes in the record of changes."""
+    done = panel.auth.two_step_off_for(user, name)
+    panel.record(user, "2fa-off", done["name"])
+    return done
 ROUTES.update(USER_ROUTES)
 NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)

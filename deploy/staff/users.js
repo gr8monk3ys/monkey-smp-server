@@ -110,6 +110,103 @@
     return form;
   }
 
+  // Two-step login: a code from an authenticator app at every login, after the password.
+  function codeInput(label) {
+    const code = input("text", { autocomplete: "one-time-code", inputMode: "numeric", maxLength: 16,
+                                 autocapitalize: "off", spellcheck: false });
+    return [code, field(label, code)];
+  }
+
+  function recoveryBox(status, codes) {
+    const box = el("div", "confirm handover");
+    const list = el("ul", "recovery mono");
+    for (const code of codes) list.append(el("li", "", code));
+    box.append(el("p", "", "Your recovery codes, shown only now. Write them down or save them somewhere safe: each "
+                           + "one logs you in once if you lose your phone."), list,
+               button("I saved them", "", () => box.remove()));
+    status.after(box);
+  }
+
+  function twoStep(status, session) {
+    const box = el("div", "two-step");
+    box.append(el("h3", "", "Two-step login"));
+    if (!session.two_step) {
+      box.append(el("p", "fine", "Off. With it on, logging in needs a 6-digit code from an authenticator app on "
+                                 + "your phone, as well as the password."));
+      const turnOn = button("Turn on two-step login", "", async () => {
+        let started;
+        turnOn.disabled = true;
+        try {
+          started = await call("POST", "/auth/2fa/start", {});
+        } catch (error) {
+          say(status, error.message, "error");
+          turnOn.disabled = false;
+          return;
+        }
+        turnOn.remove();
+        const form = el("form");
+        const link = el("a", "link", "Open in your authenticator app");
+        link.href = started.link;
+        const key = el("p", "mono", started.key);
+        const current = input("password", { autocomplete: "current-password", maxLength: 256 });
+        const [code, codeField] = codeInput("The 6-digit code the app shows now");
+        form.append(el("p", "fine", "On this phone, tap the link. Elsewhere, add an account in the app by hand "
+                                    + "and type this key (time-based):"), key, link,
+                    field("Current password", current), codeField, button("Turn it on", "primary", null, "submit"));
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            const done = await call("POST", "/auth/2fa/confirm", { current: current.value, code: code.value.trim() });
+            say(status, `Two-step login is on. ${done.ended} other session(s) logged out.`);
+            current.value = code.value = "";
+            session.two_step = true;
+            session.recovery_left = done.recovery.length;
+            box.replaceWith(twoStep(status, session));
+            recoveryBox(status, done.recovery);
+          } catch (error) {
+            say(status, error.message, "error");
+          }
+        });
+        box.append(form);
+        current.focus();
+      });
+      box.append(turnOn);
+      return box;
+    }
+    box.append(el("p", "fine", `On. Recovery codes left: ${session.recovery_left}.`));
+    const form = el("form");
+    const current = input("password", { autocomplete: "current-password", maxLength: 256 });
+    const [code, codeField] = codeInput("Code from your app, or a recovery code");
+    const off = button("Turn off two-step login", "", null, "submit");
+    const fresh = button("New recovery codes", "", null, "submit");
+    const row = el("div", "actions");
+    row.append(fresh, off);
+    form.append(field("Current password", current), codeField, row);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const body = { current: current.value, code: code.value.trim() };
+      try {
+        if (event.submitter === off) {
+          const done = await call("POST", "/auth/2fa/off", body);
+          say(status, `Two-step login is off. ${done.ended} other session(s) logged out.`);
+          session.two_step = false;
+          box.replaceWith(twoStep(status, session));
+        } else {
+          const done = await call("POST", "/auth/2fa/recovery", body);
+          say(status, "New recovery codes are below. The old ones don't work any more.");
+          session.recovery_left = done.recovery.length;
+          box.replaceWith(twoStep(status, session));
+          recoveryBox(status, done.recovery);
+        }
+        current.value = code.value = "";
+      } catch (error) {
+        say(status, error.message, "error");
+      }
+    });
+    box.append(form);
+    return box;
+  }
+
   async function account() {
     const box = $("account");
     const body = $("account-body");
@@ -132,7 +229,8 @@
       body.append(el("p", "fine", "This login is the browser's password box: ask the owner for a new password."));
     } else {
       const mail = session.email ? `${session.email}${session.email_verified ? "" : " (not confirmed yet)"}` : "none";
-      body.append(el("p", "fine", `Email: ${mail}`), passwordForm(status), emailForm(status, session),
+      body.append(el("p", "fine", `Email: ${mail}`), twoStep(status, session), passwordForm(status),
+                  emailForm(status, session),
                   button("Log out", "primary", async () => {
                     try {
                       await call("POST", "/auth/logout", {});
@@ -189,6 +287,7 @@
     if (u.disabled) flags.push("disabled");
     if (u.locked) flags.push("locked for now");
     if (!u.password_set) flags.push("no password yet");
+    if (u.two_step) flags.push("2FA on");
     if (flags.length) who.append(el("span", "meta", flags.join(", ")));
     const mail = u.email ? `${u.email}${u.email_verified ? "" : " (not confirmed)"}` : "no email";
     li.append(who, el("p", "meta", `${mail}; ${u.sessions} session(s); added ${u.created || "?"}`));
@@ -210,6 +309,13 @@
                                                (r) => handover(extras, u.name, r.link))),
       button("Delete", "", () => confirmStep(li, `Delete the login ${u.name}? It can't be undone.`, "Delete",
                                              () => act("/api/users/delete", { name: u.name }))));
+    // A lost phone: only for someone else; your own goes from the account menu, with a code.
+    if (u.two_step && u.name !== me.user) {
+      row.append(button("Turn off 2FA", "", () => confirmStep(li,
+        `Turn off two-step login for ${u.name}? Do this only if you know it's them (a lost phone): the password alone `
+        + "will log in, and every session of theirs is logged out.", "Turn off 2FA",
+        () => act("/api/users/2fa-off", { name: u.name }))));
+    }
     li.append(row);
     return li;
   }

@@ -364,6 +364,243 @@ def test_disabling_or_deleting_ends_the_sessions(auth):
     assert "diego" not in auth.auth.list_users()["users"]
 
 
+# ---------------------------------------------------------------- two-step login
+
+
+def code_at(key: str, now: float, steps: int = 0) -> str:
+    return staff_auth.hotp(staff_auth.totp_key_bytes(key.replace(" ", "")), int(now // staff_auth.TOTP_STEP) + steps)
+
+
+def two_step_on(auth, name):
+    """Turns two-step login on for `name`, logged in once: (key, recovery codes, that session's token)."""
+    _, token = auth.auth.login(name, GOOD, "203.0.113.1")
+    me = auth.auth.session(token)
+    key = auth.auth.two_step_start(me)["key"].replace(" ", "")
+    codes = auth.auth.two_step_confirm(me, GOOD, code_at(key, auth.clock.now))["recovery"]
+    auth.clock.now += staff_auth.TOTP_STEP           # the code just used can't log in again
+    return key, codes, token
+
+
+def test_totp_matches_rfc_6238_appendix_b():
+    seed = b"12345678901234567890"                   # the SHA-1 seed
+    for when, want in ((59, "94287082"), (1111111109, "07081804"), (1111111111, "14050471"),
+                       (1234567890, "89005924"), (2000000000, "69279037"), (20000000000, "65353130")):
+        assert staff_auth.hotp(seed, when // 30, 8) == want
+    key = staff_auth.base64.b32encode(seed).decode()
+    assert staff_auth.totp_step(key, "287082", 59, 0) == 1 and staff_auth.totp_step(key, "287082", 59, 1) == -1
+    # One step either side is accepted, two isn't.
+    assert staff_auth.totp_step(key, "287082", 89, 0) == 1 and staff_auth.totp_step(key, "287082", 119, 0) is None
+    assert len(staff_auth.new_totp_key()) == 32
+
+
+def test_turning_two_step_on_needs_the_password_and_a_code_and_ends_other_sessions(auth):
+    auth.user("diego")
+    _, other = auth.auth.login("diego", GOOD, "203.0.113.1")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    me = auth.auth.session(token)
+    started = auth.auth.two_step_start(me)
+    key = started["key"].replace(" ", "")
+    assert re.fullmatch(r"([A-Z2-7]{4} ){7}[A-Z2-7]{4}", started["key"])
+    assert started["link"] == (f"otpauth://totp/Monkey%20SMP%20staff%3Adiego?secret={key}"
+                               "&issuer=Monkey%20SMP%20staff")
+    # Not on until confirmed: the password alone still logs in.
+    assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
+    for current, code, message in ((OTHER, code_at(key, auth.clock.now), "Your current password isn't right."),
+                                   (GOOD, "000000" if code_at(key, auth.clock.now) != "000000" else "111111",
+                                    staff_auth.WRONG_CODE),
+                                   (GOOD, "abc", "Type the 6-digit code your app shows for this key.")):
+        with pytest.raises(staff_auth.AuthError) as e:
+            auth.auth.two_step_confirm(me, current, code)
+        assert e.value.message == message
+    done = auth.auth.two_step_confirm(me, GOOD, code_at(key, auth.clock.now))
+    assert done["two_step"] is True and done["ended"] == 2 and len(set(done["recovery"])) == 8
+    assert all(re.fullmatch(r"[a-z2-9]{5}-[a-z2-9]{5}", c) for c in done["recovery"])
+    assert auth.auth.session(other) is None and auth.auth.session(token)["two_step"] is True
+    assert auth.auth.session(token)["recovery_left"] == 8
+    stored = json.dumps(auth.auth.store.read())
+    assert not any(c in stored for c in done["recovery"]) and "totp_pending" not in stored
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_start(me)
+    assert e.value.code == 409
+
+
+def test_a_pending_key_runs_out(auth):
+    auth.user("diego")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    me = auth.auth.session(token)
+    key = auth.auth.two_step_start(me)["key"].replace(" ", "")
+    auth.clock.now += staff_auth.PENDING_LIFE + 1
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(key, auth.clock.now))
+    assert e.value.message == "That key has run out: start again."
+
+
+def test_with_two_step_on_the_password_gives_a_challenge_and_the_code_a_session(auth):
+    auth.user("diego")
+    key, _, _ = two_step_on(auth, "diego")
+    # A wrong password says nothing of two-step login.
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login("diego", OTHER, "203.0.113.1")
+    assert e.value.message == staff_auth.WRONG
+    sessions = len(auth.auth.store.read()["sessions"])
+    who, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    assert token is None and who["two_step"] is True and set(who) == {"two_step", "challenge"}
+    assert len(auth.auth.store.read()["sessions"]) == sessions
+    assert token_hash_in(auth, who["challenge"]) and who["challenge"] not in json.dumps(auth.auth.store.read())
+    who2, session = auth.auth.login_code(who["challenge"], code_at(key, auth.clock.now), "203.0.113.1")
+    assert who2 == {"user": "diego", "role": "admin", "recovery_left": 8} and auth.auth.session(session)
+    # The challenge works once.
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(who["challenge"], code_at(key, auth.clock.now, 1), "203.0.113.1")
+    assert (e.value.code, e.value.message) == (400, staff_auth.CHALLENGE_GONE)
+    # And for 5 minutes.
+    auth.clock.now += staff_auth.TOTP_STEP
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    auth.clock.now += staff_auth.CHALLENGE_LIFE + 1
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, code_at(key, auth.clock.now), "203.0.113.1")
+    assert e.value.message == staff_auth.CHALLENGE_GONE
+    # A reset link's token is no challenge.
+    link = auth.auth.handover_link("lorenzo", "diego")["link"]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(token_in(link, "reset"), code_at(key, auth.clock.now), "203.0.113.1")
+    assert e.value.message == staff_auth.CHALLENGE_GONE
+
+
+def token_hash_in(auth, token) -> bool:
+    return staff_auth.token_hash(token) in auth.auth.store.read()["tokens"]
+
+
+def test_a_code_works_once_and_wrong_codes_say_so(auth):
+    auth.user("diego")
+    key, _, _ = two_step_on(auth, "diego")
+    code = code_at(key, auth.clock.now)
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    auth.auth.login_code(challenge, code, "203.0.113.1")
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    wrong = "000000" if code != "000000" else "111111"
+    for typed, status, message in ((code, 401, staff_auth.USED_CODE), (wrong, 401, staff_auth.WRONG_CODE),
+                                   ("", 400, staff_auth.NO_CODE), ("not-a-code", 401, staff_auth.WRONG_CODE)):
+        with pytest.raises(staff_auth.AuthError) as e:
+            auth.auth.login_code(challenge, typed, "203.0.113.1")
+        assert (e.value.code, e.value.message) == (status, message)
+    # An earlier step than the last one used is refused too; the next step works on the same challenge.
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, code_at(key, auth.clock.now, -1), "203.0.113.1")
+    assert e.value.message == staff_auth.USED_CODE
+    assert auth.auth.login_code(challenge, code_at(key, auth.clock.now, 1), "203.0.113.1")[1]
+
+
+def test_a_recovery_code_logs_in_once(auth):
+    auth.user("diego")
+    _, codes, _ = two_step_on(auth, "diego")
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    who, _ = auth.auth.login_code(challenge, " " + codes[0].upper().replace("-", " ") + " ", "203.0.113.1")
+    assert who["recovery_left"] == 7
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, codes[0], "203.0.113.1")
+    assert e.value.message == staff_auth.WRONG_CODE
+    assert auth.auth.login_code(challenge, codes[1], "203.0.113.1")[0]["recovery_left"] == 6
+
+
+def test_wrong_codes_count_like_wrong_passwords_and_the_password_buys_no_new_guesses(auth):
+    auth.user("diego")
+    key, _, _ = two_step_on(auth, "diego")
+    wrong = "000000" if code_at(key, auth.clock.now) != "000000" else "111111"
+    # 4 wrong codes, then the right password again, then one more wrong code: locked.
+    challenge = auth.auth.login("diego", GOOD, "198.51.100.1")[0]["challenge"]
+    for _ in range(staff_auth.LOCK_AFTER - 1):
+        with pytest.raises(staff_auth.AuthError):
+            auth.auth.login_code(challenge, wrong, "198.51.100.1")
+    challenge = auth.auth.login("diego", GOOD, "198.51.100.1")[0]["challenge"]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, wrong, "198.51.100.1")
+    assert e.value.code == 401
+    assert not token_hash_in(auth, challenge)              # a lock takes the challenge away
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login("diego", GOOD, "198.51.100.1")
+    assert (e.value.code, e.value.message) == (429, staff_auth.LOCKED)
+    auth.clock.now += staff_auth.LOCK_FOR + 1
+    challenge = auth.auth.login("diego", GOOD, "198.51.100.1")[0]["challenge"]
+    auth.auth.login_code(challenge, code_at(key, auth.clock.now), "198.51.100.1")
+    assert auth.auth.store.read()["users"]["diego"]["failed"] == 0
+
+
+def test_wrong_codes_count_for_the_address_too(auth):
+    auth.user("diego")
+    key, _, _ = two_step_on(auth, "diego")
+    wrong = "000000" if code_at(key, auth.clock.now) != "000000" else "111111"
+    for i in range(staff_auth.IP_FAILS):
+        if i % (staff_auth.LOCK_AFTER - 1) == 0:
+            with auth.auth.store.change() as data:
+                data["users"]["diego"]["failed"] = 0     # keep the name unlocked: only the address is counted here
+            challenge = auth.auth.login("diego", GOOD, "192.0.2.9")[0]["challenge"]
+        with pytest.raises(staff_auth.AuthError):
+            auth.auth.login_code(challenge, wrong, "192.0.2.9")
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, code_at(key, auth.clock.now), "192.0.2.9")
+    assert (e.value.code, e.value.message) == (429, staff_auth.TOO_MANY)
+
+
+def test_a_reset_link_keeps_two_step_on_and_ends_an_open_challenge(auth):
+    auth.user("lorenzo", "owner")
+    auth.user("diego", email="d@example.com", verified=True)
+    key, _, _ = two_step_on(auth, "diego")
+    challenge = auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"]
+    auth.auth.forgot("diego", "203.0.113.1")
+    auth.auth.reset(token_in(auth.mail.sent[-1][2], "reset"), OTHER)
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login_code(challenge, code_at(key, auth.clock.now), "203.0.113.1")
+    assert e.value.message == staff_auth.CHALLENGE_GONE
+    link = auth.auth.handover_link("lorenzo", "diego")["link"]
+    auth.auth.reset(token_in(link, "reset"), GOOD)
+    who, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    assert token is None and who["two_step"] is True
+
+
+def test_turning_two_step_off_or_new_recovery_codes_need_the_password_and_a_code(auth):
+    auth.user("diego")
+    key, codes, token = two_step_on(auth, "diego")
+    _, other = auth.auth.login_code(auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"],
+                                    code_at(key, auth.clock.now), "203.0.113.1")
+    auth.clock.now += staff_auth.TOTP_STEP
+    me = auth.auth.session(token)
+    for current, code, message in ((OTHER, code_at(key, auth.clock.now), "Your current password isn't right."),
+                                   (GOOD, "zzzzz-zzzzz", staff_auth.WRONG_CODE), (GOOD, None, staff_auth.NO_CODE)):
+        for step in (auth.auth.two_step_off, auth.auth.two_step_recovery):
+            with pytest.raises(staff_auth.AuthError) as e:
+                step(me, current, code)
+            assert e.value.message == message
+    fresh = auth.auth.two_step_recovery(me, GOOD, code_at(key, auth.clock.now))["recovery"]
+    assert len(fresh) == 8 and not set(fresh) & set(codes) and auth.auth.session(other)
+    with pytest.raises(staff_auth.AuthError):
+        auth.auth.two_step_off(me, GOOD, codes[2])            # the old codes stopped working
+    done = auth.auth.two_step_off(me, GOOD, fresh[0])
+    assert done == {"two_step": False, "ended": 1} and auth.auth.session(other) is None
+    assert "totp" not in auth.auth.store.read()["users"]["diego"]
+    assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
+
+
+def test_an_owner_turns_off_someone_elses_two_step_but_not_their_own(auth):
+    auth.user("lorenzo", "owner")
+    auth.user("diego")
+    two_step_on(auth, "lorenzo")
+    key, _, _ = two_step_on(auth, "diego")
+    _, session = auth.auth.login_code(auth.auth.login("diego", GOOD, "203.0.113.1")[0]["challenge"],
+                                      code_at(key, auth.clock.now), "203.0.113.1")
+    assert {u["name"]: u["two_step"] for u in auth.auth.list_users()["users"]} == {"lorenzo": True, "diego": True}
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_off_for("lorenzo", "lorenzo")
+    assert e.value.message == "Turn off your own two-step login from your account menu."
+    done = auth.auth.two_step_off_for("lorenzo", "diego")
+    assert done == {"name": "diego", "two_step": False, "ended": 2} and auth.auth.session(session) is None
+    assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_off_for("lorenzo", "diego")
+    assert e.value.code == 409
+
+
 # ---------------------------------------------------------------- HTTP, through the panel
 
 
@@ -486,6 +723,61 @@ def test_no_token_or_password_reaches_the_journal(web, capfd):
     web.call("POST", "/auth/reset", {"token": token, "password": OTHER})
     out = "".join(capfd.readouterr())
     assert token not in out and GOOD not in out and OTHER not in out
+
+
+def test_two_step_login_over_http_sets_the_cookie_only_after_the_code(web):
+    web.user("diego")
+    cookie = cookie_of(web.call("POST", "/auth/login", {"name": "diego", "password": GOOD}))
+    for path in staff_auth.TWO_STEP:
+        assert web.call("POST", path, {"current": GOOD, "code": "123456"}).status == 401
+    started = web.call("POST", "/auth/2fa/start", {}, headers={"Cookie": cookie})
+    key = started.json["key"].replace(" ", "")
+    on = web.call("POST", "/auth/2fa/confirm", {"current": GOOD, "code": code_at(key, web.clock.now)},
+                  headers={"Cookie": cookie})
+    assert on.status == 200 and len(on.json["recovery"]) == 8
+    session = web.call("GET", "/auth/session", headers={"Cookie": cookie}).json
+    assert session["two_step"] is True and session["recovery_left"] == 8
+    web.clock.now += staff_auth.TOTP_STEP
+    first = web.call("POST", "/auth/login", {"name": "diego", "password": GOOD})
+    assert first.status == 200 and first.json["two_step"] is True and "Set-Cookie" not in first.headers
+    wrong = web.call("POST", "/auth/login/code", {"challenge": first.json["challenge"], "code": "zzzzz-zzzzz"})
+    assert wrong.status == 401 and wrong.json["error"] == staff_auth.WRONG_CODE and "Set-Cookie" not in wrong.headers
+    good = web.call("POST", "/auth/login/code", {"challenge": first.json["challenge"],
+                                                 "code": code_at(key, web.clock.now)})
+    assert good.status == 200 and good.json["user"] == "diego"
+    check = web.call("GET", "/auth/check", headers={"Cookie": cookie_of(good)})
+    assert check.status == 200 and check.headers["X-Staff-User"] == "diego"
+    assert web.call("POST", "/auth/login/code", {"challenge": "x" * 43, "code": "123456"},
+                    marked=False).status == 403
+
+
+def test_an_owner_turns_off_two_step_from_the_users_tab_and_it_is_recorded(web):
+    web.user("lorenzo", "owner")
+    web.user("diego")
+    two_step_on(web, "diego")
+    owner = {"X-Staff-User": "lorenzo", "X-Staff-Role": "owner"}
+    admin = {"X-Staff-User": "diego", "X-Staff-Role": "admin"}
+    assert staff_panel.NEEDS[("POST", "/api/users/2fa-off")] == "owner"
+    assert web.call("POST", "/api/users/2fa-off", {"name": "diego"}, headers=admin).status == 403
+    listed = web.call("GET", "/api/users", headers=owner).json["users"]
+    assert {u["name"]: u["two_step"] for u in listed} == {"lorenzo": False, "diego": True}
+    own = web.call("POST", "/api/users/2fa-off", {"name": "lorenzo"}, headers=owner)
+    assert own.status == 409 and "account menu" in own.json["error"]
+    done = web.call("POST", "/api/users/2fa-off", {"name": "diego"}, headers=owner)
+    assert done.status == 200 and done.json["two_step"] is False
+    log = (web.folder.parent / "actions.log").read_text(encoding="utf-8")
+    assert log.strip().endswith("lorenzo 2fa-off diego")
+
+
+def test_the_login_page_asks_for_the_code_the_way_phones_fill_it():
+    html = (PAGE / "login.html").read_text(encoding="utf-8")
+    field = re.search(r'<input id="code"[^>]*>', html)[0]
+    assert 'autocomplete="one-time-code"' in field and 'inputmode="numeric"' in field
+    assert "Use a recovery code" in html
+    script = (PAGE / "auth.js").read_text(encoding="utf-8")
+    assert "/auth/login/code" in script and "challenge" in script
+    users = (PAGE / "users.js").read_text(encoding="utf-8")
+    assert "/auth/2fa/confirm" in users and "/api/users/2fa-off" in users
 
 
 # ---------------------------------------------------------------- mail

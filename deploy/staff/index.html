@@ -248,6 +248,24 @@
         <div class="confirm" id="versions-confirm" hidden></div>
       </section>
       <section class="box" data-need="admin">
+        <h3>Java and memory</h3>
+        <p class="fine" id="java-state"></p>
+        <p class="attention" id="java-error" role="alert" hidden></p>
+        <p class="note" id="java-note" role="status" hidden></p>
+        <div class="java-form">
+          <label for="java-memory">Memory, in GB</label>
+          <input id="java-memory" type="number" min="1" step="1" inputmode="numeric" data-need="admin" aria-describedby="java-memory-about">
+          <p class="fine" id="java-memory-about"></p>
+          <label for="java-flags">Extra Java flags, one per line</label>
+          <textarea id="java-flags" rows="4" spellcheck="false" autocomplete="off" data-need="admin" aria-describedby="java-flags-about"></textarea>
+          <p class="fine" id="java-flags-about">Up to 20, like -XX:MaxGCPauseMillis=100 or -Dname=value. The start
+            script's own tuned flags stay; these come after them. Anything that runs a command or reads a file is refused.</p>
+        </div>
+        <div class="actions"><button class="btn primary" id="java-save" type="button" data-need="admin">Save</button></div>
+        <p class="fine">Takes effect at the next restart. A bad flag can stop the server starting: clear it here and start
+          again. The old settings are kept in staff-removed/ on the machine.</p>
+      </section>
+      <section class="box" data-need="admin">
         <h3>Reset the world</h3>
         <p class="fine">A new world, with a new seed if you give one. The old world is kept on the machine, never deleted.
           The seed is never shown or logged.</p>
@@ -342,6 +360,22 @@
           <button class="btn primary" id="settings-save" type="button" data-need="admin">Save changes</button>
         </div>
       </div>
+      <section class="box" id="icon-box">
+        <h3>Server icon</h3>
+        <p class="fine">The picture next to the server in the players' list: a 64 by 64 pixel PNG. It shows after the
+          next restart.</p>
+        <p class="attention" id="icon-error" role="alert" hidden></p>
+        <p class="note" id="icon-note" role="status" hidden></p>
+        <div class="icon-row">
+          <p class="fine" id="icon-none">No icon: players see the default.</p>
+          <div class="add">
+            <input id="icon-file" type="file" accept="image/png" aria-label="Icon PNG file" data-need="admin">
+            <button class="btn" id="icon-upload" type="button" data-need="admin">Upload</button>
+            <button class="btn" id="icon-remove" type="button" data-need="admin" hidden>Remove</button>
+          </div>
+        </div>
+        <div class="confirm" id="icon-confirm" hidden></div>
+      </section>
       <section class="box" id="gamerules" hidden>
         <h3>Game rules</h3>
         <p class="fine">Read from the running server. A change takes effect at once, no restart. The launch, Truce Hour and
@@ -379,12 +413,38 @@
           <p class="fine" id="modrinth-version"></p>
           <ul class="entries" id="modrinth-list"></ul>
         </section>
+        <section class="box" data-need="admin">
+          <h3>Install a modpack</h3>
+          <p class="fine">A Modrinth .mrpack for this game version and Fabric, up to 64 MB. Its server mods are downloaded
+            and checked first; only if every one passes are they put in the mods folder. Client-only mods and the pack's
+            config files are skipped.</p>
+          <div class="add">
+            <input id="mrpack-file" type="file" accept=".mrpack" aria-label="Modpack file" data-need="admin">
+            <button class="btn" id="mrpack-go" type="button" data-need="admin">Install the pack</button>
+          </div>
+        </section>
         <section class="box span">
           <div class="box-head">
             <h3>Installed mods <span class="meta" id="mods-count"></span></h3>
             <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Filter by name" aria-label="Filter the installed mods">
           </div>
           <ul class="entries" id="mods-list"></ul>
+        </section>
+        <section class="box span" id="packs-box">
+          <div class="box-head">
+            <h3>Data packs <span class="meta" id="packs-count"></span></h3>
+            <button class="btn" id="packs-reload" type="button" data-need="admin">Reload data packs</button>
+          </div>
+          <p class="fine">The world's datapacks folder. A new pack is turned on when you press Reload or the server
+            restarts. The release's own packs come back at every start, so they can be turned off but not removed.</p>
+          <p class="attention" id="packs-error" role="alert" hidden></p>
+          <p class="note" id="packs-note" role="status" hidden></p>
+          <div class="confirm" id="packs-confirm" hidden></div>
+          <div class="add">
+            <input id="pack-file" type="file" accept=".zip" aria-label="Data pack zip file" data-need="admin">
+            <button class="btn" id="pack-upload" type="button" data-need="admin">Upload the pack</button>
+          </div>
+          <ul class="entries" id="packs-list"></ul>
         </section>
       </div>
     </div>

@@ -38,6 +38,24 @@
       </form>
     </section>
 
+    <section class="card" id="code-card" hidden>
+      <h1>Two-step login</h1>
+      <p class="fine" id="code-help">Open your authenticator app and type the 6-digit code it shows for Monkey SMP
+        staff. You have 5 minutes.</p>
+      <p class="attention" id="code-error" role="alert" hidden></p>
+      <form id="code-form" method="post" action="/auth/login/code" novalidate>
+        <div class="form-field">
+          <label for="code" id="code-label">Code from your app</label>
+          <input id="code" name="code" type="text" autocomplete="one-time-code" inputmode="numeric" autocapitalize="off" spellcheck="false" maxlength="11" required>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="code-send" type="submit">Log in</button>
+          <button class="link" id="code-switch" type="button">Use a recovery code</button>
+          <button class="link" id="code-back" type="button">Start again</button>
+        </div>
+      </form>
+    </section>
+
     <section class="card" id="forgot-card" hidden>
       <h1>Forgot password</h1>
       <p class="fine">Type your name or your email. If the login has a confirmed email, a link to set a new password

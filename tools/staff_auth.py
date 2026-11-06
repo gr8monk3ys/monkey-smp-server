@@ -6,6 +6,7 @@
     python3 tools/staff_auth.py send-verify NAME              emails NAME a link to confirm their address
     python3 tools/staff_auth.py set-role NAME ROLE            moderator, admin or owner
     python3 tools/staff_auth.py end-sessions NAME             logs NAME out everywhere
+    python3 tools/staff_auth.py two-step-off NAME             turns off NAME's two-step login (a lost phone)
     python3 tools/staff_auth.py mail-test ADDRESS             sends one test email, to see that mail works
 
 Run it as monkey (deploy/monkey-staff.sh --add-user and --reset-link do): the store is monkey's, mode 600.
@@ -15,14 +16,20 @@ session answers 200 with X-Staff-User and X-Staff-Role, which Caddy copies onto 
 browser sent itself. The rest of /auth/ is the login page's:
 
     GET  /auth/check         200 with the two headers, or 401 (a page visit: 302 to /login)
-    GET  /auth/session       who is logged in: {user, role, email, email_verified}, or 401
-    POST /auth/login         {name, password}: sets the monkey_staff cookie
+    GET  /auth/session       who is logged in: {user, role, email, email_verified, two_step, recovery_left}, or 401
+    POST /auth/login         {name, password}: sets the monkey_staff cookie, or with two-step login on answers
+                             {two_step: true, challenge} and sets nothing
+    POST /auth/login/code    {challenge, code}: a code from the app or a recovery code; sets the cookie
     POST /auth/logout        ends this session
     POST /auth/forgot        {who}: a name or an email; the answer is the same whatever it is
     POST /auth/reset         {token, password}: a link's new password; ends every session of that login
     POST /auth/verify        {token}: confirms an email address
     POST /auth/password      {current, password}: ends this login's other sessions
     POST /auth/email         {current, email}: the new address gets a link; the old one is told
+    POST /auth/2fa/start     a new key, not on yet: {key, link} (an otpauth:// link for the app)
+    POST /auth/2fa/confirm   {current, code}: turns it on; answers 8 recovery codes, once; ends the other sessions
+    POST /auth/2fa/off       {current, code}: a code from the app or a recovery code; ends the other sessions
+    POST /auth/2fa/recovery  {current, code}: 8 new recovery codes; the old ones stop working
 
 The rules, all here:
 - A password is hashed with scrypt (n=2**14, r=8, p=1: 16 MB and about 50 ms, which the 2-thread machine and the
@@ -34,6 +41,11 @@ The rules, all here:
   from one address in 15 minutes stop that address for the rest of the window. Forgot-password asks are limited too.
 - A reset or email link is 32 random bytes, kept only as a hash, good once: 30 minutes for a reset by email, 24 hours
   for an email check and for a link the owner hands over. A reset email goes only to an address its owner confirmed.
+- Two-step login (optional, per login) is TOTP as RFC 6238 has it: SHA-1, 6 digits, 30 seconds, the step before
+  and after accepted too, and never a step at or before the last one used (a code works once). With it on, the right
+  password gives a challenge good once for 5 minutes, not a session; a wrong code counts like a wrong password, for
+  the name and for the address. A reset link doesn't turn it off. The key is kept as it is (the app's codes need it);
+  recovery codes only as hashes, each good once. An owner can turn it off for another login (a lost phone).
 - No password, token, key or link is ever logged. Mail settings come from /etc/monkey-staff-mail.env (root:monkey,
   640), read as KEY=value lines and never run: Resend (RESEND_API_KEY) or SMTP with STARTTLS (SMTP_HOST, SMTP_PORT,
   SMTP_USER, SMTP_PASSWORD), and MAIL_FROM. With neither, the page says to ask the owner, who has this CLI.
@@ -57,6 +69,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from email.message import EmailMessage
 from http.cookies import CookieError, SimpleCookie
@@ -97,6 +110,17 @@ FORGOT_SENT = "If that account has a verified email, a link is on its way."
 NO_MAIL = "Email isn't set up on this server: ask the owner for a reset link."
 BAD_LINK = "That link has expired or was already used: ask for a new one."
 
+TOTP_STEP, TOTP_DIGITS = 30, 6
+CHALLENGE_LIFE = 5 * 60
+PENDING_LIFE = 15 * 60               # a new key, before the first code turns it on
+RECOVERY_CODES = 8
+RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"    # no 0/o, 1/l/i: easy to copy from paper
+ISSUER = "Monkey SMP staff"
+WRONG_CODE = "That code isn't right. Check that your phone's clock is right, or use a recovery code."
+USED_CODE = "That code was already used: wait for the next one in your app."
+NO_CODE = "Type the 6-digit code from your app, or a recovery code."
+CHALLENGE_GONE = "That took too long: log in again."
+
 
 class AuthError(Exception):
     """An answer of `code` with `message`, a plain sentence for the page."""
@@ -132,6 +156,47 @@ def check_password(password: str, stored: str) -> bool:
 
 def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def hotp(key: bytes, counter: int, digits: int = TOTP_DIGITS) -> str:
+    """RFC 4226: the code for one counter (a TOTP step)."""
+    mac = hmac.new(key, counter.to_bytes(8, "big"), hashlib.sha1).digest()
+    at = mac[-1] & 0x0F
+    number = int.from_bytes(mac[at:at + 4], "big") & 0x7FFFFFFF
+    return str(number % 10 ** digits).zfill(digits)
+
+
+def new_totp_key() -> str:
+    """20 random bytes in base32 without padding: what an authenticator app takes."""
+    return base64.b32encode(secrets.token_bytes(20)).decode("ascii").rstrip("=")
+
+
+def totp_key_bytes(key: str) -> bytes:
+    return base64.b32decode(key + "=" * (-len(key) % 8))
+
+
+def totp_step(key: str, code: str, now: float, last: int) -> int | None:
+    """The step `code` belongs to (now, or one either side), or None. A step at or before `last` gives -1: used."""
+    raw, here, found = totp_key_bytes(key), int(now // TOTP_STEP), None
+    for step in (here - 1, here, here + 1):
+        # Every step is checked, in constant time each, so the time taken doesn't say which matched.
+        if hmac.compare_digest(hotp(raw, step).encode(), code.encode()) and found is None:
+            found = step
+    if found is not None and found <= last:
+        return -1
+    return found
+
+
+def new_recovery_codes() -> list[str]:
+    codes = []
+    for _ in range(RECOVERY_CODES):
+        code = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(10))
+        codes.append(f"{code[:5]}-{code[5:]}")
+    return codes
+
+
+def recovery_hash(code: str) -> str:
+    return token_hash(re.sub(r"[\s-]", "", code).lower())
 
 
 def password_problem(password, name: str) -> str | None:
@@ -449,7 +514,8 @@ class Auth:
         return morsel.value if morsel and 20 <= len(morsel.value) <= 100 else None
 
     def session(self, token: str | None) -> dict | None:
-        """{user, role, email, email_verified, key} for a good session, else None. Marks it used."""
+        """{user, role, email, email_verified, two_step, recovery_left, key} for a good session, else None. Marks it
+        used."""
         if not token:
             return None
         key, now = token_hash(token), self.clock()
@@ -464,8 +530,10 @@ class Auth:
                     return None
                 s["seen"] = now
         user = data["users"][s["user"]]
+        totp = user.get("totp")
         return {"user": s["user"], "role": user["role"], "email": user.get("email"),
-                "email_verified": bool(user.get("email_verified")), "key": key}
+                "email_verified": bool(user.get("email_verified")), "two_step": bool(totp),
+                "recovery_left": len(totp.get("recovery", [])) if totp else 0, "key": key}
 
     @staticmethod
     def cookie(token: str, max_age: int = ABSOLUTE) -> str:
@@ -475,15 +543,65 @@ class Auth:
     def cookie_gone() -> str:
         return f"{COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
 
-    def login(self, name, password, ip: str) -> tuple[dict, str]:
-        """({user, role}, the new session's token), or AuthError with the same sentence for every wrong guess."""
+    def _ip_check(self, ip: str, now: float) -> None:
+        with self._counters:
+            if len(self._recent(self._ip_fails.get(ip, []), now, IP_WINDOW)) >= IP_FAILS:
+                raise AuthError(429, TOO_MANY)
+
+    def _ip_failed(self, ip: str, now: float) -> None:
+        with self._counters:
+            self._remember(self._ip_fails, ip, [*self._recent(self._ip_fails.get(ip, []), now, IP_WINDOW), now])
+
+    @staticmethod
+    def _failed(user: dict, now: float) -> bool:
+        """One more wrong guess for a known login; whether that locked it."""
+        user["failed"] = user.get("failed", 0) + 1
+        if user["failed"] >= LOCK_AFTER:
+            user["failed"], user["locked_until"] = 0, now + LOCK_FOR
+            return True
+        return False
+
+    def _new_session(self, data: dict, name: str, now: float) -> str:
+        token = secrets.token_urlsafe(32)
+        self._prune(data, now)
+        data["sessions"][token_hash(token)] = {"user": name, "created": now, "seen": now}
+        return token
+
+    @staticmethod
+    def _drop_tokens(data: dict, name: str, kinds: tuple[str, ...]) -> None:
+        for k, t in list(data["tokens"].items()):
+            if t.get("user") == name and t.get("kind") in kinds:
+                del data["tokens"][k]
+
+    def _code_problem(self, user: dict, code, now: float) -> str | None:
+        """None when `code` is a good code from the app or an unused recovery code (marked used), else the sentence."""
+        totp = user.get("totp")
+        if not totp or not isinstance(code, str) or not code.strip() or len(code) > 64:
+            return NO_CODE
+        digits = re.sub(r"\s", "", code)
+        if re.fullmatch(r"\d{6}", digits):
+            step = totp_step(totp["secret"], digits, now, totp.get("last_step", 0))
+            if step is None:
+                return WRONG_CODE
+            if step < 0:
+                return USED_CODE
+            totp["last_step"] = step
+            return None
+        want = recovery_hash(code)
+        left = totp.get("recovery", [])
+        hit = next((h for h in left if hmac.compare_digest(h, want)), None)
+        if hit is None:
+            return WRONG_CODE
+        left.remove(hit)
+        return None
+
+    def login(self, name, password, ip: str) -> tuple[dict, str | None]:
+        """({user, role}, the new session's token), or AuthError with the same sentence for every wrong guess. With
+        two-step login on, the right password gives ({two_step: true, challenge}, None) instead: no session yet."""
         if not isinstance(name, str) or not isinstance(password, str) or len(password) > 1024 or len(name) > 64:
             raise AuthError(400, "Type your name and password.")
         name, now = name.strip().lower(), self.clock()
-        with self._counters:
-            fails = self._recent(self._ip_fails.get(ip, []), now, IP_WINDOW)
-            if len(fails) >= IP_FAILS:
-                raise AuthError(429, TOO_MANY)
+        self._ip_check(ip, now)
         user = self._user(self.store.read(), name)
         stored = user.get("hash") if user else None
         # The slow check runs every time, a dummy one for an unknown name, so the time taken says nothing.
@@ -495,16 +613,17 @@ class Auth:
                     good = False
                 elif user.get("locked_until", 0) > now:
                     raise AuthError(429, LOCKED)
+                elif good and not user.get("disabled") and user.get("totp"):
+                    # The wrong-guess count stays as it is until the code is right too: the password alone doesn't
+                    # buy fresh guesses at the code.
+                    self._prune(data, now)
+                    challenge = self._new_token(data, "2fa", name, CHALLENGE_LIFE)
+                    return {"two_step": True, "challenge": challenge}, None
                 elif good and not user.get("disabled"):
                     user["failed"], user["locked_until"] = 0, 0
-                    token = secrets.token_urlsafe(32)
-                    self._prune(data, now)
-                    data["sessions"][token_hash(token)] = {"user": name, "created": now, "seen": now}
-                    return {"user": name, "role": user["role"]}, token
+                    return {"user": name, "role": user["role"]}, self._new_session(data, name, now)
                 else:
-                    user["failed"] = user.get("failed", 0) + 1
-                    if user["failed"] >= LOCK_AFTER:
-                        user["failed"], user["locked_until"] = 0, now + LOCK_FOR
+                    self._failed(user, now)
         else:
             with self._counters:
                 count, until = self._name_fails.get(name, [0, 0])
@@ -512,9 +631,41 @@ class Auth:
                     raise AuthError(429, LOCKED)
                 count += 1
                 self._remember(self._name_fails, name, [0, now + LOCK_FOR] if count >= LOCK_AFTER else [count, 0])
-        with self._counters:
-            self._remember(self._ip_fails, ip, [*self._recent(self._ip_fails.get(ip, []), now, IP_WINDOW), now])
+        self._ip_failed(ip, now)
         raise AuthError(401, WRONG)
+
+    def login_code(self, challenge, code, ip: str) -> tuple[dict, str]:
+        """The second step: ({user, role, recovery_left}, the new session's token). A wrong code counts like a wrong
+        password; the challenge works until the code is right, it runs out, or the name is locked."""
+        now = self.clock()
+        self._ip_check(ip, now)
+        if not isinstance(challenge, str) or not 20 <= len(challenge) <= 100:
+            raise AuthError(400, CHALLENGE_GONE)
+        key = token_hash(challenge)
+        with self.store.change() as data:
+            found = data["tokens"].get(key)
+            user = self._user(data, found.get("user")) if found and found.get("kind") == "2fa" else None
+            if user is None or found.get("expires", 0) <= now or user.get("disabled") or not user.get("totp"):
+                data["tokens"].pop(key, None)
+                status, message = 400, CHALLENGE_GONE
+            elif user.get("locked_until", 0) > now:
+                del data["tokens"][key]
+                status, message = 429, LOCKED
+            else:
+                name = found["user"]
+                message = self._code_problem(user, code, now)
+                if message is None:
+                    del data["tokens"][key]
+                    user["failed"], user["locked_until"] = 0, 0
+                    who = {"user": name, "role": user["role"], "recovery_left": len(user["totp"].get("recovery", []))}
+                    return who, self._new_session(data, name, now)
+                status = 400 if message == NO_CODE else 401     # nothing typed isn't a guess
+                if status == 401 and self._failed(user, now):
+                    del data["tokens"][key]
+        # Raised after the with, so the count (and a lock, and a challenge taken away) is saved.
+        if status == 401:
+            self._ip_failed(ip, now)
+        raise AuthError(status, message)
 
     def logout(self, token: str | None) -> None:
         if token:
@@ -574,6 +725,8 @@ class Auth:
             user["failed"], user["locked_until"] = 0, 0
             if found.get("email") and found["email"] == user.get("email"):
                 user["email_verified"] = True                  # the link went to that address and came back
+            # Two-step login stays on: a link only proves the email, so the next login still needs the code.
+            self._drop_tokens(data, name, ("2fa",))
             self._end_sessions(data, name)
             notify = user.get("email") if user.get("email_verified") and had_password else None
         if notify:
@@ -606,6 +759,7 @@ class Auth:
         with self.store.change() as data:
             user = self._check_current(data, name, current)
             user["hash"], user["changed"] = hash_password(password), self.clock()
+            self._drop_tokens(data, name, ("2fa",))
             ended = self._end_sessions(data, name, keep=me["key"])
             notify = user.get("email") if user.get("email_verified") else None
         if notify:
@@ -644,6 +798,87 @@ class Auth:
                        "Reset emails no longer come here.\n\nIf that wasn't you, tell the owner at once.\n")
         return {"email": email, "sent": sent}
 
+    # ------------------------------------------------ two-step login
+
+    def _tell(self, user: dict, subject: str, text: str) -> None:
+        if user.get("email") and user.get("email_verified"):
+            self._send(user["email"], subject, text)
+
+    def two_step_start(self, me: dict) -> dict:
+        """A new key, kept apart until a code from it turns it on: {key in groups of 4, otpauth:// link}."""
+        name = me["user"]
+        with self.store.change() as data:
+            user = data["users"][name]
+            if user.get("totp"):
+                raise AuthError(409, "Two-step login is already on.")
+            key = new_totp_key()
+            user["totp_pending"] = {"secret": key, "expires": self.clock() + PENDING_LIFE}
+        label = urllib.parse.quote(f"{ISSUER}:{name}")
+        link = f"otpauth://totp/{label}?secret={key}&issuer={urllib.parse.quote(ISSUER)}"
+        return {"key": " ".join(key[i:i + 4] for i in range(0, len(key), 4)), "link": link}
+
+    def two_step_confirm(self, me: dict, current, code) -> dict:
+        """Turns it on with the password and a code from the new key; the recovery codes come back only now."""
+        name, now = me["user"], self.clock()
+        with self.store.change() as data:
+            user = self._check_current(data, name, current)
+            if user.get("totp"):
+                raise AuthError(409, "Two-step login is already on.")
+            pending = user.get("totp_pending")
+            if not pending or pending.get("expires", 0) <= now:
+                raise AuthError(400, "That key has run out: start again.")
+            digits = re.sub(r"\s", "", code) if isinstance(code, str) else ""
+            if not re.fullmatch(r"\d{6}", digits):
+                raise AuthError(400, "Type the 6-digit code your app shows for this key.")
+            step = totp_step(pending["secret"], digits, now, 0)
+            if step is None or step < 0:
+                raise AuthError(403, WRONG_CODE)
+            codes = new_recovery_codes()
+            user["totp"] = {"secret": pending["secret"], "last_step": step, "since": now,
+                            "recovery": [recovery_hash(c) for c in codes]}
+            del user["totp_pending"]
+            user["changed"] = now
+            ended = self._end_sessions(data, name, keep=me["key"])
+        self._tell(user, "Monkey SMP staff: two-step login is on",
+                   f"Two-step login was just turned on for the Monkey SMP staff login {name}: logging in now needs "
+                   "a code from the app too. Other sessions were logged out.\n\n"
+                   "If that wasn't you, tell the owner at once.\n")
+        return {"two_step": True, "recovery": codes, "ended": ended}
+
+    def _check_code(self, user: dict, code) -> None:
+        problem = self._code_problem(user, code, self.clock())
+        if problem:
+            raise AuthError(400 if problem == NO_CODE else 403, problem)
+
+    def two_step_off(self, me: dict, current, code) -> dict:
+        name = me["user"]
+        with self.store.change() as data:
+            user = self._check_current(data, name, current)
+            if not user.get("totp"):
+                raise AuthError(409, "Two-step login is already off.")
+            self._check_code(user, code)
+            user.pop("totp", None)
+            user.pop("totp_pending", None)
+            user["changed"] = self.clock()
+            self._drop_tokens(data, name, ("2fa",))
+            ended = self._end_sessions(data, name, keep=me["key"])
+        self._tell(user, "Monkey SMP staff: two-step login is off",
+                   f"Two-step login was just turned off for the Monkey SMP staff login {name}: the password alone "
+                   "logs in now. Other sessions were logged out.\n\nIf that wasn't you, tell the owner at once.\n")
+        return {"two_step": False, "ended": ended}
+
+    def two_step_recovery(self, me: dict, current, code) -> dict:
+        """8 new recovery codes, shown once; the old ones stop working."""
+        name = me["user"]
+        with self.store.change() as data:
+            user = self._check_current(data, name, current)
+            if not user.get("totp"):
+                raise AuthError(409, "Two-step login is off: turn it on first.")
+            self._check_code(user, code)
+            codes = new_recovery_codes()
+            user["totp"]["recovery"] = [recovery_hash(c) for c in codes]
+        return {"recovery": codes}
+
     # ------------------------------------------------ the owner's tools
 
     @staticmethod
@@ -669,6 +904,7 @@ class Auth:
             rows.append({"name": name, "role": u.get("role"), "email": u.get("email"),
                          "email_verified": bool(u.get("email_verified")), "disabled": bool(u.get("disabled")),
                          "password_set": bool(u.get("hash")), "locked": u.get("locked_until", 0) > now,
+                         "two_step": bool(u.get("totp")),
                          "created": iso(u.get("created")), "changed": iso(u.get("changed")),
                          "sessions": sum(1 for s in data["sessions"].values()
                                          if s.get("user") == name and self._session_ok(data, s, now))})
@@ -754,6 +990,25 @@ class Auth:
                     del data["tokens"][k]
         return {"name": name, "deleted": True}
 
+    def two_step_off_for(self, by: str, name) -> dict:
+        """An owner turns off another login's two-step login (a lost phone, no recovery codes). Its sessions end."""
+        if name == by:
+            raise AuthError(409, "Turn off your own two-step login from your account menu.")
+        with self.store.change() as data:
+            user = self._target(data, name)
+            if not user.get("totp"):
+                raise AuthError(409, f"{name} doesn't have two-step login on.")
+            user.pop("totp", None)
+            user.pop("totp_pending", None)
+            user["changed"] = self.clock()
+            self._drop_tokens(data, name, ("2fa",))
+            ended = self._end_sessions(data, name)
+        self._tell(user, "Monkey SMP staff: two-step login is off",
+                   f"The owner ({by}) turned off two-step login for the Monkey SMP staff login {name}, and every "
+                   "session was logged out. Turn it on again from the account menu once you have your app.\n\n"
+                   "If you didn't ask for this, tell the owner at once.\n")
+        return {"name": name, "two_step": False, "ended": ended}
+
     def end_sessions(self, by: str, name) -> dict:
         with self.store.change() as data:
             self._target(data, name)
@@ -785,11 +1040,17 @@ class Auth:
             if not me:
                 return 401, {"ok": False, "error": "Not logged in."}, []
             return 200, {"ok": True, "user": me["user"], "role": me["role"], "email": me["email"],
-                         "email_verified": me["email_verified"], "mail": self.mail_ready()}, []
+                         "email_verified": me["email_verified"], "two_step": me["two_step"],
+                         "recovery_left": me["recovery_left"], "mail": self.mail_ready()}, []
         if method != "POST":
             raise AuthError(404, "There is no such request.")
-        if path == "/auth/login":
-            who, new = self.login(body.get("name"), body.get("password"), ip)
+        if path in ("/auth/login", "/auth/login/code"):
+            if path == "/auth/login":
+                who, new = self.login(body.get("name"), body.get("password"), ip)
+            else:
+                who, new = self.login_code(body.get("challenge"), body.get("code"), ip)
+            if new is None:                  # two-step login: the code comes next, no session yet
+                return 200, {"ok": True, **who}, []
             if token:
                 self.logout(token)
             return 200, {"ok": True, **who}, [("Set-Cookie", self.cookie(new))]
@@ -802,14 +1063,23 @@ class Auth:
             return 200, {"ok": True, **self.reset(body.get("token"), body.get("password"))}, []
         if path == "/auth/verify":
             return 200, {"ok": True, **self.verify(body.get("token"))}, []
-        if path in ("/auth/password", "/auth/email"):
+        if path in ("/auth/password", "/auth/email", *TWO_STEP):
             me = self.session(token)
             if not me:
                 raise AuthError(401, "Your login has run out: log in again.")
             if path == "/auth/password":
                 return 200, {"ok": True, **self.change_password(me, body.get("current"), body.get("password"))}, []
+            if path == "/auth/2fa/start":
+                return 200, {"ok": True, **self.two_step_start(me)}, []
+            if path in TWO_STEP:
+                return 200, {"ok": True, **TWO_STEP[path](self, me, body.get("current"), body.get("code"))}, []
             return 200, {"ok": True, **self.change_email(me, body.get("current"), body.get("email"))}, []
         raise AuthError(404, "There is no such request.")
+
+
+# The account menu's two-step requests: {current, code} each, but start, which needs only the session.
+TWO_STEP = {"/auth/2fa/start": None, "/auth/2fa/confirm": Auth.two_step_confirm, "/auth/2fa/off": Auth.two_step_off,
+            "/auth/2fa/recovery": Auth.two_step_recovery}
 
 
 def from_settings(staff_dir: Path, env: dict | None = None) -> Auth:
@@ -829,7 +1099,7 @@ def main(argv=None) -> int:
     p.add_argument("name")
     p.add_argument("role", choices=ROLES)
     p.add_argument("--email")
-    for name in ("reset-link", "send-verify", "end-sessions"):
+    for name in ("reset-link", "send-verify", "end-sessions", "two-step-off"):
         sub.add_parser(name).add_argument("name")
     p = sub.add_parser("set-role")
     p.add_argument("name")
@@ -853,7 +1123,7 @@ def main(argv=None) -> int:
             print(f"mail: {'set up' if rows['mail'] else 'not set up'}")
             for u in rows["users"]:
                 flags = [f for f, on in (("disabled", u["disabled"]), ("locked", u["locked"]),
-                                         ("no password yet", not u["password_set"])) if on]
+                                         ("no password yet", not u["password_set"]), ("2FA on", u["two_step"])) if on]
                 email = (u["email"] or "no email") + ("" if u["email_verified"] or not u["email"] else " (unconfirmed)")
                 print(f"  {u['name']:<20} {u['role']:<10} {email}; sessions: {u['sessions']}"
                       + (f"; {', '.join(flags)}" if flags else ""))
@@ -886,6 +1156,10 @@ def main(argv=None) -> int:
         if args.command == "set-role":
             auth.set_role("cli", args.name, args.role)
             print(f"{args.name} is now {args.role}.")
+            return 0
+        if args.command == "two-step-off":
+            done = auth.two_step_off_for("cli", args.name)
+            print(f"{args.name}: two-step login is off; {done['ended']} session(s) ended.")
             return 0
         if args.command == "end-sessions":
             print(f"{args.name}: {auth.end_sessions('cli', args.name)['ended']} session(s) ended.")

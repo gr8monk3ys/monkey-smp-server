@@ -38,6 +38,12 @@ a.link { display: inline-block; }
 .account-body form { display: grid; gap: 8px; }
 .account-body h3 { padding-bottom: 4px; border-bottom: 2px solid var(--leaf-2); }
 
+/* Two-step login, in the account menu: the key to type, and the recovery codes shown once. */
+.two-step { display: grid; gap: 8px; }
+.two-step .mono { color: var(--bone); overflow-wrap: anywhere; letter-spacing: 0.04em; }
+.recovery { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
+.recovery li { color: var(--bone); }
+
 /* The Users tab. */
 .users { list-style: none; display: grid; }
 .users li { display: grid; gap: 6px; padding: 10px 4px; border-top: 2px solid var(--leaf-2); min-width: 0; }

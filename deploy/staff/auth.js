@@ -86,7 +86,12 @@
       }
       busy($("login"), true);
       try {
-        await auth("POST", "/auth/login", { name, password });
+        const done = await auth("POST", "/auth/login", { name, password });
+        $("password").value = "";
+        if (done.two_step) {
+          askCode(done.challenge);
+          return;
+        }
         location.replace("/");
       } catch (error) {
         say("error", error.message);
@@ -94,6 +99,69 @@
         $("password").focus();
       } finally {
         busy($("login"), false);
+      }
+    });
+
+    // Two-step login: the right password gave a challenge, good once for 5 minutes; the code turns it into a session.
+    const codeCard = $("code-card");
+    let challenge = "";
+    let recovery = false;
+
+    function codeKind(useRecovery) {
+      recovery = useRecovery;
+      const code = $("code");
+      code.value = "";
+      code.inputMode = recovery ? "text" : "numeric";
+      code.autocomplete = recovery ? "off" : "one-time-code";
+      code.maxLength = recovery ? 16 : 11;
+      $("code-label").textContent = recovery ? "Recovery code" : "Code from your app";
+      $("code-help").textContent = recovery
+        ? "Type one of the recovery codes you saved when you turned on two-step login. Each works once."
+        : "Open your authenticator app and type the 6-digit code it shows for Monkey SMP staff. You have 5 minutes.";
+      $("code-switch").textContent = recovery ? "Use the code from your app" : "Use a recovery code";
+      code.focus();
+    }
+
+    function askCode(token) {
+      challenge = token;
+      say("code-error", "");
+      loginCard.hidden = true;
+      codeCard.hidden = false;
+      codeKind(false);
+    }
+
+    function backToLogin(message) {
+      challenge = "";
+      codeCard.hidden = true;
+      loginCard.hidden = false;
+      say("error", message || "");
+      $("password").focus();
+    }
+
+    $("code-switch").addEventListener("click", () => codeKind(!recovery));
+    $("code-back").addEventListener("click", () => backToLogin(""));
+    $("code-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      say("code-error", "");
+      const code = $("code").value.trim();
+      if (!code) {
+        say("code-error", recovery ? "Type a recovery code." : "Type the 6-digit code from your app.");
+        return;
+      }
+      busy($("code-send"), true);
+      try {
+        await auth("POST", "/auth/login/code", { challenge, code });
+        location.replace("/");
+      } catch (error) {
+        $("code").value = "";
+        // The challenge is gone (too slow, or the name got locked): start from the password again.
+        if (error.status === 400 || error.status === 429) backToLogin(error.message);
+        else {
+          say("code-error", error.message);
+          $("code").focus();
+        }
+      } finally {
+        busy($("code-send"), false);
       }
     });
 

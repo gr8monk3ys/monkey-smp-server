@@ -65,7 +65,7 @@ def test_the_java_settings_are_written_for_the_start_script(apex):
     staff_more.more(apex.panel).memory = lambda: 16.0
     code, data = apex.call("GET", "/api/java")
     assert code == 200 and data["memory_gb"] is None and data["flags"] == []
-    assert data["default_gb"] == 5 and data["most_gb"] == 15
+    assert data["default_gb"] == 5 and data["most_gb"] == 14
     code, data = apex.call("PUT", "/api/java", {"memory_gb": 8, "flags": [" -XX:MaxGCPauseMillis=100 ", ""]})
     assert code == 200 and data["memory_gb"] == 8 and data["flags"] == ["-XX:MaxGCPauseMillis=100"]
     saved = json.loads((apex.root / "monkey-launch.json").read_text())
@@ -83,6 +83,10 @@ def test_the_java_settings_are_written_for_the_start_script(apex):
     {"memory_gb": None, "flags": ["-Xmx8G"]}, {"memory_gb": None, "flags": ["-javaagent:/tmp/a.jar"]},
     {"memory_gb": None, "flags": ["-XX:OnOutOfMemoryError=/tmp/x.sh"]}, {"memory_gb": None, "flags": ["-XX:OnError=x"]},
     {"memory_gb": None, "flags": ["-XX:Flags=/tmp/f"]}, {"memory_gb": None, "flags": ["-Dx=a b"]},
+    {"memory_gb": 15, "flags": []}, {"memory_gb": None, "flags": ["-XX:LogFile=x"]},
+    {"memory_gb": None, "flags": ["-XX:HeapDumpPath=x"]}, {"memory_gb": None, "flags": ["-Dx=/tmp/a"]},
+    {"memory_gb": None, "flags": ["-Dfabric.addMods=x"]}, {"memory_gb": None, "flags": ["-Djava.library.path=x"]},
+    {"memory_gb": None, "flags": ["-Dlog4j2.configurationFile=x"]},
     {"memory_gb": None, "flags": ["-XX:+UseG1GC"] * 21},
 ])
 def test_bad_java_settings_are_refused(apex, body):
@@ -97,6 +101,7 @@ def test_the_flag_rules_match_the_start_scripts():
     for name in staff_more.FLAG_REFUSED:
         assert f"'{name}'" in psm
     assert f"$script:LaunchFlagsMax = {staff_more.FLAGS_MAX}" in psm
+    assert f"$script:LaunchPropRefused = '^{staff_more.PROP_REFUSED.pattern}$'" in psm
 
 
 def test_the_default_memory_matches_get_memorygb():
@@ -248,6 +253,16 @@ def test_a_modpack_installs_its_server_mods_all_or_nothing(apex, tmp_path):
     assert not (apex.root / "config" / "a.toml").exists()
     assert all("skip.jar" not in u for u in cdn.urls)
     assert "modpack test.mrpack: 2 mod(s)" in actions(apex)
+
+
+def test_a_modpack_with_two_jars_for_one_mod_is_refused(apex, tmp_path):
+    lithium, _, _ = pack_setup(apex, tmp_path)
+    twice = [entry("lithium.jar", lithium), entry("lithium-copy.jar", lithium)]
+    staff_more.more(apex.panel).fetch = FakeCdn({e["downloads"][0]: lithium for e in twice})
+    before = sorted(p.name for p in (apex.root / "mods").iterdir())
+    code, data = apex.call("POST", url("/api/modpack", "twice.mrpack"), mrpack(twice))
+    assert code == 400 and "two jars for the mod lithium" in data["error"]
+    assert sorted(p.name for p in (apex.root / "mods").iterdir()) == before
 
 
 @pytest.mark.parametrize("problem", ["version", "loader", "sha", "host", "notmod"])

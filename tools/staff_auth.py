@@ -845,10 +845,23 @@ class Auth:
                    "If that wasn't you, tell the owner at once.\n")
         return {"two_step": True, "recovery": codes, "ended": ended}
 
-    def _check_code(self, user: dict, code) -> None:
-        problem = self._code_problem(user, code, self.clock())
-        if problem:
-            raise AuthError(400 if problem == NO_CODE else 403, problem)
+    def _guess(self, data: dict, name: str, user: dict, code) -> AuthError | None:
+        """None for a good code, else the error to raise once the change is saved: a wrong code counts like one at
+        login (the same lockout), and a lock also ends the login's sessions."""
+        now = self.clock()
+        if user.get("locked_until", 0) > now:
+            return AuthError(429, LOCKED)
+        problem = self._code_problem(user, code, now)
+        if problem is None:
+            user["failed"], user["locked_until"] = 0, 0
+            return None
+        if problem == NO_CODE:
+            return AuthError(400, problem)
+        if self._failed(user, now):
+            self._drop_tokens(data, name, ("2fa",))
+            self._end_sessions(data, name)
+            return AuthError(429, LOCKED)
+        return AuthError(403, problem)
 
     def two_step_off(self, me: dict, current, code) -> dict:
         name = me["user"]
@@ -856,12 +869,15 @@ class Auth:
             user = self._check_current(data, name, current)
             if not user.get("totp"):
                 raise AuthError(409, "Two-step login is already off.")
-            self._check_code(user, code)
-            user.pop("totp", None)
-            user.pop("totp_pending", None)
-            user["changed"] = self.clock()
-            self._drop_tokens(data, name, ("2fa",))
-            ended = self._end_sessions(data, name, keep=me["key"])
+            wrong = self._guess(data, name, user, code)
+            if wrong is None:
+                user.pop("totp", None)
+                user.pop("totp_pending", None)
+                user["changed"] = self.clock()
+                self._drop_tokens(data, name, ("2fa",))
+                ended = self._end_sessions(data, name, keep=me["key"])
+        if wrong:
+            raise wrong         # after the with, so the wrong guess (and a lock) is saved
         self._tell(user, "Monkey SMP staff: two-step login is off",
                    f"Two-step login was just turned off for the Monkey SMP staff login {name}: the password alone "
                    "logs in now. Other sessions were logged out.\n\nIf that wasn't you, tell the owner at once.\n")
@@ -874,9 +890,12 @@ class Auth:
             user = self._check_current(data, name, current)
             if not user.get("totp"):
                 raise AuthError(409, "Two-step login is off: turn it on first.")
-            self._check_code(user, code)
-            codes = new_recovery_codes()
-            user["totp"]["recovery"] = [recovery_hash(c) for c in codes]
+            wrong = self._guess(data, name, user, code)
+            if wrong is None:
+                codes = new_recovery_codes()
+                user["totp"]["recovery"] = [recovery_hash(c) for c in codes]
+        if wrong:
+            raise wrong
         return {"recovery": codes}
 
     # ------------------------------------------------ the owner's tools

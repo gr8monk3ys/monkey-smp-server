@@ -21,7 +21,8 @@ The safety rules:
 - A data pack zip has pack.mcmeta at its top, no absolute path, no `..`, no link and nothing encrypted. The release's
   own packs (monkey/datapacks/, and the manifest's) come back at every start, so they can't be removed here.
 - A modpack must be for this server's game version on Fabric. Every server file comes from Modrinth's allowed hosts
-  and must match its sha512, and every jar passes staff_host's mod checks, before any is put in: all or nothing.
+  and must match its sha512, and every jar passes staff_host's mod checks, before any is put in: all or nothing
+  (only the disk failing partway can stop it, and then the answer names what went in).
   Its config and other files are left out: only mods.
 
 Stdlib only, Python 3.10 or newer.
@@ -49,12 +50,18 @@ hs = None   # tools/staff_host.py
 MB = 1024 * 1024
 GB = 1024 * MB
 LAUNCH_FILE = "monkey-launch.json"
-# The same checks as Monkey.psm1's $script:LaunchFlag and $script:LaunchFlagRefused: keep the two alike.
-FLAG = re.compile(r"-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:/,+-]{1,120})?"
-                  r"|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:/,+-]{0,120})")
-FLAG_REFUSED = {"OnError", "OnOutOfMemoryError", "Flags", "VMOptionsFile", "ErrorFile", "HeapDumpPath"}
+# The same checks as Monkey.psm1's $script:LaunchFlag, LaunchFlagRefused and LaunchPropRefused: keep them alike
+# (tests/test_staff_more.py compares them). No value may hold a path (no /), and no option that runs a command, reads
+# or writes a file, or changes what Java, Fabric or the logging load.
+FLAG = re.compile(r"-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,120})?"
+                  r"|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:,+-]{0,120})")
+FLAG_REFUSED = {"OnError", "OnOutOfMemoryError", "Flags", "VMOptionsFile", "ErrorFile", "HeapDumpPath", "LogFile",
+                "CompileCommand", "CompileCommandFile", "SharedArchiveFile", "ArchiveClassesAtExit",
+                "StartFlightRecording", "FlightRecorderOptions", "AOTCache", "AOTConfiguration"}
+PROP_REFUSED = re.compile(r"(fabric|log4j|log4j2|java|javax|jdk|sun)\..*")
 FLAGS_MAX = 20
 MEMORY_MAX = 64
+MEMORY_SPARE = 2      # GB the machine keeps for itself, Docker, Caddy and this panel (the heap is taken up front)
 REMOVED = "staff-removed"
 
 PACK_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.zip")
@@ -222,14 +229,14 @@ class More:
 
     @staticmethod
     def _most(total: float) -> int:
-        return max(1, min(MEMORY_MAX, int(total - 1))) if total else MEMORY_MAX
+        return max(1, min(MEMORY_MAX, int(total - MEMORY_SPARE))) if total else MEMORY_MAX
 
     def save_java(self, user: str, body: dict) -> dict:
         gb, flags = body.get("memory_gb"), body.get("flags")
         most = self._most(self.memory())
         if gb is not None and (not isinstance(gb, int) or isinstance(gb, bool) or not 1 <= gb <= most):
-            raise sp.Refused(400, f"Memory is a whole number of GB from 1 to {most} (the machine keeps 1 GB), or empty "
-                                  "to have it picked.")
+            raise sp.Refused(400, f"Memory is a whole number of GB from 1 to {most} (the machine keeps "
+                                  f"{MEMORY_SPARE} GB), or empty to have it picked.")
         if not isinstance(flags, list) or not all(isinstance(f, str) for f in flags):
             raise sp.Refused(400, "flags must be a list of Java flags.")
         flags = [f.strip() for f in flags if f.strip()]
@@ -238,11 +245,12 @@ class More:
         for f in flags:
             if not FLAG.fullmatch(f):
                 raise sp.Refused(400, f"{clean(f, 80)} is not a flag this page takes: -XX:Name, -XX:+Name, "
-                                      "-XX:Name=value or -Dname=value, with letters, digits and . _ : / , + - only. "
-                                      "Memory goes in its own box, not -Xmx.")
+                                      "-XX:Name=value or -Dname=value, with letters, digits and . _ : , + - only (no "
+                                      "paths). Memory goes in its own box, not -Xmx.")
             name = re.sub(r"=.*$", "", re.sub(r"^-(XX:[+-]?|D)", "", f))
-            if name in FLAG_REFUSED:
-                raise sp.Refused(400, f"{name} runs a command or reads other flags from a file: not from this page.")
+            if name in FLAG_REFUSED or (f.startswith("-D") and PROP_REFUSED.fullmatch(name)):
+                raise sp.Refused(400, f"{name} runs a command, uses a file or changes what Java, Fabric or the logs "
+                                      "load: not from this page.")
         path = self._launch_path()
         if not self.p.root.is_dir():
             raise sp.Refused(404, "There is no server folder yet: start the server once.")
@@ -510,7 +518,7 @@ class More:
             if len(jars) > MRPACK_FILES_MAX:
                 raise sp.Refused(400, f"Not installed: the pack has over {MRPACK_FILES_MAX} server mods.")
             # Everything is fetched and checked before anything goes in.
-            ready: list[tuple[str, Path]] = []
+            ready: list[tuple[str, Path, str]] = []     # (jar, staged file, mod id)
             for jar, data, entry in jars:
                 if data is None:
                     hashes = entry.get("hashes") if isinstance(entry.get("hashes"), dict) else {}
@@ -532,8 +540,19 @@ class More:
                     raise sp.Refused(400, f"Not installed: {jar} is not a Fabric mod ({why}).")
                 if info["environment"] == "client":
                     continue                        # the pack says server, the jar says client-only: the jar wins
-                ready.append((jar, part))
-            done = [self.h.install(user, jar, part, f"modpack {name}") for jar, part in ready]
+                if any(info["id"] == other for _, _, other in ready):
+                    raise sp.Refused(400, f"Not installed: the pack has two jars for the mod {info['id']}.")
+                ready.append((jar, part, info["id"]))
+            # Only a failure of the disk itself can stop this part; then say exactly what went in.
+            done = []
+            try:
+                for jar, part, _ in ready:
+                    done.append(self.h.install(user, jar, part, f"modpack {name}"))
+            except (OSError, sp.Refused) as error:
+                went = ", ".join(d["file"] for d in done) or "none"
+                self.p.record(user, "modpack", f"{name}: stopped after {len(done)} mod(s) ({went})")
+                raise sp.Refused(500, f"The install stopped partway ({getattr(error, 'message', error)}). Put in: "
+                                      f"{went}. Their old jars are in mods-removed/.") from None
         finally:
             for path in [tmp, *fetched]:
                 with contextlib.suppress(OSError):

@@ -182,11 +182,15 @@
     const row = el("div", "actions");
     row.append(fresh, off);
     form.append(field("Current password", current), codeField, row);
+    // Which button sent the form, without event.submitter (Safari before 15.4 lacks it). Enter clicks the first.
+    let chosen = fresh;
+    off.addEventListener("click", () => { chosen = off; });
+    fresh.addEventListener("click", () => { chosen = fresh; });
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const body = { current: current.value, code: code.value.trim() };
       try {
-        if (event.submitter === off) {
+        if (chosen === off) {
           const done = await call("POST", "/auth/2fa/off", body);
           say(status, `Two-step login is off. ${done.ended} other session(s) logged out.`);
           session.two_step = false;

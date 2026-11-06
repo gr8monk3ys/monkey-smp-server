@@ -247,7 +247,7 @@
         </div>
         <div class="confirm" id="versions-confirm" hidden></div>
       </section>
-      <section class="box" data-need="admin">
+      <section class="box" id="java-box">
         <h3>Java and memory</h3>
         <p class="fine" id="java-state"></p>
         <p class="attention" id="java-error" role="alert" hidden></p>
@@ -259,7 +259,8 @@
           <label for="java-flags">Extra Java flags, one per line</label>
           <textarea id="java-flags" rows="4" spellcheck="false" autocomplete="off" data-need="admin" aria-describedby="java-flags-about"></textarea>
           <p class="fine" id="java-flags-about">Up to 20, like -XX:MaxGCPauseMillis=100 or -Dname=value. The start
-            script's own tuned flags stay; these come after them. Anything that runs a command or reads a file is refused.</p>
+            script's own tuned flags stay; these come after them. No paths, and nothing that runs a command, uses a file or
+            changes what Java, Fabric or the logs load.</p>
         </div>
         <div class="actions"><button class="btn primary" id="java-save" type="button" data-need="admin">Save</button></div>
         <p class="fine">Takes effect at the next restart. A bad flag can stop the server starting: clear it here and start

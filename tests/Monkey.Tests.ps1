@@ -869,7 +869,8 @@ Describe 'Read-LaunchSettings' {
         $dir = Join-Path $TestDrive 'launch'
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
         $json = '{"memory_gb": 7, "flags": ["-XX:MaxGCPauseMillis=100", "-Dfile.encoding=UTF-8", "-XX:OnError=sh x",' +
-            ' "-XX:OnOutOfMemoryError=/tmp/x", "-Xmx99G", "-javaagent:/tmp/a.jar", 5]}'
+            ' "-XX:OnOutOfMemoryError=/tmp/x", "-Xmx99G", "-javaagent:/tmp/a.jar", 5, "-XX:LogFile=x",' +
+            ' "-Dfabric.addMods=x", "-Dlog4j2.configurationFile=x", "-Dx=/tmp/a", "-xx:+UseG1GC"]}'
         [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), $json)
         $s = Read-LaunchSettings $dir 6>$null
         $s.MemoryGB | Should -Be 7

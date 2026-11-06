@@ -1030,9 +1030,13 @@ function Get-LaunchArguments {
 
 # The staff page's launch settings (server/monkey-launch.json, written by tools/staff_more.py): the memory in GB and
 # extra Java flags. A value that fails these checks is left out with a note, so a bad file never stops a start.
-$script:LaunchFlag = '^-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:/,+-]{1,120})?|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:/,+-]{0,120})$'
-# Options that run a command or read more options from a file: never from the page.
-$script:LaunchFlagRefused = @('OnError', 'OnOutOfMemoryError', 'Flags', 'VMOptionsFile', 'ErrorFile', 'HeapDumpPath')
+$script:LaunchFlag = '^-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,120})?|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:,+-]{0,120})$'
+# Options that run a command, read or write a file, or change what Java, Fabric or the logging load: never from the
+# page. No value may hold a path (no /). Java's option names are case-sensitive, so these checks are too (-cmatch).
+$script:LaunchFlagRefused = @('OnError', 'OnOutOfMemoryError', 'Flags', 'VMOptionsFile', 'ErrorFile', 'HeapDumpPath',
+    'LogFile', 'CompileCommand', 'CompileCommandFile', 'SharedArchiveFile', 'ArchiveClassesAtExit',
+    'StartFlightRecording', 'FlightRecorderOptions', 'AOTCache', 'AOTConfiguration')
+$script:LaunchPropRefused = '^(fabric|log4j|log4j2|java|javax|jdk|sun)\..*$'
 $script:LaunchFlagsMax = 20
 
 <#
@@ -1051,8 +1055,8 @@ function Read-LaunchSettings([string]$ServerDir) {
     }
     $flags = @()
     foreach ($f in @($data.flags | Where-Object { $null -ne $_ })) {
-        $name = if ($f -is [string] -and $f -match $script:LaunchFlag) { ($f -replace '^-XX:[+-]?', '' -replace '^-D', '') -replace '=.*$', '' } else { $null }
-        if (-not $name -or $script:LaunchFlagRefused -contains $name) { Write-Note "monkey-launch.json: the flag '$f' is not allowed: left out."; continue }
+        $name = if ($f -is [string] -and $f -cmatch $script:LaunchFlag) { ($f -creplace '^-XX:[+-]?', '' -creplace '^-D', '') -creplace '=.*$', '' } else { $null }
+        if (-not $name -or $script:LaunchFlagRefused -ccontains $name -or ($f.StartsWith('-D') -and $name -cmatch $script:LaunchPropRefused)) { Write-Note "monkey-launch.json: the flag '$f' is not allowed: left out."; continue }
         if ($flags.Count -ge $script:LaunchFlagsMax) { Write-Note "monkey-launch.json: more than $($script:LaunchFlagsMax) flags: the rest are left out."; break }
         $flags += [string]$f
     }

@@ -629,7 +629,7 @@
       memory.max = String(data.most_gb);
       memory.placeholder = String(data.default_gb);
       memory.value = data.memory_gb === null ? "" : String(data.memory_gb);
-      $("java-memory-about").textContent = `Empty: picked from the machine (${data.default_gb} GB now). At most ${data.most_gb}: the machine keeps 1 GB for itself.`;
+      $("java-memory-about").textContent = `Empty: picked from the machine (${data.default_gb} GB now). At most ${data.most_gb}: the machine keeps 2 GB for itself.`;
       $("java-flags").value = (data.flags || []).join("\n");
       say("java-error", null);
     } catch (error) {
@@ -1027,6 +1027,8 @@
     $("reset-go").addEventListener("click", resetWorld);
     $("upload-send").addEventListener("click", uploadWorld);
     $("upload-apply").addEventListener("click", applyUpload);
+    // Boxes whose reads are admin-only too: a moderator would see only an error in them.
+    for (const id of ["icon-box", "packs-box", "java-box"]) $(id).hidden = !can("admin");
     // What this login can't do is greyed out or, for owners only, hidden.
     for (const node of document.querySelectorAll("[data-need]")) {
       if (can(node.dataset.need)) continue;
@@ -1036,17 +1038,18 @@
   }
 
   const VIEWS = {
+    // The icon, data packs and Java boxes are admin-only (hidden in build() otherwise), so only admins load them.
     settings: () => {
       loadSettings();
-      loadIcon();
+      if (can("admin")) loadIcon();
     },
     mods: () => {
       loadMods();
-      loadPacks();
+      if (can("admin")) loadPacks();
     },
     players: loadIpBans,
     server: () => {
-      loadJava();
+      if (can("admin")) loadJava();
       loadHelper();
       loadSchedules();
       loadVersions();

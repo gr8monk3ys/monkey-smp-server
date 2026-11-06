@@ -582,6 +582,24 @@ def test_turning_two_step_off_or_new_recovery_codes_need_the_password_and_a_code
     assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
 
 
+def test_wrong_codes_to_turn_two_step_off_count_and_lock_the_login(auth):
+    # A stolen session with the password must not get unlimited code guesses here either.
+    auth.user("diego")
+    key, _, token = two_step_on(auth, "diego")
+    wrong = "000000" if code_at(key, auth.clock.now) != "000000" else "111111"
+    me = auth.auth.session(token)
+    for _ in range(staff_auth.LOCK_AFTER - 1):
+        with pytest.raises(staff_auth.AuthError) as e:
+            auth.auth.two_step_off(me, GOOD, wrong)
+        assert e.value.message == staff_auth.WRONG_CODE
+    assert auth.auth.store.read()["users"]["diego"]["failed"] == staff_auth.LOCK_AFTER - 1
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_recovery(me, GOOD, wrong)
+    assert (e.value.code, e.value.message) == (429, staff_auth.LOCKED)
+    assert auth.auth.session(token) is None                  # the lock ends every session
+    assert "totp" in auth.auth.store.read()["users"]["diego"]
+
+
 def test_an_owner_turns_off_someone_elses_two_step_but_not_their_own(auth):
     auth.user("lorenzo", "owner")
     auth.user("diego")

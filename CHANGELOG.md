@@ -21,6 +21,9 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   password, never opens the worlds, refuses `stop` in the console, takes the deploy lock for power actions, keeps every
   file it replaces or deletes in a history, and records every change. One step by hand: `--install` again
   (docs/LIVE.md, "The staff page").
+- The staff console leaves out the two lines the game logs each time a scheduled job connects over RCON (most of the
+  log); the full log is still in Files. The Server tab says the hourly backups go off-site, and that the copy on the
+  machine is the one taken before the last update.
 
 ### Removed
 

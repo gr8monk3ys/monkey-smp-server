@@ -78,7 +78,7 @@ JSON_MAX = 1024 * 1024
 SAVE_MAX = 6 * 1024 * 1024          # a 2 MB text file, escaped as JSON
 UPLOAD_MAX = 64 * 1024 * 1024
 TEXT_MAX = 2 * 1024 * 1024
-CONSOLE_FIRST = 64 * 1024
+CONSOLE_FIRST = 256 * 1024           # most of the log is RCON noise, left out, so read back further
 CONSOLE_READ = 1024 * 1024
 COMMAND_MAX = 1000
 HISTORY_KEPT = 200
@@ -101,6 +101,8 @@ _KEY_LINE = re.compile(r"^(?P<pre>\s*[\"']?)(?P<key>[^\s\"'=:#;\[\]{}]+)(?P<sep>
 _REFUSED_COMMAND = re.compile(r"(?:^|\brun\s+)(?:minecraft:)?(seed|stop)\b", re.I)
 # A log line's time, thread and level, kept as they are: "[10:00:00]" is no address.
 _LOG_HEAD = re.compile(r"^\[\d\d:\d\d:\d\d\] \[[^\]\n]*\](?: \[[^\]\n]*\])?: ")
+# The two lines the game logs each time a scheduled job (or this page) connects over RCON: left out of the console.
+_RCON_NOISE = re.compile(r"\[RCON (?:Listener|Client)[^\]\n]*\]: Thread RCON Client \S+ (?:started|shutting down)\s*$")
 _PLAYER_VERB = re.compile(r"^(whitelist\s+(?:add|remove)|op|deop|ban|pardon|kick)(?:\s+(\S+))?", re.I)
 
 
@@ -350,7 +352,8 @@ class Panel:
         end = chunk.rfind(b"\n") + 1
         if not end and len(chunk) == CONSOLE_READ:
             end = CONSOLE_READ
-        return {"offset": start + end, "lines": masked_lines(chunk[:end].decode("utf-8", "replace")), "reset": reset}
+        lines = [line for line in chunk[:end].decode("utf-8", "replace").splitlines() if not _RCON_NOISE.search(line)]
+        return {"offset": start + end, "lines": [masked(line) for line in lines], "reset": reset}
 
     @staticmethod
     def checked_command(command) -> str:

@@ -16,7 +16,8 @@ RestartSec=5
 # A restart it started (monkey-deploy.sh --restart, in its own session) must outlive the panel itself: stopping or
 # restarting this unit stops only the panel.
 KillMode=process
-MemoryMax=128M
+# The cap covers a restart it started too (it stays in this unit), docker compose included.
+MemoryMax=512M
 Nice=10
 # No PrivateTmp: the deploy lock is /tmp/monkey-deploy.lock, and a private /tmp would be a lock nobody else sees.
 NoNewPrivileges=yes

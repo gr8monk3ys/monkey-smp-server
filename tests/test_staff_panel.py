@@ -460,6 +460,37 @@ def test_secrets_are_masked_on_read_and_download_and_kept_on_save(box):
     assert not any(s in actions(box) for s in SECRETS)
 
 
+def test_the_seed_is_masked_in_files_and_kept_on_save(box):
+    path = box.root / "server.properties"
+    path.write_bytes(PROPERTIES.replace("level-seed=", "level-seed=-4172144997902289642").encode())
+    _, read = box.call("GET", "/api/file?path=server.properties")
+    assert "level-seed=********\n" in read["text"] and "4172144997902289642" not in read["text"]
+    _, raw = box.call("GET", "/api/download?path=server.properties")
+    assert b"4172144997902289642" not in raw
+    box.call("PUT", "/api/file", {"path": "server.properties", "text": read["text"], "mtime": read["mtime"]})
+    assert "level-seed=-4172144997902289642\n" in path.read_text()
+
+
+def test_crash_reports_and_logs_are_masked_like_the_console(box):
+    report = box.root / "crash-reports" / "crash-1.txt"
+    report.write_text("Description: boom\n\tSeed: -4172144997902289642\n\tPlayer at 203.0.113.9:51234\nok line\n")
+    _, read = box.call("GET", "/api/file?path=crash-reports/crash-1.txt")
+    assert "4172144997902289642" not in read["text"] and "203.0.113.9" not in read["text"]
+    assert "ok line" in read["text"] and "Description: boom" in read["text"]
+    _, raw = box.call("GET", "/api/download?path=crash-reports/crash-1.txt")
+    assert b"4172144997902289642" not in raw and b"203.0.113.9" not in raw
+
+
+def test_the_history_stays_within_its_size(box, monkeypatch):
+    monkeypatch.setattr(staff_panel, "HISTORY_BYTES", 10)
+    box.call("PUT", "/api/file", {"path": "config/big.txt", "text": "x" * 8, "mtime": None})
+    for i in range(3):
+        _, read = box.call("GET", "/api/file?path=config/big.txt")
+        box.call("PUT", "/api/file", {"path": "config/big.txt", "text": str(i) * 8, "mtime": read["mtime"]})
+    files = history_files(box)
+    assert len(files) == 1 and (box.staff / "history" / files[0]).read_text() == "1" * 8
+
+
 def test_a_new_secret_can_be_typed_and_a_mask_with_nothing_behind_it_is_refused(box):
     _, read = box.call("GET", "/api/file?path=server.properties")
     text = read["text"].replace("rcon.password=********", "rcon.password=new-one")
@@ -625,7 +656,7 @@ def test_the_unit_runs_the_panel_as_monkey_and_lets_a_restart_finish():
     assert unit.isascii() and b"\r" not in unit
     text = unit.decode()
     assert "User=monkey" in text and "Restart=on-failure" in text and "KillMode=process" in text
-    assert "MemoryMax=128M" in text and "Nice=10" in text
+    assert "MemoryMax=512M" in text and "Nice=10" in text
     assert "ExecStart=/usr/bin/python3 -B /srv/monkey/repo/tools/staff_panel.py serve\n" in text
     # The deploy lock lives in /tmp: a private /tmp would be another lock.
     assert "PrivateTmp=" not in text

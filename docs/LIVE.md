@@ -1058,16 +1058,18 @@ the server. What he cannot do, whatever the page sends:
 - open the worlds (`world*`: listed by name only), `libraries/`, `versions/`, `bluemap/` or any `*.db` file; change
   `logs/` or `crash-reports/` (read-only); reach anything outside `server/` (no `..`, no absolute path, no link that
   leads out: every path is checked again once links are followed).
-- see a password: in any file, the value of a key with password, secret or token in its name (`rcon.password` in
-  `server.properties`, a bot's token in `config/`) shows as `********`, a download too. Saving a line that still says
-  `********` keeps the value on disk; typing a new value replaces it.
+- see a password or the seed: in any file, the value of a key with password, secret, token or seed in its name
+  (`rcon.password` and `level-seed` in `server.properties`, a bot's token in `config/`) shows as `********`, a download
+  too. Saving a line that still says `********` keeps the value on disk; typing a new value replaces it. In `logs/` and
+  `crash-reports/` every line is masked as the console's are (a crash report can hold the seed and addresses), and one
+  over 2 MB can't be downloaded here.
 - delete a folder, or save over someone else's change: a save made after someone else saved the same file is refused
   ("open it again"). A save writes a whole new file and keeps its mode.
 - touch backups (the off-site copy runs as root) or anything outside the release's folder.
 
 The history: before any save, upload over a file, restore or delete, the file as it was is copied to
 `/srv/monkey/staff/history/<UTC time>-<login>/<path>` (only `monkey` can read it: it holds `server.properties`). A
-delete moves the file there; nothing is ever removed from `server/` for good. The newest 200 entries are kept. To undo
+delete moves the file there; nothing is ever removed from `server/` for good. The newest 200 entries are kept, at most 2 GB of them (old mod jars add up). To undo
 an edit, open Files, find it in History and press Restore (which keeps the current file in the history first), or by
 hand:
 

@@ -82,6 +82,7 @@ CONSOLE_FIRST = 64 * 1024
 CONSOLE_READ = 1024 * 1024
 COMMAND_MAX = 1000
 HISTORY_KEPT = 200
+HISTORY_BYTES = 2 * 1024 * 1024 * 1024
 HISTORY_SHOWN = 50
 ACTIONS_SHOWN = 100
 LIST_MAX = 5000
@@ -93,7 +94,8 @@ ACTIONS = ("restart", "restart-now", "stop", "start")
 TOP_REFUSED = {"libraries", "versions", "bluemap"}
 READ_ONLY = {"logs", "crash-reports"}
 _DATABASE = re.compile(r"\.db(-\w+)?$", re.I)
-_SECRET_KEY = re.compile(r"password|secret|token", re.I)
+# level-seed too: the seed is as secret here as in the console.
+_SECRET_KEY = re.compile(r"password|secret|token|seed", re.I)
 _KEY_LINE = re.compile(r"^(?P<pre>\s*[\"']?)(?P<key>[^\s\"'=:#;\[\]{}]+)(?P<sep>[\"']?\s*[=:]\s*)(?P<rest>.*)$")
 # The first word of a command that must not run here, alone or after `execute ... run`.
 _REFUSED_COMMAND = re.compile(r"(?:^|\brun\s+)(?:minecraft:)?(seed|stop)\b", re.I)
@@ -592,10 +594,18 @@ class Panel:
         except UnicodeDecodeError:
             raise Refused(415, "binary file: download it") from None
 
+    def _shown(self, text: str, parts: tuple[str, ...]) -> tuple[str, int]:
+        """The text as staff see it: secret values masked and, in logs/ and crash-reports/, every line masked as the
+        console's are (a crash report can hold the seed and players' addresses)."""
+        shown, secrets = mask_secrets(text)
+        if self._rules(parts) == "read-only":
+            shown = "\n".join(masked_lines(shown)) + ("\n" if shown.endswith("\n") else "")
+        return shown, secrets
+
     def read_file(self, rel: str) -> dict:
         path, parts = self.resolve(rel)
         text, st = self._text(path)
-        shown, secrets = mask_secrets(text)
+        shown, secrets = self._shown(text, parts)
         return {"path": "/".join(parts), "text": shown, "mtime": st.st_mtime, "size": st.st_size,
                 "masked": secrets, "writable": self._rules(parts) == "writable"}
 
@@ -611,10 +621,12 @@ class Panel:
         if st.st_size <= TEXT_MAX:
             data = path.read_bytes()
             try:
-                shown = mask_secrets(data.decode("utf-8"))[0].encode("utf-8")
+                shown = self._shown(data.decode("utf-8"), parts)[0].encode("utf-8")
             except UnicodeDecodeError:
                 shown = data
             return parts[-1], shown, len(shown)
+        if self._rules(parts) == "read-only":
+            raise Refused(413, "A log or crash report over 2 MB can't be downloaded here: it isn't masked.")
         return parts[-1], path, st.st_size
 
     # ------------------------------------------------ history
@@ -645,8 +657,18 @@ class Panel:
         return entry.name
 
     def _prune(self) -> None:
+        """Keeps the newest HISTORY_KEPT entries, and of those only as many as fit in HISTORY_BYTES (old mod jars add
+        up), though always the newest one."""
         entries = sorted(e.name for e in os.scandir(self.history) if e.is_dir() and ENTRY.fullmatch(e.name))
-        for name in entries[:-HISTORY_KEPT]:
+        dropped, kept = entries[:-HISTORY_KEPT], entries[-HISTORY_KEPT:]
+        total = 0
+        for i, name in enumerate(reversed(kept)):
+            for folder, _, names in os.walk(self.history / name):
+                total += sum(os.path.getsize(os.path.join(folder, n)) for n in names)
+            if i and total > HISTORY_BYTES:
+                dropped += kept[:len(kept) - i]
+                break
+        for name in dropped:
             shutil.rmtree(self.history / name, ignore_errors=True)
 
     def _entry_file(self, name: str) -> str | None:

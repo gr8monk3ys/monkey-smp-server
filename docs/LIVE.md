@@ -792,9 +792,11 @@ read and the world loads, and it rehearses the playit.gg fallback below, which s
    $env:AWS_DEFAULT_REGION = 'auto'
    $env:AWS_ACCESS_KEY_ID = '<read-only Access Key ID>'
    $env:AWS_SECRET_ACCESS_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Secret Access Key')).Password
-   C:\Tools\restic\restic.exe snapshots --latest 1
-   C:\Tools\restic\restic.exe restore latest:/srv/monkey/MonkeySMP-Server/server --target server
+   C:\Tools\restic\restic.exe --no-lock snapshots --latest 1
+   C:\Tools\restic\restic.exe --no-lock restore latest:/srv/monkey/MonkeySMP-Server/server --target server
    ```
+   `--no-lock` is needed because a read-only token can't write restic's lock file (without it, restic stops
+   with `Access Denied`). Paste the keys with a right-click: Ctrl+V in a hidden prompt can paste one character.
    The newest snapshot should be from the last hour or two.
 5. **Take the store's key out, then start it.** Delete `server\mods\tebex` first: it holds Tebex's secret key,
    and with it this copy would carry out store purchases meant for the VPS. Then `Start Server.bat`. Backups leave

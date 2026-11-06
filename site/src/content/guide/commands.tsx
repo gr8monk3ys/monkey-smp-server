@@ -73,11 +73,6 @@ export const roles: Role[] = [
           { kbd: "V", does: "Voice chat settings." },
           { kbd: "M", does: "The world map." },
           { kbd: "Y", does: "Mutes your microphone." },
-          {
-            term: "Sneak + right-click",
-            does: "With both hands empty: picks up a passive animal or a block like an enchanting table. Right-click "
-              + "to put it down. Nothing that stores items, and nothing in someone else's claim.",
-          },
         ],
       },
     ],

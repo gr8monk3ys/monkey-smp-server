@@ -66,6 +66,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
 
+import staff_apex
 import staff_auth
 import staff_status
 
@@ -961,6 +962,8 @@ USER_ROUTES = {
 ROUTES.update(USER_ROUTES)
 NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
+RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
+staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 
 
 def allowed(role: str, need: str) -> bool:
@@ -1079,11 +1082,22 @@ class Handler(BaseHTTPRequestHandler):
                 size = self.length(UPLOAD_MAX)
                 result = panel.upload(user, query, self.rfile, size)
                 self.drained = True
+            elif (method, url.path) in RAW:     # staff_apex's jar and world uploads
+                ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                if ctype != "application/octet-stream":
+                    raise Refused(415, "Send the file as application/octet-stream.")
+                raw = staff_apex.Body(self.rfile, self.length(RAW[(method, url.path)]))
+                try:
+                    result = ROUTES[(method, url.path)](panel, user, query, raw)
+                finally:
+                    self.drained = raw.started      # a body read part way is never read on: the connection closes
             else:
                 body = self.json_body(SAVE_MAX if method == "PUT" else JSON_MAX) if method != "GET" else {}
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if url.path == "/api/download":
                 self.send_download(*result)
+            elif hasattr(result, "stream"):     # staff_apex's world zip: it writes its own answer
+                result.stream(self)
             else:
                 self.send_json(200, {"ok": True, **result})
         except (Refused, staff_auth.AuthError) as e:
@@ -1168,6 +1182,7 @@ def main(argv=None) -> int:
         return 1
     print(f"monkey-panel: listening on 127.0.0.1:{args.port}, files in {panel.root}, history in {panel.history}",
           flush=True)
+    staff_apex.start_scheduler(panel)
     with contextlib.suppress(KeyboardInterrupt):
         httpd.serve_forever()
     return 0

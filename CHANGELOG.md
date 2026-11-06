@@ -21,6 +21,17 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   password, never opens the worlds, refuses `stop` in the console, takes the deploy lock for power actions, keeps every
   file it replaces or deletes in a history, and records every change. One step by hand: `--install` again
   (docs/LIVE.md, "The staff page").
+- Hosting controls on the staff page, by role: `server.properties` as typed fields and the game rules (admin), backup
+  now and the snapshot list (admin) and restore (owner, typed short ID), the page's own schedules (admin), the mods
+  list (moderator) and a mod manager (admin: upload a jar, install from Modrinth with the sha512 checked, turn off,
+  remove; old jars kept in `mods-removed/`), the world download (owner), bans by address (admin), a version switch to
+  any release tag (admin, typed tag; pins it), a world reset (admin, typed `RESET`, optional seed that is never
+  logged) and a world upload (admin, up to 8 GB, checked, swapped in on a typed `REPLACE`). The old world is always
+  kept in `backups/`. The jobs that need root go through a new root helper, `monkey-staff-helper.path`; one step by
+  hand: `--install-helper` (docs/LIVE.md, "Hosting controls").
+- SFTP logins for staff: `monkey-staff.sh --add-sftp-user NAME KEYFILE` and `--remove-sftp-user NAME` (owner, as
+  root): SFTP only, key only, chrooted to `server/`. The staff page shows the host, port and users.
+- `monkey-deploy.sh --tag=vX.Y.Z` deploys that release now and pins it (`.deploy-pin`) until the newest is picked.
 - The staff console leaves out the two lines the game logs each time a scheduled job connects over RCON (most of the
   log); the full log is still in Files. The Server tab says the hourly backups go off-site, and that the copy on the
   machine is the one taken before the last update.

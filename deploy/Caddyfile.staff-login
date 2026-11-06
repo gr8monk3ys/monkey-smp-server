@@ -40,6 +40,14 @@ staff.monkeysmp.lscaturchio.xyz {
 			reverse_proxy 127.0.0.1:8130
 		}
 
+		# A world upload (tools/staff_host.py) is the one bigger body; the panel checks the size and the disk again.
+		handle /api/world-upload {
+			request_body {
+				max_size 8GB
+			}
+			reverse_proxy 127.0.0.1:8130
+		}
+
 		# The controls (tools/staff_panel.py, deploy/monkey-panel.service), with the name and role from the check.
 		handle /api/* {
 			request_body {

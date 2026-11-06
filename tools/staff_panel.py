@@ -623,6 +623,9 @@ class Panel:
             try:
                 shown = self._shown(data.decode("utf-8"), parts)[0].encode("utf-8")
             except UnicodeDecodeError:
+                if self._rules(parts) == "read-only":       # an old log is .log.gz: it can't be masked as it is
+                    raise Refused(415, "Only plain-text logs and crash reports can be downloaded here: they are "
+                                       "masked first.") from None
                 shown = data
             return parts[-1], shown, len(shown)
         if self._rules(parts) == "read-only":

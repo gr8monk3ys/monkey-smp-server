@@ -479,6 +479,9 @@ def test_crash_reports_and_logs_are_masked_like_the_console(box):
     assert "ok line" in read["text"] and "Description: boom" in read["text"]
     _, raw = box.call("GET", "/api/download?path=crash-reports/crash-1.txt")
     assert b"4172144997902289642" not in raw and b"203.0.113.9" not in raw
+    (box.root / "logs" / "2026-11-05-1.log.gz").write_bytes(b"\x1f\x8b\x08\x00\xff\xfe-4172144997902289642")
+    code, raw = box.call("GET", "/api/download?path=logs/2026-11-05-1.log.gz")
+    assert code == 415 and b"4172144997902289642" not in json.dumps(raw).encode()
 
 
 def test_the_history_stays_within_its_size(box, monkeypatch):

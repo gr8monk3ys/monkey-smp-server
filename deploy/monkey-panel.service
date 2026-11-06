@@ -1,0 +1,26 @@
+# The staff page's controls (tools/staff_panel.py): console, files, players and power, on 127.0.0.1:8130 only, behind
+# the staff page's password (deploy/Caddyfile.staff). Install with `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh
+# --install` (docs/LIVE.md, "The staff page").
+[Unit]
+Description=Monkey SMP: staff page controls
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=monkey
+Group=monkey
+WorkingDirectory=/
+ExecStart=/usr/bin/python3 -B /srv/monkey/repo/tools/staff_panel.py serve
+Restart=on-failure
+RestartSec=5
+# A restart it started (monkey-deploy.sh --restart, in its own session) must outlive the panel itself: stopping or
+# restarting this unit stops only the panel.
+KillMode=process
+MemoryMax=128M
+Nice=10
+# No PrivateTmp: the deploy lock is /tmp/monkey-deploy.lock, and a private /tmp would be a lock nobody else sees.
+NoNewPrivileges=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

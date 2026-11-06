@@ -103,7 +103,7 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Staff page**:
-The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included (docs/LIVE.md). It reads and changes nothing, and is separate from the public status on the website, which only ever has a count.
+The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included, and run it without a shell: console commands, the config files in `server/`, the whitelist, ops and bans, and restart, stop and start (docs/LIVE.md, "The staff page"). Every change is recorded and every file it replaces is kept in its history; it never shows the seed or a password, and never opens the worlds. It is separate from the public status on the website, which only ever has a count.
 _Avoid_: dashboard, portal, admin panel
 
 **Timed job**:

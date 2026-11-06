@@ -960,9 +960,10 @@ A retry of the close writes it again, the same but for `checked`.
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
 word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time and
-players over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Nothing
-on it can change the server. It names players, which the public status never does, so it is not linked from the website: pass the
-address on privately. Uptime Kuma still does the alerting; this page only answers "how is it doing right now?".
+players over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Its
+other tabs (Console, Files, Players, Server) are the controls: they let staff run the server without a shell ("The
+controls", below). It names players, which the public status never does, so it is not linked from the website: pass the
+address on privately. Uptime Kuma still does the alerting; the Status tab only answers "how is it doing right now?".
 
 `monkey-staff.timer` runs `deploy/monkey-staff.sh` as `monkey` every 2 minutes, which writes
 `/srv/monkey/staff/staff.json` (`tools/staff_status.py`) from `tick query` and `list` through the container's own
@@ -1009,16 +1010,84 @@ replaces them with the release's own copies:
 
 ```sh
 sudo -u monkey git -C /srv/monkey/repo fetch --quiet origin main
-sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/Caddyfile.staff tools/staff_status.py
+sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff tools/staff_status.py tools/staff_panel.py
 ```
+
+If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
+controls: it copies `monkey-panel.service`, starts it and puts the new `Caddyfile.staff` in place. A deploy updates
+`tools/staff_panel.py` in the checkout but not the copy that is running: run `--install` again after a release that
+changes it (or `sudo systemctl restart monkey-panel`).
 
 A new person or a new password is `--login NAME` again, and `--remove-login NAME` takes one away; either works at once,
 with no restart. To close the page (the `import` line stays and then matches nothing, which Caddy accepts):
 
 ```sh
 sudo rm /etc/caddy/staff.caddy && sudo systemctl reload caddy
-sudo systemctl disable --now monkey-staff.timer
+sudo systemctl disable --now monkey-staff.timer monkey-panel
 ```
+
+### The controls
+
+`monkey-panel.service` runs `tools/staff_panel.py` as `monkey`, listening on `127.0.0.1:8130` only. Caddy sends the
+page's `/api/*` calls to it after the password check, with the login's name (`lorenzo`, `diego`) in a header Caddy
+sets itself. It changes nothing in how the server runs: the container, compose and the 14 timers stay as they are.
+
+- **Console**: the server log as it is written (the same masking as the Status tab: a line that mentions a secret is
+  left out, addresses and links are masked) and a command box. Commands run as the server console, through the
+  container's own `monkey rcon`, one line at a time, with a 20-second limit.
+- **Server**: running, stopped or restarting, and four buttons. Restart is the daily restart
+  (`monkey-deploy.sh --restart`): players get the 5-minute warning, and it waits for the deploy lock. It is started
+  apart from the controls, its output in `/srv/monkey/staff/power.log`, so it finishes even if the controls restart.
+  It runs with `RESTART_MIN_UPTIME=0`, so it doesn't skip a server that started less than 6 hours ago, unless
+  `/etc/monkey-deploy.env` sets `RESTART_MIN_UPTIME` itself (the script reads that file last). Chat and the staff
+  channel call it the daily restart.
+  Restart now (`docker compose restart monkey`, no warning: the deploy script has no restart without one), Stop and
+  Start (`docker compose up -d --no-build monkey`) take the deploy lock first; when a deploy, the daily restart, a timed
+  job or an off-site backup holds it, the button says so and nothing happens. One power action at a time. Also here:
+  the timers' next and last runs, the last backup and the last 100 changes made on the page.
+- **Files**: `server/` of the live release: browse, edit text files, download, upload, delete.
+- **Players**: who is online, the whitelist, ops and bans, with add and remove. They are console commands
+  (`whitelist add NAME`, `op`, `ban`, `kick`...), and the controls refuse one whose name isn't a real player name.
+
+What Diego can do: anything the server console can, but the two below; edit `config/`, `defaultconfigs/`, `mods/`,
+`server.properties`, the `.json` lists and the other config files in `server/`; upload a mod; restart, stop and start
+the server. What he cannot do, whatever the page sends:
+
+- see or run `seed` (the seed is secret), or `stop` in the console (the container would start again at once: use
+  Stop). `execute ... run seed` and `minecraft:stop` are refused too.
+- open the worlds (`world*`: listed by name only), `libraries/`, `versions/`, `bluemap/` or any `*.db` file; change
+  `logs/` or `crash-reports/` (read-only); reach anything outside `server/` (no `..`, no absolute path, no link that
+  leads out: every path is checked again once links are followed).
+- see a password: in any file, the value of a key with password, secret or token in its name (`rcon.password` in
+  `server.properties`, a bot's token in `config/`) shows as `********`, a download too. Saving a line that still says
+  `********` keeps the value on disk; typing a new value replaces it.
+- delete a folder, or save over someone else's change: a save made after someone else saved the same file is refused
+  ("open it again"). A save writes a whole new file and keeps its mode.
+- touch backups (the off-site copy runs as root) or anything outside the release's folder.
+
+The history: before any save, upload over a file, restore or delete, the file as it was is copied to
+`/srv/monkey/staff/history/<UTC time>-<login>/<path>` (only `monkey` can read it: it holds `server.properties`). A
+delete moves the file there; nothing is ever removed from `server/` for good. The newest 200 entries are kept. To undo
+an edit, open Files, find it in History and press Restore (which keeps the current file in the history first), or by
+hand:
+
+```sh
+sudo ls -t /srv/monkey/staff/history | head                       # the newest entries
+sudo -u monkey cp -p /srv/monkey/staff/history/ENTRY/config/x.toml /srv/monkey/MonkeySMP-Server/server/config/x.toml
+```
+
+Every change (a command, a save, an upload, a delete, a restore, a power action and how it ended) is one line in
+`/srv/monkey/staff/actions.log`: the time in UTC, the login, the action and the file or the command, never a file's
+text. With `STAFF_WEBHOOK_URL` set it is also posted to that Discord channel; empty, nothing is posted (never to the
+public webhook). The controls log only their own failures, to `journalctl -u monkey-panel`.
+
+The safety rules behind that: only requests from the machine itself, with a login name, are answered; a change must
+also carry the page's own `X-Monkey-Staff: 1` header and not come from another site (`Sec-Fetch-Site`), since the
+browser keeps sending the password once it has it; JSON bodies are at most 1 MB (a file being saved up to 2 MB of
+text), uploads 64 MB. No program is run through a shell, and each has a time limit. The service is capped at 128 MB
+of memory and runs at low priority (`Nice=10`). Check it with `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --check`
+("the controls answer a request with no login: 403" is right). To turn the controls off and keep the Status tab:
+`sudo systemctl disable --now monkey-panel` (the tabs then say the request failed).
 
 What it costs on the 2-thread machine: a reading took about 0.9 CPU-seconds, at low priority (measured on the VPS on
 4 November 2026, nobody online, `Nice=10`). A password check is bcrypt at cost 8, about 25 ms, not Caddy's default of 14,

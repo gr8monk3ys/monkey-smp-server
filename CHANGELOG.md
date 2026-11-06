@@ -14,6 +14,13 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   the run reports the failure.
 - `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
   touching the game.
+- Controls on the staff page: a live console with a command box, the config files in `server/` (edit, upload,
+  download, delete, restore), the whitelist, ops and bans, and restart (with the 5-minute warning), restart now, stop
+  and start, so staff can run the server without a shell. A new service, `monkey-panel.service`
+  (`tools/staff_panel.py`), answers on the machine only, behind the page's password. It never shows the seed or a
+  password, never opens the worlds, refuses `stop` in the console, takes the deploy lock for power actions, keeps every
+  file it replaces or deletes in a history, and records every change. One step by hand: `--install` again
+  (docs/LIVE.md, "The staff page").
 
 ### Removed
 

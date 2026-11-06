@@ -1010,7 +1010,7 @@ replaces them with the release's own copies:
 
 ```sh
 sudo -u monkey git -C /srv/monkey/repo fetch --quiet origin main
-sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff tools/staff_status.py tools/staff_panel.py
+sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff deploy/Caddyfile.staff-login tools/staff_status.py tools/staff_panel.py tools/staff_auth.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1096,6 +1096,81 @@ What it costs on the 2-thread machine: a reading took about 0.9 CPU-seconds, at 
 about 600 ms: the machine has no spare CPU for slow hashes, and a random 24-character password doesn't need one.
 Caddy has no limit on guesses. They can't get in, but a flood of them does take CPU from the game; if a tick time
 ever climbs with Caddy near the top of `top`, close the page as above.
+
+### The login page
+
+The page can have its own login page instead of the browser's password box: a name and a password at `/login`, a
+"Forgot password?" link, each person's own password and email, a Log out button, and roles. The browser's password
+box stays the default and the way back. One switch changes which one is live; `--install` keeps whichever is live.
+
+- **Logins and roles**: `tools/staff_auth.py` keeps them in `/srv/monkey/staff/auth/auth.json` (only `monkey` can
+  read it). Roles are `moderator`, `admin` and `owner`. Only an owner sees the Users tab: add a login, change a role,
+  disable or delete one, log one out everywhere, or make a new password link. The last owner can't be demoted,
+  disabled or deleted. Names are 2 to 32 small letters, digits or `_`.
+- **Passwords**: at least 12 characters, not the name. Kept as scrypt hashes, each with its own salt (about 16 MB and
+  a fraction of a second per check). Five wrong passwords lock a name for 15 minutes; 20 wrong ones from one address
+  in 15 minutes block that address for a while. Every failed login gets the same sentence, a name that doesn't exist
+  included.
+- **Sessions**: a random token in the `monkey_staff` cookie (HttpOnly, Secure, SameSite=Strict); only its hash is
+  stored. A session ends after 12 hours unused or 7 days in all, at Log out, and when the password is reset. A
+  password change logs out the other sessions.
+- **Links**: a new login's first password, a reset and an email check are one-time links. A reset email lasts 30
+  minutes; a link from the owner or the CLI and an email check last 24 hours. The token is after `#` in the link, so
+  it never reaches a server log. "Forgot password?" always gives the same answer, and only sends to an email that was
+  confirmed. Changing the email needs the current password; the old address is told when the email or the password
+  changes.
+- **Caddy**: `deploy/Caddyfile.staff-login` first removes any `X-Staff-*` header a browser sends, then asks the
+  controls (`forward_auth` to `/auth/check`) about every request but the login pages themselves. With a session,
+  Caddy passes on the name and role the controls give; with none, a page visit goes to `/login` and the rest gets a
+  401. It needs Caddy 2.11.4 or newer: older versions could let a browser's own `X-Staff-User` header through
+  (CVE-2026-30851, CVE-2026-52845). `caddy version` says which one runs. The controls must be running: they hold the
+  logins.
+
+Email is optional. With none set up, "Forgot password?" says to ask the owner, and the owner hands out links from the
+Users tab or the CLI. To set it up, pick one: Resend (an API key, and a sending domain checked in Resend) or any SMTP
+service with STARTTLS on port 587. Then write `/etc/monkey-staff-mail.env`, `root:monkey`, mode `640`:
+
+```sh
+# Resend
+MAIL_FROM=Monkey SMP staff <staff@monkeysmp.lscaturchio.xyz>
+RESEND_API_KEY=re_...
+# or SMTP (both set: MAIL_BACKEND=resend or smtp picks one)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+```
+
+```sh
+sudo install -m 640 -o root -g monkey /dev/null /etc/monkey-staff-mail.env   # then fill it in with sudoedit
+sudo -u monkey python3 /srv/monkey/repo/tools/staff_auth.py mail-test YOUR@EMAIL
+```
+
+A key or a token is never logged; a failed send logs only its kind (`journalctl -u monkey-panel`). The file is read
+again at each send, so a change needs no restart.
+
+Switch on, once a release that has it is live and `--install` has run (that restarts the controls):
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --add-user lorenzo owner YOUR@EMAIL   # prints a link, or emails it
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --add-user diego admin HIS@EMAIL
+# open the link, choose a password; then:
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --use-new-login
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --check
+curl -sI https://staff.monkeysmp.lscaturchio.xyz | head -1   # 302, to /login
+```
+
+`--use-new-login` refuses while the controls don't answer or no owner has a password. It puts the new site in, and
+puts the old one back if Caddy refuses it or a visit with no session isn't sent to the login page. A lost password with
+no email is `--reset-link NAME` (a new one-time link, printed once). To go back to the password box (the
+`staff-logins` file is untouched, so the old passwords still work):
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --use-basic-auth
+```
+
+The CLI also has `list`, `set-role`, `send-verify` and `end-sessions`: `sudo -u monkey python3
+/srv/monkey/repo/tools/staff_auth.py --help`. It refuses to run as root, so the store stays `monkey`'s.
 
 ## Load test
 

@@ -11,11 +11,14 @@
   <link rel="stylesheet" href="staff.css">
   <script src="staff.js" defer></script>
   <script src="panel.js" defer></script>
+  <link rel="stylesheet" href="auth.css">
+  <script src="users.js" defer></script>
 </head>
 <body>
   <header class="top">
     <p class="brand">Monkey <b>SMP</b> <span>staff</span></p>
     <p class="checked" id="checked">Getting the latest reading</p>
+    <details class="account" id="account" hidden><summary id="account-name">Account</summary><div class="account-body" id="account-body"></div></details>
   </header>
 
   <nav class="tabs" id="tabs" aria-label="Sections">
@@ -24,6 +27,7 @@
     <a href="#files" data-tab="files">Files</a>
     <a href="#players" data-tab="players">Players</a>
     <a href="#server" data-tab="server">Server</a>
+    <a href="#users" data-tab="users" id="users-tab" hidden>Users</a>
   </nav>
 
   <main>
@@ -197,6 +201,7 @@
         <ul class="entries" id="actions"></ul>
       </section>
     </div>
+    <div class="pane" id="tab-users" hidden><h2>Users</h2><p class="fine">The logins of the page's own login page. Owners only: the last owner can't be demoted, disabled or deleted.</p><p class="attention" id="users-error" role="alert" hidden></p><p class="note" id="users-note" role="status" hidden></p><div id="users-body"></div></div>
   </main>
 
   <footer class="foot" id="foot">

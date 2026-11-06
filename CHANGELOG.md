@@ -24,6 +24,17 @@ Caddyfile (docs/LIVE.md, "The website's standings").
 - The staff console leaves out the two lines the game logs each time a scheduled job connects over RCON (most of the
   log); the full log is still in Files. The Server tab says the hourly backups go off-site, and that the copy on the
   machine is the one taken before the last update.
+- A login page for the staff page, off until the owner switches it on (`--use-new-login`; `--use-basic-auth` goes
+  back): each person's own name and password, roles (moderator, admin, owner), sessions that end after 12 idle hours
+  or 7 days, Log out, "Forgot password?" and email checks by one-time links, and an owners-only Users tab. Passwords
+  are scrypt hashes; wrong guesses lock a name and then an address for a while. Email is optional (Resend or SMTP,
+  `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
+  docs/LIVE.md, "The login page".
+
+### Changed
+
+- The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
+  password-box login is always treated as an owner, as before.
 
 ### Removed
 

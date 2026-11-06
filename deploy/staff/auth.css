@@ -1,0 +1,62 @@
+/* The login, reset and email pages (auth.js) and, on the staff page, the account menu and the Users tab (users.js).
+ * The tokens and the block language come from staff.css, which loads first. */
+
+.gate { display: grid; place-items: start center; padding: 40px var(--gutter) 56px; }
+.card {
+  display: grid; gap: 14px; width: 100%; max-width: 26rem; padding: 18px 18px 20px;
+  border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px; background: var(--shade) padding-box;
+}
+.card h1 { color: var(--bone); font: 700 1.75rem/1.1 var(--display); }
+.card form { display: grid; gap: 12px; }
+.field { display: grid; gap: 4px; }
+.field label { color: var(--sage); font-size: 0.9375rem; }
+.card .attention, .card .note { max-width: none; margin-top: 0; }
+.card .actions { align-items: center; }
+.card .btn.primary { min-width: 8rem; }
+.link {
+  padding: 0; color: var(--sage); font: inherit; text-decoration: underline; text-underline-offset: 3px;
+  background: none; border: 0; cursor: pointer;
+}
+.link:hover { color: var(--bone); }
+a.link { display: inline-block; }
+
+input[type="password"], input[type="email"], select {
+  min-height: 44px; min-width: 0; padding: 0 8px;
+  color: var(--bone); font: 400 0.9375rem/1.45 var(--body);
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.card input, .box input, .box select { background-color: var(--ground); }
+input[type="password"]:focus-visible, input[type="email"]:focus-visible, select:focus-visible { outline-offset: 0; }
+
+/* The account menu, top right of the staff page. */
+.account { position: relative; color: var(--bone); }
+.account summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; cursor: pointer; list-style: none;
+  border: 6px solid transparent; border-image: var(--frame-bone) 6 / 6px; font-weight: 700;
+}
+.account summary::-webkit-details-marker { display: none; }
+.account summary small { color: var(--sage); font-weight: 400; }
+.account[open] summary { border-image: var(--frame-bone-hover) 6 fill / 6px; }
+.account-body {
+  position: absolute; right: 0; z-index: 5; display: grid; gap: 14px; width: min(24rem, calc(100vw - 32px));
+  margin-top: 6px; padding: 14px; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+  background: var(--shade) padding-box;
+}
+.account-body form { display: grid; gap: 8px; }
+.account-body h3 { padding-bottom: 4px; border-bottom: 2px solid var(--leaf-2); }
+
+/* The Users tab. */
+.users { list-style: none; display: grid; }
+.users li { display: grid; gap: 6px; padding: 10px 4px; border-top: 2px solid var(--leaf-2); min-width: 0; }
+.users li:first-child { border-top: 0; }
+.users .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.users .who b { color: var(--bone); }
+.users .meta { color: var(--sage); font-size: 0.9375rem; overflow-wrap: anywhere; }
+.add-user { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; }
+.add-user .field { flex: 1 1 10rem; }
+.handover { display: grid; gap: 6px; }
+.handover input { width: 100%; }
+
+@media (max-width: 600px) {
+  .account-body { position: static; width: 100%; }
+}

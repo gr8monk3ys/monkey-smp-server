@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#1f6142">
+  <title>Log in: Monkey SMP staff</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="staff.css">
+  <link rel="stylesheet" href="auth.css">
+  <script src="auth.js" defer></script>
+</head>
+<body data-page="login">
+  <header class="top">
+    <p class="brand">Monkey <b>SMP</b> <span>staff</span></p>
+  </header>
+
+  <main class="gate">
+    <section class="card" id="login-card">
+      <h1>Log in</h1>
+      <p class="attention" id="error" role="alert" hidden></p>
+      <p class="note" id="note" role="status" hidden></p>
+      <form id="login-form" method="post" action="/auth/login" novalidate>
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="32" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="login" type="submit">Log in</button>
+          <button class="link" id="forgot-open" type="button">Forgot password?</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="forgot-card" hidden>
+      <h1>Forgot password</h1>
+      <p class="fine">Type your name or your email. If the login has a confirmed email, a link to set a new password
+        goes there; it works once, for 30 minutes.</p>
+      <p class="attention" id="forgot-error" role="alert" hidden></p>
+      <p class="note" id="forgot-note" role="status" hidden></p>
+      <form id="forgot-form" method="post" action="/auth/forgot" novalidate>
+        <div class="field">
+          <label for="who">Name or email</label>
+          <input id="who" name="who" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="254" required>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="forgot" type="submit">Send the link</button>
+          <button class="link" id="forgot-close" type="button">Back to log in</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <noscript><p class="attention">This page needs JavaScript turned on to log in.</p></noscript>
+</body>
+</html>

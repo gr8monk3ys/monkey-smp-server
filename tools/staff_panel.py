@@ -25,6 +25,9 @@ on another site must not be able to make a change in a staff member's name. Answ
     GET  /api/timers                  the monkey-*.timer schedules
     GET  /api/backups                 the last backup, as the status page has it
     GET  /api/actions                 the last 100 changes made here
+    GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
+                                      /api/users/{role,disable,delete,sessions,link} change one (tools/staff_auth.py)
+    /auth/*                           the login itself, asked with no X-Staff-User (tools/staff_auth.py)
 
 The safety rules, all here rather than in the page:
 - Files: every path is relative to LIVE_DIR/server and must stay inside it once links are followed. The worlds, the
@@ -63,6 +66,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
 
+import staff_auth
 import staff_status
 
 import rcon as server
@@ -285,7 +289,7 @@ class Panel:
     def __init__(self, live: Path, staff: Path, repo: Path, lock_file: Path = Path("/tmp/monkey-deploy.lock"),
                  webhook: str = "", run=subprocess.run, spawn=spawn_detached, alive=pid_alive, lock=None,
                  post=post_webhook, backup_settings: Path = staff_status.BACKUP_SETTINGS,
-                 backup_failing: Path = staff_status.BACKUP_FAILING):
+                 backup_failing: Path = staff_status.BACKUP_FAILING, auth: staff_auth.Auth | None = None):
         self.live, self.staff, self.repo = Path(live), Path(staff), Path(repo)
         self.root = self.live / "server"
         self.history = self.staff / "history"
@@ -297,6 +301,7 @@ class Panel:
         self._power = threading.Lock()
         self._busy: dict | None = None
         self._log = threading.Lock()
+        self.auth = auth or staff_auth.Auth(self.staff / "auth")
 
     # ------------------------------------------------ the record of changes
 
@@ -943,6 +948,19 @@ NEEDS = {
 }
 ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
 PATHS.add("/api/me")
+# The staff page's own logins (tools/staff_auth.py), for owners only; the last owner can't be demoted or removed.
+USER_ROUTES = {
+    ("GET", "/api/users"): lambda p, u, q, b: p.auth.list_users(),
+    ("POST", "/api/users"): lambda p, u, q, b: p.auth.add_user(u, b.get("name"), b.get("role"), b.get("email")),
+    ("POST", "/api/users/role"): lambda p, u, q, b: p.auth.set_role(u, b.get("name"), b.get("role")),
+    ("POST", "/api/users/disable"): lambda p, u, q, b: p.auth.set_disabled(u, b.get("name"), b.get("disabled")),
+    ("POST", "/api/users/delete"): lambda p, u, q, b: p.auth.delete_user(u, b.get("name")),
+    ("POST", "/api/users/sessions"): lambda p, u, q, b: p.auth.end_sessions(u, b.get("name")),
+    ("POST", "/api/users/link"): lambda p, u, q, b: p.auth.handover_link(u, b.get("name")),
+}
+ROUTES.update(USER_ROUTES)
+NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
+PATHS.update(path for _, path in USER_ROUTES)
 
 
 def allowed(role: str, need: str) -> bool:
@@ -969,9 +987,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):     # the request line holds file paths at most; nothing else is logged
         pass
 
-    def send_json(self, code: int, data: dict) -> None:
+    def send_json(self, code: int, data: dict, headers=()) -> None:
         body = json.dumps(data).encode()
         self.send_response(code)
+        for name, value in headers:
+            self.send_header(name, value)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
@@ -989,12 +1009,15 @@ class Handler(BaseHTTPRequestHandler):
         if len(roles) != 1 or roles[0] not in ROLES:
             raise Refused(403, "The login's role is not one this page knows.")
         if method != "GET":
-            if self.headers.get("X-Monkey-Staff") != "1":
-                raise Refused(403, "A change must come from the staff page.")
-            site = self.headers.get("Sec-Fetch-Site")
-            if site is not None and site != "same-origin":
-                raise Refused(403, "A change must come from the staff page itself.")
+            self.from_the_page()
         return users[0], roles[0]
+
+    def from_the_page(self) -> None:
+        if self.headers.get("X-Monkey-Staff") != "1":
+            raise Refused(403, "A change must come from the staff page.")
+        site = self.headers.get("Sec-Fetch-Site")
+        if site is not None and site != "same-origin":
+            raise Refused(403, "A change must come from the staff page itself.")
 
     def length(self, most: int) -> int:
         if self.headers.get("Transfer-Encoding"):
@@ -1040,6 +1063,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             query = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
+            if url.path.startswith("/auth/"):
+                return self.answer_auth(method, url.path)
             user, role = self.checked(method)
             if (method, url.path) not in ROUTES:
                 raise Refused(405 if url.path in PATHS else 404, "There is no such request.")
@@ -1061,7 +1086,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_download(*result)
             else:
                 self.send_json(200, {"ok": True, **result})
-        except Refused as e:
+        except (Refused, staff_auth.AuthError) as e:
             self.close_connection = True
             self.drain()
             self.send_json(e.code, {"ok": False, "error": e.message})
@@ -1071,6 +1096,22 @@ class Handler(BaseHTTPRequestHandler):
             with contextlib.suppress(OSError):
                 self.send_json(500, {"ok": False, "error": "Something went wrong on the server: see "
                                                            "journalctl -u monkey-panel."})
+
+    def answer_auth(self, method: str, path: str) -> None:
+        """The login's own requests (tools/staff_auth.py): from this machine, with no login name to trust yet, and a
+        change (a login too) only from the page itself."""
+        if self.client_address[0] not in LOOPBACK:
+            raise Refused(403, "Only this machine may ask.")
+        if method not in ("GET", "POST"):
+            raise Refused(405, "There is no such request.")
+        if method == "POST":
+            self.from_the_page()
+        body = self.json_body(staff_auth.BODY_MAX) if method == "POST" else {}
+        # Caddy puts the visitor's address last (and ignores one the visitor sent); only Caddy reaches here.
+        forwarded = [a.strip() for a in ",".join(self.headers.get_all("X-Forwarded-For") or []).split(",") if a.strip()]
+        ip = forwarded[-1][:64] if forwarded else self.client_address[0]
+        code, data, headers = self.server.panel.auth.http(method, path, body, self.headers, ip)
+        self.send_json(code, data, headers)
 
     def send_download(self, name: str, data, size: int) -> None:
         safe = re.sub(r"[^A-Za-z0-9._+-]", "_", name) or "file"
@@ -1108,7 +1149,8 @@ def from_settings(env: dict | None = None) -> Panel:
                  staff=Path(setting("STAFF_DIR", "/srv/monkey/staff")),
                  repo=Path(setting("REPO_DIR", "/srv/monkey/repo")),
                  lock_file=Path(setting("LOCK_FILE", "/tmp/monkey-deploy.lock")),
-                 webhook=setting("STAFF_WEBHOOK_URL"))    # never DISCORD_WEBHOOK_URL: that channel is public
+                 webhook=setting("STAFF_WEBHOOK_URL"),    # never DISCORD_WEBHOOK_URL: that channel is public
+                 auth=staff_auth.from_settings(Path(setting("STAFF_DIR", "/srv/monkey/staff")), env))
 
 
 def main(argv=None) -> int:

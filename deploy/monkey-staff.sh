@@ -15,6 +15,16 @@
 #                                             controls. Needs a login first and the site's DNS record, and takes the
 #                                             site back out if a visit with no password gets in
 #
+# The page's own login page (tools/staff_auth.py, deploy/Caddyfile.staff-login), in place of the browser's password box:
+#
+#   sudo sh monkey-staff.sh --add-user NAME ROLE [EMAIL]   a login (moderator, admin or owner); prints a one-time
+#                                             set-password link, good for 24 hours, to pass on privately
+#   sudo sh monkey-staff.sh --reset-link NAME  prints a one-time link to set a new password, for the owner to hand over
+#   sudo sh monkey-staff.sh --use-new-login   switches Caddy to the login page: needs an owner with a password, checks
+#                                             the config, and switches back if a visit with no session gets in
+#   sudo sh monkey-staff.sh --use-basic-auth  switches back to the password box (the rollback); --login still works
+#                                             for it all along
+#
 # The status job only reads: `tick query` and `list` through the container's own `monkey rcon`, and the server's log
 # and crash reports, which tools/staff_status.py filters. No deploy lock: during a deploy or the daily restart the page
 # simply says the server is offline. The changes the page can make (console commands, the server's config files,
@@ -35,10 +45,27 @@ LOG_NAME=monkey-staff
 . "$(dirname -- "$0")/lib.sh"
 
 NAME=''
+ROLE=''
+EMAIL=''
 case "${1:-}" in
     '') MODE=write ;;
     --check) MODE=check ;;
     --install) MODE=install ;;
+    --use-new-login) MODE=use-new-login ;;
+    --use-basic-auth) MODE=use-basic-auth ;;
+    --add-user | --reset-link)
+        MODE=${1#--}
+        NAME=${2:-}
+        ROLE=${3:-}
+        EMAIL=${4:-}
+        case $NAME in
+            '' | *[!a-z0-9_]*) echo "usage: sudo sh $0 $1 NAME$([ "$1" = --reset-link ] || echo ' ROLE [EMAIL]') (small letters, digits and _)" >&2; exit 2 ;;
+        esac
+        if [ "$MODE" = add-user ]; then
+            case $ROLE in moderator | admin | owner) ;; *) echo "usage: sudo sh $0 --add-user NAME moderator|admin|owner [EMAIL]" >&2; exit 2 ;; esac
+            case $EMAIL in *[!A-Za-z0-9.@_+-]*) echo "that email has a character this script doesn't take" >&2; exit 2 ;; esac
+        fi
+        ;;
     --login | --remove-login)
         MODE=${1#--}
         NAME=${2:-}
@@ -46,7 +73,7 @@ case "${1:-}" in
             '' | *[!A-Za-z0-9_-]*) echo "usage: sudo sh $0 $1 NAME (letters, digits, - and _)" >&2; exit 2 ;;
         esac
         ;;
-    *) echo "usage: sh $0 [--check | --install | --login NAME | --remove-login NAME]" >&2; exit 2 ;;
+    *) echo "usage: sh $0 [--check | --install | --login NAME | --remove-login NAME | --add-user NAME ROLE [EMAIL] | --reset-link NAME | --use-new-login | --use-basic-auth]" >&2; exit 2 ;;
 esac
 
 ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
@@ -62,11 +89,18 @@ SITE=$CADDY_DIR/staff.caddy
 MAIN=$CADDY_DIR/Caddyfile
 IMPORT='import /etc/caddy/staff*.caddy'
 
-# Whether Caddy would take the config, and that it can read the logins as its own user.
+# Whether Caddy would take the config, and that it can read the logins as its own user (the password box only).
 caddy_ok() {
-    runuser -u caddy -- test -r "$LOGINS" 2>/dev/null || return 1
+    if ! is_new_login; then runuser -u caddy -- test -r "$LOGINS" 2>/dev/null || return 1; fi
     caddy validate --config "$MAIN" --adapter caddyfile >/dev/null 2>&1
 }
+# Whether the site in Caddy is the login page (deploy/Caddyfile.staff-login) rather than the password box.
+is_new_login() { [ -e "$SITE" ] && grep -q 'forward_auth' "$SITE"; }
+# What a visit with no password or session must get, page and status file: 401 twice for the password box; for the
+# login page, a redirect to it (302) and 401.
+gate_want() { if is_new_login; then echo '302 401'; else echo '401 401'; fi; }
+# "auth_tool ARGS...": tools/staff_auth.py as the monkey user, whose store it is.
+auth_tool() { runuser -u monkey -- env STAFF_DIR="$STAFF_DIR" python3 -B "$REPO_DIR/tools/staff_auth.py" "$@"; }
 # What a visit with no password gets: 401, or 000 when there is no answer (usually no certificate yet: it is asked
 # for only once the DNS record exists). Local, so it doesn't depend on the DNS record, and -k since it tests the
 # password rather than the certificate.
@@ -117,12 +151,24 @@ gate_or_remove() {
         sleep 5
     done
     case "$gate_page $gate_data" in
-        '401 401') log 'a visit with no password is refused (401)' ;;
+        "$(gate_want)")
+            if is_new_login; then
+                log 'a visit with no session goes to the login page (302) and the status file is refused (401)'
+            else
+                log 'a visit with no password is refused (401)'
+            fi
+            ;;
         '000 000')
             log 'no answer from the site yet: is the DNS record set? Caddy asks for the certificate once it is.'
             log "the password is in place; run sudo sh $0 --check once it answers"
             ;;
         *)
+            # A switch between the two puts the one that was there back; an install takes the site out.
+            if [ -n "${GATE_BACKUP:-}" ] && [ -e "$GATE_BACKUP" ]; then
+                cp -p "$GATE_BACKUP" "$SITE"
+                systemctl reload caddy
+                die "a visit with no password or session got $gate_page and $gate_data: the login is as it was"
+            fi
             rm -f "$SITE"
             systemctl reload caddy
             die "a visit with no password got $gate_page and $gate_data, not 401: the site is out of Caddy again"
@@ -130,10 +176,59 @@ gate_or_remove() {
     esac
 }
 
-if [ "$MODE" = login ] || [ "$MODE" = remove-login ] || [ "$MODE" = install ]; then
-    [ "$(id -u)" = 0 ] || die 'run as root: it changes Caddy'
-    command -v caddy >/dev/null 2>&1 || die 'caddy is missing (docs/LIVE.md, step 9)'
-    command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+case $MODE in
+    login | remove-login | install | use-new-login | use-basic-auth)
+        [ "$(id -u)" = 0 ] || die 'run as root: it changes Caddy'
+        command -v caddy >/dev/null 2>&1 || die 'caddy is missing (docs/LIVE.md, step 9)'
+        command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+        ;;
+    add-user | reset-link)
+        [ "$(id -u)" = 0 ] || die "run as root (sudo sh $0): it runs the login tool as monkey, whose store it is"
+        command -v python3 >/dev/null 2>&1 || die 'python3 is missing (deploy/upgrade-2.5.0.sh installs it)'
+        [ -r "$REPO_DIR/tools/staff_auth.py" ] || die "$REPO_DIR/tools/staff_auth.py is missing: is the release with the login page deployed?"
+        [ -d "$STAFF_DIR" ] || install -d -m 755 -o monkey -g monkey "$STAFF_DIR"
+        # The link is printed by the tool itself, once, and goes nowhere else: not through log.
+        if [ "$MODE" = add-user ]; then
+            if [ -n "$EMAIL" ]; then auth_tool add-user "$NAME" "$ROLE" --email "$EMAIL"; else auth_tool add-user "$NAME" "$ROLE"; fi
+        else
+            auth_tool reset-link "$NAME"
+        fi
+        exit $?
+        ;;
+esac
+
+# "switch_site FILE": puts deploy/FILE in as the staff site, keeping the one that was there: Caddy must take it and
+# a visit with no password or session must still be turned away, or the old one comes back.
+switch_site() {
+    [ -e "$SITE" ] || die "the staff page isn't in Caddy yet: run sudo sh $0 --install first"
+    [ -r "$REPO_DIR/deploy/$1" ] || die "$REPO_DIR/deploy/$1 is missing: is the release with the login page deployed?"
+    SWITCH_DIR=$(mktemp -d "$CADDY_DIR/.staff-switch.XXXXXX")
+    trap 'rm -rf "$SWITCH_DIR"' EXIT
+    cp -p "$SITE" "$SWITCH_DIR/staff.caddy"
+    install -m 644 -o root -g root "$REPO_DIR/deploy/$1" "$SITE"
+    if ! caddy_ok; then
+        cp -p "$SWITCH_DIR/staff.caddy" "$SITE"
+        die "caddy refused deploy/$1: the login is as it was. Try: caddy validate --config /etc/caddy/Caddyfile"
+    fi
+    systemctl reload caddy
+    GATE_BACKUP=$SWITCH_DIR/staff.caddy
+    gate_or_remove
+}
+
+if [ "$MODE" = use-new-login ]; then
+    [ "$(panel_answer)" = 403 ] || die "the controls don't answer on 127.0.0.1:8130 (sudo systemctl status monkey-panel): they hold the login"
+    READY=$(auth_tool ready 2>&1) || die "no owner can log in yet ($READY): run sudo sh $0 --add-user NAME owner EMAIL and set its password first"
+    log "logins: $READY"
+    switch_site Caddyfile.staff-login
+    log "the staff page now has its own login page: https://$HOST/login (to go back: sudo sh $0 --use-basic-auth)"
+    exit 0
+fi
+
+if [ "$MODE" = use-basic-auth ]; then
+    [ "$(logins_count)" -gt 0 ] 2>/dev/null || die "no password-box logins: run sudo sh $0 --login NAME first"
+    switch_site Caddyfile.staff
+    log "the staff page asks for the browser password again (logins: $(logins_count))"
+    exit 0
 fi
 
 if [ "$MODE" = login ] || [ "$MODE" = remove-login ]; then
@@ -179,7 +274,9 @@ if [ "$MODE" = install ]; then
         [ -r "$REPO_DIR/deploy/$unit" ] || die "$REPO_DIR/deploy/$unit is missing: is the release with the staff page deployed?"
     done
     [ -r "$REPO_DIR/tools/staff_panel.py" ] || die "$REPO_DIR/tools/staff_panel.py is missing: is the release with the staff page controls deployed?"
-    [ "$(logins_count)" -gt 0 ] 2>/dev/null || die "no logins yet: run sudo sh $0 --login NAME first, so the site never opens without a password"
+    # Whichever login the site has now stays: the login page once --use-new-login switched to it, else the password box.
+    if is_new_login; then SITE_FILE=Caddyfile.staff-login; else SITE_FILE=Caddyfile.staff; fi
+    [ "$SITE_FILE" = Caddyfile.staff-login ] || [ "$(logins_count)" -gt 0 ] 2>/dev/null || die "no logins yet: run sudo sh $0 --login NAME first, so the site never opens without a password"
     install -d -m 755 -o monkey -g monkey "$STAFF_DIR"
     log "status folder: $STAFF_DIR"
     UNREADABLE=$(caddy_cannot_read)
@@ -189,7 +286,7 @@ if [ "$MODE" = install ]; then
     trap 'rm -rf "$BACKUP"' EXIT
     cp -p "$MAIN" "$BACKUP/Caddyfile"
     [ ! -e "$SITE" ] || cp -p "$SITE" "$BACKUP/staff.caddy"
-    install -m 644 -o root -g root "$REPO_DIR/deploy/Caddyfile.staff" "$SITE"
+    install -m 644 -o root -g root "$REPO_DIR/deploy/$SITE_FILE" "$SITE"
     # Added by hand to the live file rather than copying the repo's over it, which would lose anything changed there.
     grep -qxF "$IMPORT" "$MAIN" || printf '\n# The staff page, if it is set up (deploy/monkey-staff.sh).\n%s\n' "$IMPORT" >>"$MAIN"
     if ! caddy_ok; then
@@ -221,8 +318,16 @@ if [ "$MODE" = check ]; then
     log "the controls answer a request with no login: $(panel_answer) (403 is right; 000 is no answer)"
     if [ "$(id -u)" = 0 ]; then
         log "logins:$(sed -n 's/^\([A-Za-z0-9_-]*\) .*/ \1/p' "$LOGINS" 2>/dev/null | tr -d '\n')"
+        if [ -r "$REPO_DIR/tools/staff_auth.py" ]; then
+            log "login page logins: $(auth_tool ready 2>&1 | tail -n 1)"
+        fi
+        if is_new_login; then
+            log 'login: the page'"'"'s own login page (deploy/Caddyfile.staff-login); back: --use-basic-auth'
+        elif [ -e "$SITE" ]; then
+            log 'login: the browser'"'"'s password box (deploy/Caddyfile.staff); to switch: --use-new-login'
+        fi
         if [ -e "$SITE" ]; then
-            log "a visit with no password gets: $(no_password /) (401 is right; 000 is no answer yet)"
+            log "a visit with no password gets: $(no_password /) ($(gate_want | cut -d ' ' -f 1) is right; 000 is no answer yet)"
             UNREADABLE=$(caddy_cannot_read)
             if [ -n "$UNREADABLE" ]; then
                 log "PROBLEM: the caddy user can't read $UNREADABLE, so a visit with the password fails"

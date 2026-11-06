@@ -1,0 +1,67 @@
+# The staff page with its own login page (tools/staff_auth.py; docs/LIVE.md, "The staff page"). `sudo sh
+# monkey-staff.sh --use-new-login` copies this to /etc/caddy/staff.caddy in place of deploy/Caddyfile.staff (the
+# browser's password box), and `--use-basic-auth` puts that one back. The logins live in /srv/monkey/staff/auth,
+# monkey's, mode 600, never in this repo, which is public.
+staff.monkeysmp.lscaturchio.xyz {
+	encode zstd gzip
+
+	# Nothing loads from elsewhere, nothing is kept by a browser or a search engine, and no other site can frame it.
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Cache-Control "no-store"
+		X-Robots-Tag "noindex, nofollow"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	# What a visitor with no session may have: the login, reset and email pages, what they load, and the login's own
+	# requests. Everything else asks the session check first.
+	@locked not path /login /login.html /reset /reset.html /verify /verify.html /auth.js /auth.css /staff.css /fonts/* /auth/*
+
+	# In this order, which `route` keeps (Caddy would otherwise run forward_auth before request_header):
+	route {
+		# Who a request is comes only from the session check below: whatever the browser sent is taken off first,
+		# underscore spellings too. (Caddy 2.11.2 and newer also delete a copied header the check didn't send.)
+		request_header -X-Staff-*
+		request_header -X_Staff_*
+
+		# The session check (tools/staff_auth.py, GET /auth/check): 200 with the login's name and role, which go onto
+		# the request; otherwise its answer goes back as it is, a redirect to /login for a page, 401 for the rest.
+		forward_auth @locked 127.0.0.1:8130 {
+			uri /auth/check
+			copy_headers X-Staff-User X-Staff-Role
+		}
+
+		# The login itself: no name to trust yet, so none is sent.
+		handle /auth/* {
+			request_body {
+				max_size 64KB
+			}
+			reverse_proxy 127.0.0.1:8130
+		}
+
+		# The controls (tools/staff_panel.py, deploy/monkey-panel.service), with the name and role from the check.
+		handle /api/* {
+			request_body {
+				max_size 64MB
+			}
+			reverse_proxy 127.0.0.1:8130
+		}
+
+		handle /staff.json {
+			root * /srv/monkey/staff
+			file_server
+		}
+
+		handle /fonts/* {
+			root * /srv/monkey/repo/site/public
+			file_server
+		}
+
+		handle {
+			root * /srv/monkey/repo/deploy/staff
+			try_files {path} {path}.html
+			file_server
+		}
+	}
+}

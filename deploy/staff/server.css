@@ -43,8 +43,10 @@
 #sftp-info dd { color: var(--bone); font-family: var(--mono); font-size: 0.875rem; overflow-wrap: anywhere; }
 
 /* Java and memory: a label over each control, the hint under it. */
-.java-form { display: grid; gap: 4px; padding-bottom: 10px; }
+.java-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 28px; padding-bottom: 10px; }
+.java-part { display: grid; gap: 4px; align-content: start; }
 .java-form label { margin-top: 6px; color: var(--bone); font-weight: 700; }
+@media (min-width: 860px) { .java-form { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); } }
 .java-form input[type="number"] { width: 7.5rem; }
 #java-flags { height: auto; min-height: 6.5rem; white-space: pre; }
 

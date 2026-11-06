@@ -50,15 +50,19 @@ hs = None   # tools/staff_host.py
 MB = 1024 * 1024
 GB = 1024 * MB
 LAUNCH_FILE = "monkey-launch.json"
-# The same checks as Monkey.psm1's $script:LaunchFlag, LaunchFlagRefused and LaunchPropRefused: keep them alike
-# (tests/test_staff_more.py compares them). No value may hold a path (no /), and no option that runs a command, reads
-# or writes a file, or changes what Java, Fabric or the logging load.
+# The same checks as Monkey.psm1's $script:LaunchFlag, LaunchXXAllowed and LaunchPropAllowed: keep them alike
+# (tests/test_staff_more.py compares them). Only garbage-collector and JIT tuning and a few harmless properties: a
+# deny-list always misses one (remote JMX, agents, files), and those let a login run code as the server.
 FLAG = re.compile(r"-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,120})?"
                   r"|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:,+-]{0,120})")
-FLAG_REFUSED = {"OnError", "OnOutOfMemoryError", "Flags", "VMOptionsFile", "ErrorFile", "HeapDumpPath", "LogFile",
-                "CompileCommand", "CompileCommandFile", "SharedArchiveFile", "ArchiveClassesAtExit",
-                "StartFlightRecording", "FlightRecorderOptions", "AOTCache", "AOTConfiguration"}
-PROP_REFUSED = re.compile(r"(fabric|log4j|log4j2|java|javax|jdk|sun)\..*")
+XX_ALLOWED = re.compile(r"G1[A-Za-z0-9]+|Use(G1|Z|Shenandoah|Parallel|Serial)GC|ZGenerational|ShenandoahGCHeuristics"
+                        r"|MaxGCPauseMillis|GCTimeRatio|ParallelGCThreads|ConcGCThreads|InitiatingHeapOccupancyPercent"
+                        r"|SurvivorRatio|MaxTenuringThreshold|AlwaysPreTouch|DisableExplicitGC|ParallelRefProcEnabled"
+                        r"|PerfDisableSharedMem|UseStringDeduplication|UseNUMA|UseLargePages|UseTransparentHugePages"
+                        r"|MaxMetaspaceSize|MetaspaceSize|ReservedCodeCacheSize|UseCompressedOops|SoftMaxHeapSize"
+                        r"|MaxInlineLevel|UnlockExperimentalVMOptions|TieredCompilation")
+PROP_ALLOWED = re.compile(r"file\.encoding|user\.timezone|user\.language|user\.country|using\.aikars\.flags"
+                          r"|aikars\.new\.flags")
 FLAGS_MAX = 20
 MEMORY_MAX = 64
 MEMORY_SPARE = 2      # GB the machine keeps for itself, Docker, Caddy and this panel (the heap is taken up front)
@@ -248,9 +252,10 @@ class More:
                                       "-XX:Name=value or -Dname=value, with letters, digits and . _ : , + - only (no "
                                       "paths). Memory goes in its own box, not -Xmx.")
             name = re.sub(r"=.*$", "", re.sub(r"^-(XX:[+-]?|D)", "", f))
-            if name in FLAG_REFUSED or (f.startswith("-D") and PROP_REFUSED.fullmatch(name)):
-                raise sp.Refused(400, f"{name} runs a command, uses a file or changes what Java, Fabric or the logs "
-                                      "load: not from this page.")
+            if not (PROP_ALLOWED if f.startswith("-D") else XX_ALLOWED).fullmatch(name):
+                raise sp.Refused(400, f"{name} isn't one this page takes: only garbage-collector and JIT tuning "
+                                      "(G1..., MaxGCPauseMillis, ...) and -Dfile.encoding, -Duser.timezone and the "
+                                      "like. Anything else goes in on the machine.")
         path = self._launch_path()
         if not self.p.root.is_dir():
             raise sp.Refused(404, "There is no server folder yet: start the server once.")

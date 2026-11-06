@@ -629,7 +629,9 @@
       memory.max = String(data.most_gb);
       memory.placeholder = String(data.default_gb);
       memory.value = data.memory_gb === null ? "" : String(data.memory_gb);
-      $("java-memory-about").textContent = `Empty: picked from the machine (${data.default_gb} GB now). At most ${data.most_gb}: the machine keeps 2 GB for itself.`;
+      $("java-memory-about").textContent = data.total_gb
+        ? `Empty: picked from the machine (${data.default_gb} GB now). At most ${data.most_gb}: the machine keeps 2 GB for itself.`
+        : `Empty: picked from the machine at each start. At most ${data.most_gb}.`;
       $("java-flags").value = (data.flags || []).join("\n");
       say("java-error", null);
     } catch (error) {

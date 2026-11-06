@@ -15,6 +15,19 @@
     return node;
   }
 
+  const DAY = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+  // The server's ISO time as a plain date, e.g. "Nov 6, 2026".
+  function day(iso) {
+    const ms = Date.parse(iso || "");
+    return Number.isNaN(ms) ? "?" : DAY.format(new Date(ms));
+  }
+
+  // " 2 other sessions logged out.", or nothing when there were none.
+  function ended(count) {
+    return count ? ` ${count} other session${count === 1 ? "" : "s"} logged out.` : "";
+  }
+
   function button(label, className, onClick, type = "button") {
     const node = el("button", `btn ${className || ""}`.trim(), label);
     node.type = type;
@@ -81,7 +94,7 @@
       event.preventDefault();
       try {
         const done = await call("POST", "/auth/password", { current: current.value, password: fresh.value });
-        say(status, `Password changed. ${done.ended} other session(s) logged out.`);
+        say(status, `Password changed.${ended(done.ended)}`);
         current.value = fresh.value = "";
       } catch (error) {
         say(status, error.message, "error");
@@ -157,7 +170,7 @@
           e.preventDefault();
           try {
             const done = await call("POST", "/auth/2fa/confirm", { current: current.value, code: code.value.trim() });
-            say(status, `Two-step login is on. ${done.ended} other session(s) logged out.`);
+            say(status, `Two-step login is on.${ended(done.ended)}`);
             current.value = code.value = "";
             session.two_step = true;
             session.recovery_left = done.recovery.length;
@@ -192,7 +205,7 @@
       try {
         if (chosen === off) {
           const done = await call("POST", "/auth/2fa/off", body);
-          say(status, `Two-step login is off. ${done.ended} other session(s) logged out.`);
+          say(status, `Two-step login is off.${ended(done.ended)}`);
           session.two_step = false;
           box.replaceWith(twoStep(status, session));
         } else {
@@ -294,7 +307,7 @@
     if (u.two_step) flags.push("2FA on");
     if (flags.length) who.append(el("span", "meta", flags.join(", ")));
     const mail = u.email ? `${u.email}${u.email_verified ? "" : " (not confirmed)"}` : "no email";
-    li.append(who, el("p", "meta", `${mail}; ${u.sessions} session(s); added ${u.created || "?"}`));
+    li.append(who, el("p", "meta", `${mail}; ${u.sessions} session${u.sessions === 1 ? "" : "s"}; added ${day(u.created)}`));
 
     const row = el("div", "actions");
     const role = document.createElement("select");

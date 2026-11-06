@@ -87,6 +87,8 @@ def test_the_java_settings_are_written_for_the_start_script(apex):
     {"memory_gb": None, "flags": ["-XX:HeapDumpPath=x"]}, {"memory_gb": None, "flags": ["-Dx=/tmp/a"]},
     {"memory_gb": None, "flags": ["-Dfabric.addMods=x"]}, {"memory_gb": None, "flags": ["-Djava.library.path=x"]},
     {"memory_gb": None, "flags": ["-Dlog4j2.configurationFile=x"]},
+    {"memory_gb": None, "flags": ["-Dcom.sun.management.jmxremote.authenticate=false"]},
+    {"memory_gb": None, "flags": ["-XX:+UnlockDiagnosticVMOptions"]}, {"memory_gb": None, "flags": ["-XX:+useg1gc"]},
     {"memory_gb": None, "flags": ["-XX:+UseG1GC"] * 21},
 ])
 def test_bad_java_settings_are_refused(apex, body):
@@ -98,10 +100,16 @@ def test_bad_java_settings_are_refused(apex, body):
 def test_the_flag_rules_match_the_start_scripts():
     psm = (REPO.root / "package" / "monkey" / "Monkey.psm1").read_text(encoding="utf-8")
     assert f"$script:LaunchFlag = '^{staff_more.FLAG.pattern}$'" in psm
-    for name in staff_more.FLAG_REFUSED:
-        assert f"'{name}'" in psm
+    assert f"$script:LaunchXXAllowed = '^({staff_more.XX_ALLOWED.pattern})$'" in psm
+    assert f"$script:LaunchPropAllowed = '^({staff_more.PROP_ALLOWED.pattern})$'" in psm
     assert f"$script:LaunchFlagsMax = {staff_more.FLAGS_MAX}" in psm
-    assert f"$script:LaunchPropRefused = '^{staff_more.PROP_REFUSED.pattern}$'" in psm
+
+
+@pytest.mark.parametrize("flag", ["-XX:+UseG1GC", "-XX:G1HeapRegionSize=8M", "-XX:MaxGCPauseMillis=130",
+                                  "-XX:-UseNUMA", "-Dfile.encoding=UTF-8", "-Dusing.aikars.flags=https:"])
+def test_the_usual_tuning_flags_are_taken(apex, flag):
+    staff_more.more(apex.panel).memory = lambda: 16.0
+    assert apex.call("PUT", "/api/java", {"memory_gb": None, "flags": [flag]})[0] == 200
 
 
 def test_the_default_memory_matches_get_memorygb():

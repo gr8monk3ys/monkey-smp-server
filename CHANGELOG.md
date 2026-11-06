@@ -15,6 +15,12 @@ Caddyfile (docs/LIVE.md, "The website's standings").
 - `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
   touching the game.
 
+### Removed
+
+- No Portals, a server-only mod nothing used: the Nether opens with the `allow_entering_nether_using_portals`
+  gamerule and the End stays closed through the rules datapack. Its options, all off, were the only state it held.
+  Taken out as a precaution while a client crash on entering a Nether portal is looked into. Players install nothing.
+
 ### Fixed
 
 - The hosting smoke test could fail a clean shutdown: stopping right after `Done` landed in the post-start save, and

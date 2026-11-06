@@ -9,8 +9,10 @@
   <title>Monkey SMP staff</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="staff.css">
+  <link rel="stylesheet" href="server.css">
   <script src="staff.js" defer></script>
   <script src="panel.js" defer></script>
+  <script src="server.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -24,6 +26,8 @@
     <a href="#files" data-tab="files">Files</a>
     <a href="#players" data-tab="players">Players</a>
     <a href="#server" data-tab="server">Server</a>
+    <a href="#settings" data-tab="settings">Settings</a>
+    <a href="#mods" data-tab="mods">Mods</a>
   </nav>
 
   <main>
@@ -161,6 +165,21 @@
       <p class="note" id="players-note" role="status" hidden></p>
       <div class="confirm" id="players-confirm" hidden></div>
       <div class="cols" id="players-body"></div>
+      <section class="box" id="ipbans" hidden>
+        <h3>Banned addresses</h3>
+        <p class="fine">Bans an IP address, so nobody can join from it under any name. Type a public IPv4 or IPv6 address,
+          or the name of a player who is online to ban the address they are on. A private or local address is refused: it
+          could be a proxy's, and banning it would keep everyone out.</p>
+        <p class="attention" id="ipbans-error" role="alert" hidden></p>
+        <p class="note" id="ipbans-note" role="status" hidden></p>
+        <div class="confirm" id="ipbans-confirm" hidden></div>
+        <ul class="entries" id="ipbans-list"></ul>
+        <div class="add">
+          <input id="ipban-target" type="text" maxlength="45" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Address or online player" aria-label="Address or online player">
+          <input id="ipban-reason" type="text" maxlength="120" autocomplete="off" placeholder="Reason (optional)" aria-label="Reason">
+          <button class="btn primary" id="ipban-go" type="button" data-need="admin">Ban address</button>
+        </div>
+      </section>
     </div>
 
     <div class="pane" id="tab-server" hidden>
@@ -181,7 +200,34 @@
       <section class="box">
         <h3>Last backup</h3>
         <dl id="backup"></dl>
-        <p class="fine">Backups can't be started or restored from here.</p>
+      </section>
+      <section class="box">
+        <h3>Backups from here</h3>
+        <p class="attention" id="helper-error" role="alert" hidden></p>
+        <p class="note" id="helper-note" role="status" hidden></p>
+        <p class="fine" id="helper-missing" hidden>The backup helper isn't installed, so backups can't be started or restored
+          from here. The owner installs it once on the machine: sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper</p>
+        <div id="helper-body" hidden>
+          <div class="actions">
+            <button class="btn" id="backup-now" type="button" data-need="admin">Back up now</button>
+            <button class="btn" id="snapshots-list" type="button" data-need="admin">List the snapshots</button>
+          </div>
+          <div class="confirm" id="helper-confirm" hidden></div>
+          <p class="fine" id="snapshots-time"></p>
+          <ul class="entries" id="snapshots"></ul>
+          <p class="fine">Only an owner can restore, and types the snapshot's short ID to confirm. The world as it was is
+            kept on the machine, in backups/before-restore-TIME.</p>
+          <h4>What the helper did last</h4>
+          <ul class="entries" id="helper-jobs"></ul>
+        </div>
+      </section>
+      <section class="box" id="world-box" data-need="owner">
+        <h3>Download the world</h3>
+        <p class="fine">A zip of the whole world folder, for keeping or testing at home. Owners only, one at a time.</p>
+        <p class="attention" id="world-error" role="alert" hidden></p>
+        <p class="note" id="world-note" role="status" hidden></p>
+        <div class="actions"><button class="btn" id="world-download" type="button">Download the world</button></div>
+        <div class="confirm" id="world-confirm" hidden></div>
       </section>
       <section class="box">
         <h3>Schedules</h3>
@@ -192,10 +238,72 @@
           </table>
         </div>
       </section>
+      <section class="box" id="schedules-box" hidden>
+        <h3>Schedules made here</h3>
+        <p class="fine" id="schedules-zone"></p>
+        <p class="attention" id="schedules-error" role="alert" hidden></p>
+        <p class="note" id="schedules-note" role="status" hidden></p>
+        <div class="confirm" id="schedules-confirm" hidden></div>
+        <ul class="entries" id="schedules-list"></ul>
+        <div class="sched-form">
+          <div class="add">
+            <input id="sched-name" type="text" maxlength="60" autocomplete="off" placeholder="Name" aria-label="Schedule name">
+            <select id="sched-kind" aria-label="What it does">
+              <option value="command">Run a command</option>
+              <option value="restart">Restart (with warnings)</option>
+              <option value="backup">Back up off-site</option>
+            </select>
+          </div>
+          <input id="sched-command" type="text" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Command, e.g. say Vote for the server!" aria-label="Command">
+          <div class="add">
+            <select id="sched-when" aria-label="How often">
+              <option value="daily">Every day</option>
+              <option value="weekly">Every week</option>
+              <option value="interval">Every N minutes</option>
+            </select>
+            <select id="sched-day" aria-label="Day"></select>
+            <input id="sched-time" type="time" value="04:00" aria-label="Time">
+            <input id="sched-minutes" type="number" min="10" max="10080" value="60" aria-label="Minutes between runs">
+            <button class="btn primary" id="sched-add" type="button" data-need="admin">Add schedule</button>
+          </div>
+        </div>
+      </section>
       <section class="box">
         <h3>Recent changes made here</h3>
         <ul class="entries" id="actions"></ul>
       </section>
+    </div>
+
+    <div class="pane" id="tab-settings" hidden>
+      <h2>Settings</h2>
+      <p class="fine">server.properties as a form. Most changes take effect when the server restarts (Server tab). Ports,
+        RCON, the seed, the world's name and online mode are locked here. Every save keeps the old file in Files, history.</p>
+      <p class="attention" id="settings-error" role="alert" hidden></p>
+      <p class="note" id="settings-note" role="status" hidden></p>
+      <div class="actions">
+        <button class="btn primary" id="settings-save" type="button" data-need="admin">Save changes</button>
+        <button class="btn" id="settings-reload" type="button">Reload</button>
+      </div>
+      <div class="cols" id="settings-fields"></div>
+      <section class="box" id="gamerules" hidden>
+        <h3>Game rules</h3>
+        <p class="fine">Read from the running server. A change takes effect at once, no restart. The launch, Truce Hour and
+          season events switch some rules themselves (pvp, portals) and may switch them back.</p>
+        <p class="attention" id="gamerules-error" role="alert" hidden></p>
+        <div class="fields" id="gamerules-list"></div>
+      </section>
+    </div>
+
+    <div class="pane" id="tab-mods" hidden>
+      <h2>Mods</h2>
+      <p class="fine">The mods the server runs, read from each jar. They can't be added or removed here: each release pins
+        its mods, and players' mod packs must match them, so a change goes through a release.</p>
+      <p class="attention" id="mods-error" role="alert" hidden></p>
+      <div class="add">
+        <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search mods" aria-label="Search mods">
+      </div>
+      <p class="fine" id="mods-count"></p>
+      <ul class="entries" id="mods-list"></ul>
     </div>
   </main>
 

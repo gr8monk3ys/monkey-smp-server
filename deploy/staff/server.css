@@ -1,0 +1,34 @@
+/* The hosting-panel controls (server.js): the Settings and Mods tabs, and the boxes it adds to Players and Server.
+   The look is staff.css's; this only adds what those controls need. */
+
+input[type="number"], input[type="time"], input[type="search"], select {
+  min-height: 44px; padding: 0 8px; min-width: 0;
+  color: var(--bone); font: 400 0.875rem/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+select option { color: var(--bone); background: var(--shade); }
+input[type="checkbox"] { width: 22px; height: 22px; margin: 0; accent-color: var(--gold); }
+input[disabled], select[disabled] { opacity: 0.55; }
+
+.fields { display: grid; gap: 0; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 14px; padding: 8px 4px; border-top: 2px solid var(--leaf-2); }
+.field:first-of-type { border-top: 0; }
+.field label { color: var(--bone); font-weight: 700; overflow-wrap: anywhere; }
+.field .control { justify-self: end; display: flex; gap: 6px; align-items: center; }
+.field .control input[type="text"] { width: min(22rem, 60vw); }
+.field .control input[type="number"] { width: 9rem; }
+.field .about { grid-column: 1 / -1; color: var(--sage); font-size: 0.9375rem; }
+.field.changed label::after { content: " (changed)"; color: var(--gold); font-weight: 400; }
+.field.missing { opacity: 0.6; }
+
+.sched-form { display: grid; gap: 8px; }
+.sched-form .add select, .sched-form .add input { flex: 1 1 8rem; }
+.typed { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.typed input { flex: 1 1 8rem; }
+
+@media (max-width: 600px) {
+  .field { grid-template-columns: minmax(0, 1fr); }
+  .field .control { justify-self: start; }
+  .field .control input[type="text"] { width: 100%; }
+  .field .control { width: 100%; }
+}

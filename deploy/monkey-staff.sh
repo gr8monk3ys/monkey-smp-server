@@ -14,6 +14,9 @@
 #   sudo sh monkey-staff.sh --install         makes STAFF_DIR, adds the site to Caddy, starts the timer and the
 #                                             controls. Needs a login first and the site's DNS record, and takes the
 #                                             site back out if a visit with no password gets in
+#   sudo sh monkey-staff.sh --install-helper  the owner's step: installs the backup helper (monkey-staff-helper.path
+#                                             and .service, root), so the page can start a backup, list the snapshots
+#                                             and (owners) restore one. Only with STAFF_DIR /srv/monkey/staff
 #
 # The status job only reads: `tick query` and `list` through the container's own `monkey rcon`, and the server's log
 # and crash reports, which tools/staff_status.py filters. No deploy lock: during a deploy or the daily restart the page
@@ -39,6 +42,7 @@ case "${1:-}" in
     '') MODE=write ;;
     --check) MODE=check ;;
     --install) MODE=install ;;
+    --install-helper) MODE=install-helper ;;
     --login | --remove-login)
         MODE=${1#--}
         NAME=${2:-}
@@ -46,7 +50,7 @@ case "${1:-}" in
             '' | *[!A-Za-z0-9_-]*) echo "usage: sudo sh $0 $1 NAME (letters, digits, - and _)" >&2; exit 2 ;;
         esac
         ;;
-    *) echo "usage: sh $0 [--check | --install | --login NAME | --remove-login NAME]" >&2; exit 2 ;;
+    *) echo "usage: sh $0 [--check | --install | --install-helper | --login NAME | --remove-login NAME]" >&2; exit 2 ;;
 esac
 
 ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
@@ -56,6 +60,7 @@ STAFF_DIR=${STAFF_DIR:-$(setting STAFF_DIR /srv/monkey/staff)}
 CADDY_DIR=${CADDY_DIR:-/etc/caddy}
 UNITS='monkey-staff.service monkey-staff.timer'
 PANEL=monkey-panel.service
+HELPER_UNITS='monkey-staff-helper.path monkey-staff-helper.service'
 HOST=staff.monkeysmp.lscaturchio.xyz
 LOGINS=$CADDY_DIR/staff-logins
 SITE=$CADDY_DIR/staff.caddy
@@ -173,6 +178,29 @@ if [ "$MODE" = login ] || [ "$MODE" = remove-login ]; then
     exit 0
 fi
 
+if [ "$MODE" = install-helper ]; then
+    [ "$(id -u)" = 0 ] || die 'run as root: it installs a root service'
+    # The path unit watches /srv/monkey/staff/requests: another STAFF_DIR would never be seen.
+    [ "$STAFF_DIR" = /srv/monkey/staff ] || die "the helper watches /srv/monkey/staff/requests, and STAFF_DIR is $STAFF_DIR"
+    for unit in $HELPER_UNITS monkey-staff-helper.sh monkey-backup.sh; do
+        [ -r "$REPO_DIR/deploy/$unit" ] || die "$REPO_DIR/deploy/$unit is missing: is the release with the helper deployed?"
+    done
+    [ -d "$STAFF_DIR" ] || die "no $STAFF_DIR: run sudo sh $0 --install first"
+    # The page (monkey) writes requests here; root reads them. Nobody else may look.
+    install -d -m 770 -o monkey -g monkey "$STAFF_DIR/requests"
+    log "requests folder: $STAFF_DIR/requests"
+    helper_changed=$(changed_units $HELPER_UNITS)
+    for unit in $helper_changed; do
+        install -m 644 -o root -g root "$REPO_DIR/deploy/$unit" "/etc/systemd/system/$unit"
+        log "installed /etc/systemd/system/$unit"
+    done
+    [ -z "$helper_changed" ] || systemctl daemon-reload
+    systemctl enable --now monkey-staff-helper.path
+    [ -z "$helper_changed" ] || systemctl restart monkey-staff-helper.path
+    log 'running: monkey-staff-helper.path (the page can now start a backup, list snapshots and restore one)'
+    exit 0
+fi
+
 if [ "$MODE" = install ]; then
     command -v curl >/dev/null 2>&1 || die 'curl is missing'
     for unit in $UNITS $PANEL Caddyfile.staff staff/index.html; do
@@ -219,6 +247,9 @@ if [ "$MODE" = check ]; then
     PANEL_CHANGED=$(changed_units "$PANEL")
     log "controls: $PANEL $PANEL_STATE; unit to copy:${PANEL_CHANGED:- none}"
     log "the controls answer a request with no login: $(panel_answer) (403 is right; 000 is no answer)"
+    if systemctl is-active --quiet monkey-staff-helper.path 2>/dev/null; then HELPER_STATE=running; else HELPER_STATE="not installed (sudo sh $0 --install-helper)"; fi
+    HELPER_CHANGED=$(changed_units $HELPER_UNITS)
+    log "backup helper: monkey-staff-helper.path $HELPER_STATE; units to copy:${HELPER_CHANGED:- none}"
     if [ "$(id -u)" = 0 ]; then
         log "logins:$(sed -n 's/^\([A-Za-z0-9_-]*\) .*/ \1/p' "$LOGINS" 2>/dev/null | tr -d '\n')"
         if [ -e "$SITE" ]; then

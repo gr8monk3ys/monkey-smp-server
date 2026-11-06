@@ -63,6 +63,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
 
+import staff_apex
 import staff_status
 
 import rcon as server
@@ -943,6 +944,7 @@ NEEDS = {
 }
 ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
 PATHS.add("/api/me")
+staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 
 
 def allowed(role: str, need: str) -> bool:
@@ -1059,6 +1061,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if url.path == "/api/download":
                 self.send_download(*result)
+            elif hasattr(result, "stream"):     # staff_apex's world zip: it writes its own answer
+                result.stream(self)
             else:
                 self.send_json(200, {"ok": True, **result})
         except Refused as e:
@@ -1126,6 +1130,7 @@ def main(argv=None) -> int:
         return 1
     print(f"monkey-panel: listening on 127.0.0.1:{args.port}, files in {panel.root}, history in {panel.history}",
           flush=True)
+    staff_apex.start_scheduler(panel)
     with contextlib.suppress(KeyboardInterrupt):
         httpd.serve_forever()
     return 0

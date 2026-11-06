@@ -484,6 +484,17 @@ def test_crash_reports_and_logs_are_masked_like_the_console(box):
     assert code == 415 and b"4172144997902289642" not in json.dumps(raw).encode()
 
 
+def test_a_link_to_a_log_is_masked_and_read_only_like_the_log(box):
+    (box.root / "crash-reports" / "crash-1.txt").write_bytes(b"Seed: -4172144997902289642\n")
+    (box.root / "config" / "alias.txt").symlink_to(box.root / "crash-reports" / "crash-1.txt")
+    _, read = box.call("GET", "/api/file?path=config/alias.txt")
+    assert "4172144997902289642" not in read["text"] and read["writable"] is False
+    _, raw = box.call("GET", "/api/download?path=config/alias.txt")
+    assert b"4172144997902289642" not in raw
+    code, _ = box.call("PUT", "/api/file", {"path": "config/alias.txt", "text": "x", "mtime": read["mtime"]})
+    assert code == 403
+
+
 def test_the_history_stays_within_its_size(box, monkeypatch):
     monkeypatch.setattr(staff_panel, "HISTORY_BYTES", 10)
     box.call("PUT", "/api/file", {"path": "config/big.txt", "text": "x" * 8, "mtime": None})

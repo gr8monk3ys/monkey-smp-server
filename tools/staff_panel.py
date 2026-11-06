@@ -534,7 +534,8 @@ class Panel:
                                "the map's files and databases).")
         if want == "write" and "read-only" in rules and parts:
             raise Refused(403, "That folder is read-only here.")
-        return Path(real), parts
+        # The real path's parts, so every later rule (read-only, masking) is about the file itself, not a link to it.
+        return Path(real), real_parts
 
     def _entry(self, d: os.DirEntry, parts: tuple[str, ...]) -> dict | None:
         try:

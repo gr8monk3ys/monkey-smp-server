@@ -1386,18 +1386,6 @@
       }
     },
     {
-      "slug": "no-portals",
-      "project_id": "ZzkyvOit",
-      "version": "1.1.10",
-      "version_id": "YRFnYm1y",
-      "file": "no-portals-26.2-1.1.10.jar",
-      "url": "https://cdn.modrinth.com/data/ZzkyvOit/versions/YRFnYm1y/no-portals-26.2-1.1.10.jar",
-      "size": 74511,
-      "hashes": {
-        "sha512": "a9959d97bc1fa935a91b92738842b231bfc7a30c366d357ac7ffceece6128be81a1a8a2eefd49f491cd60083b88454944dc7480dd659b272505bd93522f135d6"
-      }
-    },
-    {
       "slug": "open-parties-and-claims",
       "project_id": "gF3BGWvG",
       "version": "fabric-26.2-0.33.0",

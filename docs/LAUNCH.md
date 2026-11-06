@@ -123,15 +123,15 @@ How:
   This is the freeze. Merging to `main` is fine; tagging is not.
 - **Stop the deploy timer as a backstop**, once the last release is live (check with
   `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` on Thursday 5 November after 5 AM):
-  `sudo systemctl disable --now monkey-deploy.timer`. An accidental tag then waits. Stopping it without disabling it
-  isn't enough: a reboot of the VPS would start it again.
+  `systemctl disable --now monkey-deploy.timer`, as root (monkey has no sudo rights). An accidental tag then waits.
+  Stopping it without disabling it isn't enough: a reboot of the VPS would start it again.
 - **`DEPLOY_WINDOW` stays 04:00-05:00.** It can't express a date range, so it isn't the freeze, but it keeps
   any deploy far from the evening.
 - **What still runs:** the daily restart at 4:30 AM, the hourly off-site backup, the Monday update check.
   Leave them.
 - **Exception:** a crash, a dupe or a security hole. Both owners agree, tag a patch release, and deploy it
   with `--now` at a quiet hour after a backup. Nothing else.
-- **Mon 9 Nov:** `sudo systemctl enable --now monkey-deploy.timer`. Tagging is open again.
+- **Mon 9 Nov:** `systemctl enable --now monkey-deploy.timer`, as root. Tagging is open again.
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
@@ -205,7 +205,7 @@ claims. Testers do keep what they learned about where things are.
 - [ ] **Before telling anyone: note the snapshot.** `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots`
   on the VPS, and note the newest ID from before any outside player has joined. Hourly snapshots last 48 hours, and after
   that only the last one of each day is kept, so for Saturday at 10 AM use one from the 11 AM Thursday run or later
-  (the 10 AM Saturday backup's clean-up drops the 10 AM Thursday one, unless it's the last of its day). If it's gone,
+  (the 10 AM Saturday backup's clean-up drops the 10 AM Thursday one). If it's gone,
   use the last snapshot of an earlier clean day, such as `c34195a5` (4 Nov, 11:03 PM), and redo staff work since then.
 - [ ] **Before telling anyone: the store's page.** An owner adds the wipe to the pass's description on Tebex, because
   a buyer from the website may never read Discord.
@@ -220,8 +220,8 @@ claims. Testers do keep what they learned about where things are.
   - Walk spawn: the Guide, the Town Crier and the Build Battle plots are there. Then the staff stash check (above).
   - Claim each Build Battle plot for its faction now: claims are in the world, so ones made before the wipe went back.
   - BlueMap's tiles aren't in the snapshot, so the map can show test builds until those chunks render again.
-  - Once the server is fine, delete `world.before-restore` and `/srv/monkey/restore` before the 11 AM backup, which
-    would otherwise save the test world too.
+  - Once the server is fine, delete `/srv/monkey/MonkeySMP-Server/server/world.before-restore` before the 11 AM
+    backup, which would otherwise save the test world too. Delete `/srv/monkey/restore` as well.
 - **If the wipe doesn't happen,** test play carries into Season I. An owner then tells buyers, and the docs/PROMOTION.md
   lines saying everyone starts at the same moment come out. On launch, Server Firsts, challenges and grace still reset.
 

@@ -43,6 +43,18 @@ staff.monkeysmp.lscaturchio.xyz {
 		}
 	}
 
+	# The login page's own requests, so a set-password link works behind the password box before the switch. The
+	# panel takes no name from them, so none is sent.
+	handle /auth/* {
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up -X-Staff-User
+			header_up -X-Staff-Role
+		}
+	}
+
 	handle /staff.json {
 		root * /srv/monkey/staff
 		file_server
@@ -55,6 +67,7 @@ staff.monkeysmp.lscaturchio.xyz {
 
 	handle {
 		root * /srv/monkey/repo/deploy/staff
+		try_files {path} {path}.html
 		file_server
 	}
 }

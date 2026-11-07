@@ -198,6 +198,113 @@ def test_a_data_pack_is_turned_on_and_off_by_the_server(apex):
     assert "datapack-enable loot.zip" in actions(apex) and "datapack-reload" in actions(apex)
 
 
+# ---------------------------------------------------------------- troubleshooting: all off, then back on
+
+
+ENABLED = ("There are 5 data pack(s) enabled: [vanilla (built-in)], [fabric (built-in)], [file/monkey-rules (world)], "
+           "[file/loot.zip (world)], [file/b.zip (world)]")
+
+
+def troubleshoot(b):
+    packs = world(b)
+    for name in ("loot.zip", "b.zip"):
+        (packs / name).write_bytes(PACK)
+    (packs / "monkey-rules").mkdir()
+    b.docker.answers["datapack list enabled"] = ENABLED
+    for name in ("monkey-rules", "loot.zip", "b.zip"):
+        b.docker.answers[f'datapack disable "file/{name}"'] = f"Disabling pack [file/{name} (world)]"
+        b.docker.answers[f'datapack enable "file/{name}"'] = f"Enabling pack [file/{name} (world)]"
+    return packs
+
+
+def sent(b, word):
+    return [argv[-1] for argv in b.docker.calls if "exec" in argv and argv[-1].startswith(f"datapack {word}")]
+
+
+def test_save_and_turn_all_off_then_back_on_in_the_old_order(apex):
+    troubleshoot(apex)
+    assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "all off"})[0] == 400
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["saved"] == 3 and data["failed"] == []
+    assert sorted(data["off"]) == ["b.zip", "loot.zip", "monkey-rules"]
+    # Only the world's own packs: never vanilla or fabric.
+    assert sorted(sent(apex, "disable")) == ['datapack disable "file/b.zip"', 'datapack disable "file/loot.zip"',
+                                             'datapack disable "file/monkey-rules"']
+    saved = json.loads((apex.staff / "packs-saved.json").read_text())
+    assert saved["by"] == "diego" and saved["packs"] == ["file/monkey-rules", "file/loot.zip", "file/b.zip"]
+    listed = apex.call("GET", "/api/datapacks")[1]["saved"]
+    assert listed["by"] == "diego" and listed["count"] == 3 and listed["at"].endswith("Z")
+    # One saved set at a time.
+    code, body = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 409 and "turn it back on or clear it" in body["error"]
+    code, data = apex.call("POST", "/api/datapacks-restore", {})
+    assert code == 200 and data["on"] == ["monkey-rules", "loot.zip", "b.zip"] and data["failed"] == []
+    assert sent(apex, "enable") == ['datapack enable "file/monkey-rules"', 'datapack enable "file/loot.zip"',
+                                    'datapack enable "file/b.zip"']
+    # The list stays, so a second restore is safe, until someone clears it.
+    assert (apex.staff / "packs-saved.json").exists()
+    assert apex.call("POST", "/api/datapacks-restore", {})[0] == 200
+    code, data = apex.call("POST", "/api/datapacks-saved-clear", {})
+    assert code == 200 and data["cleared"] == 3 and not (apex.staff / "packs-saved.json").exists()
+    assert apex.call("GET", "/api/datapacks")[1]["saved"] is None
+    assert apex.call("POST", "/api/datapacks-saved-clear", {})[0] == 404
+    assert apex.call("POST", "/api/datapacks-restore", {})[0] == 404
+    log = actions(apex)
+    assert "datapacks-save-off 3 of 3 off" in log and "datapacks-restore 3 of 3 on" in log
+    assert "datapacks-saved-clear 3 packs, saved by diego" in log
+
+
+def test_restore_reports_a_pack_that_is_gone_or_refused(apex):
+    packs = troubleshoot(apex)
+    assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})[0] == 200
+    (packs / "loot.zip").unlink()
+    apex.docker.answers['datapack enable "file/b.zip"'] = "Unknown data pack 'file/b.zip'"
+    del apex.docker.answers['datapack enable "file/monkey-rules"']        # the fake refuses it
+    code, data = apex.call("POST", "/api/datapacks-restore", {})
+    assert code == 200 and data["on"] == []
+    why = {f["name"]: f["why"] for f in data["failed"]}
+    assert list(why) == ["monkey-rules", "loot.zip", "b.zip"]
+    assert "not in the datapacks folder" in why["loot.zip"] and "Reload" in why["b.zip"]
+    assert "did not take" in why["monkey-rules"] or "answered" in why["monkey-rules"]
+    assert "datapacks-restore 0 of 3 on, failed: monkey-rules, loot.zip, b.zip" in actions(apex)
+
+
+def test_save_off_reports_a_pack_the_server_refused(apex):
+    troubleshoot(apex)
+    del apex.docker.answers['datapack disable "file/loot.zip"']
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["off"] == ["monkey-rules", "b.zip"]
+    assert [f["name"] for f in data["failed"]] == ["loot.zip"]
+    assert len(json.loads((apex.staff / "packs-saved.json").read_text())["packs"]) == 3
+
+
+def test_troubleshooting_needs_the_server_running_and_a_pack_on(apex):
+    troubleshoot(apex)
+    apex.docker.answers["datapack list enabled"] = "There are 1 data pack(s) enabled: [vanilla (built-in)]"
+    code, body = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 409 and "nothing to turn off" in body["error"]
+    assert not (apex.staff / "packs-saved.json").exists()
+    apex.docker.answers["datapack list enabled"] = ENABLED
+    apex.docker.ps = json.dumps({"State": "exited", "Status": "Exited (0)"})
+    assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})[0] == 409
+    apex.staff.mkdir(parents=True, exist_ok=True)
+    (apex.staff / "packs-saved.json").write_text(json.dumps({"by": "diego", "at": "x", "packs": ["file/loot.zip"]}))
+    assert apex.call("POST", "/api/datapacks-restore", {})[0] == 409
+    assert sent(apex, "disable") == [] and sent(apex, "enable") == []
+
+
+def test_a_broken_saved_file_is_said_and_can_be_cleared(apex):
+    troubleshoot(apex)
+    apex.staff.mkdir(parents=True, exist_ok=True)
+    (apex.staff / "packs-saved.json").write_text(json.dumps({"packs": ["file/../evil"]}))
+    data = apex.call("GET", "/api/datapacks")[1]
+    assert "can't be read" in data["saved"]["error"]
+    assert apex.call("POST", "/api/datapacks-restore", {})[0] == 500
+    assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})[0] == 500
+    assert apex.call("POST", "/api/datapacks-saved-clear", {})[0] == 200
+    assert not (apex.staff / "packs-saved.json").exists()
+
+
 # ---------------------------------------------------------------- the server icon
 
 
@@ -271,6 +378,10 @@ def test_a_modpack_installs_its_server_mods_all_or_nothing(apex, tmp_path):
     assert not (apex.root / "config" / "a.toml").exists()
     assert all("skip.jar" not in u for u in cdn.urls)
     assert "modpack test.mrpack: 2 mod(s)" in actions(apex)
+    # The pack's env says whether players need each one; a jar from overrides has none.
+    sides = json.loads((apex.root / staff_host.SIDES_FILE).read_text())
+    assert sides["lithium.jar"]["client"] == "required" and sides["lithium.jar"]["source"] == "modpack"
+    assert sides["extra.jar"]["client"] == "unknown"
 
 
 def test_a_modpack_with_two_jars_for_one_mod_is_refused(apex, tmp_path):

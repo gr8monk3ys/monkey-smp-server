@@ -8,6 +8,9 @@ tools/staff_host.py registers them with staff_panel (register()), so they get th
     POST /api/datapack-toggle {"name", "enabled"}  datapack enable/disable "file/NAME" (the server must run)     admin
     POST /api/datapack-remove {"name", "confirm"}  into staff-removed/TIME/, never deleted                       admin
     POST /api/datapack-reload                 /reload: data packs (and their changes) load without a restart       admin
+    POST /api/datapacks-save-off {"confirm": "ALL OFF"}  saves the enabled file/ packs, then turns them all off   admin
+    POST /api/datapacks-restore               turns the saved set back on in its old order; keeps the saved list  admin
+    POST /api/datapacks-saved-clear           forgets the saved set (STAFF_DIR/packs-saved.json)                  admin
     GET  /api/server-icon                     the icon as a data: URL, or none                                    admin
     POST /api/server-icon                     a 64x64 PNG, the raw body: the old one goes to staff-removed/ first  admin
     POST /api/server-icon-remove              the icon into staff-removed/                                        admin
@@ -20,6 +23,8 @@ The safety rules:
   Memory is 1 GB up to the machine's memory less 1 GB. Either change takes effect at the next restart.
 - A data pack zip has pack.mcmeta at its top, no absolute path, no `..`, no link and nothing encrypted. The release's
   own packs (monkey/datapacks/, and the manifest's) come back at every start, so they can't be removed here.
+- Troubleshooting turns off only the world's own packs (file/...), never vanilla, Fabric's or a mod's built-in ones.
+  One saved set at a time; it stays until someone clears it, so a second restore is safe.
 - A modpack must be for this server's game version on Fabric. Every server file comes from Modrinth's allowed hosts
   and must match its sha512, and every jar passes staff_host's mod checks, before any is put in: all or nothing
   (only the disk failing partway can stop it, and then the answer names what went in).
@@ -75,6 +80,9 @@ PACK_FILES_MAX = 20_000
 PACK_TOTAL_MAX = 512 * MB      # unpacked
 PACKS_SHOWN = 200
 _ENABLED = re.compile(r"\[file/([^\]\s]+)")
+SAVED_PACKS = "packs-saved.json"      # in STAFF_DIR: the packs troubleshooting turned off, in their old order
+SAVED_PACK = re.compile(r"file/" + PACK_FOLDER.pattern)   # a .zip name fits it too
+ALL_OFF_WORD = "ALL OFF"
 
 ICON_MAX = 1 * MB
 ICON_SIZE = 64
@@ -173,6 +181,7 @@ class More:
         self.memory = total_memory_gb
         self.fetch = hs.fetch
         self._lock = threading.Lock()
+        self._packs = threading.Lock()      # one troubleshooting step at a time
 
     # ------------------------------------------------ shared
 
@@ -339,7 +348,12 @@ class More:
                 continue
             rows.append({"name": e.name, "kind": kind, "size": size, "description": desc,
                          "release": e.name in release, "enabled": None if enabled is None else e.name in enabled})
-        return {"packs": rows, "running": enabled is not None}
+        try:
+            saved = self._saved()
+            saved = saved and {"by": saved["by"], "at": saved["at"], "count": len(saved["packs"])}
+        except sp.Refused as e:
+            saved = {"by": "", "at": "", "count": 0, "error": e.message}
+        return {"packs": rows, "running": enabled is not None, "saved": saved}
 
     def datapack_upload(self, user: str, query: dict, body) -> dict:
         name = query.get("name") or ""
@@ -404,6 +418,105 @@ class More:
             kept = self._aside([path], "datapacks")
         self.p.record(user, "datapack-remove", f"{name}, kept in {kept}")
         return {"name": name, "kept_in": kept}
+
+    # ------------------------------------------------ troubleshooting: every pack off, then the same set back on
+
+    def _saved_path(self) -> Path:
+        return self.p.staff / SAVED_PACKS
+
+    def _saved(self) -> dict | None:
+        """STAFF_DIR/packs-saved.json: {"by", "at", "packs": ["file/NAME", ...]} in the old order, or None."""
+        try:
+            data = json.loads(self._saved_path().read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            data = None
+        packs = data.get("packs") if isinstance(data, dict) else None
+        if not isinstance(packs, list) or not all(isinstance(p, str) and SAVED_PACK.fullmatch(p) for p in packs):
+            raise sp.Refused(500, f"{SAVED_PACKS} (STAFF_DIR) can't be read: fix it, or clear the saved set.")
+        return {"by": clean(data.get("by"), 40), "at": clean(data.get("at"), 40), "packs": packs}
+
+    def _running_for_packs(self) -> None:
+        if not self.x.running():
+            raise sp.Refused(409, "The server isn't running: data packs are turned on or off while it runs.")
+
+    def packs_save_off(self, user: str, body: dict) -> dict:
+        if body.get("confirm") != ALL_OFF_WORD:
+            raise sp.Refused(400, f"Type {ALL_OFF_WORD} to confirm.")
+        self._running_for_packs()
+        with self._packs:
+            saved = self._saved()
+            if saved is not None:
+                raise sp.Refused(409, f"A saved set is waiting already ({len(saved['packs'])} packs, by {saved['by']} "
+                                      f"at {saved['at']}): turn it back on or clear it first.")
+            try:
+                said = self.x.rcon("datapack list enabled")
+            except sp.server.RconError as e:
+                raise sp.Refused(502, f"The server did not list its packs: {sp.masked(str(e))[:200]}") from None
+            packs = [f"file/{n}" for n in dict.fromkeys(_ENABLED.findall(said)) if SAVED_PACK.fullmatch(f"file/{n}")]
+            if not packs:
+                raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
+            self.p.staff.mkdir(parents=True, exist_ok=True)
+            tmp = self._saved_path().with_name(f".{SAVED_PACKS}.{secrets.token_hex(4)}")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"by": user, "at": sp.stamp(), "packs": packs}, f, indent=1)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, self._saved_path())
+            off, failed = [], []
+            for pack in reversed(packs):
+                try:
+                    self.x.rcon(f'datapack disable "{pack}"')
+                    off.append(pack[5:])
+                except sp.server.RconError as e:
+                    failed.append({"name": pack[5:], "why": sp.masked(str(e))[:200]})
+        self.p.record(user, "datapacks-save-off", f"{len(off)} of {len(packs)} off"
+                      + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
+        return {"saved": len(packs), "off": off[::-1], "failed": failed[::-1]}
+
+    def packs_restore(self, user: str) -> dict:
+        saved = self._saved()
+        if saved is None:
+            raise sp.Refused(404, "There is no saved set to turn back on.")
+        self._running_for_packs()
+        try:
+            here = {e.name for e in os.scandir(self._packs_folder())}
+        except FileNotFoundError:
+            here = set()
+        on, failed = [], []
+        with self._packs:
+            for pack in saved["packs"]:     # in the old order: each one enabled goes on top, as it was
+                name = pack[5:]
+                if name not in here:
+                    failed.append({"name": name, "why": "It is not in the datapacks folder any more."})
+                    continue
+                try:
+                    said = self.x.rcon(f'datapack enable "{pack}"')
+                except sp.server.RconError as e:
+                    failed.append({"name": name, "why": sp.masked(str(e))[:200]})
+                    continue
+                if "Unknown data pack" in said:
+                    failed.append({"name": name, "why": "The server doesn't know it: press Reload data packs, then "
+                                                        "turn the saved set on again."})
+                    continue
+                on.append(name)
+        self.p.record(user, "datapacks-restore", f"{len(on)} of {len(saved['packs'])} on"
+                      + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
+        return {"on": on, "failed": failed, "saved": len(saved["packs"])}
+
+    def packs_saved_clear(self, user: str) -> dict:
+        with self._packs:
+            try:
+                saved = self._saved()
+            except sp.Refused:
+                saved = {"by": "?", "at": "?", "packs": []}
+            if saved is None:
+                raise sp.Refused(404, "There is no saved set to clear.")
+            self._saved_path().unlink(missing_ok=True)
+        self.p.record(user, "datapacks-saved-clear", f"{len(saved['packs'])} packs, saved by {saved['by']} at "
+                                                     f"{saved['at']}")
+        return {"cleared": len(saved["packs"])}
 
     def datapack_reload(self, user: str) -> dict:
         if not self.x.running():
@@ -526,7 +639,7 @@ class More:
             if len(jars) > MRPACK_FILES_MAX:
                 raise sp.Refused(400, f"Not installed: the pack has over {MRPACK_FILES_MAX} server mods.")
             # Everything is fetched and checked before anything goes in.
-            ready: list[tuple[str, Path, str]] = []     # (jar, staged file, mod id)
+            ready: list[tuple[str, Path, str, str]] = []    # (jar, staged file, mod id, the pack's client env)
             for jar, data, entry in jars:
                 if data is None:
                     hashes = entry.get("hashes") if isinstance(entry.get("hashes"), dict) else {}
@@ -548,14 +661,16 @@ class More:
                     raise sp.Refused(400, f"Not installed: {jar} is not a Fabric mod ({why}).")
                 if info["environment"] == "client":
                     continue                        # the pack says server, the jar says client-only: the jar wins
-                if any(info["id"] == other for _, _, other in ready):
+                if any(info["id"] == other for _, _, other, _ in ready):
                     raise sp.Refused(400, f"Not installed: the pack has two jars for the mod {info['id']}.")
-                ready.append((jar, part, info["id"]))
+                env = entry.get("env") if entry and isinstance(entry.get("env"), dict) else {}
+                ready.append((jar, part, info["id"], env.get("client") if env.get("client") in hs.SIDES else "unknown"))
             # Only a failure of the disk itself can stop this part; then say exactly what went in.
             done = []
             try:
-                for jar, part, _ in ready:
-                    done.append(self.h.install(user, jar, part, f"modpack {name}"))
+                for jar, part, _, client in ready:
+                    done.append(self.h.install(user, jar, part, f"modpack {name}",
+                                               side={"client": client, "source": "modpack"}))
             except (OSError, sp.Refused) as error:
                 went = ", ".join(d["file"] for d in done) or "none"
                 self.p.record(user, "modpack", f"{name}: stopped after {len(done)} mod(s) ({went})")
@@ -591,6 +706,9 @@ ROUTES = {
     ("POST", "/api/datapack-toggle"): lambda p, u, q, b: more(p).datapack_toggle(u, b),
     ("POST", "/api/datapack-remove"): lambda p, u, q, b: more(p).datapack_remove(u, b),
     ("POST", "/api/datapack-reload"): lambda p, u, q, b: more(p).datapack_reload(u),
+    ("POST", "/api/datapacks-save-off"): lambda p, u, q, b: more(p).packs_save_off(u, b),
+    ("POST", "/api/datapacks-restore"): lambda p, u, q, b: more(p).packs_restore(u),
+    ("POST", "/api/datapacks-saved-clear"): lambda p, u, q, b: more(p).packs_saved_clear(u),
     ("GET", "/api/server-icon"): lambda p, u, q, b: more(p).server_icon(),
     ("POST", "/api/server-icon"): lambda p, u, q, b: more(p).icon_upload(u, b),
     ("POST", "/api/server-icon-remove"): lambda p, u, q, b: more(p).icon_remove(u),

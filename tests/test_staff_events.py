@@ -45,6 +45,8 @@ class FakeServer:
                 self.running, self.seconds = 0, 0
             return ""
         if command == "save-all flush":
+            if getattr(self, "refuse_save", False):
+                raise RconError("save-all flush answered: Incorrect argument for command (exit 0)")
             return "Saved the game"
         raise AssertionError(command)
 
@@ -204,3 +206,31 @@ def test_the_page_has_every_element_events_js_uses():
         assert path in script
     code = "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("//"))
     assert "innerHTML" not in code and not re.search(r"\b(confirm|alert)\(", code)
+
+
+def test_the_lock_is_held_through_the_save_and_given_back_when_it_fails(ev):
+    seen = []
+    plain = ev.server
+
+    def watching(command, timeout=None):
+        if command == "save-all flush":
+            seen.append(ev.lock.held - ev.lock.released)
+        return plain(command, timeout)
+
+    staff_events.events(ev.panel).rcon = watching
+    assert ev.call("POST", "/api/leaderboard", {})[0] == 200 and seen == [1]
+    plain.refuse_save = True
+    code, data = ev.call("POST", "/api/leaderboard", {})
+    assert code == 502 and data["error"].startswith("The server refused it")
+    assert ev.lock.held == ev.lock.released == 2 and len(ev.ran) == 1
+    assert "leaderboard-result failed (save-all did not go through)" in actions(ev)
+
+
+def test_the_name_is_read_once_per_run(ev):
+    ev.call("POST", "/api/event-timer", {"action": "start", "name": "Hunt", "minutes": 5})
+    for _ in range(3):
+        assert ev.call("GET", "/api/event-timer")[1]["timer"]["name"] == "Hunt"
+    assert ev.server.sent.count("data get storage monkey:events timer.name") == 1
+    ev.call("POST", "/api/event-timer", {"action": "stop"})
+    ev.call("POST", "/api/event-timer", {"action": "start", "name": "Race", "minutes": 5})
+    assert ev.call("GET", "/api/event-timer")[1]["timer"]["name"] == "Race"

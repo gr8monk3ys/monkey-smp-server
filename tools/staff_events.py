@@ -16,8 +16,9 @@ The safety rules:
 - The functions run over the container's own `monkey rcon`, as the console does. The data pack's own refusals go to
   the command's sender, which RCON doesn't show, so the state is read back before and after every change.
 - The leaderboard update takes nothing new: the panel runs as monkey with no PrivateTmp, like the standings timers,
-  and the script takes the deploy lock itself. It is checked first so a busy lock answers "skipped" at once, and
-  the script's own "skipping this update" is read too (it waits 60 seconds, then skips). One update at a time.
+  and the script takes the deploy lock itself. The panel holds the lock through the save (a world download or an
+  off-site backup runs save-off under it), so a busy lock answers "skipped" at once; then it gives the lock back for
+  the script, whose own "skipping this update" is read too (it waits 60 seconds, then skips). One update at a time.
 - Every action is one line in actions.log (staff_panel's record).
 
 Stdlib only, Python 3.10 or newer.
@@ -48,6 +49,7 @@ class Events:
         self.rcon = self._rcon
         self._timer = threading.Lock()
         self._board = threading.Lock()
+        self._name: str | None = None     # the running timer's name, once read
 
     def _rcon(self, command: str, timeout: int | None = None) -> str:
         """The server's answer to one command; RconError when it didn't take it."""
@@ -59,8 +61,11 @@ class Events:
         try:
             return self.rcon(command, timeout)
         except sp.server.RconError as e:
-            if "Unknown function" in str(e):
+            said = str(e)
+            if "Unknown function" in said:
                 raise sp.Refused(409, NO_PACK) from None
+            if any(m in said for m in sp.server.REFUSED):     # the server answered, and said no
+                raise sp.Refused(502, f"The server refused it: {sp.masked(said)[-200:]}") from None
             raise sp.Refused(502, "The server didn't answer: is it running?") from None
 
     def _score(self, holder: str, objective: str) -> int:
@@ -71,10 +76,13 @@ class Events:
 
     def state(self) -> dict:
         if not self._score("#timer", "ev.state"):
+            self._name = None
             return {"running": False}
         seconds = max(0, self._score("#timer", "ev.timer"))
-        m = _STORED.search(self._ask(f"data get storage {NS}:events timer.name"))
-        name = re.sub(r"\\(.)", r"\1", m[1]) if m else None
+        name = self._name     # read once per run: the page polls every 15 seconds, each read is a docker exec
+        if name is None:
+            m = _STORED.search(self._ask(f"data get storage {NS}:events timer.name"))
+            name = self._name = re.sub(r"\\(.)", r"\1", m[1]) if m else None
         return {"running": True, "name": name, "seconds": seconds, "minutes": (seconds + 59) // 60}
 
     def timer(self) -> dict:
@@ -124,10 +132,17 @@ class Events:
             if held is None:
                 self.p.record(user, "leaderboard", "skipped (the deploy lock is busy)")
                 raise sp.Refused(409, "Skipped: a deploy or restart is running. Try again in a few minutes.")
-            self.p.lock.release(held)    # the script takes it itself
-            self.p.record(user, "leaderboard", "save-all, then monkey-standings.sh board")
-            # flush: the answer comes once the world is on disk, so the board reads the points given just now.
-            self._ask("save-all flush", SAVE_TIMEOUT)
+            # Held through the save, so it never lands inside a world download or an off-site backup (both run
+            # save-off under this lock); given back before the script, which takes it itself.
+            try:
+                self.p.record(user, "leaderboard", "save-all, then monkey-standings.sh board")
+                # flush: the answer comes once the world is on disk, so the board reads the points given just now.
+                self._ask("save-all flush", SAVE_TIMEOUT)
+            except sp.Refused:
+                self.p.record(user, "leaderboard-result", "failed (save-all did not go through)")
+                raise
+            finally:
+                self.p.lock.release(held)
             script = self.p.repo / "deploy" / "monkey-standings.sh"
             argv = ["timeout", "-k", "10", str(BOARD_TIMEOUT - 20), "sh", str(script), "board"]
             try:

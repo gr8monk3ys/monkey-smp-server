@@ -1,0 +1,8 @@
+tellraw @s [{"text":"Event night commands (the VPS runs the timed ones by itself):","color":"gold"}]
+tellraw @s [{"text":" monkey:nights/grace/start","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/grace/start"}},{"text":"  5:00 PM, 90 min no PvP, Nether closed","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/grace/end","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/grace/end"}},{"text":"  6:30 PM, opens PvP + Nether, starts the build battle","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/build/start","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/build/start"}},{"text":"  start the build battle (3 hours)","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/build/end","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/build/end"}},{"text":"  9:30 PM, building over","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/minutes {minutes:30}","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/minutes {minutes:30}"}},{"text":"  change the minutes left","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/call {block:\"Copper Bulb\"}","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/call {block:\"Copper Bulb\"}"}},{"text":"  announce a called-out block","color":"dark_gray"}]
+tellraw @s [{"text":" monkey:nights/stop","color":"aqua","click_event":{"action":"suggest_command","command":"/function monkey:nights/stop"}},{"text":"  cancel the timer (game rules stay)","color":"dark_gray"}]

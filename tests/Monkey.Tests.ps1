@@ -516,6 +516,82 @@ Describe 'Fabric servers' {
         ((Get-State $F).mods -join ',') | Should -Be 'A.jar'
     }
 
+    It 'leaves a mod staff held off out but managed, and puts it back once it is allowed again' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' } 'a-mod'
+        $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' }
+        $m = New-Manifest $F @() @() @($a, $b) $F.Fabric
+        Install-Fixture $F $m | Out-Null
+        Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
+        $held = Join-Path $F.Server '.monkey-held.json'
+        Write-Text $held '{"mods": {"a-mod": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "test", "file": "A.jar"}}}'
+
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'held\s+a-mod \(kept off by staff, A\.jar not put in\)'
+        $out | Should -Match 'Everything is up to date'
+        $F.Fetched.Count | Should -Be 0
+        Join-Path $F.Mods 'A.jar' | Should -Not -Exist
+        ((Get-State $F).mods -join ',') | Should -Be 'A.jar,B.jar'
+
+        Write-Text $held '{"mods": {}}'
+        Install-Fixture $F $m | Out-Null
+        Get-Sha512 (Join-Path $F.Mods 'A.jar') | Should -Be $a.hashes.sha512
+    }
+
+    It 'keeps a held mod off when a release bumps its version, since a hold is by slug' {
+        $F = New-Fixture
+        $a1 = New-Entry $F 'A-1.0.jar' @{ 'fabric.mod.json' = 'a1' } 'a-mod'
+        $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' }
+        Install-Fixture $F (New-Manifest $F @() @() @($a1, $b) $F.Fabric) | Out-Null
+        Remove-Item -LiteralPath (Join-Path $F.Mods 'A-1.0.jar')
+        Write-Text (Join-Path $F.Server '.monkey-held.json') '{"mods": {"a-mod": {"file": "A-1.0.jar"}}}'
+
+        $a2 = New-Entry $F 'A-2.0.jar' @{ 'fabric.mod.json' = 'a2' } 'a-mod'
+        $m2 = New-Manifest $F @() @() @($a2, $b) $F.Fabric
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m2) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'held\s+a-mod'
+        Join-Path $F.Mods 'A-2.0.jar' | Should -Not -Exist
+        Join-Path $F.Mods 'A-1.0.jar' | Should -Not -Exist
+        $F.Fetched.Count | Should -Be 0
+        ((Get-State $F).mods -join ',') | Should -Be 'A-2.0.jar,B.jar'
+    }
+
+    It 'holds every slug key whatever its value, and ignores keys that are not slugs' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' } 'a-mod'
+        $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' } 'b-mod'
+        $c = New-Entry $F 'C.jar' @{ 'fabric.mod.json' = 'c' } 'c-mod'
+        $m = New-Manifest $F @() @() @($a, $b, $c) $F.Fabric
+        New-Item -ItemType Directory -Force -Path $F.Server | Out-Null
+        Write-Text (Join-Path $F.Server '.monkey-held.json') '{"note": 1, "mods": {"a-mod": true, "b-mod": null, "../c": {}, "C.jar": {}, "x y": 1, "A-MOD2": "x"}}'
+        $held = @(InModuleScope Monkey -Parameters @{ Dir = $F.Server } { Get-HeldMods @{ ServerDir = $Dir } })
+        ($held -join ',') | Should -Be 'a-mod,b-mod,C.jar,A-MOD2'
+        Install-Fixture $F $m | Out-Null
+        Join-Path $F.Mods 'A.jar' | Should -Not -Exist
+        Join-Path $F.Mods 'B.jar' | Should -Not -Exist
+        Join-Path $F.Mods 'C.jar' | Should -Exist
+    }
+
+    It 'holds nothing when .monkey-held.json is broken, and still starts' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' }
+        $m = New-Manifest $F @() @() @($a) $F.Fabric
+        New-Item -ItemType Directory -Force -Path $F.Server | Out-Null
+        Write-Text (Join-Path $F.Server '.monkey-held.json') '{"mods": {"A": '
+        $out = Install-Server -Context (New-Ctx $F $m) -AcceptEula -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'not valid JSON'
+        Join-Path $F.Mods 'A.jar' | Should -Exist
+
+        foreach ($odd in '["A"]', '{"mods": "A"}', '{"mods": ["A"]}', '{"mods": {"a": 1, "A": 2}}') {
+            Write-Text (Join-Path $F.Server '.monkey-held.json') $odd
+            Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
+            Install-Fixture $F $m | Out-Null
+            Join-Path $F.Mods 'A.jar' | Should -Exist
+        }
+    }
+
     It 'refuses plugins in a Fabric manifest and mods in a Paper one' {
         $F = New-Fixture
         $jar = New-Entry $F 'X.jar' @{ 'x' = 'x' }

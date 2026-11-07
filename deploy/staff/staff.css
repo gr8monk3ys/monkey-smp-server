@@ -294,6 +294,10 @@ textarea { display: block; width: 100%; height: 60vh; min-height: 14rem; padding
 
 .confirm { display: grid; gap: 8px; padding: 10px 14px; background: var(--shade); border: 2px solid var(--gold); }
 .confirm p { color: var(--bone); }
+.confirm .check { display: flex; align-items: center; gap: 10px; color: var(--bone); cursor: pointer; }
+/* A notice that can lock players out (a mod they need but don't have): ink on --bad, about 8:1. */
+.attention.bad { background: var(--bad); }
+#power-errors { display: grid; gap: 4px; margin-top: 10px; }
 
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 16px; align-items: start; }
 .cols.wide { grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); }

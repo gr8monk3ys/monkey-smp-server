@@ -1000,7 +1000,9 @@ class Extras:
                 seen.add(e.name)
             for name in set(self._mods) - seen:
                 del self._mods[name]
-        return {"mods": rows, "count": len(rows)}
+        # Held mods and whether players need each one (staff_host, registered by now: register()).
+        import staff_host
+        return staff_host.host(self.p).mod_notes({"mods": rows, "count": len(rows)})
 
     def pinned(self) -> set[str]:
         """The jar names the release's install put in mods/ (server/.monkey-state.json); it puts them back at starts."""

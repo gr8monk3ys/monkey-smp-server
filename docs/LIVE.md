@@ -1192,8 +1192,11 @@ the controls refuse it whatever the page sends.
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
 | Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
-| Mods list | moderator | Each jar's name, version and side, and whether it is off or pinned. |
+| Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks. |
 | Mod manager | admin | Upload a jar, install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
+| Keep a pinned mod off | admin | Turning off or removing a pinned mod asks "Keep it off after restarts" (ticked), when the live release supports it. Allow again undoes it. Types the jar's file name. |
+| Do players need it | admin | Yes, no or don't know, for a mod Modrinth doesn't know. Saved with the mod. |
+| Data pack troubleshooting | admin | Turn all off (types `ALL OFF`) saves which packs are on and turns them off; Turn saved set back on puts them back in order. |
 | World download | owner | A one-time link to a zip of the world. Saving is off while it streams. |
 | Bans by address | admin | `ban-ip` and `pardon-ip`. Public addresses only. The log never holds the address. |
 | Version switch | admin | The helper runs `monkey-deploy.sh --tag=vX.Y.Z` for a release tag from the checkout. Types the tag. |
@@ -1219,6 +1222,47 @@ The mod manager:
   release's own mods are pinned (`server/.monkey-state.json`): the server puts a pinned jar back each time it starts,
   so turning one off or replacing it lasts only until the next start, and the next release deploy puts `mods/` back
   to that release's list. A change takes effect at the next restart.
+- **Keep it off**: turning off or removing a pinned mod asks "Keep it off after restarts?" (ticked). Then the
+  mod's slug (from the release's `monkey/manifest.json`) goes in `server/.monkey-held.json` with who, when, why and
+  the jar's name then: `{"mods": {"<slug>": {"by", "at", "why", "file"}}}`. The start script (`Monkey.psm1`,
+  `Get-HeldMods`, `Sync-ManagedFiles`) doesn't download a manifest mod whose slug is held: the start log says
+  `held  <slug> (kept off by staff, <jar> not put in)`. It stays in the install state, so **Allow again**
+  (`POST /api/mod-hold`), turning the jar back on, or installing a jar of the release's name puts it back at the
+  next start. A hold lasts across restarts and release deploys (`monkey-deploy.sh` never touches `server/`, and a
+  release that bumps the jar's version keeps the same slug) until someone allows it again. Only mods the release's
+  manifest lists can be held. Every key that looks like a slug holds, whatever its value; a missing or broken file
+  holds nothing, and the start never fails on it. A held mod whose jar is gone from `mods/` stays in the list, with
+  Allow again. When players have the mod in their pack and their game needs it, the page says that keeping it off
+  may stop players joining. The page offers the box only when the live package's `Monkey.psm1` has `Get-HeldMods`:
+  after a rollback to a release without it, a hold is refused (turn the mod off without keeping it off). If the
+  move works but the held file can't be written, the mod stays moved and the page says the hold wasn't saved.
+- **Do players need it**: after each install the page asks Modrinth: an upload by its sha512
+  (`/v2/version_file/HASH?algorithm=sha512`, then the project's `client_side`), a Modrinth install from the project
+  it already has, a modpack from its own `env`. It is noted in `server/.monkey-mod-sides.json`. A failed lookup is
+  "unknown" and never stops the install; the page then asks staff (yes, no, don't know). Staff's answer always
+  replaces the note; a lookup's "unknown" never replaces a known answer. `required` and not in the players' pack
+  shows a red notice: players must install it too, and until the owner adds it to the players' pack in a release
+  they may not be able to join. The mods list names every enabled mod players need that the players' pack lacks: the pack is
+  `client/modrinth.index.json` in the repo checkout, matched by Modrinth project or jar name. When the checkout has
+  no readable pack, the list is every mod marked as needed. The page never changes the players' pack.
+
+The data packs box (admin, Mods tab) has a troubleshooting mode for "which pack breaks it":
+
+- **Turn all off** (types `ALL OFF`, the server must be running) reads `datapack list enabled`, saves the world's
+  own packs (`file/...`, in their order) to `/srv/monkey/staff/packs-saved.json` with who and when, then runs
+  `datapack disable` for each. A pack is found in the list by its exact name in the datapacks folder, so names with
+  spaces work. Vanilla, Fabric's and the mods' built-in packs stay on. One saved set at a time.
+- While a set is saved, the box says "Troubleshooting since TIME by NAME: N of M saved packs still off" (what the
+  server has on now). Turn packs on one at a time to find the trouble.
+- **Turn saved set back on** runs `datapack enable` for each saved pack in the old order (each goes on top, so the
+  order comes back) and names any that failed: gone from the folder, or refused by the server. The file stays, so a
+  second try is safe. **Clear the saved set** forgets it.
+- Both read each answer ("Unknown data pack" and the like mean it did nothing), then list the packs again and
+  report what the server really has. A pack still in the wrong state is tried once more (the server can drop a
+  change made while it reloads, MC-200471), then listed again.
+- After a restart or start pressed on the Server tab, the power card lists the errors logged since the server
+  started again (its start time from the power card, not the time of the press: a normal restart waits 5 minutes).
+  It reads `staff.json`'s error groups, so it is up to 2 minutes late, and says when each was last seen.
 
 The root helper (`monkey-staff-helper.path` and `.service`, root) does the jobs the panel can't, as `monkey`: backups,
 restores, version switches, resets and world swaps. The panel writes a request file of fixed words and checked values

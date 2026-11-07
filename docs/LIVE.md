@@ -1010,7 +1010,11 @@ replaces them with the release's own copies:
 
 ```sh
 sudo -u monkey git -C /srv/monkey/repo fetch --quiet origin main
-sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff deploy/Caddyfile.staff-login tools/staff_status.py tools/staff_panel.py tools/staff_auth.py
+sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deploy/monkey-staff.sh \
+    deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
+    deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
+    deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the

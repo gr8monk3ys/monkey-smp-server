@@ -549,10 +549,12 @@ Describe 'Fabric servers' {
         $out | Should -Match 'not valid JSON'
         Join-Path $F.Mods 'A.jar' | Should -Exist
 
-        Write-Text (Join-Path $F.Server '.monkey-held.json') '["A.jar"]'
-        Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
-        Install-Fixture $F $m | Out-Null
-        Join-Path $F.Mods 'A.jar' | Should -Exist
+        foreach ($odd in '["A.jar"]', '{"mods": "A.jar"}', '{"mods": ["A.jar"]}') {
+            Write-Text (Join-Path $F.Server '.monkey-held.json') $odd
+            Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
+            Install-Fixture $F $m | Out-Null
+            Join-Path $F.Mods 'A.jar' | Should -Exist
+        }
     }
 
     It 'refuses plugins in a Fabric manifest and mods in a Paper one' {

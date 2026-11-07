@@ -529,7 +529,8 @@ function Get-HeldMods($Context) {
         Write-Note "ignored .monkey-held.json: it is not valid JSON, so no mod is held"
         return @()
     }
-    if (-not $data -or -not ($data -is [pscustomobject]) -or -not ($data.mods -is [pscustomobject])) { return @() }
+    $object = [System.Management.Automation.PSCustomObject]
+    if (-not $data -or -not ($data -is $object) -or -not ($data.mods -is $object)) { return @() }
     return @($data.mods.PSObject.Properties | ForEach-Object { [string]$_.Name } | Where-Object { $_ })
 }
 

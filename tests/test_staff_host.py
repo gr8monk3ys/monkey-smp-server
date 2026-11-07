@@ -210,6 +210,256 @@ def test_a_modrinth_install_checks_the_sha512_and_the_host(apex, tmp_path):
     assert "mod-install lithium-fabric-0.15.jar (Modrinth lithium 0.15)" in actions(apex)
 
 
+# ---------------------------------------------------------------- held mods (kept off at starts)
+
+
+def held_file(b):
+    path = b.root / staff_host.HELD_FILE
+    return json.loads(path.read_text())["mods"] if path.exists() else None
+
+
+def pinned(b, *names):
+    (b.root / ".monkey-state.json").write_text(json.dumps({"mods": list(names)}))
+
+
+def test_a_pinned_mod_turned_off_with_hold_stays_off_until_it_is_turned_on(apex):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
+    assert apex.call("POST", "/api/mod-toggle", {**off, "hold": "yes"})[0] == 400
+    code, done = apex.call("POST", "/api/mod-toggle", off)
+    assert code == 200 and done["held"] is True and done["pinned"] is True
+    entry = held_file(apex)["claims.jar"]
+    assert entry["by"] == "diego" and entry["at"].endswith("Z") and entry["why"]
+    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
+    assert rows["claims.jar.disabled"]["held"]["by"] == "diego"
+    assert "mod-disable claims.jar, kept off after restarts" in actions(apex)
+    on = {"file": "claims.jar.disabled", "enabled": True, "confirm": "claims.jar.disabled"}
+    code, done = apex.call("POST", "/api/mod-toggle", on)
+    assert code == 200 and done["held"] is False and held_file(apex) == {}
+    assert "mod-enable claims.jar.disabled, no longer kept off" in actions(apex)
+
+
+def test_hold_only_applies_to_a_pinned_mod(apex):
+    mods = apex.root / "mods"
+    jar(mods / "extra.jar", {"id": "extra", "name": "Extra"})
+    code, done = apex.call("POST", "/api/mod-toggle", {"file": "extra.jar", "enabled": False,
+                                                       "confirm": "extra.jar", "hold": True})
+    assert code == 200 and done["held"] is False and held_file(apex) is None
+
+
+def test_a_removed_pinned_mod_is_listed_while_held_and_can_be_allowed_again(apex):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    code, done = apex.call("POST", "/api/mod-remove", {"file": "claims.jar", "confirm": "claims.jar", "hold": True,
+                                                       "why": "testing a crash"})
+    assert code == 200 and done["held"] is True
+    assert held_file(apex)["claims.jar"]["why"] == "testing a crash"
+    data = apex.call("GET", "/api/mods")[1]
+    assert [g["file"] for g in data["held_gone"]] == ["claims.jar"] and data["held_gone"][0]["held"]["by"] == "diego"
+    allow = {"file": "claims.jar", "held": False, "confirm": "claims.jar"}
+    assert apex.call("POST", "/api/mod-hold", {**allow, "confirm": "claims"})[0] == 400
+    assert apex.call("POST", "/api/mod-hold", allow)[0] == 200
+    assert held_file(apex) == {} and apex.call("GET", "/api/mods")[1]["held_gone"] == []
+    assert apex.call("POST", "/api/mod-hold", allow)[0] == 409          # not held any more
+    assert "mod-allow claims.jar" in actions(apex)
+
+
+def test_mod_hold_needs_a_pinned_mod_that_is_off(apex):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    hold = {"file": "claims.jar", "held": True, "confirm": "claims.jar"}
+    code, body = apex.call("POST", "/api/mod-hold", hold)
+    assert code == 409 and "not one of the release's pinned mods" in body["error"]
+    pinned(apex, "claims.jar")
+    code, body = apex.call("POST", "/api/mod-hold", hold)
+    assert code == 409 and "turn it off or remove it" in body["error"]
+    assert apex.call("POST", "/api/mod-hold", {**hold, "file": "../x.jar", "confirm": "../x.jar"})[0] == 400
+    assert apex.call("POST", "/api/mod-hold", {**hold, "held": "yes"})[0] == 400
+    (mods / "claims.jar").unlink()
+    assert apex.call("POST", "/api/mod-hold", hold)[0] == 200 and "claims.jar" in held_file(apex)
+    assert apex.call("POST", "/api/mod-hold", hold)[0] == 409           # held already
+    assert "mod-hold claims.jar" in actions(apex)
+
+
+def test_installing_a_jar_of_a_held_name_allows_it_again(apex, tmp_path):
+    pinned(apex, "claims.jar")
+    (apex.root / staff_host.HELD_FILE).write_text(json.dumps(
+        {"mods": {"claims.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"},
+                  "other.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
+    good = jar_bytes(tmp_path, {"id": "claims", "name": "Claims"})
+    assert apex.call("POST", mod_url("claims.jar"), good)[0] == 200
+    assert set(held_file(apex)) == {"other.jar"}
+    assert "mod-install claims.jar (uploaded), no longer kept off" in actions(apex)
+
+
+@pytest.mark.parametrize("text", ["{not json", "[]", '{"mods": ["claims.jar"]}', '{"mods": {"../x.jar": {}}}'])
+def test_a_broken_held_file_holds_nothing_and_is_written_over(apex, text):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    (apex.root / staff_host.HELD_FILE).write_text(text)
+    rows = apex.call("GET", "/api/mods")[1]
+    assert rows["held_gone"] == [] and all(r["held"] is None for r in rows["mods"])
+    off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
+    assert apex.call("POST", "/api/mod-toggle", off)[0] == 200
+    assert list(held_file(apex)) == ["claims.jar"]
+
+
+def test_the_held_file_is_what_the_start_script_reads():
+    psm = (REPO.root / "package" / "monkey" / "Monkey.psm1").read_text(encoding="utf-8")
+    assert f"Join-Path $Context.ServerDir '{staff_host.HELD_FILE}'" in psm
+    # A release deploy copies package/ over the live folder but never touches server/, where the file is.
+    assert "--exclude '/server/'" in (DEPLOY / "monkey-deploy.sh").read_text()
+
+
+# ---------------------------------------------------------------- do players need a mod
+
+
+class FakeLookup:
+    """Modrinth's version_file and project answers for the upload check; an answer may be an exception."""
+
+    def __init__(self, answers):
+        self.answers, self.urls = answers, []
+
+    def __call__(self, url, most):
+        self.urls.append(url)
+        assert most == staff_host.API_MAX
+        path = url.removeprefix(staff_host.MODRINTH).split("?")[0]
+        if path.startswith("/version_file/"):
+            path = "/version_file"
+        answer = self.answers.get(path, staff_panel.Refused(502, "Modrinth didn't answer: try again in a minute."))
+        if isinstance(answer, Exception):
+            raise answer
+        return answer if isinstance(answer, bytes) else json.dumps(answer).encode()
+
+
+def lookup(apex, client_side=None, version=None, project=None):
+    answers = {"/version_file": version if version is not None else {"project_id": "AbCd1234"},
+               "/project/AbCd1234": project if project is not None else {"id": "AbCd1234", "client_side": client_side}}
+    fake = FakeLookup(answers)
+    staff_host.host(apex.panel).fetch = fake
+    return fake
+
+
+def sides_file(b):
+    return json.loads((b.root / staff_host.SIDES_FILE).read_text())
+
+
+@pytest.mark.parametrize("client_side,want", [("required", "required"), ("optional", "optional"),
+                                              ("unsupported", "unsupported"), ("sideways", "unknown")])
+def test_an_upload_is_looked_up_on_modrinth_by_its_sha512(apex, tmp_path, client_side, want):
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships", "environment": "*"})
+    fake = lookup(apex, client_side)
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and done["client_side"] == want and done["side_checked"] is True
+    assert fake.urls[0] == (f"{staff_host.MODRINTH}/version_file/{hashlib.sha512(good).hexdigest()}"
+                            "?algorithm=sha512")
+    row = sides_file(apex)["shippy.jar"]
+    assert row["client"] == want and row["source"] == "modrinth" and row["project"] == "AbCd1234"
+    assert row["by"] == "diego"
+    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
+    assert rows["shippy.jar"]["client_side"] == want
+
+
+@pytest.mark.parametrize("trouble", ["network", "not found", "not json", "no project", "bad project", "crash"])
+def test_a_failed_lookup_never_stops_the_upload(apex, tmp_path, trouble):
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    answers = {"network": {},
+               "not found": {"/version_file": staff_panel.Refused(502, "404")},
+               "not json": {"/version_file": b"<html>"},
+               "no project": {"/version_file": {"files": []}},
+               "bad project": {"/version_file": {"project_id": "../x"}},
+               "crash": {"/version_file": {"project_id": "AbCd1234"}, "/project/AbCd1234": RuntimeError("boom")}}
+    staff_host.host(apex.panel).fetch = FakeLookup(answers[trouble])
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and done["client_side"] == "unknown" and done["side_checked"] is False
+    assert (apex.root / "mods" / "shippy.jar").exists()
+    assert sides_file(apex)["shippy.jar"]["client"] == "unknown"
+
+
+def test_staff_answer_whether_players_need_a_mod_and_modrinth_not_knowing_keeps_it(apex, tmp_path):
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    staff_host.host(apex.panel).fetch = FakeLookup({})
+    assert apex.call("POST", mod_url("shippy.jar"), good)[0] == 200
+    assert apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "maybe"})[0] == 400
+    assert apex.call("POST", "/api/mod-side", {"file": "gone.jar", "players": "required"})[0] == 404
+    assert apex.call("POST", "/api/mod-side", {"file": "../x.jar", "players": "required"})[0] == 400
+    code, done = apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "required"})
+    assert code == 200 and done["client_side"] == "required"
+    assert sides_file(apex)["shippy.jar"]["source"] == "staff"
+    assert "mod-side shippy.jar: do players need it? required" in actions(apex)
+    # A new upload of the same jar that Modrinth doesn't know keeps the answer; one it knows replaces it.
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["client_side"] == "required"
+    lookup(apex, "optional")
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["client_side"] == "optional"
+    code, done = apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "no"})
+    assert done["client_side"] == "unsupported"
+
+
+def test_a_modrinth_install_notes_the_projects_client_side(apex, tmp_path):
+    data = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "0.15"})
+    fake = with_modrinth(apex, FakeModrinth(data))
+    fake.answers["/project/lithium"]["client_side"] = "required"
+    code, done = apex.call("POST", "/api/modrinth-install", {"project": "lithium", "confirm": "lithium"})
+    assert code == 200 and done["client_side"] == "required"
+    assert sides_file(apex)["lithium-fabric-0.15.jar"] == {
+        "client": "required", "source": "modrinth", "project": "gvQqBUqZ", "by": "diego",
+        "at": sides_file(apex)["lithium-fabric-0.15.jar"]["at"]}
+    assert not any("version_file" in u for u in fake.urls)       # the project said it already
+
+
+def client_pack(b, files):
+    folder = b.tmp / "repo" / "client"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "modrinth.index.json").write_text(json.dumps({"files": files}))
+
+
+def test_the_mods_list_names_mods_players_need_that_their_pack_lacks(apex):
+    mods = apex.root / "mods"
+    for name in ("shippy.jar", "inpack.jar", "byname.jar", "optional.jar"):
+        jar(mods / name, {"id": name[:-4], "name": name})
+    jar(mods / "off.jar.disabled", {"id": "off", "name": "Off"})
+    sides = {n: {"client": c, "source": "staff", "by": "diego", "at": "x"} for n, c in
+             (("shippy.jar", "required"), ("byname.jar", "required"), ("optional.jar", "optional"),
+              ("off.jar", "required"))}
+    sides["inpack.jar"] = {"client": "required", "source": "modrinth", "project": "InPack12", "by": "d", "at": "x"}
+    (apex.root / staff_host.SIDES_FILE).write_text(json.dumps(sides))
+    data = apex.call("GET", "/api/mods")[1]
+    # No players' pack to read: every enabled mod marked required is listed, and the page says it couldn't check.
+    assert data["players_pack"] is False
+    assert sorted(data["players_missing"]) == ["byname.jar", "inpack.jar", "shippy.jar"]
+    client_pack(apex, [
+        {"path": "mods/other-1.0.jar", "env": {"client": "required"},
+         "downloads": ["https://cdn.modrinth.com/data/InPack12/versions/abcdefgh/other-1.0.jar"]},
+        {"path": "mods/byname.jar", "downloads": []}])
+    data = apex.call("GET", "/api/mods")[1]
+    assert data["players_pack"] is True and data["players_missing"] == ["shippy.jar"]
+    rows = {r["file"]: r for r in data["mods"]}
+    assert rows["inpack.jar"]["in_players_pack"] is True and rows["shippy.jar"]["in_players_pack"] is False
+
+
+def test_a_held_release_mod_players_need_shows_as_in_their_pack(apex):
+    (apex.live / "monkey").mkdir(exist_ok=True)
+    (apex.live / "monkey" / "manifest.json").write_text(json.dumps(
+        {"minecraft": "26.2", "mods": [{"file": "claims.jar", "project_id": "Claims12"},
+                                       {"file": "server.jar", "project_id": "Server12"}]}))
+    client_pack(apex, [{"path": "mods/claims-client.jar", "env": {"client": "required", "server": "required"},
+                        "downloads": ["https://cdn.modrinth.com/data/Claims12/versions/abcdefgh/claims.jar"]}])
+    pinned(apex, "claims.jar", "server.jar")
+    jar(apex.root / "mods" / "server.jar", {"id": "srv", "name": "Server"})
+    (apex.root / staff_host.HELD_FILE).write_text(json.dumps(
+        {"mods": {"claims.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
+    data = apex.call("GET", "/api/mods")[1]
+    gone = data["held_gone"][0]
+    assert gone["file"] == "claims.jar" and gone["client_side"] == "required" and gone["in_players_pack"] is True
+    rows = {r["file"]: r for r in data["mods"]}
+    assert rows["server.jar"]["client_side"] == "unknown" and rows["server.jar"]["in_players_pack"] is False
+    assert data["players_missing"] == []
+
+
 # ---------------------------------------------------------------- the version switch
 
 

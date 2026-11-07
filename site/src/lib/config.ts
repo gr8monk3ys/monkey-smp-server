@@ -5,6 +5,8 @@ import settings from "@config";
 export type Config = {
   ADDRESS: string;
   DISCORD_INVITE: string;
+  /** How to reach staff without the Discord, a mailto: or a page. Empty: its links go to the Discord. */
+  CONTACT_URL: string;
   /** The Tebex webstore. Empty until the store can take payments and run its commands (docs/LIVE.md). */
   STORE_URL: string;
   MODPACK_URL: string;

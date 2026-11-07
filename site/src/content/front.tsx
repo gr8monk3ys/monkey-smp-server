@@ -64,7 +64,7 @@ export const pass = {
     "Full access to the server and every mod",
     "A vote on each season's twist",
     "Proximity voice chat",
-    "Member role, forum and events in the Discord",
+    "The member role and forum in the Discord, if you want them",
   ],
 };
 
@@ -108,10 +108,18 @@ export const faq: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Refunds?",
-    a: "If you can't get the pack to run in your first 48 hours, ask in the Discord and you get your money back. "
-      + "In the first weeks after launch that can take a while, because Tebex has to clear a payment before it can "
-      + "return one. The monthly pass renews until you cancel it, and you can cancel any time; the 2-month pass doesn't renew, "
-      + "and at 60 days it ends before a 12-week season does.",
+    a: <>If you can&apos;t get the pack to run in your first 48 hours,{" "}
+      <ConfigLink to="CONTACT_URL">contact us</ConfigLink> and you get your money back. In the first weeks after launch
+      that can take a while, because Tebex has to clear a payment before it can return one. The monthly pass renews
+      until you cancel it, and you can cancel any time; the 2-month pass doesn&apos;t renew, and at 60 days it ends
+      before a 12-week season does.</>,
+  },
+  {
+    q: "Do I need the Discord?",
+    a: <>No. You can buy a pass, get on the whitelist and play without it, and the{" "}
+      <a href="/guide/rules">rules</a>, <a href="/changes">news</a>, <a href="/guide/standings">standings</a> and{" "}
+      <a href="/guide/week">weekly schedule</a> are all on this site. The Discord adds the member role, the forum,
+      game chat while you&apos;re away, and the vote on each season&apos;s twist.</>,
   },
   {
     q: "I'm under 18.",
@@ -134,8 +142,8 @@ export const faq: { q: string; a: ReactNode }[] = [
   },
   {
     q: "What happens when the server updates?",
-    a: "Updates are announced in the Discord, with a five-minute warning in chat, and the server is back in about "
-      + "three minutes. When the mod list changes, the announcement says so: get the new pack from the modpack "
-      + "link and import it again, or run the installer again.",
+    a: <>Updates are announced on <a href="/changes">What changed</a> and in the Discord, with a five-minute
+      warning in chat, and the server is back in about three minutes. When the mod list changes, the announcement
+      says so: get the new pack from the modpack link and import it again, or run the installer again.</>,
   },
 ];

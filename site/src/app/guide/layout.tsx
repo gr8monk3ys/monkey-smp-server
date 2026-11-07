@@ -24,6 +24,7 @@ export default function GuideLayout({ children }: { children: ReactNode }) {
       <Footer items={[
         { label: "Monkey SMP", href: "/" },
         { label: "Discord", to: "DISCORD_INVITE" },
+        { label: "Contact", to: "CONTACT_URL" },
         { label: "Rules", href: "/#rules" },
         { label: "Live map", to: "MAP_URL" },
         { label: "What changed", href: "/changes" },

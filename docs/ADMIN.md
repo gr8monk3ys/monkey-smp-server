@@ -1225,6 +1225,11 @@ Players read changes in two places, with the same words in both:
 - **`#changelog` in Discord**, an announcement channel nobody else posts in, on the day the change goes
   live, linking to the page.
 
+The Discord is optional for players, so anything posted in `#announcements` that a player needs goes on that page
+too, in the same words: downtime and new times, event news, season dates and each month's money post. A page entry
+goes live when its pull request merges and Vercel has built it, so during an outage say it in the Discord and in game
+first.
+
 What goes in: rule changes (and the rule's number), mods added or removed, anything the client pack
 needs, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),
 and season dates. What stays out: server internals, fixes nobody could see, and anything that helps a

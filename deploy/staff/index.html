@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="auth.css">
   <script src="users.js" defer></script>
   <script src="server.js" defer></script>
+  <script src="events.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -206,6 +207,26 @@
       <section class="box">
         <h3>Last backup</h3>
         <dl id="backup"></dl>
+      </section>
+      <section class="box span" id="events-box" hidden>
+        <h3>Event timer</h3>
+        <p class="fine">A boss bar with the minutes left for everyone, warnings at 10, 5 and 1 minute, and an "Event over"
+          title at the end. One at a time, apart from the raid and Anarchy timers. Give the Cup points by hand, then
+          update the leaderboard.</p>
+        <p class="attention" id="events-error" role="alert" hidden></p>
+        <p class="note" id="events-note" role="status" hidden></p>
+        <p class="fine" id="timer-state">Checking</p>
+        <div class="add">
+          <input id="timer-name" type="text" maxlength="40" placeholder="Event name, e.g. Boat Race" aria-label="Event name" spellcheck="false">
+          <input id="timer-minutes" type="number" min="1" max="600" value="30" aria-label="Minutes">
+          <button class="btn primary" id="timer-start" type="button">Start</button>
+        </div>
+        <div class="actions">
+          <button class="btn" id="timer-finish" type="button">End now (Event over)</button>
+          <button class="btn" id="timer-stop" type="button">Stop early (no Event over)</button>
+          <button class="btn" id="board-update" type="button">Update the leaderboard now</button>
+        </div>
+        <div class="confirm" id="events-confirm" hidden></div>
       </section>
       <section class="box span">
         <h3>Backups from here</h3>

@@ -498,6 +498,17 @@ Kit gear is marked, so it can't be smuggled out:
 /function monkey:events/raid/stop
 ```
 
+**Any other event: the event timer.** The raid's look for any event: a boss bar with the minutes left, warnings at
+10, 5 and 1 minute, a start title and the horn, and an "Event over" title (the event's name under it) and a sound at
+the end. One at a time, apart from the raid and Anarchy timers. It gives no Cup points: give them with `cup/add`,
+then update the leaderboard (the staff page's Server tab: "Update the leaderboard now", which saves the world first).
+The staff page's Event timer card runs the same three.
+
+```
+/function monkey:events/timer/start {name:"Boat Race",minutes:30}   # 1 to 600 minutes; the name has no " or /function monkey:events/timer/finish                                # ends it now, with "Event over"
+/function monkey:events/timer/stop                                  # cancels it, no "Event over"
+```
+
 **Flags, books and the Cup.**
 
 ```

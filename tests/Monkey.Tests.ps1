@@ -516,6 +516,45 @@ Describe 'Fabric servers' {
         ((Get-State $F).mods -join ',') | Should -Be 'A.jar'
     }
 
+    It 'leaves a mod staff held off out but managed, and puts it back once it is allowed again' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' } 'a-mod'
+        $b = New-Entry $F 'B.jar' @{ 'fabric.mod.json' = 'b' }
+        $m = New-Manifest $F @() @() @($a, $b) $F.Fabric
+        Install-Fixture $F $m | Out-Null
+        Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
+        $held = Join-Path $F.Server '.monkey-held.json'
+        Write-Text $held '{"mods": {"A.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "test"}}}'
+
+        $F.Fetched.Clear()
+        $out = Install-Server -Context (New-Ctx $F $m) -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'held\s+a-mod \(kept off by staff\)'
+        $out | Should -Match 'Everything is up to date'
+        $F.Fetched.Count | Should -Be 0
+        Join-Path $F.Mods 'A.jar' | Should -Not -Exist
+        ((Get-State $F).mods -join ',') | Should -Be 'A.jar,B.jar'
+
+        Write-Text $held '{"mods": {}}'
+        Install-Fixture $F $m | Out-Null
+        Get-Sha512 (Join-Path $F.Mods 'A.jar') | Should -Be $a.hashes.sha512
+    }
+
+    It 'holds nothing when .monkey-held.json is broken, and still starts' {
+        $F = New-Fixture
+        $a = New-Entry $F 'A.jar' @{ 'fabric.mod.json' = 'a' }
+        $m = New-Manifest $F @() @() @($a) $F.Fabric
+        New-Item -ItemType Directory -Force -Path $F.Server | Out-Null
+        Write-Text (Join-Path $F.Server '.monkey-held.json') '{"mods": {"A.jar": '
+        $out = Install-Server -Context (New-Ctx $F $m) -AcceptEula -NoOwner 6>&1 | Out-String
+        $out | Should -Match 'not valid JSON'
+        Join-Path $F.Mods 'A.jar' | Should -Exist
+
+        Write-Text (Join-Path $F.Server '.monkey-held.json') '["A.jar"]'
+        Remove-Item -LiteralPath (Join-Path $F.Mods 'A.jar')
+        Install-Fixture $F $m | Out-Null
+        Join-Path $F.Mods 'A.jar' | Should -Exist
+    }
+
     It 'refuses plugins in a Fabric manifest and mods in a Paper one' {
         $F = New-Fixture
         $jar = New-Entry $F 'X.jar' @{ 'x' = 'x' }

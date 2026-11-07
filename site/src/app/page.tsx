@@ -54,6 +54,21 @@ export default function Home() {
               <ConfigLink to="DISCORD_INVITE" className="button ghost">Join the Discord</ConfigLink>
             </div>
           </div>
+          <ul className="facts">
+            <li>Minecraft Java on a PC</li>
+            <li>{pass.price} a month</li>
+            <li>Money back if it won&apos;t run</li>
+          </ul>
+          <figure className="view">
+            <div className="shot">
+              <span className="where">Overworld</span>
+              <img src="/img/fortified-village-1600.webp"
+                srcSet="/img/fortified-village-800.webp 800w, /img/fortified-village-1600.webp 1600w"
+                sizes="(max-width: 1248px) calc(100vw - 32px), 1216px" width={1600} height={900} decoding="async"
+                alt="A walled village with a stone keep, built out over shallow water beside a sandy shore" />
+            </div>
+            <figcaption>A fortified village on the coast, shot on a test world before Season I.</figcaption>
+          </figure>
           {config.STATUS_URL && <ServerStatus url={config.STATUS_URL} mapUrl={config.MAP_URL}
             launchAt={config.LAUNCH_AT} builtPhase={builtPhase()} />}
           <Trailer />

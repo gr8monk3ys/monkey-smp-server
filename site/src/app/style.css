@@ -153,11 +153,12 @@ main > section, footer { padding: 112px var(--gutter); }
 .small { color: var(--sage); font-size: 0.95rem; }
 
 /* First screen: the hook across the top, what the server is beside the launch counting down, then the
- * address and the two ways in; the trailer starts at the fold. The monkey peers out of the leaves. */
+ * address and the two ways in, what it takes in one line, and a look at the world; the trailer comes after.
+ * The monkey peers out of the leaves. */
 .hero {
   position: relative; display: grid; align-items: start; column-gap: 64px; padding-top: 96px; padding-bottom: 0;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "hook hook" "lede launch" "ways ways" "status status" "trailer trailer";
+  grid-template-areas: "hook hook" "lede launch" "ways ways" "facts facts" "view view" "status status" "trailer trailer";
 }
 .monkey {
   position: absolute; z-index: 1; top: -64px; right: var(--gutter);
@@ -217,6 +218,17 @@ main > section, footer { padding: 112px var(--gutter); }
 .plaque code { grid-column: 1; font-size: 1.25rem; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .plaque button { grid-column: 2; grid-row: 1 / span 2; min-height: 48px; min-width: 96px; }
 .cta { display: flex; flex-wrap: wrap; gap: 14px; }
+/* What it takes, under the ways in (under the hook on a phone): the game, the price and the guarantee, split by small blocks. The list
+ * starts one gap to the left and clips it, so a line that wraps never starts with a block. */
+.facts {
+  grid-area: facts; display: flex; flex-wrap: wrap; margin: 20px 0 0 -26px; padding: 0; list-style: none;
+  clip-path: inset(-4px -4px -4px 26px); font-weight: 700; color: var(--bone);
+}
+.facts li { display: flex; align-items: center; }
+.facts li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 10px; background: var(--sage); }
+/* A look at the world before any of the reading: a wide strip on a big screen, a 16:9 picture on a phone. */
+.view { grid-area: view; margin-top: 36px; }
+.view .shot > img { aspect-ratio: 21 / 9; object-position: 50% 62%; }
 
 /* Pictures sit in the same outline as everything else, and each says where it was taken. */
 .shot { position: relative; padding: 2px; background: var(--ink); clip-path: var(--stair); }
@@ -277,6 +289,7 @@ figcaption { margin-top: 12px; color: var(--sage); max-width: var(--measure); }
   background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
 }
 .steps p { margin: 0; }
+.steps code { overflow-wrap: anywhere; }
 
 /* Pricing: one pass, the same for everyone, as the one solid block; the tiers beside it only change how you
  * look, so they are drawn as an outline. */
@@ -387,7 +400,12 @@ footer .small { margin: 0; }
   main > section, footer { padding-top: 72px; padding-bottom: 72px; }
   /* On a phone the countdown, the address and the two ways in come before the description, so they all
    * fit on the first screen. */
-  .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "launch" "ways" "lede" "status" "trailer"; }
+  /* What it takes goes right under the hook: a phone's browser bars hide the buttons on the first screen, so the
+   * game, the price and the guarantee come before them. */
+  .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "facts" "launch" "ways" "view" "lede" "status" "trailer"; }
+  .facts { margin-top: 0; }
+  .view { margin-top: 28px; }
+  .view .shot > img { aspect-ratio: 16 / 9; }
   /* One cell a row, label beside value, on a phone. */
   .status { margin-top: 28px; }
   .status dl { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 10px 14px 12px; }

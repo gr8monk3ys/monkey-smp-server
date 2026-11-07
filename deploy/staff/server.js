@@ -362,7 +362,7 @@
 
   // ---------------------------------------------------------------- mods
 
-  const mods = { rows: [], gone: [] };
+  const mods = { rows: [], gone: [], holds: true };
 
   // The typed step for a change to one jar: the jar's file name is the word to type.
   function modStep(message, yes, file, onYes, check) {
@@ -377,13 +377,22 @@
 
   const PINNED_NOTE = " It is one of this release's pinned mods, so the server puts the pinned jar back when it next starts.";
   const HELD_NOTE = " It is one of this release's pinned mods and stays off after restarts until someone presses Allow again.";
-  const PLAYERS_NEED = "Players must install this too. It is not in the players' pack yet, so they may not be able to join until the owner adds it.";
+  // What the page says about a mod players need, from in_players_pack: false (checked, not there), true, or null
+  // (the players' pack couldn't be read here).
+  function playersNeed(done) {
+    if (done.client_side !== "required") return null;
+    if (done.in_players_pack === false) return "Players must install this too. It is not in the players' pack yet, so they may not be able to join until the owner adds it.";
+    if (done.in_players_pack === true) return null;
+    return "Players need this mod too. The players' pack couldn't be read here, so check that it has it.";
+  }
   const KEEP_OFF = { label: "Keep it off after restarts", checked: true };
 
   function modDone(text, done) {
     const pinned = done.held ? HELD_NOTE : done.pinned ? PINNED_NOTE : "";
     say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${pinned} Restart the server (Server tab) for it to take effect.`);
-    say("mods-players", done.client_side === "required" ? PLAYERS_NEED : null);
+    // The change is made; a note that could not be saved after it (keep it off, players need it) is said apart.
+    say("mods-error", done.note_error || null);
+    say("mods-players", playersNeed(done));
     if (done.client_side === "unknown" && done.file) askPlayers(done.file, done.side_checked === false);
     loadMods();
   }
@@ -406,7 +415,7 @@
       box.replaceChildren();
       try {
         const done = await api("POST", "/api/mod-side", { file, players });
-        say("mods-players", done.client_side === "required" ? PLAYERS_NEED : null);
+        say("mods-players", playersNeed(done));
         loadMods();
       } catch (error) {
         say("mods-error", error);
@@ -432,24 +441,27 @@
   function modButtons(m) {
     const on = m.enabled !== false;
     const base = m.file.replace(/\.disabled$/, "");
-    const pinnedOff = m.pinned ? ` It is pinned: unless you keep it off, the next start puts the release's jar back.${lockout(m)}` : "";
+    const pinnedOff = m.holdable ? ` It is pinned: unless you keep it off, the next start puts the release's jar back.${lockout(m)}`
+      : m.pinned ? ` It is pinned: the next start puts the release's jar back.${mods.holds ? "" : " The running release can't keep it off."}${lockout(m)}` : "";
     const out = [
       button(on ? "Turn off" : "Turn on", "", () => modStep(on
         ? `Turn off ${m.file}? It is renamed to .jar.disabled and the server stops loading it at the next restart.${pinnedOff}`
         : `Turn ${m.file} back on?${m.held ? " It is kept off now: turning it on allows it again." : ""}`, on ? "Turn off" : "Turn on", m.file,
       (typed, hold) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed, hold: on && hold }, on ? "Turned off." : "Turned on."),
-      on && m.pinned ? KEEP_OFF : undefined), "admin"),
+      on && m.holdable ? KEEP_OFF : undefined), "admin"),
       button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.${pinnedOff}`,
         "Remove", m.file, (typed, hold) => modCall("/api/mod-remove", { file: m.file, confirm: typed, hold }, "Removed."),
-        m.pinned ? KEEP_OFF : undefined), "admin"),
+        m.holdable ? KEEP_OFF : undefined), "admin"),
     ];
     if (m.held) out.push(allowButton(base));
-    if (!m.pinned && m.client_side === "unknown") out.push(button("Players need it?", "", () => askPlayers(base, false), "admin"));
+    // The server finds the jar by its name on disk (with .disabled when it is off).
+    if (!m.pinned && m.client_side === "unknown") out.push(button("Players need it?", "", () => askPlayers(m.file, false), "admin"));
     return out;
   }
 
   function heldWords(h) {
-    return h ? `kept off by ${h.by || "staff"} since ${when(h.at)}` : "";
+    if (!h) return "";
+    return `kept off by ${h.by || "staff"}${h.at ? ` since ${when(h.at)}` : ""}`;
   }
 
   function renderMods() {
@@ -457,7 +469,7 @@
     const rows = mods.rows.filter((m) => !typed || [m.name, m.id, m.file, m.description].join(" ").toLowerCase().includes(typed));
     const gone = mods.gone.filter((g) => !typed || g.file.toLowerCase().includes(typed));
     const items = gone.map((g) => item(g.file, `(removed, ${heldWords(g.held)})`,
-      `${g.held.why || ""}${lockout(g)}`.trim(), can("admin") ? [allowButton(g.file)] : []));
+      `${(g.held && g.held.why) || ""}${lockout(g)}`.trim(), can("admin") ? [allowButton(g.file)] : []));
     items.push(...rows.map((m) => {
       const side = { client: "client only", server: "server only", both: "client and server" }[m.environment] || "";
       const players = m.client_side === "required" ? "players need it" : "";
@@ -487,6 +499,7 @@
       const data = await api("GET", "/api/mods");
       mods.rows = data.mods || [];
       mods.gone = data.held_gone || [];
+      mods.holds = data.holds_supported !== false;
       renderMods();
       renderMissing(data);
       say("mods-error", null);
@@ -503,8 +516,9 @@
       say("mods-error", "Pick a .jar file first.");
       return;
     }
-    if (!/^[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.jar$/.test(file.name)) {
-      say("mods-error", "A jar's name has letters, digits, . _ + - only and ends in .jar: rename the file first.");
+    // tools/staff_host.py, MOD_NAME
+    if (!/^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9 ._+()-]{0,123}\.jar$/.test(file.name)) {
+      say("mods-error", "A jar's name has letters, digits, spaces and . _ + - ( ) only, no '..', and ends in .jar: rename the file first.");
       return;
     }
     modStep(`Put ${file.name} (${size(file.size)}) in the server's mods folder? A jar with the same name or the same mod id is moved to mods-removed/ first.`,
@@ -571,7 +585,11 @@
           const done = await api("POST", `/api/modpack?${new URLSearchParams({ name: file.name, confirm: typed })}`, file);
           $("mrpack-file").value = "";
           const skipped = done.skipped ? ` ${done.skipped} client-only mod(s) skipped.` : "";
-          modDone(`Installed ${done.installed.length} mod(s) from ${done.pack}.${skipped}`, {});
+          const missing = (done.players_missing || []).length
+            ? ` Players need ${done.players_missing.join(", ")} too, and ${done.players_pack ? "the players' pack doesn't have them yet, so they may not be able to join until the owner adds them" : "the players' pack couldn't be read here, so check that it has them"}.`
+            : "";
+          modDone(`Installed ${done.installed.length} mod(s) from ${done.pack}.${skipped}${missing}`,
+            { note_error: (done.note_errors || []).join(" ") || null });
         } catch (error) {
           say("mods-note", null);
           say("mods-error", error);
@@ -647,7 +665,9 @@
     $("packs-restore").disabled = off || !saved || Boolean(saved.error);
     $("packs-clear").hidden = !saved;
     $("packs-clear").disabled = !can("admin");
-    say("packs-saved", saved ? (saved.error || `Troubleshooting since ${when(saved.at)} by ${saved.by}: ${saved.count} packs off.`) : null);
+    // How many saved packs are off now (the server says), not how many were saved.
+    const stillOff = typeof saved?.off === "number" ? `${saved.off} of ${saved.count} saved packs still off.` : `${saved?.count} packs saved.`;
+    say("packs-saved", saved ? (saved.error || `Troubleshooting since ${when(saved.at)} by ${saved.by}: ${stillOff}`) : null);
   }
 
   function failedWords(failed) {

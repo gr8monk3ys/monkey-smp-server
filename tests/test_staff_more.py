@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import re
 import struct
 import urllib.parse
 import zipfile
@@ -201,19 +202,55 @@ def test_a_data_pack_is_turned_on_and_off_by_the_server(apex):
 # ---------------------------------------------------------------- troubleshooting: all off, then back on
 
 
-ENABLED = ("There are 5 data pack(s) enabled: [vanilla (built-in)], [fabric (built-in)], [file/monkey-rules (world)], "
-           "[file/loot.zip (world)], [file/b.zip (world)]")
+SPACED = "Enchant Disabler for DnT 5.3.0.zip"
 
 
-def troubleshoot(b):
+class PackServer(dict):
+    """The fake server's answers, with data packs that really turn on and off: `datapack list enabled` lists what is
+    on, as the live server words it. `refuse` packs get an error; `drop` packs ignore that many changes first (the
+    reload race, MC-200471) while answering as if they took."""
+
+    def __init__(self, answers, on, known, refuse=(), drop=None):
+        super().__init__(answers)
+        self.on, self.known, self.refuse, self.drop = list(on), set(known), set(refuse), dict(drop or {})
+
+    def __contains__(self, command):
+        return command.startswith("datapack ") or super().__contains__(command)
+
+    def __getitem__(self, command):
+        if command == "datapack list enabled":
+            listed = ["[vanilla (built-in)]", "[fabric (built-in)]", *(f"[file/{n} (world)]" for n in self.on)]
+            return f"There are {len(listed)} data pack(s) enabled: {', '.join(listed)}"
+        m = re.fullmatch(r'datapack (enable|disable) "file/(.+)"', command)
+        if not m:
+            return super().__getitem__(command)
+        word, name = m.groups()
+        if name in self.refuse:
+            return "Unknown or incomplete command, see below for error"
+        if name not in self.known:
+            return f"Unknown data pack 'file/{name}'"
+        if self.drop.get(name):
+            self.drop[name] -= 1
+            return f"{'Enabling' if word == 'enable' else 'Disabling'} pack [file/{name} (world)]"
+        if word == "enable":
+            if name in self.on:
+                return f"Pack 'file/{name}' is already enabled!"
+            self.on.append(name)
+            return f"Enabling pack [file/{name} (world)]"
+        if name not in self.on:
+            return f"Pack 'file/{name}' is not enabled!"
+        self.on.remove(name)
+        return f"Disabling pack [file/{name} (world)]"
+
+
+def troubleshoot(b, names=("monkey-rules", "loot.zip", "b.zip"), **how):
     packs = world(b)
-    for name in ("loot.zip", "b.zip"):
-        (packs / name).write_bytes(PACK)
-    (packs / "monkey-rules").mkdir()
-    b.docker.answers["datapack list enabled"] = ENABLED
-    for name in ("monkey-rules", "loot.zip", "b.zip"):
-        b.docker.answers[f'datapack disable "file/{name}"'] = f"Disabling pack [file/{name} (world)]"
-        b.docker.answers[f'datapack enable "file/{name}"'] = f"Enabling pack [file/{name} (world)]"
+    for name in names:
+        if name.endswith(".zip"):
+            (packs / name).write_bytes(PACK)
+        else:
+            (packs / name).mkdir()
+    b.docker.answers = PackServer(b.docker.answers, names, names, **how)
     return packs
 
 
@@ -226,24 +263,31 @@ def test_save_and_turn_all_off_then_back_on_in_the_old_order(apex):
     assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "all off"})[0] == 400
     code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
     assert code == 200 and data["saved"] == 3 and data["failed"] == []
-    assert sorted(data["off"]) == ["b.zip", "loot.zip", "monkey-rules"]
-    # Only the world's own packs: never vanilla or fabric.
-    assert sorted(sent(apex, "disable")) == ['datapack disable "file/b.zip"', 'datapack disable "file/loot.zip"',
-                                             'datapack disable "file/monkey-rules"']
+    assert data["off"] == ["monkey-rules", "loot.zip", "b.zip"] and apex.docker.answers.on == []
+    # Only the world's own packs, the top one first: never vanilla or fabric.
+    assert sent(apex, "disable") == ['datapack disable "file/b.zip"', 'datapack disable "file/loot.zip"',
+                                     'datapack disable "file/monkey-rules"']
     saved = json.loads((apex.staff / "packs-saved.json").read_text())
     assert saved["by"] == "diego" and saved["packs"] == ["file/monkey-rules", "file/loot.zip", "file/b.zip"]
     listed = apex.call("GET", "/api/datapacks")[1]["saved"]
-    assert listed["by"] == "diego" and listed["count"] == 3 and listed["at"].endswith("Z")
+    assert listed["by"] == "diego" and listed["count"] == 3 and listed["at"].endswith("Z") and listed["off"] == 3
     # One saved set at a time.
     code, body = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
     assert code == 409 and "turn it back on or clear it" in body["error"]
+    # Staff turn one back on by hand: the count says how many are still off.
+    apex.docker.answers.on.append("loot.zip")
+    assert apex.call("GET", "/api/datapacks")[1]["saved"]["off"] == 2
+    apex.docker.answers.on.remove("loot.zip")
     code, data = apex.call("POST", "/api/datapacks-restore", {})
     assert code == 200 and data["on"] == ["monkey-rules", "loot.zip", "b.zip"] and data["failed"] == []
     assert sent(apex, "enable") == ['datapack enable "file/monkey-rules"', 'datapack enable "file/loot.zip"',
                                     'datapack enable "file/b.zip"']
-    # The list stays, so a second restore is safe, until someone clears it.
+    assert apex.docker.answers.on == ["monkey-rules", "loot.zip", "b.zip"]
+    assert apex.call("GET", "/api/datapacks")[1]["saved"]["off"] == 0
+    # The list stays, so a second restore is safe ("already enabled" is not a failure: it is on), until cleared.
     assert (apex.staff / "packs-saved.json").exists()
-    assert apex.call("POST", "/api/datapacks-restore", {})[0] == 200
+    code, data = apex.call("POST", "/api/datapacks-restore", {})
+    assert code == 200 and data["failed"] == [] and len(data["on"]) == 3
     code, data = apex.call("POST", "/api/datapacks-saved-clear", {})
     assert code == 200 and data["cleared"] == 3 and not (apex.staff / "packs-saved.json").exists()
     assert apex.call("GET", "/api/datapacks")[1]["saved"] is None
@@ -254,42 +298,97 @@ def test_save_and_turn_all_off_then_back_on_in_the_old_order(apex):
     assert "datapacks-saved-clear 3 packs, saved by diego" in log
 
 
+def test_a_pack_name_with_spaces_is_read_whole(apex):
+    troubleshoot(apex, (SPACED, "monkey-boss", "Enchant"))
+    apex.docker.answers.on = [SPACED, "monkey-boss"]        # "Enchant" is in the folder but off
+    rows = {r["name"]: r for r in apex.call("GET", "/api/datapacks")[1]["packs"]}
+    assert rows[SPACED]["enabled"] is True and rows["monkey-boss"]["enabled"] is True
+    assert rows["Enchant"]["enabled"] is False
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["off"] == [SPACED, "monkey-boss"] and data["failed"] == []
+    assert json.loads((apex.staff / "packs-saved.json").read_text())["packs"] == [f"file/{SPACED}", "file/monkey-boss"]
+    assert f'datapack disable "file/{SPACED}"' in sent(apex, "disable")
+    code, data = apex.call("POST", "/api/datapacks-restore", {})
+    assert code == 200 and data["on"] == [SPACED, "monkey-boss"]
+    # A name with spaces can be turned on and off and removed by hand too; one with a quote never reaches a command.
+    assert apex.call("POST", "/api/datapack-toggle", {"name": SPACED, "enabled": False})[0] == 200
+    assert apex.call("POST", "/api/datapack-toggle", {"name": 'a" b.zip', "enabled": False})[0] == 400
+
+
+@pytest.mark.parametrize("name,ok", [(SPACED, True), ("monkey-boss", True), ("a (1).zip", True),
+                                     ('a".zip', False), ("a\\b", False), ("a/b", False), ("..zip", False),
+                                     (" a.zip", False), (".hidden", False), ("a\x00b", False), ("x" * 129, False),
+                                     ("a..b", False), ("", False), (None, False)])
+def test_which_folder_names_a_command_may_carry(name, ok):
+    assert staff_more.pack_entry(name) is ok
+
+
+def test_enabled_in_finds_each_name_whole_in_the_listing_order():
+    said = ("There are 4 data pack(s) enabled: [vanilla (built-in)], "
+            "[file/Enchant Disabler for DnT 5.3.0.zip (world)], "
+            "[file/monkey-boss (world)], [file/a]")
+    names = ["monkey-boss", "a", "Enchant", "Enchant Disabler for DnT 5.3.0.zip", "a (1)"]
+    assert staff_more.enabled_in(said, names) == ["Enchant Disabler for DnT 5.3.0.zip", "monkey-boss", "a"]
+
+
 def test_restore_reports_a_pack_that_is_gone_or_refused(apex):
     packs = troubleshoot(apex)
     assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})[0] == 200
     (packs / "loot.zip").unlink()
-    apex.docker.answers['datapack enable "file/b.zip"'] = "Unknown data pack 'file/b.zip'"
-    del apex.docker.answers['datapack enable "file/monkey-rules"']        # the fake refuses it
+    apex.docker.answers.known.discard("b.zip")         # the server lost it: it needs a reload
+    apex.docker.answers.refuse.add("monkey-rules")
     code, data = apex.call("POST", "/api/datapacks-restore", {})
     assert code == 200 and data["on"] == []
     why = {f["name"]: f["why"] for f in data["failed"]}
     assert list(why) == ["monkey-rules", "loot.zip", "b.zip"]
     assert "not in the datapacks folder" in why["loot.zip"] and "Reload" in why["b.zip"]
-    assert "did not take" in why["monkey-rules"] or "answered" in why["monkey-rules"]
+    assert "answered" in why["monkey-rules"]
     assert "datapacks-restore 0 of 3 on, failed: monkey-rules, loot.zip, b.zip" in actions(apex)
 
 
 def test_save_off_reports_a_pack_the_server_refused(apex):
-    troubleshoot(apex)
-    del apex.docker.answers['datapack disable "file/loot.zip"']
+    troubleshoot(apex, refuse={"loot.zip"})
     code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
     assert code == 200 and data["off"] == ["monkey-rules", "b.zip"]
     assert [f["name"] for f in data["failed"]] == ["loot.zip"]
     assert len(json.loads((apex.staff / "packs-saved.json").read_text())["packs"]) == 3
 
 
+def test_an_answer_that_says_it_did_nothing_is_not_done(apex):
+    """The server answers a refusal as plain text: "Unknown data pack" is read, and the list says what is true."""
+    troubleshoot(apex)
+    apex.docker.answers.known.discard("b.zip")         # still listed on, but disable answers "Unknown data pack"
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["off"] == ["monkey-rules", "loot.zip"]
+    assert data["failed"] == [{"name": "b.zip", "why": "Unknown data pack 'file/b.zip'"}]
+    assert sent(apex, "disable").count('datapack disable "file/b.zip"') == 2          # tried once more
+
+
+def test_a_change_the_server_dropped_is_tried_once_more(apex):
+    troubleshoot(apex, drop={"loot.zip": 1})            # the first disable answers yes but doesn't take
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["off"] == ["monkey-rules", "loot.zip", "b.zip"] and data["failed"] == []
+    assert sent(apex, "disable").count('datapack disable "file/loot.zip"') == 2
+    apex.docker.answers.drop = {"b.zip": 5}             # this one never takes
+    code, data = apex.call("POST", "/api/datapacks-restore", {})
+    assert data["on"] == ["monkey-rules", "loot.zip"]
+    assert data["failed"] == [{"name": "b.zip", "why": "It is still off after turning it on."}]
+    assert sent(apex, "enable").count('datapack enable "file/b.zip"') == 2
+
+
 def test_troubleshooting_needs_the_server_running_and_a_pack_on(apex):
     troubleshoot(apex)
-    apex.docker.answers["datapack list enabled"] = "There are 1 data pack(s) enabled: [vanilla (built-in)]"
+    apex.docker.answers.on = []
     code, body = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
     assert code == 409 and "nothing to turn off" in body["error"]
     assert not (apex.staff / "packs-saved.json").exists()
-    apex.docker.answers["datapack list enabled"] = ENABLED
+    apex.docker.answers.on = ["loot.zip"]
     apex.docker.ps = json.dumps({"State": "exited", "Status": "Exited (0)"})
     assert apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})[0] == 409
     apex.staff.mkdir(parents=True, exist_ok=True)
     (apex.staff / "packs-saved.json").write_text(json.dumps({"by": "diego", "at": "x", "packs": ["file/loot.zip"]}))
     assert apex.call("POST", "/api/datapacks-restore", {})[0] == 409
+    assert apex.call("GET", "/api/datapacks")[1]["saved"]["off"] is None      # not running: can't say
     assert sent(apex, "disable") == [] and sent(apex, "enable") == []
 
 
@@ -382,6 +481,8 @@ def test_a_modpack_installs_its_server_mods_all_or_nothing(apex, tmp_path):
     sides = json.loads((apex.root / staff_host.SIDES_FILE).read_text())
     assert sides["lithium.jar"]["client"] == "required" and sides["lithium.jar"]["source"] == "modpack"
     assert sides["extra.jar"]["client"] == "unknown"
+    # No players' pack to read here: a mod players need is named, and the page says it couldn't check.
+    assert data["players_missing"] == ["lithium.jar"] and data["players_pack"] is False and data["note_errors"] == []
 
 
 def test_a_modpack_with_two_jars_for_one_mod_is_refused(apex, tmp_path):

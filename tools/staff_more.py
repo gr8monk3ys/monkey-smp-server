@@ -74,14 +74,13 @@ MEMORY_SPARE = 2      # GB the machine keeps for itself, Docker, Caddy and this 
 REMOVED = "staff-removed"
 
 PACK_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.zip")
-PACK_FOLDER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,123}")
 PACK_MAX = 64 * MB
 PACK_FILES_MAX = 20_000
 PACK_TOTAL_MAX = 512 * MB      # unpacked
 PACKS_SHOWN = 200
-_ENABLED = re.compile(r"\[file/([^\]\s]+)")
 SAVED_PACKS = "packs-saved.json"      # in STAFF_DIR: the packs troubleshooting turned off, in their old order
-SAVED_PACK = re.compile(r"file/" + PACK_FOLDER.pattern)   # a .zip name fits it too
+# A server answer to datapack enable/disable that means it did nothing (it answers these as plain text, not errors).
+PACK_REFUSED = ("unknown data pack", "not enabled", "already enabled", "unknown or incomplete", "incorrect argument")
 ALL_OFF_WORD = "ALL OFF"
 
 ICON_MAX = 1 * MB
@@ -92,11 +91,30 @@ MRPACK_MAX = 64 * MB
 MRPACK_FILES_MAX = 300
 MRPACK_HOSTS = re.compile(r"https://(cdn\.modrinth\.com|github\.com|raw\.githubusercontent\.com|gitlab\.com)/"
                           r"[A-Za-z0-9._~%+/=-]{1,400}")
-MRPACK_MOD = re.compile(r"mods/([A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.jar)")
+MRPACK_MOD = re.compile(r"mods/((?!.*\.\.)[A-Za-z0-9][A-Za-z0-9 ._+()-]{0,123}\.jar)")   # hs.MOD_NAME
 
 
 def clean(value, most: int) -> str:
     return hs.clean(value, most)
+
+
+def pack_entry(name) -> bool:
+    """A name in the datapacks folder this page lists and names in a command (datapack enable "file/NAME"): it may
+    have spaces ("Enchant Disabler for DnT 5.3.0.zip"), but no quote, backslash or slash, no "..", no control
+    character, and it starts with a letter or digit."""
+    return (isinstance(name, str) and 0 < len(name) <= 128 and name.isprintable() and name[0].isalnum()
+            and not any(c in name for c in '"\\/') and ".." not in name)
+
+
+def enabled_in(said: str, names) -> list[str]:
+    """The NAMES (the datapacks folder's entries) that `datapack list enabled`'s answer shows on, in its order. Each
+    is found whole, as [file/NAME (world)] or [file/NAME], so a name with spaces is never cut at the first one."""
+    found = []
+    for name in names:
+        m = re.search(r"\[file/" + re.escape(name) + r"(?: \([^()\[\]]*\))?\]", said)
+        if m:
+            found.append((m.start(), name))
+    return [name for _, name in sorted(found)]
 
 
 def zip_problem(z: zipfile.ZipFile, files_max: int, total_max: int) -> str | None:
@@ -309,14 +327,22 @@ class More:
             names |= {Path(n).name for n in data.get("datapacks") or [] if isinstance(n, str)}
         return names
 
-    def _enabled(self) -> set[str] | None:
+    def _entry_names(self) -> list[str]:
+        """The datapacks folder's entries this page can name (pack_entry), or [] when there is no folder."""
+        try:
+            return [e.name for e in os.scandir(self._packs_folder()) if pack_entry(e.name) and not e.is_symlink()]
+        except FileNotFoundError:
+            return []
+
+    def _enabled(self, names) -> set[str] | None:
+        """Which of NAMES the server has on, or None when it isn't running or didn't answer."""
         if not self.x.running():
             return None
         try:
             said = self.x.rcon("datapack list enabled")
         except sp.server.RconError:
             return None
-        return set(_ENABLED.findall(said))
+        return set(enabled_in(said, names))
 
     def datapacks(self) -> dict:
         try:
@@ -325,12 +351,12 @@ class More:
         except FileNotFoundError:
             entries = []
         release = self.release_packs()
-        enabled = self._enabled()
+        enabled = self._enabled([e.name for e in entries if pack_entry(e.name)])
         rows = []
         for e in entries[:PACKS_SHOWN]:
             if e.is_symlink():
                 continue
-            if e.is_file(follow_symlinks=False) and PACK_NAME.fullmatch(e.name):
+            if e.is_file(follow_symlinks=False) and e.name.lower().endswith(".zip") and pack_entry(e.name):
                 kind, desc = "zip", ""
                 with contextlib.suppress(OSError, zipfile.BadZipFile, KeyError, ValueError), \
                         zipfile.ZipFile(e.path) as z:
@@ -338,7 +364,7 @@ class More:
                     if info.file_size <= 64 * 1024:
                         desc = pack_description(z.read(info))
                 size = e.stat(follow_symlinks=False).st_size
-            elif e.is_dir(follow_symlinks=False) and PACK_FOLDER.fullmatch(e.name):
+            elif e.is_dir(follow_symlinks=False) and pack_entry(e.name):
                 kind, desc, size = "folder", "", None
                 with contextlib.suppress(OSError):
                     meta = Path(e.path) / "pack.mcmeta"
@@ -350,7 +376,9 @@ class More:
                          "release": e.name in release, "enabled": None if enabled is None else e.name in enabled})
         try:
             saved = self._saved()
-            saved = saved and {"by": saved["by"], "at": saved["at"], "count": len(saved["packs"])}
+            # How many saved packs are off right now (None: the server can't say), not just how many were saved.
+            off = None if enabled is None or not saved else sum(p[5:] not in enabled for p in saved["packs"])
+            saved = saved and {"by": saved["by"], "at": saved["at"], "count": len(saved["packs"]), "off": off}
         except sp.Refused as e:
             saved = {"by": "", "at": "", "count": 0, "error": e.message}
         return {"packs": rows, "running": enabled is not None, "saved": saved}
@@ -388,7 +416,7 @@ class More:
         return {"name": name, "kept_in": kept, "running": self.x.running()}
 
     def _pack(self, name) -> Path:
-        if not isinstance(name, str) or not (PACK_NAME.fullmatch(name) or PACK_FOLDER.fullmatch(name)):
+        if not pack_entry(name):
             raise sp.Refused(400, "That is not a data pack's name from the list.")
         path = self._packs_folder() / name
         if not path.exists() or path.is_symlink():
@@ -433,13 +461,49 @@ class More:
         except (OSError, ValueError):
             data = None
         packs = data.get("packs") if isinstance(data, dict) else None
-        if not isinstance(packs, list) or not all(isinstance(p, str) and SAVED_PACK.fullmatch(p) for p in packs):
+        if not isinstance(packs, list) or not all(isinstance(p, str) and p.startswith("file/") and pack_entry(p[5:])
+                                                  for p in packs):
             raise sp.Refused(500, f"{SAVED_PACKS} (STAFF_DIR) can't be read: fix it, or clear the saved set.")
         return {"by": clean(data.get("by"), 40), "at": clean(data.get("at"), 40), "packs": packs}
 
     def _running_for_packs(self) -> None:
         if not self.x.running():
             raise sp.Refused(409, "The server isn't running: data packs are turned on or off while it runs.")
+
+    def _switch(self, pack: str, on: bool) -> str | None:
+        """Turns one saved pack on or off; why the server didn't, or None when its answer says it did."""
+        try:
+            said = self.x.rcon(f'datapack {"enable" if on else "disable"} "{pack}"')
+        except sp.server.RconError as e:
+            return sp.masked(str(e))[:200]
+        text = said.replace(pack, "").lower()
+        if "unknown data pack" in text and on:
+            return "The server doesn't know it: press Reload data packs, then turn the saved set on again."
+        if any(w in text for w in PACK_REFUSED):
+            return clean(sp.masked(said), 200) or "The server refused it."
+        return None
+
+    def _settle(self, packs: list[str], on: bool, why: dict, names: list[str]) -> tuple[list[str], list[dict]]:
+        """After turning PACKS on (or off), what the server really has: a pack in the wrong state is tried once more,
+        as the server can drop a change made while it reloads (MC-200471), then listed again. Returns (the packs now
+        as asked, [{"name", "why"}] for the rest), both in the saved order. A list that can't be read leaves the
+        answers' word."""
+        def wrong() -> list[str] | None:
+            now = self._enabled(names)
+            return None if now is None else [p for p in packs if (p[5:] in now) != on]
+
+        bad = wrong()
+        if bad:
+            for pack in (bad if on else bad[::-1]):
+                again = self._switch(pack, on)
+                if again:
+                    why[pack] = again
+            bad = wrong()
+        if bad is None:
+            bad = [p for p in packs if p in why]
+        still = "It is still off after turning it on." if on else "It is still on after turning it off."
+        return ([p[5:] for p in packs if p not in bad],
+                [{"name": p[5:], "why": why.get(p) or still} for p in packs if p in bad])
 
     def packs_save_off(self, user: str, body: dict) -> dict:
         if body.get("confirm") != ALL_OFF_WORD:
@@ -454,53 +518,40 @@ class More:
                 said = self.x.rcon("datapack list enabled")
             except sp.server.RconError as e:
                 raise sp.Refused(502, f"The server did not list its packs: {sp.masked(str(e))[:200]}") from None
-            packs = [f"file/{n}" for n in dict.fromkeys(_ENABLED.findall(said)) if SAVED_PACK.fullmatch(f"file/{n}")]
+            names = self._entry_names()
+            packs = [f"file/{n}" for n in enabled_in(said, names)]
             if not packs:
                 raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
             self.p.staff.mkdir(parents=True, exist_ok=True)
-            tmp = self._saved_path().with_name(f".{SAVED_PACKS}.{secrets.token_hex(4)}")
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump({"by": user, "at": sp.stamp(), "packs": packs}, f, indent=1)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp, self._saved_path())
-            off, failed = [], []
-            for pack in reversed(packs):
-                try:
-                    self.x.rcon(f'datapack disable "{pack}"')
-                    off.append(pack[5:])
-                except sp.server.RconError as e:
-                    failed.append({"name": pack[5:], "why": sp.masked(str(e))[:200]})
+            data = json.dumps({"by": user, "at": sp.stamp(), "packs": packs}, indent=1) + "\n"
+            self.p._write(self._saved_path(), data.encode("utf-8"), None)
+            why = {}
+            for pack in reversed(packs):        # the top one first
+                refused = self._switch(pack, False)
+                if refused:
+                    why[pack] = refused
+            off, failed = self._settle(packs, False, why, names)
         self.p.record(user, "datapacks-save-off", f"{len(off)} of {len(packs)} off"
                       + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
-        return {"saved": len(packs), "off": off[::-1], "failed": failed[::-1]}
+        return {"saved": len(packs), "off": off, "failed": failed}
 
     def packs_restore(self, user: str) -> dict:
         saved = self._saved()
         if saved is None:
             raise sp.Refused(404, "There is no saved set to turn back on.")
         self._running_for_packs()
-        try:
-            here = {e.name for e in os.scandir(self._packs_folder())}
-        except FileNotFoundError:
-            here = set()
-        on, failed = [], []
         with self._packs:
-            for pack in saved["packs"]:     # in the old order: each one enabled goes on top, as it was
-                name = pack[5:]
-                if name not in here:
-                    failed.append({"name": name, "why": "It is not in the datapacks folder any more."})
-                    continue
-                try:
-                    said = self.x.rcon(f'datapack enable "{pack}"')
-                except sp.server.RconError as e:
-                    failed.append({"name": name, "why": sp.masked(str(e))[:200]})
-                    continue
-                if "Unknown data pack" in said:
-                    failed.append({"name": name, "why": "The server doesn't know it: press Reload data packs, then "
-                                                        "turn the saved set on again."})
-                    continue
-                on.append(name)
+            names = self._entry_names()
+            here = [p for p in saved["packs"] if p[5:] in names]
+            why = {}
+            for pack in here:           # in the old order: each one enabled goes on top, as it was
+                refused = self._switch(pack, True)
+                if refused:
+                    why[pack] = refused
+            on, refused = self._settle(here, True, why, names)
+        reasons = {f["name"]: f["why"] for f in refused}
+        failed = [{"name": p[5:], "why": reasons.get(p[5:], "It is not in the datapacks folder any more.")}
+                  for p in saved["packs"] if p[5:] not in on]
         self.p.record(user, "datapacks-restore", f"{len(on)} of {len(saved['packs'])} on"
                       + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
         return {"on": on, "failed": failed, "saved": len(saved["packs"])}
@@ -681,8 +732,13 @@ class More:
                 with contextlib.suppress(OSError):
                     path.unlink()
         self.p.record(user, "modpack", f"{name}: {len(done)} mod(s)")
+        # The ones players need that their pack lacks (in_players_pack None: the pack couldn't be read, so unsure).
+        need = [d for d in done if d["client_side"] == "required" and d.get("in_players_pack") is not True]
         return {"pack": clean(index.get("name"), 80) or name, "installed": [d["file"] for d in done],
-                "replaced": sorted({r for d in done for r in d["replaced"]}), "skipped": len(jars) - len(done)}
+                "replaced": sorted({r for d in done for r in d["replaced"]}), "skipped": len(jars) - len(done),
+                "players_missing": [d["file"] for d in need],
+                "players_pack": all(d.get("in_players_pack") is not None for d in done),
+                "note_errors": [d["note_error"] for d in done if d.get("note_error")]}
 
 
 # ---------------------------------------------------------------- wiring

@@ -73,7 +73,8 @@ def test_a_jar_upload_is_checked_then_installed(apex, tmp_path):
     mods = apex.root / "mods"
     assert apex.call("POST", mod_url("lithium.jar", "nope"), good)[0] == 400
     assert apex.call("POST", mod_url("lithium.jar"), {"not": "a file"})[0] == 415
-    for bad in ("../lithium.jar", "lithium.zip", ".hidden.jar", "a b.jar"):
+    for bad in ("../lithium.jar", "lithium.zip", ".hidden.jar", " a.jar", "a..b.jar", "a\b.jar", "a	b.jar",
+                "a\"b.jar", "x" * 130 + ".jar"):
         assert apex.call("POST", mod_url(bad), good)[0] == 400, bad
     assert apex.call("POST", mod_url("junk.jar"), b"not a zip")[0] == 400
     assert apex.call("POST", mod_url("nometa.jar"), jar_bytes(tmp_path, None))[0] == 400
@@ -218,8 +219,21 @@ def held_file(b):
     return json.loads(path.read_text())["mods"] if path.exists() else None
 
 
+def release(b, mods, holds=True):
+    """The live package: a manifest pinning MODS ({jar: slug} or {jar: (slug, project)}) and a start script that
+    reads the held file (or an older one that doesn't)."""
+    folder = b.live / "monkey"
+    folder.mkdir(parents=True, exist_ok=True)
+    rows = [{"file": f, "slug": s[0], "project_id": s[1]} if isinstance(s, tuple) else {"file": f, "slug": s}
+            for f, s in mods.items()]
+    (folder / "manifest.json").write_text(json.dumps({"minecraft": "26.2", "mods": rows}))
+    (folder / "Monkey.psm1").write_text("function Get-HeldMods($Context) { }\n" if holds else "# an old release\n")
+
+
 def pinned(b, *names):
+    """NAMES pinned by the release (slug: the name without .jar) and placed by its install."""
     (b.root / ".monkey-state.json").write_text(json.dumps({"mods": list(names)}))
+    release(b, {n: n.removesuffix(".jar") for n in names})
 
 
 def test_a_pinned_mod_turned_off_with_hold_stays_off_until_it_is_turned_on(apex):
@@ -229,24 +243,52 @@ def test_a_pinned_mod_turned_off_with_hold_stays_off_until_it_is_turned_on(apex)
     off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
     assert apex.call("POST", "/api/mod-toggle", {**off, "hold": "yes"})[0] == 400
     code, done = apex.call("POST", "/api/mod-toggle", off)
-    assert code == 200 and done["held"] is True and done["pinned"] is True
-    entry = held_file(apex)["claims.jar"]
-    assert entry["by"] == "diego" and entry["at"].endswith("Z") and entry["why"]
-    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
-    assert rows["claims.jar.disabled"]["held"]["by"] == "diego"
-    assert "mod-disable claims.jar, kept off after restarts" in actions(apex)
+    assert code == 200 and done["held"] is True and done["pinned"] is True and "note_error" not in done
+    entry = held_file(apex)["claims"]
+    assert entry["by"] == "diego" and entry["at"].endswith("Z") and entry["why"] and entry["file"] == "claims.jar"
+    data = apex.call("GET", "/api/mods")[1]
+    rows = {r["file"]: r for r in data["mods"]}
+    assert rows["claims.jar.disabled"]["held"]["by"] == "diego" and data["holds_supported"] is True
+    log = actions(apex)
+    assert "mod-disable claims.jar" in log and "mod-hold claims (claims.jar), kept off after restarts" in log
     on = {"file": "claims.jar.disabled", "enabled": True, "confirm": "claims.jar.disabled"}
     code, done = apex.call("POST", "/api/mod-toggle", on)
     assert code == 200 and done["held"] is False and held_file(apex) == {}
-    assert "mod-enable claims.jar.disabled, no longer kept off" in actions(apex)
+    assert "mod-allow claims (claims.jar), no longer kept off" in actions(apex)
+
+
+def test_a_hold_is_by_slug_so_a_new_release_version_stays_held(apex):
+    mods = apex.root / "mods"
+    jar(mods / "claims-1.0.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims-1.0.jar")
+    release(apex, {"claims-1.0.jar": "claims"})
+    assert apex.call("POST", "/api/mod-remove", {"file": "claims-1.0.jar", "confirm": "claims-1.0.jar",
+                                                 "hold": True})[0] == 200
+    assert held_file(apex)["claims"]["file"] == "claims-1.0.jar"
+    release(apex, {"claims-1.1.jar": "claims"})              # a deploy bumps the jar's version
+    data = apex.call("GET", "/api/mods")[1]
+    assert [(g["file"], g["slug"]) for g in data["held_gone"]] == [("claims-1.0.jar", "claims")]
+    # Allowed again by the name the page shows (the jar held), or the new jar's name.
+    code, done = apex.call("POST", "/api/mod-hold", {"file": "claims-1.0.jar", "held": False,
+                                                     "confirm": "claims-1.0.jar"})
+    assert code == 200 and done["slug"] == "claims" and held_file(apex) == {}
+    jar(mods / "claims-1.1.jar.disabled", {"id": "claims", "name": "Claims"})
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims-1.1.jar", "held": True,
+                                               "confirm": "claims-1.1.jar"})[0] == 200
+    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
+    assert rows["claims-1.1.jar.disabled"]["held"] is not None
+    assert apex.call("GET", "/api/mods")[1]["held_gone"] == []
 
 
 def test_hold_only_applies_to_a_pinned_mod(apex):
     mods = apex.root / "mods"
     jar(mods / "extra.jar", {"id": "extra", "name": "Extra"})
+    release(apex, {})
     code, done = apex.call("POST", "/api/mod-toggle", {"file": "extra.jar", "enabled": False,
                                                        "confirm": "extra.jar", "hold": True})
     assert code == 200 and done["held"] is False and held_file(apex) is None
+    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
+    assert rows["extra.jar.disabled"]["holdable"] is False
 
 
 def test_a_removed_pinned_mod_is_listed_while_held_and_can_be_allowed_again(apex):
@@ -256,7 +298,7 @@ def test_a_removed_pinned_mod_is_listed_while_held_and_can_be_allowed_again(apex
     code, done = apex.call("POST", "/api/mod-remove", {"file": "claims.jar", "confirm": "claims.jar", "hold": True,
                                                        "why": "testing a crash"})
     assert code == 200 and done["held"] is True
-    assert held_file(apex)["claims.jar"]["why"] == "testing a crash"
+    assert held_file(apex)["claims"]["why"] == "testing a crash"
     data = apex.call("GET", "/api/mods")[1]
     assert [g["file"] for g in data["held_gone"]] == ["claims.jar"] and data["held_gone"][0]["held"]["by"] == "diego"
     allow = {"file": "claims.jar", "held": False, "confirm": "claims.jar"}
@@ -264,7 +306,7 @@ def test_a_removed_pinned_mod_is_listed_while_held_and_can_be_allowed_again(apex
     assert apex.call("POST", "/api/mod-hold", allow)[0] == 200
     assert held_file(apex) == {} and apex.call("GET", "/api/mods")[1]["held_gone"] == []
     assert apex.call("POST", "/api/mod-hold", allow)[0] == 409          # not held any more
-    assert "mod-allow claims.jar" in actions(apex)
+    assert "mod-allow claims (claims.jar)" in actions(apex)
 
 
 def test_mod_hold_needs_a_pinned_mod_that_is_off(apex):
@@ -279,23 +321,62 @@ def test_mod_hold_needs_a_pinned_mod_that_is_off(apex):
     assert apex.call("POST", "/api/mod-hold", {**hold, "file": "../x.jar", "confirm": "../x.jar"})[0] == 400
     assert apex.call("POST", "/api/mod-hold", {**hold, "held": "yes"})[0] == 400
     (mods / "claims.jar").unlink()
-    assert apex.call("POST", "/api/mod-hold", hold)[0] == 200 and "claims.jar" in held_file(apex)
+    assert apex.call("POST", "/api/mod-hold", hold)[0] == 200 and "claims" in held_file(apex)
     assert apex.call("POST", "/api/mod-hold", hold)[0] == 409           # held already
-    assert "mod-hold claims.jar" in actions(apex)
+    assert "mod-hold claims (claims.jar)" in actions(apex)
+
+
+def test_holds_are_refused_when_the_live_release_cannot_keep_them(apex):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    release(apex, {"claims.jar": "claims"}, holds=False)          # rolled back to a release without Get-HeldMods
+    data = apex.call("GET", "/api/mods")[1]
+    assert data["holds_supported"] is False and data["mods"][0]["holdable"] is False
+    off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
+    code, body = apex.call("POST", "/api/mod-toggle", off)
+    assert code == 409 and "can't keep mods off" in body["error"] and (mods / "claims.jar").exists()
+    code, body = apex.call("POST", "/api/mod-remove", {"file": "claims.jar", "confirm": "claims.jar", "hold": True})
+    assert code == 409 and (mods / "claims.jar").exists()
+    assert apex.call("POST", "/api/mod-toggle", {**off, "hold": False})[0] == 200
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims.jar", "held": True, "confirm": "claims.jar"})[0] == 409
+    assert held_file(apex) is None
+
+
+def test_the_pinned_names_with_spaces_and_brackets_can_be_turned_off_and_held(apex):
+    odd = ["Simple Harvesting 26.2-3.0.1.jar", "Visible Traders-2.5.1-universal.jar",
+           "MoreLecternVariants-1.10.0+26.1(2)-Fabric.jar", "MoreJukeboxNoteblockVariants-1.2.4+26.1(2)-Fabric.jar"]
+    mods = apex.root / "mods"
+    for i, name in enumerate(odd):
+        jar(mods / name, {"id": f"odd{i}", "name": name})
+    (apex.root / ".monkey-state.json").write_text(json.dumps({"mods": odd}))
+    release(apex, {n: f"odd-{i}" for i, n in enumerate(odd)})
+    for i, name in enumerate(odd):
+        code, done = apex.call("POST", "/api/mod-toggle", {"file": name, "enabled": False, "confirm": name,
+                                                           "hold": True})
+        assert code == 200 and done["held"] is True, name
+        assert held_file(apex)[f"odd-{i}"]["file"] == name
+    # The release's own pins all fit, so none of them is refused by name.
+    pins = json.loads((REPO.root / "package" / "monkey" / "manifest.json").read_text())["mods"]
+    assert all(staff_host.MOD_NAME.fullmatch(m["file"]) for m in pins)
+    assert all(staff_host.SLUG.fullmatch(m["slug"]) for m in pins)
 
 
 def test_installing_a_jar_of_a_held_name_allows_it_again(apex, tmp_path):
-    pinned(apex, "claims.jar")
+    pinned(apex, "claims.jar", "other.jar")
     (apex.root / staff_host.HELD_FILE).write_text(json.dumps(
-        {"mods": {"claims.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"},
-                  "other.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
+        {"mods": {"claims": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"},
+                  "other": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
     good = jar_bytes(tmp_path, {"id": "claims", "name": "Claims"})
-    assert apex.call("POST", mod_url("claims.jar"), good)[0] == 200
-    assert set(held_file(apex)) == {"other.jar"}
-    assert "mod-install claims.jar (uploaded), no longer kept off" in actions(apex)
+    code, done = apex.call("POST", mod_url("claims.jar"), good)
+    assert code == 200 and done["held"] is False
+    assert set(held_file(apex)) == {"other"}
+    assert "mod-install claims.jar (uploaded)" in actions(apex)
+    assert "mod-allow claims (claims.jar), no longer kept off" in actions(apex)
 
 
-@pytest.mark.parametrize("text", ["{not json", "[]", '{"mods": ["claims.jar"]}', '{"mods": {"../x.jar": {}}}'])
+@pytest.mark.parametrize("text", ["{not json", "[]", '{"mods": ["claims"]}', '{"mods": {"../x": {}}}',
+                                  '{"mods": {"claims": {}, "CLAIMS": {}}}'])
 def test_a_broken_held_file_holds_nothing_and_is_written_over(apex, text):
     mods = apex.root / "mods"
     jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
@@ -305,14 +386,74 @@ def test_a_broken_held_file_holds_nothing_and_is_written_over(apex, text):
     assert rows["held_gone"] == [] and all(r["held"] is None for r in rows["mods"])
     off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
     assert apex.call("POST", "/api/mod-toggle", off)[0] == 200
-    assert list(held_file(apex)) == ["claims.jar"]
+    assert "claims" in held_file(apex)
+
+
+@pytest.mark.parametrize("value", [True, 1, "yes", None, [], {"why": 5}])
+def test_a_held_entry_of_any_shape_counts_and_others_are_kept(apex, value):
+    """Get-HeldMods holds every slug key, whatever its value: so does the page, and a change keeps the other keys."""
+    jar(apex.root / "mods" / "other.jar.disabled", {"id": "other", "name": "Other"})
+    pinned(apex, "claims.jar", "other.jar")
+    raw = {"note": "kept", "mods": {"claims": value, "../bad": {"x": 1}, "other": {"by": "anna"}}}
+    (apex.root / staff_host.HELD_FILE).write_text(json.dumps(raw))
+    data = apex.call("GET", "/api/mods")[1]
+    gone = {g["slug"]: g for g in data["held_gone"]}
+    assert set(gone) == {"claims"} and gone["claims"]["file"] == "claims.jar"
+    assert gone["claims"]["held"] == {"by": "", "at": "", "why": ""} or isinstance(value, dict)
+    rows = {r["file"]: r for r in data["mods"]}
+    assert rows["other.jar.disabled"]["held"]["by"] == "anna"
+    assert apex.call("POST", "/api/mod-hold", {"file": "other.jar", "held": False, "confirm": "other.jar"})[0] == 200
+    after = json.loads((apex.root / staff_host.HELD_FILE).read_text())
+    assert after == {"note": "kept", "mods": {"claims": value, "../bad": {"x": 1}}}
+
+
+def test_a_failed_note_write_keeps_the_move_and_says_so(apex, monkeypatch):
+    mods = apex.root / "mods"
+    jar(mods / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    h = staff_host.host(apex.panel)
+
+    def broken(name, data):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(h, "_write_note", broken)
+    off = {"file": "claims.jar", "enabled": False, "confirm": "claims.jar", "hold": True}
+    code, done = apex.call("POST", "/api/mod-toggle", off)
+    assert code == 200 and done["held"] is False and (mods / "claims.jar.disabled").exists()
+    assert "turned off, but 'keep it off' could not be saved" in done["note_error"]
+    assert "mod-disable claims.jar" in actions(apex)
+    code, done = apex.call("POST", "/api/mod-remove", {"file": "claims.jar.disabled", "confirm": "claims.jar.disabled",
+                                                       "hold": True})
+    assert code == 200 and "removed, but" in done["note_error"] and "mod-remove claims.jar.disabled" in actions(apex)
+
+
+def test_a_failed_side_note_never_fails_an_upload(apex, tmp_path, monkeypatch):
+    h = staff_host.host(apex.panel)
+    monkeypatch.setattr(h, "_write_note", lambda name, data: (_ for _ in ()).throw(OSError(13, "Permission denied")))
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and (apex.root / "mods" / "shippy.jar").exists()
+    assert "whether players need it could not be saved" in done["note_error"]
+    assert "mod-install shippy.jar (uploaded)" in actions(apex)
 
 
 def test_the_held_file_is_what_the_start_script_reads():
     psm = (REPO.root / "package" / "monkey" / "Monkey.psm1").read_text(encoding="utf-8")
     assert f"Join-Path $Context.ServerDir '{staff_host.HELD_FILE}'" in psm
+    assert "function Get-HeldMods" in psm             # holds_supported() looks for it in the live package
+    m = re.search(r"\$script:HeldSlug = '\^(.+)\$'", psm)
+    assert m and m.group(1) == staff_host.SLUG.pattern
     # A release deploy copies package/ over the live folder but never touches server/, where the file is.
     assert "--exclude '/server/'" in (DEPLOY / "monkey-deploy.sh").read_text()
+
+
+@pytest.mark.parametrize("mods", [None, "x", 5, {"a": 1}])
+def test_a_manifest_whose_mods_are_not_a_list_lists_no_projects(apex, mods):
+    (apex.live / "monkey").mkdir(parents=True, exist_ok=True)
+    (apex.live / "monkey" / "manifest.json").write_text(json.dumps({"minecraft": "26.2", "mods": mods}))
+    jar(apex.root / "mods" / "a.jar", {"id": "a", "name": "A"})
+    code, data = apex.call("GET", "/api/mods")
+    assert code == 200 and data["mods"][0]["holdable"] is False
 
 
 # ---------------------------------------------------------------- do players need a mod
@@ -442,22 +583,55 @@ def test_the_mods_list_names_mods_players_need_that_their_pack_lacks(apex):
 
 
 def test_a_held_release_mod_players_need_shows_as_in_their_pack(apex):
-    (apex.live / "monkey").mkdir(exist_ok=True)
-    (apex.live / "monkey" / "manifest.json").write_text(json.dumps(
-        {"minecraft": "26.2", "mods": [{"file": "claims.jar", "project_id": "Claims12"},
-                                       {"file": "server.jar", "project_id": "Server12"}]}))
     client_pack(apex, [{"path": "mods/claims-client.jar", "env": {"client": "required", "server": "required"},
                         "downloads": ["https://cdn.modrinth.com/data/Claims12/versions/abcdefgh/claims.jar"]}])
     pinned(apex, "claims.jar", "server.jar")
+    release(apex, {"claims.jar": ("claims", "Claims12"), "server.jar": ("server", "Server12")})
     jar(apex.root / "mods" / "server.jar", {"id": "srv", "name": "Server"})
     (apex.root / staff_host.HELD_FILE).write_text(json.dumps(
-        {"mods": {"claims.jar": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
+        {"mods": {"claims": {"by": "diego", "at": "2026-11-06T12:00:00Z", "why": "x"}}}))
     data = apex.call("GET", "/api/mods")[1]
     gone = data["held_gone"][0]
     assert gone["file"] == "claims.jar" and gone["client_side"] == "required" and gone["in_players_pack"] is True
     rows = {r["file"]: r for r in data["mods"]}
     assert rows["server.jar"]["client_side"] == "unknown" and rows["server.jar"]["in_players_pack"] is False
     assert data["players_missing"] == []
+
+
+@pytest.mark.parametrize("players", [["required"], {"a": 1}, 5, None])
+def test_mod_side_refuses_an_answer_that_is_not_text(apex, players):
+    jar(apex.root / "mods" / "a.jar", {"id": "a", "name": "A"})
+    assert apex.call("POST", "/api/mod-side", {"file": "a.jar", "players": players})[0] == 400
+
+
+def test_a_lookup_that_knows_nothing_never_replaces_a_known_answer_but_staff_always_do(apex):
+    jar(apex.root / "mods" / "a.jar", {"id": "a", "name": "A"})
+    h = staff_host.host(apex.panel)
+    with h._mods:
+        assert h._note_side("diego", "a.jar", {"client": "required", "source": "modrinth"}) == "required"
+        # Modrinth down, or a modpack with no env: "unknown" keeps what is known.
+        assert h._note_side("diego", "a.jar", {"client": "unknown", "source": "modrinth"}) == "required"
+        assert h._note_side("diego", "a.jar", {"client": "unknown", "source": "modpack"}) == "required"
+    # Staff's own "don't know" replaces it.
+    assert apex.call("POST", "/api/mod-side", {"file": "a.jar", "players": "unknown"})[1]["client_side"] == "unknown"
+    assert sides_file(apex)["a.jar"]["source"] == "staff"
+    with h._mods:
+        assert h._note_side("diego", "a.jar", {"client": "optional", "source": "modrinth"}) == "optional"
+    assert apex.call("POST", "/api/mod-side", {"file": "a.jar", "players": "no"})[1]["client_side"] == "unsupported"
+
+
+def test_an_install_says_whether_the_players_pack_has_it(apex, tmp_path):
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    lookup(apex, "required")
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and done["client_side"] == "required" and done["in_players_pack"] is None    # no pack here
+    client_pack(apex, [{"path": "mods/other.jar", "downloads": []}])
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["in_players_pack"] is False
+    client_pack(apex, [{"path": "mods/s.jar", "downloads": [
+        "https://cdn.modrinth.com/data/AbCd1234/versions/abcdefgh/s.jar"]}])
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["in_players_pack"] is True
+    done = apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "required"})[1]
+    assert done["in_players_pack"] is True
 
 
 # ---------------------------------------------------------------- the version switch

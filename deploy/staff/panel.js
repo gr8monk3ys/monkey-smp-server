@@ -519,33 +519,63 @@
     "stop": ["Stop the server? Players are disconnected, and it stays off until someone presses Start.", "Yes, stop", "Stopping."],
     "start": ["Start the server? It takes a few minutes before players can join.", "Yes, start", "Starting."],
   };
-  const powerState = { timer: null, errorsAt: 0 };
-  const STARTED_KEY = "monkey-panel-started";   // when this browser last restarted or started the server (ms)
+  const powerState = { timer: null, errorsAt: 0, since: null, state: null };
+  // That a restart or start was pressed in this tab, and the server's start time just before it ("before"): the
+  // errors shown are those after the server's next start time, which GET /api/power says (its "since" when running).
+  // A normal restart waits 5 minutes, so the time of the click is not when the server started.
+  const PRESSED_KEY = "monkey-panel-pressed";
   const ERRORS_SHOWN = 8;
 
-  // The errors logged since a restart or start pressed here: staff.json's groups (tools/staff_status.py), whose last
-  // line came after it. The file is written every 2 minutes, so it lags; errors while the server starts aren't kept.
+  // sessionStorage can throw (storage off, a private window): then the page works without remembering.
+  function pressedRead() {
+    try {
+      const kept = JSON.parse(sessionStorage.getItem(PRESSED_KEY) || "null");
+      return kept && typeof kept === "object" ? kept : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function pressedWrite(value) {
+    try {
+      sessionStorage.setItem(PRESSED_KEY, JSON.stringify(value));
+    } catch { /* not kept: no error list after this restart */ }
+  }
+
+  // The errors logged since the server started after a restart or start pressed here: staff.json's groups
+  // (tools/staff_status.py), whose last line came after that start. The file is written every 2 minutes, so it lags.
   async function loadPowerErrors() {
-    const since = Number(sessionStorage.getItem(STARTED_KEY)) || 0;
-    $("power-errors").hidden = !since;
-    if (!since || Date.now() - powerState.errorsAt < 60_000) return;
+    const pressed = pressedRead();
+    $("power-errors").hidden = !pressed;
+    if (!pressed) return;
+    // Started again since the press: running, with a start time that isn't the one from before it.
+    const started = powerState.state === "running" && powerState.since && powerState.since !== pressed.before
+      ? Date.parse(powerState.since) : NaN;
+    if (Number.isNaN(started)) {
+      $("power-errors-head").textContent = "Errors since your restart show here once the server has started again.";
+      $("power-errors-list").replaceChildren();
+      powerState.errorsAt = 0;
+      return;
+    }
+    if (Date.now() - powerState.errorsAt < 60_000) return;
     powerState.errorsAt = Date.now();
     let errors;
     try {
       const answer = await fetch("staff.json", { cache: "no-store" });
       if (!answer.ok) throw new Error();
       const data = await answer.json();
-      errors = ((data.problems && data.problems.errors) || []).filter((e) => Date.parse(e.last) >= since);
+      errors = ((data.problems && data.problems.errors) || []).filter((e) => Date.parse(e.last) >= started);
     } catch {
       $("power-errors-head").textContent = "The errors since your restart can't be read right now.";
       $("power-errors-list").replaceChildren();
       return;
     }
     $("power-errors-head").textContent = errors.length
-      ? `Errors logged since you restarted it at ${when(since)}, after it finished starting:`
-      : `No errors logged since you restarted it at ${when(since)}, after it finished starting. The list updates every 2 minutes.`;
+      ? `Errors logged since the server started again at ${when(started)}:`
+      : `No errors logged since the server started again at ${when(started)}. The list updates every 2 minutes.`;
+    // e.count is for the whole window staff.json covers, so only the last time is said, not a count since the start.
     $("power-errors-list").replaceChildren(...errors.slice(0, ERRORS_SHOWN).map((e) =>
-      el("li", "", `${e.text}${e.count > 1 ? ` (${e.count} times)` : ""}`)));
+      el("li", "", `${e.text} (last seen ${when(e.last)})`)));
   }
 
   async function loadPower() {
@@ -556,6 +586,8 @@
       $("power-mark").setAttribute("class", `mark ${kind}`);
       $("power-mark").firstElementChild.setAttribute("d", shape);
       $("power-word").textContent = data.since ? `${word}, since ${when(data.since)}` : word;
+      powerState.state = data.state;
+      powerState.since = data.since || null;
       fail("server", null);
     } catch (error) {
       fail("server", error);
@@ -571,7 +603,7 @@
       await api("POST", "/api/power", { action });
       note("server", POWER[action][2]);
       if (action !== "stop") {
-        sessionStorage.setItem(STARTED_KEY, String(Date.now()));
+        pressedWrite({ before: powerState.state === "running" ? powerState.since : null });
         powerState.errorsAt = 0;
       }
     } catch (error) {

@@ -5,7 +5,7 @@
 "use strict";
 
 (() => {
-  const TABS = ["status", "console", "files", "players", "server", "settings", "mods", "users"];   // users: users.js fills it
+  const TABS = ["status", "console", "files", "players", "server", "settings", "mods", "modcfg", "users"];   // users: users.js fills it
   const CONSOLE_MS = 2_000;        // how often the log is asked for new lines while its tab is open
   const POWER_MS = 5_000;          // how often the server's state is asked again on the Server tab
   const LOG_LINES = 1500;          // older lines drop off the top of the console
@@ -643,6 +643,11 @@
   }
 
   window.addEventListener("hashchange", show);
+  // The Mod settings tab (modcfg.js) opens a file it can't show as a form here, in the raw editor.
+  window.addEventListener("monkey-open-file", (event) => {
+    location.hash = "#files";
+    openFile(String(event.detail.path), event.detail.writable);
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     if (current === "console") pollConsole();

@@ -54,6 +54,17 @@
 .icon-row .add { flex: 1 1 18rem; }
 .server-icon { width: 64px; height: 64px; image-rendering: pixelated; background: var(--shade); box-shadow: 0 0 0 2px var(--leaf-2); }
 
+/* The Mod settings tab (modcfg.js): one folding card per mod, each config file a form. */
+.field.invalid { box-shadow: inset 3px 0 0 var(--bad); }
+.field.long .control textarea { flex: 1; width: 100%; }
+.field .fixed { color: var(--bone); font: 400 0.875rem/1.4 var(--mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+.modcard > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; cursor: pointer; }
+.modcard > summary .title { color: var(--bone); font-weight: 700; }
+.modcard .stack { padding-top: 10px; }
+.modfile h4 { margin: 4px 0 6px; color: var(--sage); }
+details.more > summary { padding: 10px 2px; color: var(--sage); cursor: pointer; }
+#modcfg-search { flex: 1 1 14rem; }
+
 @media (max-width: 600px) {
   .field { grid-template-columns: minmax(0, 1fr); }
   .field .control { justify-content: start; }

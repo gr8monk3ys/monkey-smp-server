@@ -16,7 +16,6 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 - Staff page, Server tab (admin): an Event timer card that runs those functions, and "Update the leaderboard now",
   which saves the world over RCON and then runs the hourly board update at once. A new file,
   `tools/staff_events.py`: restart `monkey-panel` once the checkout has it.
-
 - Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
   and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
   last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in

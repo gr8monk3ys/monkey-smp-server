@@ -100,8 +100,8 @@ export default function Home() {
               <h3>Get a pass</h3>
               <Store when="open">
                 <p><ConfigLink to="STORE_URL">Buy it</ConfigLink> with your Minecraft Java name. You&apos;re on the
-                  whitelist within a minute or two. Connecting your Discord is optional: it gets you the member
-                  role there, at checkout or later from the follow-up email.</p>
+                  whitelist within a minute or two. <ConfigLink to="DISCORD_INVITE">The Discord</ConfigLink> is
+                  optional: join it whenever you like, and staff there can give you the member role and forum.</p>
               </Store>
               <Store when="soon">
                 <p>The store isn&apos;t open yet. Until it is, passes are arranged in{" "}

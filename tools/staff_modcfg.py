@@ -760,14 +760,30 @@ def mod_name(rel: str) -> str:
     return stem.lower() or parts[-1].lower()
 
 
-def _secret(row: dict, lines: list[str], starts: list[int]) -> bool:
-    """Whether a value is a secret: its key says so, or any line its text touches is one Files would hide. A value
-    that spans lines is checked on every line, so the form never shows what Files masks."""
+def _secret(row: dict, text: str, starts: list[int]) -> bool:
+    """Whether a value is a secret: its key says so, or Files would hide something on the lines its text touches.
+    Files' own mask_secrets judges those lines, with its own line splitting (\\r and the other breaks too), so the
+    form never shows what Files masks."""
     if sp._SECRET_KEY.search(row["key"]):
         return True
-    first = bisect.bisect_right(starts, row["start"]) - 1
-    last = bisect.bisect_right(starts, max(row["start"], row["end"] - 1)) - 1
-    return any(sp._secret_line(line.rstrip("\r")) for line in lines[first:last + 1])
+    first = starts[bisect.bisect_right(starts, row["start"]) - 1]
+    after = bisect.bisect_right(starts, max(row["start"], row["end"] - 1))
+    last = starts[after] if after < len(starts) else len(text)
+    return sp.mask_secrets(text[first:last])[1] > 0
+
+
+SAFE_INT = 2 ** 53     # past this a browser rounds a number (an ID such as a Discord channel's)
+
+
+def _unsafe(row: dict) -> str:
+    """Why the page can't edit this value faithfully, or "": it would round it, or its list editor would lose items."""
+    value, kind = row["value"], row["type"]
+    items = value if kind == "list" else [value]
+    if any(isinstance(v, int) and not isinstance(v, bool) and abs(v) > SAFE_INT for v in items):
+        return "Too long a number for this page: change it in Files."
+    if kind == "list" and row["item"] == "text" and any(v == "" or v != v.strip() for v in value):
+        return "This list has empty or space-padded items: change it in Files."
+    return ""
 
 
 class ModConfigs:
@@ -798,7 +814,7 @@ class ModConfigs:
 
     def _allowed(self, rel: str) -> tuple[Path, tuple[str, ...]] | None:
         try:
-            path, parts = self.p.resolve(rel, "write")
+            path, parts = self.p.resolve(rel, "read")      # read-only files list too: their form is shown only
         except sp.Refused:
             return None
         return path, parts
@@ -806,7 +822,7 @@ class ModConfigs:
     def list(self) -> dict:
         known = self.important()
         groups: dict[str, dict] = {}
-        count = 0
+        count, cut = 0, False
         for rel in self._candidates():
             suffix = PurePosixPath(rel).suffix.lower()
             if (suffix not in FORMATS and suffix not in RAW_ONLY) or CLIENT_ONLY.search(PurePosixPath(rel).stem) \
@@ -821,6 +837,9 @@ class ModConfigs:
                 continue
             if not stat.S_ISREG(st.st_mode):
                 continue
+            if count >= FILES_MAX:
+                cut = True
+                break
             name = mod_name(rel)
             info = known.get(name, {})
             group = groups.setdefault(name, {"name": name, "title": info.get("title") or name, "files": [],
@@ -828,10 +847,8 @@ class ModConfigs:
             group["files"].append({"path": "/".join(found[1]), "format": FORMATS.get(suffix, "raw"),
                                    "size": st.st_size, "mtime": st.st_mtime})
             count += 1
-            if count >= FILES_MAX:
-                break
         rows = sorted(groups.values(), key=lambda g: (not g["first"], g["title"].lower()))
-        return {"mods": rows, "cut": count >= FILES_MAX}
+        return {"mods": rows, "cut": cut}
 
     def _file(self, rel) -> tuple[Path, tuple[str, ...], str]:
         path, parts = self.p.resolve(rel, "read")
@@ -848,7 +865,7 @@ class ModConfigs:
         path, parts, fmt = self._file(rel)
         text, st = self.p._text(path)
         name = "/".join(parts)
-        lines, starts = text.split("\n"), _line_starts(text)
+        starts = _line_starts(text)
         try:
             rows, skipped = parse(fmt, text)
         except Bad as e:
@@ -859,8 +876,11 @@ class ModConfigs:
         for row in rows:
             shown = {k: v for k, v in row.items() if k not in ("start", "end", "layout")}
             shown["about"] = sp.mask_secrets(row["about"])[0]
-            if _secret(row, lines, starts):
+            if _secret(row, text, starts):
                 shown.update(value=sp.MASK, type="fixed", locked="A secret: change it in Files.")
+            elif why := _unsafe(row):
+                shown.update(value=json.dumps(row["value"]) if row["type"] == "list" else str(row["value"]),
+                             type="fixed", locked=why)
             out.append(shown)
         info = self.important().get(mod_name(name), {})
         important = [k for k in info.get("keys", []) if isinstance(k, str)]
@@ -879,15 +899,17 @@ class ModConfigs:
         text, st = self.p._text(path)
         if st.st_mtime != mtime:
             raise sp.Refused(409, "Someone else saved this file since you opened it: reload it.")
-        lines, starts = text.split("\n"), _line_starts(text)
+        starts = _line_starts(text)
         try:
             rows = {row["key"]: row for row in parse(fmt, text)[0]}
         except Bad as e:
             raise sp.Refused(400, f"This file can't be read as a form ({e}): edit it in Files.") from None
         for key in values:
             row = rows.get(key) if isinstance(key, str) else None
-            if row and _secret(row, lines, starts):
+            if row and _secret(row, text, starts):
                 raise sp.Refused(403, f"{key} is a secret: change it in Files.")
+            if row and (why := _unsafe(row)):
+                raise sp.Refused(403, f"{key}: {why}")
         new, changed = edit(fmt, text, values)
         if not changed:
             return {"changed": [], "mtime": st.st_mtime}
@@ -899,7 +921,8 @@ class ModConfigs:
         # each ******** back as the value on disk and logs "save PATH".
         shown, _ = sp.mask_secrets(new)
         done = self.p.save(user, {"path": name, "text": shown, "mtime": mtime})
-        self.p.record(user, "mod-setting", f"{name}: {', '.join(changed)}")
+        keys = ", ".join(changed[:10]) + (f" and {len(changed) - 10} more" if len(changed) > 10 else "")
+        self.p.record(user, "mod-setting", f"{name}: {keys}")
         return {"changed": changed, "mtime": done["mtime"]}
 
 

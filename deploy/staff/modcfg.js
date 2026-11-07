@@ -90,7 +90,9 @@
       };
     } else if (field.type === "text" && field.choices) {
       node = el("select");
-      for (const choice of field.choices) {
+      // The value on disk is always an option, even when the mod's comment doesn't list it.
+      const choices = field.choices.includes(field.value) ? field.choices : [field.value, ...field.choices];
+      for (const choice of choices) {
         const option = el("option", "", choice);
         option.value = choice;
         node.appendChild(option);

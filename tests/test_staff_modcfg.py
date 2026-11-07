@@ -274,6 +274,22 @@ def test_a_secret_inside_a_multi_line_value_is_masked(mods):
     assert code == 200 and "ml-real" not in json.dumps(data)
     f = {r["key"]: r for r in data["fields"]}
     assert f["notes"]["value"] == staff_panel.MASK and f["plain"]["value"] == 1
+    # A bare carriage return is a line break to Files' masking: the same here.
+    (mods.root / "config/cr").mkdir(exist_ok=True)
+    (mods.root / "config/cr/cr.properties").write_bytes(b"notes=x\rpassword=cr-real\nplain=1\n")
+    code, data = mods.call("GET", "/api/mod-config?path=config/cr/cr.properties")
+    assert code == 200 and "cr-real" not in json.dumps(data)
+
+
+def test_values_a_browser_would_round_or_lose_are_shown_only(mods):
+    (mods.root / "config/ids.toml").write_text('channel = 123456789012345678\nnames = ["", " a"]\nok = 5\n')
+    _, data = mods.call("GET", "/api/mod-config?path=config/ids.toml")
+    f = {r["key"]: r for r in data["fields"]}
+    assert f["channel"]["type"] == "fixed" and f["channel"]["value"] == "123456789012345678"
+    assert f["names"]["type"] == "fixed" and f["ok"]["type"] == "int"
+    code, _ = mods.call("PUT", "/api/mod-config", {"path": "config/ids.toml", "mtime": data["mtime"],
+                                                   "values": {"channel": 1}})
+    assert code == 403
 
 
 def test_a_save_changes_only_the_edited_lines_through_the_panels_save(mods):

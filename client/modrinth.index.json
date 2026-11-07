@@ -1296,6 +1296,21 @@
       "fileSize": 100500
     },
     {
+      "path": "mods/ingeniumapi-1.1-FABRIC-MC-26.X.jar",
+      "hashes": {
+        "sha1": "c932919958eaa7908a86b0074946f5b72d4ee846",
+        "sha512": "680ce9a30090466b8e475706d99a5bd733fc423abde58d6be668ee8afca0309ba990e497f5dbc1b63f3b30cc3f24a935f91c06fd4e9a2f93c9a5f89aa5b91445"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/bhnA6sV8/versions/bRhQB9Tl/ingeniumapi-1.1-FABRIC-MC-26.X.jar"
+      ],
+      "fileSize": 13267
+    },
+    {
       "path": "mods/inventory-item-groups-1.5.3-fabric+26.2.jar",
       "hashes": {
         "sha1": "70f7a3d08caf85c7be2a5c75b7bb956d43612722",
@@ -2059,6 +2074,21 @@
         "https://cdn.modrinth.com/data/XTAy8Fqs/versions/tyVroQHB/ShieldBannerFix-fabric-MC26.2-26.2.0.1.jar"
       ],
       "fileSize": 37617
+    },
+    {
+      "path": "mods/shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar",
+      "hashes": {
+        "sha1": "127af5592a07cf843c482f2175b3c02930aee138",
+        "sha512": "48ceb07def7d6ae25a678ad52e34bc17c8768512022b30dd3c938560b45a50f910d14a00383c9b8ac204432f8e2285af6da9e4028a3d9b8a456a35093b35720b"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/oxBNHOmi/versions/3ArVRD99/shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar"
+      ],
+      "fileSize": 2601322
     },
     {
       "path": "mods/ShoulderSurfing-Fabric-26.2-5.3.0.jar",

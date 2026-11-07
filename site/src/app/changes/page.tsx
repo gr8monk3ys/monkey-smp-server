@@ -28,8 +28,8 @@ export default function WhatChanged() {
       <main id="main">
         <section className="hero">
           <h1>What changed</h1>
-          <p className="lede">Every change to the rules, the mods and the wardrobe that you&apos;d notice in game,
-            newest first. The same notes go in the Discord&apos;s #changelog channel the day they go live.</p>
+          <p className="lede">Announcements and every change to the rules, the mods and the wardrobe that you&apos;d
+            notice in game, newest first. You don&apos;t need the Discord: what it announces goes here too.</p>
         </section>
 
         <section id="updates">

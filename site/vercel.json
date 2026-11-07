@@ -2,5 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "cleanUrls": true,
-  "ignoreCommand": "[ \"$VERCEL_ENV\" = production ] || exit 0; [ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] || exit 1; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . && exit 0; exit 1"
+  "ignoreCommand": "[ \"$VERCEL_ENV\" = production ] || exit 0; [ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] || exit 1; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . && exit 0; exit 1",
+  "redirects": [
+    {
+      "source": "/pack/MonkeySMP-Client-3.1.1.mrpack",
+      "destination": "/pack/MonkeySMP-Client-3.1.1-ships.mrpack",
+      "permanent": false
+    },
+    {
+      "source": "/pack/MonkeySMP-Player-3.1.1.zip",
+      "destination": "/pack/MonkeySMP-Player-3.1.1-ships.zip",
+      "permanent": false
+    }
+  ]
 }

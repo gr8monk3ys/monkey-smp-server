@@ -11,6 +11,7 @@ LAUNCH = "2026-11-22T01:00:00Z"   # Saturday 21 November 2026, 5 PM Pacific
 SETTINGS = {
     "ADDRESS": "play.example.com",
     "DISCORD_INVITE": "https://discord.gg/abc",
+    "CONTACT_URL": "",
     "STORE_URL": "",
     "MODPACK_URL": "pack/MonkeySMP-Client-1.2.3.mrpack",
     "INSTALLER_URL": "pack/MonkeySMP-Player-1.2.3.zip",
@@ -164,6 +165,19 @@ def test_the_served_pack_must_be_the_pinned_version(tmp_path):
     assert "site/public/pack/" in error and "site/config.json" in error
 
 
+def test_a_site_build_of_the_pinned_version_is_accepted(tmp_path):
+    repo = fake_site(tmp_path, pack_version="1.2.3-ships")
+    site_links.main([], repo=repo)
+    assert site_links.problems(repo) == []
+
+
+@pytest.mark.parametrize("pack_version", ["1.2.30", "1.2.3-", "1.2.3-Ships", "1.2.4-ships"])
+def test_only_a_labelled_build_of_the_pinned_version_passes(tmp_path, pack_version):
+    repo = fake_site(tmp_path, pack_version=pack_version)
+    site_links.main([], repo=repo)
+    [error] = site_links.problems(repo)
+    assert f"{pack_version} client pack, but the manifest is 1.2.3" in error
+
 def test_a_missing_pack_is_reported(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)
@@ -300,3 +314,23 @@ def test_the_real_config_is_what_the_site_reads():
     tsconfig = json.loads((site_links.site() / "tsconfig.json").read_text(encoding="utf-8"))
     assert tsconfig["compilerOptions"]["paths"]["@config"] == ["./config.json"]
     assert 'from "@config"' in (site_links.site() / "src" / "lib" / "config.ts").read_text(encoding="utf-8")
+
+
+def test_the_rulebook_page_is_the_players_part_of_the_rulebook():
+    assert site_links.rulebook_copy().read_text(encoding="utf-8") == site_links.rulebook_text(
+        site_links.rulebook().read_text(encoding="utf-8"))
+    copy = site_links.rulebook_copy().read_text(encoding="utf-8")
+    assert "1. No private bases." in copy and "Notes for admins" not in copy
+    # MDX would read these as JSX; the admin notes have them, the players' part mustn't.
+    assert "<" not in copy.split("*/}", 1)[1]
+
+
+def test_a_stale_rulebook_is_reported_or_replaced(tmp_path):
+    repo = Repo(tmp_path)
+    (tmp_path / "docs").mkdir()
+    book = "# Title\n\nHosted by us.\n\n1. Rule.\n\n## Notes for admins\n\nSecret\n"
+    (tmp_path / "docs" / "RULES.md").write_text(book, encoding="utf-8")
+    assert "run python tools/site_links.py" in site_links.rulebook_problems(repo)[0]
+    assert site_links.rulebook_problems(repo, write=True) == []
+    assert site_links.rulebook_problems(repo) == []
+    assert "Secret" not in site_links.rulebook_copy(repo).read_text(encoding="utf-8")

@@ -2,11 +2,20 @@
 
 ## [Unreleased]
 
-For 3.2.0. Nothing changes in game, and players install nothing. One step by hand on the live server: the new
-Caddyfile (docs/LIVE.md, "The website's standings").
+For 3.2.0. In game, only the event timer is new (staff start it), and players install nothing. One step by hand on
+the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Added
 
+- The website has the full rulebook (`/guide/rules`, copied from `docs/RULES.md` by `tools/site_links.py`) and a
+  `CONTACT_URL` setting for reaching staff without the Discord.
+- An event timer for any event (`/function monkey:events/timer/start {name:"Boat Race",minutes:30}`): the raid's
+  boss bar with the minutes left, warnings at 10, 5 and 1 minute, a start title and the horn, and an "Event over"
+  title with a sound at the end (`timer/finish` ends it now, `timer/stop` cancels it). Cup points stay by hand. It is
+  in the `monkey-events` data pack, so it works only while that pack is on.
+- Staff page, Server tab (admin): an Event timer card that runs those functions, and "Update the leaderboard now",
+  which saves the world over RCON and then runs the hourly board update at once. A new file,
+  `tools/staff_events.py`: restart `monkey-panel` once the checkout has it.
 - Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
   and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
   last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in
@@ -48,6 +57,17 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
   docs/LIVE.md, "The login page".
 
+### Added
+
+- Four mods staff installed on the live server by hand on 6 and 7 November, pinned at the versions it runs, so the
+  next release keeps them instead of dropping them: Shippy Ships and its library Ingenium API (both needed on the
+  client too: they add boats, items and blocks), No Lunge (removes the Lunge enchantment) and Banner Flags (banners
+  on fences and walls), both server-only. Server: 174 mods. Client pack: 179 mods and 22 resource packs.
+- `tools/build.py --site-build LABEL`: a website-only rebuild of the manifest's version between releases, named
+  `<version>-LABEL` (files and the pack's versionId), never attached to a release; `site_links.py` accepts it. The
+  site serves `3.1.1-ships` until the next release: the 3.1.1 pack can't join a server with Shippy Ships. Its old
+  3.1.1 links redirect to it (`site/vercel.json`, temporary redirects).
+
 ### Changed
 
 - The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
@@ -58,6 +78,10 @@ Caddyfile (docs/LIVE.md, "The website's standings").
 - No Portals, a server-only mod nothing used: the Nether opens with the `allow_entering_nether_using_portals`
   gamerule and the End stays closed through the rules datapack. Its options, all off, were the only state it held.
   Taken out as a precaution while a client crash on entering a Nether portal is looked into. Players install nothing.
+
+### Changed
+
+- The Discord is optional: the site, the rulebook and the docs say so, and what it announces goes on What changed too.
 
 ### Fixed
 

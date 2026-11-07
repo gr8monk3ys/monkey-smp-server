@@ -1,7 +1,8 @@
 # Monkey SMP: Season I rules
 
-The full rulebook, for `#smp-rules` in the Discord. The website (the front page's "Rules", from
-`site/src/content/rules.tsx`) shows the short version; when a rule changes, change both. Rule numbers follow the owners' rulebook, so "rule 35"
+The full rulebook, for `#smp-rules` in the Discord and the guide's rulebook page (`/guide/rules`, which
+`python tools/site_links.py` copies from here, up to the admin notes). The front page's "Rules", from
+`site/src/content/rules.tsx`, shows the short version; when a rule changes, change both. Rule numbers follow the owners' rulebook, so "rule 35"
 means the same thing everywhere.
 
 Hosted by Diego A. Scaturchio and Lorenzo D. Scaturchio.
@@ -209,15 +210,16 @@ These carry over from the server's earlier rulebook.
 - **No real-money trading.** Don't buy or sell items, land, Strength or accounts for real money, gift
   cards or crypto.
 - **Keep it all-ages.** Names, skins, signs, banners, builds and chat stay free of sexual or hateful content.
-- **In the Discord:** `#smp-faq` has the answers but is read-only, so questions before buying go in
-  `#smp-forum` or a ticket; suggestions, bugs, recruitment and trading go in `#smp-forum`; payment problems, reports and appeals go in a ticket. No spam or mass pings.
+- **In the Discord, which is optional:** `#smp-faq` has the answers but is read-only, so questions before buying go in
+  `#smp-forum` or a ticket; suggestions, bugs, recruitment and trading go in `#smp-forum`; payment problems, reports and appeals go in a ticket. No spam or mass pings. Not on the Discord? Use the contact link on the website for any of these.
 - **Enforcement:** a warning, then a temporary ban (1 to 7 days), then a permanent ban. Cheating, hate and
   doxxing can skip straight to a ban. Admins decide edge cases.
-- **Appeals:** open a ticket (Front Desk) and say what happened, one appeal per decision. A different admin
+- **Appeals:** open a ticket (Front Desk) or use the website's contact link, and say what happened, one appeal per decision. A different admin
   reviews it within 7 days.
 - **Payments:** the Server Pass is the same price for everyone, and supporter tiers are cosmetic only. A ban
   doesn't refund time already paid for. If you can't get the modpack running in your first 48 hours, open a
-  ticket for a refund. A chargeback on a pass is a permanent ban; open a ticket instead.
+  ticket or use the website's contact link for a refund. A chargeback on a pass is a permanent ban; contact us
+  instead.
 
 Enjoy!
 

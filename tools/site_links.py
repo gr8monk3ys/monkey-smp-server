@@ -1,7 +1,7 @@
 """Checks the site's settings (site/config.json) and what the site serves from them.
 
     python tools/site_links.py --check             exit 1 if something is wrong (validate.py runs this too)
-    python tools/site_links.py                     the same, after copying the site's stylesheet for Season Wrapped
+    python tools/site_links.py                     the same, after copying Season Wrapped's stylesheet and the rulebook
     python tools/site_links.py --built site/out    also check a build's pages (checks.py's site step, after the build)
 
 config.json is the one place the site's links, the server address and the launch time live. The site (Next.js,
@@ -10,10 +10,13 @@ work without JavaScript; this checks the same file from the Python side:
   - every key is there and is a string, and nothing else is (a misspelt key would otherwise go unnoticed);
   - LAUNCH_AT is an ISO 8601 time with its offset ("2026-11-08T01:00:00Z");
   - when the modpack is served from the site itself (site/public/pack/), that file is there and is the pack of
-    the version the manifest pins, since a player with another version's pack can't join;
+    the version the manifest pins (or a site-only rebuild of it, "<version>-<label>", tools/build.py
+    --site-build), since a player with another version's pack can't join;
   - site/public/wrapped/site.css is a copy of the site's stylesheet (src/app/style.css): Season Wrapped's pages
     (tools/wrapped.py) are plain HTML that load it, since the built site's own CSS has a new name every build.
-    Without --check, a stale copy is replaced instead of reported.
+    Without --check, a stale copy is replaced instead of reported;
+  - site/src/content/guide/rulebook.mdx is the players' part of docs/RULES.md, for the guide's rulebook page. It's
+    replaced or reported the same way.
 With --built DIR, the built pages are checked too: every data-link anchor goes where config.json says (a link
 whose URL is empty points at the Discord with a "coming soon" title) and every data-launch element says the
 launch as tools/season_calendar.py does ({date} the day in Pacific time, "Saturday 7 November 2026"; {pacific}
@@ -35,14 +38,15 @@ import season_calendar
 from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
-KEYS = ("ADDRESS", "DISCORD_INVITE", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL", "STATUS_URL",
-        "STANDINGS_URL", "CALENDAR_URL", "LAUNCH_AT")
+KEYS = ("ADDRESS", "DISCORD_INVITE", "CONTACT_URL", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL",
+        "STATUS_URL", "STANDINGS_URL", "CALENDAR_URL", "LAUNCH_AT")
 # Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
-GUIDE = ("guide", "guide/factions", "guide/week", "guide/standings", "guide/commands", "guide/discord",
+GUIDE = ("guide", "guide/factions", "guide/rules", "guide/week", "guide/standings", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
 PAGES = ("index.html", "changes.html", "creators.html", *(f"{page}.html" for page in GUIDE))
 # The page for a missing address (and Next's own copy of it): never in the sitemap.
 NOT_FOUND = ("404.html", "_not-found.html")
+RULEBOOK_END = "## Notes for admins"   # docs/RULES.md: what follows isn't shown to players
 SITEMAP_LOC = re.compile(r"<loc>\s*https?://[^/<]+(/[^<]*?)\s*</loc>")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
@@ -116,7 +120,8 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
         return [f"site: MODPACK_URL is {url}, but site/public/{url.lstrip('/')} doesn't exist"]
     served = json.loads(zipfile.ZipFile(path).read("modrinth.index.json"))["versionId"]
     pinned = repo.load_manifest()["version"]
-    if served != pinned:
+    # A site-only rebuild of the pinned version (tools/build.py --site-build LABEL) is "<pinned>-LABEL".
+    if served != pinned and not re.fullmatch(re.escape(pinned) + r"-[a-z0-9]{1,20}", served):
         return [f"site: site/public/{url.lstrip('/')} is the {served} client pack, but the manifest is {pinned}: "
                 f"copy MonkeySMP-Client-{pinned}.mrpack and MonkeySMP-Player-{pinned}.zip into site/public/pack/ "
                 "and point MODPACK_URL and INSTALLER_URL in site/config.json at them (docs/MAINTAINING.md, Releasing)"]
@@ -161,6 +166,35 @@ def stylesheet_problems(repo=REPO, write=False) -> list[str]:
         print("updated site/public/wrapped/site.css")
         return []
     return ["site/public/wrapped/site.css is not a copy of site/src/app/style.css (run python tools/site_links.py)"]
+
+
+def rulebook(repo=REPO) -> Path:
+    return repo.root / "docs" / "RULES.md"
+
+
+def rulebook_copy(repo=REPO) -> Path:
+    return site(repo) / "src" / "content" / "guide" / "rulebook.mdx"
+
+
+def rulebook_text(book: str) -> str:
+    """What the guide's rulebook page shows of docs/RULES.md: from "Hosted by" up to the admin notes."""
+    players = book[book.index("Hosted by"):book.index(RULEBOOK_END)].rstrip()
+    return f"{{/* Copied from docs/RULES.md by tools/site_links.py: change it there. */}}\n\n{players}\n"
+
+
+def rulebook_problems(repo=REPO, write=False) -> list[str]:
+    source, copy = rulebook(repo), rulebook_copy(repo)
+    if not source.is_file():
+        return []
+    text = rulebook_text(source.read_text(encoding="utf-8"))
+    if copy.is_file() and copy.read_text(encoding="utf-8") == text:
+        return []
+    if write:
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_text(text, encoding="utf-8", newline="\n")
+        print("updated site/src/content/guide/rulebook.mdx")
+        return []
+    return ["site/src/content/guide/rulebook.mdx is not a copy of docs/RULES.md (run python tools/site_links.py)"]
 
 
 class _Page(HTMLParser):
@@ -266,7 +300,7 @@ def built_problems(out: Path, links: dict[str, str]) -> list[str]:
 
 
 def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
-    """What is wrong with config.json and what is served from it; with write, refresh the Wrapped stylesheet."""
+    """What is wrong with config.json and what is served from it; with write, refresh the copied files."""
     path = config_file(repo)
     if not path.is_file():
         return []
@@ -278,6 +312,7 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
     if errors:
         return errors
     errors += pack_problems(settings, repo) + calendar_problems(settings, repo) + stylesheet_problems(repo, write)
+    errors += rulebook_problems(repo, write)
     if built is not None:
         errors += built_problems(built, settings)
     return errors
@@ -285,7 +320,7 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
 
 def main(argv=None, repo=REPO) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--check", action="store_true", help="report a stale Wrapped stylesheet instead of copying it")
+    ap.add_argument("--check", action="store_true", help="report a stale copied file instead of copying it")
     ap.add_argument("--built", type=Path, metavar="DIR", help="also check a build's pages (site/out)")
     a = ap.parse_args(argv)
     errors = problems(repo, write=not a.check, built=a.built)

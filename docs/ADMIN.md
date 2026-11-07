@@ -498,6 +498,17 @@ Kit gear is marked, so it can't be smuggled out:
 /function monkey:events/raid/stop
 ```
 
+**Any other event: the event timer.** The raid's look for any event: a boss bar with the minutes left, warnings at
+10, 5 and 1 minute, a start title and the horn, and an "Event over" title (the event's name under it) and a sound at
+the end. One at a time, apart from the raid and Anarchy timers. It gives no Cup points: give them with `cup/add`,
+then update the leaderboard (the staff page's Server tab: "Update the leaderboard now", which saves the world first).
+The staff page's Event timer card runs the same three.
+
+```
+/function monkey:events/timer/start {name:"Boat Race",minutes:30}   # 1 to 600 minutes; the name has no " or /function monkey:events/timer/finish                                # ends it now, with "Event over"
+/function monkey:events/timer/stop                                  # cancels it, no "Event over"
+```
+
 **Flags, books and the Cup.**
 
 ```
@@ -1224,6 +1235,11 @@ Players read changes in two places, with the same words in both:
   that players notice. It is the record a player can link to in an argument about a rule.
 - **`#changelog` in Discord**, an announcement channel nobody else posts in, on the day the change goes
   live, linking to the page.
+
+The Discord is optional for players, so anything posted in `#announcements` that a player needs goes on that page
+too, in the same words: downtime and new times, event news, season dates and each month's money post. A page entry
+goes live when its pull request merges and Vercel has built it, so during an outage say it in the Discord and in game
+first.
 
 What goes in: rule changes (and the rule's number), mods added or removed, anything the client pack
 needs, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),

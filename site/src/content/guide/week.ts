@@ -25,6 +25,6 @@ export const week: Day[] = [
   },
   {
     name: "Sunday",
-    lines: [{ at: "7 PM", text: "The week's faction standings close and go up in the Discord. Wars end." }],
+    lines: [{ at: "7 PM", text: "The week's faction standings close and go up on the standings page and in the Discord. Wars end." }],
   },
 ];

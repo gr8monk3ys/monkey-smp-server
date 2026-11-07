@@ -63,7 +63,7 @@ function show(report: Report | null, now: number, launch: number, mapUrl: string
   if (phase === "preseason") {
     server = { main: "Pre-season", sub: "Opens with Season I" };
   } else if (!report) {
-    server = { main: "Status not available", sub: "Ask in the Discord" };
+    server = { main: "Status not available", sub: "See What changed" };
   } else if (!fresh) {
     server = { main: "Not checked lately", sub: `Last checked ${ago(age)}` };
   } else if (phase === "offseason") {
@@ -82,7 +82,7 @@ function show(report: Report | null, now: number, launch: number, mapUrl: string
     ? { main: upcoming.what, sub: shortWhen(new Date(upcoming.at)) }
     : phase === "preseason"
       ? { main: "Season I opens", sub: opens }
-      : phase === "offseason" ? { main: "The next season", sub: "Dates in the Discord" }
+      : phase === "offseason" ? { main: "The next season", sub: "Dates on What changed" }
         : { main: "The weekly event", sub: "Saturdays, 6 PM Pacific" };
 
   let border = map;

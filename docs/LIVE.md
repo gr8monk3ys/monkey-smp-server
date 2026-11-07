@@ -833,7 +833,9 @@ Only one copy may run the world at a time: two live copies split the world into 
   3.0.0 Tebex's Fabric mod (2.4.6) is in the manifest like any other mod, so a deploy, a restore or a new VPS
   gets it by itself. Its secret key is not in the repo: it sits in `server/mods/tebex`, outside the world, and
   `tebex secret` in the console sets it.
-- **Discord**: Tebex's Discord integration gives buyers the paid role. The forum, announcements, ban
+- **Discord**: optional for buyers. Since 2026-11-06 neither pass has a Discord action (with one, checkout forced
+  a Discord login even with "Discord after checkout" on), so Tebex gives no role: staff give **SMP Member** by
+  hand. A buyer still gets the whitelist and the pass from the package's command. The forum, announcements, ban
   appeals and the `monkey` bridge live in the Discord server repo (gr8monk3ys/discord-server). The bridge
   talks RCON, which is plain text: reach the VPS over Tailscale or WireGuard, never by publishing 25575.
 
@@ -842,7 +844,8 @@ Only one copy may run the world at a time: two live copies split the world into 
 Status (2026-11-02): the Tebex project "Monkey SMP" is approved, published and connected to the live server, so
 the store takes real payments. Delivery (`tebex secret` in the console), all five packages (checked in the panel
 against the table below), the support contact, the payout wallet and the storefront are all done. The paid role is
-**SMP Member**, given by Tebex's bot; its role must stay above that one.
+**SMP Member**. Tebex's bot gave it until 2026-11-06; staff give it by hand now (see **Discord** above). If a
+Discord action comes back, the bot's role must stay above SMP Member.
 The address is `https://monkey-smp-store.tebex.store` (`tebex info` in the console prints it; `monkeysmp.tebex.io`
 belongs to another server). The site has linked to it since `STORE_URL` merged on 2026-11-04 (#110).
 Make a test purchase, check that the buyer is on the whitelist (the server log shows Tebex's command), and
@@ -1014,7 +1017,7 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1197,6 +1200,8 @@ the controls refuse it whatever the page sends.
 | Reset the world | admin | Types `RESET`. Optional new seed. The old world is moved aside, never deleted. |
 | Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
 | SFTP card | admin | Host, port and user names, or "ask the owner". |
+| Event timer | admin | `tools/staff_events.py`: start (name and minutes), end now with "Event over", or stop early, over RCON (`monkey:events/timer/*`, from 3.2.0's data pack; while `monkey-events` is off the card says so). |
+| Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
 | Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |
 

@@ -15,11 +15,19 @@ and the launcher downloads the client mods, both from their official sources.
 
   python tools/build.py --notes notes.md  also writes the GitHub release's notes: the version's CHANGELOG.md
                                           section and what each download is for
+  python tools/build.py --site-build ships
+                                          a site-only rebuild of the same version, for when the live server's
+                                          mods changed between tags: every file is named <version>-ships and the
+                                          pack's versionId is "<version>-ships", so a player (and staff) can
+                                          tell it from the release's pack. Never attach these to a release; copy
+                                          the client pack and player zip to site/public/pack/ (site_links.py
+                                          accepts <version>-<label> there)
 """
 import argparse
 import fnmatch
 import json
 import os
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -36,6 +44,8 @@ EXECUTABLE = (".sh", ".command")
 # then files by their path relative to package/ (fnmatch patterns).
 RUNTIME_DIRS = {"server", "java", "backups", "exports", "downloads", "pwsh"}
 RUNTIME_FILES = (".monkey-launch", "smoke-console.log*", "docker/.env")
+# A --site-build label: it ends up in file names and in URLs, so nothing that needs escaping.
+SITE_BUILD = re.compile(r"[a-z0-9]{1,20}")
 # The end of every GitHub release's notes, one markdown line per entry.
 DOWNLOADS = "\n".join([
     "### Downloads",
@@ -147,11 +157,21 @@ def main(repo=REPO, dist: Path | None = None, argv=()):
     p = argparse.ArgumentParser(description="Build the release files into dist/.")
     p.add_argument("--notes", type=Path, metavar="FILE",
                    help="also write the GitHub release notes (CHANGELOG section + downloads) to FILE")
+    p.add_argument("--site-build", metavar="LABEL",
+                   help="a site-only rebuild of the manifest's version, named <version>-LABEL (never a release)")
     args = p.parse_args(argv)
     version = repo.load_manifest()["version"]
     tag = os.environ.get("GITHUB_REF_NAME", "")
     if tag.startswith("v") and tag[1:] != version:
         raise SystemExit(f"tag {tag} doesn't match manifest version {version}")
+    if args.site_build is not None:
+        if tag.startswith("v"):
+            raise SystemExit("--site-build is for the website between releases, not for a tagged release")
+        if not SITE_BUILD.fullmatch(args.site_build):
+            raise SystemExit(f"--site-build {args.site_build!r}: use lower-case letters and digits, like ships or r2")
+        if args.notes:
+            raise SystemExit("--site-build has no release notes: it is never a release")
+        version = f"{version}-{args.site_build}"
     _require_player(repo)
     notes = release_notes(version, repo) if args.notes else None
     dist = Path(dist or repo.dist)

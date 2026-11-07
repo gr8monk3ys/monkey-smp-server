@@ -100,7 +100,8 @@ export default function Home() {
               <h3>Get a pass</h3>
               <Store when="open">
                 <p><ConfigLink to="STORE_URL">Buy it</ConfigLink> with your Minecraft Java name. You&apos;re on the
-                  whitelist within a minute or two, and you get the member role in the Discord.</p>
+                  whitelist within a minute or two. <ConfigLink to="DISCORD_INVITE">The Discord</ConfigLink> is
+                  optional: join it whenever you like, and staff there can give you the member role and forum.</p>
               </Store>
               <Store when="soon">
                 <p>The store isn&apos;t open yet. Until it is, passes are arranged in{" "}
@@ -180,7 +181,8 @@ export default function Home() {
               <h3>Where the money goes</h3>
               <p>The server costs about $50 a month to run: the machine, backups off-site, and the fallback tunnel.
                 Everything above that goes back into the server first: a reserve, faster hardware when it fills up,
-                and events. Each month we post what came in and what it paid for in the Discord.</p>
+                and events. Each month we post what came in and what it paid for on{" "}
+                <a href="/changes">What changed</a> and in the Discord.</p>
               <p className="small">Streaming or making videos on the server? Read the <a href="/creators">creator
                 code terms</a>.</p>
             </article>
@@ -189,8 +191,8 @@ export default function Home() {
 
         <section id="rules">
           <h2>Rules</h2>
-          <p className="note">Season I, hosted by Diego and Lorenzo Scaturchio. The full rulebook, every numbered rule
-            and ban, is pinned in the Discord; if a rule turns out unfun or unfair, it changes with player
+          <p className="note">Season I, hosted by Diego and Lorenzo Scaturchio. <a href="/guide/rules">The full
+            rulebook</a> has every numbered rule and ban; if a rule turns out unfun or unfair, it changes with player
             feedback.</p>
           <Place as="ol" className="rules">
             {rules.map((r) => <li key={r.title}><h3>{r.title}</h3><p>{r.text}</p></li>)}
@@ -241,6 +243,7 @@ export default function Home() {
 
       <Footer items={[
         { label: "Discord", to: "DISCORD_INVITE" },
+        { label: "Contact", to: "CONTACT_URL" },
         { label: "Rules", href: "#rules" },
         { label: "Live map", to: "MAP_URL" },
         { label: "How it works", href: "/guide" },

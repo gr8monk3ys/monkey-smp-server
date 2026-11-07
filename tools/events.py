@@ -10,7 +10,7 @@ commands staff type. Everything here is run by staff with `/function monkey:even
 arena, which players join and leave with `/trigger arena`.
 
 Scores (all in the data pack's load function):
-  ev.state     #arena / #raid / #anarchy: 0 off, otherwise the phase; #flags and #event are counters
+  ev.state     #arena / #raid / #anarchy / #timer: 0 off, otherwise the phase; #flags and #event are counters
   ev.timer     seconds left in the running phase of each timer
   ev.strength  a player's real Strength level while they are in the arena
   rw.events    events a player has turned up to (a retention score, like the wardrobe's rw.*)
@@ -100,6 +100,13 @@ TIMERS = {
 }
 WARNINGS = (600, 300, 60)   # seconds left in the first phase when everyone is warned
 
+# The general event timer (timer/start {name, minutes}): any event, one at a time, apart from the raid and Anarchy.
+# Its name is kept in storage and shown through an nbt text component, so a name never becomes part of a command.
+TIMER_BAR = f"{NS}:timer"
+TIMER_COLOR = "blue"          # the boss bar's color; the text is aqua
+TIMER_MINUTES = (1, 600)      # the staff page checks the same range (tools/staff_events.py)
+TIMER_NAME = {"storage": STORE, "nbt": "timer.name"}
+
 
 def item(name: str) -> str:
     return f"minecraft:{name}"
@@ -148,6 +155,7 @@ def datapack_files() -> dict[str, str]:
         f"schedule function {NS}:events/second 20t replace",
         "execute if score #arena ev.state matches 1 run scoreboard players enable @a arena",
         *(f"execute if score #{name} ev.state matches 1.. run function {NS}:events/{name}/second" for name in TIMERS),
+        f"execute if score #timer ev.state matches 1.. run function {NS}:events/timer/second",
         "# A locked season world: whoever logs in can look around but not change it.",
         "execute if score #season_locked ev.state matches 1 run gamemode adventure @a[gamemode=survival]",
     )
@@ -167,6 +175,7 @@ def datapack_files() -> dict[str, str]:
     )
     f.update(arena_files())
     f.update(timer_files())
+    f.update(event_timer_files())
     f.update(flag_files())
     f.update(book_files())
     f.update(cup_files())
@@ -406,6 +415,93 @@ def timer_files() -> dict[str, str]:
     return f
 
 
+def event_timer_files() -> dict[str, str]:
+    """The general event timer: the raid's look (a boss bar with the minutes left, warnings at 10, 5 and 1 minute,
+    a start title and the horn) for any event, and an "Event over" title at the end. Staff give the Cup points by
+    hand (cup/add); the staff page's Event timer card runs these over RCON (tools/staff_events.py)."""
+    f: dict[str, str] = {}
+    fn = f"{FN}/timer"
+    name = dict(TIMER_NAME, color="aqua")
+    low, high = TIMER_MINUTES
+    f[f"{fn}/start.mcfunction"] = lines(
+        '# Macro {name:"Boat Race",minutes:30}: starts the event timer. A name with a " in it, or minutes that are',
+        "# not a whole number, make the macro fail as a whole, so nothing below runs.",
+        "execute if score #timer ev.state matches 1.. run " + refuse(
+            f"An event timer is already running. /function {NS}:events/timer/stop ends it early."),
+        "$scoreboard players set #timer_new ev.timer $(minutes)",
+        f"execute unless score #timer_new ev.timer matches {low}..{high} run " + refuse(
+            f"minutes must be {low} to {high}."),
+        f'$data modify storage {STORE} timer.name set value "$(name)"',
+        "scoreboard players operation #timer ev.timer = #timer_new ev.timer",
+        "scoreboard players operation #timer ev.timer *= #60 ev.timer",
+        "scoreboard players set #timer ev.state 1",
+        "# A new event, so everyone who turns up (attend) is counted once for it.",
+        "scoreboard players add #event ev.state 1",
+        f"bossbar remove {TIMER_BAR}",
+        f"bossbar add {TIMER_BAR} " + text({"text": "Event"}),
+        f"execute store result bossbar {TIMER_BAR} max run scoreboard players get #timer ev.timer",
+        f"execute store result bossbar {TIMER_BAR} value run scoreboard players get #timer ev.timer",
+        f"bossbar set {TIMER_BAR} color {TIMER_COLOR}",
+        f"bossbar set {TIMER_BAR} players @a",
+        f"bossbar set {TIMER_BAR} visible true",
+        f"bossbar set {TIMER_BAR} name " + text(name),
+        "title @a times 10 60 20",
+        "title @a subtitle " + text({"score": {"name": "#timer_new", "objective": "ev.timer"}, "color": "white"},
+                                    {"text": " minutes on the clock", "color": "gray"}),
+        "title @a title " + text(name),
+        "tellraw @a " + text(name, {"text": " has started: ", "color": "aqua"},
+                             {"score": {"name": "#timer_new", "objective": "ev.timer"}, "color": "white"},
+                             {"text": " minutes on the clock.", "color": "aqua"}),
+        "playsound minecraft:event.raid.horn master @a ~ ~ ~ 1000 1",
+    )
+    second = [
+        "scoreboard players remove #timer ev.timer 1",
+        f"execute store result bossbar {TIMER_BAR} value run scoreboard players get #timer ev.timer",
+        "scoreboard players operation #timer_min ev.timer = #timer ev.timer",
+        "scoreboard players add #timer_min ev.timer 59",
+        "scoreboard players operation #timer_min ev.timer /= #60 ev.timer",
+        f"bossbar set {TIMER_BAR} players @a",
+        f"bossbar set {TIMER_BAR} name " + text(
+            name, {"text": ": ", "color": "aqua"},
+            {"score": {"name": "#timer_min", "objective": "ev.timer"}, "color": "white"},
+            {"text": " min left", "color": "aqua"}),
+    ]
+    for s in WARNINGS:
+        what = f"{s // 60} minute{'s' if s > 60 else ''}"
+        second.append(f"execute if score #timer ev.timer matches {s} run tellraw @a " + text(
+            name, {"text": f": {what} left.", "color": "aqua"}))
+    second.append(f"execute if score #timer ev.timer matches ..0 run return run function {NS}:events/timer/over")
+    f[f"{fn}/second.mcfunction"] = lines(*second)
+    f[f"{fn}/stop.mcfunction"] = lines(
+        "# Cancels the event timer: no \"Event over\" (timer/finish ends it now with one).",
+        "execute unless score #timer ev.state matches 1.. run " + refuse("No event timer is running."),
+        "scoreboard players set #timer ev.state 0",
+        "scoreboard players set #timer ev.timer 0",
+        f"bossbar remove {TIMER_BAR}",
+        "tellraw @a " + text({"text": "Staff stopped the timer for ", "color": "gray"}, dict(TIMER_NAME, color="gray"),
+                             {"text": ".", "color": "gray"}),
+    )
+    f[f"{fn}/finish.mcfunction"] = lines(
+        "# Ends the event now, as if its time had run out: the \"Event over\" title and all.",
+        "execute unless score #timer ev.state matches 1.. run " + refuse("No event timer is running."),
+        f"function {NS}:events/timer/over",
+    )
+    f[f"{fn}/over.mcfunction"] = lines(
+        "# The event's time is up: the title, a sound, and a line saying the Cup points come from staff.",
+        "scoreboard players set #timer ev.state 0",
+        "scoreboard players set #timer ev.timer 0",
+        f"bossbar remove {TIMER_BAR}",
+        "title @a times 10 70 20",
+        "title @a subtitle " + text(name),
+        "title @a title " + text({"text": "Event over", "color": "gold"}),
+        "execute as @a at @s run playsound minecraft:ui.toast.challenge_complete master @s ~ ~ ~ 1 1",
+        "tellraw @a " + text(dict(TIMER_NAME, color="gold"),
+                             {"text": " is over. Thanks for playing! Staff will add the Season Cup points.",
+                              "color": "gold"}),
+    )
+    return f
+
+
 def flag_files() -> dict[str, str]:
     f: dict[str, str] = {}
     fn = f"{FN}/flag"
@@ -530,6 +626,8 @@ HELP = [
     ("arena/set_size {size:48}", "radius around the pit"), ("arena/open", ""), ("arena/round", "clear the floor"),
     ("arena/kit/sword", "as @a[tag=ev.arena]"), ("arena/close", ""),
     ("anarchy/start", "90 min, then 10 min ceasefire"), ("raid/start", "2 hours"),
+    ('timer/start {name:"Boat Race",minutes:30}', "any event"), ("timer/finish", "Event over now"),
+    ("timer/stop", "cancel, no Event over"),
     ('flag/make {id:"red",name:"Red Monkeys"}', "hold the banner"),
     ('book/sharpness {season:"I"}', "as the winner"),
     ('cup/faction {id:"red",name:"Red Monkeys"}', ""), ('cup/add {id:"red",points:30,why:"Build Battle"}', ""),

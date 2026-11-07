@@ -138,3 +138,50 @@ def test_season_lock_freezes_the_world_and_unlock_undoes_it():
     # Unlock puts back what server.properties sets.
     props = (REPO.monkey / "defaults" / "server.properties").read_text(encoding="utf-8").splitlines()
     assert "pvp=true" in props and "difficulty=normal" in props
+
+
+# ---------------------------------------------------------------- the general event timer
+
+
+def test_the_event_timer_starts_like_the_raid_and_refuses_a_second_one():
+    start = fn("timer/start")
+    assert start.index("if score #timer ev.state matches 1.. run return") < start.index("$scoreboard")
+    # minutes go through a score first and are range-checked before anything changes
+    assert "$scoreboard players set #timer_new ev.timer $(minutes)" in start
+    assert start.index("matches 1..600 run return") < start.index("timer.name set value")
+    assert start.index("timer.name set value") < start.index("scoreboard players set #timer ev.state 1")
+    assert "scoreboard players operation #timer ev.timer *= #60 ev.timer" in start
+    # the raid's look: boss bar, title, horn; the event counter moves so attendance counts once
+    for line in ("bossbar add monkey:timer", "bossbar set monkey:timer players @a", "title @a title",
+                 "playsound minecraft:event.raid.horn", "scoreboard players add #event ev.state 1"):
+        assert line in start
+    # the name only ever reaches players through an nbt component, never as command text outside storage
+    macro_lines = [line for line in start.splitlines() if line.startswith("$")]
+    assert [line for line in macro_lines if "$(name)" in line] == [
+        '$data modify storage monkey:events timer.name set value "$(name)"']
+    assert '"nbt":"timer.name"' in start
+
+
+def test_the_event_timer_counts_down_warns_and_ends_with_event_over():
+    assert "execute if score #timer ev.state matches 1.. run function monkey:events/timer/second" in fn("second")
+    second = fn("timer/second")
+    assert "scoreboard players remove #timer ev.timer 1" in second
+    assert " min left" in second and "#timer_min" in second
+    for s, words in ((600, "10 minutes"), (300, "5 minutes"), (60, "1 minute")):
+        assert f"if score #timer ev.timer matches {s} run tellraw @a" in second and f"{words} left." in second
+    assert second.rstrip().endswith("if score #timer ev.timer matches ..0 run return run function "
+                                    "monkey:events/timer/over")
+    over = fn("timer/over")
+    assert "scoreboard players set #timer ev.state 0" in over and "bossbar remove monkey:timer" in over
+    assert 'title @a title {"text":"Event over","color":"gold"}' in over
+    assert over.index("title @a subtitle") < over.index("title @a title")    # a subtitle shows with the next title
+    assert "ui.toast.challenge_complete" in over and "Season Cup points" in over
+
+
+def test_the_event_timer_can_be_cancelled_or_finished_early():
+    stop, finish = fn("timer/stop"), fn("timer/finish")
+    for f in (stop, finish):
+        assert "unless score #timer ev.state matches 1.. run return" in f
+    assert "title @a" not in stop and "bossbar remove monkey:timer" in stop
+    assert "function monkey:events/timer/over" in finish
+    assert "timer/start" in fn("help") and "timer/finish" in fn("help")

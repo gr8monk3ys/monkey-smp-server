@@ -72,9 +72,9 @@
           <p class="fine" id="problems-fine"></p>
         </section>
 
-        <section class="history" aria-labelledby="history">
+        <section class="history" aria-labelledby="history-title">
           <div class="history-head">
-            <h2 id="history">Over time</h2>
+            <h2 id="history-title">Over time</h2>
             <div class="range" role="group" aria-label="How far back to show">
               <button type="button" data-hours="1" aria-pressed="false">1 hour</button>
               <button type="button" data-hours="6" aria-pressed="true">6 hours</button>
@@ -158,7 +158,7 @@
       </div>
       <details class="table" id="history-box">
         <summary>History of changes to files</summary>
-        <ul class="entries" id="history"></ul>
+        <ul class="entries" id="file-history"></ul>
       </details>
     </div>
 
@@ -443,6 +443,7 @@
           <p class="fine">The world's datapacks folder. A new pack is turned on when you press Reload or the server
             restarts. The release's own packs come back at every start, so they can be turned off but not removed.</p>
           <p class="attention" id="packs-error" role="alert" hidden></p>
+          <p class="fine" id="packs-running" role="status" hidden></p>
           <p class="note" id="packs-note" role="status" hidden></p>
           <div class="confirm" id="packs-confirm" hidden></div>
           <div class="add">

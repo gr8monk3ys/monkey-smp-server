@@ -1253,7 +1253,8 @@ sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --remove-sftp-user diego
 
 - adds the group `monkey-sftp` and the user (no home, `nologin`, no password)
 - puts the key in `/etc/ssh/monkey-sftp-keys/NAME`
-- makes `/srv/monkey/sftp/NAME` (root's, as sshd needs) with `server/` in it, a bind mount (also in `/etc/fstab`; the
+- makes `/srv/monkey-sftp/NAME` (root's, as sshd needs; it is outside `/srv/monkey`, which the monkey user owns; an
+  older `/srv/monkey/sftp` is left as it is: remove its logins first with `--remove-sftp-user`, then add them again) with `server/` in it, a bind mount (also in `/etc/fstab`; the
   old fstab is copied first)
 - gives NAME read and write on `server/` through ACLs (needs `sudo apt install acl`)
 - writes `/etc/ssh/sshd_config.d/monkey-sftp.conf`: `Match Group monkey-sftp` with `ChrootDirectory`,

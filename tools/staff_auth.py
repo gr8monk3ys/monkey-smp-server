@@ -37,8 +37,11 @@ The rules, all here:
   against a dummy hash, so it takes as long as a wrong password, and both get the same sentence.
 - A session is 32 random bytes in an HttpOnly, Secure, SameSite=Strict cookie; only its SHA-256 is kept. It ends after
   12 hours unused or 7 days in all, at logout, and when the password changes (a reset ends them all).
-- 5 wrong passwords in a row lock that name for 15 minutes (an unknown name too, so a lock says nothing); 20 failures
-  from one address in 15 minutes stop that address for the rest of the window. Forgot-password asks are limited too.
+- 5 wrong passwords in a row for a name from one address lock that name from that address for 15 minutes (an unknown
+  name too, so a lock says nothing); the same name from another address still logs in, so a stranger can't lock the
+  owner out. 20 failures from one address in 15 minutes stop that address for the rest of the window. Wrong codes and
+  wrong current passwords (both need a password or a session) count for the login itself. At most 2 scrypt runs at
+  once. Forgot-password asks are limited too.
 - A reset or email link is 32 random bytes, kept only as a hash, good once: 30 minutes for a reset by email, 24 hours
   for an email check and for a link the owner hands over. A reset email goes only to an address its owner confirmed.
 - Two-step login (optional, per login) is TOTP as RFC 6238 has it: SHA-1, 6 digits, 30 seconds, the step before
@@ -72,7 +75,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from email.message import EmailMessage
-from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -87,6 +89,7 @@ RESEND_URL = "https://api.resend.com/emails"
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2 ** 14, 8, 1
 SCRYPT_MAXMEM = 64 * 1024 * 1024
 PASSWORD_MIN, PASSWORD_MAX = 12, 256
+SCRYPT_SLOTS = threading.BoundedSemaphore(2)   # 16 MB each: a burst of logins can't run the unit out of memory
 
 IDLE = 12 * 3600
 ABSOLUTE = 7 * 86400
@@ -136,8 +139,9 @@ def _b64(data: bytes) -> str:
 
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
-    key = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P,
-                         maxmem=SCRYPT_MAXMEM, dklen=32)
+    with SCRYPT_SLOTS:
+        key = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P,
+                             maxmem=SCRYPT_MAXMEM, dklen=32)
     return f"scrypt${SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${_b64(salt)}${_b64(key)}"
 
 
@@ -147,8 +151,9 @@ def check_password(password: str, stored: str) -> bool:
         if kind != "scrypt":
             return False
         want = base64.b64decode(key)
-        got = hashlib.scrypt(password.encode("utf-8"), salt=base64.b64decode(salt), n=int(n), r=int(r), p=int(p),
-                             maxmem=SCRYPT_MAXMEM, dklen=len(want))
+        with SCRYPT_SLOTS:
+            got = hashlib.scrypt(password.encode("utf-8"), salt=base64.b64decode(salt), n=int(n), r=int(r),
+                                 p=int(p), maxmem=SCRYPT_MAXMEM, dklen=len(want))
     except (ValueError, TypeError):
         return False
     return hmac.compare_digest(got, want)
@@ -409,7 +414,7 @@ class Auth:
         self._dummy: str | None = None
         self._counters = threading.Lock()
         self._ip_fails: dict[str, list[float]] = {}
-        self._name_fails: dict[str, list] = {}        # unknown names: [failures, locked until]
+        self._name_fails: dict[str, list] = {}        # "name ip": [wrong passwords, locked until]
         self._forgot_ip: dict[str, list[float]] = {}
         self._forgot_user: dict[str, list[float]] = {}
 
@@ -503,15 +508,15 @@ class Auth:
     # ------------------------------------------------ sessions
 
     def session_token(self, cookie_header: str | None) -> str | None:
+        # By hand: SimpleCookie drops the whole header when any other cookie in it is malformed.
         if not cookie_header:
             return None
-        jar = SimpleCookie()
-        try:
-            jar.load(cookie_header)
-        except CookieError:
-            return None
-        morsel = jar.get(COOKIE)
-        return morsel.value if morsel and 20 <= len(morsel.value) <= 100 else None
+        for part in cookie_header.split(";"):
+            key, eq, value = part.partition("=")
+            if eq and key.strip() == COOKIE:
+                value = value.strip().strip('"')
+                return value if 20 <= len(value) <= 100 else None
+        return None
 
     def session(self, token: str | None) -> dict | None:
         """{user, role, email, email_verified, two_step, recovery_left, key} for a good session, else None. Marks it
@@ -602,37 +607,45 @@ class Auth:
             raise AuthError(400, "Type your name and password.")
         name, now = name.strip().lower(), self.clock()
         self._ip_check(ip, now)
+        # Wrong passwords are counted per name and address, known name or not: a stranger's guesses lock only the
+        # stranger's address out of that name, never the real user on theirs.
+        slot = f"{name} {ip}"
+        with self._counters:
+            if self._name_fails.get(slot, [0, 0])[1] > now:
+                raise AuthError(429, LOCKED)
         user = self._user(self.store.read(), name)
         stored = user.get("hash") if user else None
         # The slow check runs every time, a dummy one for an unknown name, so the time taken says nothing.
         good = check_password(password, stored) if stored else (check_password(password, self._dummy_hash()) and False)
-        if user is not None:
+        if good and user is not None:
             with self.store.change() as data:
                 user = self._user(data, name)
-                if user is None:
+                if user is None or user.get("disabled") or user.get("hash") != stored:
                     good = False
                 elif user.get("locked_until", 0) > now:
+                    # Wrong codes (or current passwords) locked the login: only someone with the password gets here.
                     raise AuthError(429, LOCKED)
-                elif good and not user.get("disabled") and user.get("totp"):
+                elif user.get("totp"):
                     # The wrong-guess count stays as it is until the code is right too: the password alone doesn't
                     # buy fresh guesses at the code.
                     self._prune(data, now)
                     challenge = self._new_token(data, "2fa", name, CHALLENGE_LIFE)
+                    self._forget_slot(slot)
                     return {"two_step": True, "challenge": challenge}, None
-                elif good and not user.get("disabled"):
-                    user["failed"], user["locked_until"] = 0, 0
-                    return {"user": name, "role": user["role"]}, self._new_session(data, name, now)
                 else:
-                    self._failed(user, now)
-        else:
-            with self._counters:
-                count, until = self._name_fails.get(name, [0, 0])
-                if until > now:
-                    raise AuthError(429, LOCKED)
-                count += 1
-                self._remember(self._name_fails, name, [0, now + LOCK_FOR] if count >= LOCK_AFTER else [count, 0])
+                    user["failed"], user["locked_until"] = 0, 0
+                    self._forget_slot(slot)
+                    return {"user": name, "role": user["role"]}, self._new_session(data, name, now)
+        with self._counters:
+            count, until = self._name_fails.get(slot, [0, 0])
+            count = count + 1 if until <= now else 1
+            self._remember(self._name_fails, slot, [0, now + LOCK_FOR] if count >= LOCK_AFTER else [count, 0])
         self._ip_failed(ip, now)
         raise AuthError(401, WRONG)
+
+    def _forget_slot(self, slot: str) -> None:
+        with self._counters:
+            self._name_fails.pop(slot, None)
 
     def login_code(self, challenge, code, ip: str) -> tuple[dict, str]:
         """The second step: ({user, role, recovery_left}, the new session's token). A wrong code counts like a wrong
@@ -725,8 +738,9 @@ class Auth:
             user["failed"], user["locked_until"] = 0, 0
             if found.get("email") and found["email"] == user.get("email"):
                 user["email_verified"] = True                  # the link went to that address and came back
-            # Two-step login stays on: a link only proves the email, so the next login still needs the code.
-            self._drop_tokens(data, name, ("2fa",))
+            # Two-step login stays on: a link only proves the email, so the next login still needs the code. Every
+            # other open link and challenge of this login stops working.
+            self._drop_tokens(data, name, ("2fa", "reset", "setup"))
             self._end_sessions(data, name)
             notify = user.get("email") if user.get("email_verified") and had_password else None
         if notify:
@@ -744,11 +758,35 @@ class Auth:
             user["email_verified"], user["changed"] = True, self.clock()
         return {"user": found["user"], "email": found["email"]}
 
-    def _check_current(self, data: dict, name: str, current) -> dict:
-        user = data["users"].get(name)
-        if not user or not isinstance(current, str) or not user.get("hash") \
-                or not check_password(current[:1024], user["hash"]):
+    def _check_current(self, name: str, current) -> str:
+        """The stored hash `current` matches, checked outside the store's lock; else AuthError. A wrong one counts
+        like a wrong code (the same lock), and a lock ends the login's sessions: a stolen session can't guess on."""
+        now = self.clock()
+        user = self._user(self.store.read(), name)
+        if user and user.get("locked_until", 0) > now:
+            raise AuthError(429, LOCKED)
+        stored = user.get("hash") if user else None
+        if stored and isinstance(current, str) and check_password(current[:1024], stored):
+            return stored
+        locked = False
+        if user is not None and isinstance(current, str) and current:
+            with self.store.change() as data:
+                user = self._user(data, name)
+                if user is not None and self._failed(user, now):
+                    self._drop_tokens(data, name, ("2fa",))
+                    self._end_sessions(data, name)
+                    locked = True
+        if locked:
+            raise AuthError(429, LOCKED)
+        raise AuthError(403, "Your current password isn't right.")
+
+    def _same_password(self, data: dict, name: str, stored: str) -> dict:
+        """Under the lock: the login, if its hash is still the one `_check_current` matched."""
+        user = self._user(data, name)
+        if user is None or user.get("hash") != stored:
             raise AuthError(403, "Your current password isn't right.")
+        if user.get("locked_until", 0) > self.clock():
+            raise AuthError(429, LOCKED)
         return user
 
     def change_password(self, me: dict, current, password) -> dict:
@@ -756,10 +794,12 @@ class Auth:
         problem = password_problem(password, name)
         if problem:
             raise AuthError(400, problem)
+        stored = self._check_current(name, current)
+        new_hash = hash_password(password)
         with self.store.change() as data:
-            user = self._check_current(data, name, current)
-            user["hash"], user["changed"] = hash_password(password), self.clock()
-            self._drop_tokens(data, name, ("2fa",))
+            user = self._same_password(data, name, stored)
+            user["hash"], user["changed"] = new_hash, self.clock()
+            self._drop_tokens(data, name, ("2fa", "reset", "setup"))
             ended = self._end_sessions(data, name, keep=me["key"])
             notify = user.get("email") if user.get("email_verified") else None
         if notify:
@@ -782,8 +822,9 @@ class Auth:
     def change_email(self, me: dict, current, email) -> dict:
         name = me["user"]
         email = checked_email(email)
+        stored = self._check_current(name, current)
         with self.store.change() as data:
-            user = self._check_current(data, name, current)
+            user = self._same_password(data, name, stored)
             if any((u.get("email") or "").lower() == email.lower() for n, u in data["users"].items() if n != name):
                 raise AuthError(409, "Another login has that email.")
             old = user.get("email") if user.get("email_verified") else None
@@ -820,8 +861,9 @@ class Auth:
     def two_step_confirm(self, me: dict, current, code) -> dict:
         """Turns it on with the password and a code from the new key; the recovery codes come back only now."""
         name, now = me["user"], self.clock()
+        stored = self._check_current(name, current)
         with self.store.change() as data:
-            user = self._check_current(data, name, current)
+            user = self._same_password(data, name, stored)
             if user.get("totp"):
                 raise AuthError(409, "Two-step login is already on.")
             pending = user.get("totp_pending")
@@ -865,8 +907,9 @@ class Auth:
 
     def two_step_off(self, me: dict, current, code) -> dict:
         name = me["user"]
+        stored = self._check_current(name, current)
         with self.store.change() as data:
-            user = self._check_current(data, name, current)
+            user = self._same_password(data, name, stored)
             if not user.get("totp"):
                 raise AuthError(409, "Two-step login is already off.")
             wrong = self._guess(data, name, user, code)
@@ -886,8 +929,9 @@ class Auth:
     def two_step_recovery(self, me: dict, current, code) -> dict:
         """8 new recovery codes, shown once; the old ones stop working."""
         name = me["user"]
+        stored = self._check_current(name, current)
         with self.store.change() as data:
-            user = self._check_current(data, name, current)
+            user = self._same_password(data, name, stored)
             if not user.get("totp"):
                 raise AuthError(409, "Two-step login is off: turn it on first.")
             wrong = self._guess(data, name, user, code)

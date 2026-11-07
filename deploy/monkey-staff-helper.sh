@@ -97,7 +97,7 @@ job_failed() {
     result "$1" "$2" failed "$3"
     [ -z "${stage:-}" ] || rm -rf "$stage"
     stage=''
-    exec 9<&- 2>/dev/null || :
+    { exec 9<&-; } 2>/dev/null || :
 }
 
 # "live_world ID ACTION": sets server, level, world and owner (the live folder's user), or writes a refusal and
@@ -131,7 +131,10 @@ stop_for() {
     was_running=''
     running || return 0
     was_running=1
-    if [ "$(players_online || echo 0)" -gt 0 ] 2>/dev/null; then
+    # An empty or non-numeric count (RCON timed out) is "unknown": warn and wait, the safe side.
+    sf_players=$(players_online || :)
+    case $sf_players in '' | *[!0-9]*) sf_players=1 ;; esac
+    if [ "$sf_players" -gt 0 ]; then
         rcon "say $3: the server stops in 1 minute and is back in a few. Find a safe spot." >/dev/null || :
         sleep 60
     fi

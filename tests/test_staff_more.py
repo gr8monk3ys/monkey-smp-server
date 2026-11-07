@@ -112,6 +112,16 @@ def test_the_usual_tuning_flags_are_taken(apex, flag):
     assert apex.call("PUT", "/api/java", {"memory_gb": None, "flags": [flag]})[0] == 200
 
 
+@pytest.mark.parametrize("flag", ["-XX:+UseZGC", "-XX:+UseShenandoahGC", "-XX:+UseParallelGC", "-XX:+UseSerialGC",
+                                  "-XX:-UseZGC"])
+def test_another_collector_is_refused_because_the_launcher_starts_g1(apex, flag):
+    staff_more.more(apex.panel).memory = lambda: 16.0
+    code, body = apex.call("PUT", "/api/java", {"memory_gb": None, "flags": [flag]})
+    assert code == 400 and "G1" in body["error"]
+    assert not (apex.root / "monkey-launch.json").exists()
+    assert not staff_more.XX_ALLOWED.fullmatch(flag.split("XX:")[1].lstrip("+-"))
+
+
 def test_the_default_memory_matches_get_memorygb():
     # The table in tests/Monkey.Tests.ps1, Describe 'Get-MemoryGB'.
     for total, want in ((4, 3), (8.5, 3), (12, 4), (16.5, 5), (24, 6), (32, 8), (3.5, 2), (2, 1), (0, 3)):

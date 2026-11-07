@@ -280,6 +280,7 @@ sync_package() {
         --exclude '/server/' --exclude '/java/' --exclude '/backups/' --exclude '/exports/' \
         --exclude '/downloads/' --exclude '/pwsh/' --exclude '/docker/.env' \
         --exclude '/.monkey-launch' --exclude '/smoke-console.log*' \
+        --exclude '/.restore.*/' --exclude '/.upload.*/' \
         --exclude '/.deployed' --exclude '/.deploy-failed' --exclude '/.deploy-pin' \
         "$tmp/package/" "$LIVE_DIR/"
     rm -rf "$tmp"

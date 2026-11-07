@@ -48,6 +48,7 @@ import contextlib
 import datetime as dt
 import ipaddress
 import json
+import math
 import os
 import re
 import secrets
@@ -221,7 +222,7 @@ def _utf16(c: str) -> list[int]:
 def parse_properties(text: str) -> dict[str, tuple[int, str]]:
     """{key: (line index, raw value)}, the last line of a key winning as in Java. Comments and blank lines skipped."""
     found = {}
-    for n, line in enumerate(text.splitlines()):
+    for n, line in enumerate(text.split("\n")):
         stripped = line.lstrip()
         if not stripped or stripped[0] in "#!":
             continue
@@ -428,7 +429,8 @@ def checked_when(when, now: float) -> dict:
         if not isinstance(minutes, int) or isinstance(minutes, bool) or not INTERVAL_MIN <= minutes <= 7 * 24 * 60:
             raise sp.Refused(400, f"Every N minutes runs at most every {INTERVAL_MIN} minutes, and at least weekly.")
         anchor = when.get("anchor")
-        anchor = anchor if isinstance(anchor, int | float) and not isinstance(anchor, bool) else int(now)
+        ok = isinstance(anchor, int | float) and not isinstance(anchor, bool)
+        anchor = anchor if ok and math.isfinite(anchor) and abs(anchor) < 4e9 else int(now)
         return {"type": "interval", "minutes": minutes, "anchor": anchor}
     raise sp.Refused(400, "When is daily, weekly or interval.")
 
@@ -578,7 +580,7 @@ class Extras:
         if st.st_mtime != mtime:
             raise sp.Refused(409, "Someone else saved server.properties since you opened it: reload the settings.")
         found = parse_properties(text)
-        lines = text.splitlines(keepends=True)
+        lines = re.findall(r"[^\n]*\n|[^\n]+", text)  # split on \n only, as parse_properties does
         changed = []
         for key, value in values.items():
             if not isinstance(key, str) or key not in PROPERTIES:
@@ -588,8 +590,10 @@ class Extras:
                 raise sp.Refused(403, f"{key} is locked. {locked}")
             if key not in found:
                 raise sp.Refused(400, f"{key} is not in server.properties.")
-            new = coerce(key, value)
             n, raw = found[key]
+            if isinstance(value, str) and unescape(raw) == value:
+                continue  # sent back as read: leave the line byte for byte (TRUE, a MOTD with \n, ...)
+            new = coerce(key, value)
             if unescape(raw) == new:
                 continue
             ending = lines[n][len(lines[n].rstrip("\r\n")):]
@@ -817,7 +821,7 @@ class Extras:
             nxt = next_slot(row["when"], now + LEAD.get(row["kind"], 0), self.tz)
             out["describe"] = describe_when(row["when"])
             out["next"] = to_local(nxt, self.tz).strftime("%Y-%m-%d %H:%M") if nxt and row.get("enabled") else None
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, OverflowError):
             out["describe"], out["next"] = "not readable", None
         return out
 
@@ -899,12 +903,12 @@ class Extras:
                         row["last_result"] = "missed: the staff page's controls weren't running then"
                         continue
                     row["last_result"] = "running"
-                    self._running.add(row["id"])
                     started.append(dict(row))
                 except (KeyError, TypeError, ValueError, AttributeError):
                     continue
             if changed:
-                self._save(rows)
+                self._save(rows)  # if this raises, nothing was marked running, so the next tick can try again
+            self._running.update(r["id"] for r in started)
         for row in started:
             threading.Thread(target=self._run, args=(row,), daemon=True).start()
         return [r["id"] for r in started]
@@ -937,6 +941,16 @@ class Extras:
                 self.rcon(f"say Scheduled restart {words}.")
             nxt = RESTART_WARNINGS[i + 1][0] if i + 1 < len(RESTART_WARNINGS) else 0
             self.sleep(ahead - nxt)
+        # The warnings take minutes: staff may have deleted or turned off the schedule, or stopped the server.
+        with self._sched:
+            rows = self._load() or []
+        now_row = next((r for r in rows if isinstance(r, dict) and r.get("id") == row["id"]), None)
+        if now_row is None:
+            return "skipped: the schedule was deleted during the warnings"
+        if now_row.get("enabled") is not True:
+            return "skipped: the schedule was turned off during the warnings"
+        if not self.running():
+            return "skipped: the server was stopped during the warnings"
         self.p.power_action("schedule", {"action": "restart-now"})
         return "restarted (after warnings at 5 minutes, 1 minute and 10 seconds)"
 
@@ -1059,7 +1073,16 @@ class Extras:
         ip = body.get("ip")
         if not isinstance(ip, str):
             raise sp.Refused(400, "Say which address.")
-        ip = public_ip(ip.strip())
+        ip = ip.strip()
+        banned = self.ip_bans()["ips"] or []
+        try:
+            ip = str(ipaddress.ip_address(ip))
+        except ValueError:
+            raise sp.Refused(400, "That is neither an IPv4 or IPv6 address nor a player name.") from None
+        # A pardon is harmless, so an address in the ban list can be pardoned even if it is private (a ban by
+        # name lets the server pick the address). Any other address must be a public one.
+        if ip not in {r["ip"] for r in banned}:
+            ip = public_ip(ip)
         self.p.record(user, "pardon-ip", "an address")
         return {"said": self._said(f"pardon-ip {ip}")}
 

@@ -256,6 +256,34 @@ def test_a_version_switch_needs_a_listed_tag_typed_back(apex):
     assert "diego version-switch v3.1.0" in actions(apex)
 
 
+def test_a_running_job_from_a_dead_helper_stops_blocking_after_the_service_timeout(apex):
+    installed(apex)
+    now = staff_host.dt.datetime.now(staff_host.dt.timezone.utc)
+
+    def running(stamp, rid):
+        text = json.dumps({"action": "deploy", "state": "running", "time": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                           "message": "x"})
+        (apex.x.results / f"{rid}.json").write_text(text)
+
+    running(now - staff_host.dt.timedelta(minutes=30), "20261106T090000Z-00aa11bb")
+    assert apex.call("POST", "/api/world-reset", {"confirm": "RESET"})[0] == 409
+    (apex.x.results / "20261106T090000Z-00aa11bb.json").unlink()
+    running(now - staff_host.dt.timedelta(hours=6), "20261106T080000Z-00aa11bb")
+    assert apex.call("POST", "/api/world-reset", {"confirm": "RESET"})[0] == 200
+    # The helper's timeout is what the limit follows.
+    unit = (DEPLOY / "monkey-staff-helper.service").read_text()
+    assert "TimeoutStartSec=4h" in unit and staff_host.dt.timedelta(hours=4) < staff_host.STALE_JOB
+
+
+def test_a_replaced_jar_that_is_pinned_under_another_name_is_reported_pinned(apex, tmp_path):
+    mods = apex.root / "mods"
+    jar(mods / "lithium-1.0.jar", {"id": "lithium", "name": "Lithium", "version": "1.0"})
+    (apex.root / ".monkey-state.json").write_text(json.dumps({"mods": ["lithium-1.0.jar"]}))
+    new = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.1"})
+    code, done = apex.call("POST", mod_url("lithium-1.1.jar"), new)
+    assert code == 200 and done["replaced"] == ["lithium-1.0.jar"] and done["pinned"] is True
+
+
 # ---------------------------------------------------------------- the world reset
 
 

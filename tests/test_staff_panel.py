@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -119,9 +120,11 @@ def box(tmp_path):
     thread = threading.Thread(target=httpd.serve_forever, args=(0.05,), daemon=True)
     thread.start()
 
-    def call(method, path, body=None, user="diego", marked=True, ctype=None, headers=None):
+    def call(method, path, body=None, user="diego", marked=True, ctype=None, headers=None, role="owner"):
         conn = http.client.HTTPConnection("127.0.0.1", httpd.server_address[1], timeout=10)
         sent = {} if user is None else {"X-Staff-User": user}
+        if role is not None:        # Caddy always sends one; `headers` can replace it
+            sent["X-Staff-Role"] = role
         if marked and method != "GET":
             sent["X-Monkey-Staff"] = "1"
         data = None
@@ -138,8 +141,8 @@ def box(tmp_path):
             return r.status, json.loads(raw)
         return r.status, raw
 
-    yield SimpleNamespace(call=call, panel=panel, root=root, staff=staff_dir, live=live, docker=docker, lock=lock,
-                          spawned=spawned, posted=posted, alive=alive, tmp=tmp_path)
+    yield SimpleNamespace(call=call, port=httpd.server_address[1], panel=panel, root=root, staff=staff_dir, live=live,
+                          docker=docker, lock=lock, spawned=spawned, posted=posted, alive=alive, tmp=tmp_path)
     httpd.shutdown()
     httpd.server_close()
 
@@ -247,7 +250,7 @@ def test_the_console_leaves_out_the_rcon_connection_lines(box):
 
 
 def test_roles_decide_what_a_login_may_ask(box):
-    assert box.call("GET", "/api/me")[1] == {"ok": True, "user": "diego", "role": "owner"}   # basic_auth: no role
+    assert box.call("GET", "/api/me")[1] == {"ok": True, "user": "diego", "role": "owner"}
     mod = {"X-Staff-Role": "moderator"}
     assert box.call("GET", "/api/me", headers=mod)[1]["role"] == "moderator"
     assert box.call("GET", "/api/players", headers=mod)[0] == 200
@@ -255,6 +258,46 @@ def test_roles_decide_what_a_login_may_ask(box):
     assert box.call("POST", "/api/command", {"command": "list"}, headers=mod)[0] == 403
     assert box.call("POST", "/api/command", {"command": "list"}, headers={"X-Staff-Role": "admin"})[0] == 200
     assert box.call("GET", "/api/me", headers={"X-Staff-Role": "root"})[0] == 403
+
+
+def test_a_request_with_no_role_or_two_roles_is_refused(box):
+    # A moderator's `Connection: X-Staff-Role` makes Caddy drop the copied role: no role must never mean owner.
+    for method, path, body in (("GET", "/api/me", None), ("GET", "/api/files", None),
+                               ("POST", "/api/command", {"command": "list"})):
+        code, answer = box.call(method, path, body, role=None)
+        assert code == 403 and "role" in answer["error"]
+    assert box.docker.calls == []
+    conn = http.client.HTTPConnection("127.0.0.1", box.port, timeout=10)
+    conn.putrequest("GET", "/api/me")
+    conn.putheader("X-Staff-User", "diego")
+    conn.putheader("X-Staff-Role", "moderator")
+    conn.putheader("X-Staff-Role", "owner")
+    conn.endheaders()
+    assert conn.getresponse().status == 403
+    conn.close()
+
+
+def test_the_panel_run_as_main_is_the_module_staff_auth_imports():
+    # As the unit runs it the panel is __main__; staff_auth's late `from staff_panel import` must not load a second
+    # copy, which would register the routes again and make every refusal a 500.
+    script = (
+        "import runpy, sys\n"
+        f"sys.path.insert(0, {str(REPO.root / 'tools')!r})\n"
+        "sys.argv = ['staff_panel.py', 'no-such-command']\n"
+        "try:\n"
+        f"    runpy.run_path({str(REPO.root / 'tools' / 'staff_panel.py')!r}, run_name='__main__')\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "import staff_apex\n"
+        "first = staff_apex.sp\n"
+        "from staff_panel import settings_file\n"
+        "import staff_panel\n"
+        "assert staff_apex.sp is first is staff_panel, (staff_apex.sp, first, staff_panel)\n"
+        "assert staff_panel.__name__ == '__main__'\n"
+        "print('same')\n"
+    )
+    done = subprocess.run([sys.executable, "-B", "-c", script], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0 and done.stdout.strip() == "same", done.stderr
 
 
 def test_the_first_console_read_is_the_end_of_the_log_from_a_line_start(box):
@@ -285,7 +328,8 @@ def test_an_unknown_command_says_so_without_failing(box):
 
 
 @pytest.mark.parametrize("command", ["seed", "/seed", "minecraft:seed", "execute as @p run seed", "stop", "/stop",
-                                     "STOP", "minecraft:stop", "execute run stop"])
+                                     "STOP", "minecraft:stop", "execute run stop", "//stop", "/ /stop", "//seed",
+                                     " // stop"])
 def test_the_seed_and_stop_are_refused(box, command):
     code, answer = box.call("POST", "/api/command", {"command": command})
     assert code == 403 and answer["ok"] is False and box.docker.calls == []
@@ -299,7 +343,7 @@ def test_one_plain_line_only(box, command):
 
 
 @pytest.mark.parametrize("command", ["whitelist add @a", "op @p", "ban", "kick ab", "pardon a-b", "deop " + "x" * 17,
-                                     "whitelist remove ../x"])
+                                     "whitelist remove ../x", "//ban @a", "/ /op @p", "minecraft:ban @a"])
 def test_player_commands_need_a_player_name(box, command):
     code, answer = box.call("POST", "/api/command", {"command": command})
     assert code == 400 and "player name" in answer["error"] and box.docker.calls == []
@@ -310,6 +354,30 @@ def test_good_player_commands_go_through(box):
         assert box.call("POST", "/api/command", {"command": command})[0] == 200
     assert [argv[-1] for argv in box.docker.calls] == ["whitelist add Charlie_1", "op Alpha",
                                                        "ban Bravo griefing the spawn", "kick Bravo bye"]
+
+
+def test_commands_that_only_start_like_a_player_command_need_no_name(box):
+    for command in ("banlist", "banlist players", "ban-ip 203.0.113.9", "pardon-ip 203.0.113.9", "opx"):
+        assert box.call("POST", "/api/command", {"command": command})[0] == 200, command
+    assert [argv[-1] for argv in box.docker.calls] == ["banlist", "banlist players", "ban-ip 203.0.113.9",
+                                                       "pardon-ip 203.0.113.9", "opx"]
+
+
+def test_a_player_cannot_forge_a_console_line_with_a_unicode_line_break(box):
+    log = box.root / "logs" / "latest.log"
+    log.write_bytes("[10:00:00] [Server thread/INFO]: <Bravo> hi\u2028[10:00:01] [Server thread/INFO]: Alpha was "
+                    "opped\u0085x\r\n[10:00:02] [Server thread/INFO]: next\n".encode())
+    _, read = box.call("GET", "/api/console")
+    assert len(read["lines"]) == 2 and read["lines"][1] == "[10:00:02] [Server thread/INFO]: next"
+    assert read["lines"][0].startswith("[10:00:00] [Server thread/INFO]: <Bravo> hi ") and "opped x" in read["lines"][0]
+    box.docker.answers["list"] = "one\u2028fake\ntwo"
+    _, answer = box.call("POST", "/api/command", {"command": "list"})
+    assert answer["output"].split("\n") == ["one fake", "two"]
+    report = box.root / "crash-reports" / "crash-1.txt"
+    report.write_bytes("a\u2028b\r\nc\n".encode())
+    _, read = box.call("GET", "/api/file?path=crash-reports/crash-1.txt")
+    assert read["text"] == "a b\nc\n"
+    assert staff_panel.lines_of("") == [] and staff_panel.lines_of("a\r\nb") == ["a", "b"]
 
 
 def test_command_output_and_the_record_are_masked(box):
@@ -372,12 +440,64 @@ def test_the_other_actions_take_the_deploy_lock_and_refuse_a_second(box, action,
     assert box.spawned == []
 
 
+def test_a_failure_before_the_power_thread_starts_gives_back_the_lock(box, monkeypatch):
+    def broken(*args, **kw):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(box.panel, "record", broken)
+    with pytest.raises(OSError):
+        box.panel.power_action("diego", {"action": "stop"})
+    assert box.lock.held == 1 and box.lock.released == 1 and box.panel.busy() is None
+    monkeypatch.undo()
+
+    class NoThread:
+        def __init__(self, *a, **kw):
+            pass
+
+        def start(self):
+            raise RuntimeError("can't start new thread")
+
+    monkeypatch.setattr(staff_panel.threading, "Thread", NoThread)
+    with pytest.raises(RuntimeError):
+        box.panel.power_action("diego", {"action": "start"})
+    assert box.lock.held == 2 and box.lock.released == 2 and box.panel.busy() is None
+
+
+def test_power_answers_while_an_action_waits_for_the_deploy_lock(box):
+    waiting, go = threading.Event(), threading.Event()
+    take = box.lock.take
+
+    def slow_take(wait):
+        waiting.set()
+        go.wait(5)
+        return take(wait)
+
+    box.lock.take = slow_take
+    box.docker.gate.clear()
+    started = threading.Thread(target=box.call, args=("POST", "/api/power", {"action": "stop"}))
+    started.start()
+    assert waiting.wait(5)
+    t0 = time.monotonic()
+    code, answer = box.call("GET", "/api/power")
+    assert code == 200 and answer["busy"] == "stop" and time.monotonic() - t0 < 2
+    assert box.call("POST", "/api/power", {"action": "start"})[0] == 409     # claimed while it waits
+    go.set()
+    started.join(5)
+    box.docker.gate.set()
+    box.panel.wait_for_power()
+    assert box.lock.released == 1 and box.panel.busy() is None
+
+
 def test_a_held_deploy_lock_is_a_409_and_runs_nothing(box):
     box.lock.taken_elsewhere = True
     code, answer = box.call("POST", "/api/power", {"action": "stop"})
     assert code == 409 and "deploy lock" in answer["error"]
     box.panel.wait_for_power()
     assert not [argv for argv in box.docker.calls if "stop" in argv]
+    assert box.panel.busy() is None
+    box.lock.taken_elsewhere = False
+    assert box.call("POST", "/api/power", {"action": "stop"})[0] == 200
+    box.panel.wait_for_power()
 
 
 def test_an_unknown_power_action_is_refused(box):
@@ -457,6 +577,27 @@ def test_logs_and_crash_reports_are_read_only(box, path):
     assert box.call("POST", "/api/delete", {"path": path})[0] == 403
     assert box.call("POST", f"/api/upload?path={path.split('/')[0]}&name=x.txt", b"x")[0] == 403
     assert (box.root / path).read_bytes() == before and history_files(box) == []
+
+
+def test_a_download_is_masked_even_when_it_is_not_utf8_or_is_big(box):
+    # Latin-1 text: masked, every other byte kept.
+    (box.root / "server.properties").write_bytes(b"motd=Caf\xe9\nrcon.password=hunter2-real\n")
+    code, raw = box.call("GET", "/api/download?path=server.properties")
+    assert code == 200 and raw == b"motd=Caf\xe9\nrcon.password=********\n"
+    # Binary with a secret line: can't be masked safely, refused.
+    (box.root / "config" / "blob.bin").write_bytes(b"\x00\xff\npassword=hunter2-real\n")
+    code, answer = box.call("GET", "/api/download?path=config/blob.bin")
+    assert code == 415 and b"hunter2" not in json.dumps(answer).encode()
+    (box.root / "config" / "clean.bin").write_bytes(b"\x00\xff\x01")
+    assert box.call("GET", "/api/download?path=config/clean.bin")[1] == b"\x00\xff\x01"
+    # Over 2 MB: goes as it is only with no secret in it.
+    big = box.root / "config" / "big.txt"
+    big.write_bytes(b"x" * (staff_panel.TEXT_MAX + 10) + b"\napi_token = hunter2-real\n")
+    code, answer = box.call("GET", "/api/download?path=config/big.txt")
+    assert code == 413 and answer["ok"] is False
+    big.write_bytes(b"y\n" * (staff_panel.TEXT_MAX // 2 + 10))
+    code, raw = box.call("GET", "/api/download?path=config/big.txt")
+    assert code == 200 and raw == big.read_bytes()
 
 
 def test_a_binary_file_is_for_download(box):
@@ -593,6 +734,24 @@ def test_delete_moves_the_file_to_the_history_and_only_files(box):
     assert box.call("POST", "/api/delete", {"path": "mods/none.jar"})[0] == 400
 
 
+def test_an_upload_reads_its_body_before_taking_the_files_lock(box):
+    class Body:
+        def __init__(self):
+            self.locked = []
+
+        def read(self, n):
+            self.locked.append(box.panel._files.locked())
+            return b"" if len(self.locked) > 1 else b"abc"
+
+    body = Body()
+    done = box.panel.upload("diego", {"path": "config", "name": "u.txt"}, body, 3)
+    assert done["size"] == 3 and body.locked == [False] and (box.root / "config" / "u.txt").read_bytes() == b"abc"
+    with pytest.raises(staff_panel.Refused):
+        box.panel.upload("diego", {"path": "config", "name": "v.txt"}, Body(), 10)     # stops part way
+    assert not (box.root / "config" / "v.txt").exists()
+    assert not [p for p in (box.root / "config").iterdir() if p.name.startswith(".staff-")]
+
+
 def test_upload_adds_or_replaces_a_file_keeping_the_old_one(box):
     code, answer = box.call("POST", "/api/upload?path=mods&name=b.jar", b"new jar")
     assert code == 200 and answer["replaced"] is False and (box.root / "mods" / "b.jar").read_bytes() == b"new jar"
@@ -711,7 +870,12 @@ def test_caddy_sends_only_api_to_the_panel_after_the_password_with_the_login_nam
     caddy = (DEPLOY / "Caddyfile.staff").read_text()
     assert caddy.index("basic_auth") < caddy.index("handle /api/*")
     assert "reverse_proxy 127.0.0.1:8130" in caddy and "header_up X-Staff-User {http.auth.user.id}" in caddy
-    assert "max_size 64MB" in caddy
+    assert "max_size 64MiB" in caddy and "max_size 64MB" not in caddy        # the panel's 64 * 1024 * 1024
+    # Every /api/ request is an owner's (the password box has no roles), set after the hop-by-hop headers go.
+    for block in re.findall(r"handle /api/[^{]*\{.*?\n\t\}", caddy, re.S):
+        assert "header_up X-Staff-Role owner" in block and "header_up -X-Staff-Role" not in block
+    login = (DEPLOY / "Caddyfile.staff-login").read_text()
+    assert "max_size 64MiB" in login and "max_size 64MB" not in login
 
 
 def test_install_starts_the_panel_and_check_reports_it():

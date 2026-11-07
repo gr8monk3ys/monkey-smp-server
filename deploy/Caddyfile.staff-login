@@ -49,9 +49,11 @@ staff.monkeysmp.lscaturchio.xyz {
 		}
 
 		# The controls (tools/staff_panel.py, deploy/monkey-panel.service), with the name and role from the check.
+		# A visitor's `Connection: X-Staff-Role` makes reverse_proxy drop the copied role; the panel then refuses the
+		# request (no role is never owner). 64MiB: the panel's UPLOAD_MAX is 64 * 1024 * 1024.
 		handle /api/* {
 			request_body {
-				max_size 64MB
+				max_size 64MiB
 			}
 			reverse_proxy 127.0.0.1:8130
 		}

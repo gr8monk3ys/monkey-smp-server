@@ -344,7 +344,7 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     ticking = tick(ask(docker, "tick query")) if up else None
     who = players(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
-    reading = [round(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,
+    reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,
                who["count"] if who else None]
     return {
         "version": VERSION, "checked": public.iso(now), "online": online, "container": box, "tick": ticking,

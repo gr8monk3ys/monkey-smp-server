@@ -3,6 +3,8 @@
 # "The staff page"); that is the owner's step, since the service runs as root.
 [Unit]
 Description=Monkey SMP: the staff page's backup requests
+# Quick repeated requests must not trip systemd's start limit and kill this unit.
+StartLimitIntervalSec=0
 
 [Path]
 PathExistsGlob=/srv/monkey/staff/requests/*.req

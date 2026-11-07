@@ -4,6 +4,8 @@
 Description=Monkey SMP: the staff page's backup helper
 After=network-online.target docker.service
 Wants=network-online.target
+# Quick repeated requests must not trip systemd's start limit (that would also stop the path unit).
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot

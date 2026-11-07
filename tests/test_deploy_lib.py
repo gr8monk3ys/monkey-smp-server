@@ -327,14 +327,16 @@ def test_warn_players_says_it_twice_then_waits_a_minute(sh):
 def test_warn_players_warns_nobody_when_no_one_is_on_or_warn_minutes_is_0(sh):
     nobody = r"There are 0 of a max of 20 players online:\n"
     assert sh("warn_players x", FAKE_OUT_docker=nobody)[1:] == ([], [f"{RCON} list"])
-    assert sh("warn_players x", FAKE_RC_docker="1")[1] == []
+    # No answer from RCON is "unknown", not "nobody": it warns (the safe side).
+    unknown = sh("warn_players x", FAKE_RC_docker="1")
+    assert unknown[1] == ["[t] could not count the players; warning them 5 minutes ahead to be safe"]
     assert sh("warn_players x", FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1:] == ([], [f"{RCON} list"])
 
 
 def test_warn_players_keeps_the_count_so_the_caller_needs_no_second_list(sh):
     assert sh('warn_players x; log "$PLAYERS_ONLINE online"', FAKE_OUT_docker=LIST, WARN_MINUTES="0")[1] == [
         "[t] 2 online"]
-    assert sh('warn_players x; log "[$PLAYERS_ONLINE] online"', FAKE_RC_docker="1")[1] == ["[t] [] online"]
+    assert sh('warn_players x; log "[$PLAYERS_ONLINE] online"', FAKE_RC_docker="1")[1][-1] == "[t] [] online"
 
 
 @pytest.mark.parametrize("value", ["5m", "-1", "05", " 5", "five"])

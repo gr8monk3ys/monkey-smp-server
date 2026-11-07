@@ -41,6 +41,17 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   are scrypt hashes; wrong guesses lock a name and then an address for a while. Email is optional (Resend or SMTP,
   `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
   docs/LIVE.md, "The login page".
+- Keep a pinned mod off: turning off or removing one of the release's own mods on the staff page asks "Keep it off
+  after restarts?" (ticked). The start script then leaves it out (`server/.monkey-held.json`, "held" in the start
+  log) until staff press Allow again, turn it on, or install a jar of that name. A missing or broken file holds
+  nothing. The start script part needs this release; until it is live, the hold is noted but the jar still comes back.
+- Do players need it: every mod install on the staff page asks Modrinth whether players must install the mod too (an
+  upload by its sha512) and notes the answer; a failed lookup never stops the install, and staff can answer instead.
+  A red notice says when players need it, and the mods list names the mods players need that the players' pack
+  (`client/`) lacks. The players' pack itself is not changed.
+- Data pack troubleshooting on the staff page: Turn all off (typed `ALL OFF`) saves which of the world's packs are
+  on and turns them off; Turn saved set back on puts them back in their old order and names any that failed. After
+  a restart or start from the Server tab, the power card lists the errors logged since.
 
 ### Changed
 

@@ -478,6 +478,10 @@ players") came from this harness on an i7-8700K.
    `dist/MonkeySMP-Client-X.Y.Z.mrpack` and `dist/MonkeySMP-Player-X.Y.Z.zip` and point `MODPACK_URL` and
    `INSTALLER_URL` in `site/config.json` at them. `validate.py` fails while the site serves another version's pack.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
+   Between releases, when the live server gains a mod players need and no tag may go out yet, the site can serve a
+   rebuild of the same version: `python tools/build.py --site-build LABEL` names the files and the pack
+   `X.Y.Z-LABEL`. Never attach those to a release; the next release's pack replaces them, and its redirects in
+   `site/vercel.json` come out then too.
 4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 5. Put the client pack on Modrinth. The Release workflow's `modrinth` job does it when the repo secret
    `MODRINTH_TOKEN` is set; otherwise run `python tools/modrinth.py` from a checkout of the tag, with the token in

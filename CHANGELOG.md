@@ -42,6 +42,17 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
   docs/LIVE.md, "The login page".
 
+### Added
+
+- Four mods staff installed on the live server by hand on 6 and 7 November, pinned at the versions it runs, so the
+  next release keeps them instead of dropping them: Shippy Ships and its library Ingenium API (both needed on the
+  client too: they add boats, items and blocks), No Lunge (removes the Lunge enchantment) and Banner Flags (banners
+  on fences and walls), both server-only. Server: 174 mods. Client pack: 179 mods and 22 resource packs.
+- `tools/build.py --site-build LABEL`: a website-only rebuild of the manifest's version between releases, named
+  `<version>-LABEL` (files and the pack's versionId), never attached to a release; `site_links.py` accepts it. The
+  site serves `3.1.1-ships` until the next release: the 3.1.1 pack can't join a server with Shippy Ships. Its old
+  3.1.1 links redirect to it (`site/vercel.json`, temporary redirects).
+
 ### Changed
 
 - The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a

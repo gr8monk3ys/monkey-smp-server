@@ -347,7 +347,7 @@
       const done = await api("PUT", "/api/strength", { values });
       await loadStrength();
       const labels = new Map(entries.map((e) => [e.key, e.field.label]));
-      say($("strength-note"), `Set: ${done.changed.map((k) => labels.get(k) || k).join(", ")}. It takes effect at once.`);
+      say($("strength-note"), `Set: ${done.changed.map((k) => labels.get(k) || k).join(", ")}. It counts from the next ultimate used.`);
     } catch (failure) {
       say($("strength-error"), failure);
       save.disabled = false;
@@ -404,7 +404,7 @@
     const words = $("modcfg-search").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     for (const node of [$("strength-card"), ...$("modcfg-list").children]) {
       if (!node.dataset.find) continue;
-      node.hidden = !words.every((w) => node.dataset.find.includes(w));
+      node.hidden = !words.every((w) => node.dataset.find.includes(w)) || (node.id === "strength-card" && !can("admin"));
     }
   }
 
@@ -441,12 +441,17 @@
     }
     $("modcfg-search").addEventListener("input", filter);
     let strengthAsked = false;
+    $("strength-card").hidden = !can("admin");     // its settings are admin only, as the file cards are
     $("strength-card").addEventListener("toggle", () => {
       if (!$("strength-card").open || strengthAsked) return;
       strengthAsked = true;
       loadStrength();
     });
-    $("modcfg-reload").addEventListener("click", () => { state.loaded = false; load(); });
+    $("modcfg-reload").addEventListener("click", () => {
+      state.loaded = false;
+      load();
+      if (strengthAsked) loadStrength();
+    });
     window.addEventListener("hashchange", show);
     show();
   }

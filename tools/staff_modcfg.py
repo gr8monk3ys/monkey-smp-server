@@ -1025,15 +1025,21 @@ class Strength:
 
     def _set(self, user: str, scores: dict[str, int], action: str) -> dict:
         self._running()
-        self.p.record(user, action, ", ".join(f"{k}={v}" for k, v in scores.items()))
         done = []
+
+        def log(tail=""):       # what the game took, so the record never claims a score it refused
+            if done:
+                self.p.record(user, action, ", ".join(f"{k}={scores[k]}" for k in done) + tail)
+
         for key, score in scores.items():
             try:
                 self._rcon(f"scoreboard players set $Config {STRENGTH_OBJ}{STRENGTH[key]['objective']} {score}")
             except sp.Refused as e:
                 left = ", ".join(k for k in scores if k not in done)
+                log(f" (not set: {left})")
                 raise sp.Refused(502, f"{e.message} Not set: {left}.") from None
             done.append(key)
+        log()
         return {"changed": done}
 
     def save(self, user: str, body: dict) -> dict:

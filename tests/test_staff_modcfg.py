@@ -454,3 +454,4 @@ def test_strength_says_which_settings_were_not_set_when_the_game_refuses_one(box
     del box.docker.answers[f"scoreboard players set $Config {m.STRENGTH_OBJ}Tag_Dependent_Powers 1"]
     code, body = box.call("PUT", "/api/strength", {"values": {"cooldown.axe": 60, "tag.powers": True}})
     assert code == 502 and "Not set: tag.powers." in body["error"]
+    assert "diego strength cooldown.axe=60 (not set: tag.powers)" in (box.staff / "actions.log").read_text()

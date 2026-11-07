@@ -1,6 +1,10 @@
-"""The staff page's event controls: the event timer and a leaderboard update. tools/staff_panel.py registers them
-(register()), so they get the same login, role and change checks as every other control. Admins only.
+"""The staff page's event controls: event nights, the event timer and a leaderboard update. tools/staff_panel.py
+registers them (register()), so they get the same login, role and change checks as every other control. Admins only.
 
+    GET  /api/nights                              the monkey-nights phase (idle, grace, build battle) and time left
+    POST /api/nights {"action", ...}              /function monkey:nights/<action> (tools/nights.py): grace/start,
+                                                  grace/end, build/start, build/end, stop, minutes {"minutes"} and
+                                                  call {"block"}; the state is read before and after
     GET  /api/event-timer                         the running event timer: its name and the minutes left, or none
     POST /api/event-timer {"action": "start", "name", "minutes"}
                                                   /function monkey:events/timer/start (tools/events.py)
@@ -11,8 +15,12 @@
                                                   given a minute ago
 
 The safety rules:
-- The event name is checked here (letters, digits, spaces and a few marks; no quote or backslash) and the data pack
-  keeps it in storage and shows it through an nbt text component, so a name never becomes a command.
+- The event name and a called-out block are checked here (letters, digits, spaces and a few marks; no quote or
+  backslash) and the data packs keep them in storage and show them through an nbt text component, so a name never
+  becomes a command.
+- Event nights: each step is refused unless the phase allows it (grace/start and build/start only when idle,
+  grace/end only in the grace period, build/end only in the build battle), and the phase read back afterwards must be
+  the one the step leads to. grace/end runs build/start itself, so it ends in the build battle.
 - The functions run over the container's own `monkey rcon`, as the console does. The data pack's own refusals go to
   the command's sender, which RCON doesn't show, so the state is read back before and after every change.
 - The leaderboard update takes nothing new: the panel runs as monkey with no PrivateTmp, like the standings timers,
@@ -39,6 +47,22 @@ _STORED = re.compile(r"contents: \"((?:[^\"\\]|\\.)*)\"\s*$")
 SKIPPED = "skipping this update"     # deploy/monkey-standings.sh's line when the lock stays busy
 NO_PACK = ("The events data pack doesn't have the event timer: is monkey-events on, and from release 3.2.0 or "
            "later? (/datapack list)")
+NO_NIGHTS = "The event nights data pack isn't on: is monkey-nights enabled? (/datapack list)"
+_UNSET = "none is set"            # `scoreboard players get` for a holder with no score
+_NO_OBJECTIVE = "Unknown scoreboard objective"
+
+# tools/nights.py's phases (#phase nt.state) and steps: the phase a step needs, and the phase it leads to.
+PHASES = {0: "idle", 1: "grace", 2: "build"}
+STEPS = {
+    "grace/start": ({0}, 1),
+    "grace/end": ({1}, 2),        # grace/end runs build/start
+    "build/start": ({0}, 2),
+    "build/end": ({2}, 0),
+    "stop": ({1, 2}, 0),
+    "minutes": ({1, 2}, None),    # the phase stays; the time left changes
+    "call": ({0, 1, 2}, None),    # an announcement only
+}
+NEEDS_WHAT = {0: "nothing is running", 1: "the grace period is running", 2: "the build battle is running"}
 
 
 class Events:
@@ -48,6 +72,7 @@ class Events:
         self.p = panel
         self.rcon = self._rcon
         self._timer = threading.Lock()
+        self._nights = threading.Lock()
         self._board = threading.Lock()
         self._name: str | None = None     # the running timer's name, once read
 
@@ -57,13 +82,13 @@ class Events:
                                      timeout=timeout or sp.COMMAND_TIMEOUT)
         return sp.server.checked(command, done.stdout.strip(), done.returncode, done.stderr)
 
-    def _ask(self, command: str, timeout: int | None = None) -> str:
+    def _ask(self, command: str, timeout: int | None = None, missing: str = NO_PACK) -> str:
         try:
             return self.rcon(command, timeout)
         except sp.server.RconError as e:
             said = str(e)
             if "Unknown function" in said:
-                raise sp.Refused(409, NO_PACK) from None
+                raise sp.Refused(409, missing) from None
             if any(m in said for m in sp.server.REFUSED):     # the server answered, and said no
                 raise sp.Refused(502, f"The server refused it: {sp.masked(said)[-200:]}") from None
             raise sp.Refused(502, "The server didn't answer: is it running?") from None
@@ -122,6 +147,67 @@ class Events:
                             "Event over. Give the Cup points (cup/add), then update the leaderboard.")
         return done
 
+    # ------------------------------------------------ event nights (monkey-nights, tools/nights.py)
+
+    def _night_score(self, holder: str, objective: str) -> int | None:
+        """The score, 0 when the holder has none, None when the objective doesn't exist yet (the pack's load step
+        hasn't run: an empty server is paused)."""
+        said = self._ask(f"scoreboard players get {holder} {objective}", missing=NO_NIGHTS)
+        m = _SCORE.search(said)
+        if m:
+            return int(m[1])
+        if _NO_OBJECTIVE in said:
+            return None
+        if _UNSET in said:
+            return 0
+        raise sp.Refused(502, f"The server's answer about {objective} wasn't one this page knows: "
+                              f"{sp.masked(said)[-200:]}")
+
+    def night_state(self) -> dict:
+        phase = self._night_score("#phase", "nt.state")
+        if phase is None:
+            return {"phase": "idle", "seconds": 0, "minutes": 0, "set_up": False}
+        seconds = max(0, self._night_score("#left", "nt.timer") or 0) if phase else 0
+        return {"phase": PHASES.get(phase, f"unknown ({phase})"), "seconds": seconds,
+                "minutes": (seconds + 59) // 60, "set_up": True}
+
+    def nights(self) -> dict:
+        return {"nights": self.night_state()}
+
+    def night_action(self, user: str, body: dict) -> dict:
+        action = body.get("action")
+        if action not in STEPS:
+            raise sp.Refused(400, f"action must be one of {', '.join(STEPS)}.")
+        command, detail, minutes = f"function {NS}:nights/{action}", action, 0
+        if action == "minutes":
+            minutes = checked_minutes(body.get("minutes"))
+            command, detail = f"{command} {{minutes:{minutes}}}", f"minutes {minutes}"
+        elif action == "call":
+            block = checked_name(body.get("block"), "block")
+            command, detail = f'{command} {{block:"{block}"}}', f"call {block}"
+        allowed, leads_to = STEPS[action]
+        if not self._nights.acquire(blocking=False):
+            raise sp.Refused(409, "Another event night change is under way: try again in a moment.")
+        try:
+            before = self.night_state()
+            phase = next((k for k, v in PHASES.items() if v == before["phase"]), None)
+            if phase not in allowed:
+                needs = " or ".join(NEEDS_WHAT[p] for p in sorted(allowed))
+                raise sp.Refused(409, f"{action} only works when {needs}; now: {before['phase']}.")
+            self.p.record(user, "event-night", f"{detail} (was {describe(before)})")
+            self._ask(command, missing=NO_NIGHTS)
+            after = self.night_state()
+            self.p.record(user, "event-night-result", f"{detail}: now {describe(after)}")
+            if leads_to is not None and after["phase"] != PHASES[leads_to]:
+                raise sp.Refused(502, f"The server took {action}, but the phase is {after['phase']}, not "
+                                      f"{PHASES[leads_to]}. Check the console.")
+            if action == "minutes" and not minutes * 60 - 5 <= after["seconds"] <= minutes * 60:
+                raise sp.Refused(502, f"The server took the new time, but {after['minutes']} min are left. "
+                                      "Check the console.")
+        finally:
+            self._nights.release()
+        return {"nights": after, "before": before, "note": NIGHT_NOTES.get(action, "Done.")}
+
     # ------------------------------------------------ the leaderboard
 
     def leaderboard(self, user: str) -> dict:
@@ -165,12 +251,30 @@ class Events:
             self._board.release()
 
 
-def checked_name(value) -> str:
+NIGHT_NOTES = {
+    "grace/start": "The grace period started: PvP off, Nether closed.",
+    "grace/end": "The grace period is over: PvP and the Nether are open, and the build battle started.",
+    "build/start": "The build battle started.",
+    "build/end": "Building is over. Judge the bases, then give the prizes.",
+    "stop": "Stopped. Game rules stay as they are: check pvp and allow_entering_nether_using_portals.",
+    "minutes": "Time left changed.",
+    "call": "Called out.",
+}
+
+
+def describe(state: dict) -> str:
+    if state["phase"] == "idle":
+        return "idle" if state.get("set_up", True) else "idle, not set up yet"
+    return f"{state['phase']}, {state['minutes']} min left"
+
+
+def checked_name(value, what: str = "name") -> str:
     if not isinstance(value, str):
-        raise sp.Refused(400, "name must be text.")
+        raise sp.Refused(400, f"{what} must be text.")
     value = " ".join(value.split())
     if not NAME.fullmatch(value):
-        raise sp.Refused(400, "The event's name: 1 to 40 letters, digits, spaces and ' & ! ? . , : ( ) + # -, "
+        label = "The event's name" if what == "name" else "The block's name"
+        raise sp.Refused(400, f"{label}: 1 to 40 letters, digits, spaces and ' & ! ? . , : ( ) + # -, "
                               "starting with a letter or digit.")
     return value
 
@@ -196,6 +300,8 @@ def events(panel) -> Events:
 
 
 ROUTES = {
+    ("GET", "/api/nights"): lambda p, u, q, b: events(p).nights(),
+    ("POST", "/api/nights"): lambda p, u, q, b: events(p).night_action(u, b),
     ("GET", "/api/event-timer"): lambda p, u, q, b: events(p).timer(),
     ("POST", "/api/event-timer"): lambda p, u, q, b: events(p).timer_action(u, b),
     ("POST", "/api/leaderboard"): lambda p, u, q, b: events(p).leaderboard(u),

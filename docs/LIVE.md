@@ -1017,7 +1017,7 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \n    tools/staff_players.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1207,6 +1207,41 @@ the controls refuse it whatever the page sends.
 | Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
 | Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |
+| Event nights | admin | `tools/staff_events.py`, on the Server tab: the `monkey-nights` pack's grace/start, grace/end, build/start, build/end and stop, the minutes left (1 to 600) and the called-out block. Reads `#phase nt.state` and `#left nt.timer` before and after each step ("Player actions and event nights", below). |
+| Player actions | admin | `tools/staff_players.py`, on the Players tab: kick, ban, unban, send to the world spawn, Strength SMP's level (show, set 0 to 5, +1, reset to 0) and a per-player stat reset. |
+| Faction prize | admin | +1 Strength to every member of one Open Parties and Claims faction (the build battle's prize). |
+
+#### Player actions and event nights
+
+Each is one line in `actions.log` before it runs (`player-kick`, `player-ban`, `player-unban`, `player-spawn`,
+`player-strength`, `player-reset`, `faction-strength`, `event-night`), and the reset, the faction prize and each night
+step one more with the result. One change at a time. A name must be one the server has seen (`usercache.json`, the
+whitelist, ops, bans) and is used as the server spells it; a reason may not hold `@` or a control character.
+
+- **Kick** and **Send to world spawn** need the player online. Spawn is
+  `execute in minecraft:overworld run tp NAME ~0.5 ~ ~0.5`: RCON's commands run at the Overworld's spawn point, so
+  that is the world spawn, from any dimension. **Ban** and **Unban** are `ban` and `pardon`.
+- **Strength** is the score `Strength_SMP+Strength_Level` (Strength SMP 1.3 is a data pack in a jar; it has no reset
+  command). Tried on a local 26.2 server with a fake player (Carpet), 7 November 2026: the mod reads the score each
+  tick and keeps a value written to it; at 6 it gives one Strength item and goes back to 5; a player with no score gets
+  3 on their next tick, so +1 on no score sets 4. Its damage bonus (`strength_smp:buff-level_N` attribute modifiers)
+  is taken off only at level 1 or below, so a lower level would keep the old bonus: the page then takes the modifiers
+  off (`attribute NAME minecraft:attack_damage modifier remove ...`) and the mod puts back the right ones the next
+  tick. That needs the player online, so for an offline player the page lowers only to 0 or 1 (the mod clears the
+  bonus itself when they join). Raising works offline.
+- **Reset stats** is per player: there is no button or call for everyone. Type the player's name to confirm. It sets
+  Strength to 0 and the game's own kills and deaths to 0: `minecraft:custom` `player_kills` and `deaths`,
+  `minecraft:killed` `minecraft:player` and `minecraft:killed_by` `minecraft:player`, in
+  `world/players/stats/<uuid>.json`. The player must be offline (kick them first): the game keeps an online player's
+  statistics in memory and writes them back when they leave. The old file goes to the history first, and the file is
+  written whole. Other statistics stay. The old `st.pk`, `om.pk` and `om.deaths` scores of the packs that are off are
+  left alone.
+- **Faction prize**: the factions are the saved party files (`world/data/openpartiesandclaims/parties/`), so one made
+  in the last few minutes may not show yet. +1 for each member, offline ones too; one at 5 gets a Strength item.
+- **Event nights**: each step is refused before it runs when the phase is wrong (grace/end only in grace, build/end
+  only in the build, stop and minutes only while something runs), and is an error when the phase after isn't the one
+  expected. While `monkey-nights` is off, the box says so and nothing runs. The block's name follows the event timer's
+  name rules (no `"`, which would break the pack's macro).
 
 The mod manager:
 

@@ -1,5 +1,5 @@
-// The staff page's event controls on the Server tab (tools/staff_events.py answers them): the event timer and the
-// leaderboard update. Admins only: the box stays hidden for a moderator, and the panel checks the role anyway.
+// The staff page's event controls on the Server tab (tools/staff_events.py answers them): the event timer, the
+// leaderboard update and the event nights (the monkey-nights pack). Admins only: the box stays hidden for a moderator, and the panel checks the role anyway.
 // The same rules as panel.js: everything from the server goes in with textContent, no style attributes, no forms, no
 // confirm() or alert().
 "use strict";
@@ -10,6 +10,8 @@
   const $ = (id) => document.getElementById(id);
   let timer = null;
   let busy = false;
+  let nights = null;
+  let nightBusy = false;
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -54,8 +56,8 @@
     node.textContent = text ? (text.message || String(text)) : "";
   }
 
-  function confirmIn(message, yes, onYes) {
-    const box = $("events-confirm");
+  function confirmIn(message, yes, onYes, where = "events-confirm") {
+    const box = $(where);
     const close = () => {
       box.hidden = true;
       box.replaceChildren();
@@ -91,6 +93,87 @@
       say("events-error", e);
     }
     render();
+    try {
+      nights = (await api("GET", "/api/nights")).nights;
+      say("nights-error", "");
+    } catch (e) {
+      nights = null;
+      say("nights-error", e);
+    }
+    renderNights();
+  }
+
+  // ------------------------------------------------ event nights
+
+  // Which phases each step may run in, as tools/staff_events.py's STEPS has them.
+  const NIGHT_STEPS = {
+    "grace/start": ["idle"], "grace/end": ["grace"], "build/start": ["idle"], "build/end": ["build"],
+    stop: ["grace", "build"], minutes: ["grace", "build"], call: ["idle", "grace", "build"],
+  };
+  const NIGHT_BUTTONS = {
+    "grace/start": "nights-grace-start", "grace/end": "nights-grace-end", "build/start": "nights-build-start",
+    "build/end": "nights-build-end", stop: "nights-stop", minutes: "nights-minutes-go", call: "nights-call-go",
+  };
+  const NIGHT_ASK = {
+    "grace/start": ["Start the grace period now? Everyone on the server sees it.", "Start grace"],
+    "grace/end": ["End the grace period and start the build battle now?", "End grace"],
+    "build/start": ["Start the build battle now, with no grace period?", "Start the build"],
+    "build/end": ["End the build battle now?", "End the build"],
+    stop: ["Stop the event night now? The timer and the phase go back to idle.", "Stop it"],
+  };
+
+  function renderNights() {
+    const phase = nights ? nights.phase : null;
+    let text = "The event night's state isn't known.";
+    if (nights && !nights.set_up) text = "Nothing is running (the pack hasn't set itself up yet: it does on the first step).";
+    else if (phase === "idle") text = "Nothing is running.";
+    else if (phase === "grace" || phase === "build") {
+      const what = phase === "grace" ? "Grace period" : "Build battle";
+      text = `${what}: ${nights.minutes === 1 ? "1 min" : `${nights.minutes} min`} left.`;
+    } else if (phase) text = `The phase is ${phase}: stop it, then start again.`;
+    $("nights-state").textContent = text;
+    for (const [step, id] of Object.entries(NIGHT_BUTTONS)) {
+      $(id).disabled = nightBusy || !phase || !NIGHT_STEPS[step].includes(phase);
+    }
+  }
+
+  async function night(body) {
+    nightBusy = true;
+    renderNights();
+    say("nights-error", "");
+    say("nights-note", "");
+    try {
+      const done = await api("POST", "/api/nights", body);
+      nights = done.nights;
+      say("nights-note", done.note || "Done.");
+    } catch (e) {
+      say("nights-error", e);
+    }
+    nightBusy = false;
+    renderNights();
+  }
+
+  function nightStep(step) {
+    const [message, yes] = NIGHT_ASK[step];
+    confirmIn(message, yes, () => night({ action: step }), "nights-confirm");
+  }
+
+  function nightMinutes() {
+    const minutes = Number($("nights-minutes").value);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) {
+      say("nights-error", "Minutes: a whole number from 1 to 600.");
+      return;
+    }
+    night({ action: "minutes", minutes });
+  }
+
+  function nightCall() {
+    const block = $("nights-block").value.trim();
+    if (!block) {
+      say("nights-error", "Type the block's name.");
+      return;
+    }
+    night({ action: "call", block });
   }
 
   async function act(body) {
@@ -144,7 +227,7 @@
     if (location.hash !== "#server") return;
     load();
     poll = setInterval(() => {
-      if (!busy && !document.hidden) load();
+      if (!busy && !nightBusy && !document.hidden) load();
     }, POLL_MS);
   }
 
@@ -158,6 +241,11 @@
     }
     if (RANK[role] < RANK.admin) return;
     $("events-box").hidden = false;
+    $("nights-box").hidden = false;
+    for (const step of Object.keys(NIGHT_ASK)) $(NIGHT_BUTTONS[step]).addEventListener("click", () => nightStep(step));
+    $("nights-minutes-go").addEventListener("click", nightMinutes);
+    $("nights-call-go").addEventListener("click", nightCall);
+    renderNights();
     $("timer-start").addEventListener("click", start);
     $("timer-finish").addEventListener("click", () => confirmIn(
       "End the event now? Everyone sees \"Event over\".", "End it", () => act({ action: "finish" })));

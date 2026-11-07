@@ -234,3 +234,150 @@ def test_the_name_is_read_once_per_run(ev):
     ev.call("POST", "/api/event-timer", {"action": "stop"})
     ev.call("POST", "/api/event-timer", {"action": "start", "name": "Race", "minutes": 5})
     assert ev.call("GET", "/api/event-timer")[1]["timer"]["name"] == "Race"
+
+
+# ---------------------------------------------------------------- event nights (the monkey-nights pack)
+
+
+class FakeNights:
+    """The monkey-nights pack as RCON sees it: #phase nt.state, #left nt.timer, and its functions' effect."""
+
+    def __init__(self):
+        self.sent: list[str] = []
+        self.phase, self.left = 0, 0
+        self.set_up = True       # nt.state exists (the pack's load step has run)
+        self.pack = True
+        self.ignore = False
+
+    def __call__(self, command, timeout=None):
+        self.sent.append(command)
+        m = re.fullmatch(r"scoreboard players get (#phase|#left) (nt\.state|nt\.timer)", command)
+        if m:
+            if not self.set_up:
+                return f"Unknown scoreboard objective '{m[2]}'"
+            value = self.phase if m[1] == "#phase" else self.left
+            return f"{m[1]} has {value} [{m[2]}]" if value or m[1] == "#phase" else \
+                f"Can't get value of {m[2]} for {m[1]}; none is set"
+        if not command.startswith("function monkey:nights/"):
+            raise AssertionError(command)
+        if not self.pack:
+            raise RconError(f"{command} answered: Unknown function monkey:nights/x (exit 0)")
+        self.set_up = True
+        if self.ignore:
+            return ""
+        step = command.split("/", 1)[1]
+        if step == "grace/start" and not self.phase:
+            self.phase, self.left = 1, 5400
+        elif step in ("grace/end", "build/start") and self.phase == (1 if step == "grace/end" else 0):
+            self.phase, self.left = 2, 10800
+        elif step in ("build/end", "stop") and self.phase:
+            self.phase = 0
+        elif step.startswith("minutes ") and self.phase:
+            self.left = int(re.fullmatch(r"minutes \{minutes:(\d+)\}", step)[1]) * 60
+        return ""
+
+
+@pytest.fixture
+def nt(box):  # noqa: F811
+    fake = FakeNights()
+    staff_events.events(box.panel).rcon = fake
+    box.server = fake
+    return box
+
+
+def night(nt, body, role="admin"):
+    return nt.call("POST", "/api/nights", body, role=role)
+
+
+def test_the_nights_state(nt):
+    assert nt.call("GET", "/api/nights", role="admin")[1]["nights"] == {
+        "phase": "idle", "seconds": 0, "minutes": 0, "set_up": True}
+    nt.server.phase, nt.server.left = 2, 61
+    assert nt.call("GET", "/api/nights", role="admin")[1]["nights"] == {
+        "phase": "build", "seconds": 61, "minutes": 2, "set_up": True}
+    nt.server.set_up = False
+    assert nt.call("GET", "/api/nights", role="admin")[1]["nights"]["set_up"] is False
+    assert nt.call("GET", "/api/nights", role="moderator")[0] == 403
+
+
+def test_a_whole_night(nt):
+    code, data = night(nt, {"action": "grace/start"})
+    assert code == 200 and data["nights"]["phase"] == "grace" and data["nights"]["minutes"] == 90
+    assert data["before"]["phase"] == "idle" and "grace period started" in data["note"]
+    assert night(nt, {"action": "minutes", "minutes": "5"})[1]["nights"]["seconds"] == 300
+    assert night(nt, {"action": "grace/end"})[1]["nights"]["phase"] == "build"
+    assert night(nt, {"action": "call", "block": "  Oak   Stairs "})[0] == 200
+    assert night(nt, {"action": "build/end"})[1]["nights"]["phase"] == "idle"
+    assert [c for c in nt.server.sent if c.startswith("function")] == [
+        "function monkey:nights/grace/start", "function monkey:nights/minutes {minutes:5}",
+        "function monkey:nights/grace/end", 'function monkey:nights/call {block:"Oak Stairs"}',
+        "function monkey:nights/build/end"]
+    log = actions(nt)
+    assert "event-night grace/start (was idle)" in log
+    assert "event-night-result grace/start: now grace, 90 min left" in log
+    assert "event-night minutes 5 (was grace, 90 min left)" in log and "event-night call Oak Stairs" in log
+
+
+def test_the_pack_sets_itself_up_on_the_first_step(nt):
+    nt.server.set_up = False
+    code, data = night(nt, {"action": "build/start"})
+    assert code == 200 and data["before"]["set_up"] is False and data["nights"]["phase"] == "build"
+    assert "event-night build/start (was idle, not set up yet)" in actions(nt)
+
+
+@pytest.mark.parametrize("phase, action", [
+    (0, "grace/end"), (0, "build/end"), (0, "stop"), (0, "minutes"), (1, "grace/start"), (1, "build/start"),
+    (1, "build/end"), (2, "grace/end"), (2, "grace/start")])
+def test_a_step_in_the_wrong_phase_is_refused_before_it_runs(nt, phase, action):
+    nt.server.phase, nt.server.left = phase, 600
+    code, data = night(nt, {"action": action, "minutes": 5})
+    assert code == 409 and "only works when" in data["error"]
+    assert not any(c.startswith("function") for c in nt.server.sent) and actions(nt) == ""
+
+
+@pytest.mark.parametrize("body", [
+    {"action": "load"}, {"action": "help"}, {}, {"action": "minutes", "minutes": 0},
+    {"action": "minutes", "minutes": 601}, {"action": "minutes", "minutes": True}, {"action": "call"},
+    {"action": "call", "block": 'a"b'}, {"action": "call", "block": "x}"}, {"action": "call", "block": "a" * 41},
+    {"action": "call", "block": " "}])
+def test_a_bad_step_is_refused(nt, body):
+    nt.server.phase, nt.server.left = 1, 600
+    assert night(nt, body)[0] == 400 and nt.server.sent == [] and actions(nt) == ""
+
+
+def test_without_the_pack(nt):
+    nt.server.pack = False
+    code, data = night(nt, {"action": "call", "block": "Glass"})
+    assert code == 409 and "monkey-nights" in data["error"]
+
+
+def test_a_step_that_changes_nothing_is_an_error(nt):
+    nt.server.ignore = True
+    code, data = night(nt, {"action": "grace/start"})
+    assert code == 502 and "Check the console" in data["error"]
+    assert "event-night-result grace/start: now idle" in actions(nt)
+    nt.server.phase, nt.server.left = 1, 600
+    code, data = night(nt, {"action": "minutes", "minutes": 3})
+    assert code == 502 and "10 min are left" in data["error"]
+
+
+def test_one_night_change_at_a_time(nt):
+    lock = staff_events.events(nt.panel)._nights
+    assert lock.acquire(blocking=False)
+    try:
+        assert night(nt, {"action": "grace/start"})[0] == 409
+    finally:
+        lock.release()
+    assert nt.server.sent == []
+
+
+def test_the_page_has_the_nights_box():
+    page = REPO.root / "deploy" / "staff"
+    script = (page / "events.js").read_text(encoding="utf-8")
+    html = (page / "index.html").read_text(encoding="utf-8")
+    assert "/api/nights" in script
+    for step, needs in staff_events.STEPS.items():
+        assert f'"{step}"' in script or f"{step}:" in script
+        assert all(staff_events.PHASES[p] in script for p in needs[0])
+    for i in re.findall(r'"(nights-[a-z-]+)"', script):
+        assert f'id="{i}"' in html, i

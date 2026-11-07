@@ -16,6 +16,7 @@
   <script src="users.js" defer></script>
   <script src="server.js" defer></script>
   <script src="events.js" defer></script>
+  <script src="players.js" defer></script>
   <script src="modcfg.js" defer></script>
 </head>
 <body>
@@ -172,6 +173,57 @@
       <p class="note" id="players-note" role="status" hidden></p>
       <div class="confirm" id="players-confirm" hidden></div>
       <div class="cols" id="players-body"></div>
+      <section class="box" id="act-box" hidden>
+        <h3>Player actions</h3>
+        <p class="fine">Admins only. Type a player's name and look them up first: every button works on the player shown.
+          Each action is one line in the action log.</p>
+        <p class="attention" id="act-error" role="alert" hidden></p>
+        <p class="note" id="act-note" role="status" hidden></p>
+        <div class="add">
+          <input id="act-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Player name" aria-label="Player name">
+          <button class="btn primary" id="act-look" type="button">Look up</button>
+        </div>
+        <div id="act-body" hidden>
+          <p class="fine" id="act-who"></p>
+          <div class="add">
+            <input id="act-reason" type="text" maxlength="120" autocomplete="off" placeholder="Reason (optional)" aria-label="Reason">
+            <button class="btn" id="act-kick" type="button">Kick</button>
+            <button class="btn" id="act-ban" type="button">Ban</button>
+            <button class="btn" id="act-unban" type="button">Unban</button>
+            <button class="btn" id="act-spawn" type="button">Send to world spawn</button>
+          </div>
+          <h4>Strength</h4>
+          <p class="fine" id="act-strength"></p>
+          <div class="add">
+            <input id="act-level" type="number" min="0" max="5" value="3" aria-label="Strength level">
+            <button class="btn" id="act-level-set" type="button">Set</button>
+            <button class="btn" id="act-level-add" type="button">+1</button>
+            <button class="btn" id="act-level-zero" type="button">Reset to 0</button>
+          </div>
+          <h4>Reset stats</h4>
+          <p class="fine">Strength to 0, and the game's kills and deaths for this one player to 0. They must be offline (kick
+            them first). The old statistics file goes to the history.</p>
+          <div class="add">
+            <input id="act-confirm-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type their name to confirm" aria-label="Type the player's name to confirm">
+            <button class="btn" id="act-reset" type="button">Reset this player's stats</button>
+          </div>
+        </div>
+        <div class="confirm" id="act-confirm" hidden></div>
+      </section>
+      <section class="box" id="faction-box" hidden>
+        <h3>Faction prize</h3>
+        <p class="fine">+1 Strength to every member of one faction, for the build battle's winners. The list is the factions
+          as last saved: a faction made in the last few minutes may not be there yet.</p>
+        <p class="attention" id="faction-error" role="alert" hidden></p>
+        <p class="note" id="faction-note" role="status" hidden></p>
+        <div class="add">
+          <select id="faction-pick" aria-label="Faction"></select>
+          <button class="btn" id="faction-load" type="button">Reload the list</button>
+          <button class="btn primary" id="faction-go" type="button">Give +1 Strength</button>
+        </div>
+        <p class="fine" id="faction-members"></p>
+        <div class="confirm" id="faction-confirm" hidden></div>
+      </section>
       <section class="box" id="ipbans" hidden>
         <h3>Banned addresses</h3>
         <p class="fine">Bans an IP address, so nobody can join from it under any name. Type a public IPv4 or IPv6 address,
@@ -233,6 +285,30 @@
           <button class="btn" id="board-update" type="button">Update the leaderboard now</button>
         </div>
         <div class="confirm" id="events-confirm" hidden></div>
+      </section>
+      <section class="box span" id="nights-box" hidden>
+        <h3>Event nights</h3>
+        <p class="fine">The monkey-nights data pack: a grace period, then the build battle. Each button runs the pack's own
+          function and reads the phase back. Nothing here works while the pack is off.</p>
+        <p class="attention" id="nights-error" role="alert" hidden></p>
+        <p class="note" id="nights-note" role="status" hidden></p>
+        <p class="fine" id="nights-state">Checking</p>
+        <div class="actions">
+          <button class="btn" id="nights-grace-start" type="button">Start the grace period</button>
+          <button class="btn" id="nights-grace-end" type="button">End grace, start the build</button>
+          <button class="btn" id="nights-build-start" type="button">Start the build battle</button>
+          <button class="btn" id="nights-build-end" type="button">End the build battle</button>
+          <button class="btn" id="nights-stop" type="button">Stop everything</button>
+        </div>
+        <div class="add">
+          <input id="nights-minutes" type="number" min="1" max="600" value="10" aria-label="Minutes left">
+          <button class="btn" id="nights-minutes-go" type="button">Set the minutes left</button>
+        </div>
+        <div class="add">
+          <input id="nights-block" type="text" maxlength="40" placeholder="Block to build, e.g. Oak Stairs" aria-label="Block to build" spellcheck="false">
+          <button class="btn" id="nights-call-go" type="button">Call the block</button>
+        </div>
+        <div class="confirm" id="nights-confirm" hidden></div>
       </section>
       <section class="box span">
         <h3>Backups from here</h3>

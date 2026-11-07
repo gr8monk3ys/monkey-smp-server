@@ -828,7 +828,7 @@ Only one copy may run the world at a time: two live copies split the world into 
 - **Tebex** sells the pass and the supporter tiers, collects sales tax as the merchant of record, and runs
   commands on the server after a purchase: `whitelist add {username}` for the pass (`whitelist remove` when
   it ends), and the wardrobe scoreboard and team commands for supporter tiers (the full list, with the
-  reverse on expiry, is in docs/RETENTION.md). The monthly pass renews until the buyer cancels it from
+  reverse on expiry, is in docs/RETENTION.md). Both passes renew (monthly, or every 2 months) until the buyer cancels from
   Tebex's payment history page; after 3 failed renewals it expires and the expiry commands run. Since
   3.0.0 Tebex's Fabric mod (2.4.6) is in the manifest like any other mod, so a deploy, a restore or a new VPS
   gets it by itself. Its secret key is not in the repo: it sits in `server/mods/tebex`, outside the world, and
@@ -858,7 +858,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | Package | Price | Charged | Commands (docs/RETENTION.md) |
 | --- | --- | --- | --- |
 | Server Pass | $5 | monthly subscription | whitelist, `rw.months 1` on renewal |
-| Server Pass, 2 months | $8 | once; Remove After 60 days | whitelist, `rw.months 2`, taken back on refund or chargeback |
+| Server Pass, 2 months | $8 | subscription, every 2 months (since 2026-11-07) | whitelist, `rw.months 2` on purchase and on renewal, taken back on refund or chargeback |
 | Ember, Banner, Crown | $3, $7, $15 | monthly subscription | `rw.tier`, `tier_*` team |
 
 - **No priority or reserved slots, and no coupons for single people.** Mojang's rules ask for one price

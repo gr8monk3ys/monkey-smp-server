@@ -44,3 +44,9 @@ removes after 60 days and that adds `rw.months 2`. No 3-month pass had been sold
 $3.55 a month against the monthly pass's $4.33, so break-even is about 15 payers on it instead of 12. It is 20% off two
 monthly passes, the same discount turned down above at $12. And it ends before a 12-week season does: one bought on
 launch day ends on 6 January 2027, before the 23 January finale.
+
+## Changed on 2026-11-07
+
+On launch day the owner made the 2-month pass renew: it is now a Tebex subscription at $8 every 2 months, and each
+renewal adds `rw.months 2`. Passes bought before the change stay one-off and end after 60 days. Like the monthly pass,
+its price can no longer change for subscriptions already sold.

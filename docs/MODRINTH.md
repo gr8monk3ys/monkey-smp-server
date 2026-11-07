@@ -183,9 +183,9 @@ to server listings only, not to modpacks, so:
 
 ## What's in the pack, and may it be published
 
-Checked 2026-11-02 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
+Checked 2026-11-02 (and 2026-11-07 for the two files 3.1.2 added) against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
 
-- **All 199 files are on Modrinth** (177 mods, 22 resource packs) and download from
+- **All 201 files are on Modrinth** (179 mods, 22 resource packs) and download from
   `cdn.modrinth.com`. Modrinth's rule for modpacks is that a file hosted on Modrinth may be used in a pack
   whatever its license, so none of them needs extra permission.
 - **The overrides are the pack's own**: configs, `options.txt`, the generated Monkey SMP Wardrobe resource pack

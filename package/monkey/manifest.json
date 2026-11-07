@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "minecraft": "26.2",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -970,6 +970,18 @@
       }
     },
     {
+      "slug": "ingeniumapi",
+      "project_id": "bhnA6sV8",
+      "version": "1.1",
+      "version_id": "bRhQB9Tl",
+      "file": "ingeniumapi-1.1-FABRIC-MC-26.X.jar",
+      "url": "https://cdn.modrinth.com/data/bhnA6sV8/versions/bRhQB9Tl/ingeniumapi-1.1-FABRIC-MC-26.X.jar",
+      "size": 13267,
+      "hashes": {
+        "sha512": "680ce9a30090466b8e475706d99a5bd733fc423abde58d6be668ee8afca0309ba990e497f5dbc1b63f3b30cc3f24a935f91c06fd4e9a2f93c9a5f89aa5b91445"
+      }
+    },
+    {
       "slug": "inventory-essentials",
       "project_id": "Boon8xwi",
       "version": "26.2.0.6+fabric-26.2",
@@ -1623,6 +1635,18 @@
       "size": 9195,
       "hashes": {
         "sha512": "6827bbe54c98d65579fd813ca6b44df7f38cdd9c03468090c57266959329842b0a2d36ae4b31c1a0a7a29a5aeb1483cdcbea90f07d962946be62b82935dc8a2d"
+      }
+    },
+    {
+      "slug": "shippy-ships",
+      "project_id": "oxBNHOmi",
+      "version": "1.0.28.2",
+      "version_id": "3ArVRD99",
+      "file": "shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar",
+      "url": "https://cdn.modrinth.com/data/oxBNHOmi/versions/3ArVRD99/shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar",
+      "size": 2601322,
+      "hashes": {
+        "sha512": "48ceb07def7d6ae25a678ad52e34bc17c8768512022b30dd3c938560b45a50f910d14a00383c9b8ac204432f8e2285af6da9e4028a3d9b8a456a35093b35720b"
       }
     },
     {

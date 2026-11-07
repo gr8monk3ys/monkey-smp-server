@@ -14,7 +14,8 @@ export const features: { fig?: string; title: string; text: ReactNode }[] = [
   {
     title: "Land worth fighting over",
     text: <>Grand Capitals rebuilds villages and illager strongholds, Dungeons and Taverns adds dungeons worth the trip, and
-      Crazy Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them.</>,
+      Crazy Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them, and you
+      can sail there: build a ship, from a sailboat for 3 to a galleon for 55.</>,
   },
   {
     fig: "3D",

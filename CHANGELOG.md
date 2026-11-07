@@ -1,12 +1,20 @@
 # Changelog
 
-## [Unreleased]
+## [3.1.2] - 2026-11-07
 
-For 3.2.0. Nothing changes in game, and players install nothing. One step by hand on the live server: the new
-Caddyfile (docs/LIVE.md, "The website's standings").
+Shippy Ships, which the live server's mod folder gained by hand on 2026-11-06, and IngeniumAPI, the library it needs.
+Its ships, blocks and items are registry entries the server sends to every player, so **players need the 3.1.2 client
+pack to join** (docs/LIVE.md, "3.1.2: Shippy Ships"). Also here: what main gained after 3.1.1, first meant for 3.2.0
+(the standings for the website, the staff page's controls and login page, No Portals out). One step by hand on the
+live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Added
 
+- Shippy Ships 1.0.28.2 (by Caesius_Leo): ships to build and sail, from a sailboat for 3 passengers to a galleon for
+  55 that needs a crew of 6. Ships carry storage, roll and sway with the sea, and take damage in deep-water storms
+  (the bigger ones don't). Its optional cannon add-on, OldCannons, isn't in the pack. Server: 172 mods, up from 170.
+  Client pack: 179 mods, up from 177, and 22 resource packs.
+- IngeniumAPI 1.1, the library Shippy Ships needs, on the server and in the client pack.
 - Public standings for the website: the hourly and Sunday standings runs write `standings.json` next to `status.json`,
   and Caddy serves it with the same headers. It holds faction names, ranks and points only, this week so far and
   last week's final table, from what those runs already read from the saved world: no new timer, no RCON, nothing in

@@ -148,4 +148,7 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
   rewards only ([rule B18](RULES.md)).
 - **New in 3.1.1:** only a few crafted maces can exist at once. When the cap is reached, no more can be crafted until one
   breaks or is destroyed.
+- **New in 3.1.2:** ships (Shippy Ships, by Caesius_Leo). Build one and sail it, from a sailboat for 3 passengers to a
+  galleon for 55 that needs a crew of 6. Ships carry storage, and a dye on a ship changes its sails. The server has
+  had them since 6 November, so the 3.1.1 pack can't join: reinstall the 3.1.2 pack.
 - There is no land capture (that was Towns & Nations on the 1.x Paper server).

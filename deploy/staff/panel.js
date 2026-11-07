@@ -63,7 +63,9 @@
     }
     if (answer.status === 401) throw new Error("Your login has run out. Reload this page to log in again.");
     if (!answer.ok || (data && data.ok === false)) {
-      throw new Error((data && data.error) || `That didn't work (error ${answer.status}).`);
+      const failure = new Error((data && data.error) || `That didn't work (error ${answer.status}).`);
+      failure.status = answer.status;
+      throw failure;
     }
     return data || {};
   }
@@ -265,6 +267,12 @@
       box.scrollTop = 0;
     } catch (error) {
       fail("files", error);
+      // Too big or not text: the editor won't open it, but it can still be downloaded.
+      if (error && (error.status === 413 || error.status === 415)) {
+        const a = el("a", "", "Download it");
+        a.href = `/api/download?${query({ path })}`;
+        $("files-error").append(" ", a);
+      }
     }
   }
 
@@ -360,7 +368,7 @@
         item.appendChild(right);
         return item;
       });
-      $("history").replaceChildren(...(rows.length ? rows : [emptyRow("No changes yet.")]));
+      $("file-history").replaceChildren(...(rows.length ? rows : [emptyRow("No changes yet.")]));
     } catch (error) {
       fail("files", error);
     }

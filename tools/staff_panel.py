@@ -73,6 +73,10 @@ import staff_status
 
 import rcon as server
 
+# Run as `python3 tools/staff_panel.py serve` this module is __main__; staff_auth's late `from staff_panel import ...`
+# must get this same module, not a second copy that registers the routes again with its own Refused class.
+sys.modules.setdefault("staff_panel", sys.modules[__name__])
+
 PORT = 8130
 LOOPBACK = {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
 USER = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -111,7 +115,9 @@ _LOG_HEAD = re.compile(r"^\[\d\d:\d\d:\d\d\] \[[^\]\n]*\](?: \[[^\]\n]*\])?: ")
 # left out of the console. Whole lines from the RCON threads only, so chat can't hide itself, nor can another address.
 _RCON_NOISE = re.compile(r"^\[\d\d:\d\d:\d\d\] \[RCON (?:Listener #\d+|Client /127\.0\.0\.1 #\d+)/INFO\]: "
                          r"Thread RCON Client /127\.0\.0\.1 (?:started|shutting down)\s*$")
-_PLAYER_VERB = re.compile(r"^(whitelist\s+(?:add|remove)|op|deop|ban|pardon|kick)(?:\s+(\S+))?", re.I)
+# The word must end there: banlist, ban-ip and pardon-ip take no player name.
+_PLAYER_VERB = re.compile(r"^(?:minecraft:)?(whitelist\s+(?:add|remove)|op|deop|ban|pardon|kick)(?=\s|$)(?:\s+(\S+))?",
+                          re.I)
 
 
 class Refused(Exception):
@@ -138,8 +144,19 @@ def masked(line: str) -> str:
     return "".join(c if c.isprintable() else " " for c in head + said).rstrip()
 
 
+def lines_of(text: str) -> list[str]:
+    """The lines of `text`, split on \\n only: splitlines() also splits on U+2028 and the like, which a player can
+    put in chat to make a line that looks like the console's own."""
+    if not text:
+        return []
+    rows = text.split("\n")
+    if rows[-1] == "":
+        rows.pop()
+    return [r[:-1] if r.endswith("\r") else r for r in rows]
+
+
 def masked_lines(text: str) -> list[str]:
-    return [masked(line) for line in text.splitlines()]
+    return [masked(line) for line in lines_of(text)]
 
 
 def settings_file(path: Path) -> dict[str, str]:
@@ -361,7 +378,7 @@ class Panel:
         end = chunk.rfind(b"\n") + 1
         if not end and len(chunk) == CONSOLE_READ:
             end = CONSOLE_READ
-        lines = [line for line in chunk[:end].decode("utf-8", "replace").splitlines() if not _RCON_NOISE.search(line)]
+        lines = [line for line in lines_of(chunk[:end].decode("utf-8", "replace")) if not _RCON_NOISE.search(line)]
         return {"offset": start + end, "lines": [masked(line) for line in lines], "reset": reset}
 
     @staticmethod
@@ -371,8 +388,7 @@ class Panel:
             raise Refused(400, "command must be text.")
         if "\n" in command or "\r" in command or "\x00" in command:
             raise Refused(400, "One command at a time: no new lines.")
-        command = command.strip()
-        command = command[1:].lstrip() if command.startswith("/") else command
+        command = re.sub(r"^[\s/]+", "", command).rstrip()     # every leading /, so //stop is stop
         if not command:
             raise Refused(400, "Type a command.")
         if len(command) > COMMAND_MAX:
@@ -472,15 +488,25 @@ class Panel:
                 self._busy = {"action": action, "since": since, "pid": pid}
                 self.record(user, "power", "restart (5-minute warning)")
                 return {"started": action}
+            self._busy = {"action": action, "since": since}    # claimed: a second one is refused from here on
+        # The lock wait (up to LOCK_WAIT) happens outside _power, so GET /api/power doesn't wait on it. Until the
+        # thread owns the lock and _busy, any failure gives both back.
+        held = None
+        try:
             held = self.lock.take(LOCK_WAIT)
             if held is None:
                 raise Refused(409, "A deploy, the daily restart, a backup or a timed job has the deploy lock: "
                                    "try again in a few minutes.")
-            self._busy = {"action": action, "since": since}
-        self.record(user, "power", action)
-        args = {"restart-now": ("restart", "monkey"), "stop": ("stop", "monkey"),
-                "start": ("up", "-d", "--no-build", "monkey")}[action]
-        threading.Thread(target=self._power_run, args=(user, action, args, held), daemon=True).start()
+            self.record(user, "power", action)
+            args = {"restart-now": ("restart", "monkey"), "stop": ("stop", "monkey"),
+                    "start": ("up", "-d", "--no-build", "monkey")}[action]
+            threading.Thread(target=self._power_run, args=(user, action, args, held), daemon=True).start()
+        except BaseException:
+            if held is not None:
+                self.lock.release(held)
+            with self._power:
+                self._busy = None
+            raise
         return {"started": action}
 
     def _power_run(self, user: str, action: str, args: tuple, held) -> None:
@@ -623,7 +649,9 @@ class Panel:
                 "masked": secrets, "writable": self._rules(parts) == "writable"}
 
     def download(self, rel: str) -> tuple[str, bytes | Path, int]:
-        """(file name, bytes or path to stream, size). Text has its secrets masked, as on screen."""
+        """(file name, bytes or path to stream, size). Text has its secrets masked, as on screen. A file that isn't
+        UTF-8 but has no NUL byte is masked too, its other bytes kept as they are; a binary file or one over 2 MB goes
+        as it is only when no line in it holds a secret."""
         path, parts = self.resolve(rel)
         try:
             st = path.stat()
@@ -639,11 +667,39 @@ class Panel:
                 if self._rules(parts) == "read-only":       # an old log is .log.gz: it can't be masked as it is
                     raise Refused(415, "Only plain-text logs and crash reports can be downloaded here: they are "
                                        "masked first.") from None
-                shown = data
+                if b"\x00" not in data:                     # text in another encoding: masked, byte for byte
+                    text = data.decode("utf-8", "surrogateescape")
+                    shown = mask_secrets(text)[0].encode("utf-8", "surrogateescape")
+                elif self._has_secret(path):
+                    raise Refused(415, "That file has a secret in it and isn't plain text: it can't be masked, so "
+                                       "it can't be downloaded here.") from None
+                else:
+                    shown = data
             return parts[-1], shown, len(shown)
         if self._rules(parts) == "read-only":
             raise Refused(413, "A log or crash report over 2 MB can't be downloaded here: it isn't masked.")
+        if self._has_secret(path):
+            raise Refused(413, "That file is over 2 MB and has a secret in it: it can't be masked, so it can't be "
+                               "downloaded here.")
         return parts[-1], path, st.st_size
+
+    @staticmethod
+    def _has_secret(path: Path) -> bool:
+        """Whether any line of the file would be masked, read 1 MB at a time (a longer line is checked in pieces)."""
+        rest = b""
+        with open(path, "rb") as f:
+            while True:
+                chunk = f.read(1024 * 1024)
+                data = rest + chunk
+                cut = data.rfind(b"\n") + 1 if chunk else len(data)
+                if chunk and not cut and len(data) >= 1024 * 1024:
+                    cut = len(data)
+                for line in data[:cut].split(b"\n"):
+                    if _secret_line(line.rstrip(b"\r").decode("utf-8", "surrogateescape")):
+                        return True
+                rest = data[cut:]
+                if not chunk:
+                    return False
 
     # ------------------------------------------------ history
 
@@ -774,32 +830,33 @@ class Panel:
         if not folder.is_dir():
             raise Refused(400, "Upload into a folder.")
         path, parts = self.resolve("/".join((*parts, name)), "write")
-        with self._files:
-            st = None
-            with contextlib.suppress(FileNotFoundError):
-                st = path.stat()
-            if st is not None and not stat.S_ISREG(st.st_mode):
-                raise Refused(400, "A folder has that name.")
-            fd, tmp = tempfile.mkstemp(prefix=".staff-", suffix=".tmp", dir=folder)
-            try:
-                with os.fdopen(fd, "wb") as f:
-                    left = length
-                    while left:
-                        chunk = stream.read(min(left, 256 * 1024))
-                        if not chunk:
-                            raise Refused(400, "The upload stopped part way.")
-                        f.write(chunk)
-                        left -= len(chunk)
-                    f.flush()
-                    os.fsync(f.fileno())
+        # The body goes to a temporary file first, outside the files lock: a slow upload holds up no one else.
+        fd, tmp = tempfile.mkstemp(prefix=".staff-", suffix=".tmp", dir=folder)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                left = length
+                while left:
+                    chunk = stream.read(min(left, 256 * 1024))
+                    if not chunk:
+                        raise Refused(400, "The upload stopped part way.")
+                    f.write(chunk)
+                    left -= len(chunk)
+                f.flush()
+                os.fsync(f.fileno())
+            with self._files:
+                st = None
+                with contextlib.suppress(FileNotFoundError):
+                    st = path.stat()
+                if st is not None and not stat.S_ISREG(st.st_mode):
+                    raise Refused(400, "A folder has that name.")
                 os.chmod(tmp, stat.S_IMODE(st.st_mode) if st else 0o644)
                 if st is not None:
                     self._keep(path, parts, user)
                 os.replace(tmp, path)
-            except BaseException:
-                with contextlib.suppress(OSError):
-                    os.unlink(tmp)
-                raise
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp)
+            raise
         self.record(user, "upload", "/".join(parts))
         return {"path": "/".join(parts), "size": length, "replaced": st is not None}
 
@@ -936,8 +993,9 @@ ROUTES = {
 }
 PATHS = {path for _, path in ROUTES}
 
-# Who may ask what. A role is X-Staff-Role from the login in front of the page; with no such header (the basic_auth
-# logins from before staff roles) the login is an owner, as both of those logins were. A request not listed needs admin.
+# Who may ask what. A role is X-Staff-Role from the login in front of the page, exactly one and a known one: a missing
+# role is refused, never taken as owner (a `Connection: X-Staff-Role` makes Caddy drop the copied one). The basic_auth
+# logins get owner from deploy/Caddyfile.staff. A request not listed needs admin.
 ROLES = ("moderator", "admin", "owner")
 NEEDS = {
     ("GET", "/api/me"): "moderator",
@@ -1017,7 +1075,7 @@ class Handler(BaseHTTPRequestHandler):
         users = self.headers.get_all("X-Staff-User") or []
         if len(users) != 1 or not USER.fullmatch(users[0]):
             raise Refused(403, "No login name came with the request.")
-        roles = self.headers.get_all("X-Staff-Role") or ["owner"]
+        roles = self.headers.get_all("X-Staff-Role") or []
         if len(roles) != 1 or roles[0] not in ROLES:
             raise Refused(403, "The login's role is not one this page knows.")
         if method != "GET":

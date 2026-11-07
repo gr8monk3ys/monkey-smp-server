@@ -323,7 +323,7 @@ function visibleRows() {
   const rows = (state.data && state.data.history) || [];
   const end = (state.data ? Date.parse(state.data.checked) : Date.now()) / 1000;
   const start = end - state.hours * 3600;
-  return { rows: rows.filter((r) => r[0] >= start && r[0] <= end), start, end };
+  return { rows: rows.filter((r) => r[0] >= start && r[0] <= end + 1), start, end };
 }
 
 // The stretches of a series with readings; a missing reading or a long wait breaks the line rather than joining across it.

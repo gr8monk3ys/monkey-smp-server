@@ -21,7 +21,9 @@ staff.monkeysmp.lscaturchio.xyz {
 	}
 
 	# The controls (tools/staff_panel.py, deploy/monkey-panel.service): only this machine reaches it, and only after
-	# the password above. The login's name goes with every request; one the browser sent itself is replaced.
+	# the password above. The login's name goes with every request, and the role owner (every password-box login is
+	# one; the panel refuses a request with no role); a name or role the browser sent itself is replaced. header_up
+	# runs after Caddy drops the hop-by-hop headers, so a `Connection: X-Staff-Role` can't take them off.
 	# A world upload (tools/staff_host.py) is the one bigger body; the panel checks the size and the disk again.
 	handle /api/world-upload {
 		request_body {
@@ -29,17 +31,17 @@ staff.monkeysmp.lscaturchio.xyz {
 		}
 		reverse_proxy 127.0.0.1:8130 {
 			header_up X-Staff-User {http.auth.user.id}
-			header_up -X-Staff-Role
+			header_up X-Staff-Role owner
 		}
 	}
 
 	handle /api/* {
 		request_body {
-			max_size 64MB
+			max_size 64MiB
 		}
 		reverse_proxy 127.0.0.1:8130 {
 			header_up X-Staff-User {http.auth.user.id}
-			header_up -X-Staff-Role
+			header_up X-Staff-Role owner
 		}
 	}
 

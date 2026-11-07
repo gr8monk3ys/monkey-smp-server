@@ -55,7 +55,7 @@ LAUNCH_FILE = "monkey-launch.json"
 # deny-list always misses one (remote JMX, agents, files), and those let a login run code as the server.
 FLAG = re.compile(r"-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,120})?"
                   r"|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:,+-]{0,120})")
-XX_ALLOWED = re.compile(r"G1[A-Za-z0-9]+|Use(G1|Z|Shenandoah|Parallel|Serial)GC|ZGenerational|ShenandoahGCHeuristics"
+XX_ALLOWED = re.compile(r"G1[A-Za-z0-9]+|UseG1GC|ZGenerational|ShenandoahGCHeuristics"
                         r"|MaxGCPauseMillis|GCTimeRatio|ParallelGCThreads|ConcGCThreads|InitiatingHeapOccupancyPercent"
                         r"|SurvivorRatio|MaxTenuringThreshold|AlwaysPreTouch|DisableExplicitGC|ParallelRefProcEnabled"
                         r"|PerfDisableSharedMem|UseStringDeduplication|UseNUMA|UseLargePages|UseTransparentHugePages"
@@ -252,6 +252,9 @@ class More:
                                       "-XX:Name=value or -Dname=value, with letters, digits and . _ : , + - only (no "
                                       "paths). Memory goes in its own box, not -Xmx.")
             name = re.sub(r"=.*$", "", re.sub(r"^-(XX:[+-]?|D)", "", f))
+            if re.fullmatch(r"Use(Z|Shenandoah|Parallel|Serial|Epsilon)GC", name):
+                raise sp.Refused(400, f"{name} can't be set here: the server always starts with the G1 collector "
+                                      "(-XX:+UseG1GC), and a second collector makes Java stop at start.")
             if not (PROP_ALLOWED if f.startswith("-D") else XX_ALLOWED).fullmatch(name):
                 raise sp.Refused(400, f"{name} isn't one this page takes: only garbage-collector and JIT tuning "
                                       "(G1..., MaxGCPauseMillis, ...) and -Dfile.encoding, -Duser.timezone and the "

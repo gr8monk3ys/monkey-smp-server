@@ -885,6 +885,14 @@ Describe 'Read-LaunchSettings' {
         (Read-LaunchSettings $dir 6>$null).MemoryGB | Should -Be 0
     }
 
+    It 'leaves out the collector <Flag>, so no second collector reaches the JVM' -ForEach @(
+        @{ Flag = '-XX:+UseZGC' }, @{ Flag = '-XX:+UseSerialGC' }, @{ Flag = '-XX:+UseParallelGC' }, @{ Flag = '-XX:+UseShenandoahGC' }) {
+        $dir = Join-Path $TestDrive "gc$($Flag.GetHashCode())"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), "{""flags"": [""$Flag"", ""-XX:+UseG1GC""]}")
+        @((Read-LaunchSettings $dir 6>$null).Flags) | Should -Be @('-XX:+UseG1GC')
+    }
+
     It 'survives a file that is not JSON' {
         $dir = Join-Path $TestDrive 'broken'
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -1146,6 +1154,20 @@ Describe 'Backup-Server' {
         $newest = $left[-1].FullName
         Join-Native $newest 'world/level.dat' | Should -Exist
         Join-Native $newest 'plugins/Foo.jar' | Should -Not -Exist
+    }
+
+    It 'does not count the helper''s before-* folders, so dated backups survive' {
+        $F = New-Fixture
+        Write-Text (Join-Path $F.Server 'server.properties') "server-port=$($F.Port)`n"
+        Write-Text (Join-Native $F.Server 'world/level.dat') 'level'
+        $backups = Join-Path $F.Root 'backups'
+        foreach ($i in 0..4) { New-Item -ItemType Directory -Force -Path (Join-Path $backups ('2020-01-01_00-00-{0:D2}' -f $i)) | Out-Null }
+        foreach ($i in 0..19) { New-Item -ItemType Directory -Force -Path (Join-Path $backups ('before-restore-2030{0:D4}T000000Z' -f $i)) | Out-Null }
+
+        Backup-Server -Context (New-Ctx $F (New-Manifest $F)) 6>$null
+
+        @(Get-ChildItem -LiteralPath $backups -Directory | Where-Object { $_.Name -match '^\d{4}-' }).Count | Should -Be 6
+        @(Get-ChildItem -LiteralPath $backups -Directory | Where-Object { $_.Name -like 'before-*' }).Count | Should -Be 20
     }
 }
 

@@ -9,6 +9,7 @@
   const RANK = { moderator: 0, admin: 1, owner: 2 };
   const HELPER_POLL_MS = 3_000;
   const HELPER_POLL_MAX = 100;     // about 5 minutes
+  const HELPER_POLL_TRIES = 3;     // a failed poll is tried this many times before it counts as an error
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const $ = (id) => document.getElementById(id);
   let role = "moderator";
@@ -265,7 +266,19 @@
       const node = $(`set-${field.key}`);
       if (!node || !field.editable) continue;
       const value = current(field, node);
-      if (value !== field.value) values[field.key] = field.type === "int" ? Number(value) : value;
+      if (value === field.value) continue;
+      if (field.type === "int") {
+        if (value === "") continue; // a cleared box is not a 0
+        const n = Number(value);
+        if (Number.isNaN(n)) {
+          say("settings-note", null);
+          say("settings-error", `${field.key}: type a number.`);
+          return;
+        }
+        values[field.key] = n;
+      } else {
+        values[field.key] = value;
+      }
     }
     say("settings-note", null);
     say("settings-error", null);
@@ -314,7 +327,15 @@
           holder.appendChild(node);
         } else {
           node = input("number", { min: rule.min, max: rule.max, step: 1, value: rule.value ?? "" });
-          holder.append(node, button("Set", "", () => setRule(rule, Number(node.value)), "admin"));
+          holder.append(node, button("Set", "", () => {
+            const text = node.value.trim();
+            const n = Number(text);
+            if (text === "" || Number.isNaN(n)) {
+              say("settings-error", "Type a number.");
+              return;
+            }
+            setRule(rule, n);
+          }, "admin"));
         }
         node.id = `rule-${rule.name}`;
         node.disabled = rule.missing || !can("admin");
@@ -534,10 +555,11 @@
       $("packs-count").textContent = `(${packs.length})`;
       $("packs-reload").disabled = !data.running || !can("admin");
       $("packs-reload").title = data.running ? "" : "The server isn't running.";
-      say("packs-error", data.running ? null : "The server isn't running, so on and off can't be read or changed. Uploads and removals still work.");
+      // Its own line, so a reload after an action never wipes that action's error.
+      say("packs-running", data.running ? null : "The server isn't running, so on and off can't be read or changed. Uploads and removals still work.");
     } catch (error) {
       $("packs-list").replaceChildren();
-      say("packs-error", error);
+      if ($("packs-error").hidden) say("packs-error", error);
     }
   }
 
@@ -719,13 +741,23 @@
   async function waitFor(request) {
     for (let i = 0; i < HELPER_POLL_MAX; i += 1) {
       await new Promise((resolve) => { setTimeout(resolve, HELPER_POLL_MS); });
-      const data = await api("GET", "/api/helper");
+      let data = null;
+      for (let attempt = 0; attempt < HELPER_POLL_TRIES && !data; attempt += 1) {
+        try {
+          data = await api("GET", "/api/helper");
+        } catch (error) {
+          if (attempt === HELPER_POLL_TRIES - 1) throw error;
+          await new Promise((resolve) => { setTimeout(resolve, HELPER_POLL_MS); });
+        }
+      }
       renderJobs(data);
       const job = (data.jobs || []).find((j) => j.id === request);
       if (job && job.state !== "running") return job;
     }
     return null;
   }
+
+  const HELPER_BAD = ["failed", "refused", "stopped"];
 
   function renderJobs(data) {
     const items = (data.jobs || []).slice(0, 5).map((j) => entry(`${j.action}: ${j.state}`, `${when(j.time)}. ${j.message}`));
@@ -753,7 +785,8 @@
       const done = await api("POST", url, body || {});
       say(`${box}-note`, `${words} The helper picks it up in a few seconds.`);
       const job = await waitFor(done.request);
-      if (job) say(`${box}-${job.state === "failed" ? "error" : "note"}`, job.message);
+      if (job) say(`${box}-${HELPER_BAD.includes(job.state) ? "error" : "note"}`, job.message);
+      else say(`${box}-note`, "Still running: see the jobs list.");
       return job;
     } catch (error) {
       say(`${box}-error`, error);
@@ -811,7 +844,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      say("world-note", "The download started. Saving is off while it runs and comes back on when it ends.");
+      say("world-note", "The download was asked for: check your browser's downloads bar. If it shows as failed there, the server refused it (it must be running, and no other job can be busy). Saving is off while it runs and comes back on when it ends.");
     } catch (error) {
       say("world-error", error);
     }

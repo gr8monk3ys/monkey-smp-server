@@ -261,11 +261,12 @@
 
   // ------------------------------------------------ the Users tab (owners)
 
-  function confirmStep(where, message, yes, onYes) {
+  function confirmStep(where, message, yes, onYes, onNo) {
     const box = el("div", "confirm");
     box.append(el("p", "", message));
     const row = el("div", "actions");
-    row.append(button(yes, "primary", () => { box.remove(); onYes(); }), button("Cancel", "", () => box.remove()));
+    row.append(button(yes, "primary", () => { box.remove(); onYes(); }),
+               button("Cancel", "", () => { box.remove(); if (onNo) onNo(); }));
     box.append(row);
     where.append(box);
   }
@@ -318,7 +319,12 @@
       option.selected = r === u.role;
       role.append(option);
     }
-    role.addEventListener("change", () => act("/api/users/role", { name: u.name, role: role.value }));
+    role.addEventListener("change", () => {
+      const next = role.value;
+      confirmStep(li, `Change the role of ${u.name} from ${u.role} to ${next}? Their access changes at once.`, "Change role",
+        () => act("/api/users/role", { name: u.name, role: next }),
+        () => { role.value = u.role; });
+    });
     row.append(role,
       button(u.disabled ? "Enable" : "Disable", "", () => act("/api/users/disable", { name: u.name, disabled: !u.disabled })),
       button("Log out everywhere", "", () => act("/api/users/sessions", { name: u.name })),

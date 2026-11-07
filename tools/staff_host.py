@@ -75,6 +75,9 @@ TAG = re.compile(r"v(\d{1,4})\.(\d{1,4})\.(\d{1,4})")
 SHA = re.compile(r"[0-9a-f]{40}")
 TAGS_SHOWN = 60
 WORLD_JOBS = ("restore", "deploy", "reset", "world-upload")
+# monkey-staff-helper.service has TimeoutStartSec=4h: a "running" result older than that (plus a margin) is from a
+# helper that died, and must not block world jobs forever.
+STALE_JOB = dt.timedelta(hours=5)
 
 WORLD_UPLOAD_MAX = 8_000_000_000     # 8GB in deploy/Caddyfile.staff
 WORLD_TOTAL_MAX = 64 * GB       # unpacked
@@ -298,7 +301,7 @@ class Host:
         self.p.record(user, "mod-install", f"{name} ({source})" + (f", old one in {kept}" if kept else ""))
         return {"file": name, "id": info["id"], "name": info["name"], "version": info["version"],
                 "replaced": [p.name for p in replaced], "kept_in": kept,
-                "pinned": name in self.x.pinned()}
+                "pinned": bool({name, *(p.name.removesuffix(".disabled") for p in replaced)} & set(self.x.pinned()))}
 
     def mod_upload(self, user: str, query: dict, body) -> dict:
         name = query.get("name") or ""
@@ -437,9 +440,18 @@ class Host:
 
     # ------------------------------------------------ the root helper's world and version jobs
 
+    @staticmethod
+    def _stale(stamp: str) -> bool:
+        """True when a result's time (UTC, 2026-11-06T12:00:00Z) is older than the helper's longest run."""
+        try:
+            when = dt.datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.UTC)
+        except ValueError:
+            return False
+        return dt.datetime.now(dt.UTC) - when > STALE_JOB
+
     def _busy(self) -> None:
         for job in self.x.jobs():
-            if job["action"] in WORLD_JOBS and job["state"] == "running":
+            if job["action"] in WORLD_JOBS and job["state"] == "running" and not self._stale(job.get("time", "")):
                 raise sp.Refused(409, f"The helper is busy with a {job['action']} already: wait for it to finish.")
         for rid in self.x._pending():
             with contextlib.suppress(OSError):

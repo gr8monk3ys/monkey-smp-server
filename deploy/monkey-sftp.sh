@@ -11,7 +11,7 @@
 # (monkey-staff.sh hands both to this script.) What --add-sftp-user does:
 #   - the group monkey-sftp, and NAME in it: no home, nologin as the shell, no password (a key only)
 #   - /etc/ssh/monkey-sftp-keys/NAME: the public key (root's, 644)
-#   - /srv/monkey/sftp/NAME (root's, 755, as sshd wants a chroot) with server/ in it: a bind mount of LIVE_DIR/server,
+#   - /srv/monkey-sftp/NAME (root's, 755, as sshd wants a chroot) with server/ in it: a bind mount of LIVE_DIR/server,
 #     also a line in /etc/fstab so it is back after a reboot
 #   - ACLs on LIVE_DIR/server: NAME may read and write there, and what NAME makes stays the server user's to change
 #   - /etc/ssh/sshd_config.d/monkey-sftp.conf: Match Group monkey-sftp (chroot, internal-sftp, key only, no forwarding),
@@ -53,7 +53,9 @@ LIVE_DIR=${LIVE_DIR:-$(setting LIVE_DIR /srv/monkey/MonkeySMP-Server)}
 STAFF_DIR=${STAFF_DIR:-$(setting STAFF_DIR /srv/monkey/staff)}
 SFTP_HOST=${SFTP_HOST:-$(setting SFTP_HOST '')}
 GROUP=monkey-sftp
-CHROOTS=/srv/monkey/sftp
+# Root-owned and outside /srv/monkey (the monkey user owns that): sshd needs every component of a chroot path to be
+# root's and not group/other-writable. An older version used /srv/monkey/sftp; it is left alone if it is there.
+CHROOTS=/srv/monkey-sftp
 KEYS=/etc/ssh/monkey-sftp-keys
 DROPIN=/etc/ssh/sshd_config.d/monkey-sftp.conf
 SERVER=$LIVE_DIR/server
@@ -201,6 +203,20 @@ if grep -qxF "$FSTAB_LINE" /etc/fstab; then
     cat "$f_tmp" >/etc/fstab
     rm -f "$f_tmp"
 fi
+
+# A login made by an older version sits under /srv/monkey/sftp: unmount and drop that one too.
+OLD_MOUNT=/srv/monkey/sftp/$NAME/server
+OLD_LINE="$SERVER $OLD_MOUNT none bind 0 0"
+if mountpoint -q "$OLD_MOUNT" 2>/dev/null; then umount "$OLD_MOUNT"; fi
+if grep -qxF "$OLD_LINE" /etc/fstab; then
+    cp -p /etc/fstab "/etc/fstab.before-monkey-sftp-$(date -u +%Y%m%dT%H%M%SZ)"
+    f_tmp=$(mktemp)
+    grep -vxF "$OLD_LINE" /etc/fstab >"$f_tmp" || :
+    cat "$f_tmp" >/etc/fstab
+    rm -f "$f_tmp"
+fi
+rmdir "$OLD_MOUNT" "/srv/monkey/sftp/$NAME" 2>/dev/null || :
+
 setfacl -R -x "u:$NAME,d:u:$NAME" "$SERVER" 2>/dev/null || :
 userdel "$NAME"
 rm -f "$KEYS/$NAME"

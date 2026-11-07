@@ -135,6 +135,26 @@ def test_a_settings_save_changes_only_those_keys_and_keeps_the_secrets(apex):
     assert code == 409
 
 
+def test_values_sent_back_unchanged_keep_their_lines_byte_for_byte(apex):
+    text = ("#Minecraft server properties\n# odd\x0c comment  here\n"
+            "motd=line one\\nline two\r\n"
+            "pvp=TRUE\n"
+            "max-players=30\n"
+            "difficulty=normal")           # no newline at the end
+    (apex.root / "server.properties").write_bytes(text.encode("utf-8"))
+    _, data = apex.call("GET", "/api/settings")
+    fields = {f["key"]: f["value"] for f in data["fields"]}
+    assert fields["pvp"] == "TRUE" and "\n" in fields["motd"]
+    sent = {k: fields[k] for k in ("motd", "pvp", "difficulty")}
+    code, done = apex.call("PUT", "/api/settings", {"values": {**sent, "max-players": 40}, "mtime": data["mtime"]})
+    assert code == 200 and done["changed"] == ["max-players"]
+    assert (apex.root / "server.properties").read_bytes() == text.replace("max-players=30", "max-players=40").encode()
+    # Nothing changed at all: the file is not written again.
+    _, data = apex.call("GET", "/api/settings")
+    code, done = apex.call("PUT", "/api/settings", {"values": sent, "mtime": data["mtime"]})
+    assert code == 200 and done["changed"] == []
+
+
 @pytest.mark.parametrize("values,code", [
     ({"rcon.password": "x"}, 403), ({"rcon.port": 1}, 403), ({"enable-rcon": False}, 403),
     ({"level-seed": "1"}, 403), ({"level-name": "other"}, 403), ({"server-port": 1}, 403),
@@ -516,6 +536,42 @@ def test_a_bad_when_is_refused(apex, when):
     assert code == 400
 
 
+@pytest.mark.parametrize("anchor", [float("nan"), float("inf"), -float("inf"), 1e999, 5e9, -5e9, True, "x"])
+def test_an_interval_anchor_must_be_a_sane_number(anchor):
+    got = staff_apex.checked_when({"type": "interval", "minutes": 30, "anchor": anchor}, 1_700_000_000.7)
+    assert got["anchor"] == 1_700_000_000
+    assert staff_apex.checked_when({"type": "interval", "minutes": 30, "anchor": 1_600_000_000.5}, 1)["anchor"] \
+        == 1_600_000_000.5
+
+
+def test_a_row_with_an_unreadable_anchor_does_not_break_the_list(apex):
+    bad = {"id": "i1", "name": "i", "kind": "backup", "enabled": True, "last_slot": 0,
+           "when": {"type": "interval", "minutes": 30, "anchor": float("inf")}}
+    apex.staff.mkdir(parents=True, exist_ok=True)
+    (apex.staff / "schedules.json").write_text(json.dumps({"schedules": [bad]}))
+    code, data = apex.call("GET", "/api/schedules")
+    assert code == 200 and data["schedules"][0]["describe"] == "not readable"
+
+
+def test_a_failed_save_in_a_tick_does_not_stop_the_schedule_for_good(apex):
+    row = {"id": "g1", "name": "g", "kind": "command", "command": "list", "enabled": True,
+           "when": {"type": "interval", "minutes": 10, "anchor": 0}, "last_slot": 0}
+    apex.staff.mkdir(parents=True, exist_ok=True)
+    (apex.staff / "schedules.json").write_text(json.dumps({"schedules": [row]}))
+    now = 10 * 60 * 1000 + 5
+    apex.x.clock = lambda: now
+    real = apex.x._save
+
+    def broken(rows):
+        raise OSError("disk full")
+    apex.x._save = broken
+    with pytest.raises(OSError):
+        apex.x.tick()
+    assert "g1" not in apex.x._running
+    apex.x._save = real
+    assert apex.x.tick() == ["g1"]
+
+
 def test_a_scheduled_command_follows_the_consoles_rules(apex):
     for command in ("stop", "seed", "kick", "say hi\nstop"):
         code, _ = apex.call("POST", "/api/schedules", {"name": "x", "kind": "command", "command": command,
@@ -579,15 +635,46 @@ def test_bad_rows_and_a_corrupt_file_never_stop_the_scheduler(apex):
     assert (apex.staff / "schedules.json").read_text() == "{broken"
 
 
-def test_a_scheduled_restart_warns_then_uses_the_restart_path(apex):
+def _restart_row(apex, enabled=True):
+    row = {"id": "r", "name": "r", "kind": "restart", "enabled": enabled,
+           "when": {"type": "daily", "time": "04:00"}, "last_slot": 0}
+    apex.staff.mkdir(parents=True, exist_ok=True)
+    (apex.staff / "schedules.json").write_text(json.dumps({"schedules": [row]}))
     apex.docker.answers.update({f"say Scheduled restart {w}.": "" for _, w in staff_apex.RESTART_WARNINGS})
+    return row
+
+
+def test_a_scheduled_restart_warns_then_uses_the_restart_path(apex):
+    row = _restart_row(apex)
     slept = []
     apex.x.sleep = slept.append
-    result = apex.x._do({"id": "r", "name": "r", "kind": "restart"})
+    result = apex.x._do(row)
     said = [c[-1] for c in apex.docker.calls if "exec" in c]
     assert said == [f"say Scheduled restart {w}." for _, w in staff_apex.RESTART_WARNINGS]
     assert sum(slept) == 300 and result.startswith("restarted")
     assert "schedule power restart-now" in actions(apex)
+
+
+def test_a_restart_is_skipped_if_the_schedule_goes_during_the_warnings(apex):
+    for how, word in (("delete", "deleted"), ("off", "turned off")):
+        row = _restart_row(apex)
+
+        def change(seconds, how=how, row=row):
+            rows = [] if how == "delete" else [{**row, "enabled": False}]
+            (apex.staff / "schedules.json").write_text(json.dumps({"schedules": rows}))
+        apex.x.sleep = change
+        result = apex.x._do(row)
+        assert result.startswith("skipped") and word in result
+    assert "restart-now" not in actions(apex)
+
+
+def test_a_restart_is_skipped_if_the_server_was_stopped_during_the_warnings(apex):
+    row = _restart_row(apex)
+    states = iter([True, False])
+    apex.x.running = lambda: next(states)
+    result = apex.x._do(row)
+    assert result.startswith("skipped") and "stopped" in result
+    assert "restart-now" not in actions(apex)
 
 
 def test_schedules_can_be_turned_off_and_deleted(apex):
@@ -729,6 +816,18 @@ def test_an_address_ban_sends_one_command_and_logs_no_address(apex):
     assert [c[-1] for c in apex.docker.calls if "exec" in c] == ["ban-ip 8.8.8.8 alt accounts", "ban-ip Alpha",
                                                                  "pardon-ip 8.8.8.8"]
     assert "8.8.8.8" not in actions(apex) and "diego ban-ip an address" in actions(apex)
+
+
+def test_an_address_in_the_ban_list_can_be_pardoned_even_if_private(apex):
+    # `ban-ip Alpha` lets the server pick the address, which can be a proxy's or Docker's.
+    (apex.root / "banned-ips.json").write_text(json.dumps([{"ip": "172.17.0.1", "reason": "x"}]))
+    apex.docker.answers["pardon-ip 172.17.0.1"] = "Unbanned IP 172.17.0.1"
+    assert apex.call("POST", "/api/ip-pardon", {"ip": "172.17.0.1"})[0] == 200
+    # Not in the list: still only a public address.
+    assert apex.call("POST", "/api/ip-pardon", {"ip": "10.0.0.1"})[0] == 400
+    assert apex.call("POST", "/api/ip-pardon", {"ip": "nonsense"})[0] == 400
+    assert apex.call("POST", "/api/ip-ban", {"target": "172.17.0.1"})[0] == 400
+    assert [c[-1] for c in apex.docker.calls if "exec" in c] == ["pardon-ip 172.17.0.1"]
 
 
 def test_the_address_bans_are_listed(apex):

@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -130,6 +131,29 @@ def test_five_wrong_passwords_lock_a_name_for_a_while_known_or_not(auth):
     auth.clock.now += staff_auth.LOCK_FOR + 1
     assert auth.auth.login("diego", GOOD, "198.51.100.9")[0]["user"] == "diego"
     assert auth.auth.store.read()["users"]["diego"]["failed"] == 0
+
+
+def test_a_strangers_wrong_guesses_dont_lock_the_owner_out_from_another_address(auth):
+    auth.user("lorenzo", "owner")
+    for _ in range(staff_auth.LOCK_AFTER):
+        with pytest.raises(staff_auth.AuthError):
+            auth.auth.login("lorenzo", "wrong wrong wrong", "198.51.100.66")
+    with pytest.raises(staff_auth.AuthError) as e:                  # the guesser's address is locked out
+        auth.auth.login("lorenzo", GOOD, "198.51.100.66")
+    assert (e.value.code, e.value.message) == (429, staff_auth.LOCKED)
+    assert auth.auth.login("lorenzo", GOOD, "203.0.113.1")[0]["user"] == "lorenzo"
+    assert auth.auth.store.read()["users"]["lorenzo"]["failed"] == 0
+
+
+def test_old_lock_fields_in_the_store_still_read(auth):
+    auth.user("diego")
+    with auth.auth.store.change() as data:
+        data["users"]["diego"].update(failed=3, locked_until=auth.clock.now - 1)
+        data["users"]["ghost"] = {"role": "admin", "hash": None}    # an old entry without the fields at all
+    assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.login("ghost", GOOD, "203.0.113.1")
+    assert e.value.code == 401
 
 
 def test_one_address_gets_a_limited_number_of_wrong_guesses(auth):
@@ -303,6 +327,110 @@ def test_changing_the_password_ends_the_other_sessions_only(auth):
     assert auth.auth.change_password(me, GOOD, OTHER) == {"ended": 1}
     assert auth.auth.session(here) and auth.auth.session(there) is None
     assert auth.mail.sent[-1][0] == "d@example.com" and "password was changed" in auth.mail.sent[-1][1]
+
+
+def test_a_new_password_ends_every_open_link_of_that_login(auth):
+    auth.user("lorenzo", "owner")
+    setup = token_in(auth.auth.add_user("lorenzo", "diego", "admin", send=False)["link"], "reset")
+    handed = token_in(auth.auth.handover_link("lorenzo", "diego")["link"], "reset")
+    auth.auth.reset(handed, GOOD)
+    with pytest.raises(staff_auth.AuthError) as e:                  # the setup link stopped working
+        auth.auth.reset(setup, OTHER)
+    assert e.value.message == staff_auth.BAD_LINK
+    late = token_in(auth.auth.handover_link("lorenzo", "diego")["link"], "reset")
+    me = auth.auth.session(auth.auth.login("diego", GOOD, "203.0.113.1")[1])
+    auth.auth.change_password(me, GOOD, OTHER)
+    with pytest.raises(staff_auth.AuthError) as e:                  # and a reset link, after a change on the page
+        auth.auth.reset(late, GOOD)
+    assert e.value.message == staff_auth.BAD_LINK
+
+
+def test_wrong_current_passwords_count_and_a_lock_ends_the_sessions(auth):
+    auth.user("diego")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    me = auth.auth.session(token)
+    for _ in range(staff_auth.LOCK_AFTER - 1):
+        with pytest.raises(staff_auth.AuthError) as e:
+            auth.auth.change_password(me, "wrong wrong wrong", OTHER)
+        assert e.value.code == 403
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.change_email(me, "wrong wrong wrong", "d@example.com")
+    assert (e.value.code, e.value.message) == (429, staff_auth.LOCKED)
+    assert auth.auth.session(token) is None
+    with pytest.raises(staff_auth.AuthError) as e:                  # even the right one waits out the lock
+        auth.auth.change_password(me, GOOD, OTHER)
+    assert e.value.code == 429
+
+
+def test_the_current_password_is_checked_outside_the_store_lock(auth, monkeypatch):
+    auth.user("diego")
+    me = auth.auth.session(auth.auth.login("diego", GOOD, "203.0.113.1")[1])
+    real, held = staff_auth.check_password, []
+
+    def check(password, stored):
+        got = []
+
+        def try_lock():                                             # another thread, as another request would be
+            got.append(auth.auth.store._lock.acquire(timeout=2))
+            if got[0]:
+                auth.auth.store._lock.release()
+
+        t = threading.Thread(target=try_lock)
+        t.start()
+        t.join()
+        held.append(not got[0])
+        return real(password, stored)
+
+    monkeypatch.setattr(staff_auth, "check_password", check)
+    auth.auth.change_password(me, GOOD, OTHER)
+    assert held == [False]
+
+
+def test_a_password_changed_during_the_check_is_refused(auth, monkeypatch):
+    auth.user("diego")
+    me = auth.auth.session(auth.auth.login("diego", GOOD, "203.0.113.1")[1])
+    real = staff_auth.check_password
+
+    def check(password, stored):
+        with auth.auth.store.change() as data:                      # someone else changes it meanwhile
+            data["users"]["diego"]["hash"] = staff_auth.hash_password("a third long password")
+        return real(password, stored)
+
+    monkeypatch.setattr(staff_auth, "check_password", check)
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.change_password(me, GOOD, OTHER)
+    assert e.value.code == 403
+
+
+def test_at_most_two_scrypt_runs_at_once(monkeypatch):
+    real, lock, now, most = staff_auth.hashlib.scrypt, threading.Lock(), [0], [0]
+
+    def scrypt(*a, **kw):
+        with lock:
+            now[0] += 1
+            most[0] = max(most[0], now[0])
+        time.sleep(0.05)
+        with lock:
+            now[0] -= 1
+        return real(*a, **kw)
+
+    monkeypatch.setattr(staff_auth.hashlib, "scrypt", scrypt)
+    stored = staff_auth.hash_password(GOOD)
+    threads = [threading.Thread(target=staff_auth.check_password, args=(GOOD, stored)) for _ in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert most[0] == 2
+
+
+def test_a_malformed_cookie_beside_the_session_one_doesnt_log_out(auth):
+    token = "a" * 43
+    for header in (f'junk="unclosed; monkey_staff={token}; [odd]=1', f"x; monkey_staff={token}",
+                   f"monkey_staff={token}; monkey_staff={'b' * 43}", f' monkey_staff = "{token}" '):
+        assert auth.auth.session_token(header) == token
+    for header in ("other=1", "monkey_staff=short", "monkey_staffx=" + token, "", None):
+        assert auth.auth.session_token(header) is None
 
 
 def test_an_owner_added_login_with_mail_gets_a_link_that_also_confirms_the_email(auth):
@@ -920,11 +1048,11 @@ def test_caddy_strips_the_login_headers_before_the_session_check_and_in_order():
     assert "/auth/*" in locked and "/login" in locked and "/api/*" not in locked and "/staff.json" not in locked
     assert all(p.startswith(("/login", "/reset", "/verify", "/auth", "/fonts/", "/img/", "/staff.css")) for p in locked)
     assert "/srv/monkey/repo/site/public" in caddy[caddy.index("handle /img/*"):]     # the website's public pictures
-    assert "max_size 64MB" in caddy and "header_up X-Staff-User" not in caddy
+    assert "max_size 64MiB" in caddy and "header_up X-Staff-User" not in caddy
     basic = (DEPLOY / "Caddyfile.staff").read_text()
     for policy in ("default-src 'none'", "form-action 'none'", "frame-ancestors 'none'", "X-Robots-Tag", "no-store"):
         assert policy in caddy and policy in basic
-    assert "header_up -X-Staff-Role" in basic           # the password box: a browser can't pick its own role
+    assert "header_up X-Staff-Role owner" in basic       # the password box: a browser can't pick its own role
 
 
 @pytest.mark.parametrize("name", ["login.html", "reset.html", "verify.html", "index.html"])

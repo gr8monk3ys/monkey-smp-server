@@ -1034,7 +1034,7 @@ $script:LaunchFlag = '^-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,
 # Only garbage-collector and JIT tuning and a few harmless properties (the same lists as tools/staff_more.py): a
 # deny-list always misses one (remote JMX, agents, files). No value may hold a path (no /). Java's option names are
 # case-sensitive, so these checks are too (-cmatch).
-$script:LaunchXXAllowed = '^(G1[A-Za-z0-9]+|Use(G1|Z|Shenandoah|Parallel|Serial)GC|ZGenerational|ShenandoahGCHeuristics|MaxGCPauseMillis|GCTimeRatio|ParallelGCThreads|ConcGCThreads|InitiatingHeapOccupancyPercent|SurvivorRatio|MaxTenuringThreshold|AlwaysPreTouch|DisableExplicitGC|ParallelRefProcEnabled|PerfDisableSharedMem|UseStringDeduplication|UseNUMA|UseLargePages|UseTransparentHugePages|MaxMetaspaceSize|MetaspaceSize|ReservedCodeCacheSize|UseCompressedOops|SoftMaxHeapSize|MaxInlineLevel|UnlockExperimentalVMOptions|TieredCompilation)$'
+$script:LaunchXXAllowed = '^(G1[A-Za-z0-9]+|UseG1GC|ZGenerational|ShenandoahGCHeuristics|MaxGCPauseMillis|GCTimeRatio|ParallelGCThreads|ConcGCThreads|InitiatingHeapOccupancyPercent|SurvivorRatio|MaxTenuringThreshold|AlwaysPreTouch|DisableExplicitGC|ParallelRefProcEnabled|PerfDisableSharedMem|UseStringDeduplication|UseNUMA|UseLargePages|UseTransparentHugePages|MaxMetaspaceSize|MetaspaceSize|ReservedCodeCacheSize|UseCompressedOops|SoftMaxHeapSize|MaxInlineLevel|UnlockExperimentalVMOptions|TieredCompilation)$'
 $script:LaunchPropAllowed = '^(file\.encoding|user\.timezone|user\.language|user\.country|using\.aikars\.flags|aikars\.new\.flags)$'
 $script:LaunchFlagsMax = 20
 
@@ -1162,7 +1162,10 @@ function Backup-Server {
     } finally {
         if ($running) { [void](Invoke-Rcon $Context @('save-on')) }
     }
-    Get-ChildItem -LiteralPath $Context.BackupDir -Directory | Sort-Object Name -Descending |
+    # Only the dated folders count: the staff helper keeps before-* folders in the same place, and they must not
+    # push real backups out.
+    Get-ChildItem -LiteralPath $Context.BackupDir -Directory |
+        Where-Object { $_.Name -match '^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$' } | Sort-Object Name -Descending |
         Select-Object -Skip $script:KeepBackups | Remove-Item -Recurse -Force
     $size = (Get-ChildItem -LiteralPath $dest -Recurse -File | Measure-Object Length -Sum).Sum / 1MB
     Write-Ok ("Backup done ({0:N0} MB)." -f $size)

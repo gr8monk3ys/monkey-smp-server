@@ -179,9 +179,9 @@ run `migrate_names.py` on it first.
 
 3.1.2 pins the two jars that went into the live `mods` folder by hand on 2026-11-06: Shippy Ships 1.0.28.2 and
 IngeniumAPI 1.1. The deploy finds them there with the pinned hashes and keeps them. Shippy Ships adds no structures
-or features to world generation (only a biome tag its own code reads), so it stays on the world it finds. Its ships, blocks and items are registry entries, so a player
-without the mod can't join. That has been true on the live server since the jars went in, so the website must serve
-the 3.1.2 client pack before launch.
+or features to world generation (only a biome tag its own code reads), so it stays on the world it finds. Its ships,
+blocks and items are registry entries, so a player without the mod can't join. That has been true on the live server
+since the jars went in, so the website must serve the 3.1.2 client pack before launch.
 
 The deploy's forced checkout replaces the staff page's files that were taken from `main` by hand (see "The staff
 page"). The tag's copies have main's later panel fixes, which need the new `Caddyfile.staff`: the panel now refuses a

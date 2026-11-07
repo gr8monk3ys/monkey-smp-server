@@ -3,12 +3,12 @@ import re
 import subprocess
 from types import SimpleNamespace
 
-import events
 import pytest
 import staff_events
 import staff_panel
 from test_staff_panel import actions, box  # noqa: F401 (box is a fixture)
 
+import events
 from rcon import RconError
 from repo import REPO
 

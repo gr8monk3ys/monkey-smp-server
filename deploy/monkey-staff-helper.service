@@ -1,0 +1,26 @@
+# Handles the staff page's backup requests (deploy/monkey-staff-helper.sh): a backup now, the snapshot list, a
+# restore. Started by monkey-staff-helper.path; install with  sudo sh monkey-staff.sh --install-helper.
+[Unit]
+Description=Monkey SMP: the staff page's backup helper
+After=network-online.target docker.service
+Wants=network-online.target
+# Quick repeated requests must not trip systemd's start limit (that would also stop the path unit).
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+# Root, like monkey-backup.service: only root may read /etc/monkey-backup.env (the R2 keys and the restic password),
+# and a restore stops the server and swaps the world. The script takes only fixed words and a hex ID from a request.
+User=root
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-staff-helper.sh
+# /var/lib/monkey-staff-helper/results: what happened, which the page reads.
+StateDirectory=monkey-staff-helper
+StateDirectoryMode=0755
+# restic's cache, shared with the hourly backup.
+Environment=RESTIC_CACHE_DIR=/var/cache/monkey-backup
+Environment=GOMAXPROCS=1
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# A restore downloads the whole world and may wait 30 minutes for the deploy lock.
+TimeoutStartSec=4h

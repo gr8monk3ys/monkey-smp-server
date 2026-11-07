@@ -103,8 +103,12 @@ A second hostname for the live server, one per place it's promoted (`yt.monkeysm
 _Avoid_: vanity domain, referral link, alias
 
 **Staff page**:
-The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included (docs/LIVE.md). It reads and changes nothing, and is separate from the public status on the website, which only ever has a count.
+The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included, and run it without a shell: console commands, the config files in `server/`, the whitelist, ops and bans, and restart, stop and start (docs/LIVE.md, "The staff page"). Every change is recorded and every file it replaces is kept in its history; it never shows the seed or a password, and never opens the worlds. It is separate from the public status on the website, which only ever has a count.
 _Avoid_: dashboard, portal, admin panel
+
+**Login page**:
+The staff page's own sign-in at `/login`, as opposed to the browser's password box: each staff login has a name, a password, an optional email, a role (moderator, admin or owner) and sessions that end by themselves (`tools/staff_auth.py`; docs/LIVE.md, "The login page"). Which one guards the staff page is one switch in `deploy/monkey-staff.sh`; the password box stays the way back.
+_Avoid_: SSO, account system, auth portal
 
 **Timed job**:
 A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly), the border acts (hourly, from Season II) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.

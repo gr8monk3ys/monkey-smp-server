@@ -86,8 +86,13 @@ warn_players() {
     lib_minutes=${WARN_MINUTES:-5}
     whole_number WARN_MINUTES "$lib_minutes" minutes
     PLAYERS_ONLINE=$(players_online || true)
-    [ "$lib_minutes" -gt 0 ] && [ "${PLAYERS_ONLINE:-0}" -gt 0 ] || return 0
-    log "$PLAYERS_ONLINE player(s) online; warning them $lib_minutes minutes ahead"
+    [ "$lib_minutes" -gt 0 ] || return 0
+    # No answer (RCON timed out) is "unknown", not "nobody": warn, the safe side.
+    case $PLAYERS_ONLINE in
+        '' | *[!0-9]*) log "could not count the players; warning them $lib_minutes minutes ahead to be safe" ;;
+        *) [ "$PLAYERS_ONLINE" -gt 0 ] || return 0
+           log "$PLAYERS_ONLINE player(s) online; warning them $lib_minutes minutes ahead" ;;
+    esac
     rcon "say $1 in $lib_minutes minutes ${3:-(about 3 minutes offline)}." >/dev/null || true
     [ "$lib_minutes" -le 1 ] || sleep $(((lib_minutes - 1) * 60))
     rcon "say ${2:-$1} in 1 minute. Find a safe spot." >/dev/null || true

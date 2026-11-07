@@ -74,6 +74,14 @@ def test_reads_a_running_server(box):
     assert data["history"] == [[round(NOW.timestamp()), 12.5, 18.7, 3]]
 
 
+def test_a_reading_is_never_later_than_the_checked_time(box):
+    # "checked" drops the fraction of a second; a rounded-up reading would be newer than it and the page would drop it.
+    late = NOW + dt.timedelta(milliseconds=900)
+    data = read(box, now=late)
+    assert data["history"][-1][0] == int(late.timestamp())
+    assert data["history"][-1][0] <= rcon.parse_time(data["checked"]).timestamp()
+
+
 def test_tps_is_what_the_average_allows_and_never_above_the_target():
     slow = TICK.replace("Average time per tick: 12.5ms", "Average time per tick: 80.0ms")
     assert staff_status.tick(slow)["tps"] == 12.5
@@ -477,7 +485,7 @@ def test_write_replaces_the_file_whole_and_show_changes_nothing(box, monkeypatch
     assert [p.name for p in box.out.parent.glob(".status-*")] == []
 
 
-@pytest.mark.parametrize("name", [*UNITS, "monkey-staff.sh", "Caddyfile.staff"])
+@pytest.mark.parametrize("name", [*UNITS, "monkey-staff.sh", "Caddyfile.staff", "Caddyfile.staff-login"])
 def test_deploy_files_are_plain_ascii_with_lf(name):
     data = (DEPLOY / name).read_bytes()
     assert data.isascii() and b"\r" not in data

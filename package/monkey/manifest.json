@@ -174,6 +174,18 @@
       }
     },
     {
+      "slug": "banner-flags",
+      "project_id": "cCStmVIN",
+      "version": "3.2+mod",
+      "version_id": "yo3InCKg",
+      "file": "banner-flags-3.2.jar",
+      "url": "https://cdn.modrinth.com/data/cCStmVIN/versions/yo3InCKg/banner-flags-3.2.jar",
+      "size": 62368,
+      "hashes": {
+        "sha512": "4db28e1bf5bb985a198d46fb3b4e72fd98824dd7259c7c11a4d0b5be4558f7fd3289ef77d656a848d54bf602428c773dfc5c682288d19fcc937f49ff3dcc964d"
+      }
+    },
+    {
       "slug": "bartering-station",
       "project_id": "EOig9U0j",
       "version": "26.2.0",
@@ -970,6 +982,18 @@
       }
     },
     {
+      "slug": "ingeniumapi",
+      "project_id": "bhnA6sV8",
+      "version": "1.1",
+      "version_id": "bRhQB9Tl",
+      "file": "ingeniumapi-1.1-FABRIC-MC-26.X.jar",
+      "url": "https://cdn.modrinth.com/data/bhnA6sV8/versions/bRhQB9Tl/ingeniumapi-1.1-FABRIC-MC-26.X.jar",
+      "size": 13267,
+      "hashes": {
+        "sha512": "680ce9a30090466b8e475706d99a5bd733fc423abde58d6be668ee8afca0309ba990e497f5dbc1b63f3b30cc3f24a935f91c06fd4e9a2f93c9a5f89aa5b91445"
+      }
+    },
+    {
       "slug": "inventory-essentials",
       "project_id": "Boon8xwi",
       "version": "26.2.0.6+fabric-26.2",
@@ -1386,15 +1410,15 @@
       }
     },
     {
-      "slug": "no-portals",
-      "project_id": "ZzkyvOit",
-      "version": "1.1.10",
-      "version_id": "YRFnYm1y",
-      "file": "no-portals-26.2-1.1.10.jar",
-      "url": "https://cdn.modrinth.com/data/ZzkyvOit/versions/YRFnYm1y/no-portals-26.2-1.1.10.jar",
-      "size": 74511,
+      "slug": "no-lunge",
+      "project_id": "Bp9s75ll",
+      "version": "1.0+mod",
+      "version_id": "S0Z6OdzK",
+      "file": "no-lunge-1.0.jar",
+      "url": "https://cdn.modrinth.com/data/Bp9s75ll/versions/S0Z6OdzK/no-lunge-1.0.jar",
+      "size": 3357,
       "hashes": {
-        "sha512": "a9959d97bc1fa935a91b92738842b231bfc7a30c366d357ac7ffceece6128be81a1a8a2eefd49f491cd60083b88454944dc7480dd659b272505bd93522f135d6"
+        "sha512": "e9cbdae3d399d8d5eaf61c89bee78c36f588b0d04a8d08031583c3f3d0825d1227399c67e512a6834578a98a20e84c73de6f7e5ab5c6e864838478aa52ea224a"
       }
     },
     {
@@ -1635,6 +1659,18 @@
       "size": 9195,
       "hashes": {
         "sha512": "6827bbe54c98d65579fd813ca6b44df7f38cdd9c03468090c57266959329842b0a2d36ae4b31c1a0a7a29a5aeb1483cdcbea90f07d962946be62b82935dc8a2d"
+      }
+    },
+    {
+      "slug": "shippy-ships",
+      "project_id": "oxBNHOmi",
+      "version": "1.0.28.2",
+      "version_id": "3ArVRD99",
+      "file": "shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar",
+      "url": "https://cdn.modrinth.com/data/oxBNHOmi/versions/3ArVRD99/shippy-ships-1.0.28.2-FABRIC-MC-26.2.jar",
+      "size": 2601322,
+      "hashes": {
+        "sha512": "48ceb07def7d6ae25a678ad52e34bc17c8768512022b30dd3c938560b45a50f910d14a00383c9b8ac204432f8e2285af6da9e4028a3d9b8a456a35093b35720b"
       }
     },
     {

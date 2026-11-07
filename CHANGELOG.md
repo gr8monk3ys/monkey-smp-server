@@ -16,6 +16,55 @@ Caddyfile (docs/LIVE.md, "The website's standings").
   the run reports the failure.
 - `hidden-names.txt` in the standings folder: staff hide a faction's name on the website, in old weeks too, without
   touching the game.
+- Controls on the staff page: a live console with a command box, the config files in `server/` (edit, upload,
+  download, delete, restore), the whitelist, ops and bans, and restart (with the 5-minute warning), restart now, stop
+  and start, so staff can run the server without a shell. A new service, `monkey-panel.service`
+  (`tools/staff_panel.py`), answers on the machine only, behind the page's password. It never shows the seed or a
+  password, never opens the worlds, refuses `stop` in the console, takes the deploy lock for power actions, keeps every
+  file it replaces or deletes in a history, and records every change. One step by hand: `--install` again
+  (docs/LIVE.md, "The staff page").
+- Hosting controls on the staff page, by role: `server.properties` as typed fields and the game rules (admin), backup
+  now and the snapshot list (admin) and restore (owner, typed short ID), the page's own schedules (admin), the mods
+  list (moderator) and a mod manager (admin: upload a jar, install from Modrinth with the sha512 checked, turn off,
+  remove; old jars kept in `mods-removed/`), the world download (owner), bans by address (admin), a version switch to
+  any release tag (admin, typed tag; pins it), a world reset (admin, typed `RESET`, optional seed that is never
+  logged) and a world upload (admin, up to 8 GB, checked, swapped in on a typed `REPLACE`). The old world is always
+  kept in `backups/`. The jobs that need root go through a new root helper, `monkey-staff-helper.path`; one step by
+  hand: `--install-helper` (docs/LIVE.md, "Hosting controls").
+- SFTP logins for staff: `monkey-staff.sh --add-sftp-user NAME KEYFILE` and `--remove-sftp-user NAME` (owner, as
+  root): SFTP only, key only, chrooted to `server/`. The staff page shows the host, port and users.
+- `monkey-deploy.sh --tag=vX.Y.Z` deploys that release now and pins it (`.deploy-pin`) until the newest is picked.
+- The staff console leaves out the two lines the game logs each time a scheduled job connects over RCON (most of the
+  log); the full log is still in Files. The Server tab says the hourly backups go off-site, and that the copy on the
+  machine is the one taken before the last update.
+- A login page for the staff page, off until the owner switches it on (`--use-new-login`; `--use-basic-auth` goes
+  back): each person's own name and password, roles (moderator, admin, owner), sessions that end after 12 idle hours
+  or 7 days, Log out, "Forgot password?" and email checks by one-time links, and an owners-only Users tab. Passwords
+  are scrypt hashes; wrong guesses lock a name and then an address for a while. Email is optional (Resend or SMTP,
+  `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
+  docs/LIVE.md, "The login page".
+
+### Added
+
+- Four mods staff installed on the live server by hand on 6 and 7 November, pinned at the versions it runs, so the
+  next release keeps them instead of dropping them: Shippy Ships and its library Ingenium API (both needed on the
+  client too: they add boats, items and blocks), No Lunge (removes the Lunge enchantment) and Banner Flags (banners
+  on fences and walls), both server-only. Server: 174 mods. Client pack: 179 mods and 22 resource packs.
+- `tools/build.py --site-build LABEL`: a website-only rebuild of the manifest's version between releases, named
+  `<version>-LABEL` (files and the pack's versionId), never attached to a release; `site_links.py` accepts it. The
+  site serves `3.1.1-ships` until the next release: the 3.1.1 pack can't join a server with Shippy Ships. Its old
+  3.1.1 links redirect to it (`site/vercel.json`, temporary redirects).
+
+### Changed
+
+- The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
+  password-box login is always treated as an owner, as before.
+
+### Removed
+
+- No Portals, a server-only mod nothing used: the Nether opens with the `allow_entering_nether_using_portals`
+  gamerule and the End stays closed through the rules datapack. Its options, all off, were the only state it held.
+  Taken out as a precaution while a client crash on entering a Nether portal is looked into. Players install nothing.
 
 ### Changed
 

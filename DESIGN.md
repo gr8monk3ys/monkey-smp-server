@@ -211,7 +211,7 @@ A dark, saturated jungle green ramp carries the page, with bone text, a single w
 
 ## Typography
 
-**Display Font:** Pixelify Sans Monkey (with sans-serif). A modified Pixelify Sans, weight 700 only, self-hosted, with the 5 redrawn so it no longer reads as an S.
+**Display Font:** Pixelify Sans Monkey (with sans-serif). A modified Pixelify Sans, weight 700 only, self-hosted, with the 5 redrawn so it no longer reads as an S and the f ligatures off so "fi" no longer reads as a capital A.
 **Body Font:** Atkinson Hyperlegible Next (with sans-serif), variable 200 to 800, self-hosted.
 **Label/Mono Font:** Atkinson Hyperlegible Mono (with monospace), for the server address, commands and in-game text.
 

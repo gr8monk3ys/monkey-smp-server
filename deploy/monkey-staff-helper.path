@@ -1,0 +1,14 @@
+# Starts monkey-staff-helper.service when the staff page leaves a request in /srv/monkey/staff/requests (a backup
+# now, the snapshot list or a restore). Install with  sudo sh monkey-staff.sh --install-helper  (docs/LIVE.md,
+# "The staff page"); that is the owner's step, since the service runs as root.
+[Unit]
+Description=Monkey SMP: the staff page's backup requests
+# Quick repeated requests must not trip systemd's start limit and kill this unit.
+StartLimitIntervalSec=0
+
+[Path]
+PathExistsGlob=/srv/monkey/staff/requests/*.req
+Unit=monkey-staff-helper.service
+
+[Install]
+WantedBy=multi-user.target

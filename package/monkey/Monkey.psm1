@@ -1014,17 +1014,54 @@ function Get-MemoryGB {
     The java command line (everything after java) that runs the manifest's server with -MemoryGB of memory.
 #>
 function Get-LaunchArguments {
-    param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [int]$MemoryGB)
+    param([Parameter(Mandatory)] $Manifest, [Parameter(Mandatory)] [int]$MemoryGB, [string[]]$ExtraFlags = @())
     $layout = Get-ServerLayout -Manifest $Manifest
     $gb = $MemoryGB
-    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags); they suit a Fabric server too.
-    return @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
+    # Aikar's G1 flags (https://docs.papermc.io/paper/aikars-flags); they suit a Fabric server too. Extra flags
+    # come after them, so one that names the same option wins (Java takes the last).
+    $flags = @("-Xms${gb}G", "-Xmx${gb}G", '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled', '-XX:MaxGCPauseMillis=200',
         '-XX:+UnlockExperimentalVMOptions', '-XX:+DisableExplicitGC', '-XX:+AlwaysPreTouch', '-XX:G1NewSizePercent=30',
         '-XX:G1MaxNewSizePercent=40', '-XX:G1HeapRegionSize=8M', '-XX:G1ReservePercent=20', '-XX:G1HeapWastePercent=5',
         '-XX:G1MixedGCCountTarget=4', '-XX:InitiatingHeapOccupancyPercent=15', '-XX:G1MixedGCLiveThresholdPercent=90',
         '-XX:G1RSetUpdatingPauseTimePercent=5', '-XX:SurvivorRatio=32', '-XX:+PerfDisableSharedMem',
-        '-XX:MaxTenuringThreshold=1', '-Dusing.aikars.flags=https://mcflags.emc.gs', '-Daikars.new.flags=true',
-        '-jar', $layout.Jar) + $layout.Arguments
+        '-XX:MaxTenuringThreshold=1', '-Dusing.aikars.flags=https://mcflags.emc.gs', '-Daikars.new.flags=true')
+    return $flags + @($ExtraFlags | Where-Object { $_ }) + @('-jar', $layout.Jar) + $layout.Arguments
+}
+
+# The staff page's launch settings (server/monkey-launch.json, written by tools/staff_more.py): the memory in GB and
+# extra Java flags. A value that fails these checks is left out with a note, so a bad file never stops a start.
+$script:LaunchFlag = '^-(XX:[+-]?[A-Za-z][A-Za-z0-9]{1,79}(=[A-Za-z0-9._:,+-]{1,120})?|D[A-Za-z][A-Za-z0-9._-]{0,79}=[A-Za-z0-9._:,+-]{0,120})$'
+# Only garbage-collector and JIT tuning and a few harmless properties (the same lists as tools/staff_more.py): a
+# deny-list always misses one (remote JMX, agents, files). No value may hold a path (no /). Java's option names are
+# case-sensitive, so these checks are too (-cmatch).
+$script:LaunchXXAllowed = '^(G1[A-Za-z0-9]+|UseG1GC|ZGenerational|ShenandoahGCHeuristics|MaxGCPauseMillis|GCTimeRatio|ParallelGCThreads|ConcGCThreads|InitiatingHeapOccupancyPercent|SurvivorRatio|MaxTenuringThreshold|AlwaysPreTouch|DisableExplicitGC|ParallelRefProcEnabled|PerfDisableSharedMem|UseStringDeduplication|UseNUMA|UseLargePages|UseTransparentHugePages|MaxMetaspaceSize|MetaspaceSize|ReservedCodeCacheSize|UseCompressedOops|SoftMaxHeapSize|MaxInlineLevel|UnlockExperimentalVMOptions|TieredCompilation)$'
+$script:LaunchPropAllowed = '^(file\.encoding|user\.timezone|user\.language|user\.country|using\.aikars\.flags|aikars\.new\.flags)$'
+$script:LaunchFlagsMax = 20
+
+<#
+.SYNOPSIS
+    @{ MemoryGB = 0 (not set) or 1-64; Flags = the extra Java flags } from ServerDir/monkey-launch.json.
+#>
+function Read-LaunchSettings([string]$ServerDir) {
+    $out = @{ MemoryGB = 0; Flags = @() }
+    $path = Join-Path $ServerDir 'monkey-launch.json'
+    try { $data = Read-JsonFile $path $null } catch { Write-Note 'monkey-launch.json is not JSON: its settings are left out.'; return $out }
+    if ($null -eq $data) { return $out }
+    $gb = $data.memory_gb
+    if ($null -ne $gb) {
+        if (($gb -is [int] -or $gb -is [long]) -and $gb -ge 1 -and $gb -le 64) { $out.MemoryGB = [int]$gb }
+        else { Write-Note "monkey-launch.json: memory_gb must be a whole number from 1 to 64, not '$gb': left out." }
+    }
+    $flags = @()
+    foreach ($f in @($data.flags | Where-Object { $null -ne $_ })) {
+        $name = if ($f -is [string] -and $f -cmatch $script:LaunchFlag) { ($f -creplace '^-XX:[+-]?', '' -creplace '^-D', '') -creplace '=.*$', '' } else { $null }
+        $allowed = if ($f -is [string] -and $f.StartsWith('-D')) { $script:LaunchPropAllowed } else { $script:LaunchXXAllowed }
+        if (-not $name -or $name -cnotmatch $allowed) { Write-Note "monkey-launch.json: the flag '$f' is not allowed: left out."; continue }
+        if ($flags.Count -ge $script:LaunchFlagsMax) { Write-Note "monkey-launch.json: more than $($script:LaunchFlagsMax) flags: the rest are left out."; break }
+        $flags += [string]$f
+    }
+    $out.Flags = $flags
+    return $out
 }
 
 <#
@@ -1037,11 +1074,12 @@ function Get-LaunchArguments {
 #>
 function Start-Server {
     param([Parameter(Mandatory)] $Context, [Parameter(Mandatory)] [string]$Java, [Parameter(Mandatory)] [int]$MemoryGB,
-        [string]$LaunchFile)
+        [string]$LaunchFile, [string[]]$ExtraFlags = @())
     $gb = $MemoryGB
-    $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb
+    $jvm = Get-LaunchArguments -Manifest $Context.Manifest -MemoryGB $gb -ExtraFlags $ExtraFlags
     Write-Host ''
     Write-Step "Starting Monkey SMP with $gb GB of memory"
+    if (@($ExtraFlags | Where-Object { $_ }).Count) { Write-Note "extra Java flags: $($ExtraFlags -join ' ')" }
     Write-Host '    Friends join at the address shown by playit.gg (see READ ME FIRST.txt).' -ForegroundColor White
     Write-Host '    To stop the server safely, type  stop  here and press Enter.' -ForegroundColor White
     Write-Host '    (Closing this window without "stop" can lose the last few minutes of the world.)' -ForegroundColor White
@@ -1124,7 +1162,10 @@ function Backup-Server {
     } finally {
         if ($running) { [void](Invoke-Rcon $Context @('save-on')) }
     }
-    Get-ChildItem -LiteralPath $Context.BackupDir -Directory | Sort-Object Name -Descending |
+    # Only the dated folders count: the staff helper keeps before-* folders in the same place, and they must not
+    # push real backups out.
+    Get-ChildItem -LiteralPath $Context.BackupDir -Directory |
+        Where-Object { $_.Name -match '^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$' } | Sort-Object Name -Descending |
         Select-Object -Skip $script:KeepBackups | Remove-Item -Recurse -Force
     $size = (Get-ChildItem -LiteralPath $dest -Recurse -File | Measure-Object Length -Sum).Sum / 1MB
     Write-Ok ("Backup done ({0:N0} MB)." -f $size)
@@ -1453,6 +1494,7 @@ Export-ModuleMember -Function @(
     'Invoke-Rcon'
     'Get-MemoryGB'
     'Get-LaunchArguments'
+    'Read-LaunchSettings'
     'Get-ServerLayout'
     'Export-HostingBundle'
     'Get-ExpectedHash'

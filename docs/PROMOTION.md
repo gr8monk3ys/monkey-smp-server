@@ -269,7 +269,6 @@ registration and asks players to install the pack; the T-7 post says both again.
 >   judging is Sunday at 6 PM (<t:1794189600:F>).
 > - No Netherite armor until we say so. The border starts at 5000 × 5000 and grows with the season.
 > - Play launch weekend and keep the Founder skin. [needs the Founder skin]
-> - New here? The monthly pass starts with 7 free days. [only if the trial is on]
 > - The rules: https://monkeysmp.lscaturchio.xyz/#rules (the full rulebook is in #smp-rules).
 >
 > Address: `monkeysmp.lscaturchio.xyz`

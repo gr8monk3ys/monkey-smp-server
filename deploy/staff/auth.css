@@ -1,0 +1,75 @@
+/* The login, reset and email pages (auth.js) and, on the staff page, the account menu and the Users tab (users.js).
+ * The tokens and the block language come from staff.css, which loads first. */
+
+/* The world behind them: the website's fortified village screenshot (site/public/img), blurred and darkened ahead of
+ * time into this 480 px copy, so nothing waits on a second request and no CSS filter has to redraw it. */
+:is([data-page="login"], [data-page="reset"], [data-page="verify"]) {
+  display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;
+  background:
+    linear-gradient(180deg, rgb(14 49 34 / 0.15), rgb(14 49 34 / 0.6)),
+    url("data:image/webp;base64,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") center / cover no-repeat,
+    var(--ground);
+}
+
+.gate {
+  display: grid; flex: 1; place-items: center; align-content: center; gap: 20px; padding: 40px var(--gutter) 56px;
+}
+.gate-mark { width: 88px; height: 88px; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.4)); }
+.card {
+  display: grid; gap: 14px; width: 100%; max-width: 26rem; padding: 18px 18px 20px;
+  border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px; background: var(--shade) padding-box;
+}
+.card h1 { color: var(--bone); font: 700 1.75rem/1.1 var(--display); }
+.card form { display: grid; gap: 12px; }
+.form-field { display: grid; gap: 4px; }
+.form-field label { color: var(--sage); font-size: 0.9375rem; }
+.card .attention, .card .note { max-width: none; margin-top: 0; }
+.card .actions { align-items: center; }
+.card .btn.primary { min-width: 8rem; }
+.link {
+  padding: 0; color: var(--sage); font: inherit; text-decoration: underline; text-underline-offset: 3px;
+  background: none; border: 0; cursor: pointer;
+}
+.link:hover { color: var(--bone); }
+a.link { display: inline-block; }
+
+
+/* The account menu, top right of the staff page. */
+.account { position: relative; color: var(--bone); }
+.account summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; cursor: pointer; list-style: none;
+  border: 6px solid transparent; border-image: var(--frame-bone) 6 / 6px; font-weight: 700;
+}
+.account summary::-webkit-details-marker { display: none; }
+.account summary small { color: var(--sage); font-weight: 400; }
+.account[open] summary { border-image: var(--frame-bone-hover) 6 fill / 6px; }
+.account-body {
+  position: absolute; right: 0; z-index: 5; display: grid; gap: 14px; width: min(24rem, calc(100vw - 32px));
+  margin-top: 6px; padding: 14px; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+  background: var(--shade) padding-box;
+}
+.account-body form { display: grid; gap: 8px; }
+.account-body h3 { padding-bottom: 4px; border-bottom: 2px solid var(--leaf-2); }
+
+/* Two-step login, in the account menu: the key to type, and the recovery codes shown once. */
+.two-step { display: grid; gap: 8px; }
+.two-step .mono { color: var(--bone); overflow-wrap: anywhere; letter-spacing: 0.04em; }
+.recovery { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
+.recovery li { color: var(--bone); }
+
+/* The Users tab. */
+.users { list-style: none; display: grid; }
+.users li { display: grid; gap: 6px; padding: 10px 4px; border-top: 2px solid var(--leaf-2); min-width: 0; }
+.users li:first-child { border-top: 0; }
+.users .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.users .who b { color: var(--bone); }
+.users .meta { color: var(--sage); font-size: 0.9375rem; overflow-wrap: anywhere; }
+.add-user { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.add-user .form-field { flex: 1 1 12rem; }
+.users .actions { align-items: center; }
+.handover { display: grid; gap: 6px; }
+.handover input { width: 100%; }
+
+@media (max-width: 600px) {
+  .account-body { position: static; width: 100%; }
+}

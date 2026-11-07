@@ -858,6 +858,55 @@ Describe 'Export-HostingBundle' {
     }
 }
 
+Describe 'Read-LaunchSettings' {
+    It 'is empty without the file' {
+        $s = Read-LaunchSettings (Join-Path $TestDrive 'none')
+        $s.MemoryGB | Should -Be 0
+        @($s.Flags).Count | Should -Be 0
+    }
+
+    It 'reads the memory and the allowed flags, and leaves the rest out' {
+        $dir = Join-Path $TestDrive 'launch'
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $json = '{"memory_gb": 7, "flags": ["-XX:MaxGCPauseMillis=100", "-Dfile.encoding=UTF-8", "-XX:OnError=sh x",' +
+            ' "-XX:OnOutOfMemoryError=/tmp/x", "-Xmx99G", "-javaagent:/tmp/a.jar", 5, "-XX:LogFile=x",' +
+            ' "-Dfabric.addMods=x", "-Dlog4j2.configurationFile=x", "-Dx=/tmp/a", "-xx:+UseG1GC",' +
+            ' "-Dcom.sun.management.jmxremote=true", "-XX:+useg1gc"]}'
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), $json)
+        $s = Read-LaunchSettings $dir 6>$null
+        $s.MemoryGB | Should -Be 7
+        $s.Flags | Should -Be @('-XX:MaxGCPauseMillis=100', '-Dfile.encoding=UTF-8')
+    }
+
+    It 'leaves out memory of <Gb>' -ForEach @(@{ Gb = '0' }, @{ Gb = '65' }, @{ Gb = '4.5' }, @{ Gb = '"8"' }, @{ Gb = 'true' }) {
+        $dir = Join-Path $TestDrive "mem$($Gb.GetHashCode())"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), "{""memory_gb"": $Gb}")
+        (Read-LaunchSettings $dir 6>$null).MemoryGB | Should -Be 0
+    }
+
+    It 'leaves out the collector <Flag>, so no second collector reaches the JVM' -ForEach @(
+        @{ Flag = '-XX:+UseZGC' }, @{ Flag = '-XX:+UseSerialGC' }, @{ Flag = '-XX:+UseParallelGC' }, @{ Flag = '-XX:+UseShenandoahGC' }) {
+        $dir = Join-Path $TestDrive "gc$($Flag.GetHashCode())"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), "{""flags"": [""$Flag"", ""-XX:+UseG1GC""]}")
+        @((Read-LaunchSettings $dir 6>$null).Flags) | Should -Be @('-XX:+UseG1GC')
+    }
+
+    It 'survives a file that is not JSON' {
+        $dir = Join-Path $TestDrive 'broken'
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        [IO.File]::WriteAllText((Join-Path $dir 'monkey-launch.json'), '{nope')
+        (Read-LaunchSettings $dir 6>$null).MemoryGB | Should -Be 0
+    }
+
+    It 'puts extra flags after the built-in ones, before -jar' {
+        $m = [pscustomobject]@{ server = [pscustomobject]@{ type = 'fabric' } }
+        $a = @(Get-LaunchArguments -Manifest $m -MemoryGB 4 -ExtraFlags @('-XX:MaxGCPauseMillis=100'))
+        $a[-4..-1] | Should -Be @('-XX:MaxGCPauseMillis=100', '-jar', 'fabric-server-launch.jar', 'nogui')
+    }
+}
+
 Describe 'Get-MemoryGB' {
     It 'maps <Gb> GB of RAM to <Want> GB' -ForEach @(
         @{ Gb = 4; Want = 3 }, @{ Gb = 8; Want = 3 }, @{ Gb = 8.5; Want = 3 }, @{ Gb = 12; Want = 4 },
@@ -1105,6 +1154,20 @@ Describe 'Backup-Server' {
         $newest = $left[-1].FullName
         Join-Native $newest 'world/level.dat' | Should -Exist
         Join-Native $newest 'plugins/Foo.jar' | Should -Not -Exist
+    }
+
+    It 'does not count the helper''s before-* folders, so dated backups survive' {
+        $F = New-Fixture
+        Write-Text (Join-Path $F.Server 'server.properties') "server-port=$($F.Port)`n"
+        Write-Text (Join-Native $F.Server 'world/level.dat') 'level'
+        $backups = Join-Path $F.Root 'backups'
+        foreach ($i in 0..4) { New-Item -ItemType Directory -Force -Path (Join-Path $backups ('2020-01-01_00-00-{0:D2}' -f $i)) | Out-Null }
+        foreach ($i in 0..19) { New-Item -ItemType Directory -Force -Path (Join-Path $backups ('before-restore-2030{0:D4}T000000Z' -f $i)) | Out-Null }
+
+        Backup-Server -Context (New-Ctx $F (New-Manifest $F)) 6>$null
+
+        @(Get-ChildItem -LiteralPath $backups -Directory | Where-Object { $_.Name -match '^\d{4}-' }).Count | Should -Be 6
+        @(Get-ChildItem -LiteralPath $backups -Directory | Where-Object { $_.Name -like 'before-*' }).Count | Should -Be 20
     }
 }
 

@@ -1,7 +1,9 @@
 # The staff page (deploy/monkey-staff.sh, docs/LIVE.md, "The staff page"). `sudo sh monkey-staff.sh --install` copies
 # this to /etc/caddy/staff.caddy, which the main Caddyfile imports if it is there. The script never adds it until
 # there is a login, and takes it back out if a visit with no password gets in. The logins are in
-# /etc/caddy/staff-logins (root:caddy, 640), never in this repo, which is public.
+# /etc/caddy/staff-logins (root:caddy, 640), never in this repo, which is public. This is the password the browser
+# asks for; deploy/Caddyfile.staff-login is the page's own login, which `monkey-staff.sh --use-new-login` puts in its
+# place and `--use-basic-auth` takes back out.
 staff.monkeysmp.lscaturchio.xyz {
 	encode zstd gzip
 
@@ -18,6 +20,43 @@ staff.monkeysmp.lscaturchio.xyz {
 		Referrer-Policy "no-referrer"
 	}
 
+	# The controls (tools/staff_panel.py, deploy/monkey-panel.service): only this machine reaches it, and only after
+	# the password above. The login's name goes with every request, and the role owner (every password-box login is
+	# one; the panel refuses a request with no role); a name or role the browser sent itself is replaced. header_up
+	# runs after Caddy drops the hop-by-hop headers, so a `Connection: X-Staff-Role` can't take them off.
+	# A world upload (tools/staff_host.py) is the one bigger body; the panel checks the size and the disk again.
+	handle /api/world-upload {
+		request_body {
+			max_size 8GB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up X-Staff-User {http.auth.user.id}
+			header_up X-Staff-Role owner
+		}
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 64MiB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up X-Staff-User {http.auth.user.id}
+			header_up X-Staff-Role owner
+		}
+	}
+
+	# The login page's own requests, so a set-password link works behind the password box before the switch. The
+	# panel takes no name from them, so none is sent.
+	handle /auth/* {
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy 127.0.0.1:8130 {
+			header_up -X-Staff-User
+			header_up -X-Staff-Role
+		}
+	}
+
 	handle /staff.json {
 		root * /srv/monkey/staff
 		file_server
@@ -30,6 +69,7 @@ staff.monkeysmp.lscaturchio.xyz {
 
 	handle {
 		root * /srv/monkey/repo/deploy/staff
+		try_files {path} {path}.html
 		file_server
 	}
 }

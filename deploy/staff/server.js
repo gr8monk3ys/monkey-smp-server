@@ -93,8 +93,9 @@
     node.textContent = text ? (text.message || String(text)) : "";
   }
 
-  // An in-page confirm step in the box `id`: the message, an optional field the answer must be typed into, a button.
-  function confirmIn(id, message, yes, onYes, typed) {
+  // An in-page confirm step in the box `id`: the message, an optional field the answer must be typed into, an
+  // optional tick box ({label, checked}: its state is onYes's second argument), a button.
+  function confirmIn(id, message, yes, onYes, typed, check) {
     const box = $(id);
     const close = () => {
       box.hidden = true;
@@ -108,11 +109,19 @@
       row.append(field);
       parts.push(row);
     }
+    let tick = null;
+    if (check) {
+      tick = input("checkbox", { checked: Boolean(check.checked) });
+      const label = el("label", "check");
+      label.append(tick, el("span", "", check.label));
+      parts.push(label);
+    }
     const row = el("div", "actions");
     row.append(button(yes, "primary", () => {
       const value = field ? field.value.trim() : "";
+      const ticked = tick ? tick.checked : false;
       close();
-      onYes(value);
+      onYes(value, ticked);
     }), button("Cancel", "", close));
     parts.push(row);
     box.replaceChildren(...parts);
@@ -353,23 +362,29 @@
 
   // ---------------------------------------------------------------- mods
 
-  const mods = { rows: [] };
+  const mods = { rows: [], gone: [] };
 
   // The typed step for a change to one jar: the jar's file name is the word to type.
-  function modStep(message, yes, file, onYes) {
-    confirmIn("mods-confirm", `${message} Type ${file} to confirm.`, yes, (typed) => {
+  function modStep(message, yes, file, onYes, check) {
+    confirmIn("mods-confirm", `${message} Type ${file} to confirm.`, yes, (typed, ticked) => {
       if (typed !== file) {
         say("mods-error", `Nothing changed: type ${file} exactly.`);
         return;
       }
-      onYes(typed);
-    }, { label: "Jar file name", placeholder: file });
+      onYes(typed, ticked);
+    }, { label: "Jar file name", placeholder: file }, check);
   }
 
   const PINNED_NOTE = " It is one of this release's pinned mods, so the server puts the pinned jar back when it next starts.";
+  const HELD_NOTE = " It is one of this release's pinned mods and stays off after restarts until someone presses Allow again.";
+  const PLAYERS_NEED = "Players must install this too. It is not in the players' pack yet, so they may not be able to join until the owner adds it.";
+  const KEEP_OFF = { label: "Keep it off after restarts", checked: true };
 
   function modDone(text, done) {
-    say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${done.pinned ? PINNED_NOTE : ""} Restart the server (Server tab) for it to take effect.`);
+    const pinned = done.held ? HELD_NOTE : done.pinned ? PINNED_NOTE : "";
+    say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${pinned} Restart the server (Server tab) for it to take effect.`);
+    say("mods-players", done.client_side === "required" ? PLAYERS_NEED : null);
+    if (done.client_side === "unknown" && done.file) askPlayers(done.file, done.side_checked === false);
     loadMods();
   }
 
@@ -383,37 +398,97 @@
     }
   }
 
+  // Modrinth didn't say whether players need the jar: staff's answer is saved with it.
+  function askPlayers(file, failed) {
+    const box = $("mods-ask");
+    const answer = async (players) => {
+      box.hidden = true;
+      box.replaceChildren();
+      try {
+        const done = await api("POST", "/api/mod-side", { file, players });
+        say("mods-players", done.client_side === "required" ? PLAYERS_NEED : null);
+        loadMods();
+      } catch (error) {
+        say("mods-error", error);
+      }
+    };
+    const why = failed ? "Modrinth couldn't be asked about it." : "Modrinth doesn't say.";
+    const row = el("div", "actions");
+    row.append(button("Yes, players need it", "", () => answer("required"), "admin"),
+      button("No", "", () => answer("no"), "admin"), button("Don't know", "", () => answer("unknown"), "admin"));
+    box.replaceChildren(el("p", "", `Do players need ${file} too? ${why} A mod that adds blocks, items or creatures usually must be in the players' pack.`), row);
+    box.hidden = false;
+  }
+
+  // A pinned mod players have in their pack, which their game needs: keeping it off on the server may lock them out.
+  const playersHaveIt = (m) => m.client_side === "required" && m.in_players_pack;
+  const lockout = (m) => (playersHaveIt(m) ? " Players have it in their pack and need it there: with it off on the server, players may not be able to join." : "");
+
+  function allowButton(file) {
+    return button("Allow again", "", () => modStep(`Let the release put ${file} back? The next start downloads it again.`,
+      "Allow again", file, (typed) => modCall("/api/mod-hold", { file, held: false, confirm: typed }, `${file} is allowed again.`)), "admin");
+  }
+
   function modButtons(m) {
     const on = m.enabled !== false;
-    return [
+    const base = m.file.replace(/\.disabled$/, "");
+    const pinnedOff = m.pinned ? ` It is pinned: unless you keep it off, the next start puts the release's jar back.${lockout(m)}` : "";
+    const out = [
       button(on ? "Turn off" : "Turn on", "", () => modStep(on
-        ? `Turn off ${m.file}? It is renamed to .jar.disabled and the server stops loading it at the next restart.`
-        : `Turn ${m.file} back on?`, on ? "Turn off" : "Turn on", m.file,
-      (typed) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed }, on ? "Turned off." : "Turned on.")), "admin"),
-      button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.`,
-        "Remove", m.file, (typed) => modCall("/api/mod-remove", { file: m.file, confirm: typed }, "Removed.")), "admin"),
+        ? `Turn off ${m.file}? It is renamed to .jar.disabled and the server stops loading it at the next restart.${pinnedOff}`
+        : `Turn ${m.file} back on?${m.held ? " It is kept off now: turning it on allows it again." : ""}`, on ? "Turn off" : "Turn on", m.file,
+      (typed, hold) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed, hold: on && hold }, on ? "Turned off." : "Turned on."),
+      on && m.pinned ? KEEP_OFF : undefined), "admin"),
+      button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.${pinnedOff}`,
+        "Remove", m.file, (typed, hold) => modCall("/api/mod-remove", { file: m.file, confirm: typed, hold }, "Removed."),
+        m.pinned ? KEEP_OFF : undefined), "admin"),
     ];
+    if (m.held) out.push(allowButton(base));
+    if (!m.pinned && m.client_side === "unknown") out.push(button("Players need it?", "", () => askPlayers(base, false), "admin"));
+    return out;
+  }
+
+  function heldWords(h) {
+    return h ? `kept off by ${h.by || "staff"} since ${when(h.at)}` : "";
   }
 
   function renderMods() {
     const typed = $("mods-search").value.trim().toLowerCase();
     const rows = mods.rows.filter((m) => !typed || [m.name, m.id, m.file, m.description].join(" ").toLowerCase().includes(typed));
-    const items = rows.map((m) => {
+    const gone = mods.gone.filter((g) => !typed || g.file.toLowerCase().includes(typed));
+    const items = gone.map((g) => item(g.file, `(removed, ${heldWords(g.held)})`,
+      `${g.held.why || ""}${lockout(g)}`.trim(), can("admin") ? [allowButton(g.file)] : []));
+    items.push(...rows.map((m) => {
       const side = { client: "client only", server: "server only", both: "client and server" }[m.environment] || "";
-      const flags = [m.enabled === false ? "off" : "", m.pinned ? "pinned" : ""].filter(Boolean);
+      const players = m.client_side === "required" ? "players need it" : "";
+      const flags = [m.enabled === false ? "off" : "", m.pinned ? "pinned" : "", heldWords(m.held), players].filter(Boolean);
       return item(m.error ? m.file : `${m.name} ${m.version || ""}`.trim(),
         m.error ? `(${m.error})` : `(${[m.id, side, size(m.size), ...flags].filter(Boolean).join(", ")})`,
         m.description, can("admin") && m.file ? modButtons(m) : []);
-    });
+    }));
     $("mods-list").replaceChildren(...(items.length ? items : [emptyRow(typed ? "No mod matches." : "No mods found.")]));
     $("mods-count").textContent = typed ? `(${rows.length} of ${mods.rows.length})` : `(${mods.rows.length})`;
+  }
+
+  // The enabled mods players need that the players' pack lacks (or, when the pack can't be read, all those marked).
+  function renderMissing(data) {
+    const missing = data.players_missing || [];
+    if (!missing.length) {
+      say("mods-missing", null);
+      return;
+    }
+    say("mods-missing", data.players_pack
+      ? `The players' pack is missing ${missing.length} mod(s) players need: ${missing.join(", ")}. Until the owner adds them in a release, players may not be able to join.`
+      : `The players' pack couldn't be read here, so it can't be checked. These mods are marked as ones players need: ${missing.join(", ")}.`);
   }
 
   async function loadMods() {
     try {
       const data = await api("GET", "/api/mods");
       mods.rows = data.mods || [];
+      mods.gone = data.held_gone || [];
       renderMods();
+      renderMissing(data);
       say("mods-error", null);
     } catch (error) {
       say("mods-error", error);
@@ -555,12 +630,69 @@
       $("packs-count").textContent = `(${packs.length})`;
       $("packs-reload").disabled = !data.running || !can("admin");
       $("packs-reload").title = data.running ? "" : "The server isn't running.";
+      renderSaved(data);
       // Its own line, so a reload after an action never wipes that action's error.
       say("packs-running", data.running ? null : "The server isn't running, so on and off can't be read or changed. Uploads and removals still work.");
     } catch (error) {
       $("packs-list").replaceChildren();
       if ($("packs-error").hidden) say("packs-error", error);
     }
+  }
+
+  // Troubleshooting: every pack of the world's own off at once, and the same set back on later in its old order.
+  function renderSaved(data) {
+    const saved = data.saved;
+    const off = !data.running || !can("admin");
+    $("packs-all-off").disabled = off || Boolean(saved);
+    $("packs-restore").disabled = off || !saved || Boolean(saved.error);
+    $("packs-clear").hidden = !saved;
+    $("packs-clear").disabled = !can("admin");
+    say("packs-saved", saved ? (saved.error || `Troubleshooting since ${when(saved.at)} by ${saved.by}: ${saved.count} packs off.`) : null);
+  }
+
+  function failedWords(failed) {
+    return (failed || []).map((f) => `${f.name} (${f.why})`).join("; ");
+  }
+
+  function packsAllOff() {
+    confirmIn("packs-confirm", "Save the list of data packs that are on, then turn every one of them off? Vanilla, Fabric's and the mods' built-in packs stay on. The game changes at once, without a restart. Type ALL OFF to confirm.",
+      "Turn all off", async (typed) => {
+        if (typed !== "ALL OFF") {
+          say("packs-error", "Nothing changed: type ALL OFF exactly.");
+          return;
+        }
+        say("packs-error", null);
+        say("packs-note", null);
+        try {
+          const done = await api("POST", "/api/datapacks-save-off", { confirm: typed });
+          const failed = failedWords(done.failed);
+          say("packs-note", `Saved ${done.saved} packs and turned ${done.off.length} off.${failed ? ` These didn't turn off: ${failed}.` : ""} Turn them back on one at a time to find the trouble, or all at once with Turn saved set back on.`);
+        } catch (error) {
+          say("packs-error", error);
+        }
+        loadPacks();
+      }, { label: "Confirm word", placeholder: "ALL OFF" });
+  }
+
+  function packsRestore() {
+    confirmIn("packs-confirm", "Turn the saved set of data packs back on, in the order they had? The saved list stays until you clear it.",
+      "Turn them back on", async () => {
+        say("packs-error", null);
+        say("packs-note", null);
+        try {
+          const done = await api("POST", "/api/datapacks-restore", {});
+          const failed = failedWords(done.failed);
+          say("packs-note", `Turned ${done.on.length} of ${done.saved} back on.${failed ? ` These didn't: ${failed}.` : ""} Clear the saved set when you are done.`);
+        } catch (error) {
+          say("packs-error", error);
+        }
+        loadPacks();
+      });
+  }
+
+  function packsClear() {
+    confirmIn("packs-confirm", "Forget the saved set? The packs stay as they are now; only the list of what was on is gone.",
+      "Clear it", () => packCall("/api/datapacks-saved-clear", {}, "The saved set is cleared."));
   }
 
   function uploadPack() {
@@ -1038,6 +1170,9 @@
     $("mrpack-go").addEventListener("click", installPack);
     $("pack-upload").addEventListener("click", uploadPack);
     $("packs-reload").addEventListener("click", () => packCall("/api/datapack-reload", {}, "Reloaded."));
+    $("packs-all-off").addEventListener("click", packsAllOff);
+    $("packs-restore").addEventListener("click", packsRestore);
+    $("packs-clear").addEventListener("click", packsClear);
     // Settings tab: the icon
     $("icon-upload").addEventListener("click", uploadIcon);
     $("icon-remove").addEventListener("click", () => confirmIn("icon-confirm",

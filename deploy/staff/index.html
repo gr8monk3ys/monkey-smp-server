@@ -202,6 +202,10 @@
           <button class="btn" type="button" data-power="start">Start</button>
         </div>
         <div class="confirm" id="server-confirm" hidden></div>
+        <div id="power-errors" hidden>
+          <p class="fine" id="power-errors-head"></p>
+          <ul class="entries" id="power-errors-list"></ul>
+        </div>
       </section>
       <section class="box">
         <h3>Last backup</h3>
@@ -399,7 +403,9 @@
         deploy puts the mods folder back to that release's list. A change takes effect when the server restarts.</p>
       <p class="attention" id="mods-error" role="alert" hidden></p>
       <p class="note" id="mods-note" role="status" hidden></p>
+      <p class="attention bad" id="mods-players" role="alert" hidden></p>
       <div class="confirm" id="mods-confirm" hidden></div>
+      <div class="confirm" id="mods-ask" hidden></div>
       <div class="cols wide">
         <section class="box" data-need="admin">
           <h3>Upload a jar</h3>
@@ -433,6 +439,7 @@
             <h3>Installed mods <span class="meta" id="mods-count"></span></h3>
             <input id="mods-search" type="search" autocomplete="off" spellcheck="false" placeholder="Filter by name" aria-label="Filter the installed mods">
           </div>
+          <p class="attention bad" id="mods-missing" role="status" hidden></p>
           <ul class="entries" id="mods-list"></ul>
         </section>
         <section class="box span" id="packs-box">
@@ -442,6 +449,15 @@
           </div>
           <p class="fine">The world's datapacks folder. A new pack is turned on when you press Reload or the server
             restarts. The release's own packs come back at every start, so they can be turned off but not removed.</p>
+          <p class="fine">To find a pack that causes trouble: Turn all off saves which packs are on, then turns them
+            all off. Turn them back on one at a time, then Turn saved set back on puts the rest back in their old
+            order.</p>
+          <div class="actions">
+            <button class="btn" id="packs-all-off" type="button" data-need="admin" disabled>Turn all off</button>
+            <button class="btn" id="packs-restore" type="button" data-need="admin" disabled>Turn saved set back on</button>
+            <button class="btn" id="packs-clear" type="button" data-need="admin" hidden>Clear the saved set</button>
+          </div>
+          <p class="attention" id="packs-saved" role="status" hidden></p>
           <p class="attention" id="packs-error" role="alert" hidden></p>
           <p class="fine" id="packs-running" role="status" hidden></p>
           <p class="note" id="packs-note" role="status" hidden></p>

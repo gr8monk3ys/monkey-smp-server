@@ -519,7 +519,34 @@
     "stop": ["Stop the server? Players are disconnected, and it stays off until someone presses Start.", "Yes, stop", "Stopping."],
     "start": ["Start the server? It takes a few minutes before players can join.", "Yes, start", "Starting."],
   };
-  const powerState = { timer: null };
+  const powerState = { timer: null, errorsAt: 0 };
+  const STARTED_KEY = "monkey-panel-started";   // when this browser last restarted or started the server (ms)
+  const ERRORS_SHOWN = 8;
+
+  // The errors logged since a restart or start pressed here: staff.json's groups (tools/staff_status.py), whose last
+  // line came after it. The file is written every 2 minutes, so it lags; errors while the server starts aren't kept.
+  async function loadPowerErrors() {
+    const since = Number(sessionStorage.getItem(STARTED_KEY)) || 0;
+    $("power-errors").hidden = !since;
+    if (!since || Date.now() - powerState.errorsAt < 60_000) return;
+    powerState.errorsAt = Date.now();
+    let errors;
+    try {
+      const answer = await fetch("staff.json", { cache: "no-store" });
+      if (!answer.ok) throw new Error();
+      const data = await answer.json();
+      errors = ((data.problems && data.problems.errors) || []).filter((e) => Date.parse(e.last) >= since);
+    } catch {
+      $("power-errors-head").textContent = "The errors since your restart can't be read right now.";
+      $("power-errors-list").replaceChildren();
+      return;
+    }
+    $("power-errors-head").textContent = errors.length
+      ? `Errors logged since you restarted it at ${when(since)}, after it finished starting:`
+      : `No errors logged since you restarted it at ${when(since)}, after it finished starting. The list updates every 2 minutes.`;
+    $("power-errors-list").replaceChildren(...errors.slice(0, ERRORS_SHOWN).map((e) =>
+      el("li", "", `${e.text}${e.count > 1 ? ` (${e.count} times)` : ""}`)));
+  }
 
   async function loadPower() {
     clearTimeout(powerState.timer);
@@ -533,6 +560,7 @@
     } catch (error) {
       fail("server", error);
     }
+    loadPowerErrors();
     if (current === "server" && !document.hidden) powerState.timer = setTimeout(loadPower, POWER_MS);
   }
 
@@ -542,6 +570,10 @@
     try {
       await api("POST", "/api/power", { action });
       note("server", POWER[action][2]);
+      if (action !== "stop") {
+        sessionStorage.setItem(STARTED_KEY, String(Date.now()));
+        powerState.errorsAt = 0;
+      }
     } catch (error) {
       fail("server", error);
     }

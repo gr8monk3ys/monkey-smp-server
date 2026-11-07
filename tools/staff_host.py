@@ -3,8 +3,10 @@ the SFTP card. tools/staff_apex.py registers them with staff_panel (register()),
 change checks; docs/LIVE.md, "The staff page", says what each one does.
 
     POST /api/mod-upload?name=N&confirm=N   a jar, the raw body: checked, then into mods/      admin
-    POST /api/mod-toggle {"file", "enabled", "confirm"}   N.jar <-> N.jar.disabled             admin
-    POST /api/mod-remove {"file", "confirm"}              into mods-removed/TIME/, never deleted  admin
+    POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     admin
+    POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  admin
+    POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  admin
+    POST /api/mod-side {"file", "players"}    staff's answer: do players need it (required, no, unknown)  admin
     GET  /api/modrinth?q=TEXT                 Modrinth's Fabric mods for the server's game version  admin
     POST /api/modrinth-install {"project", "confirm"}     its newest file, sha512 checked          admin
     GET  /api/versions                        the release tags in the repo checkout, and the live one  admin
@@ -24,6 +26,16 @@ The safety rules:
 - A world zip must have one level.dat, at the top or one folder down, and no absolute path, no `..`, no link and no
   encrypted entry; its unpacked size is capped and the disk must have room. The helper unpacks it again, as the
   server's user, with unzip_world(), which checks it all again.
+- A pinned mod (one the release's manifest lists, with a slug) comes back at every start. Turned off or removed with
+  "hold", or held with /api/mod-hold, its slug goes in server/.monkey-held.json and the start script leaves it out
+  until someone allows it again, across release deploys too (a new version of the jar is still the same slug);
+  turning it on or installing a jar of the release's name allows it again. Only this page writes that file, and only
+  while the live release's start script reads it (Get-HeldMods): after a rollback to one that doesn't, holds are
+  refused. A note that fails to save after a jar moved never undoes the move: the answer says it in note_error.
+- After each install the page notes whether players need the mod too (server/.monkey-mod-sides.json): Modrinth's
+  client_side, looked up by the jar's sha512 for an upload, or staff's answer. A failed lookup is "unknown" and never
+  stops the install. GET /api/mods then lists the mods players need that the players' pack (client/ in the checkout)
+  lacks.
 - The version, the reset and the upload run as root through deploy/monkey-staff-helper.sh, like a restore: the page
   only writes a request with checked words. A new seed goes in the request and nowhere else: never in a log.
 
@@ -58,8 +70,12 @@ ax = None   # tools/staff_apex.py (register)
 MB = 1024 * 1024
 GB = 1024 * MB
 MOD_MAX = 64 * MB
-MOD_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.jar")
-MOD_FILE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,123}\.jar(?:\.disabled)?")
+# A jar's file name: no folder, no "..", no leading dot or space, no control characters; spaces and ( ) are fine, as
+# four of the release's own jars have them ("Simple Harvesting 26.2-3.0.1.jar"). A name only ever goes in a path in
+# mods/, a JSON file or the audit log: never a shell, RCON or a URL (an upload's name is URL-encoded).
+MOD_NAME = re.compile(r"(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9 ._+()-]{0,123}\.jar")
+MOD_FILE = re.compile(r"(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9 ._+()-]{0,123}\.jar(?:\.disabled)?")
+SLUG = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,63}")     # a manifest mod's slug; Monkey.psm1's $script:HeldSlug
 REMOVED = "mods-removed"
 MODRINTH = "https://api.modrinth.com/v2"
 MODRINTH_CDN = re.compile(r"https://cdn\.modrinth\.com/data/[A-Za-z0-9]{8}/versions/[A-Za-z0-9]{8}/[A-Za-z0-9._+%-]{1,200}")
@@ -70,6 +86,11 @@ SEARCH_MAX = 20
 USER_AGENT = "gr8monk3ys/monkey-smp-server (staff page)"
 GAME_VERSION = re.compile(r"\d{1,3}(?:\.\d{1,3}){1,3}")
 SIDES = ("required", "optional", "unsupported", "unknown")
+HELD_FILE = ".monkey-held.json"           # server/: the pinned mods staff keep off, by slug (Monkey.psm1, Get-HeldMods)
+SIDES_FILE = ".monkey-mod-sides.json"     # server/: whether players need each mod
+PLAYER_ANSWERS = {"required": "required", "no": "unsupported", "unknown": "unknown"}
+CDN_PROJECT = re.compile(r"https://cdn\.modrinth\.com/data/([A-Za-z0-9]{8})/")
+WHY_MAX = 200
 
 TAG = re.compile(r"v(\d{1,4})\.(\d{1,4})\.(\d{1,4})")
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -232,6 +253,7 @@ class Host:
         self.x = ax.extras(panel)
         self.fetch = fetch
         self._mods = threading.Lock()
+        self._notes = threading.Lock()      # the held and sides files; taken inside _mods, never around it
         self._upload = threading.Lock()
 
     # ------------------------------------------------ mods
@@ -280,9 +302,10 @@ class Host:
                 out.append(Path(e.path))
         return out
 
-    def install(self, user: str, name: str, tmp: Path, source: str) -> dict:
+    def install(self, user: str, name: str, tmp: Path, source: str, side: dict | None = None) -> dict:
         """Puts a checked jar in as mods/NAME. A jar of that name (on or off) or an enabled one with the same mod id
-        goes to mods-removed first."""
+        goes to mods-removed first. A hold on NAME's slug is cleared; `side` ({"client", "source", "project"?}) is
+        noted. The jar is in and recorded before either note is written: a note that fails is said in note_error."""
         info = ax.mod_info(tmp)
         if "error" in info:
             raise sp.Refused(400, f"Not installed: {info['error']}.")
@@ -298,34 +321,69 @@ class Host:
             kept = self._aside(replaced) if replaced else None
             os.chmod(tmp, 0o644)
             os.replace(tmp, folder / name)
-        self.p.record(user, "mod-install", f"{name} ({source})" + (f", old one in {kept}" if kept else ""))
-        return {"file": name, "id": info["id"], "name": info["name"], "version": info["version"],
-                "replaced": [p.name for p in replaced], "kept_in": kept,
-                "pinned": bool({name, *(p.name.removesuffix(".disabled") for p in replaced)} & set(self.x.pinned()))}
+            self.p.record(user, "mod-install", f"{name} ({source})" + (f", old one in {kept}" if kept else ""))
+            done = {"file": name, "id": info["id"], "name": info["name"], "version": info["version"],
+                    "replaced": [p.name for p in replaced], "kept_in": kept, "client_side": "unknown",
+                    "pinned": bool({name, *(p.name.removesuffix(".disabled") for p in replaced)}
+                                   & set(self.x.pinned()))}
+            try:
+                self._allow(user, name)
+            except OSError as e:
+                done["note_error"] = (f"{name} is in, but the mark that kept it off could not be cleared, so the "
+                                      f"release's jar won't come back at starts: {e}")
+            gone = {p.name.removesuffix(".disabled") for p in replaced} - {name}
+            try:
+                done["client_side"] = self._note_side(user, name, side, drop=gone)
+            except OSError as e:
+                done.setdefault("note_error", f"{name} is in, but whether players need it could not be saved: {e}")
+            notes = self._notes_for(name, self._context())
+            done["held"] = notes["held"] is not None
+            done["in_players_pack"] = notes["in_players_pack"]
+        return done
 
     def mod_upload(self, user: str, query: dict, body) -> dict:
         name = query.get("name") or ""
         if not MOD_NAME.fullmatch(name):
-            raise sp.Refused(400, "A jar's name has letters, digits, . _ + - only, no folders, and ends in .jar.")
+            raise sp.Refused(400, "A jar's name has letters, digits, spaces and . _ + - ( ) only, no folders and no "
+                                  "'..', and ends in .jar.")
         if (query.get("confirm") or "") != name:
             raise sp.Refused(400, f"Type the jar's name, {name}, to confirm.")
         if body.length > MOD_MAX:
             raise sp.Refused(413, f"A mod is at most {MOD_MAX // MB} MB.")
         self._folder()
         tmp = self._incoming()
+        sha = hashlib.sha512()
         try:
             with open(tmp, "wb") as f:
                 for chunk in body.chunks():
+                    sha.update(chunk)
                     f.write(chunk)
-            return self.install(user, name, tmp, "uploaded")
+            done = self.install(user, name, tmp, "uploaded")
         finally:
             with contextlib.suppress(OSError):
                 tmp.unlink()
+        # The jar is in already: the lookup only adds a note, and its failure is "unknown".
+        client, project = self._modrinth_side(sha.hexdigest())
+        with self._mods:
+            try:
+                done["client_side"] = self._note_side(
+                    user, name, {"client": client, "source": "modrinth", "project": project})
+            except OSError as e:
+                done.setdefault("note_error", f"{name} is in, but whether players need it could not be saved: {e}")
+            done["in_players_pack"] = self._notes_for(name, self._context())["in_players_pack"]
+        return {**done, "side_checked": project is not None}
+
+    def _hold_flag(self, body: dict) -> bool:
+        hold = body.get("hold", False)
+        if not isinstance(hold, bool):
+            raise sp.Refused(400, "hold must be true or false.")
+        return hold
 
     def mod_toggle(self, user: str, body: dict) -> dict:
         name, enabled, confirm = body.get("file"), body.get("enabled"), body.get("confirm")
         if not isinstance(enabled, bool):
             raise sp.Refused(400, "enabled must be true or false.")
+        hold = self._hold_flag(body)
         if confirm != name:
             raise sp.Refused(400, f"Type the jar's name, {str(name)[:130]}, to confirm.")
         with self._mods:
@@ -334,6 +392,10 @@ class Host:
             if enabled == name.endswith(".jar"):
                 raise sp.Refused(409, f"{name} is {'on' if enabled else 'off'} already.")
             target = folder / (name[:-len(".disabled")] if enabled else name + ".disabled")
+            base = target.name if enabled else name
+            slug = self._slug(base)
+            if hold and not enabled and slug:
+                self._holds_or_refuse()
             if enabled:
                 mod_id = ax.mod_info(path).get("id")
                 clash = self._same_id(folder, mod_id) if mod_id else []
@@ -342,27 +404,311 @@ class Host:
                                           "first.")
             kept = self._aside([target]) if target.exists() else None
             os.replace(path, target)
-        base = target.name if enabled else name
-        self.p.record(user, "mod-enable" if enabled else "mod-disable", name)
-        return {"file": target.name, "enabled": enabled, "kept_in": kept, "pinned": base in self.x.pinned()}
+            self.p.record(user, "mod-enable" if enabled else "mod-disable", name)
+            done = {"file": target.name, "enabled": enabled, "kept_in": kept, "pinned": base in self.x.pinned()}
+            try:
+                if enabled:
+                    self._allow(user, base)
+                elif hold and slug:
+                    self._hold(user, slug, self._held_entry(user, body, "turned off", base))
+            except OSError as e:
+                done["note_error"] = (f"The mod was turned {'on' if enabled else 'off'}, but 'keep it off' could not "
+                                      f"be {'cleared' if enabled else 'saved'}: {e}")
+            done["held"] = bool(slug) and slug in self.held()
+        return done
 
     def mod_remove(self, user: str, body: dict) -> dict:
         name, confirm = body.get("file"), body.get("confirm")
+        hold = self._hold_flag(body)
         if confirm != name:
             raise sp.Refused(400, f"Type the jar's name, {str(name)[:130]}, to confirm.")
         with self._mods:
-            kept = self._aside([self._entry(name)])
-        self.p.record(user, "mod-remove", f"{name}, kept in {kept}")
-        return {"file": name, "kept_in": kept, "pinned": name.removesuffix(".disabled") in self.x.pinned()}
+            path = self._entry(name)
+            base = name.removesuffix(".disabled")
+            slug = self._slug(base)
+            if hold and slug:
+                self._holds_or_refuse()
+            kept = self._aside([path])
+            self.p.record(user, "mod-remove", f"{name}, kept in {kept}")
+            done = {"file": name, "kept_in": kept, "pinned": base in self.x.pinned()}
+            try:
+                if hold and slug:
+                    self._hold(user, slug, self._held_entry(user, body, "removed", base))
+            except OSError as e:
+                done["note_error"] = f"The mod was removed, but 'keep it off' could not be saved: {e}"
+            done["held"] = bool(slug) and slug in self.held()
+        return done
+
+    # ------------------------------------------------ held mods, and whether players need a mod
+
+    def _read_note(self, name: str) -> dict:
+        """One of the page's JSON files in server/: {} when it is missing or not JSON (the start script does alike)."""
+        try:
+            data = json.loads((self.p.root / name).read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def _write_note(self, name: str, data: dict) -> None:
+        """Writes one of them whole, readable by the server's user."""
+        self.p._write(self.p.root / name, (json.dumps(data, indent=1, sort_keys=True) + "\n").encode("utf-8"), None)
+
+    def _manifests(self):
+        """The release's monkey/manifest.json, as JSON objects: the live package's first, then the repo checkout's."""
+        for path in (self.p.live / "monkey" / "manifest.json", self.p.repo / "package" / "monkey" / "manifest.json"):
+            with contextlib.suppress(OSError, ValueError):
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+                if isinstance(data, dict):
+                    yield data
+
+    def _release_mods(self) -> dict[str, dict]:
+        """{jar: its manifest entry ("file", "slug", "project_id", ...)} from the first manifest that reads; {} when its
+        mods are not a list."""
+        for data in self._manifests():
+            mods = data.get("mods")
+            if not isinstance(mods, list):
+                return {}
+            return {m["file"]: m for m in mods if isinstance(m, dict) and isinstance(m.get("file"), str)}
+        return {}
+
+    def _release_projects(self) -> dict[str, str]:
+        """{jar: Modrinth project id} for the release's mods."""
+        return {f: m["project_id"] for f, m in self._release_mods().items() if isinstance(m.get("project_id"), str)}
+
+    @staticmethod
+    def _slug_in(entry) -> str | None:
+        slug = entry.get("slug") if isinstance(entry, dict) else None
+        return slug if isinstance(slug, str) and SLUG.fullmatch(slug) else None
+
+    def _slug(self, jar: str) -> str | None:
+        """The release's slug for a pinned jar name; None for a jar the release doesn't pin (it can't be held)."""
+        return self._slug_in(self._release_mods().get(jar))
+
+    def holds_supported(self) -> bool:
+        """True when the live package's start script reads the held file (an older release, rolled back to, doesn't:
+        a hold would then be a promise nothing keeps)."""
+        try:
+            text = (self.p.live / "monkey" / "Monkey.psm1").read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False
+        return "Get-HeldMods" in text
+
+    def _holds_or_refuse(self) -> None:
+        if not self.holds_supported():
+            raise sp.Refused(409, "The running release can't keep mods off after restarts. Turn it off without "
+                                  "keeping it off, or update the release first.")
+
+    def held(self) -> dict[str, dict]:
+        """{slug: {"by", "at", "why", "file"} or {}}: the pinned mods the start script leaves out (server/
+        .monkey-held.json). Any key that is a slug counts, whatever its value, as Get-HeldMods reads it. Keys that are
+        the same but for case make the file unreadable for PowerShell's JSON reader, so they hold nothing here too."""
+        mods = self._read_note(HELD_FILE).get("mods")
+        if not isinstance(mods, dict) or len({str(n).lower() for n in mods}) != len(mods):
+            return {}
+        return {n: (v if isinstance(v, dict) else {}) for n, v in mods.items() if isinstance(n, str)
+                and SLUG.fullmatch(n)}
+
+    @staticmethod
+    def _held_entry(user: str, body: dict, what: str, jar: str) -> dict:
+        why = clean(body.get("why"), WHY_MAX) or f"{what} on the staff page"
+        return {"by": user, "at": sp.stamp(), "why": why, "file": jar}
+
+    def _set_held(self, slug: str, entry: dict | None) -> bool:
+        """Holds SLUG (entry) or allows it again (None), changing only that key in the file as it is on disk. True
+        when the file changed. A file that isn't {"mods": {...}} is written over when something is held."""
+        with self._notes:
+            raw = self._read_note(HELD_FILE)
+            mods = raw.get("mods")
+            if not isinstance(mods, dict):
+                if entry is None:
+                    return False
+                raw, mods = {}, {}
+            if entry is None:
+                if slug not in mods:
+                    return False
+                del mods[slug]
+            else:
+                mods[slug] = entry
+            raw["mods"] = mods
+            self._write_note(HELD_FILE, raw)
+        return True
+
+    def _hold(self, user: str, slug: str, entry: dict) -> None:
+        if self._set_held(slug, entry):
+            self.p.record(user, "mod-hold", f"{slug} ({entry['file']}), kept off after restarts")
+
+    def _allow(self, user: str, jar: str) -> bool:
+        slug = self._slug(jar)
+        if slug and self._set_held(slug, None):
+            self.p.record(user, "mod-allow", f"{slug} ({jar}), no longer kept off")
+            return True
+        return False
+
+    def _held_slug(self, name: str, now: dict) -> str | None:
+        """The held slug a name from the page means: the release's slug for that jar, the slug whose stored jar it
+        is, or the slug itself (a held_gone row with no stored jar)."""
+        slug = self._slug(name)
+        if slug in now:
+            return slug
+        for key, entry in now.items():
+            if entry.get("file") == name:
+                return key
+        return name if name in now else None
+
+    def mod_hold(self, user: str, body: dict) -> dict:
+        name, held, confirm = body.get("file"), body.get("held"), body.get("confirm")
+        if not isinstance(name, str) or not (MOD_NAME.fullmatch(name) or SLUG.fullmatch(name)):
+            raise sp.Refused(400, "That is not a jar's name from the list.")
+        if not isinstance(held, bool):
+            raise sp.Refused(400, "held must be true or false.")
+        if confirm != name:
+            raise sp.Refused(400, f"Type the jar's name, {name}, to confirm.")
+        with self._mods:
+            now = self.held()
+            if held:
+                slug = self._slug(name) if MOD_NAME.fullmatch(name) else None
+                if slug is None:
+                    raise sp.Refused(409, f"{name} is not one of the release's pinned mods: no start puts it back, "
+                                          "so there is nothing to keep off.")
+                self._holds_or_refuse()
+                if slug in now:
+                    raise sp.Refused(409, f"{name} is kept off already.")
+                if (self.p.root / "mods" / name).is_file():
+                    raise sp.Refused(409, f"{name} is on: turn it off or remove it, and it stays off.")
+                self._set_held(slug, self._held_entry(user, body, "kept off", name))
+            else:
+                slug = self._held_slug(name, now)
+                if slug is None or not self._set_held(slug, None):
+                    raise sp.Refused(409, f"{name} is not kept off.")
+            self.p.record(user, "mod-hold" if held else "mod-allow", name if slug == name else f"{slug} ({name})")
+        return {"file": name, "slug": slug, "held": held}
+
+    def sides(self) -> dict[str, dict]:
+        """{jar: {"client", "source", "by", "at", "project"?}} (server/.monkey-mod-sides.json)."""
+        return {n: v for n, v in self._read_note(SIDES_FILE).items()
+                if MOD_NAME.fullmatch(n) and isinstance(v, dict) and v.get("client") in SIDES}
+
+    def _note_side(self, user: str, name: str, side: dict | None, drop=()) -> str:
+        """Notes whether players need NAME and forgets the jars in `drop`; returns what is noted for NAME now. Staff's
+        answer always replaces the note; a lookup's "unknown" (Modrinth down, a modpack without env) never replaces
+        an answer that is known."""
+        with self._notes:
+            sides = self.sides()
+            for gone in drop:
+                sides.pop(gone, None)
+            old = sides.get(name)
+            known = bool(old) and old.get("client") != "unknown"
+            if side and (side["source"] == "staff" or side["client"] != "unknown" or not known):
+                row = {"client": side["client"], "source": side["source"], "by": user, "at": sp.stamp()}
+                project = side.get("project") or (old or {}).get("project")    # staff's answer keeps the project
+                if project:
+                    row["project"] = project
+                sides[name] = row
+            if drop or side:
+                self._write_note(SIDES_FILE, sides)
+            return sides[name]["client"] if name in sides else "unknown"
+
+    def _modrinth_side(self, sha512: str) -> tuple[str, str | None]:
+        """Modrinth's client_side for a jar, found by its sha512, and its project id; ("unknown", None) when Modrinth
+        doesn't know the file or can't be asked."""
+        try:
+            version = self._json(f"{MODRINTH}/version_file/{sha512}?algorithm=sha512")
+            project = version.get("project_id") if isinstance(version, dict) else None
+            if not isinstance(project, str) or not PROJECT.fullmatch(project):
+                return "unknown", None
+            meta = self._json(f"{MODRINTH}/project/{project}")
+        except Exception:  # noqa: BLE001 (a failed lookup must never fail the install)
+            return "unknown", None
+        side = meta.get("client_side") if isinstance(meta, dict) else None
+        return (side if side in SIDES else "unknown"), project
+
+    def mod_side(self, user: str, body: dict) -> dict:
+        players = body.get("players")
+        if not isinstance(players, str) or players not in PLAYER_ANSWERS:
+            raise sp.Refused(400, "players is required, no or unknown.")
+        with self._mods:
+            name = self._entry(body.get("file")).name.removesuffix(".disabled")
+            noted = self._note_side(user, name, {"client": PLAYER_ANSWERS[players], "source": "staff"})
+            self.p.record(user, "mod-side", f"{name}: do players need it? {players}")
+            in_pack = self._notes_for(name, self._context())["in_players_pack"]
+        return {"file": name, "client_side": noted, "in_players_pack": in_pack}
+
+    def _client_pack(self) -> dict | None:
+        """The players' pack, client/modrinth.index.json in the repo checkout: its jar names and {Modrinth project:
+        client env}, or None when it can't be read."""
+        try:
+            data = json.loads((self.p.repo / "client" / "modrinth.index.json").read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(data, dict) or not isinstance(data.get("files"), list):
+            return None
+        files, projects = set(), {}
+        for f in data["files"]:
+            if not isinstance(f, dict) or not isinstance(f.get("path"), str):
+                continue
+            files.add(f["path"].rsplit("/", 1)[-1])
+            env = f.get("env") if isinstance(f.get("env"), dict) else {}
+            client = env.get("client") if env.get("client") in SIDES else "required"   # no env: every client has it
+            for url in f.get("downloads") or []:
+                m = CDN_PROJECT.match(url) if isinstance(url, str) else None
+                if m:
+                    projects[m.group(1)] = client
+        return {"files": files, "projects": projects}
+
+    def _context(self) -> dict:
+        """What _notes_for reads, read once for a whole list."""
+        return {"held": self.held(), "sides": self.sides(), "pack": self._client_pack(),
+                "release": self._release_mods(), "supported": self.holds_supported()}
+
+    @staticmethod
+    def _notes_for(base: str, ctx: dict, slug: str | None = None) -> dict:
+        """One jar's "held" (or None), "holdable", "client_side" and "in_players_pack" (None: no pack to read)."""
+        pack = ctx["pack"]
+        projects = pack["projects"] if pack else {}
+        entry = ctx["release"].get(base) or {}
+        slug = slug or Host._slug_in(entry)
+        side = ctx["sides"].get(base)
+        project = (side or {}).get("project") or (entry.get("project_id") if isinstance(entry.get("project_id"), str)
+                                                   else None)
+        client = side["client"] if side else projects.get(project, "unknown")
+        h = ctx["held"].get(slug) if slug else None
+        return {"held": {"by": clean(h.get("by"), 40), "at": clean(h.get("at"), 40),
+                         "why": clean(h.get("why"), WHY_MAX)} if h is not None else None,
+                "holdable": bool(slug) and ctx["supported"] and bool(entry),
+                "client_side": client,
+                "in_players_pack": None if pack is None else (project in projects or base in pack["files"])}
+
+    def mod_notes(self, result: dict) -> dict:
+        """GET /api/mods's rows with "held", "holdable", "client_side" and "in_players_pack"; the held mods whose
+        release jar is not in mods/ (held_gone); the enabled mods players need that their pack lacks
+        (players_missing); and whether the live release keeps holds at all (holds_supported)."""
+        ctx = self._context()
+        seen, missing = set(), []
+        for row in result["mods"]:
+            base = row["file"].removesuffix(".disabled")
+            seen.add(base)
+            row.update(self._notes_for(base, ctx))
+            if row.get("enabled") and row["client_side"] == "required" and not row["in_players_pack"]:
+                missing.append(row["file"])
+        by_slug = {self._slug_in(m): f for f, m in ctx["release"].items() if self._slug_in(m)}
+        gone = []
+        for slug in sorted(ctx["held"]):
+            current = by_slug.get(slug)
+            if current in seen:
+                continue                    # its row in the list says it is held
+            stored = ctx["held"][slug].get("file")
+            shown = stored if isinstance(stored, str) and MOD_NAME.fullmatch(stored) else current or slug
+            gone.append({"file": shown, "slug": slug, **self._notes_for(current or shown, ctx, slug)})
+        return {**result, "held_gone": gone, "players_missing": missing, "players_pack": ctx["pack"] is not None,
+                "holds_supported": ctx["supported"]}
 
     # ------------------------------------------------ Modrinth
 
     def game_version(self) -> str:
-        for path in (self.p.live / "monkey" / "manifest.json", self.p.repo / "package" / "monkey" / "manifest.json"):
-            with contextlib.suppress(OSError, ValueError, AttributeError):
-                version = json.loads(path.read_text(encoding="utf-8-sig")).get("minecraft")
-                if isinstance(version, str) and GAME_VERSION.fullmatch(version):
-                    return version
+        for data in self._manifests():
+            version = data.get("minecraft")
+            if isinstance(version, str) and GAME_VERSION.fullmatch(version):
+                return version
         raise sp.Refused(503, "This page can't tell the server's game version (monkey/manifest.json): upload the jar "
                               "instead.")
 
@@ -430,7 +776,9 @@ class Host:
         tmp = self._incoming()
         try:
             tmp.write_bytes(data)
-            done = self.install(user, name, tmp, f"Modrinth {project} {clean(pick.get('version_number'), 40)}")
+            client = meta.get("client_side") if meta.get("client_side") in SIDES else "unknown"
+            done = self.install(user, name, tmp, f"Modrinth {project} {clean(pick.get('version_number'), 40)}",
+                                side={"client": client, "source": "modrinth", "project": meta["id"]})
         finally:
             with contextlib.suppress(OSError):
                 tmp.unlink()
@@ -637,6 +985,8 @@ ROUTES = {
     ("POST", "/api/mod-upload"): lambda p, u, q, b: host(p).mod_upload(u, q, b),
     ("POST", "/api/mod-toggle"): lambda p, u, q, b: host(p).mod_toggle(u, b),
     ("POST", "/api/mod-remove"): lambda p, u, q, b: host(p).mod_remove(u, b),
+    ("POST", "/api/mod-hold"): lambda p, u, q, b: host(p).mod_hold(u, b),
+    ("POST", "/api/mod-side"): lambda p, u, q, b: host(p).mod_side(u, b),
     ("GET", "/api/modrinth"): lambda p, u, q, b: host(p).modrinth_search(q),
     ("POST", "/api/modrinth-install"): lambda p, u, q, b: host(p).modrinth_install(u, b),
     ("GET", "/api/versions"): lambda p, u, q, b: host(p).versions(),

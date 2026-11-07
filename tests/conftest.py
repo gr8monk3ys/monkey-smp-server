@@ -37,6 +37,17 @@ PLAYER_FILES = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _staff_page_offline(monkeypatch):
+    """The staff page's Modrinth calls fail as with no network, unless a test gives its panel a fake fetch."""
+    import staff_host
+
+    def offline(url, most):
+        raise RuntimeError(f"a test tried to fetch {url}")
+
+    monkeypatch.setattr(staff_host, "fetch", offline)
+
+
 @pytest.fixture
 def recorded() -> RecordedHttp:
     """Responses recorded once from the live APIs (tests/fixtures/record.py)."""

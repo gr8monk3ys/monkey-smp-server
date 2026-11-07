@@ -56,6 +56,22 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
   are scrypt hashes; wrong guesses lock a name and then an address for a while. Email is optional (Resend or SMTP,
   `/etc/monkey-staff-mail.env`); without it the owner hands out links. Needs Caddy 2.11.4 or newer. Steps by hand:
   docs/LIVE.md, "The login page".
+- Keep a pinned mod off: turning off or removing one of the release's own mods on the staff page asks "Keep it off
+  after restarts?" (ticked). The start script then leaves it out (`server/.monkey-held.json`, by the mod's slug, so
+  a release that bumps the jar's version keeps it held; "held" in the start log) until staff press Allow again, turn
+  it on, or install a jar of the release's name. A missing or broken file holds nothing. The page offers holds only
+  while the live release's start script reads them: after a rollback to an older release it refuses them.
+  Jar names with spaces and brackets (four of the release's own) can now be turned off, removed and held.
+- Do players need it: every mod install on the staff page asks Modrinth whether players must install the mod too (an
+  upload by its sha512) and notes the answer; a failed lookup never stops the install, and staff can answer instead.
+  A red notice says when players need it and the players' pack (`client/`) lacks it, and the mods list names the
+  mods players need that the pack lacks. A lookup that fails never replaces a known answer. The players' pack itself
+  is not changed.
+- Data pack troubleshooting on the staff page: Turn all off (typed `ALL OFF`) saves which of the world's packs are
+  on and turns them off; Turn saved set back on puts them back in their old order and names any that failed. Both
+  read the server's answers and list the packs again after, so what they report is what the server has. Pack names
+  with spaces work. After a restart or start from the Server tab, the power card lists the errors logged since the
+  server started again.
 
 ### Added
 

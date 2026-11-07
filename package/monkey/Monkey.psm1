@@ -475,6 +475,9 @@ function Install-PatchedArtifact($Context, $Entry, [string]$Path, $Previous) {
 # entry that isn't already correct, and removes files a previous install placed there that are no
 # longer wanted. Only those exact file names are ever touched: files the host (or a mod) added and
 # subfolders (e.g. mods\luckperms) are left alone.
+# An entry whose slug is $Held (one staff kept off, see Get-HeldMods) is not downloaded but stays
+# managed, so allowing it again puts it back at the next install. Holds go by slug, so a release that
+# bumps the jar's version keeps it held.
 # Returns @{ Changed = <count>; Managed = <file names now managed>; Patched = @{ file = record } }.
 function Sync-ManagedFiles {
     param(
@@ -483,7 +486,8 @@ function Sync-ManagedFiles {
         [object[]]$Entries,
         [string]$Folder,
         [object[]]$Previous,
-        $PreviousPatched
+        $PreviousPatched,
+        [string[]]$Held = @()
     )
     $label = $Kind.PadRight(8)
     $changed = 0
@@ -491,7 +495,11 @@ function Sync-ManagedFiles {
     $wanted = @($Entries | Where-Object { $_ })
     foreach ($e in $wanted) {
         $dest = Join-Path $Folder $e.file
-        if ($e.patch) {
+        if ($e.slug -and (@($Held) -ccontains [string]$e.slug)) {
+            $prev = if ($PreviousPatched) { $PreviousPatched.($e.file) } else { $null }
+            if ($e.patch -and $prev) { $patched[$e.file] = $prev }
+            Write-Note "held     $($e.slug) (kept off by staff, $($e.file) not put in)"
+        } elseif ($e.patch) {
             $prev = if ($PreviousPatched) { $PreviousPatched.($e.file) } else { $null }
             $r = Install-PatchedArtifact $Context $e $dest $prev
             $patched[$e.file] = $r.Record
@@ -509,6 +517,25 @@ function Sync-ManagedFiles {
         }
     }
     return [pscustomobject]@{ Changed = $changed; Managed = $managed; Patched = $patched }
+}
+
+# The slugs of the manifest's mods staff kept off (server/.monkey-held.json, written by the staff page,
+# tools/staff_host.py): {"mods": {"<slug>": {"by", "at", "why", "file"}}}. Every key that looks like a
+# slug counts, whatever its value; other keys are ignored. A missing or unreadable file holds nothing:
+# a start never fails because of it.
+$script:HeldSlug = '^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$'
+function Get-HeldMods($Context) {
+    $path = Join-Path $Context.ServerDir '.monkey-held.json'
+    try {
+        $data = Read-JsonFile $path $null
+    } catch {
+        Write-Note "ignored .monkey-held.json: it is not valid JSON, so no mod is held"
+        return @()
+    }
+    $object = [System.Management.Automation.PSCustomObject]
+    if (-not $data -or -not ($data -is $object) -or -not ($data.mods -is $object)) { return @() }
+    return @($data.mods.PSObject.Properties | ForEach-Object { [string]$_.Name } |
+        Where-Object { $_ -cmatch $script:HeldSlug })
 }
 
 # Install state (.monkey-state.json): what the last install placed, so the next one can reconcile.
@@ -948,9 +975,11 @@ function Install-Server {
     }
     if (Save-Artifact $Context $m.server (Join-Path $server $layout.Jar)) { Write-Ok $layout.Description; $n++ }
     $synced = [ordered]@{}
+    $heldMods = @(Get-HeldMods $Context)
     foreach ($group in $script:Groups.Keys) {
+        $held = if ($group -eq 'mods') { $heldMods } else { @() }
         $synced[$group] = Sync-ManagedFiles -Context $Context -Kind $script:Groups[$group] -Entries $m.$group `
-            -Folder (Get-GroupFolder $Context $group) -Previous $state.$group -PreviousPatched $state.patched
+            -Folder (Get-GroupFolder $Context $group) -Previous $state.$group -PreviousPatched $state.patched -Held $held
         $n += $synced[$group].Changed
     }
     if ($n -eq 0) { Write-Ok 'Everything is up to date.' }

@@ -267,6 +267,15 @@ def test_reading_masks_and_locks_secrets(mods):
     assert "sec-real" not in json.dumps(data)
 
 
+def test_a_secret_inside_a_multi_line_value_is_masked(mods):
+    # Files hides the second line; the form must not show it either, as part of the whole value.
+    (mods.root / "config/spread.toml").write_text('notes = """\nhello\npassword = ml-real\n"""\nplain = 1\n')
+    code, data = mods.call("GET", "/api/mod-config?path=config/spread.toml")
+    assert code == 200 and "ml-real" not in json.dumps(data)
+    f = {r["key"]: r for r in data["fields"]}
+    assert f["notes"]["value"] == staff_panel.MASK and f["plain"]["value"] == 1
+
+
 def test_a_save_changes_only_the_edited_lines_through_the_panels_save(mods):
     path = mods.root / "config/sample.toml"
     _, data = mods.call("GET", "/api/mod-config?path=config/sample.toml")

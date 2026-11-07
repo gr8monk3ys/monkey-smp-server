@@ -760,6 +760,16 @@ def mod_name(rel: str) -> str:
     return stem.lower() or parts[-1].lower()
 
 
+def _secret(row: dict, lines: list[str], starts: list[int]) -> bool:
+    """Whether a value is a secret: its key says so, or any line its text touches is one Files would hide. A value
+    that spans lines is checked on every line, so the form never shows what Files masks."""
+    if sp._SECRET_KEY.search(row["key"]):
+        return True
+    first = bisect.bisect_right(starts, row["start"]) - 1
+    last = bisect.bisect_right(starts, max(row["start"], row["end"] - 1)) - 1
+    return any(sp._secret_line(line.rstrip("\r")) for line in lines[first:last + 1])
+
+
 class ModConfigs:
     def __init__(self, panel):
         self.p = panel
@@ -847,9 +857,9 @@ class ModConfigs:
                     "writable": self.p._rules(parts) == "writable"}
         out = []
         for row in rows:
-            line = lines[bisect.bisect_right(starts, row["start"]) - 1]
             shown = {k: v for k, v in row.items() if k not in ("start", "end", "layout")}
-            if sp._secret_line(line.rstrip("\r")) or sp._SECRET_KEY.search(row["key"]):
+            shown["about"] = sp.mask_secrets(row["about"])[0]
+            if _secret(row, lines, starts):
                 shown.update(value=sp.MASK, type="fixed", locked="A secret: change it in Files.")
             out.append(shown)
         info = self.important().get(mod_name(name), {})
@@ -876,8 +886,7 @@ class ModConfigs:
             raise sp.Refused(400, f"This file can't be read as a form ({e}): edit it in Files.") from None
         for key in values:
             row = rows.get(key) if isinstance(key, str) else None
-            if row and (sp._secret_line(lines[bisect.bisect_right(starts, row["start"]) - 1].rstrip("\r"))
-                        or sp._SECRET_KEY.search(key)):
+            if row and _secret(row, lines, starts):
                 raise sp.Refused(403, f"{key} is a secret: change it in Files.")
         new, changed = edit(fmt, text, values)
         if not changed:

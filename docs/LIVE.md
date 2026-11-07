@@ -1017,7 +1017,7 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_events.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1200,6 +1200,8 @@ the controls refuse it whatever the page sends.
 | Reset the world | admin | Types `RESET`. Optional new seed. The old world is moved aside, never deleted. |
 | Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
 | SFTP card | admin | Host, port and user names, or "ask the owner". |
+| Event timer | admin | `tools/staff_events.py`: start (name and minutes), end now with "Event over", or stop early, over RCON (`monkey:events/timer/*`, from 3.2.0's data pack; while `monkey-events` is off the card says so). |
+| Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 
 The mod manager:
 

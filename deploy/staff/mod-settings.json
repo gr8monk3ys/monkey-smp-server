@@ -1,0 +1,30 @@
+{
+  "about": "The staff page's Mod settings tab (tools/staff_modcfg.py) reads this. A mod listed here shows first, with its title; its keys show first in each file's form and the rest sit under All settings. applies is restart (the default) or reload. The mod's name is its config file name in lower case, without -server, -common, -config or -settings.",
+  "mods": {
+    "antixray": {
+      "title": "Anti-Xray",
+      "about": "Hides ores from x-ray clients.",
+      "keys": ["enabled", "overworld.enabled", "overworld.engineMode", "the_nether.enabled", "the_end.enabled"]
+    },
+    "openpartiesandclaims": {
+      "title": "Open Parties and Claims",
+      "about": "Land claims and parties.",
+      "keys": ["serverConfig.claims.maxPlayerClaims", "serverConfig.parties.maxPartyMembers"]
+    },
+    "lootrestock": {
+      "title": "Loot Restock",
+      "about": "Refills loot chests and vaults over time.",
+      "keys": ["reset_time_value", "reset_time_unit", "only_reset_when_empty", "include_vaults", "allow_chest_breaking"]
+    },
+    "enchantmentdisabler": {
+      "title": "Enchantment Disabler",
+      "about": "Turns off or caps enchantments.",
+      "keys": ["disabler.disabledEnchantmentsV2", "maxLevel.globalMaxLevel", "maxLevel.maxLevels"]
+    },
+    "chunky": {
+      "title": "Chunky",
+      "about": "Pre-generates the world.",
+      "keys": ["continueOnRestart", "silent", "updateInterval"]
+    }
+  }
+}

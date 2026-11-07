@@ -38,6 +38,12 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
   logged) and a world upload (admin, up to 8 GB, checked, swapped in on a typed `REPLACE`). The old world is always
   kept in `backups/`. The jobs that need root go through a new root helper, `monkey-staff-helper.path`; one step by
   hand: `--install-helper` (docs/LIVE.md, "Hosting controls").
+- A Mod settings tab on the staff page (admin): one card per mod, each config file a form built from the file
+  (`.toml`, `.properties`, `.json`, `.json5`), with the mod's main settings first. A save changes only the edited
+  values, keeps comments and order, keeps the old file in the history and writes a line to `actions.log`. A file the
+  form can't read opens in Files. Nothing changes until a restart. Its Strength SMP card sets that mod's in-game
+  settings over RCON, at once: the ultimate cooldowns and lifetimes, the armor ultimate charge, powers only for
+  tagged players, and a reset to the defaults (typed `RESET`).
 - SFTP logins for staff: `monkey-staff.sh --add-sftp-user NAME KEYFILE` and `--remove-sftp-user NAME` (owner, as
   root): SFTP only, key only, chrooted to `server/`. The staff page shows the host, port and users.
 - `monkey-deploy.sh --tag=vX.Y.Z` deploys that release now and pins it (`.deploy-pin`) until the newest is picked.

@@ -16,6 +16,7 @@
   <script src="users.js" defer></script>
   <script src="server.js" defer></script>
   <script src="events.js" defer></script>
+  <script src="modcfg.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -33,6 +34,7 @@
     <a href="#users" data-tab="users" id="users-tab" hidden>Users</a>
     <a href="#settings" data-tab="settings">Settings</a>
     <a href="#mods" data-tab="mods">Mods</a>
+    <a href="#modcfg" data-tab="modcfg">Mod settings</a>
   </nav>
 
   <main>
@@ -413,6 +415,29 @@
         <p class="attention" id="gamerules-error" role="alert" hidden></p>
         <div class="fields" id="gamerules-list"></div>
       </section>
+    </div>
+
+    <div class="pane" id="tab-modcfg" hidden>
+      <h2>Mod settings</h2>
+      <p class="fine">Each mod's config file as a form, with the file's own comments as help. A save changes only the
+        values you changed: every comment and line order stays. Most changes take effect when the server restarts
+        (Server tab). Every save keeps the old file in Files, history, and goes in the record of changes.</p>
+      <p class="attention" id="modcfg-error" role="alert" hidden></p>
+      <p class="note" id="modcfg-note" role="status" hidden></p>
+      <div class="add">
+        <input id="modcfg-search" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Find a mod or file" aria-label="Find a mod or file">
+        <button class="btn" id="modcfg-reload" type="button">Reload</button>
+      </div>
+      <details class="box modcard" id="strength-card" data-find="strength smp ultimate cooldown lifetime armor powers tag">
+        <summary><span class="title">Strength SMP</span><span class="fine">in-game settings, over RCON</span></summary>
+        <p class="fine">No config file: these live in the world. A change needs no restart and stays after one. A new
+          cooldown or lifetime counts from the next ultimate: one already running keeps its old time. Times are in seconds (about). The start level, the level range and the mace and lunge
+          cooldowns are fixed in the mod and can't be changed here.</p>
+        <p class="attention" id="strength-error" role="alert" hidden></p>
+        <p class="note" id="strength-note" role="status" hidden></p>
+        <div class="stack" id="strength-body"></div>
+      </details>
+      <div class="stack" id="modcfg-list"></div>
     </div>
 
     <div class="pane" id="tab-mods" hidden>

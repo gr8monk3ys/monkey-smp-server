@@ -70,6 +70,7 @@ from urllib.parse import parse_qs, urlsplit
 import staff_apex
 import staff_auth
 import staff_events
+import staff_modcfg
 import staff_status
 
 import rcon as server
@@ -1033,6 +1034,7 @@ PATHS.update(path for _, path in USER_ROUTES)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
+staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 
 
 def allowed(role: str, need: str) -> bool:

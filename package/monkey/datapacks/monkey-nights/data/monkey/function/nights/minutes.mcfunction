@@ -1,3 +1,4 @@
+function monkey:nights/load
 execute unless score #phase nt.state matches 1.. run return run tellraw @s [{"text":"Nothing is running.","color":"red"}]
 $scoreboard players set #new nt.timer $(minutes)
 execute unless score #new nt.timer matches 1..600 run return run tellraw @s [{"text":"minutes must be 1 to 600.","color":"red"}]

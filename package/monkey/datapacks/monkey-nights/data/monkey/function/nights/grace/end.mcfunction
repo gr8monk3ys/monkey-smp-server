@@ -1,4 +1,5 @@
 # 6:30 PM (the countdown, the VPS, or an admin): PvP and the Nether open, then the build battle.
+function monkey:nights/load
 execute unless score #phase nt.state matches 1 run return run tellraw @s [{"text":"No grace period is running.","color":"red"}]
 gamerule pvp true
 gamerule allow_entering_nether_using_portals true

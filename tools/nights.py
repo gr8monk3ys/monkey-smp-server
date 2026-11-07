@@ -130,6 +130,7 @@ def pack_files() -> dict[str, str]:
 
     f[f"{FN}/grace/start.mcfunction"] = lines(
         "# 5:00 PM (sent by the VPS, or an admin runs it): the 90-minute grace period.",
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute if score #phase {OBJ_STATE} matches 1.. run return run "
         + tell("@s", BUSY),
         "gamerule pvp false",
@@ -151,6 +152,7 @@ def pack_files() -> dict[str, str]:
     )
     f[f"{FN}/grace/end.mcfunction"] = lines(
         "# 6:30 PM (the countdown, the VPS, or an admin): PvP and the Nether open, then the build battle.",
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute unless score #phase {OBJ_STATE} matches 1 run return run "
         + tell("@s", {"text": "No grace period is running.", "color": "red"}),
         "gamerule pvp true",
@@ -161,6 +163,7 @@ def pack_files() -> dict[str, str]:
     )
     f[f"{FN}/build/start.mcfunction"] = lines(
         "# Rise of Kingdoms: 3 hours, judged by staff per faction at the end.",
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute if score #phase {OBJ_STATE} matches 1.. run return run "
         + tell("@s", BUSY),
         f"scoreboard players set #phase {OBJ_STATE} 2",
@@ -180,6 +183,7 @@ def pack_files() -> dict[str, str]:
     )
     f[f"{FN}/build/end.mcfunction"] = lines(
         "# 9:30 PM (the countdown, the VPS, or an admin): building stops, staff judge.",
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute unless score #phase {OBJ_STATE} matches 2 run return run "
         + tell("@s", {"text": "No build battle is running.", "color": "red"}),
         f"scoreboard players set #phase {OBJ_STATE} 0",
@@ -193,6 +197,7 @@ def pack_files() -> dict[str, str]:
     )
     f[f"{FN}/stop.mcfunction"] = lines(
         "# Cancels whatever phase runs. Game rules stay as they are: check them after.",
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute unless score #phase {OBJ_STATE} matches 1.. run return run "
         + tell("@s", IDLE),
         f"scoreboard players set #phase {OBJ_STATE} 0",
@@ -203,6 +208,7 @@ def pack_files() -> dict[str, str]:
     )
     # {minutes:N}: sets the minutes left in the running phase (1 to 600). A non-number fails the macro whole.
     f[f"{FN}/minutes.mcfunction"] = lines(
+        f"function {F}/load",  # makes the scores if the server hasn't ticked since the pack came on
         f"execute unless score #phase {OBJ_STATE} matches 1.. run return run "
         + tell("@s", IDLE),
         f"$scoreboard players set #new {OBJ_TIMER} $(minutes)",

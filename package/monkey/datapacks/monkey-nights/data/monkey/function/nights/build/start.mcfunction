@@ -1,4 +1,5 @@
 # Rise of Kingdoms: 3 hours, judged by staff per faction at the end.
+function monkey:nights/load
 execute if score #phase nt.state matches 1.. run return run tellraw @s [{"text":"An event night phase is already running. /function monkey:nights/stop cancels it.","color":"red"}]
 scoreboard players set #phase nt.state 2
 bossbar remove monkey:nights

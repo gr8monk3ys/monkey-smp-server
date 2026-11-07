@@ -29,9 +29,17 @@ def test_grace_closes_and_opens_pvp_and_nether():
 def test_every_step_is_guarded_by_its_phase():
     """The VPS clock and the in-game countdown both send the end steps: only the first may act."""
     f = nights.pack_files()
-    first = {name: f[f"{FN}/{name}.mcfunction"].splitlines()[1] for name in
+    first = {name: f[f"{FN}/{name}.mcfunction"].splitlines()[2] for name in
              ("grace/start", "grace/end", "build/start", "build/end")}
     assert first["grace/start"].startswith("execute if score #phase nt.state matches 1.. run return run")
     assert first["build/start"].startswith("execute if score #phase nt.state matches 1.. run return run")
     assert first["grace/end"].startswith("execute unless score #phase nt.state matches 1 run return run")
     assert first["build/end"].startswith("execute unless score #phase nt.state matches 2 run return run")
+
+
+def test_every_entry_step_sets_up_first():
+    """An empty server doesn't tick, so the load tag may not have run when the VPS sends a step."""
+    f = nights.pack_files()
+    for name in ("grace/start", "grace/end", "build/start", "build/end", "stop"):
+        assert f[f"{FN}/{name}.mcfunction"].splitlines()[1].startswith("function monkey:nights/load")
+    assert f[f"{FN}/minutes.mcfunction"].splitlines()[0].startswith("function monkey:nights/load")

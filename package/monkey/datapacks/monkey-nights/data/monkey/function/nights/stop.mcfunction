@@ -1,4 +1,5 @@
 # Cancels whatever phase runs. Game rules stay as they are: check them after.
+function monkey:nights/load
 execute unless score #phase nt.state matches 1.. run return run tellraw @s [{"text":"Nothing is running.","color":"red"}]
 scoreboard players set #phase nt.state 0
 bossbar remove monkey:nights

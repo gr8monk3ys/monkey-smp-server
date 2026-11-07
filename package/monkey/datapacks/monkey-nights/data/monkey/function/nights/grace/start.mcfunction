@@ -1,4 +1,5 @@
 # 5:00 PM (sent by the VPS, or an admin runs it): the 90-minute grace period.
+function monkey:nights/load
 execute if score #phase nt.state matches 1.. run return run tellraw @s [{"text":"An event night phase is already running. /function monkey:nights/stop cancels it.","color":"red"}]
 gamerule pvp false
 gamerule allow_entering_nether_using_portals false

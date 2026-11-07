@@ -1,4 +1,5 @@
 # 9:30 PM (the countdown, the VPS, or an admin): building stops, staff judge.
+function monkey:nights/load
 execute unless score #phase nt.state matches 2 run return run tellraw @s [{"text":"No build battle is running.","color":"red"}]
 scoreboard players set #phase nt.state 0
 bossbar remove monkey:nights

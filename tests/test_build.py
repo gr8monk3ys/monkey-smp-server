@@ -86,6 +86,31 @@ def test_build_main_writes_all_three_files(tmp_path, fabric_repo, capsys, monkey
                                         "MonkeySMP-Player-2.0.0.zip"))
 
 
+def test_build_site_build_names_every_file_and_the_pack_by_its_label(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    build.main(fabric_repo, tmp_path / "dist", ["--site-build", "ships"])
+    assert sorted(p.name for p in (tmp_path / "dist").iterdir()) == [
+        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip"]
+    index = json.loads(zipfile.ZipFile(tmp_path / "dist" / "MonkeySMP-Client-2.0.0-ships.mrpack").read(
+        "modrinth.index.json"))
+    assert index["versionId"] == "2.0.0-ships"
+    player = zipfile.ZipFile(tmp_path / "dist" / "MonkeySMP-Player-2.0.0-ships.zip").namelist()
+    assert "MonkeySMP-Player-2.0.0-ships/MonkeySMP-Client-2.0.0-ships.mrpack" in player
+
+
+@pytest.mark.parametrize(("argv", "tag", "message"), [
+    (["--site-build", "Ships!"], "", "lower-case letters and digits"),
+    (["--site-build", "ships"], "v2.0.0", "not for a tagged release"),
+    (["--site-build", "ships", "--notes", "notes.md"], "", "never a release"),
+])
+def test_build_site_build_is_never_a_release(tmp_path, fabric_repo, monkeypatch, argv, tag, message):
+    monkeypatch.setenv("GITHUB_REF_NAME", tag)
+    fake_player(fabric_repo)
+    with pytest.raises(SystemExit, match=message):
+        build.main(fabric_repo, tmp_path / "dist", argv)
+    assert not (tmp_path / "dist").exists()
+
 CHANGELOG = ("# Changelog\n\n## [Unreleased]\n\n## [2.0.0] - 2026-10-01\n\nFabric.\n\n- New mods.\n\n"
              "## [1.1.0]\n\nOld.\n")
 

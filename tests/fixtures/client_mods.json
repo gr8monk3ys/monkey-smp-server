@@ -2012,6 +2012,25 @@
   "items": 1,
   "entity_textures": 0
  },
+ "bhnA6sV8": {
+  "slug": "ingeniumapi",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "ingeniumapi",
+  "environment": "*",
+  "ids": [
+   "ingeniumapi"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 0,
+  "items": 0,
+  "entity_textures": 0
+ },
  "bppzc3HJ": {
   "slug": "maseffects-v2",
   "modrinth": {
@@ -2762,6 +2781,26 @@
   "blockstates": 0,
   "items": 0,
   "entity_textures": 0
+ },
+ "oxBNHOmi": {
+  "slug": "shippy-ships",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "shippy-ships",
+  "environment": "*",
+  "ids": [
+   "shippy-ships"
+  ],
+  "depends": [
+   "fabric-api",
+   "ingeniumapi"
+  ],
+  "code": true,
+  "blockstates": 7,
+  "items": 26,
+  "entity_textures": 9
  },
  "ozLFhOy3": {
   "slug": "dungeons-and-taverns-mineshaft-overhaul",

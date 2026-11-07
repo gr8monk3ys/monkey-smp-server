@@ -10,7 +10,8 @@ work without JavaScript; this checks the same file from the Python side:
   - every key is there and is a string, and nothing else is (a misspelt key would otherwise go unnoticed);
   - LAUNCH_AT is an ISO 8601 time with its offset ("2026-11-08T01:00:00Z");
   - when the modpack is served from the site itself (site/public/pack/), that file is there and is the pack of
-    the version the manifest pins, since a player with another version's pack can't join;
+    the version the manifest pins (or a site-only rebuild of it, "<version>-<label>", tools/build.py
+    --site-build), since a player with another version's pack can't join;
   - site/public/wrapped/site.css is a copy of the site's stylesheet (src/app/style.css): Season Wrapped's pages
     (tools/wrapped.py) are plain HTML that load it, since the built site's own CSS has a new name every build.
     Without --check, a stale copy is replaced instead of reported.
@@ -116,7 +117,8 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
         return [f"site: MODPACK_URL is {url}, but site/public/{url.lstrip('/')} doesn't exist"]
     served = json.loads(zipfile.ZipFile(path).read("modrinth.index.json"))["versionId"]
     pinned = repo.load_manifest()["version"]
-    if served != pinned:
+    # A site-only rebuild of the pinned version (tools/build.py --site-build LABEL) is "<pinned>-LABEL".
+    if served != pinned and not re.fullmatch(re.escape(pinned) + r"-[a-z0-9]{1,20}", served):
         return [f"site: site/public/{url.lstrip('/')} is the {served} client pack, but the manifest is {pinned}: "
                 f"copy MonkeySMP-Client-{pinned}.mrpack and MonkeySMP-Player-{pinned}.zip into site/public/pack/ "
                 "and point MODPACK_URL and INSTALLER_URL in site/config.json at them (docs/MAINTAINING.md, Releasing)"]

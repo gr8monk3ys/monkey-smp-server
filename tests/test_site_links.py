@@ -164,6 +164,19 @@ def test_the_served_pack_must_be_the_pinned_version(tmp_path):
     assert "site/public/pack/" in error and "site/config.json" in error
 
 
+def test_a_site_build_of_the_pinned_version_is_accepted(tmp_path):
+    repo = fake_site(tmp_path, pack_version="1.2.3-ships")
+    site_links.main([], repo=repo)
+    assert site_links.problems(repo) == []
+
+
+@pytest.mark.parametrize("pack_version", ["1.2.30", "1.2.3-", "1.2.3-Ships", "1.2.4-ships"])
+def test_only_a_labelled_build_of_the_pinned_version_passes(tmp_path, pack_version):
+    repo = fake_site(tmp_path, pack_version=pack_version)
+    site_links.main([], repo=repo)
+    [error] = site_links.problems(repo)
+    assert f"{pack_version} client pack, but the manifest is 1.2.3" in error
+
 def test_a_missing_pack_is_reported(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)

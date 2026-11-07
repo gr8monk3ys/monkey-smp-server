@@ -1198,6 +1198,7 @@ the controls refuse it whatever the page sends.
 | Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
 | SFTP card | admin | Host, port and user names, or "ask the owner". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
+| Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |
 
 The mod manager:
 

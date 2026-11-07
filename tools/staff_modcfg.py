@@ -4,6 +4,9 @@ with the same login, role and change checks as its own; docs/LIVE.md, "The staff
     GET  /api/mod-configs             the config files, one group per mod                         admin
     GET  /api/mod-config?path=F       one file's settings as typed fields                          admin
     PUT  /api/mod-config {"path", "mtime", "values"}  saves the changed ones                       admin
+    GET  /api/strength                Strength SMP's settings, asked over RCON                     admin
+    PUT  /api/strength {"values"}     `scoreboard players set $Config ...` for each                admin
+    POST /api/strength-reset {"confirm": "RESET"}  every Strength SMP setting back to its default  admin
 
 Which files: config/ (three folders deep) and the server folder's own *.properties except server.properties, as the
 Files tab's rules allow them. .toml, .properties, .json and .json5 become forms; any other config file (.yml, .conf,
@@ -25,6 +28,7 @@ Stdlib only, Python 3.10 or newer (no tomllib: the parsers here read the files t
 tools/ at load: staff_panel hands itself over in register().
 """
 import bisect
+import concurrent.futures
 import json
 import math
 import os
@@ -926,6 +930,126 @@ class ModConfigs:
         return {"changed": changed, "mtime": done["mtime"]}
 
 
+# ---------------------------------------------------------------- Strength SMP
+
+# Strength SMP (silvers_strength-smp-season-5) has no config file: its settings are scores of the fake player
+# $Config, kept in the world and read every tick, so a change takes effect at once and survives restarts. The mod's
+# own tick puts a score below 2 back to its default, hence each minimum. Its cooldowns and lifetimes count down
+# once every 21 ticks, about once a second. Read from the jar's technical/trigger/ftf/cmd/config/reset and
+# technical/main/tick/private functions. The start level, the level range and the Restrictions add-on's mace and
+# lunge cooldowns are written into the mod's functions: they aren't here.
+STRENGTH_OBJ = "Strength_SMP+Config-"
+STRENGTH_WEAPONS = ("Axe", "Shield", "Sword", "Trident", "Crossbow", "Bow", "Spear", "Mace", "Armor")
+STRENGTH_THREADS = 8
+
+
+def _strength_settings() -> list[dict]:
+    rows = []
+    for kind, default, about in (
+            ("Cooldown", 300, "Seconds (about) before the {w} ultimate can be used again."),
+            ("Lifetime", 500, "Seconds (about) the {w} ultimate lasts.")):
+        for weapon in STRENGTH_WEAPONS:
+            rows.append({"key": f"{kind.lower()}.{weapon.lower()}", "group": kind.lower(),
+                         "label": f"{weapon} ultimate {kind.lower()}", "objective": f"Ultimate_Weapon_{kind}-{weapon}",
+                         "type": "int", "default": default, "min": 2, "max": 86400,
+                         "about": about.format(w=weapon.lower())})
+    rows.append({"key": "armor.charge", "group": "other", "label": "Armor ultimate charge",
+                 "objective": "Ultimate_Damage_Counter_Sufficient_Armor", "type": "int", "default": 250, "min": 2,
+                 "max": 100000, "about": "Damage the armor power must count before its ultimate is ready."})
+    rows.append({"key": "tag.powers", "group": "other", "label": "Powers only for tagged players",
+                 "objective": "Tag_Dependent_Powers", "type": "bool", "default": False,
+                 "about": "On: only players with the tag S_Server-Strength_SMP get powers. Off: everyone does."})
+    return rows
+
+
+STRENGTH = {row["key"]: row for row in _strength_settings()}
+_SCORE = re.compile(r"\bhas (-?\d+) \[")
+
+
+class Strength:
+    """Strength SMP's settings over RCON: `scoreboard players get|set $Config OBJECTIVE`."""
+
+    def __init__(self, panel):
+        self.p = panel
+
+    def _x(self):
+        return sp_apex().extras(self.p)
+
+    def _rcon(self, command: str) -> str:
+        try:
+            return self._x().rcon(command)
+        except sp.server.RconError as e:
+            raise sp.Refused(502, f"The server did not take it: {sp.masked(str(e))[:200]}") from None
+
+    def _running(self):
+        if not self._x().running():
+            raise sp.Refused(502, "The server isn't running: Strength SMP's settings live in the game.")
+
+    def read(self) -> dict:
+        self._running()
+
+        def ask(row):
+            try:
+                said = self._x().rcon(f"scoreboard players get $Config {STRENGTH_OBJ}{row['objective']}")
+            except sp.server.RconError:
+                return None
+            m = _SCORE.search(said)
+            return int(m[1]) if m else None
+
+        with concurrent.futures.ThreadPoolExecutor(STRENGTH_THREADS) as pool:
+            values = list(pool.map(ask, STRENGTH.values()))
+        if all(v is None for v in values):
+            raise sp.Refused(502, "The server didn't answer for any Strength SMP setting: is the mod loaded, or is "
+                                  "the server still starting?")
+        out = []
+        for row, value in zip(STRENGTH.values(), values, strict=True):
+            shown = {k: v for k, v in row.items() if k != "objective"}
+            if row["type"] == "bool" and value is not None:
+                value = value == 1
+            shown.update(value=value, missing=value is None)
+            out.append(shown)
+        return {"settings": out}
+
+    @staticmethod
+    def _score(key, value) -> int:
+        row = STRENGTH.get(key) if isinstance(key, str) else None
+        if row is None:
+            raise sp.Refused(400, f"{str(key)[:80]} is not a Strength SMP setting.")
+        if row["type"] == "bool":
+            if not isinstance(value, bool):
+                raise sp.Refused(400, f"{row['label']} must be on or off.")
+            return int(value)
+        if isinstance(value, bool) or not isinstance(value, int) or not row["min"] <= value <= row["max"]:
+            raise sp.Refused(400, f"{row['label']} must be a whole number from {row['min']} to {row['max']}.")
+        return value
+
+    def _set(self, user: str, scores: dict[str, int], action: str) -> dict:
+        self._running()
+        self.p.record(user, action, ", ".join(f"{k}={v}" for k, v in scores.items()))
+        done = []
+        for key, score in scores.items():
+            try:
+                self._rcon(f"scoreboard players set $Config {STRENGTH_OBJ}{STRENGTH[key]['objective']} {score}")
+            except sp.Refused as e:
+                left = ", ".join(k for k in scores if k not in done)
+                raise sp.Refused(502, f"{e.message} Not set: {left}.") from None
+            done.append(key)
+        return {"changed": done}
+
+    def save(self, user: str, body: dict) -> dict:
+        values = body.get("values")
+        if not isinstance(values, dict) or not values or len(values) > len(STRENGTH):
+            raise sp.Refused(400, "values must be the Strength SMP settings to change.")
+        scores = {key: self._score(key, value) for key, value in values.items()}
+        return self._set(user, scores, "strength")
+
+    def reset(self, user: str, body: dict) -> dict:
+        if body.get("confirm") != "RESET":
+            raise sp.Refused(400, "Type RESET to put every Strength SMP setting back to the mod's default.")
+        scores = {key: int(row["default"]) for key, row in STRENGTH.items()}
+        return self._set(user, scores, "strength-reset")
+
+
 def configs(panel) -> ModConfigs:
     found = getattr(panel, "_modcfg", None)
     if found is None:
@@ -937,6 +1061,9 @@ ROUTES = {
     ("GET", "/api/mod-configs"): lambda p, u, q, b: configs(p).list(),
     ("GET", "/api/mod-config"): lambda p, u, q, b: configs(p).read(q.get("path") or ""),
     ("PUT", "/api/mod-config"): lambda p, u, q, b: configs(p).save(u, b),
+    ("GET", "/api/strength"): lambda p, u, q, b: Strength(p).read(),
+    ("PUT", "/api/strength"): lambda p, u, q, b: Strength(p).save(u, b),
+    ("POST", "/api/strength-reset"): lambda p, u, q, b: Strength(p).reset(u, b),
 }
 NEEDS = dict.fromkeys(ROUTES, "admin")
 

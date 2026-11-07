@@ -403,6 +403,15 @@
         <input id="modcfg-search" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Find a mod or file" aria-label="Find a mod or file">
         <button class="btn" id="modcfg-reload" type="button">Reload</button>
       </div>
+      <details class="box modcard" id="strength-card" data-find="strength smp ultimate cooldown lifetime armor powers tag">
+        <summary><span class="title">Strength SMP</span><span class="fine">in-game settings, over RCON</span></summary>
+        <p class="fine">No config file: these live in the world. A change takes effect at once, with no restart, and
+          stays after one. Times are in seconds (about). The start level, the level range and the mace and lunge
+          cooldowns are fixed in the mod and can't be changed here.</p>
+        <p class="attention" id="strength-error" role="alert" hidden></p>
+        <p class="note" id="strength-note" role="status" hidden></p>
+        <div class="stack" id="strength-body"></div>
+      </details>
       <div class="stack" id="modcfg-list"></div>
     </div>
 

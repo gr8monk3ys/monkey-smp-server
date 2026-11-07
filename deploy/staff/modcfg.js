@@ -140,7 +140,7 @@
     const { node, read, id } = control(field, editable);
     const wide = field.type === "list" || field.type === "fixed" || (field.type === "text" && !field.choices);
     const row = el("div", wide ? "field long" : "field");
-    const label = el("label", "", field.key);
+    const label = el("label", "", field.label || field.key);
     label.htmlFor = id;
     const holder = el("div", "control");
     holder.appendChild(node);
@@ -261,6 +261,112 @@
     }
   }
 
+  // ---------------------------------------------------------------- Strength SMP (over RCON, no file)
+
+  const STRENGTH_GROUPS = [["cooldown", "Ultimate cooldowns"], ["lifetime", "Ultimate lifetimes"], ["other", "Other"]];
+
+  async function loadStrength() {
+    const body = $("strength-body");
+    say($("strength-error"), null);
+    body.replaceChildren(el("p", "fine", "Asking the server..."));
+    let data;
+    try {
+      data = await api("GET", "/api/strength");
+    } catch (error) {
+      body.replaceChildren(button("Try again", "", loadStrength));
+      say($("strength-error"), error);
+      return;
+    }
+    renderStrength(body, data.settings);
+  }
+
+  function renderStrength(body, settings) {
+    const editable = can("admin");
+    const entries = [];
+    const count = el("p", "fine", "No unsaved changes.");
+    count.setAttribute("role", "status");
+    const bar = el("div", "savebar");
+    const save = button("Save changes", "primary", () => saveStrength(entries, save));
+    const onChange = () => {
+      const n = entries.filter((e) => e.row.classList.contains("changed")).length;
+      const bad = entries.filter((e) => e.bad).length;
+      count.textContent = bad ? `${bad} value${bad === 1 ? " isn't" : "s aren't"} valid.`
+        : n ? `${n} unsaved change${n === 1 ? "" : "s"}.` : "No unsaved changes.";
+      bar.classList.toggle("dirty", n > 0 || bad > 0);
+      save.disabled = !editable || bad > 0 || n === 0;
+    };
+    const parts = [];
+    for (const [group, title] of STRENGTH_GROUPS) {
+      const fields = el("div", "fields");
+      for (const setting of settings.filter((s) => s.group === group)) {
+        const shownDefault = setting.type === "bool" ? (setting.default ? "on" : "off") : String(setting.default);
+        // A score the world doesn't hold yet: the mod uses its default, so the form starts there.
+        const field = { ...setting, value: setting.missing ? setting.default : setting.value };
+        field.about = `${setting.about} Default ${shownDefault}.${setting.missing ? " Not set yet: the mod uses the default." : ""}`;
+        const entry = fieldRow(field, editable, onChange);
+        entry.key = setting.key;
+        entries.push(entry);
+        fields.appendChild(entry.row);
+      }
+      parts.push(el("h4", "", title), fields);
+    }
+    const actions = el("div", "actions");
+    actions.append(button("Reload", "", loadStrength), save);
+    bar.append(count, actions);
+    parts.push(bar);
+    if (editable) {
+      const typed = el("input");
+      typed.type = "text";
+      typed.maxLength = 10;
+      typed.autocomplete = "off";
+      typed.spellcheck = false;
+      typed.placeholder = "Type RESET";
+      typed.setAttribute("aria-label", "Type RESET to put every Strength SMP setting back to its default");
+      const reset = button("Reset to defaults", "", () => resetStrength(typed, reset));
+      reset.disabled = true;
+      typed.addEventListener("input", () => { reset.disabled = typed.value.trim() !== "RESET"; });
+      const row = el("div", "typed");
+      row.append(el("span", "fine", "Every setting back to the mod's default:"), typed, reset);
+      parts.push(row);
+    } else {
+      parts.push(el("p", "fine", "Changing these needs an admin login."));
+    }
+    body.replaceChildren(...parts);
+    onChange();
+  }
+
+  async function saveStrength(entries, save) {
+    const values = {};
+    for (const entry of entries) {
+      if (entry.row.classList.contains("changed")) values[entry.key] = entry.read();
+    }
+    if (!Object.keys(values).length) return;
+    say($("strength-error"), null);
+    save.disabled = true;
+    try {
+      const done = await api("PUT", "/api/strength", { values });
+      await loadStrength();
+      const labels = new Map(entries.map((e) => [e.key, e.field.label]));
+      say($("strength-note"), `Set: ${done.changed.map((k) => labels.get(k) || k).join(", ")}. It takes effect at once.`);
+    } catch (failure) {
+      say($("strength-error"), failure);
+      save.disabled = false;
+    }
+  }
+
+  async function resetStrength(typed, reset) {
+    say($("strength-error"), null);
+    reset.disabled = true;
+    try {
+      await api("POST", "/api/strength-reset", { confirm: typed.value.trim() });
+      await loadStrength();
+      say($("strength-note"), "Every Strength SMP setting is back to its default.");
+    } catch (failure) {
+      say($("strength-error"), failure);
+      reset.disabled = false;
+    }
+  }
+
   // ---------------------------------------------------------------- the cards
 
   function card(mod) {
@@ -296,7 +402,7 @@
 
   function filter() {
     const words = $("modcfg-search").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    for (const node of $("modcfg-list").children) {
+    for (const node of [$("strength-card"), ...$("modcfg-list").children]) {
       if (!node.dataset.find) continue;
       node.hidden = !words.every((w) => node.dataset.find.includes(w));
     }
@@ -334,6 +440,12 @@
       role = "moderator";   // the safe guess: the panel decides anyway
     }
     $("modcfg-search").addEventListener("input", filter);
+    let strengthAsked = false;
+    $("strength-card").addEventListener("toggle", () => {
+      if (!$("strength-card").open || strengthAsked) return;
+      strengthAsked = true;
+      loadStrength();
+    });
     $("modcfg-reload").addEventListener("click", () => { state.loaded = false; load(); });
     window.addEventListener("hashchange", show);
     show();

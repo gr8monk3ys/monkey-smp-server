@@ -399,6 +399,10 @@
       "size": 458883,
       "hashes": {
         "sha512": "0189e8db8a2e14d863231ef10d5e278b26fba54c114a9454f3bbd07d38feb5aea5e14a5c49012eceb62a5a2c422d445dea1e5a447c398eecba187307a514e7db"
+      },
+      "patch": {
+        "path": "patches/colorful-trims",
+        "base_sha512": "0189e8db8a2e14d863231ef10d5e278b26fba54c114a9454f3bbd07d38feb5aea5e14a5c49012eceb62a5a2c422d445dea1e5a447c398eecba187307a514e7db"
       }
     },
     {
@@ -907,6 +911,10 @@
       "size": 46043,
       "hashes": {
         "sha512": "d8ff2795c5d81851da1fac3b97787ae76f5a6ac9d359307dae550aabecb6beb82ce76e63cfd3ef041fb396d2bc01d54dd835cc630f5f0af3e5f8e235477b4988"
+      },
+      "patch": {
+        "path": "patches/glowing-glow-squids",
+        "base_sha512": "d8ff2795c5d81851da1fac3b97787ae76f5a6ac9d359307dae550aabecb6beb82ce76e63cfd3ef041fb396d2bc01d54dd835cc630f5f0af3e5f8e235477b4988"
       }
     },
     {
@@ -1947,6 +1955,10 @@
       "size": 96040,
       "hashes": {
         "sha512": "ddce2410196262a4e580fb5e66a8e1060d7bf9342deefe1083b70a1086fccc7722d5068a1842c8d854f8dda1fda92002749e78ebb444d89b393e5a7a76b56983"
+      },
+      "patch": {
+        "path": "patches/sulfur-cube-expansion",
+        "base_sha512": "ddce2410196262a4e580fb5e66a8e1060d7bf9342deefe1083b70a1086fccc7722d5068a1842c8d854f8dda1fda92002749e78ebb444d89b393e5a7a76b56983"
       }
     },
     {

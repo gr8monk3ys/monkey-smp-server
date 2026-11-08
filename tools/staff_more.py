@@ -4,7 +4,7 @@ tools/staff_host.py registers them with staff_panel (register()), so they get th
     GET  /api/java                            the memory and extra Java flags the next start uses, and the Java    admin
     PUT  /api/java {"memory_gb", "flags"}     writes server/monkey-launch.json (null memory: picked as before)     admin
     GET  /api/datapacks                       the world's data packs, on or off when the server runs              admin
-    POST /api/datapack-upload?name=N&confirm=N  a data pack .zip, the raw body: checked, then into the world     admin
+    POST /api/datapack-upload?name=N&confirm=N  a data pack .zip, the raw body: checked, then into the world     owner
     POST /api/datapack-toggle {"name", "enabled"}  datapack enable/disable "file/NAME" (the server must run)     admin
     POST /api/datapack-remove {"name", "confirm"}  into staff-removed/TIME/, never deleted                       admin
     POST /api/datapack-reload                 /reload: data packs (and their changes) load without a restart       admin
@@ -772,6 +772,9 @@ ROUTES = {
 }
 NEEDS = {key: "admin" for key in ROUTES}
 NEEDS[("POST", "/api/modpack")] = "owner"     # a pack's overrides/ can carry any jar: like a mod upload
+# A data pack is game code (functions, loot, recipes) that runs on the server: also the owner's. Turning packs on or
+# off stays admin.
+NEEDS[("POST", "/api/datapack-upload")] = "owner"
 RAW = {("POST", "/api/datapack-upload"): PACK_MAX, ("POST", "/api/server-icon"): ICON_MAX,
        ("POST", "/api/modpack"): MRPACK_MAX}
 

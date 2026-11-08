@@ -1185,9 +1185,12 @@ The CLI also has `list`, `set-role`, `send-verify` and `end-sessions`: `sudo -u 
 Who may use what: the login's role (`moderator`, `admin`, `owner`). The page greys out or hides what a login can't use;
 the controls refuse it whatever the page sends. With the new login (`tools/staff_auth.py`), an admin or owner login
 without two-step login works as a moderator until it turns two-step on from the account menu, which says so. The
-password box (`--use-basic-auth`) has no two-step login and gives owner: keep it for emergencies.
+password box (`--use-basic-auth`) has no two-step login and gives owner: keep it for emergencies. **Before a deploy
+that brings this in, every admin turns two-step on**, and never deploy it during an event (17:00 to 21:30 on event
+nights): an admin without it can't run the event timer until they do.
 
-A jar runs as the server, so only an owner adds one: uploading a jar, installing a `.mrpack`, and, in Files, saving,
+A jar runs as the server, so only an owner adds one: uploading a jar, installing a `.mrpack`, uploading a data pack
+(game code: functions, loot, recipes; turning packs on or off stays admin), and, in Files, saving,
 uploading or restoring a `.jar` or anything in `mods/` or `.fabric/` (checked again after links are followed). An
 admin adds mods from Modrinth, where the file is checked by its hash.
 
@@ -1203,6 +1206,7 @@ admin adds mods from Modrinth, where the file is checked by its hash.
 | Mod manager | admin | Install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
 | Keep a pinned mod off | admin | Turning off or removing a pinned mod asks "Keep it off after restarts" (ticked), when the live release supports it. Allow again undoes it. Types the jar's file name. |
 | Do players need it | admin | Yes, no or don't know, for a mod Modrinth doesn't know. Saved with the mod. |
+| Upload a data pack | owner | A data pack `.zip`, checked, then into the world's `datapacks/`. |
 | Data pack troubleshooting | admin | Turn all off (types `ALL OFF`) saves which packs are on and turns them off; Turn saved set back on puts them back in order. |
 | World download | owner | A one-time link to a zip of the world. Saving is off while it streams. |
 | Bans by address | admin | `ban-ip` and `pardon-ip`. Public addresses only. The log never holds the address. |

@@ -97,6 +97,9 @@ def test_warden_advancements_test_the_biome_before_reading_the_player():
 TRIMS = "data/colorful_trims/function/tick.mcfunction"
 CUBES = "data/more_archetypes/function/tick.mcfunction"
 EFFECTS_TICK = "overlay_26.2/data/s_effects_lib/function/technical/tick/private.mcfunction"
+# Read from upstream 1.0's tick.mcfunction (the jar whose sha512 starts CUBE_UPSTREAM_SHA512), in its order. A new
+# upstream jar fails the pin test below until this list is read again from that jar, not from the patch.
+CUBE_UPSTREAM_SHA512 = "ddce2410196262a4"
 CUBE_ARCHETYPES = [
     "hot_air", "sticky", "extra_sticky", "shulker", "healing", "booster", "creepy", "potent", "potent", "anvil",
     "oven", "sonic", "barbed", "fragile", "fragile_panes", "small_explosive", "big_explosive", "dried_ghast",
@@ -113,20 +116,27 @@ def world_scans(text):
     return [s for s in found if "distance=" not in s]
 
 
+# `if` conditions that always fail when there is no @s, so a return behind one cannot stop the server.
+NEEDS_AN_ENTITY = re.compile(r"\bif (entity @s\b|items entity @s |data entity @s |score @s |predicate )")
+
+
 def server_stops_at(text):
-    """The first line that returns when the function runs with no entity, as a tick function does."""
+    """The first line that can return when the function runs with no entity, as a tick function does.
+
+    Any condition that does not need @s (`if score <fake player>`, `if block`, any `unless`) may pass, so a return
+    behind only those counts as a stop.
+    """
     for i, line in enumerate(commands(text)):
         if " return" not in f" {line}" and not line.startswith("return"):
             continue
-        conditions = re.findall(r"(if|unless) entity (@s(?:\[[^\]]*\])?)", line.split(" run ", 1)[0])
-        if all(kind == "unless" for kind, _ in conditions):
+        if not NEEDS_AN_ENTITY.search(line.split(" run ", 1)[0]):
             return i
     return None
 
 
 def test_colorful_trims_scans_items_once_and_still_sets_every_dye():
     text = patched("colorful-trims", TRIMS)
-    assert world_scans(text) == ["@e[type=minecraft:item]"]
+    assert world_scans(text) == ["@e[type=minecraft:item,tag=!colorful_trims.no_material]"]
     lines = commands(text)
     for color in DYES:
         hits = [line for line in lines if f"contents minecraft:{color}_dye run" in line]
@@ -136,6 +146,17 @@ def test_colorful_trims_scans_items_once_and_still_sets_every_dye():
     assert "#colorful_trims:dyes[!minecraft:provides_trim_material]" in pass_line
     assert pass_line.endswith("run function colorful_trims:tick")
     assert server_stops_at(text) is None
+    # A tag member with no line above is tagged once and skipped, not run again every tick.
+    assert "tag=!colorful_trims.no_material" in pass_line
+    assert "execute if entity @s[type=minecraft:item] run return run tag @s add colorful_trims.no_material" in lines
+
+
+def test_server_stops_at_counts_only_conditions_that_need_an_entity():
+    assert server_stops_at("execute if score #on x matches 1 run return 0") == 0
+    assert server_stops_at("execute unless entity @s run return 0") == 0
+    assert server_stops_at("execute if items entity @s contents minecraft:stone run return 0") is None
+    assert server_stops_at("execute if predicate a:b run return 0") is None
+    assert server_stops_at("execute if entity @s[type=minecraft:item] run return run kill @s") is None
 
 
 def test_colorful_trims_still_fixes_dyes_held_by_players():
@@ -159,7 +180,9 @@ def test_sulfur_cubes_run_every_archetype_in_one_pass():
     text = patched("sulfur-cube-expansion", CUBES)
     assert len(world_scans(text)) == 5
     assert sum("@e[type=minecraft:sulfur_cube]" in line for line in commands(text)) == 1
-    # Upstream 1.0's archetype checks, in its order.
+    # Upstream 1.0's archetype checks, in its order (CUBE_ARCHETYPES is read from the pinned upstream jar).
+    mods = {e["slug"]: e for e in load_json(REPO.monkey / "manifest.json")["mods"]}
+    assert mods["sulfur-cube-expansion"]["patch"]["base_sha512"].startswith(CUBE_UPSTREAM_SHA512)
     assert re.findall(r"if predicate more_archetypes:(\w+)", text) == CUBE_ARCHETYPES
 
 

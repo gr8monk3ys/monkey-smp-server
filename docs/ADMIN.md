@@ -425,6 +425,13 @@ because on a raiding server live positions would lead everyone to their targets.
 any map. Where BlueMap wrote `plugin.conf` itself (a server installed before this default shipped), markers
 are on: set it to `false` there and run `bluemap reload`.
 
+It renders only while fewer than 3 players are online: `player-render-limit: 3` in the same file. On the VPS's two
+threads the renderer took more CPU than the game thread on 2026-11-07, and the load test lost about 3 TPS with it on
+(docs/LIVE.md, "Load test"). While it is paused the map still serves; changes made in busy hours show up once fewer
+are on, and `bluemap` in the console says the render threads are paused. A server installed before this default
+keeps its own `plugin.conf` with `-1` (never pause): set `player-render-limit: 3` there and run `bluemap reload`.
+`bluemap stop` still stops it by hand, and that state outlasts restarts until `bluemap start`.
+
 It also stops at the world border. Chunky generates out to the season's largest border (docs/LIVE.md, step
 6), so a map of everything generated would show the land the border acts haven't opened yet. The first
 `render-mask` layer of each map in `server\config\bluemap\maps\` is a box on its dimension's border: the

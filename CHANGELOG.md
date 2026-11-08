@@ -91,6 +91,11 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Changed
 
+- The live map pauses its renderer while 3 or more players are online (`player-render-limit: 3` in BlueMap's
+  `plugin.conf`) and catches up once fewer are on. On 2026-11-07 the renderer used more CPU than the game thread on
+  the VPS's two threads, and the load test lost about 3 TPS with it on. Until now this was a manual `bluemap stop`
+  (docs/LAUNCH.md), and the renderer was running again that evening. The map still serves; it just shows busy hours' changes
+  later. Servers keep their own `plugin.conf`, so the live one needs the line by hand (docs/ADMIN.md, "The live map").
 - The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
   password-box login is always treated as an owner, as before.
 

@@ -161,6 +161,17 @@ def check_world_zip(path) -> dict:
         return {"prefix": prefix, "files": files, "size": total}
 
 
+DATAPACKS_ONLY_OWNER = ("The world has data packs in it (datapacks/), and only the owner adds those: take the "
+                        "datapacks folder out of the zip, or ask the owner to upload it.")
+
+
+def has_datapacks(path, prefix: str) -> bool:
+    """Whether the world zip at `path` (its world folder `prefix`, from check_world_zip) has a file in datapacks/."""
+    top = (prefix + "datapacks/").lower()
+    with zipfile.ZipFile(path) as z:
+        return any(not i.is_dir() and i.filename.lower().startswith(top) for i in z.infolist())
+
+
 def unzip_world(src, dest) -> Path:
     """Unpacks a world zip into DEST/world (DEST an empty folder), checking it all again first. Returns that folder."""
     dest = Path(dest)
@@ -908,6 +919,9 @@ class Host:
                     f.flush()
                     os.fsync(f.fileno())
                 info = check_world_zip(part)
+                # A data pack is game code, which only the owner adds (/api/datapack-upload): never around that here.
+                if getattr(body, "role", None) != "owner" and has_datapacks(part, info["prefix"]):
+                    raise Problem(DATAPACKS_ONLY_OWNER)
             except Problem as e:
                 part.unlink(missing_ok=True)
                 raise sp.Refused(400, str(e)) from None

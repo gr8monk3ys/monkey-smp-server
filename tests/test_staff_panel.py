@@ -784,6 +784,27 @@ def test_only_the_owner_adds_or_changes_jars_or_files_in_mods(box):
     assert box.call("POST", "/api/upload?path=config&name=x.txt", b"x", headers=admin)[0] == 200
 
 
+def test_only_the_owner_writes_server_properties_in_files(box):
+    # The Settings form keeps online-mode, RCON and the ports for the owner; the file manager must not go round it.
+    admin = {"X-Staff-Role": "admin"}
+    props = box.root / "server.properties"
+    before = props.read_bytes() if props.exists() else None
+    _, read = box.call("GET", "/api/file?path=server.properties")
+    mtime = read.get("mtime")
+    for path in ("server.properties", "./server.properties", "Server.Properties"):
+        code, answer = box.call("PUT", "/api/file", {"path": path, "text": "online-mode=false\n", "mtime": mtime},
+                                headers=admin)
+        assert code == 403 and "owner" in answer["error"], path
+    code, answer = box.call("POST", "/api/upload?path=&name=server.properties", b"online-mode=false\n",
+                            headers=admin)
+    assert code == 403 and "owner" in answer["error"]
+    link(props, box.root / "config" / "p.properties")
+    code, answer = box.call("PUT", "/api/file", {"path": "config/p.properties", "text": "online-mode=false\n",
+                                                 "mtime": mtime}, headers=admin)
+    assert code == 403 and "owner" in answer["error"]
+    assert (props.read_bytes() if props.exists() else None) == before
+
+
 def test_an_admin_cannot_reach_mods_through_a_link(box):
     link(box.root / "mods", box.root / "config" / "m")
     code, answer = box.call("POST", "/api/upload?path=config/m&name=x.txt", b"x", headers={"X-Staff-Role": "admin"})

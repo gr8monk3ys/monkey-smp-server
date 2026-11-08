@@ -2,8 +2,14 @@
 
 ## [Unreleased]
 
-For 3.2.0. In game, only the event timer is new (staff start it), and players install nothing. One step by hand on
-the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
+## [3.2.0] - 2026-11-08
+
+Less lag in busy hours, event nights that run by themselves, and the staff page's new tools. In game, the event timer
+and the event nights are new (staff start them), and four mods' data packs scan entities far less often. Players
+install nothing: the client pack is the same as the site's 3.1.1-ships pack. Steps by hand on the live server, each in
+its entry below: the new Caddyfile (docs/LIVE.md, "The website's standings"), the staff page's `--install` and
+`--install-helper` and the login page (docs/LIVE.md). The live map's `player-render-limit: 3` was already set by hand
+on 2026-11-07.
 
 ### Added
 

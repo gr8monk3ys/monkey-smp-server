@@ -71,6 +71,7 @@ import staff_apex
 import staff_auth
 import staff_events
 import staff_modcfg
+import staff_players
 import staff_status
 
 import rcon as server
@@ -1035,6 +1036,7 @@ RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a f
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
+staff_players.register(sys.modules[__name__])  # player actions, Strength, faction prize, stat reset
 
 
 def allowed(role: str, need: str) -> bool:

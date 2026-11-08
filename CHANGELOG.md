@@ -91,6 +91,11 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Changed
 
+- Four data packs inside mods look through every loaded entity far less often each tick: Colorful Trims (16 scans a
+  tick to 1), Huge Sulfur Cube Expansion (about 45 to 5), Glowing Glow Squids (one per glow squid to none) and
+  Silver's Effects Library (20 to 2 for its stun boxes and eternal flames). On launch night, with about 1,700 loaded
+  entities, scans like these took about 11% of the server's main thread. Patches in `package/monkey/patches/`, listed in
+  docs/MAINTAINING.md. What players see doesn't change. Players install nothing.
 - The password-box site (`deploy/Caddyfile.staff`) also removes an `X-Staff-Role` header a browser sends, so a
   password-box login is always treated as an owner, as before.
 

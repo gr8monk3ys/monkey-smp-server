@@ -49,6 +49,9 @@ The rules, all here:
   password gives a challenge good once for 5 minutes, not a session; a wrong code counts like a wrong password, for
   the name and for the address. A reset link doesn't turn it off. The key is kept as it is (the app's codes need it);
   recovery codes only as hashes, each good once. An owner can turn it off for another login (a lost phone).
+- An admin or owner login without two-step login works as a moderator (X-Staff-Role says moderator) until it turns
+  two-step login on in the account menu. A stolen admin password alone can't upload, install or change anything.
+  /auth/session says so: {role: the role it works as, held_role: its own role, two_step_needed: true}.
 - No password, token, key or link is ever logged. Mail settings come from /etc/monkey-staff-mail.env (root:monkey,
   640), read as KEY=value lines and never run: Resend (RESEND_API_KEY) or SMTP with STARTTLS (SMTP_HOST, SMTP_PORT,
   SMTP_USER, SMTP_PASSWORD), and MAIL_FROM. With neither, the page says to ask the owner, who has this CLI.
@@ -79,7 +82,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 ROLES = ("moderator", "admin", "owner")
-NAME = re.compile(r"[a-z0-9_]{2,32}")
+TWO_STEP_ROLES = ("admin", "owner")     # these work as a moderator until two-step login is on
+NAME =re.compile(r"[a-z0-9_]{2,32}")
 EMAIL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})+")
 COOKIE = "monkey_staff"
 SITE_URL = "https://staff.monkeysmp.lscaturchio.xyz"
@@ -221,6 +225,11 @@ def checked_email(email) -> str:
     if not isinstance(email, str) or len(email) > 254 or not EMAIL.fullmatch(email.strip()):
         raise AuthError(400, "That doesn't look like an email address.")
     return email.strip()
+
+
+def working_role(role: str, two_step: bool) -> str:
+    """The role a login works as: an admin or owner without two-step login works as a moderator."""
+    return "moderator" if role in TWO_STEP_ROLES and not two_step else role
 
 
 def iso(when: float | None) -> str | None:
@@ -519,8 +528,8 @@ class Auth:
         return None
 
     def session(self, token: str | None) -> dict | None:
-        """{user, role, email, email_verified, two_step, recovery_left, key} for a good session, else None. Marks it
-        used."""
+        """{user, role, held_role, two_step_needed, email, email_verified, two_step, recovery_left, key} for a good
+        session, else None. `role` is the one it works as (working_role); `held_role` is its own. Marks it used."""
         if not token:
             return None
         key, now = token_hash(token), self.clock()
@@ -536,7 +545,9 @@ class Auth:
                 s["seen"] = now
         user = data["users"][s["user"]]
         totp = user.get("totp")
-        return {"user": s["user"], "role": user["role"], "email": user.get("email"),
+        role = working_role(user["role"], bool(totp))
+        return {"user": s["user"], "role": role, "held_role": user["role"], "two_step_needed": role != user["role"],
+                "email": user.get("email"),
                 "email_verified": bool(user.get("email_verified")), "two_step": bool(totp),
                 "recovery_left": len(totp.get("recovery", [])) if totp else 0, "key": key}
 
@@ -635,7 +646,8 @@ class Auth:
                 else:
                     user["failed"], user["locked_until"] = 0, 0
                     self._forget_slot(slot)
-                    return {"user": name, "role": user["role"]}, self._new_session(data, name, now)
+                    return {"user": name, "role": working_role(user["role"], False)}, \
+                        self._new_session(data, name, now)
         with self._counters:
             count, until = self._name_fails.get(slot, [0, 0])
             count = count + 1 if until <= now else 1
@@ -1102,7 +1114,8 @@ class Auth:
             me = self.session(token)
             if not me:
                 return 401, {"ok": False, "error": "Not logged in."}, []
-            return 200, {"ok": True, "user": me["user"], "role": me["role"], "email": me["email"],
+            return 200, {"ok": True, "user": me["user"], "role": me["role"], "held_role": me["held_role"],
+                         "two_step_needed": me["two_step_needed"], "email": me["email"],
                          "email_verified": me["email_verified"], "two_step": me["two_step"],
                          "recovery_left": me["recovery_left"], "mail": self.mail_ready()}, []
         if method != "POST":

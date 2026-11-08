@@ -36,6 +36,8 @@ The safety rules, all here rather than in the page:
   read-only. A save checks the file wasn't saved by someone else since it was read, and writes a whole new file.
   Nothing is ever deleted: a file that is replaced, deleted or restored over goes to STAFF_DIR/history first, the newest
   200 kept. A value whose key says password, secret or token is shown as ******** and saved back as it was.
+  Only an owner saves, uploads or restores a jar, or anything in mods/ or .fabric/ (asked or reached through a link):
+  a jar runs as the server, so with it an admin could do anything the server's user can.
 - Commands: one line, no `seed` (the seed is secret) and no `stop` (the container would start again at once: the
   power controls stop it). Player commands need a real player name. Log lines and answers are masked as the status
   page's are (tools/staff_status.py): a line that mentions a secret is left out, addresses and links are masked.
@@ -105,6 +107,10 @@ LOCK_WAIT = 10
 ACTIONS = ("restart", "restart-now", "stop", "start")
 TOP_REFUSED = {"libraries", "versions", "bluemap"}
 READ_ONLY = {"logs", "crash-reports"}
+# Files that run as the server: only the owner writes them from the file manager (save, upload, restore), like the
+# Mods tab's own upload. Deleting stays admin, like removing a mod.
+CODE_TOPS = {"mods", ".fabric"}
+CODE_ONLY_OWNER = "Only the owner can add or change jars, or files in mods/ (they run as the server)."
 _DATABASE = re.compile(r"\.db(-\w+)?$", re.I)
 # level-seed too: the seed is as secret here as in the console.
 _SECRET_KEY = re.compile(r"password|secret|token|seed", re.I)
@@ -546,6 +552,20 @@ class Panel:
         if top in READ_ONLY:
             return "read-only"
         return "writable"
+
+    @staticmethod
+    def holds_code(parts: tuple[str, ...]) -> bool:
+        """Whether a path (its parts from the server folder) is a jar, or in a folder the game loads code from."""
+        return bool(parts) and (parts[0].lower() in CODE_TOPS or parts[-1].lower().endswith(".jar"))
+
+    def code_guard(self, rel) -> None:
+        """Refused unless `rel` (as asked, and the file a link leads to) holds no code. For non-owners' writes."""
+        if not isinstance(rel, str):
+            return                      # resolve() refuses it with its own sentence
+        _, real_parts = self.resolve(rel, "write")
+        asked = tuple(p for p in PurePosixPath(rel).parts if p != ".")
+        if self.holds_code(asked) or self.holds_code(real_parts):
+            raise Refused(403, CODE_ONLY_OWNER)
 
     def resolve(self, rel, want: str = "read") -> tuple[Path, tuple[str, ...]]:
         """(real path, its parts from the server folder) for `rel`, or Refused. `want` is read or write."""
@@ -1037,6 +1057,10 @@ staff_events.register(sys.modules[__name__])  # the event timer and the leaderbo
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 
 
+# The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.
+CODE_WRITES = {("PUT", "/api/file"), ("POST", "/api/upload"), ("POST", "/api/restore")}
+
+
 def allowed(role: str, need: str) -> bool:
     return ROLES.index(role) >= ROLES.index(need)
 
@@ -1144,6 +1168,9 @@ class Handler(BaseHTTPRequestHandler):
                 raise Refused(405 if url.path in PATHS else 404, "There is no such request.")
             if not allowed(role, NEEDS.get((method, url.path), "admin")):
                 raise Refused(403, "Your login's role can't do that.")
+            code_write = role != "owner" and (method, url.path) in CODE_WRITES
+            if code_write and url.path == "/api/upload":
+                panel.code_guard("/".join(p for p in (query.get("path") or "", query.get("name") or "") if p))
             if url.path == "/api/me":
                 result = {"user": user, "role": role}
             elif url.path == "/api/upload":
@@ -1164,6 +1191,8 @@ class Handler(BaseHTTPRequestHandler):
                     self.drained = raw.started      # a body read part way is never read on: the connection closes
             else:
                 body = self.json_body(SAVE_MAX if method == "PUT" else JSON_MAX) if method != "GET" else {}
+                if code_write:
+                    panel.code_guard(body.get("path"))
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if url.path == "/api/download":
                 self.send_download(*result)

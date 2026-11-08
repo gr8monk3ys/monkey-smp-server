@@ -36,11 +36,14 @@ UID = "20261106T090000Z-00aa11bb"
 # ---------------------------------------------------------------- who may ask
 
 
+OWNER_ONLY = {("POST", "/api/mod-upload")}     # a jar runs as the server (exploit audit, 2026-11-07)
+
+
 def test_every_new_route_is_admin_and_registered():
     assert staff_host.ROUTES
     for key in staff_host.ROUTES:
         assert staff_panel.ROUTES[key] is staff_host.ROUTES[key]
-        assert staff_panel.NEEDS[key] == "admin" == staff_host.NEEDS[key]
+        assert staff_panel.NEEDS[key] == ("owner" if key in OWNER_ONLY else "admin") == staff_host.NEEDS[key]
         assert key[1] in staff_panel.PATHS
     assert set(staff_host.RAW) <= set(staff_host.ROUTES)
     assert staff_panel.RAW[("POST", "/api/world-upload")] == 8_000_000_000
@@ -52,6 +55,16 @@ def test_a_moderator_is_refused_every_new_route(apex, method, path):
     body = None if method == "GET" else (b"x" if (method, path) in staff_host.RAW else {})
     code, data = apex.call(method, path, body, headers=as_role("moderator"))
     assert code == 403 and "role" in data["error"]
+
+
+def test_only_the_owner_uploads_a_jar_and_an_admin_still_installs_from_modrinth(apex, tmp_path):
+    good = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.0", "environment": "*"})
+    for role in ("moderator", "admin"):
+        code, data = apex.call("POST", mod_url("lithium.jar"), good, headers=as_role(role))
+        assert code == 403 and "role" in data["error"]
+    assert not (apex.root / "mods" / "lithium.jar").exists()
+    assert staff_panel.NEEDS[("POST", "/api/modrinth-install")] == "admin"
+    assert apex.call("POST", mod_url("lithium.jar"), good)[0] == 200          # the fixture's role is owner
 
 
 # ---------------------------------------------------------------- the mod manager

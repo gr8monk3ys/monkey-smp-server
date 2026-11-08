@@ -2,7 +2,7 @@
 the SFTP card. tools/staff_apex.py registers them with staff_panel (register()), so they get the same login, role and
 change checks; docs/LIVE.md, "The staff page", says what each one does.
 
-    POST /api/mod-upload?name=N&confirm=N   a jar, the raw body: checked, then into mods/      admin
+    POST /api/mod-upload?name=N&confirm=N   a jar, the raw body: checked, then into mods/      owner
     POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     admin
     POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  admin
     POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  admin
@@ -997,8 +997,11 @@ ROUTES = {
     ("POST", "/api/world-upload-apply"): lambda p, u, q, b: host(p).world_upload_apply(u, b),
     ("GET", "/api/sftp"): lambda p, u, q, b: host(p).sftp(u),
 }
-# Every route here names who may use it (the owner made all of these admin: 2026-11-06).
+# Every route here names who may use it (the owner made all of these admin: 2026-11-06). A jar from the visitor's
+# own computer runs as the server on the next restart, so that one is the owner's (exploit audit, 2026-11-07);
+# a Modrinth install stays admin: the jar comes from Modrinth, checked against its hash.
 NEEDS = {key: "admin" for key in ROUTES}
+NEEDS[("POST", "/api/mod-upload")] = "owner"
 # The routes whose body is a file, and the most bytes each takes (staff_panel.RAW).
 RAW = {("POST", "/api/mod-upload"): MOD_MAX, ("POST", "/api/world-upload"): WORLD_UPLOAD_MAX}
 

@@ -14,7 +14,7 @@ tools/staff_host.py registers them with staff_panel (register()), so they get th
     GET  /api/server-icon                     the icon as a data: URL, or none                                    admin
     POST /api/server-icon                     a 64x64 PNG, the raw body: the old one goes to staff-removed/ first  admin
     POST /api/server-icon-remove              the icon into staff-removed/                                        admin
-    POST /api/modpack?name=N&confirm=N        a .mrpack, the raw body: its server mods, all checked, then in      admin
+    POST /api/modpack?name=N&confirm=N        a .mrpack, the raw body: its server mods, all checked, then in      owner
 
 The safety rules:
 - What is replaced or removed is moved to server/staff-removed/TIME-XXXX/ first, never deleted (mods: mods-removed/).
@@ -771,6 +771,7 @@ ROUTES = {
     ("POST", "/api/modpack"): lambda p, u, q, b: more(p).modpack(u, q, b),
 }
 NEEDS = {key: "admin" for key in ROUTES}
+NEEDS[("POST", "/api/modpack")] = "owner"     # a pack's overrides/ can carry any jar: like a mod upload
 RAW = {("POST", "/api/datapack-upload"): PACK_MAX, ("POST", "/api/server-icon"): ICON_MAX,
        ("POST", "/api/modpack"): MRPACK_MAX}
 

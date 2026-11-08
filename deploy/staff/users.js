@@ -242,6 +242,12 @@
     status.hidden = true;
     status.setAttribute("role", "status");
     body.append(el("p", "", `Logged in as ${me.user}, ${me.role}.`), status);
+    if (session && session.two_step_needed) {
+      // An admin or owner login without two-step works as a moderator until it is on (staff_auth.working_role).
+      body.append(el("p", "attention", `Your login is ${session.held_role}, but it works as a moderator until you `
+                                       + "turn on two-step login below. Then reload this page."));
+      box.open = true;
+    }
     if (!session) {
       body.append(el("p", "fine", "This login is the browser's password box: ask the owner for a new password."));
     } else {

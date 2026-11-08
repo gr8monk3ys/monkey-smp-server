@@ -761,6 +761,38 @@ def test_upload_adds_or_replaces_a_file_keeping_the_old_one(box):
     assert box.call("POST", "/api/upload?path=&name=server-icon.png", b"png")[0] == 200
 
 
+def test_only_the_owner_adds_or_changes_jars_or_files_in_mods(box):
+    admin = {"X-Staff-Role": "admin"}
+    # A jar runs as the server, so the file manager keeps jars, mods/ and .fabric/ for the owner.
+    for query in ("path=mods&name=b.jar", "path=config&name=x.jar", "path=&name=evil.JAR", "path=mods&name=x.txt"):
+        code, answer = box.call("POST", f"/api/upload?{query}", b"jar", headers=admin)
+        assert code == 403 and "owner" in answer["error"], query
+    for path in ("mods/a.jar", "mods/notes.txt", ".fabric/x.txt", "config/x.jar", "./mods/a.jar"):
+        code, answer = box.call("PUT", "/api/file", {"path": path, "text": "x", "mtime": None}, headers=admin)
+        assert code == 403 and "owner" in answer["error"], path
+    assert (box.root / "mods" / "a.jar").read_bytes() != b"x"
+    # The owner still can, and an admin still saves and restores everything else.
+    assert box.call("POST", "/api/upload?path=mods&name=a.jar", b"jar 2")[0] == 200
+    entry = box.call("GET", "/api/history")[1]["entries"][0]
+    assert entry["path"] == "mods/a.jar"
+    code, answer = box.call("POST", "/api/restore", {"entry": entry["entry"], "path": "mods/a.jar"}, headers=admin)
+    assert code == 403 and (box.root / "mods" / "a.jar").read_bytes() == b"jar 2"
+    assert box.call("POST", "/api/restore", {"entry": entry["entry"], "path": "mods/a.jar"})[0] == 200
+    _, read = box.call("GET", "/api/file?path=config/plain.yml")
+    assert box.call("PUT", "/api/file", {"path": "config/plain.yml", "text": "a: 2\n", "mtime": read["mtime"]},
+                    headers=admin)[0] == 200
+    assert box.call("POST", "/api/upload?path=config&name=x.txt", b"x", headers=admin)[0] == 200
+
+
+def test_an_admin_cannot_reach_mods_through_a_link(box):
+    link(box.root / "mods", box.root / "config" / "m")
+    code, answer = box.call("POST", "/api/upload?path=config/m&name=x.txt", b"x", headers={"X-Staff-Role": "admin"})
+    assert code == 403 and not (box.root / "mods" / "x.txt").exists()
+    code, _ = box.call("PUT", "/api/file", {"path": "config/m/new.txt", "text": "x", "mtime": None},
+                       headers={"X-Staff-Role": "admin"})
+    assert code == 403 and not (box.root / "mods" / "new.txt").exists()
+
+
 @pytest.mark.parametrize("query", ["path=mods&name=../x.jar", "path=mods&name=a b.jar", "path=mods&name=",
                                    "path=..&name=x.jar", "path=mods&name=..", "path=mods/a.jar&name=x.jar",
                                    "path=world&name=x.jar", "path=mods&name=x.db"])

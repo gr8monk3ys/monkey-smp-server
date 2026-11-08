@@ -86,7 +86,8 @@ def test_a_password_is_scrypt_with_its_own_salt_and_the_unit_can_afford_it(monke
 def test_login_works_and_wrong_or_unknown_get_the_same_sentence(auth):
     auth.user("diego")
     who, token = auth.auth.login("Diego ", GOOD, "203.0.113.1")
-    assert who == {"user": "diego", "role": "admin"} and len(token) >= 40
+    # An admin without two-step login works as a moderator (see test_an_admin_or_owner_works_as_a_moderator_...).
+    assert who == {"user": "diego", "role": "moderator"} and len(token) >= 40
     with pytest.raises(staff_auth.AuthError) as wrong:
         auth.auth.login("diego", "not it at all", "203.0.113.1")
     with pytest.raises(staff_auth.AuthError) as unknown:
@@ -782,12 +783,13 @@ def cookie_of(answer) -> str:
 
 
 def test_the_session_check_names_the_login_for_caddy(web):
-    web.user("diego")
+    web.user("diego", "moderator")
     answer = web.call("POST", "/auth/login", {"name": "diego", "password": GOOD})
-    assert answer.status == 200 and answer.json == {"ok": True, "user": "diego", "role": "admin"}
+    assert answer.status == 200 and answer.json == {"ok": True, "user": "diego", "role": "moderator"}
     cookie = cookie_of(answer)
     check = web.call("GET", "/auth/check", headers={"Cookie": cookie})
-    assert check.status == 200 and check.headers["X-Staff-User"] == "diego" and check.headers["X-Staff-Role"] == "admin"
+    assert check.status == 200 and check.headers["X-Staff-User"] == "diego" \
+        and check.headers["X-Staff-Role"] == "moderator"
     # Without a session: a page visit goes to the login page, the rest is refused.
     page = web.call("GET", "/auth/check", headers={"X-Forwarded-Method": "GET", "X-Forwarded-Uri": "/index.html"})
     assert page.status == 302 and page.headers["Location"] == "/login" and "X-Staff-User" not in page.headers
@@ -895,6 +897,47 @@ def test_two_step_login_over_http_sets_the_cookie_only_after_the_code(web):
     assert check.status == 200 and check.headers["X-Staff-User"] == "diego"
     assert web.call("POST", "/auth/login/code", {"challenge": "x" * 43, "code": "123456"},
                     marked=False).status == 403
+
+
+def test_working_role_drops_only_admins_and_owners_without_two_step():
+    assert staff_auth.working_role("moderator", False) == "moderator"
+    assert staff_auth.working_role("admin", False) == staff_auth.working_role("owner", False) == "moderator"
+    assert staff_auth.working_role("admin", True) == "admin" and staff_auth.working_role("owner", True) == "owner"
+
+
+def test_an_admin_or_owner_works_as_a_moderator_until_two_step_is_on(web):
+    cookies = {}
+    for name, role in (("diego", "admin"), ("lorenzo", "owner")):
+        web.user(name, role)
+        cookie = cookies[name] = cookie_of(web.call("POST", "/auth/login", {"name": name, "password": GOOD}))
+        check = web.call("GET", "/auth/check", headers={"Cookie": cookie})
+        assert check.headers["X-Staff-Role"] == "moderator"
+        session = web.call("GET", "/auth/session", headers={"Cookie": cookie}).json
+        assert (session["role"], session["held_role"], session["two_step_needed"]) == ("moderator", role, True)
+        # The account menu still works, so the login can turn two-step on; the same session then has its role.
+        key = web.call("POST", "/auth/2fa/start", {}, headers={"Cookie": cookie}).json["key"].replace(" ", "")
+        assert web.call("POST", "/auth/2fa/confirm", {"current": GOOD, "code": code_at(key, web.clock.now)},
+                        headers={"Cookie": cookie}).status == 200
+        assert web.call("GET", "/auth/check", headers={"Cookie": cookie}).headers["X-Staff-Role"] == role
+        session = web.call("GET", "/auth/session", headers={"Cookie": cookie}).json
+        assert (session["role"], session["two_step_needed"]) == (role, False)
+        web.clock.now += staff_auth.TOTP_STEP
+        first = web.call("POST", "/auth/login", {"name": name, "password": GOOD})
+        good = web.call("POST", "/auth/login/code", {"challenge": first.json["challenge"],
+                                                     "code": code_at(key, web.clock.now)})
+        assert good.json["role"] == role
+        web.clock.now += staff_auth.TOTP_STEP
+    # When the owner turns diego's two-step off, diego's sessions end and the next login is a moderator again.
+    assert web.call("GET", "/auth/check", headers={"Cookie": cookies["diego"]}).headers["X-Staff-Role"] == "admin"
+    web.auth.two_step_off_for("lorenzo", "diego")
+    assert web.call("GET", "/auth/session", headers={"Cookie": cookies["diego"]}).status == 401
+    again = web.call("POST", "/auth/login", {"name": "diego", "password": GOOD})
+    assert again.json["role"] == "moderator"
+    # A moderator never needs two-step login.
+    web.user("mo", "moderator")
+    cookie = cookie_of(web.call("POST", "/auth/login", {"name": "mo", "password": GOOD}))
+    session = web.call("GET", "/auth/session", headers={"Cookie": cookie}).json
+    assert (session["role"], session["held_role"], session["two_step_needed"]) == ("moderator", "moderator", False)
 
 
 def test_an_owner_turns_off_two_step_from_the_users_tab_and_it_is_recorded(web):

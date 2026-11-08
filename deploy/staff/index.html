@@ -456,7 +456,7 @@
         <section class="box" data-need="owner">
           <h3>Upload a jar</h3>
           <p class="fine">A Fabric jar of up to 64 MB. Client-only mods are refused: they go in the players' pack.
-            Only the owner can upload a jar, because a jar runs as the server. Admins add mods from Modrinth below.</p>
+            Only the owner can upload a jar, because a jar runs as the server.</p>
           <div class="add">
             <input id="mod-file" type="file" accept=".jar" aria-label="Mod jar file" data-need="owner">
             <button class="btn primary" id="mod-upload" type="button" data-need="owner">Upload the jar</button>
@@ -464,6 +464,8 @@
         </section>
         <section class="box" data-need="admin">
           <h3>Find one on Modrinth</h3>
+          <p class="fine">Only the owner can upload a jar or install a modpack: a jar runs as the server. Modrinth files
+            are checked against Modrinth's hash.</p>
           <div class="add">
             <input id="modrinth-q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mod name" aria-label="Search Modrinth" data-need="admin">
             <button class="btn" id="modrinth-go" type="button" data-need="admin">Search</button>

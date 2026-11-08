@@ -83,7 +83,7 @@ from urllib.parse import urlsplit
 
 ROLES = ("moderator", "admin", "owner")
 TWO_STEP_ROLES = ("admin", "owner")     # these work as a moderator until two-step login is on
-NAME =re.compile(r"[a-z0-9_]{2,32}")
+NAME = re.compile(r"[a-z0-9_]{2,32}")
 EMAIL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})+")
 COOKIE = "monkey_staff"
 SITE_URL = "https://staff.monkeysmp.lscaturchio.xyz"

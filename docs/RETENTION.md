@@ -200,7 +200,7 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | A Banner or Crown player picks a title, or earns Herald (staff) | see "Titles" below |
 | A Crown player names a landmark (staff, once a season) | see "Crown landmarks" below |
 | A monthly pass renews | `scoreboard players add {username} rw.months 1` |
-| A 2-month pass is bought | `scoreboard players add {username} rw.months 2` |
+| A 2-month pass is bought, or renews | `scoreboard players add {username} rw.months 2` |
 | A 2-month pass is refunded or charged back | `scoreboard players remove {username} rw.months 2` |
 | A friend they invited buys a pass (staff) | `scoreboard players add NAME rw.invites 1` |
 | A referral (Front Desk posts these in the mod channel, or sends them itself) | `scoreboard players set BUYER rw.kin 1`, `scoreboard players set NAME rw.kin 1`, `scoreboard players add NAME rw.invites 1` |
@@ -342,9 +342,9 @@ costs the same for everyone, which the official server list reads as payment opt
 close to". The first prices turned down 20% off ($12 for 3 months) for stretching that reading and earning
 less than monthly passes. The owner chose $8 for 2 months on 4 November 2026, before the first sale
 (docs/adr/0008-pass-prices-settled-before-the-first-sale.md). The risk that a list reads this as a second price was
-flagged to the owner that day, and the price stood. If a list objects, raise this package's price: it's a one-off, so
-passes already sold aren't affected. Tebex can't change the price of a subscription already sold, so the monthly pass's
-$5 has to hold.
+flagged to the owner that day, and the price stood. Since 7 November 2026 the 2-month pass is a subscription too (every 2 months), so
+Tebex can't change its price for passes already sold: a new price reaches new buyers only. The monthly pass's $5 has to
+hold for the same reason.
 
 A creator code (the site's /creators page) pays its creator 20% of a two-month pass, and Tebex takes 1% more on
 payments made with a code, which leaves about $5.42 ($2.71 a month). Codes are for finding players, not

@@ -84,7 +84,9 @@
     $("timer-stop").disabled = busy || !running;
   }
 
-  async function load() {
+  // The nights' state is read when the tab opens and then only while a phase runs: each read is two RCON calls,
+  // and the pack is off most of the time.
+  async function load(withNights = true) {
     try {
       timer = (await api("GET", "/api/event-timer")).timer;
       say("events-error", "");
@@ -93,6 +95,7 @@
       say("events-error", e);
     }
     render();
+    if (!withNights) return;
     try {
       nights = (await api("GET", "/api/nights")).nights;
       say("nights-error", "");
@@ -227,7 +230,7 @@
     if (location.hash !== "#server") return;
     load();
     poll = setInterval(() => {
-      if (!busy && !nightBusy && !document.hidden) load();
+      if (!busy && !nightBusy && !document.hidden) load(Boolean(nights && nights.phase !== "idle"));
     }, POLL_MS);
   }
 

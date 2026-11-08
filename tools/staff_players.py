@@ -38,9 +38,11 @@ The safety rules:
 Stdlib only, Python 3.10 or newer.
 """
 import json
+import os
 import re
 import threading
 
+import staff_apex
 import staff_events
 import staff_status
 
@@ -54,7 +56,7 @@ START = 3                 # the mod's starting level, for a player with no score
 BUFFS = tuple(f"strength_smp:buff-level_{n}" for n in range(1, 6))
 REASON_MAX = 120
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-LEVEL_NAME = re.compile(r"[A-Za-z0-9_. -]{1,64}")
+LEVEL_NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}")   # as staff_apex.WorldZip.level allows
 # The game's own statistics that are a player's kills and deaths (the Statistics screen).
 STATS = (("minecraft:custom", "minecraft:player_kills"), ("minecraft:custom", "minecraft:deaths"),
          ("minecraft:killed", "minecraft:player"), ("minecraft:killed_by", "minecraft:player"))
@@ -129,9 +131,9 @@ class Players:
         raise sp.Refused(502, "The server's answer about Strength wasn't one this page knows: "
                               f"{sp.masked(said)[-200:]}")
 
-    def _set_strength(self, name: str, level: int, online: bool) -> int | None:
-        """Sets the level and, when it went down for an online player, takes the old damage bonus off."""
-        was = self.strength(name)
+    def _set_strength(self, name: str, level: int, online: bool, was: int | None) -> None:
+        """Sets the level and, when it went down for an online player, takes the old damage bonus off. `was` is the
+        level read just before."""
         self._ask(f"scoreboard players set {name} {STRENGTH} {level}")
         if online and level < (START if was is None else was):
             for buff in BUFFS:
@@ -139,7 +141,6 @@ class Players:
         now = self.strength(name)
         if now != level:
             raise sp.Refused(502, f"The server took the new level, but {name} has {now}. Check the console.")
-        return was
 
     def _add_strength(self, name: str) -> tuple[int | None, int]:
         was = self.strength(name)
@@ -171,7 +172,10 @@ class Players:
             note = getattr(self, "_" + action.replace("-", "_"))(user, name, uuid, body)
         finally:
             self._lock.release()
-        result = self.look({"name": name})
+        try:
+            result = self.look({"name": name})
+        except sp.Refused as e:     # it was done: say so, rather than an error that invites a second try
+            return {"player": None, "note": f"{note} (Reading {name} back failed: {e.message} Look them up again.)"}
         return {**result, "note": note}
 
     def _kick(self, user, name, uuid, body) -> str:
@@ -219,7 +223,7 @@ class Players:
             raise sp.Refused(409, f"{name} is offline: lowering Strength to {level} needs them online, or the mod "
                                   "keeps their old damage bonus. 0 or 1 works offline.")
         self.p.record(user, action, f"{name} set {level} (was {shown(was)})")
-        self._set_strength(name, level, online)
+        self._set_strength(name, level, online, was)
         return f"{name}'s Strength is {level}."
 
     def _strength_add(self, user, name, uuid, body) -> str:
@@ -237,7 +241,7 @@ class Players:
         path = self.stats_file(uuid)
         self.p.record(user, "player-reset", f"{name}: Strength, kills, deaths")
         was = self.strength(name)
-        self._set_strength(name, 0, online=False)
+        self._set_strength(name, 0, False, was)
         stats = self._reset_stats(user, name, path)
         self.p.record(user, "player-reset-result", f"{name}: Strength {shown(was)} -> 0, {stats}")
         note = f"{name} reset: Strength {shown(was)} -> 0, {stats}."
@@ -274,11 +278,16 @@ class Players:
     def stats_file(self, uuid: str):
         if not UUID.fullmatch(uuid):
             raise sp.Refused(409, "The server's player list has no proper UUID for that player.")
-        return self.world() / "players" / "stats" / f"{uuid}.json"
+        path = self.world() / "players" / "stats" / f"{uuid}.json"
+        root = os.path.realpath(self.p.root)
+        if os.path.commonpath([root, os.path.realpath(path)]) != root or any(
+                p.is_symlink() for p in (path, *path.parents) if p != self.p.root and self.p.root in p.parents):
+            raise sp.Refused(409, "The statistics file or a folder on its way is a link: fix it on the machine.")
+        return path
 
     def world(self):
         level = level_name(self.p.root / "server.properties")
-        if not LEVEL_NAME.fullmatch(level) or level.strip(".") == "":
+        if not LEVEL_NAME.fullmatch(level) or ".." in level:
             raise sp.Refused(409, "server.properties' level-name isn't a plain folder name.")
         return self.p.root / level
 
@@ -300,11 +309,14 @@ class Players:
         for party in found or []:
             if party.owner is None:
                 continue
-            members = [names.get(m.uuid) or m.username for m in party.members]
-            members = [m for m in members if m and sp.PLAYER.fullmatch(m)]
+            # Only names the server knows for that UUID: a party file's username can be an old name, and a score
+            # written to it would reach nobody.
+            members = [names[m.uuid] for m in party.members if m.uuid in names]
+            unknown = [m.username or m.uuid for m in party.members if m.uuid not in names]
+            leader = names.get(party.owner.uuid) or party.owner.username or "?"
             # As saved_world.faction_name names it, written out here: the live checkout's saved_world may be older.
-            rows.append({"id": party.id, "members": members,
-                         "name": party.name or f"{members[0] if members else '?'}'s faction"})
+            rows.append({"id": party.id, "members": members, "unknown": unknown,
+                         "name": party.name or f"{leader}'s faction"})
         return sorted(rows, key=lambda r: r["name"].lower())
 
     def factions(self) -> dict:
@@ -334,6 +346,9 @@ class Players:
         finally:
             self._lock.release()
         note = f"+1 Strength to {found['name']}: {', '.join(done) or 'nobody'}."
+        if found["unknown"]:
+            note += (f" Not given to {', '.join(found['unknown'])}: the server has no name for them (give it by hand "
+                     "with their current name).")
         if any(" -> 6" in d or d.endswith("5 -> 5") for d in done):
             note += " Anyone at 5 gets a Strength item instead (when they are next online)."
         if failed:
@@ -342,17 +357,13 @@ class Players:
 
 
 def level_name(path) -> str:
-    """server.properties' level-name (the last one wins, as Java's Properties reads it), "world" when unset."""
-    found = "world"
+    """server.properties' level-name, read as staff_apex.WorldZip.level reads it; "world" when unset."""
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return found
-    for line in text.splitlines():
-        m = re.fullmatch(r"\s*level-name\s*[=:]\s*(.*?)\s*", line)
-        if m:
-            found = m[1] or "world"
-    return found
+        return "world"
+    raw = staff_apex.parse_properties(text).get("level-name", (0, "world"))[1]
+    return staff_apex.unescape(raw).strip() or "world"
 
 
 def shown(level: int | None) -> str:

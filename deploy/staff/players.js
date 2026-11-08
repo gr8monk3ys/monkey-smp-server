@@ -120,7 +120,7 @@
     say("act-note", "");
     try {
       const done = await api("POST", "/api/player", { name: who.name, ...body });
-      who = done.player;
+      if (done.player) who = done.player;      // null: done, but reading the player back failed (the note says)
       say("act-note", done.note || "Done.");
     } catch (e) {
       say("act-error", e);
@@ -163,7 +163,8 @@
   function renderFaction() {
     const picked = factions.find((f) => f.id === $("faction-pick").value);
     $("faction-members").textContent = picked
-      ? `Members: ${picked.members.join(", ") || "none this page can name"}.`
+      ? `Members: ${picked.members.join(", ") || "none this page can name"}.` + (picked.unknown.length
+        ? ` No name the server knows for ${picked.unknown.join(", ")}: give theirs by hand.` : "")
       : (factions.length ? "" : "No factions saved yet.");
     $("faction-go").disabled = busy || !picked || !picked.members.length;
   }

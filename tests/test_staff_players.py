@@ -17,6 +17,7 @@ ALPHA = "11111111-1111-1111-1111-111111111111"
 BRAVO = "22222222-2222-2222-2222-222222222222"
 CHARLIE = "33333333-3333-3333-3333-333333333333"
 ZED = "44444444-4444-4444-4444-444444444444"
+STRANGER = "55555555-5555-5555-5555-555555555555"     # in a party, but the server has no name for them
 STRENGTH = staff_players.STRENGTH
 
 
@@ -336,7 +337,8 @@ def test_there_is_no_reset_for_everyone(pl):
 
 @pytest.fixture
 def party(pl):
-    FakeWorld(pl.root / "world").party("party-1", member(ALPHA, "OldName"), [member(CHARLIE, "Charlie")]) \
+    FakeWorld(pl.root / "world").party("party-1", member(ALPHA, "OldName"),
+                                       [member(CHARLIE, "Charlie"), member(STRANGER, "Renamed")]) \
         .party("party-2", None).party_name(ALPHA, "Red Team").party("party-3", member(BRAVO, "Bravo"))
     return pl
 
@@ -344,8 +346,9 @@ def party(pl):
 def test_the_factions_list(party):
     code, data = party.call("GET", "/api/factions", role="admin")
     assert code == 200
-    assert data["factions"] == [{"id": "party-3", "members": ["Bravo"], "name": "Bravo's faction"},
-                                {"id": "party-1", "members": ["Alpha", "Charlie"], "name": "Red Team"}]
+    assert data["factions"] == [
+        {"id": "party-3", "members": ["Bravo"], "unknown": [], "name": "Bravo's faction"},
+        {"id": "party-1", "members": ["Alpha", "Charlie"], "unknown": ["Renamed"], "name": "Red Team"}]
 
 
 def test_no_factions_yet(pl):
@@ -356,7 +359,8 @@ def test_no_factions_yet(pl):
 def test_the_faction_prize(party):
     code, data = party.call("POST", "/api/faction-strength", {"party": "party-1"}, role="admin")
     assert code == 200, data
-    assert party.server.scores == {"Alpha": 4, "Bravo": 5, "Charlie": 4}
+    assert party.server.scores == {"Alpha": 4, "Bravo": 5, "Charlie": 4}     # nothing for "Renamed"
+    assert "Not given to Renamed" in data["note"]
     log = actions(party)
     assert "faction-strength +1 Red Team: Alpha, Charlie" in log
     assert "faction-strength-result Alpha 3 -> 4; Charlie none (starts at 3) -> 4" in log
@@ -395,3 +399,35 @@ def test_the_page_has_every_element_players_js_uses():
     assert "innerHTML" not in code and not re.search(r"\b(confirm|alert)\(", code)
     for action in staff_players.ACTIONS:
         assert f'"{action}"' in script
+
+
+def test_a_done_action_whose_read_back_fails_still_says_done(pl):
+    plain, calls = pl.server, []
+
+    def flaky(command, timeout=None):
+        calls.append(command)
+        if command == "list" and any(c.startswith("scoreboard players add") for c in calls):
+            raise RconError("list answered: nothing (exit 1)")
+        return plain(command, timeout)
+
+    staff_events.events(pl.panel).rcon = flaky
+    code, data = post(pl, {"action": "strength-add", "name": "Alpha"})
+    assert code == 200 and data["player"] is None and "Reading Alpha back failed" in data["note"]
+    assert pl.server.scores["Alpha"] == 4
+
+
+def test_a_linked_statistics_folder_is_refused(pl, tmp_path):
+    folder = pl.root / "world" / "players" / "stats"
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (outside / f"{CHARLIE}.json").write_text(json.dumps(stats()))
+    for f in folder.iterdir():
+        f.unlink()
+    folder.rmdir()
+    try:
+        folder.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("this machine can't make links")
+    code, data = post(pl, {"action": "reset", "name": "Charlie", "confirm": "Charlie"})
+    assert code == 409 and "link" in data["error"]
+    assert json.loads((outside / f"{CHARLIE}.json").read_text()) == stats()

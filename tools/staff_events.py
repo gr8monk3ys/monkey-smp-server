@@ -201,7 +201,8 @@ class Events:
             if leads_to is not None and after["phase"] != PHASES[leads_to]:
                 raise sp.Refused(502, f"The server took {action}, but the phase is {after['phase']}, not "
                                       f"{PHASES[leads_to]}. Check the console.")
-            if action == "minutes" and not minutes * 60 - 5 <= after["seconds"] <= minutes * 60:
+            # A docker exec per read and a lagging server can let a fair few seconds pass before the read back.
+            if action == "minutes" and not minutes * 60 - 30 <= after["seconds"] <= minutes * 60:
                 raise sp.Refused(502, f"The server took the new time, but {after['minutes']} min are left. "
                                       "Check the console.")
         finally:

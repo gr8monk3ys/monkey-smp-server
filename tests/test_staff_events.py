@@ -359,6 +359,14 @@ def test_a_step_that_changes_nothing_is_an_error(nt):
     nt.server.phase, nt.server.left = 1, 600
     code, data = night(nt, {"action": "minutes", "minutes": 3})
     assert code == 502 and "10 min are left" in data["error"]
+    nt.server.ignore = False
+    real = nt.server
+
+    def late(command, timeout=None):      # the read back comes 20 seconds late: still fine
+        return real(command, timeout).replace("has 180 [", "has 160 [")
+
+    staff_events.events(nt.panel).rcon = late
+    assert night(nt, {"action": "minutes", "minutes": 3})[0] == 200
 
 
 def test_one_night_change_at_a_time(nt):

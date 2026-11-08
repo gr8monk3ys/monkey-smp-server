@@ -125,8 +125,12 @@ do, is `OPTIONAL_MODS` in [`tools/client_env.py`](../tools/client_env.py).
   - Claim land: stand in a chunk and type `/oclaims claim`.
     Claimed land can't be broken into or griefed by outsiders.
   - Parties: `/oparties create`, then `/oparties member invite <player>`; the invited player types
-    `/oparties join <party owner>`. Ally another party with `/oparties ally add <party owner>`. Allies and party
-    members share claims.
+    `/oparties join <party owner>`. Ally another party with `/oparties ally add <party owner>`.
+  - Who can use your land: each player owns the chunks they claim. By default your party members have full
+    access there and allies have none. Change it in the claims menu (the **Open Parties and Claims Menu** key,
+    then **My Player Config**): who gets full access, your own player groups (for example "trusted"), one
+    setting per kind of block (chests, doors, beds and more), and sub-configs for different rules in different
+    chunks. Each player's settings cover only their own chunks.
   - Type `/oclaims`, `/oparties` or `/opac` and press **Tab** to see every command.
 - **War and pacts:** `/trigger diplomacy` shows how your faction stands with the others. Your party's owner can
   declare war (kills between the two count double in the weekly standings until Sunday's close) or offer a pact

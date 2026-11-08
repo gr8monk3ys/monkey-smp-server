@@ -46,7 +46,9 @@ def test_every_new_route_is_admin_and_registered():
     for key in staff_more.ROUTES:
         assert staff_panel.ROUTES[key] is staff_more.ROUTES[key]
         # A pack's overrides/ folder can carry any jar, so installing one is the owner's (2026-11-07).
-        assert staff_panel.NEEDS[key] == ("owner" if key == ("POST", "/api/modpack") else "admin")
+        # Uploading a data pack (game code) is the owner's too.
+        owner = key in {("POST", "/api/modpack"), ("POST", "/api/datapack-upload")}
+        assert staff_panel.NEEDS[key] == ("owner" if owner else "admin")
         assert key[1] in staff_panel.PATHS
     assert set(staff_more.RAW) <= set(staff_more.ROUTES)
     for key, most in staff_more.RAW.items():

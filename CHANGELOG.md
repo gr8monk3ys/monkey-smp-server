@@ -7,6 +7,11 @@ the live server: the new Caddyfile (docs/LIVE.md, "The website's standings").
 
 ### Added
 
+- `monkey-nights`, a server-only data pack that runs the launch night by itself: a 90-minute grace (no PvP,
+  Nether portals closed) with a boss-bar countdown, then the 3-hour Rise of Kingdoms build battle, with titles,
+  warnings and the judging list. The VPS can send each step at its clock time too; staff can start, end, stop or
+  change the minutes by hand (`/function monkey:nights/help`). It needs neither monkey-rules nor monkey-events
+  (docs/ADMIN.md, "Event nights").
 - The website has the full rulebook (`/guide/rules`, copied from `docs/RULES.md` by `tools/site_links.py`) and a
   `CONTACT_URL` setting for reaching staff without the Discord.
 - An event timer for any event (`/function monkey:events/timer/start {name:"Boat Race",minutes:30}`): the raid's

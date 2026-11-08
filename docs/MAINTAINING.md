@@ -328,7 +328,10 @@ Blaze Attack Animation and TNT Timer run one world-wide scan a tick when nothing
 only while a blaze attacks or TNT is lit. Cutting the blaze's idle scan would leave a fireball stuck in the air when
 its chunk unloads mid-shot. Measured on a bare Fabric server with only these four mods and 1,725 loaded entities
 (1,700 markers, plus a few cubes, glow squids and items), on the i7-8700K: 5.9 ms a tick upstream, 3.3 ms patched
-(`tick query`, six 100-tick samples each). Both passed the same checks: dropped dyes get their material, a glow
+(`tick query`, six 100-tick samples each). That bench is mostly markers, which no patched scan visits, so it
+measures the saved scans, not a live tick: on the live server most entities are mobs, and Silver's Effects
+Library still runs its effects function once per mob each tick (not patched). The full-pack `tools/loadtest.py`
+run was not done before 3.2.0. Both passed the same checks: dropped dyes get their material, a glow
 squid keeps one light, cube archetypes still apply, and the mannequin, Boombox, stun box and flame still despawn.
 
 Measure a change like these with `tools/loadtest.py` (below): on an i7-8700K with 25 fake players the effects

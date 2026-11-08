@@ -18,10 +18,13 @@ execute if entity @s[type=minecraft:item] if items entity @s contents minecraft:
 execute if entity @s[type=minecraft:item] if items entity @s contents minecraft:gray_dye run return run data merge entity @s {Item:{components:{"minecraft:provides_trim_material":"colorful_trims:gray"}}}
 execute if entity @s[type=minecraft:item] if items entity @s contents minecraft:black_dye run return run data merge entity @s {Item:{components:{"minecraft:provides_trim_material":"colorful_trims:black"}}}
 execute if entity @s[type=minecraft:item] if items entity @s contents minecraft:brown_dye run return run data merge entity @s {Item:{components:{"minecraft:provides_trim_material":"colorful_trims:brown"}}}
+# A tag member with no line above (another pack can add to #colorful_trims:dyes) gets a tag, so the pass
+# below skips it instead of running this function for it every tick.
+execute if entity @s[type=minecraft:item] run return run tag @s add colorful_trims.no_material
 execute if entity @s run return 0
 
 execute as @a if items entity @s container.* #colorful_trims:dyes[!minecraft:provides_trim_material] run function colorful_trims:fix_dyes
 execute as @a if items entity @s player.cursor #colorful_trims:dyes[!minecraft:provides_trim_material] run function colorful_trims:fix_dyes
 execute as @a if items entity @s weapon.offhand #colorful_trims:dyes[!minecraft:provides_trim_material] run function colorful_trims:fix_dyes
 
-execute as @e[type=minecraft:item] if items entity @s contents #colorful_trims:dyes[!minecraft:provides_trim_material] run function colorful_trims:tick
+execute as @e[type=minecraft:item,tag=!colorful_trims.no_material] if items entity @s contents #colorful_trims:dyes[!minecraft:provides_trim_material] run function colorful_trims:tick

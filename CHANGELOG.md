@@ -100,7 +100,8 @@ on 2026-11-07.
 - Four data packs inside mods look through every loaded entity far less often each tick: Colorful Trims (16 scans a
   tick to 1), Huge Sulfur Cube Expansion (about 45 to 5), Glowing Glow Squids (one per glow squid to none) and
   Silver's Effects Library (20 to 2 for its stun boxes and eternal flames). On launch night, with about 1,700 loaded
-  entities, scans like these took about 11% of the server's main thread. Patches in `package/monkey/patches/`, listed in
+  entities, world-wide scans (these and others) took about 11% of the server's main thread; how much of that these
+  patches save on a live tick is not measured yet. Patches in `package/monkey/patches/`, listed in
   docs/MAINTAINING.md. What players see doesn't change. Players install nothing.
 - The live map pauses its renderer while 3 or more players are online (`player-render-limit: 3` in BlueMap's
   `plugin.conf`) and catches up once fewer are on. On 2026-11-07 the renderer used more CPU than the game thread on

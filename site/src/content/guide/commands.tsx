@@ -83,7 +83,7 @@ export const roles: Role[] = [
     groups: [{
       cmds: [
         { code: "/oparties member invite <player>", does: "Invites a player. Four is the most a faction can have." },
-        { code: "/oparties ally add <leader>", does: "Makes another party an ally. Allies share claims." },
+        { code: "/oparties ally add <leader>", does: "Makes another party an ally. Allies get into your claims only if you allow them." },
         {
           code: "/trigger diplomacy",
           does: "For a leader it has buttons: declare war, offer a pact, accept one, break one. One move every 2 "

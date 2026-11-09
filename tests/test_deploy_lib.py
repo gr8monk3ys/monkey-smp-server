@@ -211,7 +211,8 @@ def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(
 
 OFTEN_NONE = ("monkey-drops.sh", "monkey-omens.sh")
 PACKS = {"monkey-week.sh": "monkey-wardrobe", "monkey-day.sh": "monkey-wardrobe", "monkey-sieges.sh": "monkey-sieges",
-         "monkey-drops.sh": "monkey-drops", "monkey-omens.sh": "monkey-omens monkey-drops"}
+         "monkey-drops.sh": "monkey-drops", "monkey-omens.sh": "monkey-omens monkey-drops",
+         "monkey-outposts.sh": "monkey-outposts"}
 
 
 @needs_dash
@@ -238,7 +239,7 @@ def test_drops_and_omens_with_nothing_to_send_take_no_lock(sh, tmp_path, script)
 def job(sh, tmp_path, script, *args, **env):
     """Runs a timed job's script against a made-up checkout; returns (exit code, its logged lines, calls)."""
     (tmp_path / "repo" / "tools").mkdir(parents=True, exist_ok=True)
-    for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py", "sieges.py"):
+    for name in ("challenges.py", "drops.py", "omens.py", "wardrobe.py", "sieges.py", "outposts.py"):
         (tmp_path / "repo" / "tools" / name).write_text("")
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}" "$@"', *args, REPO_DIR=(tmp_path / "repo").as_posix(),
                           **{"MONKEY_DEPLOY_ENV": "/nonexistent", **env})

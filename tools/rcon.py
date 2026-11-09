@@ -217,7 +217,7 @@ def main(argv=None, server=Docker) -> int:
         if args.command == "running":
             return 0 if rcon.running() else 1
         if not rcon.running():
-            print("server not running: can't tell", file=sys.stderr)
+            print("server not running", file=sys.stderr)
             return 2
         off = packs_off(rcon, args.packs)
     except RconError as e:

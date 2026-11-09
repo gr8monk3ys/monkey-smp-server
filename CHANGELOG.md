@@ -10,7 +10,7 @@
   logs that and sends nothing (`tools/rcon.py packs-on`). When it can't tell, it sends as before.
 - `monkey-deploy.timer` checks 1 minute after it starts (`OnActiveSec`). Stopped on 11-04 and started again on
   11-08, it never fired: 5 minutes after the last check only counts once a check has run, so no release could
-  deploy itself. Install the new unit by hand (docs/LIVE.md).
+  deploy itself. Install the new unit by hand (docs/LIVE.md, "The deploy timer that fires on start").
 
 ## [3.3.0] - 2026-11-08
 

@@ -1,11 +1,10 @@
-# Checks for a new release every 5 minutes (and 2 minutes after boot, and 1 minute after the timer starts).
-# OnActiveSec matters: 5 minutes after the last check only counts once a check has run since the timer started,
-# and 2 minutes after boot is long past, so a timer stopped and started again (11-04 to 11-08) never fired.
+# Checks for a new release 1 minute after the timer starts (at boot too), then every 5 minutes. OnActiveSec
+# matters: 5 minutes after the last check only counts once a check has run since the timer started, so with only
+# OnBootSec (long past) a timer stopped and started again (11-04 to 11-08) never fired.
 [Unit]
 Description=Monkey SMP: check for a new release every 5 minutes
 
 [Timer]
-OnBootSec=2min
 OnActiveSec=1min
 OnUnitActiveSec=5min
 Persistent=true

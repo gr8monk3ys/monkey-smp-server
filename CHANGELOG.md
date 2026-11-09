@@ -6,8 +6,8 @@
 
 - Staff page: only an owner changes which jars run. Installing from Modrinth, turning a jar off or on, removing it,
   and keeping a pinned mod off or allowing it again were admin; they are owner now, like a jar upload (admins see the
-  buttons greyed out). Admins still search Modrinth and answer "do players need it?". Restart `monkey-panel` once
-  the checkout has it (docs/LIVE.md, "The staff page").
+  buttons greyed out). Admins still search Modrinth and answer "do players need it?". Once the checkout has
+  it, run `monkey-staff.sh --install` again (docs/LIVE.md, "The staff page").
 
 ## [3.2.0] - 2026-11-08
 

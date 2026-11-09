@@ -1,0 +1,10 @@
+[
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:axe":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:crossbow":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:crossbow_ult":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:bow":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:sword":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:trident":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:spear":-10},"add":true},
+    {"function":"minecraft:set_enchantments","enchantments":{"strength_smp:mace":-10},"add":true}
+]

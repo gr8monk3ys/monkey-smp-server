@@ -2,10 +2,11 @@
 
     python tools/datapacks.py      regenerate the monkey-armor-repair data pack (with the others)
 
-A player who picks Strength SMP's Armor power has their diamond armor turned into netherite armor (the mod's
-powers/armor function swaps the item, one way). Vanilla repairs netherite armor only with netherite ingots, so
-those players couldn't fix their armor with the diamonds it was made from. This pack adds `minecraft:diamond` to
-`#minecraft:repairs_netherite_armor`, so an anvil takes diamonds as well as ingots.
+Strength SMP's Armor power used to turn diamond armor into netherite armor (the mod's powers/armor function
+swapped the item, one way; our patch stopped that after 3.2.0, docs/MAINTAINING.md). Vanilla repairs netherite
+armor only with netherite ingots, so those players couldn't fix the pieces with the diamonds they were made from.
+This pack adds `minecraft:diamond` to `#minecraft:repairs_netherite_armor`, so an anvil takes diamonds as well as
+ingots.
 
 It reaches every piece of netherite armor, but rule 24 (docs/RULES.md) keeps other netherite armor out, so in
 practice it only changes the Armor power's pieces. Owners decided 2026-11-07. Turn it off with

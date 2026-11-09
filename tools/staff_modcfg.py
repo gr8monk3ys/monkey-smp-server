@@ -934,10 +934,11 @@ class ModConfigs:
 
 # Strength SMP (silvers_strength-smp-season-5) has no config file: its settings are scores of the fake player
 # $Config, kept in the world and read every tick, so a change takes effect at once and survives restarts. The mod's
-# own tick puts a score below 2 back to its default, hence each minimum. Its cooldowns and lifetimes count down
-# once every 21 ticks, about once a second. Read from the jar's technical/trigger/ftf/cmd/config/reset and
-# technical/main/tick/private functions. The start level, the level range and the Restrictions add-on's mace and
-# lunge cooldowns are written into the mod's functions: they aren't here.
+# own tick puts a score below 2 back to its default, hence each minimum. Its cooldowns count down once every 21
+# ticks, about once a second. A lifetime is how long a charged ultimate stays ready to use, counted every tick (500 is
+# 25 seconds); how long an ultimate lasts once used is written into the mod's functions. Read from the jar's
+# technical/trigger/ftf/cmd/config/reset and technical/main/tick/private functions. The start level, the level range
+# and the Restrictions add-on's mace and lunge cooldowns are written into the mod's functions: they aren't here.
 STRENGTH_OBJ = "Strength_SMP+Config-"
 STRENGTH_WEAPONS = ("Axe", "Shield", "Sword", "Trident", "Crossbow", "Bow", "Spear", "Mace", "Armor")
 STRENGTH_THREADS = 8
@@ -947,7 +948,7 @@ def _strength_settings() -> list[dict]:
     rows = []
     for kind, default, about in (
             ("Cooldown", 300, "Seconds (about) before the {w} ultimate can be used again."),
-            ("Lifetime", 500, "Seconds (about) the {w} ultimate lasts.")):
+            ("Lifetime", 500, "Ticks (20 a second) the {w} ultimate stays ready once charged; unused, it's lost.")):
         for weapon in STRENGTH_WEAPONS:
             rows.append({"key": f"{kind.lower()}.{weapon.lower()}", "group": kind.lower(),
                          "label": f"{weapon} ultimate {kind.lower()}", "objective": f"Ultimate_Weapon_{kind}-{weapon}",

@@ -897,6 +897,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | `monkey-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
 | `monkey-news.timer` | the VPS | every 10 minutes: Monkey SMP news to the public channel, a few lines a week ("The news timer") |
 | `monkey-staff.timer` | the VPS | every 2 minutes: a reading for the staff page; it alerts nobody ("The staff page") |
+| `monkey-report.timer` | the VPS | Mondays at 1:15 AM Pacific: last week's rule check for the staff page's Reports tab; it only reports ("The weekly rule check") |
 
 Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
 the time anyway. The update check runs on the VPS rather than the home PC: it uses the webhook that is already
@@ -1037,7 +1038,7 @@ sudo systemctl disable --now monkey-staff.timer monkey-panel
 
 `monkey-panel.service` runs `tools/staff_panel.py` as `monkey`, listening on `127.0.0.1:8130` only. Caddy sends the
 page's `/api/*` calls to it after the password check, with the login's name (`lorenzo`, `diego`) in a header Caddy
-sets itself. It changes nothing in how the server runs: the container, compose and the 14 timers stay as they are.
+sets itself. It changes nothing in how the server runs: the container, compose and the timers stay as they are.
 
 - **Console**: the server log as it is written (the same masking as the Status tab: a line that mentions a secret is
   left out, addresses and links are masked) and a command box. Commands run as the server console, through the
@@ -1330,6 +1331,54 @@ sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --remove-sftp-user diego
 first login, in case sshd misbehaves. `--remove-sftp-user` unmounts, takes the fstab line and the ACLs out and
 removes the user and key; the server's files stay as they are. Not run on a real machine yet: the tests check only
 its arguments and its text, so watch the first run.
+
+### The weekly rule check (the Reports tab)
+
+The Reports tab shows, for each ISO week (Monday to Monday, Pacific), which server rules each player may have broken,
+as a grid: players down the side, rules across, a count in each cell. **It only reports.** It punishes nobody, messages
+nobody and rolls nothing back; staff look at the rows and decide. Moderators and up can see it.
+
+`monkey-report.timer` runs `deploy/monkey-report.sh` as `monkey` on Mondays at 1:15 AM Pacific (Nice 19, idle disk
+priority, so the game never waits on it), which runs `tools/staff_report.py write` for the week that just ended. It
+writes `/srv/monkey/staff/reports/2026-W46.json` (one file per week) and `reports/stats/2026-W46.json`, a copy of
+everyone's game stats, which the next week counts from. A week already written is skipped, so a missed or repeated
+run is safe. It reads only, never through RCON:
+
+- Ledger's database, opened read-only (`?mode=ro`), only the week's rows. Rows from the `command` source (Dynamic
+  Lights' light and air blocks, about 40 million a day) are left out.
+- the game's stats (the week's change against last week's copy), the parties (Open Parties and Claims), the
+  usercache, `level.dat` (the spawn) and the server's logs.
+
+Ledger and log times are Pacific. Logins' addresses are hashed in memory with a key made for that run and then
+dropped: the report says only which players shared a connection, never an address. Each cell has a level:
+
+- **clear** (solid gold): the logs show it plainly.
+- **likely** (dimmer): probably, for example a kill in the launch hour or one-way takes from another faction's chest.
+- **unclear** (dashed): worth a look, for example a pickup of a banned item, a kill in the victim's first 48 hours or
+  a combat log just after a time-out.
+
+Clicking a cell shows its rows (time, world, position, what happened). Below the grid: the checks that came back
+clean, the ones skipped because a file was missing, notes and the week's mining table. "Copy for Discord" makes
+code-block messages under 2,000 characters each and copies the first. The checks and their rules (docs/RULES.md):
+portal trapping (4, 7), pearls (B3), enchanted golden apples (B5), totems (B4), end crystals (B7), netherite armor
+(24), kills in the launch hour (23, launch week only), kills in a victim's first 48 hours (26), combat logs (3),
+chest takes from another faction (39), a faction over 4 (29), a group over 4 (32), shared connections (21), the
+x-ray ratio (B15), TNT near spawn (B11), broken bedrock (44, 45) and the Nether roof (46). The game's stats can't be
+split by time, so pearls, gapples, totems, crystals and netherite count the whole week; everything before the launch
+(staff test play) is left out of the rest.
+
+Install it once the release with it is live (owner step; nothing else needs restarting but `monkey-panel`, which
+loads the new routes):
+
+```sh
+sudo sh /srv/monkey/repo/deploy/monkey-report.sh --install   # the units, the reports folder, the timer
+sudo systemctl restart monkey-panel
+sh /srv/monkey/repo/deploy/monkey-report.sh --check            # this week so far, as JSON; writes nothing
+```
+
+To write last week now: `sudo systemctl start monkey-report.service`. `python3 tools/staff_report.py show
+/srv/monkey/MonkeySMP-Server` prints this week so far (`--week 2026-W45` for another) and writes nothing; on the live
+world it takes about 15 seconds. Log: `journalctl -u monkey-report -n 50`.
 
 ## Load test
 

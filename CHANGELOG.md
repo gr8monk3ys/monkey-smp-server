@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- Staff page, Reports tab (moderators and up): each week's rule check. For every player, which server rules they may
+  have broken that week (portal trapping, banned items, launch-hour and new-player kills, combat logs, chest takes
+  from another faction, faction and group size, shared connections, x-ray, TNT at spawn, bedrock and the Nether
+  roof), as a grid with a count and a level (clear, likely, unclear) per cell, the rows behind each cell, the checks
+  that came back clean and a "Copy for Discord" button. It only reports: no punishments, no messages, no rollbacks.
+  `tools/staff_report.py` reads the Ledger database (read-only), the game's stats, the parties and the logs; it never
+  keeps or shows an address. `monkey-report.timer` writes last week every Monday at 1:15 AM Pacific at the lowest
+  priority. Owner steps: `monkey-report.sh --install` and a restart of `monkey-panel` (docs/LIVE.md, "The weekly
+  rule check").
+
 ## [3.2.0] - 2026-11-08
 
 Less lag in busy hours, event nights that run by themselves, and the staff page's new tools. In game, the event timer

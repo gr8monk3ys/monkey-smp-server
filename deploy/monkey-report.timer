@@ -1,0 +1,11 @@
+# Writes the week that just ended every Monday at 1:15 AM Pacific, a quiet hour well before the 4:30 AM daily
+# restart (and after boot if one was missed: a week already written is skipped).
+[Unit]
+Description=Monkey SMP: weekly rule check on Monday mornings
+
+[Timer]
+OnCalendar=Mon *-*-* 01:15:00 America/Los_Angeles
+Persistent=true
+
+[Install]
+WantedBy=timers.target

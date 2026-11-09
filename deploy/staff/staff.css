@@ -334,3 +334,37 @@ textarea { display: block; width: 100%; height: 60vh; min-height: 14rem; padding
 @media (max-width: 380px) {
   .tabs a { padding: 0 9px; }
 }
+
+/* The Reports tab (reports.js). A cell's look says how sure the finding is: solid gold is clear in the logs, the
+ * darker gold is likely, a dashed outline is unclear. The word is in its label too, so colour is never the only cue. */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; color: var(--sage); font-size: 0.9375rem; }
+.legend li { display: inline-flex; align-items: center; gap: 8px; }
+.legend .cell { min-width: 32px; min-height: 28px; cursor: default; }
+.cell {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 36px; padding: 0 8px;
+  margin: 0; font: 700 0.9375rem/1 var(--body); cursor: pointer; border: 2px solid transparent;
+}
+.cell.clear { color: var(--ink); background: var(--gold); border-color: var(--gold); }
+.cell.likely { color: var(--ink); background: var(--line-1); border-color: var(--line-1); }
+.cell.unclear { color: var(--bone); background: none; border: 2px dashed var(--bone-2); }
+button.cell:hover { border-color: var(--bone); }
+button.cell[aria-pressed="true"] { outline: 2px solid var(--bone); outline-offset: 2px; }
+.report-grid { max-height: 70vh; }
+.report-grid th, .report-grid td { padding: 6px 8px; text-align: center; vertical-align: bottom; }
+.report-grid thead th { min-width: 5.5rem; white-space: normal; line-height: 1.2; }
+.report-grid .rule-title { display: block; color: var(--bone); }
+.report-grid .rule-no { display: block; color: var(--sage); font-weight: 400; font-size: 0.8125rem; }
+.report-grid th:first-child, .report-grid tbody th {
+  position: sticky; left: 0; z-index: 1; text-align: left; color: var(--bone); background: var(--shade);
+  box-shadow: inset -2px 0 0 var(--leaf-2);
+}
+.report-grid thead th:first-child { z-index: 2; box-shadow: inset -2px -2px 0 var(--leaf-2); }
+.report-grid tbody th { font-weight: 600; white-space: nowrap; border-top: 1px solid var(--leaf-2); }
+#reports-evidence td.what { min-width: 18rem; white-space: normal; }
+#reports-evidence .table-scroll { max-height: 26rem; }
+.entries .meta, .entries li.meta { color: var(--sage); }
+.discord-msg { display: grid; gap: 6px; }
+.discord-msg pre {
+  margin: 0; padding: 8px 10px; max-height: 18rem; overflow: auto; white-space: pre; color: var(--bone);
+  background: var(--ground);
+}

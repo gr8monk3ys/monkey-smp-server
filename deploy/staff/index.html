@@ -17,6 +17,7 @@
   <script src="server.js" defer></script>
   <script src="events.js" defer></script>
   <script src="modcfg.js" defer></script>
+  <script src="reports.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -35,6 +36,7 @@
     <a href="#settings" data-tab="settings">Settings</a>
     <a href="#mods" data-tab="mods">Mods</a>
     <a href="#modcfg" data-tab="modcfg">Mod settings</a>
+    <a href="#reports" data-tab="reports">Reports</a>
   </nav>
 
   <main>
@@ -438,6 +440,74 @@
         <div class="stack" id="strength-body"></div>
       </details>
       <div class="stack" id="modcfg-list"></div>
+    </div>
+
+    <div class="pane" id="tab-reports" hidden>
+      <h2>Reports</h2>
+      <p class="fine">Each Monday the server's own logs are checked against the rules for the week before: Ledger, the
+        players' stats, the parties and the game log. It only reports. Nothing here punishes, messages or rolls back
+        anyone: read the rows behind a number before you act on it.</p>
+      <p class="attention" id="reports-error" role="alert" hidden></p>
+      <div class="add">
+        <select id="reports-week" aria-label="Week" disabled></select>
+        <button class="btn" id="reports-copy" type="button" disabled>Copy for Discord</button>
+        <button class="btn" id="reports-reload" type="button">Reload</button>
+      </div>
+      <p class="note" id="reports-empty" hidden>No week written yet. The weekly job writes one each Monday for the week
+        before (sudo sh /srv/monkey/repo/deploy/monkey-report.sh --install).</p>
+      <div class="stack" id="reports-body" hidden>
+        <p class="fine" id="reports-span"></p>
+        <ul class="legend" aria-label="How sure each number is">
+          <li><span class="cell clear">3</span> clear in the logs</li>
+          <li><span class="cell likely">3</span> likely: something the logs can't see could explain it</li>
+          <li><span class="cell unclear">3</span> unclear: worth a look, no more</li>
+        </ul>
+        <p class="note" id="reports-none" hidden>Nobody: every check came back clean.</p>
+        <div class="table-scroll report-grid" id="reports-grid" tabindex="0" role="region" aria-label="Players and rules">
+          <table>
+            <thead id="reports-head"></thead>
+            <tbody id="reports-rows"></tbody>
+          </table>
+        </div>
+        <div class="box" id="reports-evidence" hidden>
+          <div class="box-head"><h3 id="reports-evidence-title"></h3><button class="btn" id="reports-evidence-close" type="button">Close</button></div>
+          <p class="fine" id="reports-evidence-sum"></p>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="The rows behind it">
+            <table>
+              <thead><tr><th>When (Pacific)</th><th>World</th><th>Where</th><th>What happened</th><th>How sure</th></tr></thead>
+              <tbody id="reports-evidence-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="box" id="reports-discord" hidden>
+          <h3>For Discord</h3>
+          <p class="fine">The first message is copied already. Paste each one in order.</p>
+          <div class="stack" id="reports-discord-list"></div>
+        </div>
+        <div class="cols">
+          <div class="box">
+            <h3>Checked and clean</h3>
+            <ul class="entries" id="reports-clean"></ul>
+          </div>
+          <div class="box">
+            <h3>Read this first</h3>
+            <ul class="entries" id="reports-notes"></ul>
+          </div>
+          <div class="box" id="reports-skipped-box" hidden>
+            <h3>Not checked</h3>
+            <ul class="entries" id="reports-skipped"></ul>
+          </div>
+        </div>
+        <details class="table" id="reports-mining-box" hidden>
+          <summary>Mining: diamond ore and ancient debris per 1,000 stone</summary>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Mining">
+            <table>
+              <thead><tr><th>Player</th><th>Stone</th><th>Diamond ore</th><th>Ancient debris</th><th>Per 1,000</th></tr></thead>
+              <tbody id="reports-mining"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
     </div>
 
     <div class="pane" id="tab-mods" hidden>

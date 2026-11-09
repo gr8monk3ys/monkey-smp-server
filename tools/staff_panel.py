@@ -25,6 +25,8 @@ on another site must not be able to make a change in a staff member's name. Answ
     GET  /api/timers                  the monkey-*.timer schedules
     GET  /api/backups                 the last backup, as the status page has it
     GET  /api/actions                 the last 100 changes made here
+    GET  /api/reports                 the weekly rule checks written; GET /api/report?week=2026-W45 one of them
+                                      (tools/staff_report.py; moderators too)
     GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
                                       /api/users/{role,disable,delete,sessions,link,2fa-off} change one
                                       (tools/staff_auth.py)
@@ -73,6 +75,7 @@ import staff_apex
 import staff_auth
 import staff_events
 import staff_modcfg
+import staff_report
 import staff_status
 
 import rcon as server
@@ -1055,6 +1058,7 @@ RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a f
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
+staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
 
 
 # The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.

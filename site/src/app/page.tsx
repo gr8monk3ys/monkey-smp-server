@@ -17,7 +17,8 @@ import { launchEvent, pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Monkey SMP: a Minecraft factions SMP server on Fabric",
   description: sayLaunch(`A paid-whitelist Fabric SMP for ${GAME}: factions of four, territory, PvP, new dungeons `
-    + `and magic. One pass, ${pass.price} a month, the same for everyone. Season I opens {date}, {pacific}.`),
+    + `and magic. One pass, ${pass.price} a month, the same for everyone. `
+    + (builtPhase() === "live" ? "Season I is live." : "Season I opens {date}, {pacific}.")),
   path: "/",
 });
 

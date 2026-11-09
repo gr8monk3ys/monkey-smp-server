@@ -3,12 +3,12 @@ the SFTP card. tools/staff_apex.py registers them with staff_panel (register()),
 change checks; docs/LIVE.md, "The staff page", says what each one does.
 
     POST /api/mod-upload?name=N&confirm=N   a jar, the raw body: checked, then into mods/      owner
-    POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     admin
-    POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  admin
-    POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  admin
+    POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     owner
+    POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  owner
+    POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  owner
     POST /api/mod-side {"file", "players"}    staff's answer: do players need it (required, no, unknown)  admin
     GET  /api/modrinth?q=TEXT                 Modrinth's Fabric mods for the server's game version  admin
-    POST /api/modrinth-install {"project", "confirm"}     its newest file, sha512 checked          admin
+    POST /api/modrinth-install {"project", "confirm"}     its newest file, sha512 checked          owner
     GET  /api/versions                        the release tags in the repo checkout, and the live one  admin
     POST /api/version-switch {"tag", "confirm"}           the helper deploys that tag            admin
     POST /api/world-reset {"confirm": "RESET", "seed"?}   the helper moves the world aside       admin
@@ -36,6 +36,10 @@ The safety rules:
   client_side, looked up by the jar's sha512 for an upload, or staff's answer. A failed lookup is "unknown" and never
   stops the install. GET /api/mods then lists the mods players need that the players' pack (client/ in the checkout)
   lacks.
+- The players' pack follows the owner's mod changes through a release, never from here: after each change the page
+  writes server/.monkey-pack-changes.json, the pack changes waiting (pack_waiting in GET /api/mods: a mod players
+  need that the owner added, or removed or keeps off). tools/pack_sync.py, on the owner's PC, reads it over SSH and
+  writes the repo change; a release publishes it. The page holds no repo or Modrinth key.
 - The version, the reset and the upload run as root through deploy/monkey-staff-helper.sh, like a restore: the page
   only writes a request with checked words. A new seed goes in the request and nowhere else: never in a log.
 
@@ -88,6 +92,9 @@ GAME_VERSION = re.compile(r"\d{1,3}(?:\.\d{1,3}){1,3}")
 SIDES = ("required", "optional", "unsupported", "unknown")
 HELD_FILE = ".monkey-held.json"           # server/: the pinned mods staff keep off, by slug (Monkey.psm1, Get-HeldMods)
 SIDES_FILE = ".monkey-mod-sides.json"     # server/: whether players need each mod
+PACK_FILE = ".monkey-pack-changes.json"   # server/: the players' pack changes waiting for a release (pack_sync.py)
+PACK_ACTIONS = ("add", "remove")
+PACK_HOW = ("off", "removed", "held")
 PLAYER_ANSWERS = {"required": "required", "no": "unsupported", "unknown": "unknown"}
 CDN_PROJECT = re.compile(r"https://cdn\.modrinth\.com/data/([A-Za-z0-9]{8})/")
 WHY_MAX = 200
@@ -159,6 +166,17 @@ def check_world_zip(path) -> dict:
         prefix = levels[0][0] + "/" if len(levels[0]) == 2 else ""
         files = sum(1 for i in infos if not i.is_dir() and i.filename.startswith(prefix))
         return {"prefix": prefix, "files": files, "size": total}
+
+
+DATAPACKS_ONLY_OWNER = ("The world has data packs in it (datapacks/), and only the owner adds those: take the "
+                        "datapacks folder out of the zip, or ask the owner to upload it.")
+
+
+def has_datapacks(path, prefix: str) -> bool:
+    """Whether the world zip at `path` (its world folder `prefix`, from check_world_zip) has a file in datapacks/."""
+    top = (prefix + "datapacks/").lower()
+    with zipfile.ZipFile(path) as z:
+        return any(not i.is_dir() and i.filename.lower().startswith(top) for i in z.infolist())
 
 
 def unzip_world(src, dest) -> Path:
@@ -676,7 +694,82 @@ class Host:
                          "why": clean(h.get("why"), WHY_MAX)} if h is not None else None,
                 "holdable": bool(slug) and ctx["supported"] and bool(entry),
                 "client_side": client,
+                "project": project if isinstance(project, str) and PROJECT.fullmatch(project) else None,
                 "in_players_pack": None if pack is None else (project in projects or base in pack["files"])}
+
+    # ------------------------------------------------ the players' pack, following the owner's mod changes
+
+    def pack_changes(self) -> list[dict]:
+        """The lines of server/.monkey-pack-changes.json: [{"file", "action", "how"?, "project", "sha512"?, "by",
+        "at"}], as the last mod change wrote them. tools/pack_sync.py reads the file over SSH."""
+        rows = self._read_note(PACK_FILE).get("changes")
+        return [r for r in rows if isinstance(r, dict) and isinstance(r.get("file"), str) and MOD_NAME.fullmatch(
+            r["file"]) and r.get("action") in PACK_ACTIONS] if isinstance(rows, list) else []
+
+    def _pack_waiting(self, rows: list[dict], ctx: dict) -> list[dict]:
+        """The players' pack changes the mods folder calls for now, worked out afresh each time, so a line goes away
+        by itself once a release has the pack match (or the owner undoes the change):
+        - add: an enabled jar players need that the owner put in (not the release's: the release decides those),
+          whose file the pack lacks. A new version of a mod the pack has counts: the pack must match the server.
+        - remove: a mod players need in the pack that the server no longer runs: a jar the owner put in and then
+          removed or turned off, or a release mod the owner keeps off (held). A release mod that is only off or
+          removed comes back at the next start, so it isn't one.
+        Only mods players need ("required") count. Nothing, when the pack can't be read."""
+        pack = ctx["pack"]
+        if pack is None:
+            return []
+        out, running = [], {r["project"] for r in rows if r.get("enabled") and r.get("project")}
+        for r in rows:
+            if r.get("enabled") and not r.get("pinned") and r.get("client_side") == "required" \
+                    and r["file"] not in pack["files"]:
+                out.append({"file": r["file"], "action": "add", "project": r.get("project")})
+        by_project = {m["project_id"]: m for m in ctx["release"].values() if isinstance(m.get("project_id"), str)}
+        noted = {v["project"]: jar for jar, v in sorted(ctx["sides"].items())
+                 if v.get("client") == "required" and isinstance(v.get("project"), str)}
+        off = {r["file"].removesuffix(".disabled") for r in rows if not r.get("enabled")}
+        for project, client in sorted(pack["projects"].items()):
+            if client != "required" or project in running:
+                continue
+            entry = by_project.get(project)
+            if entry is not None:
+                slug = self._slug_in(entry)
+                if slug and slug in ctx["held"]:
+                    out.append({"file": entry["file"], "action": "remove", "how": "held", "project": project})
+            elif project in noted:
+                jar = noted[project]
+                out.append({"file": jar, "action": "remove", "how": "off" if jar in off else "removed",
+                            "project": project})
+        stored = {(c["file"], c["action"]): c for c in self.pack_changes()}
+        for w in out:
+            old = stored.get((w["file"], w["action"]), {})
+            w["by"], w["at"] = clean(old.get("by"), 40) or None, clean(old.get("at"), 40) or None
+        return out
+
+    def after_mods(self, user: str, done: dict) -> dict:
+        """Run after each change to the mods folder or to "do players need it?": writes server/
+        .monkey-pack-changes.json from GET /api/mods's pack_waiting, with who and when for each new line and, for an
+        add, the jar's sha512 (pack_sync.py finds the Modrinth version by it). The change stands whatever happens
+        here: a failure is said in pack_error."""
+        try:
+            with self._mods:
+                waiting = self.x.mods()["pack_waiting"]
+                lines = []
+                for w in waiting:
+                    line = {**w, "by": w["by"] or user, "at": w["at"] or sp.stamp()}
+                    jar = self.p.root / "mods" / w["file"]
+                    if w["action"] == "add" and jar.is_file() and not jar.is_symlink():
+                        sha = hashlib.sha512()
+                        with open(jar, "rb") as f:
+                            for chunk in iter(lambda: f.read(MB), b""):
+                                sha.update(chunk)
+                        line["sha512"] = sha.hexdigest()
+                    lines.append(line)
+                with self._notes:
+                    if lines != self.pack_changes() and (lines or (self.p.root / PACK_FILE).exists()):
+                        self._write_note(PACK_FILE, {"changes": lines})
+            return {**done, "pack_waiting": len(lines)}
+        except OSError as e:
+            return {**done, "pack_error": f"The change is made, but the players' pack list could not be saved: {e}"}
 
     def mod_notes(self, result: dict) -> dict:
         """GET /api/mods's rows with "held", "holdable", "client_side" and "in_players_pack"; the held mods whose
@@ -700,7 +793,7 @@ class Host:
             shown = stored if isinstance(stored, str) and MOD_NAME.fullmatch(stored) else current or slug
             gone.append({"file": shown, "slug": slug, **self._notes_for(current or shown, ctx, slug)})
         return {**result, "held_gone": gone, "players_missing": missing, "players_pack": ctx["pack"] is not None,
-                "holds_supported": ctx["supported"]}
+                "holds_supported": ctx["supported"], "pack_waiting": self._pack_waiting(result["mods"], ctx)}
 
     # ------------------------------------------------ Modrinth
 
@@ -908,6 +1001,9 @@ class Host:
                     f.flush()
                     os.fsync(f.fileno())
                 info = check_world_zip(part)
+                # A data pack is game code, which only the owner adds (/api/datapack-upload): never around that here.
+                if getattr(body, "role", None) != "owner" and has_datapacks(part, info["prefix"]):
+                    raise Problem(DATAPACKS_ONLY_OWNER)
             except Problem as e:
                 part.unlink(missing_ok=True)
                 raise sp.Refused(400, str(e)) from None
@@ -981,14 +1077,15 @@ def host(panel) -> Host:
         return found
 
 
+# Each change to the mods folder, and each answer to "do players need it?", then rewrites the players' pack list.
 ROUTES = {
-    ("POST", "/api/mod-upload"): lambda p, u, q, b: host(p).mod_upload(u, q, b),
-    ("POST", "/api/mod-toggle"): lambda p, u, q, b: host(p).mod_toggle(u, b),
-    ("POST", "/api/mod-remove"): lambda p, u, q, b: host(p).mod_remove(u, b),
-    ("POST", "/api/mod-hold"): lambda p, u, q, b: host(p).mod_hold(u, b),
-    ("POST", "/api/mod-side"): lambda p, u, q, b: host(p).mod_side(u, b),
+    ("POST", "/api/mod-upload"): lambda p, u, q, b: host(p).after_mods(u, host(p).mod_upload(u, q, b)),
+    ("POST", "/api/mod-toggle"): lambda p, u, q, b: host(p).after_mods(u, host(p).mod_toggle(u, b)),
+    ("POST", "/api/mod-remove"): lambda p, u, q, b: host(p).after_mods(u, host(p).mod_remove(u, b)),
+    ("POST", "/api/mod-hold"): lambda p, u, q, b: host(p).after_mods(u, host(p).mod_hold(u, b)),
+    ("POST", "/api/mod-side"): lambda p, u, q, b: host(p).after_mods(u, host(p).mod_side(u, b)),
     ("GET", "/api/modrinth"): lambda p, u, q, b: host(p).modrinth_search(q),
-    ("POST", "/api/modrinth-install"): lambda p, u, q, b: host(p).modrinth_install(u, b),
+    ("POST", "/api/modrinth-install"): lambda p, u, q, b: host(p).after_mods(u, host(p).modrinth_install(u, b)),
     ("GET", "/api/versions"): lambda p, u, q, b: host(p).versions(),
     ("POST", "/api/version-switch"): lambda p, u, q, b: host(p).version_switch(u, b),
     ("POST", "/api/world-reset"): lambda p, u, q, b: host(p).world_reset(u, b),
@@ -998,10 +1095,13 @@ ROUTES = {
     ("GET", "/api/sftp"): lambda p, u, q, b: host(p).sftp(u),
 }
 # Every route here names who may use it (the owner made all of these admin: 2026-11-06). A jar from the visitor's
-# own computer runs as the server on the next restart, so that one is the owner's (exploit audit, 2026-11-07);
-# a Modrinth install stays admin: the jar comes from Modrinth, checked against its hash.
-NEEDS = {key: "admin" for key in ROUTES}
-NEEDS[("POST", "/api/mod-upload")] = "owner"
+# own computer runs as the server on the next restart, so that one is the owner's (exploit audit, 2026-11-07).
+# Only the owner changes which jars run (owner, 2026-11-08): installing from Modrinth, turning a jar on or off,
+# removing it, and holding a pinned mod off or allowing it again. The answer to "do players need it?" stays admin:
+# it is a note in .monkey-mod-sides.json, never a jar moved, and the start script doesn't read it.
+OWNER_MODS = {("POST", path) for path in ("/api/mod-upload", "/api/modrinth-install", "/api/mod-toggle",
+                                          "/api/mod-remove", "/api/mod-hold")}
+NEEDS = {key: "owner" if key in OWNER_MODS else "admin" for key in ROUTES}
 # The routes whose body is a file, and the most bytes each takes (staff_panel.RAW).
 RAW = {("POST", "/api/mod-upload"): MOD_MAX, ("POST", "/api/world-upload"): WORLD_UPLOAD_MAX}
 

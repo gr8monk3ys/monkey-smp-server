@@ -114,6 +114,10 @@ READ_ONLY = {"logs", "crash-reports"}
 # Mods tab's own upload. Deleting stays admin, like removing a mod.
 CODE_TOPS = {"mods", ".fabric"}
 CODE_ONLY_OWNER = "Only the owner can add or change jars, or files in mods/ (they run as the server)."
+# The file the Settings form keeps some keys of (staff_apex.LOCKED: online-mode, RCON, the ports) for the owner.
+PROPERTIES = "server.properties"
+PROPERTIES_ONLY_OWNER = ("Only the owner can write server.properties here: change the game's settings on the Settings "
+                         "page.")
 _DATABASE = re.compile(r"\.db(-\w+)?$", re.I)
 # level-seed too: the seed is as secret here as in the console.
 _SECRET_KEY = re.compile(r"password|secret|token|seed", re.I)
@@ -562,13 +566,17 @@ class Panel:
         return bool(parts) and (parts[0].lower() in CODE_TOPS or parts[-1].lower().endswith(".jar"))
 
     def code_guard(self, rel) -> None:
-        """Refused unless `rel` (as asked, and the file a link leads to) holds no code. For non-owners' writes."""
+        """Refused unless `rel` (as asked, and the file a link leads to) holds no code and is not server.properties,
+        whose locked keys (online-mode, RCON, the ports) the Settings form keeps for the owner. For non-owners'
+        writes."""
         if not isinstance(rel, str):
             return                      # resolve() refuses it with its own sentence
         _, real_parts = self.resolve(rel, "write")
         asked = tuple(p for p in PurePosixPath(rel).parts if p != ".")
         if self.holds_code(asked) or self.holds_code(real_parts):
             raise Refused(403, CODE_ONLY_OWNER)
+        if any(tuple(p.lower() for p in parts) == (PROPERTIES,) for parts in (asked, real_parts)):
+            raise Refused(403, PROPERTIES_ONLY_OWNER)
 
     def resolve(self, rel, want: str = "read") -> tuple[Path, tuple[str, ...]]:
         """(real path, its parts from the server folder) for `rel`, or Refused. `want` is read or write."""
@@ -1188,7 +1196,7 @@ class Handler(BaseHTTPRequestHandler):
                 ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
                 if ctype != "application/octet-stream":
                     raise Refused(415, "Send the file as application/octet-stream.")
-                raw = staff_apex.Body(self.rfile, self.length(RAW[(method, url.path)]))
+                raw = staff_apex.Body(self.rfile, self.length(RAW[(method, url.path)]), role)
                 try:
                     result = ROUTES[(method, url.path)](panel, user, query, raw)
                 finally:

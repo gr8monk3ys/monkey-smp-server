@@ -768,7 +768,7 @@ ROUTES = {
     ("GET", "/api/server-icon"): lambda p, u, q, b: more(p).server_icon(),
     ("POST", "/api/server-icon"): lambda p, u, q, b: more(p).icon_upload(u, b),
     ("POST", "/api/server-icon-remove"): lambda p, u, q, b: more(p).icon_remove(u),
-    ("POST", "/api/modpack"): lambda p, u, q, b: more(p).modpack(u, q, b),
+    ("POST", "/api/modpack"): lambda p, u, q, b: hs.host(p).after_mods(u, more(p).modpack(u, q, b)),
 }
 NEEDS = {key: "admin" for key in ROUTES}
 NEEDS[("POST", "/api/modpack")] = "owner"     # a pack's overrides/ can carry any jar: like a mod upload

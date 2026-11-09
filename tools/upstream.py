@@ -2,6 +2,7 @@
 
   Upstream(http)                                   the catalog, over an HTTP adapter
     .modrinth_versions_by_sha1(sha1s)              {sha1: version} for files Modrinth knows
+    .modrinth_versions_by_sha512(sha512s)          {sha512: version}, the same by SHA-512
     .modrinth_projects(ids)                        {project id: project}
     .modrinth_versions(project_id, mc, loaders)    every version of a project for a Minecraft version
     .newest_release(project_id, mc, loaders)       newest stable ("release") version, or None
@@ -82,10 +83,16 @@ class Upstream:
         self.http = http
 
     def modrinth_versions_by_sha1(self, sha1s) -> dict[str, dict]:
-        hashes = sorted(set(sha1s))
+        return self._versions_by_hash(sha1s, "sha1")
+
+    def modrinth_versions_by_sha512(self, sha512s) -> dict[str, dict]:
+        return self._versions_by_hash(sha512s, "sha512")
+
+    def _versions_by_hash(self, values, algorithm: str) -> dict[str, dict]:
+        hashes = sorted(set(values))
         if not hashes:
             return {}
-        return self.http.post_json(f"{MODRINTH}/version_files", {"hashes": hashes, "algorithm": "sha1"})
+        return self.http.post_json(f"{MODRINTH}/version_files", {"hashes": hashes, "algorithm": algorithm})
 
     def modrinth_projects(self, ids) -> dict[str, dict]:
         ids = sorted(set(ids))

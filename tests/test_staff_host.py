@@ -36,7 +36,9 @@ UID = "20261106T090000Z-00aa11bb"
 # ---------------------------------------------------------------- who may ask
 
 
-OWNER_ONLY = {("POST", "/api/mod-upload")}     # a jar runs as the server (exploit audit, 2026-11-07)
+# A jar runs as the server (exploit audit, 2026-11-07), so only the owner changes which jars run (owner, 2026-11-08).
+OWNER_ONLY = {("POST", path) for path in ("/api/mod-upload", "/api/modrinth-install", "/api/mod-toggle",
+                                          "/api/mod-remove", "/api/mod-hold")}
 
 
 def test_every_new_route_is_admin_and_registered():
@@ -57,14 +59,44 @@ def test_a_moderator_is_refused_every_new_route(apex, method, path):
     assert code == 403 and "role" in data["error"]
 
 
-def test_only_the_owner_uploads_a_jar_and_an_admin_still_installs_from_modrinth(apex, tmp_path):
-    good = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.0", "environment": "*"})
+def mod_change(b, tmp_path, path):
+    """Sets up a valid request to PATH, one of the owner's mod routes: (url, body, what an owner's call changes)."""
+    mods = b.root / "mods"
+    if path == "/api/mod-upload":
+        good = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.0", "environment": "*"})
+        return mod_url("lithium.jar"), good, lambda: (mods / "lithium.jar").exists()
+    if path == "/api/modrinth-install":
+        with_modrinth(b, FakeModrinth(jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "0.15"})))
+        return path, {"project": "lithium", "confirm": "lithium"}, lambda: (mods / "lithium-fabric-0.15.jar").exists()
+    if path == "/api/mod-hold":
+        pinned(b, "claims.jar")                              # pinned, and not in mods/: removed
+        return path, {"file": "claims.jar", "held": True, "confirm": "claims.jar"}, lambda: held_file(b) is not None
+    jar(mods / "lithium.jar", {"id": "lithium", "name": "Lithium"})
+    release(b, {})
+    if path == "/api/mod-toggle":
+        return path, {"file": "lithium.jar", "enabled": False, "confirm": "lithium.jar"}, \
+            lambda: (mods / "lithium.jar.disabled").exists()
+    return path, {"file": "lithium.jar", "confirm": "lithium.jar"}, lambda: not (mods / "lithium.jar").exists()
+
+
+@pytest.mark.parametrize("path", sorted(path for _, path in OWNER_ONLY))
+def test_only_the_owner_changes_which_jars_run(apex, tmp_path, path):
+    url, body, changed = mod_change(apex, tmp_path, path)
     for role in ("moderator", "admin"):
-        code, data = apex.call("POST", mod_url("lithium.jar"), good, headers=as_role(role))
-        assert code == 403 and "role" in data["error"]
-    assert not (apex.root / "mods" / "lithium.jar").exists()
-    assert staff_panel.NEEDS[("POST", "/api/modrinth-install")] == "admin"
-    assert apex.call("POST", mod_url("lithium.jar"), good)[0] == 200          # the fixture's role is owner
+        code, data = apex.call("POST", url, body, headers=as_role(role))
+        assert code == 403 and "role" in data["error"], role
+    assert not changed()
+    code, data = apex.call("POST", url, body, headers=as_role("owner"))
+    assert code == 200, data
+    assert changed()
+
+
+def test_an_admin_still_answers_whether_players_need_a_mod(apex):
+    jar(apex.root / "mods" / "shippy.jar", {"id": "shippy", "name": "Shippy"})
+    code, done = apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "required"},
+                           headers=as_role("admin"))
+    assert code == 200 and done["client_side"] == "required"
+    assert (apex.root / "mods" / "shippy.jar").exists()
 
 
 # ---------------------------------------------------------------- the mod manager
@@ -647,6 +679,127 @@ def test_an_install_says_whether_the_players_pack_has_it(apex, tmp_path):
     assert done["in_players_pack"] is True
 
 
+# ---------------------------------------------------------------- the players' pack follows the owner's changes
+
+
+SHIPPY = "https://cdn.modrinth.com/data/AbCd1234/versions/abcdefgh/shippy.jar"
+CLIENT_ONLY = {"path": "mods/zoom.jar", "env": {"client": "required"},
+               "downloads": ["https://cdn.modrinth.com/data/Zoom1234/versions/abcdefgh/zoom.jar"]}
+
+
+def pack_file(b):
+    path = b.root / staff_host.PACK_FILE
+    return json.loads(path.read_text())["changes"] if path.exists() else None
+
+
+def waiting(b):
+    return [(w["file"], w["action"], w.get("how")) for w in apex_get(b)["pack_waiting"]]
+
+
+def apex_get(b):
+    code, data = b.call("GET", "/api/mods")
+    assert code == 200
+    return data
+
+
+def test_an_owner_install_players_need_waits_for_the_pack_and_goes_once_it_has_it(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY])            # a client-only mod the server never ran: never a removal
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    lookup(apex, "required")
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and done["pack_waiting"] == 1 and "pack_error" not in done
+    [line] = pack_file(apex)
+    assert line["file"] == "shippy.jar" and line["action"] == "add" and line["project"] == "AbCd1234"
+    assert line["sha512"] == hashlib.sha512(good).hexdigest() and line["by"] == "diego" and line["at"].endswith("Z")
+    row = apex_get(apex)["pack_waiting"][0]
+    assert (row["file"], row["action"], row["by"], row["at"]) == ("shippy.jar", "add", "diego", line["at"])
+    # Turned off before any release: nothing for the pack to do, and the line goes.
+    off = {"file": "shippy.jar", "enabled": False, "confirm": "shippy.jar"}
+    assert apex.call("POST", "/api/mod-toggle", off)[1]["pack_waiting"] == 0
+    assert pack_file(apex) == [] and waiting(apex) == []
+    # A release puts it in the players' pack: on again, nothing waits.
+    client_pack(apex, [CLIENT_ONLY, {"path": "mods/shippy.jar", "env": {"client": "required"},
+                                     "downloads": [SHIPPY]}])
+    on = {"file": "shippy.jar.disabled", "enabled": True, "confirm": "shippy.jar.disabled"}
+    assert apex.call("POST", "/api/mod-toggle", on)[0] == 200 and pack_file(apex) == []
+
+
+def test_an_owner_removal_of_a_mod_in_the_pack_waits_for_the_pack(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY, {"path": "mods/shippy.jar", "env": {"client": "required"},
+                                     "downloads": [SHIPPY]}])
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    lookup(apex, "required")
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["pack_waiting"] == 0
+    assert waiting(apex) == []
+    off = {"file": "shippy.jar", "enabled": False, "confirm": "shippy.jar"}
+    assert apex.call("POST", "/api/mod-toggle", off)[0] == 200
+    assert waiting(apex) == [("shippy.jar", "remove", "off")]
+    first = pack_file(apex)[0]["at"]
+    code, done = apex.call("POST", "/api/mod-remove", {"file": "shippy.jar.disabled", "confirm": "shippy.jar.disabled"})
+    assert code == 200 and waiting(apex) == [("shippy.jar", "remove", "removed")]
+    assert pack_file(apex)[0]["at"] != first or pack_file(apex)[0]["how"] == "removed"
+    # Put back: nothing waits. A new version instead: the pack must take that version (an add).
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["pack_waiting"] == 0 and pack_file(apex) == []
+    newer = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships", "version": "2"}, "s2.jar")
+    assert apex.call("POST", mod_url("shippy-2.jar"), newer)[0] == 200
+    assert waiting(apex) == [("shippy-2.jar", "add", None)]
+
+
+def test_only_mods_players_need_wait(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY])
+    lookup(apex, "optional")
+    assert apex.call("POST", mod_url("lith.jar"), jar_bytes(tmp_path, {"id": "lith", "name": "L"}))[0] == 200
+    assert waiting(apex) == [] and pack_file(apex) is None              # nothing to say: no file at all
+    # Staff (an admin) answer that players need it: it waits, for the owner's release.
+    code, done = apex.call("POST", "/api/mod-side", {"file": "lith.jar", "players": "required"},
+                           headers=as_role("admin"))
+    assert code == 200 and done["pack_waiting"] == 1 and waiting(apex) == [("lith.jar", "add", None)]
+
+
+def test_a_release_mod_players_need_waits_for_removal_only_while_it_is_held(apex):
+    client_pack(apex, [{"path": "mods/claims.jar", "env": {"client": "required"},
+                        "downloads": ["https://cdn.modrinth.com/data/Claims12/versions/abcdefgh/claims.jar"]}])
+    jar(apex.root / "mods" / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    release(apex, {"claims.jar": ("claims", "Claims12")})
+    assert waiting(apex) == []
+    # Removed without keeping it off: the next start puts it back, so the pack keeps it.
+    assert apex.call("POST", "/api/mod-remove", {"file": "claims.jar", "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == []
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims.jar", "held": True, "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == [("claims.jar", "remove", "held")] and pack_file(apex)[0]["project"] == "Claims12"
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims.jar", "held": False, "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == [] and pack_file(apex) == []
+
+
+def test_without_a_players_pack_nothing_waits(apex, tmp_path):
+    lookup(apex, "required")
+    code, done = apex.call("POST", mod_url("shippy.jar"), jar_bytes(tmp_path, {"id": "shippy", "name": "S"}))
+    assert code == 200 and done["pack_waiting"] == 0 and apex_get(apex)["pack_waiting"] == []
+
+
+def test_a_pack_list_that_fails_to_save_never_undoes_the_change(apex, tmp_path, monkeypatch):
+    client_pack(apex, [CLIENT_ONLY])
+    lookup(apex, "required")
+    real = staff_host.Host._write_note
+
+    def failing(self, name, data):
+        if name == staff_host.PACK_FILE:
+            raise OSError("disk full")
+        real(self, name, data)
+
+    monkeypatch.setattr(staff_host.Host, "_write_note", failing)
+    code, done = apex.call("POST", mod_url("shippy.jar"), jar_bytes(tmp_path, {"id": "shippy", "name": "S"}))
+    assert code == 200 and "disk full" in done["pack_error"] and (apex.root / "mods" / "shippy.jar").exists()
+
+
+@pytest.mark.parametrize("text", ["[]", "{\"changes\": 5}", "not json",
+                                  "{\"changes\": [{\"file\": \"../x.jar\", \"action\": \"add\"}, 7]}"])
+def test_a_broken_pack_file_reads_as_nothing(apex, text):
+    (apex.root / staff_host.PACK_FILE).write_text(text)
+    assert staff_host.host(apex.panel).pack_changes() == []
+
+
 # ---------------------------------------------------------------- the version switch
 
 
@@ -840,6 +993,23 @@ def test_a_world_upload_is_checked_kept_and_swapped_in_only_when_typed(apex, mon
     assert (apex.root / "world" / "level.dat").read_text() == "nbt"     # the page itself changes no world
     log = actions(apex)
     assert "diego world-upload" in log and "diego world-replace" in log
+
+
+def test_only_the_owner_uploads_a_world_with_data_packs(apex, monkeypatch):
+    # A data pack is game code (/api/datapack-upload is the owner's), so an admin's world upload can't carry one.
+    monkeypatch.setattr(staff_host, "SPARE", 0)
+    installed(apex)
+    uploads = apex.staff / "uploads"
+    for files in ({"world/level.dat": "x", "world/datapacks/evil.zip": "x"},
+                  {"level.dat": "x", "DataPacks/evil/pack.mcmeta": "x"}):
+        code, body = apex.call("POST", "/api/world-upload", world_zip(files), headers=as_role("admin"))
+        assert code == 400 and "owner" in body["error"], files
+        assert not uploads.exists() or not list(uploads.iterdir())
+    # Beside the world folder is not in it; an empty datapacks folder holds no code.
+    plain = world_zip({"world/level.dat": "x", "datapacks/readme.txt": "x"})
+    assert apex.call("POST", "/api/world-upload", plain, headers=as_role("admin"))[0] == 200
+    packs = world_zip({"world/level.dat": "x", "world/datapacks/evil.zip": "x"})
+    assert apex.call("POST", "/api/world-upload", packs)[0] == 200          # the fixture's role is owner
 
 
 def test_a_world_upload_needs_room_on_the_disk(apex, monkeypatch):

@@ -13,6 +13,33 @@
   keeps or shows an address. `monkey-report.timer` writes last week every Monday at 1:15 AM Pacific at the lowest
   priority. Owner steps: `monkey-report.sh --install` and a restart of `monkey-panel` (docs/LIVE.md, "The weekly
   rule check").
+- Staff page: the players' pack follows the owner's mod changes. The Mods tab lists "Players' pack: waiting for a
+  release": mods players need that the owner added or took off the server and their pack doesn't match yet. The
+  page saves that list on the VPS, and `python tools/pack_sync.py --ssh HOST` on the owner's PC turns it into a
+  change to `client/modrinth.index.json` and the manifest (`--pr` opens a draft pull request). Players get it with
+  the next release; nothing on the VPS can change the pack. Needs `monkey-staff.sh --install` again.
+
+### Changed
+
+- Staff page: only an owner changes which jars run. Installing from Modrinth, turning a jar off or on, removing it,
+  and keeping a pinned mod off or allowing it again were admin; they are owner now, like a jar upload (admins see the
+  buttons greyed out). Admins still search Modrinth and answer "do players need it?". Once the checkout has
+  it, run `monkey-staff.sh --install` again (docs/LIVE.md, "The staff page").
+
+### Fixed
+
+- Strength SMP's crossbow and armor ultimates work again and end on time (docs/MAINTAINING.md, "Patches this pack
+  carries"). The crossbow ultimate's buff (faster charge, +3 arrow damage) now comes off when its 10 seconds are up;
+  before, it stayed on the crossbow for good, for whoever held it, through death, chests and restarts. A crossbow
+  that already has it loses it the moment a player holds it. The armor ultimate now lasts about 30 seconds and its
+  cooldown counts down; before, its knockback immunity and stronger golden apples lasted until death, kept going
+  after a reroll, and the ultimate came back only after dying. It now takes a full diamond or netherite set worn.
+- The Armor power no longer turns diamond armor into netherite. The swap went one way (dropping, dying or
+  rerolling kept the netherite), reached diamond armor anywhere in the inventory, not only worn, and rule 24 then took
+  the netherite off the player, so the armor ultimate could almost never start. Netherite it already made stays
+  netherite, and diamonds still repair it (`monkey-armor-repair`).
+- The staff page's Strength SMP card described ultimate lifetimes as how long an ultimate lasts. It is how long it
+  stays ready to use, counted in ticks (500 is about 25 seconds); the card now says so.
 
 ## [3.2.0] - 2026-11-08
 

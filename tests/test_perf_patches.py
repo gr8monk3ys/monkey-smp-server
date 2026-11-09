@@ -60,10 +60,12 @@ def test_each_guard_covers_all_the_slots_the_macro_edits():
         assert sum(f"if items entity @s {slots} " in line for line in commands(text)) == 7
 
 
-def test_armor_and_sword_powers_stay_upstream():
-    """A guard on the armor power's HurtTime read looked free and stopped its hit counter ever starting."""
+def test_sword_power_stays_upstream():
+    """No speed guard on the sword or armor powers: one on the armor power's HurtTime read looked free and stopped its
+    hit counter ever starting. The armor power is patched only for its ultimate (tests/test_strength_ults.py, which
+    pins those lines as upstream has them)."""
     files = patches.read(REPO.patches / "silvers_strength-smp-season-5")
-    assert not [path for path in files if path.endswith(("powers/armor.mcfunction", "powers/sword.mcfunction"))]
+    assert not [path for path in files if path.endswith("powers/sword.mcfunction")]
 
 
 def test_fire_is_still_read_for_both_effects_that_use_it():

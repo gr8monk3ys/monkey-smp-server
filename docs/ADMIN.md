@@ -399,9 +399,10 @@ values.
 - **Repairing Strength SMP gear** (pack `monkey-armor-repair`, `tools/repairs.py`). Strength SMP puts a hidden
   power enchantment on the weapon you hold. Within 5 blocks of an anvil, grindstone or enchanting table the mod
   takes it off, so a spear or any other weapon repairs at an anvil as usual, with its own material. The Armor
-  power turns diamond armor into netherite armor, and vanilla repairs netherite armor only with netherite
-  ingots, so this pack adds diamonds to `#minecraft:repairs_netherite_armor` (owners, 2026-11-07). Rule 24 keeps
-  other netherite armor out, so in practice only the Armor power's pieces are affected. Turn it off with
+  power used to turn diamond armor into netherite armor (stopped after 3.2.0: its ultimate now takes a full diamond
+  or netherite set), and vanilla repairs netherite armor only with netherite ingots, so this pack adds diamonds to
+  `#minecraft:repairs_netherite_armor` (owners, 2026-11-07). It stays for the pieces the power already made. Rule 24
+  keeps other netherite armor out, so in practice only those pieces are affected. Turn it off with
   `datapack disable "file/monkey-armor-repair"`.
 
 ## World generation

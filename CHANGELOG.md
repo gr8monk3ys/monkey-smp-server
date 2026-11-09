@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-08
+
+Strength SMP's crossbow and armor ultimates fixed, the staff page's mod and file controls kept for the owner, and
+Random Mob Sizes off the server. Players install nothing: the client pack is the same as 3.2.0's. Steps by hand on
+the live server: `monkey-staff.sh --install` again (below), and the 3.2.0 steps if they aren't done yet.
+
+### Removed
+
+- Random Mob Sizes (`random-mob-sizes-dp`), taken off the live server by the owner on 2026-11-08. It is server-only
+  and adds no blocks or biomes, so the world loses nothing; mobs it already resized keep their size. The client pack
+  still lists it (nothing to download again); the next pack change can drop it. Streams Reflowing stays: it adds its
+  own stream block and biome, so taking it off would empty the rivers in every explored chunk.
+
+### Security
+
+- Staff page: a world upload can no longer bring data packs onto the server, and the Files tab can no longer write
+  `server.properties` (it holds the RCON password). Both stay with the owner, over SSH.
+
 ### Added
 
 - Staff page: the players' pack follows the owner's mod changes. The Mods tab lists "Players' pack: waiting for a

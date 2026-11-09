@@ -391,7 +391,7 @@
     const pinned = done.held ? HELD_NOTE : done.pinned ? PINNED_NOTE : "";
     say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${pinned} Restart the server (Server tab) for it to take effect.`);
     // The change is made; a note that could not be saved after it (keep it off, players need it) is said apart.
-    say("mods-error", [done.note_error, done.pack_error && `The list of changes waiting for the players' pack couldn't be saved: ${done.pack_error}`].filter(Boolean).join(" ") || null);
+    say("mods-error", [done.note_error, done.pack_error].filter(Boolean).join(" ") || null);
     say("mods-players", playersNeed(done));
     if (done.client_side === "unknown" && done.file) askPlayers(done.file, done.side_checked === false);
     loadMods();

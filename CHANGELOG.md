@@ -4,6 +4,15 @@
 
 ### Added
 
+- Staff page, Reports tab (moderators and up): each week's rule check. For every player, which server rules they may
+  have broken that week (portal trapping, banned items, launch-hour and new-player kills, combat logs, chest takes
+  from another faction, faction and group size, shared connections, x-ray, TNT at spawn, bedrock and the Nether
+  roof), as a grid with a count and a level (clear, likely, unclear) per cell, the rows behind each cell, the checks
+  that came back clean and a "Copy for Discord" button. It only reports: no punishments, no messages, no rollbacks.
+  `tools/staff_report.py` reads the Ledger database (read-only), the game's stats, the parties and the logs; it never
+  keeps or shows an address. `monkey-report.timer` writes last week every Monday at 1:15 AM Pacific at the lowest
+  priority. Owner steps: `monkey-report.sh --install` and a restart of `monkey-panel` (docs/LIVE.md, "The weekly
+  rule check").
 - Staff page: the players' pack follows the owner's mod changes. The Mods tab lists "Players' pack: waiting for a
   release": mods players need that the owner added or took off the server and their pack doesn't match yet. The
   page saves that list on the VPS, and `python tools/pack_sync.py --ssh HOST` on the owner's PC turns it into a

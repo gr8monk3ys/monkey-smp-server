@@ -1,0 +1,15 @@
+# Writes last week's rule check for the staff page's Reports tab (deploy/monkey-report.sh, tools/staff_report.py).
+# Started every Monday by monkey-report.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-report.sh
+# --install` (docs/LIVE.md). It only reads the server's files, at the lowest CPU and disk priority so the game
+# never waits on it.
+[Unit]
+Description=Monkey SMP: weekly rule check for the staff page
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-report.sh
+TimeoutStartSec=30min
+Nice=19
+IOSchedulingClass=idle

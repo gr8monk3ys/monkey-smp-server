@@ -1203,7 +1203,7 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
 | Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
-| Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks. |
+| Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks, and the mod changes waiting for a release of the players' pack. |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
 | Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |
 | Mod manager | owner | Install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
@@ -1261,6 +1261,20 @@ The mod manager:
   they may not be able to join. The mods list names every enabled mod players need that the players' pack lacks: the pack is
   `client/modrinth.index.json` in the repo checkout, matched by Modrinth project or jar name. When the checkout has
   no readable pack, the list is every mod marked as needed. The page never changes the players' pack.
+- **Players' pack: waiting for a release** (owner, 2026-11-08): the Mods tab lists the mod changes players need in
+  their pack too, worked out afresh from the mods folder each time:
+  - *add*: an enabled jar players need (`required`) that the owner put in, whose file the pack lacks. A new version
+    of a mod the pack has counts too: the pack must have the server's version.
+  - *remove*: a mod players need that is in the pack but no longer runs here: a jar the owner put in and then turned
+    off or removed, or a release mod kept off. A release mod that is only off or removed comes back at the next
+    start, so it isn't one.
+
+  After each mod change the page writes the list to `server/.monkey-pack-changes.json` (who, when, and for an add
+  the jar's sha512). A line goes by itself once the deployed release's pack matches the server, or when the owner
+  undoes the change. Nothing on the VPS writes to the repo or to Modrinth: on the owner's PC,
+  `python tools/pack_sync.py --ssh HOST` reads that file over the owner's SSH login and changes
+  `client/modrinth.index.json` and `package/monkey/manifest.json` (`--pr` opens a draft pull request). Players get
+  it once the owner merges that and tags a release (docs/MAINTAINING.md, "Releasing").
 
 The data packs box (admin, Mods tab) has a troubleshooting mode for "which pack breaks it":
 

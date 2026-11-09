@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Staff page: the players' pack follows the owner's mod changes. The Mods tab lists "Players' pack: waiting for a
+  release": mods players need that the owner added or took off the server and their pack doesn't match yet. The
+  page saves that list on the VPS, and `python tools/pack_sync.py --ssh HOST` on the owner's PC turns it into a
+  change to `client/modrinth.index.json` and the manifest (`--pr` opens a draft pull request). Players get it with
+  the next release; nothing on the VPS can change the pack. Needs `monkey-staff.sh --install` again.
+
 ### Changed
 
 - Staff page: only an owner changes which jars run. Installing from Modrinth, turning a jar off or on, removing it,

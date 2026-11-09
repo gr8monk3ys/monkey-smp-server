@@ -1209,10 +1209,12 @@ class _Counted:
 
 class Body:
     """A request body that is a file (staff_panel.RAW): read in chunks, never past `length`. `started` says whether
-    any of it was read, so a refusal before that can still read and drop it."""
+    any of it was read, so a refusal before that can still read and drop it. `role` is the sender's login role
+    (None when unknown, which is never the owner)."""
 
-    def __init__(self, raw, length: int):
+    def __init__(self, raw, length: int, role: str | None = None):
         self.raw, self.length, self.left, self.started = raw, length, length, False
+        self.role = role
 
     def chunks(self, size: int = 256 * 1024):
         while self.left:

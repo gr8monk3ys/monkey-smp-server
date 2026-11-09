@@ -995,6 +995,23 @@ def test_a_world_upload_is_checked_kept_and_swapped_in_only_when_typed(apex, mon
     assert "diego world-upload" in log and "diego world-replace" in log
 
 
+def test_only_the_owner_uploads_a_world_with_data_packs(apex, monkeypatch):
+    # A data pack is game code (/api/datapack-upload is the owner's), so an admin's world upload can't carry one.
+    monkeypatch.setattr(staff_host, "SPARE", 0)
+    installed(apex)
+    uploads = apex.staff / "uploads"
+    for files in ({"world/level.dat": "x", "world/datapacks/evil.zip": "x"},
+                  {"level.dat": "x", "DataPacks/evil/pack.mcmeta": "x"}):
+        code, body = apex.call("POST", "/api/world-upload", world_zip(files), headers=as_role("admin"))
+        assert code == 400 and "owner" in body["error"], files
+        assert not uploads.exists() or not list(uploads.iterdir())
+    # Beside the world folder is not in it; an empty datapacks folder holds no code.
+    plain = world_zip({"world/level.dat": "x", "datapacks/readme.txt": "x"})
+    assert apex.call("POST", "/api/world-upload", plain, headers=as_role("admin"))[0] == 200
+    packs = world_zip({"world/level.dat": "x", "world/datapacks/evil.zip": "x"})
+    assert apex.call("POST", "/api/world-upload", packs)[0] == 200          # the fixture's role is owner
+
+
 def test_a_world_upload_needs_room_on_the_disk(apex, monkeypatch):
     installed(apex)
     monkeypatch.setattr(staff_host, "SPARE", 10 ** 18)

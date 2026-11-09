@@ -435,7 +435,7 @@
 
   function allowButton(file) {
     return button("Allow again", "", () => modStep(`Let the release put ${file} back? The next start downloads it again.`,
-      "Allow again", file, (typed) => modCall("/api/mod-hold", { file, held: false, confirm: typed }, `${file} is allowed again.`)), "admin");
+      "Allow again", file, (typed) => modCall("/api/mod-hold", { file, held: false, confirm: typed }, `${file} is allowed again.`)), "owner");
   }
 
   function modButtons(m) {
@@ -448,11 +448,12 @@
         ? `Turn off ${m.file}? It is renamed to .jar.disabled and the server stops loading it at the next restart.${pinnedOff}`
         : `Turn ${m.file} back on?${m.held ? " It is kept off now: turning it on allows it again." : ""}`, on ? "Turn off" : "Turn on", m.file,
       (typed, hold) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed, hold: on && hold }, on ? "Turned off." : "Turned on."),
-      on && m.holdable ? KEEP_OFF : undefined), "admin"),
+      on && m.holdable ? KEEP_OFF : undefined), "owner"),
       button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.${pinnedOff}`,
         "Remove", m.file, (typed, hold) => modCall("/api/mod-remove", { file: m.file, confirm: typed, hold }, "Removed."),
-        m.holdable ? KEEP_OFF : undefined), "admin"),
+        m.holdable ? KEEP_OFF : undefined), "owner"),
     ];
+    // Only the owner changes which jars run (tools/staff_host.py, OWNER_MODS); admins see these greyed out.
     if (m.held) out.push(allowButton(base));
     // The server finds the jar by its name on disk (with .disabled when it is off).
     if (!m.pinned && m.client_side === "unknown") out.push(button("Players need it?", "", () => askPlayers(m.file, false), "admin"));
@@ -545,7 +546,7 @@
         [h.downloads !== null ? `${h.downloads} downloads` : "", `players need it: ${h.client_side}`].filter(Boolean).join(", "),
         h.description,
         [button("Install", "", () => modStep(`Install ${h.title} from Modrinth? The newest release for this game version is downloaded and its sha512 checked.`,
-          "Install", h.slug, (typed) => installModrinth(h.slug, typed)), "admin")]));
+          "Install", h.slug, (typed) => installModrinth(h.slug, typed)), "owner")]));
       $("modrinth-list").replaceChildren(...(items.length ? items : [emptyRow("No Fabric mod for this version matches.")]));
     } catch (error) {
       $("modrinth-list").replaceChildren();

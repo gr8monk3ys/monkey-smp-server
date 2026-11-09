@@ -1191,8 +1191,10 @@ nights): an admin without it can't run the event timer until they do.
 
 A jar runs as the server, so only an owner adds one: uploading a jar, installing a `.mrpack`, uploading a data pack
 (game code: functions, loot, recipes; turning packs on or off stays admin), and, in Files, saving,
-uploading or restoring a `.jar` or anything in `mods/` or `.fabric/` (checked again after links are followed). An
-admin adds mods from Modrinth, where the file is checked by its hash.
+uploading or restoring a `.jar` or anything in `mods/` or `.fabric/` (checked again after links are followed). Only
+an owner changes which jars run at all (owner, 2026-11-08): installing from Modrinth, turning a jar off or on,
+removing it, and keeping a pinned mod off or allowing it again. Admins see those buttons greyed out. An admin still
+searches Modrinth and answers "do players need it?", which only notes the answer and moves no jar.
 
 | What | Who | What it does |
 |---|---|---|
@@ -1203,8 +1205,9 @@ admin adds mods from Modrinth, where the file is checked by its hash.
 | Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
 | Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks. |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
-| Mod manager | admin | Install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
-| Keep a pinned mod off | admin | Turning off or removing a pinned mod asks "Keep it off after restarts" (ticked), when the live release supports it. Allow again undoes it. Types the jar's file name. |
+| Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |
+| Mod manager | owner | Install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
+| Keep a pinned mod off | owner | Turning off or removing a pinned mod asks "Keep it off after restarts" (ticked), when the live release supports it. Allow again undoes it. Types the jar's file name. |
 | Do players need it | admin | Yes, no or don't know, for a mod Modrinth doesn't know. Saved with the mod. |
 | Upload a data pack | owner | A data pack `.zip`, checked, then into the world's `datapacks/`. |
 | Data pack troubleshooting | admin | Turn all off (types `ALL OFF`) saves which packs are on and turns them off; Turn saved set back on puts them back in order. |

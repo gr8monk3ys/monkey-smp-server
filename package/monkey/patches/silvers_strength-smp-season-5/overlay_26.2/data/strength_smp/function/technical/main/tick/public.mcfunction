@@ -36,6 +36,21 @@ attribute @s[scores={Strength_SMP+Strength_Level=..1}] minecraft:attack_damage m
 attribute @s[scores={Strength_SMP+Strength_Level=..1}] minecraft:attack_damage modifier remove strength_smp:buff-level_4
 attribute @s[scores={Strength_SMP+Strength_Level=..1}] minecraft:attack_damage modifier remove strength_smp:buff-level_5
 
+# Monkey SMP: the armor passive (powers/armor) comes off when the power is no longer Armor and at death, before
+# death_resets zeroes the death count; powers/armor puts it back.
+execute if entity @s[tag=strength_smp.armor_passive] unless score @s Strength_SMP+Selected_Weapon_ID matches 9 run tag @s add strength_smp.armor_passive.off
+tag @s[tag=strength_smp.armor_passive,scores={Strength_SMP+Death=1..}] add strength_smp.armor_passive.off
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:armor_toughness modifier remove strength_smp:armor_passive-head-armor_toughness
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:knockback_resistance modifier remove strength_smp:armor_passive-head-knockback_resistance
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:armor_toughness modifier remove strength_smp:armor_passive-chest-armor_toughness
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:knockback_resistance modifier remove strength_smp:armor_passive-chest-knockback_resistance
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:armor_toughness modifier remove strength_smp:armor_passive-legs-armor_toughness
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:knockback_resistance modifier remove strength_smp:armor_passive-legs-knockback_resistance
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:armor_toughness modifier remove strength_smp:armor_passive-feet-armor_toughness
+attribute @s[tag=strength_smp.armor_passive.off] minecraft:knockback_resistance modifier remove strength_smp:armor_passive-feet-knockback_resistance
+tag @s[tag=strength_smp.armor_passive.off] remove strength_smp.armor_passive
+tag @s[tag=strength_smp.armor_passive.off] remove strength_smp.armor_passive.off
+
 # Death
 execute as @s[scores={Strength_SMP+Death=1..}] at @s run function strength_smp:technical/trigger/ftf/death_resets
 

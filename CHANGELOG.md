@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The Armor power has a passive again. 3.3.0 removed upstream's, which turned diamond armor into netherite, and
+  left nothing in its place. Now each diamond piece an Armor player wears gets what netherite has over it: +1 armor
+  toughness and +0.1 knockback resistance. Nothing about the armor changes; the bonus comes off when the piece does,
+  when the power changes and at death (docs/MAINTAINING.md, "Patches this pack carries"). Staff reported it
+  (2026-11-08).
+
 ## [3.3.0] - 2026-11-08
 
 Strength SMP's crossbow and armor ultimates fixed, the staff page's mod and file controls kept for the owner, and

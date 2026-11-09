@@ -6,22 +6,32 @@
   "redirects": [
     {
       "source": "/pack/MonkeySMP-Client-3.1.1.mrpack",
-      "destination": "/pack/MonkeySMP-Client-3.2.0.mrpack",
+      "destination": "/pack/MonkeySMP-Client-3.3.0.mrpack",
       "permanent": false
     },
     {
       "source": "/pack/MonkeySMP-Player-3.1.1.zip",
-      "destination": "/pack/MonkeySMP-Player-3.2.0.zip",
+      "destination": "/pack/MonkeySMP-Player-3.3.0.zip",
       "permanent": false
     },
     {
       "source": "/pack/MonkeySMP-Client-3.1.1-ships.mrpack",
-      "destination": "/pack/MonkeySMP-Client-3.2.0.mrpack",
+      "destination": "/pack/MonkeySMP-Client-3.3.0.mrpack",
       "permanent": false
     },
     {
       "source": "/pack/MonkeySMP-Player-3.1.1-ships.zip",
-      "destination": "/pack/MonkeySMP-Player-3.2.0.zip",
+      "destination": "/pack/MonkeySMP-Player-3.3.0.zip",
+      "permanent": false
+    },
+    {
+      "source": "/pack/MonkeySMP-Client-3.2.0.mrpack",
+      "destination": "/pack/MonkeySMP-Client-3.3.0.mrpack",
+      "permanent": false
+    },
+    {
+      "source": "/pack/MonkeySMP-Player-3.2.0.zip",
+      "destination": "/pack/MonkeySMP-Player-3.3.0.zip",
       "permanent": false
     }
   ]

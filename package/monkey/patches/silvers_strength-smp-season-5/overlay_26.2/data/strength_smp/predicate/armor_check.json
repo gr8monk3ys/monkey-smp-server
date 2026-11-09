@@ -1,0 +1,9 @@
+{
+  "condition": "minecraft:all_of",
+  "terms": [
+    {"condition":"minecraft:entity_properties","entity":"this","predicate":{"minecraft:slots":{"armor.head":{"items":["minecraft:diamond_helmet","minecraft:netherite_helmet"]}}}},
+    {"condition":"minecraft:entity_properties","entity":"this","predicate":{"minecraft:slots":{"armor.chest":{"items":["minecraft:diamond_chestplate","minecraft:netherite_chestplate"]}}}},
+    {"condition":"minecraft:entity_properties","entity":"this","predicate":{"minecraft:slots":{"armor.legs":{"items":["minecraft:diamond_leggings","minecraft:netherite_leggings"]}}}},
+    {"condition":"minecraft:entity_properties","entity":"this","predicate":{"minecraft:slots":{"armor.feet":{"items":["minecraft:diamond_boots","minecraft:netherite_boots"]}}}}
+  ]
+}

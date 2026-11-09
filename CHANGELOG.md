@@ -17,6 +17,21 @@
   buttons greyed out). Admins still search Modrinth and answer "do players need it?". Once the checkout has
   it, run `monkey-staff.sh --install` again (docs/LIVE.md, "The staff page").
 
+### Fixed
+
+- Strength SMP's crossbow and armor ultimates work again and end on time (docs/MAINTAINING.md, "Patches this pack
+  carries"). The crossbow ultimate's buff (faster charge, +3 arrow damage) now comes off when its 10 seconds are up;
+  before, it stayed on the crossbow for good, for whoever held it, through death, chests and restarts. A crossbow
+  that already has it loses it the moment a player holds it. The armor ultimate now lasts about 30 seconds and its
+  cooldown counts down; before, its knockback immunity and stronger golden apples lasted until death, kept going
+  after a reroll, and the ultimate came back only after dying. It now takes a full diamond or netherite set worn.
+- The Armor power no longer turns diamond armor into netherite. The swap went one way (dropping, dying or
+  rerolling kept the netherite), reached diamond armor anywhere in the inventory, not only worn, and rule 24 then took
+  the netherite off the player, so the armor ultimate could almost never start. Netherite it already made stays
+  netherite, and diamonds still repair it (`monkey-armor-repair`).
+- The staff page's Strength SMP card described ultimate lifetimes as how long an ultimate lasts. It is how long it
+  stays ready to use, counted in ticks (500 is about 25 seconds); the card now says so.
+
 ## [3.2.0] - 2026-11-08
 
 Less lag in busy hours, event nights that run by themselves, and the staff page's new tools. In game, the event timer

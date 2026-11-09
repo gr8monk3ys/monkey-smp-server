@@ -442,8 +442,9 @@
 
     <div class="pane" id="tab-mods" hidden>
       <h2>Mods</h2>
-      <p class="fine">The mods in the server's mods folder, read from each jar. Admins can add, turn off and remove them
-        here; each change asks you to type the jar's name, and every old jar is kept in mods-removed/ on the machine.</p>
+      <p class="fine">The mods in the server's mods folder, read from each jar. Only the owner can add, turn off and remove
+        them here, because a jar runs as the server; admins can look and say whether players need a mod. Each change asks
+        you to type the jar's name, and every old jar is kept in mods-removed/ on the machine.</p>
       <p class="attention">Before you change a mod: a mod that players need too must match in their mod pack, or they
         can't join. The release's own (pinned) mods come back each time the server starts, and the next release
         deploy puts the mods folder back to that release's list. A change takes effect when the server restarts.</p>
@@ -464,8 +465,8 @@
         </section>
         <section class="box" data-need="admin">
           <h3>Find one on Modrinth</h3>
-          <p class="fine">Only the owner can upload a jar or install a modpack: a jar runs as the server. Modrinth files
-            are checked against Modrinth's hash.</p>
+          <p class="fine">Admins can search; only the owner can install, because a jar runs as the server. Modrinth
+            files are checked against Modrinth's hash.</p>
           <div class="add">
             <input id="modrinth-q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mod name" aria-label="Search Modrinth" data-need="admin">
             <button class="btn" id="modrinth-go" type="button" data-need="admin">Search</button>

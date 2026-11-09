@@ -3,12 +3,12 @@ the SFTP card. tools/staff_apex.py registers them with staff_panel (register()),
 change checks; docs/LIVE.md, "The staff page", says what each one does.
 
     POST /api/mod-upload?name=N&confirm=N   a jar, the raw body: checked, then into mods/      owner
-    POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     admin
-    POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  admin
-    POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  admin
+    POST /api/mod-toggle {"file", "enabled", "confirm", "hold"?}  N.jar <-> N.jar.disabled     owner
+    POST /api/mod-remove {"file", "confirm", "hold"?}     into mods-removed/TIME/, never deleted  owner
+    POST /api/mod-hold {"file", "held", "confirm"}        keep a pinned mod off at starts, or allow it again  owner
     POST /api/mod-side {"file", "players"}    staff's answer: do players need it (required, no, unknown)  admin
     GET  /api/modrinth?q=TEXT                 Modrinth's Fabric mods for the server's game version  admin
-    POST /api/modrinth-install {"project", "confirm"}     its newest file, sha512 checked          admin
+    POST /api/modrinth-install {"project", "confirm"}     its newest file, sha512 checked          owner
     GET  /api/versions                        the release tags in the repo checkout, and the live one  admin
     POST /api/version-switch {"tag", "confirm"}           the helper deploys that tag            admin
     POST /api/world-reset {"confirm": "RESET", "seed"?}   the helper moves the world aside       admin
@@ -998,10 +998,13 @@ ROUTES = {
     ("GET", "/api/sftp"): lambda p, u, q, b: host(p).sftp(u),
 }
 # Every route here names who may use it (the owner made all of these admin: 2026-11-06). A jar from the visitor's
-# own computer runs as the server on the next restart, so that one is the owner's (exploit audit, 2026-11-07);
-# a Modrinth install stays admin: the jar comes from Modrinth, checked against its hash.
-NEEDS = {key: "admin" for key in ROUTES}
-NEEDS[("POST", "/api/mod-upload")] = "owner"
+# own computer runs as the server on the next restart, so that one is the owner's (exploit audit, 2026-11-07).
+# Only the owner changes which jars run (owner, 2026-11-08): installing from Modrinth, turning a jar on or off,
+# removing it, and holding a pinned mod off or allowing it again. The answer to "do players need it?" stays admin:
+# it is a note in .monkey-mod-sides.json, never a jar moved, and the start script doesn't read it.
+OWNER_MODS = {("POST", path) for path in ("/api/mod-upload", "/api/modrinth-install", "/api/mod-toggle",
+                                          "/api/mod-remove", "/api/mod-hold")}
+NEEDS = {key: "owner" if key in OWNER_MODS else "admin" for key in ROUTES}
 # The routes whose body is a file, and the most bytes each takes (staff_panel.RAW).
 RAW = {("POST", "/api/mod-upload"): MOD_MAX, ("POST", "/api/world-upload"): WORLD_UPLOAD_MAX}
 

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Staff page: only an owner changes which jars run. Installing from Modrinth, turning a jar off or on, removing it,
+  and keeping a pinned mod off or allowing it again were admin; they are owner now, like a jar upload (admins see the
+  buttons greyed out). Admins still search Modrinth and answer "do players need it?". Restart `monkey-panel` once
+  the checkout has it (docs/LIVE.md, "The staff page").
+
 ## [3.2.0] - 2026-11-08
 
 Less lag in busy hours, event nights that run by themselves, and the staff page's new tools. In game, the event timer

@@ -36,7 +36,9 @@ UID = "20261106T090000Z-00aa11bb"
 # ---------------------------------------------------------------- who may ask
 
 
-OWNER_ONLY = {("POST", "/api/mod-upload")}     # a jar runs as the server (exploit audit, 2026-11-07)
+# A jar runs as the server (exploit audit, 2026-11-07), so only the owner changes which jars run (owner, 2026-11-08).
+OWNER_ONLY = {("POST", path) for path in ("/api/mod-upload", "/api/modrinth-install", "/api/mod-toggle",
+                                          "/api/mod-remove", "/api/mod-hold")}
 
 
 def test_every_new_route_is_admin_and_registered():
@@ -57,14 +59,44 @@ def test_a_moderator_is_refused_every_new_route(apex, method, path):
     assert code == 403 and "role" in data["error"]
 
 
-def test_only_the_owner_uploads_a_jar_and_an_admin_still_installs_from_modrinth(apex, tmp_path):
-    good = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.0", "environment": "*"})
+def mod_change(b, tmp_path, path):
+    """Sets up a valid request to PATH, one of the owner's mod routes: (url, body, what an owner's call changes)."""
+    mods = b.root / "mods"
+    if path == "/api/mod-upload":
+        good = jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "1.0", "environment": "*"})
+        return mod_url("lithium.jar"), good, lambda: (mods / "lithium.jar").exists()
+    if path == "/api/modrinth-install":
+        with_modrinth(b, FakeModrinth(jar_bytes(tmp_path, {"id": "lithium", "name": "Lithium", "version": "0.15"})))
+        return path, {"project": "lithium", "confirm": "lithium"}, lambda: (mods / "lithium-fabric-0.15.jar").exists()
+    if path == "/api/mod-hold":
+        pinned(b, "claims.jar")                              # pinned, and not in mods/: removed
+        return path, {"file": "claims.jar", "held": True, "confirm": "claims.jar"}, lambda: held_file(b) is not None
+    jar(mods / "lithium.jar", {"id": "lithium", "name": "Lithium"})
+    release(b, {})
+    if path == "/api/mod-toggle":
+        return path, {"file": "lithium.jar", "enabled": False, "confirm": "lithium.jar"}, \
+            lambda: (mods / "lithium.jar.disabled").exists()
+    return path, {"file": "lithium.jar", "confirm": "lithium.jar"}, lambda: not (mods / "lithium.jar").exists()
+
+
+@pytest.mark.parametrize("path", sorted(path for _, path in OWNER_ONLY))
+def test_only_the_owner_changes_which_jars_run(apex, tmp_path, path):
+    url, body, changed = mod_change(apex, tmp_path, path)
     for role in ("moderator", "admin"):
-        code, data = apex.call("POST", mod_url("lithium.jar"), good, headers=as_role(role))
-        assert code == 403 and "role" in data["error"]
-    assert not (apex.root / "mods" / "lithium.jar").exists()
-    assert staff_panel.NEEDS[("POST", "/api/modrinth-install")] == "admin"
-    assert apex.call("POST", mod_url("lithium.jar"), good)[0] == 200          # the fixture's role is owner
+        code, data = apex.call("POST", url, body, headers=as_role(role))
+        assert code == 403 and "role" in data["error"], role
+    assert not changed()
+    code, data = apex.call("POST", url, body, headers=as_role("owner"))
+    assert code == 200, data
+    assert changed()
+
+
+def test_an_admin_still_answers_whether_players_need_a_mod(apex):
+    jar(apex.root / "mods" / "shippy.jar", {"id": "shippy", "name": "Shippy"})
+    code, done = apex.call("POST", "/api/mod-side", {"file": "shippy.jar", "players": "required"},
+                           headers=as_role("admin"))
+    assert code == 200 and done["client_side"] == "required"
+    assert (apex.root / "mods" / "shippy.jar").exists()
 
 
 # ---------------------------------------------------------------- the mod manager

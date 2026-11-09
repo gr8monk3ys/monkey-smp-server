@@ -20,27 +20,34 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 
 **Short description** (under 150 characters, for lists that show one line):
 
-> Modded factions on Java 26.2: factions of four, territory, PvP, Strength SMP, voice chat, weekly events. Paid pass, $5/mo.
+> Modded factions on Java 26.2. Season I live to 23 Jan. Factions of four, Strength SMP, ships, voice chat. Pass $5/mo.
 
 **Long description:**
 
-> Monkey SMP is a small modded factions server on Minecraft Java 26.2 (Fabric), for players who play evenings,
-> Pacific time.
+> **Monkey SMP** is a small modded factions server on Minecraft Java 26.2 (Fabric), for players who play
+> evenings, Pacific time. **Season I is live until 23 January 2027.**
 >
-> - Factions of up to four, alliances, banner-marked territory nobody may grief. Everything outside it is
->   contested.
+> - Factions of up to four, alliances, and claimed land nobody may grief. Everything outside it is contested.
 > - Strength SMP: win fights and your strength grows, lose them and it drains.
-> - A remade Nether, rebuilt villages and illager strongholds, bigger trial chambers, sulfur caves to raid.
-> - Proximity voice chat, and a public 3D live map.
-> - One event a week (Saturday, 6 pm Pacific): faction raids, arena nights, Dragon Night.
-> - Up to 30 online, a pre-generated world on a dedicated CPU, 20 TPS.
+> - Ships you can build and sail, a remade Nether, rebuilt villages, bigger dungeons and new structures.
+> - Maces are capped at three on the whole server.
+> - Proximity voice chat and a public 3D live map.
+> - A pre-generated world on a dedicated CPU, up to 30 online.
 >
 > Access is a server pass: $5 a month or $8 for 2 months, the same for everyone. Supporter tiers are cosmetic
 > only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a PC
 > (Windows, macOS or Linux) with 16 GB of RAM; the modpack installs in one click from the website. If it won't
 > run in your first 48 hours, you get your money back.
 >
-> Website: https://monkeysmp.lscaturchio.xyz · Discord: https://discord.gg/C25hy9Ca9W
+> Website: https://monkeysmp.lscaturchio.xyz · Discord: https://discord.gg/C25hy9Ca9W ·
+> Contact: lorenzosca7@protonmail.ch
+>
+> Not an official Minecraft server. Not approved by or associated with Mojang or Microsoft.
+
+Advertise only what runs today. Weekly events, standings, drops and the wardrobe have been off with their data
+packs since 6 November; add them back here when they're on again. The Official Minecraft Server List removes
+servers whose description doesn't match the game. Keep the Mojang line and the email: the Usage Guidelines
+want the disclaimer on listings, not only on the site, and an email rather than a chat link as the contact.
 
 **Tags** (pick what each list offers): Factions, PvP, SMP, Modded, Survival, Whitelist, Teams, Voice chat,
 Fabric, US West, English. Not Roleplay: the server has no roleplay rules, and a roleplay crowd
@@ -70,7 +77,7 @@ All free to list on. Each needs an account the owner makes; the server address g
 | [minecraft-mp.com](https://minecraft-mp.com) | `list.monkeysmp.lscaturchio.xyz` | |
 | [minecraftservers.org](https://minecraftservers.org) | `list.monkeysmp.lscaturchio.xyz` | |
 | [topg.org](https://topg.org/minecraft-servers) | `list.monkeysmp.lscaturchio.xyz` | |
-| [Planet Minecraft](https://www.planetminecraft.com/servers/) | `list.monkeysmp.lscaturchio.xyz` | Blocked our check (403); see whether it still takes server posts. |
+| [Planet Minecraft](https://www.planetminecraft.com/servers/) | `list.monkeysmp.lscaturchio.xyz` | Active: 6,255 servers on 8 November, sorted by last update. Edit the post weekly to stay near the top. |
 
 The toplists share one address: each brings a few players at most, and one count for "the lists" is enough to
 decide whether they are worth the votes. If one list turns out to bring most of them, give it its own.
@@ -82,7 +89,7 @@ something other than play, and would need one more mod. Ask players to vote in t
 
 A join address is a hostname that reaches the same server, one per place we promote it:
 `yt.monkeysmp.lscaturchio.xyz` for YouTube, `tt.` for TikTok, `list.` for the toplists, `find.` for the
-Official list, and one per creator on request (`<name>.monkeysmp.lscaturchio.xyz`). Players type it like the
+Official list, `rd.` for Reddit, and one per creator on request (`<name>.monkeysmp.lscaturchio.xyz`). Players type it like the
 main address.
 
 ### The DNS records
@@ -136,6 +143,10 @@ address, and a player who joined on the free trial (docs/LIVE.md, "The store") c
 new players in the Discord where they heard of the server too, and compare.
 
 ## Season I launch announcements
+
+These went out around launch and are kept as a record. They promise events, standings and other features
+that are off now, so don't reuse them. The current drafts, for after launch, are in
+docs/marketing-plan-2026-11-08.md.
 
 Drafts for Season I's launch, Saturday 7 November 2026 at 5 PM Pacific. When each one goes out, and where,
 is in docs/LAUNCH.md, "Announcement schedule"; the founding roster post (T-9) and the moderator post are in
@@ -314,7 +325,7 @@ Message template (Discord DM, email from the channel's About page, or a reply on
 no follow-up spam):
 
 > Hi NAME, I'm Lorenzo, one of the two people running Monkey SMP, a small modded factions server on Java 26.2
-> (factions of four, territory, Strength SMP, proximity voice, a weekly raid or arena night).
+> (factions of four, territory, Strength SMP, ships, proximity voice).
 >
 > I liked VIDEO. If you're looking for a server for a series, you'd be welcome to play here for free, and you
 > can have a creator code that pays you 20% of each 2-month pass your viewers buy with it. The terms are

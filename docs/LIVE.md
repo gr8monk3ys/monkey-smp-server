@@ -577,7 +577,8 @@ sudo sh /srv/monkey/repo/deploy/monkey-day.sh --install
 
 Until then the old unit keeps working: it runs `function monkey:wardrobe/day`, which the release keeps (staff can
 run it for an extra day). Like the old one, the new one tries again every 10 minutes while the server is down; it
-now also does when the server turns the command down (say, the wardrobe pack is off). It gives up after 6 hours
+now also does when the server turns the command down. A data pack staff turned off (the wardrobe pack) isn't a
+failure: the job logs that and sends nothing (`JOB_PACKS`, the next release). It gives up after 6 hours
 of tries: it posts to the staff channel and stops, and the next midnight's run starts afresh. `journalctl -u
 monkey-day` shows each try; to start the given-up day later, run `sh /srv/monkey/repo/deploy/monkey-day.sh` as
 `monkey` (by hand it has no limit, and a date already started is left alone).

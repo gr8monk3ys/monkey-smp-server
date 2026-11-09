@@ -23,6 +23,7 @@ LOG_NAME=monkey-sieges
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=sieges.py
+JOB_PACKS=monkey-sieges
 JOB_FOR='the siege windows and the clock'
 JOB_SHOW=windows
 JOB_RETRY='the timer tries again in 5 minutes'

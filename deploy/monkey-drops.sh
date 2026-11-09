@@ -23,6 +23,7 @@ LOG_NAME=monkey-drops
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=drops.py
+JOB_PACKS=monkey-drops
 JOB_WORLD=1
 JOB_SHOW=spots
 JOB_FOR='supply drops'

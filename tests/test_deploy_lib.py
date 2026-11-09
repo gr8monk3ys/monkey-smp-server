@@ -60,7 +60,8 @@ def test_the_deploy_loads_lib_before_it_touches_the_checkout():
 @pytest.fixture
 def sh(tmp_path):
     """Runs a dash snippet with lib.sh loaded and fake flock, docker, python3, curl and sleep first on PATH; each
-    fake records its arguments in `calls` (curl its JSON from stdin too) and exits with FAKE_RC_<name> (default 0)."""
+    fake records its arguments in `calls` (curl its JSON from stdin too) and exits with FAKE_RC_<name> (default 0).
+    python3's `packs-on` (tools/rcon.py) prints FAKE_OUT_packs (default: the packs are on) and exits FAKE_RC_packs."""
     if not DASH:
         pytest.skip("needs dash")
     bin_dir, calls = tmp_path / "bin", tmp_path / "calls"
@@ -68,6 +69,8 @@ def sh(tmp_path):
     for name in ("flock", "docker", "python3", "sleep"):
         (bin_dir / name).write_text(
             f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n'
+            'case " $* " in *" packs-on "*) printf "${FAKE_OUT_packs-data packs on: x}"; '
+            'exit "${FAKE_RC_packs:-0}" ;; esac\n'
             f'[ -z "${{FAKE_OUT_{name}:-}}" ] || printf "$FAKE_OUT_{name}"\n'
             f'case " $* " in *" send "*) exit "${{FAKE_RC_send:-0}}" ;; esac\n'
             f'exit "${{FAKE_RC_{name}:-0}}"\n', newline="\n")
@@ -175,9 +178,10 @@ def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, s
     assert code == 0 and logged == ["function monkey:x: ok"]
     send = calls.index("flock -w 1800 9") + 1
     assert calls[send].startswith("python3 -B -u ") and calls[send].endswith(f"{sent} /srv/live/docker")
-    # Only drops and omens (JOB_NONE: often nothing to send) ask for the commands first; the others start one
-    # python3.
-    assert len([c for c in calls if c.startswith("python3")]) == (2 if script in OFTEN_NONE else 1)
+    # Only drops and omens (JOB_NONE: often nothing to send) ask for the commands first; each then asks whether
+    # its data packs are on (JOB_PACKS) before the lock.
+    assert len([c for c in calls if c.startswith("python3")]) == (3 if script in OFTEN_NONE else 2)
+    assert calls[send - 2].endswith(f" packs-on {PACKS[script]} --docker /srv/live/docker")
     code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_flock="1")
     assert code == 1 and logged[-1] == f"ERROR: the deploy lock was taken for 30 minutes ({retry})"
     assert calls[-1] == "flock -w 1800 9"
@@ -206,6 +210,23 @@ def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(
 
 
 OFTEN_NONE = ("monkey-drops.sh", "monkey-omens.sh")
+PACKS = {"monkey-week.sh": "monkey-wardrobe", "monkey-day.sh": "monkey-wardrobe", "monkey-sieges.sh": "monkey-sieges",
+         "monkey-drops.sh": "monkey-drops", "monkey-omens.sh": "monkey-omens monkey-drops"}
+
+
+@needs_dash
+@pytest.mark.parametrize("script", list(PACKS))
+def test_a_job_whose_pack_staff_turned_off_sends_nothing_and_does_not_fail(sh, tmp_path, script):
+    """A pack turned off on purpose (the wardrobe, 11-06) failed monkey-day all evening and alerted staff."""
+    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function monkey:x\n", FAKE_RC_packs="5",
+                              FAKE_OUT_packs="data pack off: monkey-x")
+    assert code == 0 and logged == ["data pack off: monkey-x (staff turned it off): nothing sent"]
+    assert not any(c.startswith("flock") or " send " in c for c in calls)
+    # Can't tell (the server is down, docker failed): it sends as before, so the day still retries.
+    code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3=r"function monkey:x: ok\n", FAKE_RC_packs="2")
+    assert code == 0 and any(" send " in c for c in calls)
+    code, logged, _ = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_packs="2", FAKE_RC_send="3")
+    assert code == 1 and logged[-1].startswith("ERROR: the server isn't running")
 
 
 @pytest.mark.parametrize("script", OFTEN_NONE)
@@ -233,10 +254,13 @@ def job(sh, tmp_path, script, *args, **env):
 def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh, tmp_path, script, first):
     code, logged, calls = job(sh, tmp_path, script, "--check", FAKE_OUT_python3=r"function monkey:x\n")
     assert code == 0 and logged[:len(first) + 2] == [*first, "commands for now:", "  function monkey:x"]
-    assert logged[-3].startswith(f"timer: {script[:-3]}.timer ") and logged[-2:] == [
-        "server: running", "check finished: nothing was changed"]
+    assert logged[-4].startswith(f"timer: {script[:-3]}.timer ") and logged[-3:] == [
+        "server: running", "data packs on: x", "check finished: nothing was changed"]
     assert not any(c.startswith("flock") for c in calls)
-    assert calls[-1].endswith(" running --docker /srv/live/docker")
+    assert calls[-2].endswith(" running --docker /srv/live/docker")
+    assert calls[-1].endswith(f" packs-on {PACKS[script]} --docker /srv/live/docker")
+    _, logged, _ = job(sh, tmp_path, script, "--check", FAKE_RC_packs="2", FAKE_OUT_packs="server not running")
+    assert logged[-2] == "data packs: can't tell (server not running)"
 
 
 @needs_dash
@@ -246,7 +270,7 @@ def test_check_says_why_there_may_be_no_commands_and_what_a_stopped_server_means
     _, logged, _ = job(sh, tmp_path, "monkey-drops.sh", "--check")
     assert logged[:2] == ["commands for now:", "  none (outside drop hours, or no spot)"]
     _, logged, _ = job(sh, tmp_path, "monkey-day.sh", "--check", FAKE_OUT_python3=r"function monkey:x\n")
-    assert logged[-2] == "server: running"
+    assert logged[-3] == "server: running"
 
 
 @needs_dash

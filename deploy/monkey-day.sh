@@ -24,6 +24,7 @@ LOG_NAME=monkey-day
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=wardrobe.py
+JOB_PACKS=monkey-wardrobe
 JOB_FOR="the wardrobe's day job"
 JOB_RETRY='monkey-day.service tries again in 10 minutes'
 JOB_DOWN='a run would fail, and monkey-day.service would try again every 10 minutes until it answers'

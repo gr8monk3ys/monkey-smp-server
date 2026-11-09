@@ -17,6 +17,11 @@ over several commands) stops at its first failure too, in tools/standings.py's u
 
     python3 tools/rcon.py running --docker DIR   exit 0 when the server is running, 1 when not, 2 when docker
                                                  failed (the timers' --check)
+    python3 tools/rcon.py packs-on PACK... --docker DIR
+                                                 exit 0 when every data pack named is enabled, PACK_OFF when one
+                                                 is off, 2 when it can't tell (server down, docker failed, an
+                                                 answer it can't read). deploy/lib.sh's timed_job skips a job
+                                                 whose pack staff turned off (JOB_PACKS), instead of failing it
 
 A timed job's tool (tools/challenges.py, drops.py, wardrobe.py; deploy/lib.sh's timed_job runs them) has the
 same two subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
@@ -36,6 +41,8 @@ UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may ha
 # A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart).
 NOT_RUNNING = 3
 GAVE_UP = 4
+# `packs-on`: a data pack the job needs is off (staff turned it off; deploy/lib.sh's timed_job skips the job).
+PACK_OFF = 5
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -148,6 +155,15 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
     return 0 if send(rcon, commands, log, **how) else 1
 
 
+def packs_off(rcon, packs: Iterable[str]) -> list[str]:
+    """Which of the world data packs `packs` (folder names, e.g. monkey-wardrobe) are off, from `datapack list
+    enabled`. RconError when the answer isn't that list, so an answer it can't read never reads as "off"."""
+    answer = rcon("datapack list enabled")
+    if "enabled" not in answer:
+        raise RconError(f"datapack list enabled answered: {answer[-300:] or 'nothing'}")
+    return [p for p in packs if not re.search(rf"file/{re.escape(p)}(?![\w.-])", answer)]
+
+
 # ---------------------------------------------------------------- a timed job's command line
 
 
@@ -188,16 +204,27 @@ def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[
     return 0
 
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Is the server running? (the timers' --check)")
+def main(argv=None, server=Docker) -> int:
+    ap = argparse.ArgumentParser(description="Is the server running, with these data packs on? (the timers)")
     sub = ap.add_subparsers(dest="command", required=True)
     sub.add_parser("running").add_argument("--docker", type=Path, required=True, help="the release's docker folder")
+    on = sub.add_parser("packs-on")
+    on.add_argument("packs", nargs="+", help="world data pack folder names (monkey-wardrobe)")
+    on.add_argument("--docker", type=Path, required=True, help="the release's docker folder")
     args = ap.parse_args(argv)
+    rcon = server(args.docker)
     try:
-        return 0 if Docker(args.docker).running() else 1
+        if args.command == "running":
+            return 0 if rcon.running() else 1
+        if not rcon.running():
+            print("server not running: can't tell", file=sys.stderr)
+            return 2
+        off = packs_off(rcon, args.packs)
     except RconError as e:
         print(e, file=sys.stderr)
         return 2
+    print(f"data pack off: {' '.join(off)}" if off else f"data packs on: {' '.join(args.packs)}")
+    return PACK_OFF if off else 0
 
 
 if __name__ == "__main__":

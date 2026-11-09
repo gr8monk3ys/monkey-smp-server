@@ -23,6 +23,7 @@ LOG_NAME=monkey-outposts
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=outposts.py
+JOB_PACKS=monkey-outposts
 JOB_WORLD=1
 JOB_SHOW=status
 JOB_FOR='outposts'

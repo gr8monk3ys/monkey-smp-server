@@ -214,8 +214,11 @@ install_timer() {
 #   JOB_RETRY   when it runs again after a failure, for the errors ("the next hour tries again")
 #   JOB_DOWN    what a stopped server means, for --check's "server: not running (JOB_DOWN)"
 # and optionally JOB_WORLD=1 (the tool takes the saved world first), JOB_SHOW (a tool subcommand whose output
-# --check logs first: drops' spots) and JOB_NONE (why there may be no commands, for --check; with it, sending
-# asks for the commands first, and none means nothing is logged and no lock is taken).
+# --check logs first: drops' spots), JOB_NONE (why there may be no commands, for --check; with it, sending
+# asks for the commands first, and none means nothing is logged and no lock is taken) and JOB_PACKS (the world
+# data packs its commands need, by folder name: when staff turned one off, sending logs that and stops with
+# nothing sent and exit 0, so a pack turned off on purpose isn't a failure every run, a retry or a staff alert;
+# when it can't tell, it sends as before).
 #
 # With no option it waits up to 30 minutes for the deploy lock, so it never lands while a deploy, the daily
 # restart or an off-site backup has the server stopped or not saving, sends, and logs each line the tool prints;
@@ -263,6 +266,14 @@ timed_job() {
 
     if [ "$lib_mode" = send ]; then
         [ -z "${JOB_NONE:-}" ] || [ -n "$lib_out" ] || return 0
+        if [ -n "${JOB_PACKS:-}" ]; then
+            lib_on=0
+            lib_packs=$(python3 -B "$REPO_DIR/tools/rcon.py" packs-on $JOB_PACKS --docker "$LIVE_DIR/docker" 2>/dev/null) || lib_on=$?
+            if [ "$lib_on" = 5 ]; then
+                log "$lib_packs (staff turned it off): nothing sent"
+                return 0
+            fi
+        fi
         deploy_lock 1800 || die "the deploy lock was taken for 30 minutes ($JOB_RETRY)"
         lib_sent=0
         log_each python3 -B -u "$lib_tool" send "$@" --docker "$LIVE_DIR/docker" || lib_sent=$?
@@ -289,5 +300,13 @@ timed_job() {
         1) log "server: not running ($JOB_DOWN)" ;;
         *) log "server: can't tell (docker failed; see above)" ;;
     esac
+    if [ -n "${JOB_PACKS:-}" ]; then
+        lib_on=0
+        lib_packs=$(python3 -B "$REPO_DIR/tools/rcon.py" packs-on $JOB_PACKS --docker "$LIVE_DIR/docker" 2>&1) || lib_on=$?
+        case $lib_on in
+            0|5) log "$lib_packs" ;;
+            *) log "data packs: can't tell ($lib_packs)" ;;
+        esac
+    fi
     log 'check finished: nothing was changed'
 }

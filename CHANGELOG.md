@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- **The website has a privacy policy and terms of service** (`/privacy`, `/terms`), linked from every page's
+  footer. The privacy policy says what the site, the game server, the store and Discord record, who handles it,
+  how long backups last and how to get data copied or deleted. The terms cover who can play (13 and over),
+  payments through Tebex, renewals, refunds, seasons, bans and appeals. Link both from the Tebex store's
+  settings by hand.
+
+### Fixed
+
+- **The front page's refunds answer said the 2-month pass doesn't renew.** It has renewed every 2 months since
+  2026-11-07 (docs/LIVE.md, "The store"); the answer now says so.
+
 ## [3.3.0] - 2026-11-08
 
 Strength SMP's crossbow and armor ultimates fixed, the staff page's mod and file controls kept for the owner, and

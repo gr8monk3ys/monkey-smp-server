@@ -391,7 +391,7 @@
     const pinned = done.held ? HELD_NOTE : done.pinned ? PINNED_NOTE : "";
     say("mods-note", `${text}${done.kept_in ? ` The old file is kept in ${done.kept_in}.` : ""}${pinned} Restart the server (Server tab) for it to take effect.`);
     // The change is made; a note that could not be saved after it (keep it off, players need it) is said apart.
-    say("mods-error", done.note_error || null);
+    say("mods-error", [done.note_error, done.pack_error && `The list of changes waiting for the players' pack couldn't be saved: ${done.pack_error}`].filter(Boolean).join(" ") || null);
     say("mods-players", playersNeed(done));
     if (done.client_side === "unknown" && done.file) askPlayers(done.file, done.side_checked === false);
     loadMods();
@@ -495,6 +495,18 @@
       : `The players' pack couldn't be read here, so it can't be checked. These mods are marked as ones players need: ${missing.join(", ")}.`);
   }
 
+  // The owner's mod changes players need in their pack too, until a release has them (tools/staff_host.py, pack_waiting).
+  const PACK_HOW = { off: "turned off here", removed: "removed here", held: "kept off here" };
+  function renderPackWaiting(data) {
+    const waiting = data.pack_waiting || [];
+    $("mods-pack-box").hidden = !waiting.length;
+    $("mods-pack-count").textContent = waiting.length ? `(${waiting.length})` : "";
+    $("mods-pack-list").replaceChildren(...waiting.map((w) => item(w.file,
+      `(${[w.action === "add" ? "add to the pack" : `take out of the pack, ${PACK_HOW[w.how] || "gone here"}`,
+        w.by ? `by ${w.by}` : "", w.at ? when(w.at) : ""].filter(Boolean).join(", ")})`,
+      w.action === "remove" && w.how === "off" ? "Still only turned off: pack_sync.py asks before it takes it out of the pack." : "", [])));
+  }
+
   async function loadMods() {
     try {
       const data = await api("GET", "/api/mods");
@@ -503,6 +515,7 @@
       mods.holds = data.holds_supported !== false;
       renderMods();
       renderMissing(data);
+      renderPackWaiting(data);
       say("mods-error", null);
     } catch (error) {
       say("mods-error", error);
@@ -590,7 +603,7 @@
             ? ` Players need ${done.players_missing.join(", ")} too, and ${done.players_pack ? "the players' pack doesn't have them yet, so they may not be able to join until the owner adds them" : "the players' pack couldn't be read here, so check that it has them"}.`
             : "";
           modDone(`Installed ${done.installed.length} mod(s) from ${done.pack}.${skipped}${missing}`,
-            { note_error: (done.note_errors || []).join(" ") || null });
+            { note_error: (done.note_errors || []).join(" ") || null, pack_error: done.pack_error });
         } catch (error) {
           say("mods-note", null);
           say("mods-error", error);

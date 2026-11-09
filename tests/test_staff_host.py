@@ -679,6 +679,127 @@ def test_an_install_says_whether_the_players_pack_has_it(apex, tmp_path):
     assert done["in_players_pack"] is True
 
 
+# ---------------------------------------------------------------- the players' pack follows the owner's changes
+
+
+SHIPPY = "https://cdn.modrinth.com/data/AbCd1234/versions/abcdefgh/shippy.jar"
+CLIENT_ONLY = {"path": "mods/zoom.jar", "env": {"client": "required"},
+               "downloads": ["https://cdn.modrinth.com/data/Zoom1234/versions/abcdefgh/zoom.jar"]}
+
+
+def pack_file(b):
+    path = b.root / staff_host.PACK_FILE
+    return json.loads(path.read_text())["changes"] if path.exists() else None
+
+
+def waiting(b):
+    return [(w["file"], w["action"], w.get("how")) for w in apex_get(b)["pack_waiting"]]
+
+
+def apex_get(b):
+    code, data = b.call("GET", "/api/mods")
+    assert code == 200
+    return data
+
+
+def test_an_owner_install_players_need_waits_for_the_pack_and_goes_once_it_has_it(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY])            # a client-only mod the server never ran: never a removal
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    lookup(apex, "required")
+    code, done = apex.call("POST", mod_url("shippy.jar"), good)
+    assert code == 200 and done["pack_waiting"] == 1 and "pack_error" not in done
+    [line] = pack_file(apex)
+    assert line["file"] == "shippy.jar" and line["action"] == "add" and line["project"] == "AbCd1234"
+    assert line["sha512"] == hashlib.sha512(good).hexdigest() and line["by"] == "diego" and line["at"].endswith("Z")
+    row = apex_get(apex)["pack_waiting"][0]
+    assert (row["file"], row["action"], row["by"], row["at"]) == ("shippy.jar", "add", "diego", line["at"])
+    # Turned off before any release: nothing for the pack to do, and the line goes.
+    off = {"file": "shippy.jar", "enabled": False, "confirm": "shippy.jar"}
+    assert apex.call("POST", "/api/mod-toggle", off)[1]["pack_waiting"] == 0
+    assert pack_file(apex) == [] and waiting(apex) == []
+    # A release puts it in the players' pack: on again, nothing waits.
+    client_pack(apex, [CLIENT_ONLY, {"path": "mods/shippy.jar", "env": {"client": "required"},
+                                     "downloads": [SHIPPY]}])
+    on = {"file": "shippy.jar.disabled", "enabled": True, "confirm": "shippy.jar.disabled"}
+    assert apex.call("POST", "/api/mod-toggle", on)[0] == 200 and pack_file(apex) == []
+
+
+def test_an_owner_removal_of_a_mod_in_the_pack_waits_for_the_pack(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY, {"path": "mods/shippy.jar", "env": {"client": "required"},
+                                     "downloads": [SHIPPY]}])
+    good = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships"})
+    lookup(apex, "required")
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["pack_waiting"] == 0
+    assert waiting(apex) == []
+    off = {"file": "shippy.jar", "enabled": False, "confirm": "shippy.jar"}
+    assert apex.call("POST", "/api/mod-toggle", off)[0] == 200
+    assert waiting(apex) == [("shippy.jar", "remove", "off")]
+    first = pack_file(apex)[0]["at"]
+    code, done = apex.call("POST", "/api/mod-remove", {"file": "shippy.jar.disabled", "confirm": "shippy.jar.disabled"})
+    assert code == 200 and waiting(apex) == [("shippy.jar", "remove", "removed")]
+    assert pack_file(apex)[0]["at"] != first or pack_file(apex)[0]["how"] == "removed"
+    # Put back: nothing waits. A new version instead: the pack must take that version (an add).
+    assert apex.call("POST", mod_url("shippy.jar"), good)[1]["pack_waiting"] == 0 and pack_file(apex) == []
+    newer = jar_bytes(tmp_path, {"id": "shippy", "name": "Shippy Ships", "version": "2"}, "s2.jar")
+    assert apex.call("POST", mod_url("shippy-2.jar"), newer)[0] == 200
+    assert waiting(apex) == [("shippy-2.jar", "add", None)]
+
+
+def test_only_mods_players_need_wait(apex, tmp_path):
+    client_pack(apex, [CLIENT_ONLY])
+    lookup(apex, "optional")
+    assert apex.call("POST", mod_url("lith.jar"), jar_bytes(tmp_path, {"id": "lith", "name": "L"}))[0] == 200
+    assert waiting(apex) == [] and pack_file(apex) is None              # nothing to say: no file at all
+    # Staff (an admin) answer that players need it: it waits, for the owner's release.
+    code, done = apex.call("POST", "/api/mod-side", {"file": "lith.jar", "players": "required"},
+                           headers=as_role("admin"))
+    assert code == 200 and done["pack_waiting"] == 1 and waiting(apex) == [("lith.jar", "add", None)]
+
+
+def test_a_release_mod_players_need_waits_for_removal_only_while_it_is_held(apex):
+    client_pack(apex, [{"path": "mods/claims.jar", "env": {"client": "required"},
+                        "downloads": ["https://cdn.modrinth.com/data/Claims12/versions/abcdefgh/claims.jar"]}])
+    jar(apex.root / "mods" / "claims.jar", {"id": "claims", "name": "Claims"})
+    pinned(apex, "claims.jar")
+    release(apex, {"claims.jar": ("claims", "Claims12")})
+    assert waiting(apex) == []
+    # Removed without keeping it off: the next start puts it back, so the pack keeps it.
+    assert apex.call("POST", "/api/mod-remove", {"file": "claims.jar", "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == []
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims.jar", "held": True, "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == [("claims.jar", "remove", "held")] and pack_file(apex)[0]["project"] == "Claims12"
+    assert apex.call("POST", "/api/mod-hold", {"file": "claims.jar", "held": False, "confirm": "claims.jar"})[0] == 200
+    assert waiting(apex) == [] and pack_file(apex) == []
+
+
+def test_without_a_players_pack_nothing_waits(apex, tmp_path):
+    lookup(apex, "required")
+    code, done = apex.call("POST", mod_url("shippy.jar"), jar_bytes(tmp_path, {"id": "shippy", "name": "S"}))
+    assert code == 200 and done["pack_waiting"] == 0 and apex_get(apex)["pack_waiting"] == []
+
+
+def test_a_pack_list_that_fails_to_save_never_undoes_the_change(apex, tmp_path, monkeypatch):
+    client_pack(apex, [CLIENT_ONLY])
+    lookup(apex, "required")
+    real = staff_host.Host._write_note
+
+    def failing(self, name, data):
+        if name == staff_host.PACK_FILE:
+            raise OSError("disk full")
+        real(self, name, data)
+
+    monkeypatch.setattr(staff_host.Host, "_write_note", failing)
+    code, done = apex.call("POST", mod_url("shippy.jar"), jar_bytes(tmp_path, {"id": "shippy", "name": "S"}))
+    assert code == 200 and "disk full" in done["pack_error"] and (apex.root / "mods" / "shippy.jar").exists()
+
+
+@pytest.mark.parametrize("text", ["[]", "{\"changes\": 5}", "not json",
+                                  "{\"changes\": [{\"file\": \"../x.jar\", \"action\": \"add\"}, 7]}"])
+def test_a_broken_pack_file_reads_as_nothing(apex, text):
+    (apex.root / staff_host.PACK_FILE).write_text(text)
+    assert staff_host.host(apex.panel).pack_changes() == []
+
+
 # ---------------------------------------------------------------- the version switch
 
 

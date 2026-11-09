@@ -487,6 +487,14 @@ players") came from this harness on an i7-8700K.
 
 ## Releasing
 
+0. If the staff page's Mods tab lists "Players' pack: waiting for a release", bring the owner's mod changes into
+   the repo first: `python tools/pack_sync.py --ssh HOST` (add `--dry-run` to only look, `--include-off` to also
+   take out mods that are only turned off, `--pr` for a draft pull request). It reads
+   `server/.monkey-pack-changes.json` over SSH, pins the server's exact Modrinth files in
+   `client/modrinth.index.json` and `package/monkey/manifest.json` (or drops them), runs `validate.py` and
+   re-records `tests/fixtures/client_mods.json` when the pack gained or lost a mod. A jar Modrinth doesn't know,
+   a split client/server jar or a patched mod is refused: do those by hand. Merge that pull request before the
+   steps below; the release then takes the pack to players (docs/LIVE.md, "The staff page").
 1. Bump `version` in `package/monkey/manifest.json` (semver: patch = plugin bumps, minor = new content,
    major = new Minecraft version or a world reset).
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client

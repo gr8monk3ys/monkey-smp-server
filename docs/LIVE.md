@@ -175,6 +175,21 @@ stopped, before 2.10.0 deploys. In this order, as root:
 Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
 run `migrate_names.py` on it first.
 
+### The deploy timer that fires on start (the release after 3.3.0)
+
+The release changes `monkey-deploy.timer` so it checks 1 minute after it starts (`OnActiveSec`). The old unit, once
+stopped and started again, never fired: 11-04 to 11-09 no release could deploy itself. Nothing installs this unit,
+so once the release is live, as root:
+
+```sh
+cp /srv/monkey/repo/deploy/monkey-deploy.timer /etc/systemd/system/
+systemctl daemon-reload && systemctl restart monkey-deploy.timer
+systemctl list-timers monkey-deploy.timer   # NEXT shows a time, not "-"
+```
+
+Until then, if NEXT shows "-", `systemctl start monkey-deploy.service` runs one check and restarts the 5-minute
+cycle (outside `DEPLOY_WINDOW` it deploys nothing).
+
 ### 3.1.1: Mace Limiter
 
 3.1.1 adds one server-only mod. Players keep the 3.1.0 pack and nothing they install changes. It adds no blocks, items
@@ -577,7 +592,8 @@ sudo sh /srv/monkey/repo/deploy/monkey-day.sh --install
 
 Until then the old unit keeps working: it runs `function monkey:wardrobe/day`, which the release keeps (staff can
 run it for an extra day). Like the old one, the new one tries again every 10 minutes while the server is down; it
-now also does when the server turns the command down (say, the wardrobe pack is off). It gives up after 6 hours
+now also does when the server turns the command down. A data pack staff turned off (the wardrobe pack) isn't a
+failure: the job logs that and sends nothing (`JOB_PACKS`, the next release). It gives up after 6 hours
 of tries: it posts to the staff channel and stops, and the next midnight's run starts afresh. `journalctl -u
 monkey-day` shows each try; to start the given-up day later, run `sh /srv/monkey/repo/deploy/monkey-day.sh` as
 `monkey` (by hand it has no limit, and a date already started is left alone).

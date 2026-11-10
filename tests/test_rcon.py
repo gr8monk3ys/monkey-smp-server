@@ -168,3 +168,32 @@ def test_job_subcommands_take_the_world_first_and_at_only_when_asked(capsys):
     with pytest.raises(SystemExit):
         job(["commands", "--at", "2026-11-23T08:00:00Z"], at=False)
     assert "unrecognized arguments: --at" in capsys.readouterr().err
+
+
+LISTED = ("There are 3 data pack(s) enabled: [vanilla (built-in)], [file/monkey-boss (world)], "
+          "[file/monkey-wardrobe-extra (world)]")
+
+
+def test_packs_off_reads_the_enabled_list_by_whole_name():
+    server = rcon.Recorder({"datapack list enabled": LISTED})
+    assert rcon.packs_off(server, ["monkey-boss", "monkey-wardrobe"]) == ["monkey-wardrobe"]
+    assert server.sent == ["datapack list enabled"]
+    assert rcon.packs_off(rcon.Recorder({"datapack": "There are no data packs enabled"}), ["monkey-boss"]) == [
+        "monkey-boss"]
+
+
+def test_an_answer_that_is_not_the_list_is_never_read_as_off():
+    with pytest.raises(rcon.RconError):
+        rcon.packs_off(rcon.Recorder({"datapack": "something else"}), ["monkey-boss"])
+
+
+@pytest.mark.parametrize(("server", "code", "said"), [
+    (rcon.Recorder({"datapack": LISTED}), 0, "data packs on: monkey-boss\n"),
+    (rcon.Recorder({"datapack": LISTED}), rcon.PACK_OFF, "data pack off: monkey-sieges\n"),
+    (rcon.Recorder(running=False), 2, ""),
+    (rcon.Recorder(fail=1), 2, ""),
+])
+def test_packs_on_gives_lib_sh_its_exit_code(capsys, server, code, said):
+    packs = ["monkey-boss"] if code == 0 else ["monkey-boss", "monkey-sieges"]
+    assert rcon.main(["packs-on", *packs, "--docker", "d"], server=lambda folder: server) == code
+    assert capsys.readouterr().out == said

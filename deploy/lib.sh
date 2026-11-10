@@ -51,6 +51,29 @@ log_each() {
 # "python_ok MINOR": python3 is installed and 3.MINOR or newer.
 python_ok() { python3 -c "import sys; sys.exit(sys.version_info < (3, $1))" 2>/dev/null; }
 
+# "release_gate COMMIT [TAG]": true when tools/release_gate.py says COMMIT may go live: GitHub has a published
+# release for TAG that points at COMMIT, and CI passed on it (no TAG: CI passed, for TRACK=<branch>). Its one line is
+# logged and kept in GATE_SAYS. RELEASE_GATE=off lets everything through (the emergency switch, docs/LIVE.md: GitHub
+# is down and a fix can't wait); a python3 older than 3.10 lets nothing through. GATE_TOOLS (default REPO_DIR/tools)
+# is the folder that holds the script.
+release_gate() {
+    if [ "${RELEASE_GATE:-on}" = off ]; then
+        GATE_SAYS='release gate: off (RELEASE_GATE=off in the settings)'
+        log "$GATE_SAYS"
+        return 0
+    fi
+    if ! python_ok 10; then
+        GATE_SAYS='release gate: needs python3 3.10 or newer; nothing goes live'
+        log "$GATE_SAYS"
+        return 1
+    fi
+    lib_rc=0
+    GATE_SAYS=$(python3 -B -I "${GATE_TOOLS:-$REPO_DIR/tools}/release_gate.py" "$1" ${2:+--tag "$2"} 2>&1) || lib_rc=$?
+    GATE_SAYS=$(printf '%s' "${GATE_SAYS:-release gate: no answer (exit $lib_rc)}" | tail -n 1)
+    log "$GATE_SAYS"
+    return "$lib_rc"
+}
+
 # "absolute PATH": PATH, made absolute against the working directory.
 absolute() { case $1 in /*) printf '%s\n' "$1" ;; *) printf '%s\n' "$PWD/$1" ;; esac; }
 

@@ -443,3 +443,38 @@ def test_wait_for_live_while_running_gives_up_when_the_container_stops(sh):
     assert out == ["[t] gave up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running monkey"]
     code, out, calls = sh("wait_for_live --while-running && log up", FAKE_OUT_docker=r"3f2a\n")
     assert out == ["[t] up"] and calls == ["sleep 15", f"{COMPOSE} ps -q --status running monkey", f"{RCON} list"]
+
+
+COMMIT = "c" * 40
+
+
+def test_the_release_gate_asks_the_tool_and_logs_its_one_line(sh):
+    code, out, calls = sh(f'python_ok() {{ return 0; }}; release_gate {COMMIT} v3.4.0; echo "says=$GATE_SAYS"',
+                          REPO_DIR="/repo", FAKE_OUT_python3=r"release gate: v3.4.0 has a published release\n")
+    assert code == 0 and calls == [f"python3 -B -I /repo/tools/release_gate.py {COMMIT} --tag v3.4.0"]
+    said = "release gate: v3.4.0 has a published release"
+    assert out == [f"[t] {said}", f"says={said}"]
+    code, _, calls = sh(f'python_ok() {{ return 0; }}; release_gate {COMMIT}', REPO_DIR="/repo", GATE_TOOLS="/opt/t")
+    assert code == 0 and calls == [f"python3 -B -I /opt/t/release_gate.py {COMMIT}"]   # a branch: no --tag
+
+
+@pytest.mark.parametrize("rc", ["1", "2"])
+def test_a_release_gate_that_says_not_yet_or_cant_tell_lets_nothing_through(sh, rc):
+    code, out, _ = sh(f'python_ok() {{ return 0; }}; release_gate {COMMIT} v3.4.0 || echo "rc=$?"', REPO_DIR="/repo",
+                      FAKE_RC_python3=rc, FAKE_OUT_python3=r"noise\nrelease gate: not yet: no release\n")
+    assert code == 0 and out == ["[t] release gate: not yet: no release", f"rc={rc}"]
+
+
+def test_the_release_gate_switch_and_an_old_python(sh):
+    code, out, calls = sh(f"release_gate {COMMIT} v3.4.0", RELEASE_GATE="off")
+    assert code == 0 and out == ["[t] release gate: off (RELEASE_GATE=off in the settings)"] and calls == []
+    code, out, calls = sh(f'release_gate {COMMIT} v3.4.0 || echo "rc=$?"', FAKE_RC_python3="1")
+    assert out == ["[t] release gate: needs python3 3.10 or newer; nothing goes live", "rc=1"] and len(calls) == 1
+
+
+def test_the_deploy_asks_the_gate_before_it_warns_backs_up_or_copies_anything():
+    text = (DEPLOY / "monkey-deploy.sh").read_text()
+    gate = text.index('release_gate "$commit" "$ref" || gated=$?')
+    assert text.index("in_window; then") < gate < text.index("warn_players \"Server update") < text.index(
+        "sync_package \"$commit\"\n")
+    assert '[ -z "$tag" ] || die "$tag was not deployed' in text   # --tag (the staff switch) says why

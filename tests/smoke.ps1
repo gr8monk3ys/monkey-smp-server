@@ -225,6 +225,19 @@ if ($isPaper) {
 foreach ($pattern in $bad) {
     foreach ($m in [regex]::Matches($logText, "(?m)^.*$([regex]::Escape($pattern)).*$")) { $failures.Add("log: $($m.Value)") }
 }
+# Data that failed to load. The server starts anyway and the pack still counts as enabled, so only the log says
+# so. A function that fails also takes down every function tag that lists it: one typo in a tick function stops
+# every pack's tick. Any function or tag counts: ours are generated (tools/datapacks.py), and monkey/patches
+# rewrites other mods'. So does any other data file, but for the ones a pinned mod ships broken, which fail on
+# every boot ($knownData). Add to $knownData only after looking at what the mod loses by it. The "Couldn't load
+# advancements" line lists other mods' on every boot, so it counts only when it names one of ours.
+# docker-smoke.sh and hosting-smoke.sh look for the same two patterns (tests/test_hosting_smoke.py keeps them in step).
+$dataErrors = "Failed to load function |Couldn't load tag |Couldn't parse data file |Couldn't load advancements: .*[^a-z0-9_.-]monkey:"
+$knownData = "Couldn't parse data file 'morevillagers:"
+# The line after a function's says why ("Whilst parsing command on line 3: ..."): take it along.
+foreach ($m in [regex]::Matches($logText, '(?m)^.*(?:' + $dataErrors + ').*$(?:\n\S*Exception: .*$)?')) {
+    if ($m.Value -notmatch $knownData) { $failures.Add("data failed to load: $(($m.Value -replace '\s*\n', ' <- ').Trim())") }
+}
 # LuckPerms answers commands on the console, not over RCON, so check its storage instead. On Fabric
 # the line has no [LuckPerms] prefix.
 $storageLine = if ($isPaper) { 'LuckPerms\] Loading storage provider\.\.\. \[YAML\]' } else { '(?i)Loading storage provider\.\.\. \[YAML\]' }

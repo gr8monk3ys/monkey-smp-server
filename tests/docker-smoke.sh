@@ -90,6 +90,14 @@ echo "--- stopped in ${took}s, exit code $exit_code"
 if grep -nE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop|---- Minecraft Crash Report' "$root/compose.log" "$log" 2>/dev/null; then
     echo "errors in the server log"; fail=1
 fi
+# Data that failed to load: the server starts anyway, so only the log says so. tests/smoke.ps1 says what counts.
+data_errors="Failed to load function |Couldn't load tag |Couldn't parse data file |Couldn't load advancements: .*[^a-z0-9_.-]monkey:"
+known_data="Couldn't parse data file 'morevillagers:"
+# Not as the test of an "if": grep's exit code is 2 when $log is missing, lines found or not, and pipefail keeps it.
+data=$(grep -hE "$data_errors" "$root/compose.log" "$log" 2>/dev/null | grep -vE "$known_data" || true)
+if [ -n "$data" ]; then
+    echo "$data"; echo "data that failed to load (above)"; fail=1
+fi
 if [ "$reached" = yes ] && ! grep -qE 'All dimensions are saved|Saving worlds' "$log"; then
     echo "no clean shutdown in server/logs/latest.log"; fail=1
 fi

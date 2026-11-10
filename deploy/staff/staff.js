@@ -131,11 +131,18 @@ function renderVerdict(now) {
   $("mark").setAttribute("class", `mark ${v.kind}`);
   $("mark").firstElementChild.setAttribute("d", MARKS[v.kind]);
   $("word").textContent = v.word;
+  // The same word and mark in the header, so every tab says how the server is.
+  $("pulse-mark").setAttribute("class", `mark ${v.kind}`);
+  $("pulse-mark").firstElementChild.setAttribute("d", MARKS[v.kind]);
+  $("pulse-word").textContent = v.word;
   $("sentence").textContent = v.text;
   document.title = `${v.word}: Monkey SMP staff`;
 
   const fresh = d && now - Date.parse(d.checked) <= STALE_MS;
   const nobody = fresh && d.online && d.players && d.players.count === 0;
+  // For the Server tab's stop and restart steps (panel.js): how many players a stop would disconnect.
+  if (fresh && d.online && d.players) document.body.dataset.players = String(d.players.count);
+  else delete document.body.dataset.players;
   $("note").hidden = !nobody;
   $("note").textContent = nobody ? "Nobody is on, so the server has little to do. These numbers will look different with a crowd." : "";
 

@@ -19,27 +19,31 @@
   <script src="modcfg.js" defer></script>
   <script src="reports.js" defer></script>
 </head>
-<body>
+<body data-tab="status">
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="bar">
   <header class="top">
     <p class="brand">Monkey <b>SMP</b> <span>staff</span></p>
+    <a class="pulse" id="pulse" href="#status"><span class="sr">Server: </span><svg class="mark unknown" id="pulse-mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="pulse-word">Checking</span></a>
     <p class="checked" id="checked">Getting the latest reading</p>
     <details class="account" id="account" hidden><summary id="account-name">Account</summary><div class="account-body" id="account-body"></div></details>
   </header>
 
   <nav class="tabs" id="tabs" aria-label="Sections">
     <a href="#status" data-tab="status" aria-current="page">Status</a>
-    <a href="#console" data-tab="console">Console</a>
-    <a href="#files" data-tab="files">Files</a>
     <a href="#players" data-tab="players">Players</a>
-    <a href="#server" data-tab="server">Server</a>
-    <a href="#users" data-tab="users" id="users-tab" hidden>Users</a>
+    <a href="#console" data-tab="console">Console</a>
+    <a href="#reports" data-tab="reports">Reports</a>
+    <a class="lead" href="#server" data-tab="server">Server</a>
     <a href="#settings" data-tab="settings">Settings</a>
     <a href="#mods" data-tab="mods">Mods</a>
     <a href="#modcfg" data-tab="modcfg">Mod settings</a>
-    <a href="#reports" data-tab="reports">Reports</a>
+    <a href="#files" data-tab="files">Files</a>
+    <a class="lead" href="#users" data-tab="users" id="users-tab" hidden>Users</a>
   </nav>
+  </div>
 
-  <main>
+  <main id="main">
     <div id="tab-status">
     <section class="verdict" aria-live="polite">
       <h1><svg class="mark" id="mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="word">Checking</span></h1>
@@ -123,7 +127,7 @@
     </div>
 
     <div class="pane" id="tab-console" hidden>
-      <h2>Console</h2>
+      <h1>Console</h1>
       <p class="fine">Commands run as the server console. To stop or restart the server, use the Server tab. The lines the game
         logs each time a scheduled job connects (RCON) are left out; Files, logs has the whole file while it is under 2 MB.</p>
       <p class="attention" id="console-error" role="alert" hidden></p>
@@ -136,7 +140,7 @@
     </div>
 
     <div class="pane" id="tab-files" hidden>
-      <h2>Files</h2>
+      <h1>Files</h1>
       <p class="fine">The server's own folder. Worlds, libraries and databases are not shown. Every change is kept in history, so a save or a delete can be undone.</p>
       <p class="attention" id="files-error" role="alert" hidden></p>
       <p class="note" id="files-note" role="status" hidden></p>
@@ -158,7 +162,7 @@
           <button class="btn primary" id="save" type="button">Save</button>
           <button class="btn" id="cancel" type="button">Close</button>
           <a class="btn" id="download" download>Download</a>
-          <button class="btn" id="delete" type="button">Delete</button>
+          <button class="btn danger" id="delete" type="button">Delete</button>
         </div>
       </div>
       <details class="table" id="history-box">
@@ -168,7 +172,7 @@
     </div>
 
     <div class="pane" id="tab-players" hidden>
-      <h2>Players</h2>
+      <h1>Players</h1>
       <p class="fine">These buttons type the console command for you. Names are 3 to 16 letters, digits or underscores.</p>
       <p class="attention" id="players-error" role="alert" hidden></p>
       <p class="note" id="players-note" role="status" hidden></p>
@@ -186,13 +190,13 @@
         <div class="add">
           <input id="ipban-target" type="text" maxlength="45" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Address or online player" aria-label="Address or online player">
           <input id="ipban-reason" type="text" maxlength="120" autocomplete="off" placeholder="Reason (optional)" aria-label="Reason">
-          <button class="btn primary" id="ipban-go" type="button" data-need="admin">Ban address</button>
+          <button class="btn danger" id="ipban-go" type="button" data-need="admin">Ban address</button>
         </div>
       </section>
     </div>
 
     <div class="pane" id="tab-server" hidden>
-      <h2>Server</h2>
+      <h1>Server</h1>
       <p class="fine">Power, backups, the world, versions and timed jobs. A big step asks you to type a word to confirm it.</p>
       <p class="attention" id="server-error" role="alert" hidden></p>
       <p class="note" id="server-note" role="status" hidden></p>
@@ -200,11 +204,15 @@
       <section class="box">
         <h3>Power</h3>
         <p class="state" id="power-state"><svg class="mark unknown" id="power-mark" viewBox="0 0 12 12" aria-hidden="true"><path/></svg><span id="power-word">Checking</span></p>
-        <div class="actions" id="power-buttons">
-          <button class="btn" type="button" data-power="restart">Restart (5-minute warning)</button>
-          <button class="btn" type="button" data-power="restart-now">Restart now</button>
-          <button class="btn" type="button" data-power="stop">Stop</button>
-          <button class="btn" type="button" data-power="start">Start</button>
+        <div class="power" id="power-buttons">
+          <div class="actions">
+            <button class="btn" type="button" data-power="restart">Restart (5-minute warning)</button>
+            <button class="btn" type="button" data-power="start">Start</button>
+          </div>
+          <div class="actions">
+            <button class="btn danger" type="button" data-power="restart-now">Restart now</button>
+            <button class="btn danger" type="button" data-power="stop">Stop</button>
+          </div>
         </div>
         <div class="confirm" id="server-confirm" hidden></div>
         <div id="power-errors" hidden>
@@ -307,7 +315,7 @@
         <p class="note" id="reset-note" role="status" hidden></p>
         <div class="add">
           <input id="reset-seed" type="text" maxlength="64" autocomplete="off" spellcheck="false" placeholder="New seed (empty: keep it)" aria-label="New seed">
-          <button class="btn" id="reset-go" type="button" data-need="admin">Reset the world</button>
+          <button class="btn danger" id="reset-go" type="button" data-need="admin">Reset the world</button>
         </div>
         <div class="confirm" id="reset-confirm" hidden></div>
       </section>
@@ -378,10 +386,10 @@
       </section>
       </div>
     </div>
-    <div class="pane" id="tab-users" hidden><h2>Users</h2><p class="fine">The logins of the page's own login page. Owners only: the last owner can't be demoted, disabled or deleted.</p><p class="attention" id="users-error" role="alert" hidden></p><p class="note" id="users-note" role="status" hidden></p><div id="users-body"></div></div>
+    <div class="pane" id="tab-users" hidden><h1>Users</h1><p class="fine">The logins of the page's own login page. Owners only: the last owner can't be demoted, disabled or deleted.</p><p class="attention" id="users-error" role="alert" hidden></p><p class="note" id="users-note" role="status" hidden></p><div id="users-body"></div></div>
 
     <div class="pane" id="tab-settings" hidden>
-      <h2>Settings</h2>
+      <h1>Settings</h1>
       <p class="fine">server.properties as a form. Most changes take effect when the server restarts (Server tab). Ports,
         RCON, the seed, the world's name and online mode are locked here. Every save keeps the old file in Files, history.</p>
       <p class="attention" id="settings-error" role="alert" hidden></p>
@@ -405,7 +413,7 @@
           <div class="add">
             <input id="icon-file" type="file" accept="image/png" aria-label="Icon PNG file" data-need="admin">
             <button class="btn" id="icon-upload" type="button" data-need="admin">Upload</button>
-            <button class="btn" id="icon-remove" type="button" data-need="admin" hidden>Remove</button>
+            <button class="btn danger" id="icon-remove" type="button" data-need="admin" hidden>Remove</button>
           </div>
         </div>
         <div class="confirm" id="icon-confirm" hidden></div>
@@ -420,7 +428,7 @@
     </div>
 
     <div class="pane" id="tab-modcfg" hidden>
-      <h2>Mod settings</h2>
+      <h1>Mod settings</h1>
       <p class="fine">Each mod's config file as a form, with the file's own comments as help. A save changes only the
         values you changed: every comment and line order stays. Most changes take effect when the server restarts
         (Server tab). Every save keeps the old file in Files, history, and goes in the record of changes.</p>
@@ -443,7 +451,7 @@
     </div>
 
     <div class="pane" id="tab-reports" hidden>
-      <h2>Reports</h2>
+      <h1>Reports</h1>
       <p class="fine">Each Monday the server's own logs are checked against the rules for the week before: Ledger, the
         players' stats, the parties and the game log. It only reports. Nothing here punishes, messages or rolls back
         anyone: read the rows behind a number before you act on it.</p>
@@ -511,7 +519,7 @@
     </div>
 
     <div class="pane" id="tab-mods" hidden>
-      <h2>Mods</h2>
+      <h1>Mods</h1>
       <p class="fine">The mods in the server's mods folder, read from each jar. Only the owner can add, turn off and remove
         them here, because a jar runs as the server; admins can look and say whether players need a mod. Each change asks
         you to type the jar's name, and every old jar is kept in mods-removed/ on the machine.</p>

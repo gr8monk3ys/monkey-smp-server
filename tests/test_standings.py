@@ -447,6 +447,10 @@ def test_an_old_week_with_land_still_loads_and_shows_as_it_was_scored(world, tmp
     assert "1. Red Monkeys: 97  [Cup 30, Str 7, kills 4, bounties 1]" in week and "land" not in week
     assert "1. Red Monkeys: 98  [Cup 30, land 7, Str 7, kills 4, bounties 1]" in last
     assert "3. LoneFake's faction: 3  [Cup 0, land 0, Str -2, kills 1]" in last
+    # The footer under both tables gives today's formula, so the old week's heading says how it differs.
+    assert "Final standings, week of Sun 18 Oct to Sun 25 Oct (land still counted)" in last
+    assert "land still counted" not in week
+    assert standings.FORMULA in standings.discord_message({**json.loads(before), "formula": ["not", "text"]})
     # The website's file: last week's ranks and points as they were, and never a land number.
     public = json.loads(out.read_bytes())
     assert public["last_week"]["factions"] == [{"rank": 1, "name": "Red Monkeys", "points": 98},

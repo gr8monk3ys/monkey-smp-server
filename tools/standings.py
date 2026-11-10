@@ -417,8 +417,10 @@ def board_commands(rows: list[Row], week: dict | None, last: dict | None, now: d
            f"updated {clock(now)})"
     commands = [store_command("week", head, rows, TOP)]
     if last:
-        commands.append(store_command("last", f"Final standings, {span(last)}", [Row(**r) for r in last["rows"]],
-                                      LAST_TOP))
+        then = [Row(**r) for r in last["rows"]]
+        # The board's footer gives today's formula: a week scored with the land column says so in its heading.
+        note = " (land still counted)" if any(r.land is not None for r in then) else ""
+        commands.append(store_command("last", f"Final standings, {span(last)}{note}", then, LAST_TOP))
     commands.append(wanted_command(scores or {}))
     commands.append(f"function {NS}:standings/publish")
     return commands
@@ -438,7 +440,8 @@ def discord_message(week: dict) -> str:
     before the recap existed has none, so it posts the table alone. The formula is the one the week was scored
     with (its file keeps it), so a week closed while land counted says so when a retry posts it."""
     rows = [Row(**r) for r in week["rows"]]
-    scored = week.get("formula") or FORMULA
+    scored = week.get("formula")
+    scored = scored if isinstance(scored, str) and scored else FORMULA
     head, foot = recap.heading(week), f"Scored as {scored} `/trigger standings` shows the board in game."
     bare = recap.message(head, lambda n: table_text(rows, n), [], foot, DISCORD_LIMIT)
     # The week's war and pacts come first of the sections, in the room the table leaves (cut short with MORE).

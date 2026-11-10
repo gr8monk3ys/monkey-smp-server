@@ -1138,7 +1138,7 @@ own settings.
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
 word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time,
-players and the machine's memory and CPU in use over the last 24 hours, what the problems probably are, who is online, memory, swap, CPU load, disk, the release and the last backup. Its
+players and the machine's memory and CPU in use over the last 24 hours, what the problems probably are, who is online, memory, swap, CPU in use (and the load average under it), disk, the release and the last backup. Its
 other tabs (Console, Files, Players, Server) are the controls: they let staff run the server without a shell ("The
 controls", below). It names players, which the public status never does, so it is not linked from the website: pass the
 address on privately. Uptime Kuma still does the alerting; the Status tab only answers "how is it doing right now?".
@@ -1167,11 +1167,21 @@ minutes), less than 10% of memory or disk free, over half the swap in use, the o
 from words in the log: check before acting on it. A line it doesn't know is left as it is.
 
 **Health alerts.** With `STAFF_WEBHOOK_URL` set in `/etc/monkey-deploy.env`, the same 2-minute job tells the staff
-channel (never the public one) when something that needs a look first shows, then at most once in 6 hours while it
-lasts ("(still)"), and says when a number is back to normal ("cleared"). Each new crash is its own message, with its
-description and likely cause, at most one in 30 minutes (the next one says how many there were). What it last posted
-is kept in `staff.json` (`alerts`), so a restart of the job doesn't post again; the very first reading only notes the
-crash reports already there. The job reads the webhook from the env file and hands it over in the environment, never
+channel (never the public one) what needs a look, as one message a reading:
+
+- a number (lag, memory, disk, the off-site backup) when it first shows, then "(still)" at most once in 6 hours while
+  it lasts, and "Cleared" once it has stayed back to normal for 10 minutes. After that it isn't raised again for an
+  hour, so a number hovering at its line doesn't post on every reading.
+- a cause from the log (out of memory, a missing dependency, the port taken...) once while it is in the day's list,
+  never "(still)". Errors that stop the server starting are kept for this; the dozen every start logs are only
+  counted, as before.
+- each new crash, with its description and likely cause, at most one message in 30 minutes; crashes in between are
+  counted in the next ("3 crash reports since the last message").
+
+What it posted is kept in `staff.json` (`alerts`), which is written before anything is posted, so a restart of the job
+doesn't post again. If the file can't be written (a full disk), the job can't remember, so it posts only in its first
+run of each hour. The first reading after it is set up is quiet about what was there before it watched: older log
+lines and crash reports already in the folder. The job reads the webhook from the env file and hands it over in the environment, never
 on a command line. Without it nothing is posted, and Uptime Kuma still says when the server is down.
 
 Set it up once, on a quiet day, after a release that has it is live:
@@ -1255,7 +1265,8 @@ sets itself. It changes nothing in how the server runs: the container, compose a
 - **Files**: `server/` of the live release: browse, find by name in a folder, edit text files, download, upload,
   delete, make a new file or folder, and rename or move a file within `server/`. **Search all files** (admin): every
   file the page can open whose name has the text, or with "In the text" whose lines do (plain-text settings files
-  only, never `logs/` or `crash-reports/`; a line found has its secrets masked as the editor shows them). It stops
+  only, never `logs/` or `crash-reports/`). It searches the text as the editor shows it, secrets masked, so a search
+  never finds (or lets anyone guess) a password's value: searching `rcon.password` shows the line, `********`. It stops
   after 20,000 files, 5 seconds or 200 results, and says so. A rename never replaces anything (a
   name already taken is refused) and keeps no copy, since nothing is lost; it follows the same rules as a save, under
   both its old name and its new one, so only an owner renames a jar, anything in `mods/` or `server.properties`.
@@ -1265,8 +1276,10 @@ sets itself. It changes nothing in how the server runs: the container, compose a
   **Temporary bans** (admin; moderators see the list): the game's own ban, with a reason that starts "Banned until"
   and the time it ends in UTC, so the player sees when. The page keeps them in `/srv/monkey/staff/tempbans.json` and
   pardons the player at that time (its scheduler looks every 20 seconds), but only if the ban in
-  `banned-players.json` is still that one: a player pardoned by hand, or banned again for good, is left as staff left
-  them. While the server is off it waits, and pardons once it is back. "Lift now" pardons early. 1 hour to 30 days.
+  `banned-players.json` is still that one, word for word: a player pardoned by hand, or banned again, is left as staff
+  left them. While the server is off it waits, sending nothing, and pardons once it is back. "Lift now" pardons early.
+  1 hour to 30 days. A player banned already can't be banned for a time, nor banned for good over a temporary ban:
+  the game keeps the ban that is there ("Nothing changed"), so the page says to pardon or lift it first.
   **Everyone who has joined** (moderator): every name in `usercache.json`, the last seen first, with when the server
   last saved them (`world/players/data/UUID.dat`'s time, so a player who is on shows the last few minutes), hours
   played (`minecraft:play_time` in their stats file, nothing else of it) and whether they are an operator,

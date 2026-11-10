@@ -1004,8 +1004,9 @@ class Extras:
 
     def run_scheduler(self) -> None:
         while not self.stop.is_set():
-            # The schedules, then each other module's own look (staff_panel.TICKS: the temporary bans' ends).
-            for look in (self.tick, *(lambda f=f: f(self.p) for f in sp.TICKS)):
+            # The schedules first, then each other module's own look (staff_panel.SCHEDULER_LOOKS: temp bans' ends).
+            looks = [lambda: self.tick()] + [lambda look=look: look(self.p) for look in sp.SCHEDULER_LOOKS]
+            for look in looks:
                 try:
                     look()
                 except Exception as e:  # noqa: BLE001 (the loop must outlive one bad look)

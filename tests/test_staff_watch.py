@@ -90,22 +90,54 @@ def alert(id, source="machine", level="alert"):
     return {"id": id, "title": f"{id} title", "fix": "Do this.", "from": "a number", "level": level, "source": source}
 
 
-def test_an_alert_is_posted_once_then_at_most_every_six_hours_and_cleared_once():
+def test_a_number_is_posted_once_then_at_most_every_six_hours_and_cleared_once():
     lines, state = w.alerts({}, [alert("disk"), alert("swap", level="warn")], [], NOW)
-    assert lines == ["Monkey SMP: disk title. a number. Do this."]
+    assert lines == ["Monkey SMP staff: disk title. a number. Do this."]
     lines, state = w.alerts(state, [alert("disk")], [], NOW + 2 * MIN)
     assert lines == []
     lines, state = w.alerts(state, [alert("disk")], [], NOW + w.QUIET)
-    assert lines == ["Monkey SMP: disk title (still). a number. Do this."]
+    assert lines == ["Monkey SMP staff: disk title (still). a number. Do this."]
+    # Back to normal: "cleared" only once it has stayed so for CLEAR_AFTER.
     lines, state = w.alerts(state, [], [], NOW + w.QUIET + 2 * MIN)
-    assert lines == ["Monkey SMP: cleared: the disk has room again."]
-    assert w.alerts(state, [], [], NOW + w.QUIET + 4 * MIN)[0] == []
+    assert lines == []
+    lines, state = w.alerts(state, [], [], NOW + w.QUIET + 2 * MIN + w.CLEAR_AFTER)
+    assert lines == ["Monkey SMP staff: Cleared: the disk has room again."]
+    assert w.alerts(state, [], [], NOW + w.QUIET + 20 * MIN)[0] == []
 
 
-def test_a_log_line_that_ages_out_is_not_cleared_aloud():
+def test_a_number_hovering_at_its_line_does_not_post_on_every_reading():
+    state, posts, at = {}, [], NOW
+    for i in range(90):                                   # 3 hours of readings, every other one past the line
+        at += 2 * MIN
+        lines, state = w.alerts(state, [alert("memory")] if i % 2 == 0 else [], [], at)
+        posts += lines
+    assert posts == ["Monkey SMP staff: memory title. a number. Do this."]
+
+
+def test_a_number_cleared_is_not_raised_again_within_the_hour():
+    lines, state = w.alerts({}, [alert("lag")], [], NOW)
+    _, state = w.alerts(state, [], [], NOW + 2 * MIN)
+    lines, state = w.alerts(state, [], [], NOW + 2 * MIN + w.CLEAR_AFTER)
+    assert lines and "Cleared" in lines[0]
+    assert w.alerts(state, [alert("lag")], [], NOW + 30 * MIN)[0] == []
+    assert w.alerts(state, [alert("lag")], [], NOW + 2 * MIN + w.CLEAR_AFTER + w.RENOTIFY)[0] != []
+
+
+def test_a_cause_from_the_log_is_posted_once_while_it_is_in_the_list():
     lines, state = w.alerts({}, [alert("out-of-memory", source="log")], [], NOW)
     assert len(lines) == 1
-    assert w.alerts(state, [], [], NOW + dt.timedelta(days=1))[0] == []
+    for hours in (6, 12, 18):
+        lines, state = w.alerts(state, [alert("out-of-memory", source="log")], [], NOW + dt.timedelta(hours=hours))
+        assert lines == []
+    lines, state = w.alerts(state, [], [], NOW + dt.timedelta(days=1))
+    assert lines == [] and "out-of-memory" not in state["posted"]           # aged out quietly
+    assert len(w.alerts(state, [alert("out-of-memory", source="log")], [], NOW + dt.timedelta(days=2))[0]) == 1
+
+
+def test_lines_from_before_the_job_watched_are_not_news():
+    assert w.alerts({}, [{**alert("missing-dependency", source="log"), "older": True}], [], NOW)[0] == []
+    rows = w.advice(reading(problems={"errors": [{"text": "Incompatible mods found!", "older": True}], "crashes": []}))
+    assert rows[0]["older"] is True
 
 
 def test_a_crash_is_its_own_message_and_never_posted_twice_as_an_alert():
@@ -115,19 +147,34 @@ def test_a_crash_is_its_own_message_and_never_posted_twice_as_an_alert():
     crashes = [*first, {"when": iso(NOW + MIN), "text": "Ticking entity"}]
     rows = [alert("ticking", source="crash")]
     lines, state = w.alerts(state, rows, crashes, NOW + 2 * MIN)
-    assert len(lines) == 1 and "the game crashed: Ticking entity" in lines[0] and "Entity being ticked" in lines[0]
-    lines, state = w.alerts(state, rows, crashes, NOW + 4 * MIN)
-    assert lines == []                                      # the same crash, the next reading
-    # Two more within the quiet half hour: held, then told together once it has passed.
-    more = [*crashes, {"when": iso(NOW + 5 * MIN), "text": "Watching Server"}]
-    lines, state = w.alerts(state, rows, more, NOW + 6 * MIN)
-    assert lines == []
-    more.append({"when": iso(NOW + 7 * MIN), "text": "Exception in server tick loop"})
-    lines, state = w.alerts({**state, "crash_seen": iso(NOW + MIN)}, rows, more, NOW + 40 * MIN)
+    assert len(lines) == 1 and "The game crashed: Ticking entity" in lines[0] and "Entity being ticked" in lines[0]
+    assert w.alerts(state, rows, crashes, NOW + 4 * MIN)[0] == []      # the same crash, the next reading
+
+
+def test_crashes_inside_the_quiet_half_hour_are_counted_in_the_next_message():
+    _, state = w.alerts({}, [], [], NOW)
+    crashes = [{"when": iso(NOW + 5 * MIN), "text": "Ticking entity"}]
+    assert len(w.alerts(state, [], crashes, NOW + 6 * MIN)[0]) == 1
+    _, state = w.alerts(state, [], crashes, NOW + 6 * MIN)
+    crashes.append({"when": iso(NOW + 10 * MIN), "text": "Watching Server"})
+    lines, state = w.alerts(state, [], crashes, NOW + 12 * MIN)
+    assert lines == []                                      # held back: within 30 minutes of the last message
+    crashes.append({"when": iso(NOW + 40 * MIN), "text": "Exception in server tick loop"})
+    lines, state = w.alerts(state, [], crashes, NOW + 42 * MIN)
     assert len(lines) == 1 and "2 crash reports since the last message" in lines[0]
+    assert w.alerts(state, [], crashes, NOW + 44 * MIN)[0] == []
+
+
+def test_one_reading_is_one_message():
+    _, state = w.alerts({}, [], [], NOW)
+    crashes = [{"when": iso(NOW + MIN), "text": "Exception in server tick loop"}]
+    lines, _ = w.alerts(state, [alert("out-of-memory", source="log"), alert("disk")], crashes, NOW + 2 * MIN)
+    assert lines[0].startswith("Monkey SMP staff: The game crashed") and len(lines) == 3
+    assert not any(line.startswith("Monkey SMP") for line in lines[1:])
 
 
 @pytest.mark.parametrize("state", [None, "x", {"posted": "x"}, {"posted": {"disk": "not a time", 5: "y"}}])
 def test_a_broken_state_starts_afresh(state):
     lines, kept = w.alerts(state, [alert("disk")], [], NOW)
     assert len(lines) == 1 and kept["posted"] == {"disk": iso(NOW)}
+    assert w.alerts({"posted": {}, "crash_seen": "junk"}, [], [{"when": iso(NOW), "text": "x"}], NOW)[0] != []

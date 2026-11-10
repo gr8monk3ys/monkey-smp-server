@@ -663,6 +663,7 @@
     try {
       const data = await api("GET", "/api/players");
       const run = (text) => () => command(text);
+      const banned = new Set((data.banned || data.bans || []).map((b) => nameOf(b).toLowerCase()));
       $("players-body").replaceChildren(
         group("Online now", data.online || [], {
           none: "Nobody is on.",
@@ -698,7 +699,10 @@
           },
           add: {
             label: "Ban", reason: true, danger: true,
-            run: (name, why) => confirmStep("players", `Ban ${name}${why ? ` for "${why}"` : ""}? They can't join until pardoned.`, `Yes, ban ${name}`, run(`ban ${name}${why ? ` ${why}` : ""}`)),
+            // The game keeps a ban that is there ("Nothing changed"): a temporary one would then still end on time.
+            run: (name, why) => (banned.has(name.toLowerCase())
+              ? fail("players", new Error(`${name} is banned already. Pardon them (or lift their temporary ban) first, then ban them again.`))
+              : confirmStep("players", `Ban ${name}${why ? ` for "${why}"` : ""}? They can't join until pardoned.`, `Yes, ban ${name}`, run(`ban ${name}${why ? ` ${why}` : ""}`))),
           },
         }),
       );

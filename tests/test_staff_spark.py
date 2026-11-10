@@ -131,3 +131,16 @@ def test_the_page_uses_every_route_and_only_opens_a_report_link():
     # The link's href is set only after the page checks its shape again.
     assert 'SPARK_LINK.test(run.link)' in script and 'rel="noopener noreferrer"' in (
         REPO.root / "deploy" / "staff" / "index.html").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("line", [
+    f"[10:01:00] [Server thread/INFO]: <Griefer> staff look {LINK}",
+    f"[10:01:00] [Server thread/INFO]: [Not Secure] <Griefer> {LINK}",
+    f"[10:01:00] [Server thread/INFO]: [Griefer] {LINK}",
+])
+def test_a_link_a_player_posts_in_chat_is_never_the_report(sp, line):
+    sp.call("POST", "/api/spark", {"mode": "cpu", "seconds": 60})
+    log(sp, line)
+    assert sp.call("GET", "/api/spark")[1]["run"]["link"] is None
+    log(sp, f"[10:02:00] [spark-worker-pool-1/INFO]: [⚡] {LINK.replace('AbCd', 'Real')}")
+    assert sp.call("GET", "/api/spark")[1]["run"]["link"] == LINK.replace("AbCd", "Real")

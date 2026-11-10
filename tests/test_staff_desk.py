@@ -583,11 +583,11 @@ def test_a_ban_the_server_did_not_take_saves_nothing(desk):
 
 
 def test_the_scheduler_thread_lifts_them(desk):
-    assert any(callable(f) for f in staff_panel.TICKS)
+    assert any(callable(f) for f in staff_panel.SCHEDULER_LOOKS)
     tb, clock, banned = tempban_setup(desk)
     desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
     clock[0] += 3601
-    for look in staff_panel.TICKS:
+    for look in staff_panel.SCHEDULER_LOOKS:
         look(desk.panel)
     assert desk.call("GET", "/api/tempbans")[1]["bans"] == []
 
@@ -609,8 +609,60 @@ def test_a_text_search_shows_the_line_with_its_secrets_masked(desk):
     (desk.root / "config" / "more.toml").write_text('[x]\nchannel = "general"\napi_token = "general-secret"\n')
     data = desk.call("GET", "/api/file-search?q=general&text=1")[1]
     rows = {(r["path"], r["line"]): r["text"] for r in data["results"]}
-    assert rows[("config/discord.toml", 3)] == 'channel = "general"'
-    assert rows[("config/more.toml", 3)] == 'api_token = "********"'
+    assert rows == {("config/discord.toml", 3): 'channel = "general"', ("config/more.toml", 2): 'channel = "general"'}
     assert "general-secret" not in json.dumps(data) and "tok-real" not in json.dumps(data)
+    # The key is found, never its value.
+    found = desk.call("GET", "/api/file-search?q=api_token&text=1")[1]["results"]
+    assert [r["text"] for r in found] == ['api_token = "********"'] * 2       # discord.toml and more.toml
+
+
+@pytest.mark.parametrize("guess", ["rcon.password=h", "rcon.password=hunter2", "hunter2-real", "tok-r", "sec-real",
+                                   'api_token = "t'])
+def test_a_text_search_cannot_be_used_to_guess_a_secret(desk, guess):
+    """One character at a time, a hit would spell the password out: the search sees only what the editor shows."""
+    from urllib.parse import quote
+    data = desk.call("GET", f"/api/file-search?q={quote(guess)}&text=1")[1]
+    assert data["results"] == [], data
     # Logs and crash reports aren't read for text, nor anything not plain text.
     assert desk.call("GET", "/api/file-search?q=line&text=1")[1]["results"] == []
+
+
+def test_a_temporary_ban_sends_nothing_while_the_server_is_off(desk):
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    clock[0] += 3601
+    before = actions(desk)
+    desk.docker.ps = json.dumps({"State": "exited", "Status": "Exited (0)"})
+    for _ in range(5):
+        assert tb.expire() == []
+    assert actions(desk) == before                                  # no line, so no post, every 20 seconds
+
+
+def test_a_player_banned_already_is_not_banned_for_a_time(desk):
+    tempban_setup(desk)
+    code, data = desk.call("POST", "/api/tempban", {"name": "Zed", "hours": 5})     # the fixture bans Zed for good
+    assert code == 409 and "banned already" in data["error"]
+    assert not (desk.staff / "tempbans.json").exists()
+
+
+def test_a_ban_with_other_words_is_not_lifted_even_if_it_starts_alike(desk):
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1, "reason": "x"})
+    rows = json.loads(banned.read_text())
+    next(r for r in rows if r["name"] == "Bravo")["reason"] = "Banned until forever: staff decided"
+    banned.write_text(json.dumps(rows))
+    clock[0] += 3601
+    assert tb.expire() == ["Bravo"] and any(r["name"] == "Bravo" for r in json.loads(banned.read_text()))
+
+
+def test_a_reason_that_is_not_text_is_refused_not_a_crash(desk):
+    tempban_setup(desk)
+    assert desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 5, "reason": 5})[0] == 400
+
+
+def test_a_broken_tempbans_file_says_so(desk):
+    desk.staff.mkdir(parents=True, exist_ok=True)
+    (desk.staff / "tempbans.json").write_text("{broken")
+    assert desk.call("GET", "/api/tempbans")[0] == 500
+    with pytest.raises(RuntimeError):
+        staff_desk.tempbans(desk.panel).expire()

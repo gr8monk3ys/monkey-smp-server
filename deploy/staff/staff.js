@@ -239,11 +239,15 @@ function renderNow() {
     const used = host.swap.total - host.swap.free;
     row(machine, "Swap in use", [num(one(gb(used))), unit(`of ${one(gb(host.swap.total))} GB`)]);
   }
-  if (host.load) {
+  // CPU in use since the reading before (the history's sixth number), the same number the chart draws; the load
+  // average stays as the line under it, since it also counts work waiting for a turn.
+  const history = state.data.history || [];
+  const cpu = history.length ? history[history.length - 1][5] : null;
+  if (typeof cpu === "number" || host.load) {
     const threads = host.threads || 0;
-    row(machine, "CPU load", [num(host.load[0].toFixed(2)), unit(threads ? `of ${threads} threads` : "")],
-      `${host.load[1].toFixed(2)} over 5 minutes, ${host.load[2].toFixed(2)} over 15`,
-      threads ? meter(host.load[0] / threads) : null);
+    const load = host.load ? `Load ${host.load[0].toFixed(2)} over 1 minute${threads ? `, on ${threads} threads` : ""}` : "";
+    row(machine, "CPU in use", typeof cpu === "number" ? [num(String(Math.round(cpu))), unit("%")] : [unit("reading at the next check")],
+      load, typeof cpu === "number" ? meter(cpu / 100) : null);
   }
   if (host.disk) {
     const free = host.disk.free / host.disk.total;

@@ -73,7 +73,7 @@ import status as public
 
 import rcon as server
 
-VERSION = 1
+VERSION = 2         # 2: a reading's sixth number is CPU in use; in 1 it was the load average, so it is dropped
 HISTORY = dt.timedelta(hours=24)
 READING = 6                     # a row of the history: time, average, P95, players, memory, load
 BACKUP_NAME = re.compile(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}")
@@ -336,7 +336,9 @@ def problems(live: Path, now: dt.datetime, old) -> dict:
                 lag = lag or {"worst": 0, "count": 0, "first": stamp, "last": stamp}
                 lag.update(worst=max(lag["worst"], int(behind[1])), count=lag["count"] + 1, last=stamp)
                 mark_older(lag, first)
-        elif reader["up"] or level == b"FATAL":     # a FATAL before the start finishes is why it didn't
+        elif reader["up"] or level == b"FATAL" or staff_watch.blocks_start(said.decode("utf-8", "replace")):
+            # A FATAL before the start finishes is why it didn't, and so is an error staff_watch knows stops a start
+            # (a mod missing a dependency, the port taken); the dozen errors every start logs are only counted.
             text = plain(said.decode("utf-8", "replace"))
             row = errors.setdefault(_VARIES.sub("#", text)[:100], {"text": text, "count": 0, "first": stamp})
             row.update(text=text, count=row["count"] + 1, last=stamp)
@@ -361,11 +363,14 @@ def earlier(previous: Path | None) -> dict:
 
 
 def carried_over(old: dict, now: dt.datetime) -> list[list]:
-    """The readings in the file before, without those older than a day."""
+    """The readings in the file before, without those older than a day. A file from before version 2 had the load
+    average where CPU in use now goes: that number is dropped, not drawn as CPU."""
     rows = old.get("history")
     if not isinstance(rows, list):
         return []
     since = (now - HISTORY).timestamp()
+    if old.get("version") != VERSION:
+        rows = [[*row[:5], None] if isinstance(row, list) and len(row) == READING else row for row in rows]
     return [[*row, *[None] * (READING - len(row))] for row in rows
             if isinstance(row, list) and len(row) in (4, READING) and isinstance(row[0], int | float)
             and row[0] > since]
@@ -382,10 +387,10 @@ def shares(machine: dict, before: dict | None = None) -> tuple[float | None, flo
 
 def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, meminfo: Path = MEMINFO,
            settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING, proc_stat: Path = PROC_STAT,
-           post=None) -> dict:
-    """The status as of `now`, with the readings in the file `previous` carried over. `post(line)`, when given, sends
-    a line to the staff channel (staff_watch.alerts says which); without it, nothing is posted and the alert state
-    carries over as it was."""
+           alerting: bool = False) -> tuple[dict, list[str]]:
+    """(the status as of `now`, with the readings in the file `previous` carried over; the lines to post to the staff
+    channel). With `alerting` off there are none and the alert state carries over as it was. The caller writes the
+    file before it posts, so a post is never sent again for want of the state that says it was."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
     box = container(docker)
@@ -405,11 +410,10 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     }
     data["advice"] = staff_watch.advice(data)
     data["alerts"] = old.get("alerts") if isinstance(old.get("alerts"), dict) else {}
-    if post is not None:
+    lines: list[str] = []
+    if alerting:
         lines, data["alerts"] = staff_watch.alerts(data["alerts"], data["advice"], data["problems"].get("crashes"), now)
-        for line in lines:
-            post(line)
-    return data
+    return data, lines
 
 
 def post_webhook(url: str, line: str) -> None:
@@ -435,14 +439,22 @@ def main(argv=None) -> int:
     docker = server.Docker(args.live / "docker")
     now = server.job_time(args)
     if args.command == "show":
-        print(json.dumps(status(args.live, now, docker), indent=2))
+        print(json.dumps(status(args.live, now, docker)[0], indent=2))
         return 0
     # The staff channel only (deploy/monkey-staff.sh passes it in the environment, never on the command line), and
     # never the public webhook: these messages name what is wrong on the machine.
     hook = os.environ.get("STAFF_WEBHOOK_URL", "").strip()
-    post = (lambda line: post_webhook(hook, line)) if hook else None
-    data = status(args.live, now, docker, previous=args.out, post=post)
-    public.write(args.out, data)
+    data, lines = status(args.live, now, docker, previous=args.out, alerting=bool(hook))
+    try:
+        public.write(args.out, data)
+    except OSError:
+        # Not written (a full disk, most likely), so the state that says what was posted isn't either, and the next
+        # run would post the same again: post only in the first run of each hour, which needs no memory.
+        if lines and now.minute < 2:
+            post_webhook(hook, "\n".join(lines))
+        raise
+    if lines:
+        post_webhook(hook, "\n".join(lines))
     count = data["players"]["count"] if data["players"] else "no"
     print(f"{args.out}: {'online' if data['online'] else 'offline'}, {count} player count, "
           f"{len(data['history'])} readings")

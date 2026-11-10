@@ -29,12 +29,14 @@ The safety rules:
 - A saved command goes through the console's own checks when it is saved (no seed, no stop, one line) and again
   when it is run: running one is an ordinary POST /api/command, with its own line in actions.log.
 - A temporary ban is the game's own ban, its reason starting TEMP_REASON and the time it ends. At that time (the
-  scheduler's thread looks every 20 seconds: staff_panel.TICKS) the page pardons the player, but only if the ban in
-  banned-players.json is still that one: a staff member who pardoned them, or banned them again for good, decides.
-  While the server is off it waits, and pardons once it is back.
+  scheduler's thread looks every 20 seconds: staff_panel.SCHEDULER_LOOKS) the page pardons the player, but only if
+  the ban in banned-players.json is still that one, word for word: a staff member who pardoned them, or banned them
+  again, decides. While the server is off it waits, sending nothing, and pardons once it is back. A player banned
+  already can't be banned for a time: the game would keep the first ban's words and end.
 - The file search walks server/ under the Files tab's own rules (no worlds, libraries, versions, map files or
   databases), at most SEARCH_FILES files and SEARCH_SECONDS seconds. A text search reads only plain-text config files
-  under SEARCH_TEXT_MAX, never logs/ or crash-reports/, and a line it shows has its secrets masked as the editor does.
+  under SEARCH_TEXT_MAX, never logs/ or crash-reports/, and it searches the text as the editor shows it, secrets
+  masked, so a search can't find (or guess) a secret value.
 - The record of changes is only read here. A search reads at most ACTIVITY_READ of the end of actions.log. In the
   .csv a cell that a spreadsheet would run as a formula (it starts with = + - or @) gets a ' in front.
 
@@ -430,7 +432,7 @@ class TempBans:
         return dt.datetime.fromtimestamp(until, dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")  # noqa: UP017 (3.10)
 
     def listed(self) -> dict:
-        rows = self._load() or {}
+        rows = self._rows()
         return {"bans": sorted(({k: v.get(k) for k in ("name", "until", "by", "at", "reason")} for v in rows.values()),
                                key=lambda r: r["until"]), "now": self.clock()}
 
@@ -441,16 +443,23 @@ class TempBans:
         if not isinstance(hours, int) or isinstance(hours, bool) or not low <= hours <= high:
             raise sp.Refused(400, f"A temporary ban lasts {low} to {high} hours.")
         why = body.get("reason") or ""
+        if not isinstance(why, str):
+            raise sp.Refused(400, "a reason must be text.")
         why = checked_text(why, 120, "a reason") if why.strip() else ""
         until = self.clock() + hours * 3600
         reason = f"{TEMP_REASON} {self._until_words(until)}" + (f": {why}" if why else "")
         with self._lock:
             rows = self._rows()
+            # The game doesn't change a ban that is there ("Nothing changed"), so a second one would keep the first's
+            # end and words: staff lift or pardon first.
+            if self._game_ban(name):
+                raise sp.Refused(409, f"{name} is banned already. Lift or pardon that ban first, then ban them again.")
             done = self.p.command(user, {"command": f"ban {name} {reason}"})
-            if done.get("refused") or not self._game_ban(name):
+            if done.get("refused") or "Nothing changed" in str(done.get("output")) or not self._game_ban(name):
                 raise sp.Refused(502, "The server didn't ban them (is it running?): nothing was saved. "
                                       f"It said: {done.get('output') or 'nothing'}")
-            rows[name.lower()] = {"name": name, "until": until, "by": user, "at": sp.stamp(), "reason": why}
+            rows[name.lower()] = {"name": name, "until": until, "by": user, "at": sp.stamp(), "reason": why,
+                                  "game_reason": reason}
             _save_json(self.file, {"version": 1, "bans": rows})
         self.p.record(user, "tempban", f"{name} for {hours} hours")
         return {"name": name, "until": until}
@@ -458,7 +467,15 @@ class TempBans:
     def _lift(self, who: str, key: str, row: dict, rows: dict) -> str:
         """Pardons the player if the game's ban is still this one, then forgets it. What happened, in words."""
         ban = self._game_ban(row["name"])
-        if ban is not None and str(ban.get("reason", "")).startswith(TEMP_REASON):
+        # Only the very ban this page made: one changed by hand (new words, or banned again for good) is staff's.
+        said_now = str(ban.get("reason", "")) if ban is not None else None
+        if said_now is None:
+            same = False
+        elif row.get("game_reason"):
+            same = said_now == row["game_reason"]
+        else:                                   # saved before the exact words were kept
+            same = said_now.startswith(TEMP_REASON)
+        if same:
             done = self.p.command(who, {"command": f"pardon {row['name']}"})
             if done.get("refused"):
                 raise sp.Refused(502, "The server didn't take the pardon: is it running?")
@@ -484,7 +501,12 @@ class TempBans:
         now, ended = self.clock(), []
         with self._lock:
             rows = self._load()
-            if not rows:
+            if rows is None:
+                raise RuntimeError("tempbans.json can't be read")     # the scheduler says so in the journal
+            if not any(row["until"] <= now for row in rows.values()):
+                return []
+            # No command while the server is off: each would fail, and still be a line in actions.log and a post.
+            if self.p.who_is_on() is None:
                 return []
             for key, row in list(rows.items()):
                 if row["until"] > now or not isinstance(row.get("name"), str):
@@ -532,11 +554,11 @@ def search_files(panel, query: dict) -> dict:
                 text = Path(path).read_bytes().decode("utf-8")
             except (OSError, UnicodeDecodeError):
                 continue
-            shown = sp.mask_secrets(text)[0].splitlines()
-            for number, line in enumerate(text.splitlines(), 1):
+            # Matched against the text as the editor shows it, secrets masked: matching the real text would let a
+            # search for "rcon.password=a", "=ab"... spell out a password from whether it finds anything.
+            for number, line in enumerate(sp.mask_secrets(text)[0].splitlines(), 1):
                 if wanted in line.lower():
-                    found.append({"path": "/".join(parts), "line": number,
-                                  "text": shown[number - 1].strip()[:200] if number <= len(shown) else ""})
+                    found.append({"path": "/".join(parts), "line": number, "text": line.strip()[:200]})
                     if len(found) >= SEARCH_SHOWN:
                         break
         if cut:
@@ -602,4 +624,4 @@ def register(module) -> None:
     module.ROUTES.update(ROUTES)
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
-    module.TICKS.append(lambda panel: tempbans(panel).expire())
+    module.SCHEDULER_LOOKS.append(lambda panel: tempbans(panel).expire())

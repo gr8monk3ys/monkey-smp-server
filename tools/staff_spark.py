@@ -19,7 +19,8 @@ The safety rules:
 - Only the commands above go to the server, built here from checked values: no text from the page reaches them.
 - One run at a time; a second start is refused while one runs. Each start and stop is one line in actions.log.
 - Only a link of LINK's shape is taken from the log, so nothing else of a log line (addresses, secrets) reaches the
-  page by this road. A report shows the mods, the machine's CPU and memory and the players online, never the seed.
+  page by this road, and never one from a chat line: a player could post a page of their own. A report shows the
+  mods, the machine's CPU and memory and the players online, never the seed.
 
 Stdlib only, Python 3.10 or newer.
 """
@@ -38,6 +39,9 @@ SECONDS = (30, 600)
 GRACE = 180                 # seconds after a run's end that the log is still searched: spark uploads, then says
 LINK = re.compile(r"https://spark\.lucko\.me/[A-Za-z0-9]{6,32}(?![A-Za-z0-9])")
 LOG_READ = 4 * 1024 * 1024  # the most of the log one look reads
+# What players say: <Name> text, [Not Secure] <Name> text, and /say's [Name] text. A link there is a player's, not
+# spark's, so a player can't hand staff a page of their own as "the report".
+_CHAT = re.compile(r"\]: (?:\[Not Secure\] )?(?:<[^>]*>|\[[A-Za-z0-9_]{3,16}\] )")
 
 
 def log_mark(log: Path) -> tuple[str, int] | None:
@@ -57,8 +61,12 @@ def link_after(log: Path, head: str, offset: int) -> tuple[str | None, bool]:
         return None, False
     with open(log, "rb") as f:
         f.seek(offset)
-        found = LINK.search(f.read(LOG_READ).decode("utf-8", "replace"))
-    return (found[0] if found else None), True
+        text = f.read(LOG_READ).decode("utf-8", "replace")
+    for line in text.splitlines():
+        found = LINK.search(line)
+        if found and not _CHAT.search(line[:found.start()]):
+            return found[0], True
+    return None, True
 
 
 class Spark:

@@ -72,7 +72,6 @@ import sys
 import tempfile
 import threading
 import time
-import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
@@ -312,13 +311,7 @@ def pid_alive(pid: int) -> bool:
     return b"monkey-deploy.sh" in cmdline
 
 
-def post_webhook(url: str, line: str) -> None:
-    """One line to the staff channel, mentioning nobody. A post that fails changes nothing."""
-    body = json.dumps({"content": line[:1900], "allowed_mentions": {"parse": []}}).encode()
-    request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json",
-                                                              "User-Agent": "monkey-panel"})
-    with contextlib.suppress(OSError, ValueError):
-        urllib.request.urlopen(request, timeout=10).close()
+post_webhook = staff_status.post_webhook     # one line to the staff channel, mentioning nobody
 
 
 # ---------------------------------------------------------------- the panel
@@ -1121,7 +1114,7 @@ def two_step_off(panel, user: str, name) -> dict:
 ROUTES.update(USER_ROUTES)
 NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
-TICKS: list = []    # f(panel), called on the scheduler's thread every SCHEDULE_TICK seconds (staff_desk: temp bans)
+SCHEDULER_LOOKS: list = []   # f(panel), each called on the scheduler's thread every 20 s (staff_desk: temp bans' ends)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_desk.register(sys.modules[__name__])    # everyone who has joined, notes, saved commands, the changes searched

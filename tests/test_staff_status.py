@@ -57,12 +57,13 @@ def box(tmp_path):
 
 def read(box, server=None, now=NOW, previous=None):
     return staff_status.status(box.live, now, server or docker(), previous=previous, meminfo=box.meminfo,
-                               settings=box.settings, failing=box.failing)
+                               settings=box.settings, failing=box.failing)[0]
 
 
 def test_reads_a_running_server(box):
     data = read(box)
-    assert data["version"] == 1 and data["checked"] == "2026-11-15T02:00:00Z" and data["online"] is True
+    assert data["version"] == staff_status.VERSION and data["checked"] == "2026-11-15T02:00:00Z"
+    assert data["online"] is True
     assert data["container"] == {"state": "running", "uptime": "3 hours", "health": "healthy"}
     assert data["tick"] == {"state": "The game is running normally", "target": 20.0, "tps": 20.0, "avg": 12.5,
                             "p50": 11.9, "p95": 18.7, "p99": 31.0, "sample": 100}
@@ -146,8 +147,12 @@ def test_history_carries_over_keeps_a_day_and_holds_no_names(box):
     assert "Alpha" not in json.dumps(data["history"])
     # A row from before memory and load were kept is carried over with nulls for them, so the day isn't lost.
     assert data["history"][0] == [kept, 3.0, 4.0, 2, None, None]
-    box.out.write_text(json.dumps({"history": [[kept, 3.0, 4.0, 2, 61.5, 140.0], [kept, 1, 2, 3, 4], [kept] * 7]}))
-    assert read(box, previous=box.out)["history"][:-1] == [[kept, 3.0, 4.0, 2, 61.5, 140.0]]
+    box.out.write_text(json.dumps({"version": staff_status.VERSION,
+                                   "history": [[kept, 3.0, 4.0, 2, 61.5, 40.0], [kept, 1, 2, 3, 4], [kept] * 7]}))
+    assert read(box, previous=box.out)["history"][:-1] == [[kept, 3.0, 4.0, 2, 61.5, 40.0]]
+    # A file from before version 2 had the load average there, which is not CPU in use: it is dropped.
+    box.out.write_text(json.dumps({"version": 1, "history": [[kept, 3.0, 4.0, 2, 61.5, 140.0]]}))
+    assert read(box, previous=box.out)["history"][0] == [kept, 3.0, 4.0, 2, 61.5, None]
 
 
 @pytest.mark.parametrize("machine, before, want", [
@@ -176,13 +181,13 @@ def test_cpu_times_from_proc_stat(tmp_path):
 def test_cpu_use_is_worked_out_across_two_readings(box, tmp_path):
     stat = tmp_path / "stat"
     stat.write_text("cpu  100 0 100 800 0 0 0 0\n")
-    first = staff_status.status(box.live, NOW, docker(), meminfo=box.meminfo, settings=box.settings,
-                                failing=box.failing, proc_stat=stat)
+    first, _ = staff_status.status(box.live, NOW, docker(), meminfo=box.meminfo, settings=box.settings,
+                                   failing=box.failing, proc_stat=stat)
     assert first["history"][-1][5] is None and first["host"]["cpu"] == {"total": 1000, "idle": 800}
     box.out.write_text(json.dumps(first))
     stat.write_text("cpu  250 0 150 1000 0 0 0 0\n")       # 400 more ticks, 200 of them idle
-    later = staff_status.status(box.live, NOW + dt.timedelta(minutes=2), docker(), previous=box.out,
-                                meminfo=box.meminfo, settings=box.settings, failing=box.failing, proc_stat=stat)
+    later, _ = staff_status.status(box.live, NOW + dt.timedelta(minutes=2), docker(), previous=box.out,
+                                   meminfo=box.meminfo, settings=box.settings, failing=box.failing, proc_stat=stat)
     assert later["history"][-1][5] == 50.0
 
 
@@ -517,6 +522,7 @@ def test_no_meminfo_is_no_numbers_not_a_crash(tmp_path):
 
 
 def test_write_replaces_the_file_whole_and_show_changes_nothing(box, monkeypatch, capsys):
+    monkeypatch.delenv("STAFF_WEBHOOK_URL", raising=False)     # never a real post from a test
     server = docker()
     monkeypatch.setattr(staff_status.server, "Docker", lambda _folder: server)
     assert staff_status.main(["show", str(box.live), "--at", "2026-11-15T02:00:00Z"]) == 0
@@ -814,19 +820,3 @@ def test_the_status_job_hands_the_staff_webhook_over_in_the_environment_only(sta
     assert [line for line in seen.read_text().splitlines() if " write " in line][0].endswith(" hook=")
 
 
-def test_the_status_reading_posts_only_when_asked(box, tmp_path):
-    posted = []
-    full = {"MemTotal": 16000000, "MemAvailable": 100000}
-    (tmp_path / "low").write_text("".join(f"{k}: {v} kB\n" for k, v in {**full, "SwapTotal": 0, "SwapFree": 0}.items()))
-    data = staff_status.status(box.live, NOW, docker(), meminfo=tmp_path / "low", settings=box.settings,
-                               failing=box.failing)
-    assert [a["id"] for a in data["advice"]] == ["memory"] and data["alerts"] == {}
-    data = staff_status.status(box.live, NOW, docker(), meminfo=tmp_path / "low", settings=box.settings,
-                               failing=box.failing, post=posted.append)
-    assert len(posted) == 1 and posted[0].startswith("Monkey SMP: The machine is nearly out of memory")
-    assert "memory" in data["alerts"]["posted"]
-    # The state carries over in the file: the next reading posts nothing new.
-    box.out.write_text(json.dumps(data))
-    staff_status.status(box.live, NOW + dt.timedelta(minutes=2), docker(), previous=box.out,
-                        meminfo=tmp_path / "low", settings=box.settings, failing=box.failing, post=posted.append)
-    assert len(posted) == 1

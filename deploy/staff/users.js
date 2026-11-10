@@ -336,7 +336,7 @@
       button("Log out everywhere", "", () => act("/api/users/sessions", { name: u.name })),
       button("New password link", "", () => act("/api/users/link", { name: u.name },
                                                (r) => handover(extras, u.name, r.link))),
-      button("Delete", "", () => confirmStep(li, `Delete the login ${u.name}? It can't be undone.`, "Delete",
+      button("Delete", "danger", () => confirmStep(li, `Delete the login ${u.name}? It can't be undone.`, "Delete",
                                              () => act("/api/users/delete", { name: u.name }))));
     // A lost phone: only for someone else; your own goes from the account menu, with a code.
     if (u.two_step && u.name !== me.user) {

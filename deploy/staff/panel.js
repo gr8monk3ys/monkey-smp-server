@@ -73,17 +73,20 @@
   const query = (params) => new URLSearchParams(params).toString();
   const list = (data, key) => (Array.isArray(data[key]) ? data[key] : Array.isArray(data) ? data : []);
 
-  // One line in a tab, in place of an alert: an error (red-free, bone on stone) or a quiet note.
+  // One line in a tab, in place of an alert: an error (a coral outline and its mark) or a quiet note. Each is
+  // brought into view, so the answer to a button far down a phone's page is not left off screen.
   function fail(tab, error) {
     const node = $(`${tab}-error`);
     node.hidden = !error;
     node.textContent = error ? (error.message || String(error)) : "";
+    if (error) node.scrollIntoView({ block: "nearest" });
   }
 
   function note(tab, text) {
     const node = $(`${tab}-note`);
     node.hidden = !text;
     node.textContent = text || "";
+    if (text) node.scrollIntoView({ block: "nearest" });
   }
 
   // The in-page confirm step: what will happen, a button that does it, and one that doesn't.
@@ -236,6 +239,7 @@
         const item = el("li");
         const what = el("span", "what");
         const full = join(files.dir, entry.name);
+        item.className = entry.dir ? "dir" : "file";
         what.appendChild(entry.dir ? link(`${entry.name}/`, () => loadDir(full)) : link(entry.name, () => openFile(full, entry.writable)));
         const meta = [entry.dir ? "" : size(entry.size), when(entry.mtime), entry.writable ? "" : "read only"].filter(Boolean);
         item.append(what, el("span", "meta", meta.join(", ")));
@@ -425,7 +429,10 @@
       const what = el("span", "what", name);
       if (reasonOf(item)) what.appendChild(el("span", "meta", ` (${reasonOf(item)})`));
       row.appendChild(what);
-      if (spec.remove) row.appendChild(button(spec.remove.label, "", () => spec.remove.run(name)));
+      if (spec.remove) {
+        row.appendChild(button(spec.remove.label, spec.remove.danger ? "danger" : "",
+          () => confirmStep("players", spec.remove.ask(name), spec.remove.yes(name), () => spec.remove.run(name))));
+      }
       if (spec.extra) row.appendChild(button(spec.extra.label, "", () => spec.extra.run(name)));
       ul.appendChild(row);
     }
@@ -450,7 +457,7 @@
         reason.setAttribute("aria-label", "Reason");
         reason.autocomplete = "off";
       }
-      const go = button(spec.add.label, "primary", () => {
+      const go = button(spec.add.label, spec.add.danger ? "danger" : "primary", () => {
         const typed = input.value.trim();
         if (!NAME.test(typed)) {
           fail("players", new Error("A name is 3 to 16 letters, digits or underscores."));
@@ -477,16 +484,25 @@
       $("players-body").replaceChildren(
         group("Online now", data.online || [], {
           none: "Nobody is on.",
-          remove: { label: "Kick", run: (name) => command(`kick ${name}`) },
+          remove: {
+            label: "Kick", danger: true, run: (name) => command(`kick ${name}`),
+            ask: (name) => `Kick ${name}? They are disconnected now and can join again at once.`, yes: (name) => `Yes, kick ${name}`,
+          },
         }),
         group("Whitelist", data.whitelist || [], {
           none: "Nobody is on the whitelist.",
-          remove: { label: "Remove", run: (name) => command(`whitelist remove ${name}`) },
+          remove: {
+            label: "Remove", danger: true, run: (name) => command(`whitelist remove ${name}`),
+            ask: (name) => `Take ${name} off the whitelist? They can't join until they are added again.`, yes: (name) => `Yes, remove ${name}`,
+          },
           add: { label: "Add", run: (name) => command(`whitelist add ${name}`) },
         }),
         group("Operators", data.ops || [], {
           none: "There are no operators.",
-          remove: { label: "Deop", run: (name) => command(`deop ${name}`) },
+          remove: {
+            label: "Deop", danger: true, run: (name) => command(`deop ${name}`),
+            ask: (name) => `Take operator away from ${name}? They lose the operator commands at once.`, yes: (name) => `Yes, deop ${name}`,
+          },
           add: {
             label: "Make operator",
             run: (name) => confirmStep("players", `Make ${name} an operator? Operators can run most commands in the game.`, `Yes, make ${name} operator`, run(`op ${name}`)),
@@ -494,9 +510,12 @@
         }),
         group("Banned", data.banned || data.bans || [], {
           none: "Nobody is banned.",
-          remove: { label: "Pardon", run: (name) => command(`pardon ${name}`) },
+          remove: {
+            label: "Pardon", run: (name) => command(`pardon ${name}`),
+            ask: (name) => `Pardon ${name}? They can join again at once.`, yes: (name) => `Yes, pardon ${name}`,
+          },
           add: {
-            label: "Ban", reason: true,
+            label: "Ban", reason: true, danger: true,
             run: (name, why) => confirmStep("players", `Ban ${name}${why ? ` for "${why}"` : ""}? They can't join until pardoned.`, `Yes, ban ${name}`, run(`ban ${name}${why ? ` ${why}` : ""}`)),
           },
         }),
@@ -671,7 +690,10 @@
   for (const node of document.querySelectorAll("[data-power]")) {
     node.addEventListener("click", () => {
       const action = node.dataset.power;
-      confirmStep("server", POWER[action][0], POWER[action][1], () => doPower(action));
+      // staff.js leaves the latest player count on the body while its reading is fresh.
+      const on = action === "start" ? 0 : Number(document.body.dataset.players || 0);
+      const who = on > 0 ? ` ${on === 1 ? "1 player is" : `${on} players are`} on right now.` : "";
+      confirmStep("server", POWER[action][0] + who, POWER[action][1], () => doPower(action));
     });
   }
 
@@ -698,9 +720,14 @@
     for (const name of TABS) {
       $(`tab-${name}`).hidden = name !== current;
     }
+    document.body.dataset.tab = current;
     for (const a of $("tabs").children) {
-      if (a.dataset.tab === current) a.setAttribute("aria-current", "page");
-      else a.removeAttribute("aria-current");
+      if (a.dataset.tab === current) {
+        a.setAttribute("aria-current", "page");
+        a.scrollIntoView({ block: "nearest", inline: "nearest" });   // the row of tabs scrolls sideways on a phone
+      } else {
+        a.removeAttribute("aria-current");
+      }
     }
     $("foot").hidden = current !== "status";
     if (VIEWS[current]) VIEWS[current]();

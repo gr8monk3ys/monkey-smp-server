@@ -449,7 +449,7 @@
         : `Turn ${m.file} back on?${m.held ? " It is kept off now: turning it on allows it again." : ""}`, on ? "Turn off" : "Turn on", m.file,
       (typed, hold) => modCall("/api/mod-toggle", { file: m.file, enabled: !on, confirm: typed, hold: on && hold }, on ? "Turned off." : "Turned on."),
       on && m.holdable ? KEEP_OFF : undefined), "owner"),
-      button("Remove", "", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.${pinnedOff}`,
+      button("Remove", "danger", () => modStep(`Remove ${m.file}? It is moved to mods-removed/ on the machine, never deleted.${pinnedOff}`,
         "Remove", m.file, (typed, hold) => modCall("/api/mod-remove", { file: m.file, confirm: typed, hold }, "Removed."),
         m.holdable ? KEEP_OFF : undefined), "owner"),
     ];
@@ -643,7 +643,7 @@
         { name: p.name, enabled: !p.enabled }, p.enabled ? "Turned off." : "Turned on."), "admin"));
     }
     if (!p.release) {
-      out.push(button("Remove", "", () => packStep(`Remove ${p.name}? It is moved to staff-removed/ on the machine, never deleted. Its changes to the world stay until the server reloads.`,
+      out.push(button("Remove", "danger", () => packStep(`Remove ${p.name}? It is moved to staff-removed/ on the machine, never deleted. Its changes to the world stay until the server reloads.`,
         "Remove", p.name, (typed) => packCall("/api/datapack-remove", { name: p.name, confirm: typed }, "Removed. Press Reload to unload it.")), "admin"));
     }
     return out;
@@ -1147,7 +1147,7 @@
       const items = (data.schedules || []).map((s) => entry(`${s.name}${s.enabled ? "" : " (off)"}`,
         `${describe(s)}. Next: ${s.next || "-"}. Last: ${s.last_run ? `${when(s.last_run)}, ${s.last_result || ""}` : "never"}.`,
         button(s.enabled ? "Turn off" : "Turn on", "", () => editSchedule({ id: s.id, enabled: !s.enabled }), "admin"),
-        button("Delete", "", () => confirmIn("schedules-confirm", `Delete the schedule ${s.name}?`, "Yes, delete",
+        button("Delete", "danger", () => confirmIn("schedules-confirm", `Delete the schedule ${s.name}?`, "Yes, delete",
           () => scheduleCall("POST", "/api/schedule-delete", { id: s.id }, "Deleted.")), "admin")));
       $("schedules-list").replaceChildren(...(items.length ? items : [emptyRow("No schedules made here yet.")]));
       $("sched-kind").querySelector('option[value="backup"]').disabled = !data.helper;

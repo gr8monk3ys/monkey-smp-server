@@ -297,7 +297,17 @@ allows no inline script or style. A tool for a quick look, so it keeps the groun
 show: no placed blocks, no gallery. One word in the display face says how the server is, with the sentence that
 explains it; the numbers sit in a rail on the left and the charts on the right (one column on phones), with recent
 problems above the charts, each marked with a shape and a word. The numbers use the body face, not the display face:
-at this size the display face's 2 reads as an 8. The chosen time range is the only gold fill, since it can be pressed.
+at this size the display face's 2 reads as an 8. Gold fills only what can be pressed to do something: the chosen time range and the main step of a view.
+
+The header and the tabs stay at the top of every tab. The header repeats the status word and its mark, so the
+server's state is in view while you work in another tab. A tab is a word with a bone bar under the open one; on a
+phone the tabs are one row that scrolls sideways. They are ordered by job: watching (Status, Players, Console,
+Reports), running (Server, Settings, Mods, Mod settings, Files), then Users.
+
+A button that takes something away (stop, restart now, kick, ban, remove, delete, reset) has a coral outline and
+coral text, never a gold fill, and always asks first. Messages come in three kinds, each with its own mark: a
+warning is ink on bone with a triangle, an error has a coral outline with an octagon, and a note that something was
+done is leaf with a tick.
 
 The only status colours in the system live here: green for good, amber `#f0a13c` for busy, coral `#ff8675` for slow.
 Each always comes with its word and its own pixel shape (filled square, triangle, octagon; a hollow square for offline,

@@ -405,6 +405,9 @@ footer { position: relative; padding-top: 112px; padding-bottom: 64px; backgroun
 .foot ul { list-style: none; margin: 0; padding: 0; }
 .foot li a { display: block; padding: 9px 0; color: var(--bone); font-weight: 700; text-decoration: none; }
 .foot li a:hover { color: var(--bone); text-decoration: underline; text-underline-offset: 6px; }
+/* The Wrapped pages (tools/wrapped.py) keep the footer as one line of links. */
+footer > p:first-child a { color: var(--bone); font-weight: 700; }
+footer > p:first-child a:hover { color: var(--gold-hi); }
 footer .small { margin: 0; }
 
 /* The dock (components/plaque.tsx): the address and the pass, in reach once the page's own have scrolled away.

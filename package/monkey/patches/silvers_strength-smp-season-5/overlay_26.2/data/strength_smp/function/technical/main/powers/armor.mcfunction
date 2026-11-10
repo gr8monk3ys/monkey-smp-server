@@ -18,6 +18,26 @@ attribute @s[scores={Strength_SMP+Armor-Ultimate_Duration=1..}] minecraft:explos
 execute as @s[scores={Strength_SMP+Armor-Ultimate_Cooldown=0}] at @s run function strength_smp:technical/trigger/ftf/off_cooldown/armor
 
 # Monkey SMP: no diamond -> netherite swap (it never swapped back). armor_check takes diamond or netherite.
+# Monkey SMP: the passive instead. Each worn diamond piece gets what netherite has over it (+1 armor toughness,
+# +0.1 knockback resistance) as a player modifier, so no item changes. Adding one already there fails quietly, as
+# upstream's strength buffs do. tick/public takes it all off when the power changes or the player dies.
+tag @s add strength_smp.armor_passive
+execute if items entity @s armor.head minecraft:diamond_helmet run attribute @s minecraft:armor_toughness modifier add strength_smp:armor_passive-head-armor_toughness 1 add_value
+execute if items entity @s armor.head minecraft:diamond_helmet run attribute @s minecraft:knockback_resistance modifier add strength_smp:armor_passive-head-knockback_resistance 0.1 add_value
+execute unless items entity @s armor.head minecraft:diamond_helmet run attribute @s minecraft:armor_toughness modifier remove strength_smp:armor_passive-head-armor_toughness
+execute unless items entity @s armor.head minecraft:diamond_helmet run attribute @s minecraft:knockback_resistance modifier remove strength_smp:armor_passive-head-knockback_resistance
+execute if items entity @s armor.chest minecraft:diamond_chestplate run attribute @s minecraft:armor_toughness modifier add strength_smp:armor_passive-chest-armor_toughness 1 add_value
+execute if items entity @s armor.chest minecraft:diamond_chestplate run attribute @s minecraft:knockback_resistance modifier add strength_smp:armor_passive-chest-knockback_resistance 0.1 add_value
+execute unless items entity @s armor.chest minecraft:diamond_chestplate run attribute @s minecraft:armor_toughness modifier remove strength_smp:armor_passive-chest-armor_toughness
+execute unless items entity @s armor.chest minecraft:diamond_chestplate run attribute @s minecraft:knockback_resistance modifier remove strength_smp:armor_passive-chest-knockback_resistance
+execute if items entity @s armor.legs minecraft:diamond_leggings run attribute @s minecraft:armor_toughness modifier add strength_smp:armor_passive-legs-armor_toughness 1 add_value
+execute if items entity @s armor.legs minecraft:diamond_leggings run attribute @s minecraft:knockback_resistance modifier add strength_smp:armor_passive-legs-knockback_resistance 0.1 add_value
+execute unless items entity @s armor.legs minecraft:diamond_leggings run attribute @s minecraft:armor_toughness modifier remove strength_smp:armor_passive-legs-armor_toughness
+execute unless items entity @s armor.legs minecraft:diamond_leggings run attribute @s minecraft:knockback_resistance modifier remove strength_smp:armor_passive-legs-knockback_resistance
+execute if items entity @s armor.feet minecraft:diamond_boots run attribute @s minecraft:armor_toughness modifier add strength_smp:armor_passive-feet-armor_toughness 1 add_value
+execute if items entity @s armor.feet minecraft:diamond_boots run attribute @s minecraft:knockback_resistance modifier add strength_smp:armor_passive-feet-knockback_resistance 0.1 add_value
+execute unless items entity @s armor.feet minecraft:diamond_boots run attribute @s minecraft:armor_toughness modifier remove strength_smp:armor_passive-feet-armor_toughness
+execute unless items entity @s armor.feet minecraft:diamond_boots run attribute @s minecraft:knockback_resistance modifier remove strength_smp:armor_passive-feet-knockback_resistance
 
 
 

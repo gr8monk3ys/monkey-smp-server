@@ -170,7 +170,11 @@ for d in libraries versions .fabric; do
 done
 rsync -a -m --exclude='/bluemap/' --exclude='/logs/' --exclude='/libraries/' --exclude='/versions/' \
     --exclude='/.fabric/' --include='*/' --include='*.jar' --exclude='*' "$SERVER/" "$scratch/server/"
-[ ! -f "$SERVER/.monkey-state.json" ] || cp -p "$SERVER/.monkey-state.json" "$scratch/server/"
+# The live folder is the monkey user's: root copies links as links (cp -a, rsync -a, cp -P) and never follows one,
+# so a link there can't make root copy a file monkey may not read.
+if [ -f "$SERVER/.monkey-state.json" ] && [ ! -L "$SERVER/.monkey-state.json" ]; then
+    cp -P -p "$SERVER/.monkey-state.json" "$scratch/server/"
+fi
 chown -R "$DRILL_UID:$DRILL_UID" "$scratch"
 
 # ---------------------------------------------------------------- 5. and 6. boot it, offline

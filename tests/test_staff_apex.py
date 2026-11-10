@@ -305,7 +305,7 @@ def test_the_helper_script_is_plain_posix_sh_with_a_fixed_allow_list():
     assert "PathExistsGlob=/srv/monkey/staff/requests/*.req" in (DEPLOY / "monkey-staff-helper.path").read_text()
     service = (DEPLOY / "monkey-staff-helper.service").read_text()
     assert "User=root" in service and "StateDirectory=monkey-staff-helper" in service
-    assert "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-staff-helper.sh" in service
+    assert "ExecStart=/bin/sh /opt/monkey/deploy/monkey-staff-helper.sh" in service   # root's copy
     shell = shutil.which("dash")
     if shell:
         for name in ("monkey-staff-helper.sh", "monkey-staff.sh"):
@@ -328,7 +328,7 @@ HELPER_FAKES = {
 # The repo's monkey-backup.sh needs root's keys; this one answers --restic like restic would.
 FAKE_BACKUP = """#!/bin/sh
 echo "backup.sh $*" >>"$FAKE_CALLS"
-[ "$1" = --restic ] || exit 2
+[ "$1" = --restic-read ] || exit 2   # read-only: the helper never writes to the repository
 shift
 case $1 in
     snapshots) cat "$FAKE_SNAPSHOTS" ;;
@@ -379,7 +379,10 @@ def helper(tmp_path):
                    "FAKE_CALLS": calls.as_posix(), "FAKE_SNAPSHOTS": snaps.as_posix(),
                    "MONKEY_DEPLOY_ENV": (tmp_path / "none").as_posix(), "REPO_DIR": repo.as_posix(),
                    "LIVE_DIR": live.as_posix(), "STAFF_DIR": staff_dir.as_posix(),
-                   "HELPER_RESULTS": results.as_posix(), "LOCK_FILE": (tmp_path / "deploy.lock").as_posix(), **env}
+                   "HELPER_RESULTS": results.as_posix(), "LOCK_FILE": (tmp_path / "deploy.lock").as_posix(),
+                   # root's copies (in /opt/monkey on the VPS): here the made-up checkout's
+                   "HELPER_BACKUP": (repo / "deploy" / "monkey-backup.sh").as_posix(),
+                   "HELPER_TOOLS": (repo / "tools").as_posix(), **env}
         done = subprocess.run([shell, (DEPLOY / "monkey-staff-helper.sh").as_posix()], env=environ,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
         out = {p.stem: json.loads(p.read_text()) for p in results.glob("*.json")} if results.exists() else {}
@@ -434,7 +437,7 @@ def test_the_helper_lists_the_snapshots_cut_down(helper):
     result = done.results[RID]
     assert result["state"] == "done"
     assert [s["short_id"] for s in result["snapshots"]] == ["b" * 8, "a" * 8]
-    assert "backup.sh --restic snapshots --json --tag world" in done.calls
+    assert "backup.sh --restic-read snapshots --json --tag world" in done.calls
 
 
 def test_the_helper_refuses_a_snapshot_that_is_not_hex(helper):
@@ -455,7 +458,7 @@ def test_the_helper_restores_a_snapshot_and_keeps_the_old_world(helper):
     kept = list((helper.live / "backups").glob("before-restore-*/world/level.dat"))
     assert len(kept) == 1 and kept[0].read_text() == "live"
     assert not list(helper.live.glob(".restore.*"))
-    restore = next(i for i, c in enumerate(done.calls) if c.startswith("backup.sh --restic restore"))
+    restore = next(i for i, c in enumerate(done.calls) if c.startswith("backup.sh --restic-read restore"))
     assert f"{snap}:{helper.live.as_posix()}/server/world" in done.calls[restore]
     stop = next(i for i, c in enumerate(done.calls) if c.endswith("stop monkey"))
     start = next(i for i, c in enumerate(done.calls) if c.endswith("up -d --no-build monkey"))

@@ -8,11 +8,12 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-# Root, because only root may read /etc/monkey-backup.env (the R2 keys and the restic password).
+# Root, because only root may read /etc/monkey-backup.env (the R2 keys and the restic password). So it runs root's
+# own copy in /opt/monkey/deploy (deploy/install-root.sh), never the checkout the monkey user can write.
 User=root
-ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-backup.sh
+ExecStart=/bin/sh /opt/monkey/deploy/monkey-backup.sh
 # If the run was killed before it could turn saving back on, do it now. Does nothing otherwise.
-ExecStopPost=-/bin/sh /srv/monkey/repo/deploy/monkey-backup.sh --save-on
+ExecStopPost=-/bin/sh /opt/monkey/deploy/monkey-backup.sh --save-on
 # /var/cache/monkey-backup (restic's cache) and /var/lib/monkey-backup (the script's state).
 CacheDirectory=monkey-backup
 StateDirectory=monkey-backup

@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 import pytest
-import restore_drill
 
+import restore_drill
 from repo import REPO
 
 SCRIPT = REPO.root / "deploy" / "monkey-restore-drill.sh"

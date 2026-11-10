@@ -26,9 +26,12 @@
 #
 #   sh monkey-staff-helper.sh     handle every request waiting (what the service runs)
 #
-# Install with  sudo sh monkey-staff.sh --install-helper  (an owner's step: it adds a root service).
-# Reads REPO_DIR, LIVE_DIR, STAFF_DIR and LOCK_FILE from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV); HELPER_RESULTS
-# and HELPER_LOCK_WAIT are for the tests.
+# Install with  sudo sh monkey-staff.sh --install-helper  (an owner's step: it adds a root service). The service runs
+# root's own copy in /opt/monkey/deploy (deploy/install-root.sh puts it there), and so does everything it runs as root:
+# monkey-backup.sh beside it and tools/staff_apex.py in /opt/monkey/tools. Root runs nothing the monkey user can write;
+# what it runs from the checkout (the deploy, staff_host.py) runs as the checkout's owner.
+# Reads REPO_DIR, LIVE_DIR, STAFF_DIR and LOCK_FILE from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV); HELPER_RESULTS,
+# HELPER_LOCK_WAIT, HELPER_BACKUP and HELPER_TOOLS are for the tests.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -44,7 +47,9 @@ LOCK_FILE=${LOCK_FILE:-$(setting LOCK_FILE /tmp/monkey-deploy.lock)}
 REQUESTS=$STAFF_DIR/requests
 RESULTS=${HELPER_RESULTS:-/var/lib/monkey-staff-helper/results}
 LOCK_WAIT=${HELPER_LOCK_WAIT:-1800}
-BACKUP=$REPO_DIR/deploy/monkey-backup.sh
+HERE=$(cd "$(dirname -- "$0")" && pwd)
+BACKUP=${HELPER_BACKUP:-$HERE/monkey-backup.sh}
+ROOT_TOOLS=${HELPER_TOOLS:-$HERE/../tools}
 KEEP_RESULTS=50
 
 [ "$(id -u)" = 0 ] || die 'run as root (monkey-staff-helper.service does)'
@@ -78,8 +83,8 @@ do_list() {
     result "$1" list-snapshots running 'Asking R2 for the snapshot list.'
     l_out=$(mktemp)
     # The pipe's status is python's: a restic that failed leaves it no JSON, and it fails too.
-    if timeout 600 sh "$BACKUP" --restic snapshots --json --tag world 2>/dev/null |
-        python3 -B -I "$REPO_DIR/tools/staff_apex.py" snapshots >"$l_out" 2>/dev/null; then
+    if timeout 600 sh "$BACKUP" --restic-read snapshots --json --tag world 2>/dev/null |
+        python3 -B -I "$ROOT_TOOLS/staff_apex.py" snapshots >"$l_out" 2>/dev/null; then
         log "listed the snapshots (asked by $user)"
         result "$1" list-snapshots done 'The snapshot list from R2.' "$(cat "$l_out")"
     else
@@ -203,7 +208,7 @@ do_restore() {
     result "$r_id" restore running "Restoring snapshot $short beside the live world. The server keeps running for now."
     # Beside the world, on the same disk, so the swap is a rename; the server is still up while restic downloads.
     stage=$(mktemp -d "$LIVE_DIR/.restore.XXXXXX") || { job_failed "$r_id" restore 'Could not make a folder beside the world.'; return 0; }
-    if ! timeout 3h sh "$BACKUP" --restic restore "$r_snap:$server/$level" --target "$stage/world"; then
+    if ! timeout 3h sh "$BACKUP" --restic-read restore "$r_snap:$server/$level" --target "$stage/world"; then
         job_failed "$r_id" restore "restic could not restore snapshot $short: see journalctl -u monkey-staff-helper."
         return 0
     fi

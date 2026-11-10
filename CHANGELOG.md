@@ -4,6 +4,10 @@
 
 ### Added
 
+- Storage Drawers 26.2.0.1 (Texelsaur, Modrinth `storagedrawers`), on the server and in the players' pack. Staff
+  put the jar on the live server by hand on 2026-11-09 and made it required to join; the pack now pins the same
+  file (matched by its SHA-1 on Modrinth). A deploy finds that file already in place with the pinned hash, keeps it
+  and manages it from then on, so the server ends up with one copy. Needs Fabric API (already in the pack).
 - Patina & Chime 0.2.1, the owner's own copper and amethyst mod, on the server and in the players' pack. It is
   still waiting for Modrinth's moderation, so it is pinned from its GitHub release instead: size and hash in the
   manifest, downloaded and checked on install like every other mod (ADR-0009). Players need the new pack to

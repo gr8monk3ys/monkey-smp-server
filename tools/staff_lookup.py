@@ -16,8 +16,9 @@ control; docs/LIVE.md, "The staff page", says what each one does.
 The safety rules:
 - A moderator's console command goes through the console's own checks first (no seed, no stop, one line), then
   must start with the words of one allowed entry ("whitelist add" allows `whitelist add NAME`, not `whitelist off`).
-  Commands that run other commands, change who is an operator, reload code or show addresses can never be allowed
-  (NEVER), so the list can't lift a moderator to admin. Admins and owners use the console as before.
+  The owner picks entries only from CAN_ALLOW, known commands that can't run others, make operators, place a
+  command block or send a click, so the list can't lift a moderator to admin. Admins and owners use the console as
+  before.
 - Block history opens Ledger's database read-only (mode=ro), only through its location index, one (x, y) column at a
   time, inside a box of at most RADIUS_MAX blocks each way, for at most HOURS_MAX hours, and stops after
   LOOKUP_SECONDS or LOOKUP_ROWS rows, saying so. Rows from the `command` source (Dynamic Lights' light blocks) are
@@ -49,16 +50,15 @@ sp = None   # tools/staff_panel.py (register)
 ENTRY = re.compile(r"[a-z0-9_.:-]{1,40}(?: [a-z0-9_.:-]{1,40}){0,2}")
 ENTRIES_MAX = 40
 DEFAULT_COMMANDS = ["list", "say", "msg", "tell", "w", "kick", "whitelist add", "whitelist remove", "whitelist list"]
-# The first words a moderator can never be allowed, whatever the list says: they run other commands (execute,
-# function, schedule, return), make operators, reload or change code (reload, datapack), stop saving, end the server,
-# show the seed or show or ban addresses (banlist ips, ban-ip). Also every command that can put a command block, a
-# command-block minecart or NBT in the world or in a hand (setblock, fill, clone, place, give, item, loot, summon,
-# data), since a command block runs as the server and could op its maker, and text with a click that runs a command
-# as whoever clicks it, an operator too (tellraw, dialog). `minecraft:` in front is the same command.
-NEVER = {"execute", "function", "schedule", "return", "op", "deop", "reload", "datapack", "stop", "seed", "save-off",
-         "ban-ip", "pardon-ip", "banlist", "debug", "jfr", "perf", "transfer", "trigger",
-         "setblock", "fill", "clone", "place", "give", "item", "loot", "summon", "data", "tellraw", "dialog",
-         "publish", "setidletimeout", "forceload"}
+# The only first words the owner can give moderators. A fixed list of known commands, not a list of forbidden ones:
+# a forbidden list always misses one, and many commands can make a moderator an operator by the back door (setblock,
+# give, data or summon make a command block, which runs as the server; tellraw, team, bossbar and scoreboard take
+# text with a click that runs a command as whoever clicks it, an operator too). None of these take such text or NBT.
+# `minecraft:` in front is the same command. `ledger` is Ledger's own look-ups and rollbacks.
+CAN_ALLOW = {"list", "say", "msg", "tell", "w", "me", "teammsg", "tm", "kick", "ban", "pardon", "whitelist",
+             "tp", "teleport", "spectate", "gamemode", "effect", "clear", "kill", "weather", "time", "difficulty",
+             "gamerule", "xp", "experience", "enchant", "playsound", "stopsound", "spawnpoint", "worldborder",
+             "locate", "ledger"}
 
 RADIUS_MAX = 8
 HOURS = (1, 24 * 30)
@@ -104,10 +104,8 @@ def checked_entries(value) -> list[str]:
         if not ENTRY.fullmatch(entry):
             raise sp.Refused(400, f"{entry[:40]!r}: one to three words of letters, digits and _ . : -")
         first = entry.split()[0].removeprefix("minecraft:")
-        if first in NEVER:
-            raise sp.Refused(400, f"{first} can't be allowed for moderators: it runs other commands, makes "
-                                  "operators, can place a command block, changes code, stops the server or shows "
-                                  "addresses.")
+        if first not in CAN_ALLOW:
+            raise sp.Refused(400, f"{first} can't be given to moderators. These can: {', '.join(sorted(CAN_ALLOW))}.")
         if entry not in out:
             out.append(entry)
     return out
@@ -119,7 +117,7 @@ def allows(entries: list[str], command: str) -> bool:
     if not words:
         return False
     words[0] = words[0].removeprefix("minecraft:")
-    if words[0] in NEVER:
+    if words[0] not in CAN_ALLOW:
         return False
     for entry in entries:
         want = entry.split()
@@ -148,12 +146,12 @@ class ModCommands:
         if not isinstance(rows, list):
             return [], {"broken": True}
         kept = [r for r in rows if isinstance(r, str) and ENTRY.fullmatch(r)
-                and r.split()[0].removeprefix("minecraft:") not in NEVER]
+                and r.split()[0].removeprefix("minecraft:") in CAN_ALLOW]
         return kept, {"by": data.get("by"), "at": data.get("at")}
 
     def listed(self) -> dict:
         rows, about = self.entries()
-        return {"commands": rows, **about, "never": sorted(NEVER)}
+        return {"commands": rows, **about, "can_allow": sorted(CAN_ALLOW)}
 
     def save(self, user: str, body: dict) -> dict:
         rows = checked_entries(body.get("commands"))

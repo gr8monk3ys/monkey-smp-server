@@ -32,6 +32,17 @@
   advancements and the `gilded_station` recipe don't parse on 26.2); see `docs/MAINTAINING.md`, "Updating the
   server, plugins and mods".
 
+### Changed
+
+- **Weekly standings: land no longer counts.** A faction's rank comes from three columns: Cup 50, Strength 25,
+  kills 25 (before: Cup 40, land 20, Strength 20, kills 20). Bounties (+5) and outpost hours (+1, at most 20) are
+  as before, and claims themselves are unchanged. The board, the Discord table, `standings.py show` and the
+  formula text lose the land column; the website's file never had it. Closed weeks are not rewritten: a week
+  closed with the land column keeps its land numbers and formula in `STATE/weeks/`, and the board's last-week
+  table and a re-posted Discord table show it as it was scored. The Sunday recap's "Land" line (chunks claimed
+  that week, `tools/recap.py`) and the first-week quest's "Claim a chunk" step are unchanged. The
+  `monkey-standings` pack is regenerated (the board's footer); it is still off on the live server.
+
 ### Fixed
 
 - Timed jobs no longer fail when staff turned their data pack off. With the wardrobe pack off since 2026-11-06,

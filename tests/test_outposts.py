@@ -314,8 +314,7 @@ def test_the_standings_table_adds_outpost_hours_as_a_bonus_like_bounties(tmp_pat
     text = standings.table_text(list(rows.values()))
     assert text[0].endswith(" Hold") and standings.board_line(rows["Red Monkeys"]).endswith(", outposts 4h]\n")
     assert "outposts" not in standings.board_line(rows["Blue Herons"])
-    assert "outpost" in standings.FORMULA and standings.WEIGHTS == (("cup", 40), ("land", 20), ("strength", 20),
-                                                                     ("kills", 20))
+    assert "outpost" in standings.FORMULA and standings.WEIGHTS == (("cup", 50), ("strength", 25), ("kills", 25))
     assert standings.snapshot(data, NOON)["outposts"] == {"epoch": 77, "minutes": {"#f1": 310}, "seq": 0}
 
 

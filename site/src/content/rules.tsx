@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { LaunchTime } from "@/components/links";
+import { running } from "@/lib/live";
 
 // The front page's rules, one stone tablet each (#rules). The full rulebook is docs/RULES.md, pinned in the
 // Discord; this is its short form, so change both together.
@@ -10,8 +11,10 @@ export const rules: Tablet[] = [
     title: "Season I launch",
     text: <>Launch: <LaunchTime template="{date} at {pacific} ({eastern})" />, everyone let in at once. For the first
       hour, PvP, the Nether and the End are closed; then PvP and only the Nether open, and the End opens when we
-      announce it. No Netherite armor until we say so: the smithing table won&apos;t make it, and armor you find
-      comes off at your feet (Netherite tools and weapons are fine). The world border is 5000 &times; 5000 around
+      announce it. {running("monkey-no-netherite-armor")
+        ? <>No Netherite armor until we say so: the smithing table won&apos;t make it, and armor you find comes off
+          at your feet (Netherite tools and weapons are fine).</>
+        : "No Netherite armor until we say so (Netherite tools and weapons are fine)."} The world border is 5000 &times; 5000 around
       spawn and grows as the server does.</>,
   },
   {

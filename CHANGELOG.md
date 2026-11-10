@@ -37,6 +37,11 @@
 - `monkey-deploy.timer` checks 1 minute after it starts (`OnActiveSec`). Stopped on 11-04 and started again on
   11-08, it never fired: 5 minutes after the last check only counts once a check has run, so no release could
   deploy itself. Install the new unit by hand (docs/LIVE.md, "The deploy timer that fires on start").
+- The Armor power has a passive again. 3.3.0 removed upstream's, which turned diamond armor into netherite, and
+  left nothing in its place. Now each diamond piece an Armor player wears gets what netherite has over it: +1 armor
+  toughness and +0.1 knockback resistance. Nothing about the armor changes; the bonus comes off when the piece does,
+  when the power changes and at death (docs/MAINTAINING.md, "Patches this pack carries"). Staff reported it
+  (2026-11-08).
 - **The front page's refunds answer said the 2-month pass doesn't renew.** It has renewed every 2 months since
   2026-11-07 (docs/LIVE.md, "The store"); the answer now says so.
 

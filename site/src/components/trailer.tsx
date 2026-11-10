@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { OffNote } from "@/components/live";
 
 /** The trailer plays muted while it's on screen, unless the visitor asked for less motion or less data. A pause
  * the visitor made sticks. */
@@ -43,7 +44,9 @@ export function Trailer() {
         </video>
       </div>
       <figcaption>The trailer, one minute. The event scenes are staged on a test server with stand-in players. It
-        plays muted: turn the sound on in the player.</figcaption>
+        plays muted: turn the sound on in the player.{" "}
+        {/* It shows a Faction Raid, Arena Glory, the Cup and wardrobe items (marketing/trailer.py). */}
+        <OffNote as="span" className="" packs={["monkey-events", "monkey-wardrobe"]} /></figcaption>
     </figure>
   );
 }

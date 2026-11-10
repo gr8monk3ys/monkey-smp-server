@@ -21,6 +21,7 @@ import defaults
 import entries
 import launcher_profile
 import patches
+import player_needs
 import pwsh_lock
 import season_ics
 import site_links
@@ -132,6 +133,16 @@ def validate_client(manifest: dict, repo=REPO) -> list[str]:
     return errors + validate_profile(index, repo)
 
 
+def client_version_problems(manifest: dict, repo=REPO) -> list[str]:
+    """The client pack's own versionId is the release's: build.py stamps the built pack, but the source index is
+    what the Modrinth App shows when the pack is imported from the repo."""
+    version = load_json(repo.client / "modrinth.index.json").get("versionId")
+    if version != manifest["version"]:
+        return [f"client: modrinth.index.json's versionId is {version}, but the manifest is {manifest['version']}: "
+                "change both together (docs/MAINTAINING.md, Releasing, step 1)"]
+    return []
+
+
 def validate_profile(index: dict, repo=REPO) -> list[str]:
     """client/fabric-profile.json must be the launcher profile for the client index's Minecraft + loader."""
     mc, loader = index["dependencies"].get("minecraft"), index["dependencies"].get("fabric-loader")
@@ -196,6 +207,7 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
         errors += [f"{p} is out of date (run python tools/datapacks.py)" for p in datapacks.differences(repo)]
         errors += datapacks.problems(datapacks.all_files(repo))
         errors += season_ics.problems(repo)
+        errors += client_version_problems(manifest, repo) + player_needs.problems(repo)
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
         errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)

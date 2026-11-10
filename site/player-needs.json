@@ -1,0 +1,7 @@
+{
+  "about": "What a player needs. pack_mb is the client pack's download (tools/player_needs.py --write works it out from client/modrinth.index.json); ram_gb is kept by hand. The site and the player docs say these numbers; validate.py checks they agree.",
+  "pack_mb": 380,
+  "ram_gb": 16,
+  "ram_measured": false,
+  "ram_note": "Not measured: no test in the repo runs the client pack on a machine and records its memory."
+}

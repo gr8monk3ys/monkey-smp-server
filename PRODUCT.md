@@ -52,7 +52,7 @@ connects without needing help.
   `address`, `copy`, `countdown`, `launch-label` and `trailer`.
 - While `STORE_URL` is empty, every buy button points at the Discord and the pages say passes are arranged
   there by hand; once the Tebex store opens the "open" copy shows instead.
-- The modpack (`.mrpack`, about 560 MB) and the Windows installer zip are served from `site/public/pack/`,
+- The modpack (`.mrpack`; a launcher downloads about 380 MB with it) and the Windows installer zip are served from `site/public/pack/`,
   versioned with each release. `site/src/content/changes.mdx` gets a players' entry with each release (tests check its shape).
 - Pages: `/` (the server), `/guide` (how it works: a sidebar of pages, from the first hour to commands by rank and the Discord), `/changes` (what changed), `/creators` (creator codes),
   in `site/src/app/`.

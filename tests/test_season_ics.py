@@ -216,7 +216,7 @@ def test_the_times_are_the_pacific_ones_the_site_gives():
 
 def test_the_site_says_every_time_and_date_the_file_gives():
     guide = (SITE / "src" / "content" / "guide" / "week.ts").read_text(encoding="utf-8")
-    assert 'at: "6 PM", text: "The week\'s event:' in guide
+    assert 'at: "6 PM", text: `The week\'s event:' in guide
     assert 'at: "7 PM", text: "The week\'s faction standings close' in guide
     changes = (SITE / "src" / "content" / "changes.mdx").read_text(encoding="utf-8")
     assert "the finale is on 23 January" in changes

@@ -61,10 +61,11 @@ def test_the_armor_ultimate_modifiers_come_off_for_every_player():
 
 def test_the_armor_power_adds_only_its_own_modifiers_and_swaps_nothing():
     armor = commands(patched("function/technical/main/powers/armor.mcfunction"))
-    adds = [line for line in armor if " modifier add " in line]
-    assert len(adds) == 2 and all("strength_smp:armor_ultimate-" in line for line in adds)
-    assert not [line for line in armor if "modifier remove" in line or "s_inv_lib:macro/item_modify" in line]
-    assert not [line for line in armor if "netherite" in line]
+    changes = [line for line in armor if " modifier add " in line or " modifier remove " in line]
+    ultimate = [line for line in changes if "strength_smp:armor_ultimate-" in line]
+    assert len(ultimate) == 2 and all(" modifier add " in line for line in ultimate)
+    assert all("strength_smp:armor_passive-" in line for line in changes if line not in ultimate)
+    assert not [line for line in armor if "s_inv_lib:macro/item_modify" in line or "netherite" in line]
 
 
 def test_the_armor_power_keeps_upstreams_hit_counter():
@@ -87,3 +88,36 @@ def test_the_armor_ultimate_takes_a_full_diamond_or_netherite_set():
     for slot, piece in zip(("armor.head", "armor.chest", "armor.legs", "armor.feet"),
                            ("helmet", "chestplate", "leggings", "boots"), strict=True):
         assert slots[slot]["items"] == [f"minecraft:diamond_{piece}", f"minecraft:netherite_{piece}"]
+
+
+
+PIECES = {"head": "helmet", "chest": "chestplate", "legs": "leggings", "feet": "boots"}
+PASSIVE = (("armor_toughness", "1"), ("knockback_resistance", "0.1"))
+OFF = "strength_smp.armor_passive.off"
+
+
+def test_the_armor_passive_follows_each_worn_diamond_piece():
+    """Instead of upstream's netherite swap: netherite's extra stats while each diamond piece is worn."""
+    armor = commands(patched("function/technical/main/powers/armor.mcfunction"))
+    assert "tag @s add strength_smp.armor_passive" in armor
+    for slot, piece in PIECES.items():
+        worn = f"items entity @s armor.{slot} minecraft:diamond_{piece} run attribute @s minecraft:"
+        for attribute, amount in PASSIVE:
+            name = f"strength_smp:armor_passive-{slot}-{attribute}"
+            assert f"execute if {worn}{attribute} modifier add {name} {amount} add_value" in armor
+            assert f"execute unless {worn}{attribute} modifier remove {name}" in armor
+
+
+def test_the_armor_passive_comes_off_on_a_new_power_and_at_death():
+    """tick/public runs whatever the power; the clear runs before death_resets zeroes the death count."""
+    public = commands(patched("function/technical/main/tick/public.mcfunction"))
+    start = public.index("execute if entity @s[tag=strength_smp.armor_passive] unless score @s "
+                         f"Strength_SMP+Selected_Weapon_ID matches 9 run tag @s add {OFF}")
+    assert public[start + 1] == f"tag @s[tag=strength_smp.armor_passive,scores={{Strength_SMP+Death=1..}}] add {OFF}"
+    removes = public[start + 2:start + 10]
+    assert removes == [f"attribute @s[tag={OFF}] minecraft:{attribute} modifier remove "
+                       f"strength_smp:armor_passive-{slot}-{attribute}" for slot in PIECES for attribute, _ in PASSIVE]
+    assert public[start + 10:start + 12] == [f"tag @s[tag={OFF}] remove strength_smp.armor_passive",
+                                             f"tag @s[tag={OFF}] remove {OFF}"]
+    resets = next(i for i, line in enumerate(public) if "death_resets" in line and "Death=1.." in line)
+    assert start + 11 < resets

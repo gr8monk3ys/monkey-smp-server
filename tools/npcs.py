@@ -100,17 +100,17 @@ GUIDE_TEXT = ("Hi @initiator, welcome to Monkey SMP! I can go over the short rul
 RULES_TEXT = "<br>".join((
     "The short rules:",
     "- No combat logging, and no teaming in other factions' fights.",
-    "- A faction holds at most 4 players. No insiding.",
+    f"- A faction holds at most {rules.faction_size()} players. No insiding.",
     "- Nobody griefs a territory without permission.",
     "- Your first 48 hours come with PvP grace. Attacking a player ends it.",
     "- Spawn is a no-PvP zone, and nobody touches it.",
     "- No hacked clients, x-ray, dupes or exploits. Respect people.",
     "",
-    "The full rulebook is in #smp-rules on the Discord.",
+    f"The full rulebook is on the website: {rules.SITE.removeprefix('https://')}/guide/rules",
 ))
 FACTIONS_TEXT = "<br>".join((
-    "A faction is up to 4 players who share land, and most start small. Factions that are recruiting post "
-    "in #smp-forum on the Discord.",
+    f"A faction is up to {rules.faction_size()} players who share land, and most start small. Factions that are "
+    "recruiting post in #smp-forum on the Discord.",
     "",
     "To start your own: /oparties create, then /oparties member invite and the player's name.",
 ))

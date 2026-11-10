@@ -24,11 +24,21 @@ test("lists read as English", () => {
 
 test("a note names what isn't running, and is empty when all of it is", () => {
   const on = packs.filter(running);
-  const off = packs.filter((pack) => !running(pack));
+  const off = packs.filter((pack) => list.packs[pack] === "off");
   if (on.length) assert.equal(offText(on), "");
   if (off.length >= 3) {
     const text = offText(off.slice(0, 3));
     assert.equal(text, `Not running on the server right now: ${NAMES[off[0]]}; ${NAMES[off[1]]}; and ${NAMES[off[2]]}.`);
   }
   if (off.length) assert.equal(offText([off[0]]), `Not running on the server right now: ${NAMES[off[0]]}.`);
+});
+
+test("a pack coming back is said apart, and still doesn't run", () => {
+  const returning = packs.filter((pack) => list.packs[pack] === "returning");
+  for (const pack of returning) assert.equal(running(pack), false);
+  const off = packs.filter((pack) => list.packs[pack] === "off");
+  if (returning.length && off.length) {
+    assert.equal(offText([off[0], returning[0]]), `Not running on the server right now: ${NAMES[off[0]]}. `
+      + `Coming back this season, not running yet: ${NAMES[returning[0]]}.`);
+  }
 });

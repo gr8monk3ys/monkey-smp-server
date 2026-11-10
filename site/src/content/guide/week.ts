@@ -2,7 +2,7 @@
 // Saturday. Times are Pacific. Keep it in step with tools/season_calendar.py, tools/drops.py and tools/omens.py.
 // A line with a `pack` shows only while that data pack runs (site/live-packs.json), and a day with no line left
 // isn't shown.
-import { type Pack, running } from "@/lib/live";
+import { type Pack, running, whereRunning } from "@/lib/live";
 
 export type Day = {
   name: string;
@@ -19,9 +19,8 @@ function sayOr(items: string[]): string {
 }
 
 /** Saturday's events, those whose pack runs. */
-const saturday = ([["a Faction Raid", "monkey-events"], ["Arena Glory", "monkey-events"],
-  ["a Build Battle", "monkey-nights"], ["the border breaking open"]] as [string, Pack?][])
-  .filter(([, pack]) => !pack || running(pack)).map(([words]) => words);
+const saturday = whereRunning([["a Faction Raid", "monkey-events"], ["Arena Glory", "monkey-events"],
+  ["a Build Battle", "monkey-nights"], ["the border breaking open"]]);
 
 const days: Day[] = [
   {

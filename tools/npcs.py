@@ -109,8 +109,8 @@ RULES_TEXT = "<br>".join((
     f"The full rulebook is on the website: {rules.SITE.removeprefix('https://')}/guide/rules",
 ))
 FACTIONS_TEXT = "<br>".join((
-    f"A faction is up to {rules.faction_size()} players who share land, and most start small. Factions that are recruiting post "
-    "in #smp-forum on the Discord.",
+    f"A faction is up to {rules.faction_size()} players who share land, and most start small. Factions that are "
+    "recruiting post in #smp-forum on the Discord.",
     "",
     "To start your own: /oparties create, then /oparties member invite and the player's name.",
 ))

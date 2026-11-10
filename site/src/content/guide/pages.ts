@@ -1,15 +1,10 @@
-import { type Pack, running, sayList } from "@/lib/live";
+import { type Pack, running, sayList, whereRunning as live } from "@/lib/live";
 
 // The guide's pages, in reading order: the sidebar lists them under these headings, and each page links to the
 // one before and after it. A page with a `pack` is about that data pack's feature: while the pack isn't running
 // (site/live-packs.json) the page still builds, saying so, but the sidebar and the pager leave it out.
 
 export type GuidePage = { href: string; title: string; description: string; pack?: Pack };
-
-/** The words of `parts` whose pack runs (a part with no pack always does). */
-function live(parts: [string, Pack?][]): string[] {
-  return parts.filter(([, pack]) => !pack || running(pack)).map(([words]) => words);
-}
 
 const everySection: { title: string; pages: GuidePage[] }[] = [
   {

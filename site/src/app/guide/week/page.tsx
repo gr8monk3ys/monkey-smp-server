@@ -4,7 +4,6 @@ import { Live, OffNote } from "@/components/live";
 import { Place } from "@/components/place";
 import { week } from "@/content/guide/week";
 import WeekNotes from "@/content/guide/week-notes.mdx";
-import { running } from "@/lib/live";
 
 export const metadata = guideMetadata("/guide/week");
 
@@ -31,10 +30,10 @@ export default function WeekPage() {
       <Live pack="monkey-npcs"><p className="small">The Town Crier at spawn has the next two Saturday events.</p></Live>
       <p className="small">
         Want them on your phone? <ConfigLink to="CALENDAR_URL">Add Season I to your calendar</ConfigLink>: the
-        launch{running("monkey-standings")
-          ? <>, each Saturday&apos;s event and each Sunday&apos;s standings close,</>
-          : <> and each Saturday&apos;s event,</>} in your own time zone. It is a plain calendar file (.ics) that most
-        calendar apps open.
+        launch, each Saturday&apos;s event and each Sunday&apos;s standings close, in your own time zone. It is a plain
+        calendar file (.ics) that most calendar apps open.{" "}
+        {/* The .ics isn't gated, so the sentence says what is in it and the note says what doesn't run yet. */}
+        <OffNote as="span" className="" packs={["monkey-standings"]} />
       </p>
       <div className="prose"><WeekNotes /></div>
     </GuidePage>

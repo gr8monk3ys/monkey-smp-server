@@ -14,7 +14,12 @@ export const ranks: { name: string; id?: string; does: string }[] = [
       ? "The owner of a faction's party: invites members and allies, declares war and makes pacts."
       : "The owner of a faction's party: invites members and allies.",
   },
-  { name: "Supporter", id: "supporters", does: "Ember, Banner or Crown: a name color, a title and skins. No commands of their own." },
+  {
+    name: "Supporter", id: "supporters",
+    does: running("monkey-wardrobe")
+      ? "Ember, Banner or Crown: a name color, a title and skins. No commands of their own."
+      : "Ember, Banner or Crown: a name color and a title. No commands of their own.",
+  },
   { name: "Builder", does: "A player staff trust with build jobs. An admin switches them to creative for a job and back after." },
   { name: "Moderator", id: "moderators", does: "Warns, mutes, kicks and bans; watches quietly; checks and undoes griefing." },
   { name: "Admin", id: "admins", does: "Everything: ranks, the whitelist, events, and the server's own commands." },

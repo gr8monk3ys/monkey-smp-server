@@ -4,7 +4,8 @@
     python tools/live_packs.py --built DIR     also check a build's pages (site/out)
 
 live-packs.json says, for each of the server's own data packs, whether it runs on the live server this season:
-"on", "off" or "unknown" (not read yet). Flipping a pack is one line there. The site reads the same file when it
+"on", "off", "returning" (staff decided it comes back, but it isn't enabled on the server yet) or "unknown" (not
+read yet). Flipping a pack is one line there. The site reads the same file when it
 is built (site/src/lib/live.ts) and shows a pack's features only while it is "on"; where a section stays, it says
 plainly that the feature is not running now (an element with data-off="<pack> ...", the OffNote component).
 
@@ -26,7 +27,7 @@ from pathlib import Path
 
 from repo import REPO
 
-STATES = ("on", "off", "unknown")
+STATES = ("on", "off", "returning", "unknown")
 
 # What names each pack's features on the site. Some match their case only: "the Guide" is the spawn NPC and "the
 # guide" the site's; "Server Firsts" and "Anarchy" are the features, "server first" and "non-anarchy" are not.
@@ -74,7 +75,7 @@ def load(repo=REPO) -> dict[str, str]:
 
 
 def not_running(packs: dict[str, str]) -> dict[str, str]:
-    """The packs the site can't say run: off, or not read yet."""
+    """The packs the site can't say run: off, returning but not enabled yet, or not read yet."""
     return {pack: state for pack, state in packs.items() if state != "on"}
 
 
@@ -145,10 +146,16 @@ class _Page(HTMLParser):
             if self.at.tag in {"main", "article"}:
                 self.page_allows.update(packs)
         self.at = node
-        if tag == "script" and found.get("type") == "application/ld+json" or tag == "title":
+        if tag == "script" and found.get("type") == "application/ld+json" or tag == "title" and not self._in("svg"):
             self._capture = []
         elif tag in SKIP:
             self._skipping += 1
+
+    def _in(self, tag: str) -> bool:
+        node = self.at
+        while node is not None and node.tag != tag:
+            node = node.parent
+        return node is not None
 
     def handle_endtag(self, tag):
         # Walk up to the matching element (HTML lets some end tags be left out).

@@ -13,9 +13,10 @@ export function guideMetadata(href: string): Metadata {
 /** One page of the guide: its title, an optional lede, the page itself, then the pages before and after it. */
 export function GuidePage({ href, lede, children }: { href: string; lede?: ReactNode; children: ReactNode }) {
   const page = guidePage(href);
+  // A page the sidebar leaves out (its pack isn't running, pages.ts) has no place in the reading order.
   const at = pages.indexOf(page);
-  const prev = pages[at - 1];
-  const next = pages[at + 1];
+  const prev = at > 0 ? pages[at - 1] : undefined;
+  const next = at >= 0 ? pages[at + 1] : undefined;
   return (
     <article className="doc">
       <JsonLd data={guideTrail(page.title, page.href)} />

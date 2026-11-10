@@ -56,8 +56,11 @@ def texts(repo=REPO) -> list[Path]:
 
 def text_problems(text: str, name: str, mb: int, ram: int) -> list[str]:
     errors = []
-    for n, line in enumerate(text.splitlines(), 1):
-        if re.search(r"\bmods?\b|pack", line, re.IGNORECASE) and "server" not in line.lower():
+    lines = text.splitlines()
+    for n, line in enumerate(lines, 1):
+        # The line and the next one: a sentence's "mods" or "pack" can wrap past its size.
+        near = line + " " + (lines[n] if n < len(lines) else "")
+        if re.search(r"\bmods?\b|pack", near, re.IGNORECASE) and "server" not in line.lower():
             errors += [f"{name}:{n}: says the pack is {m.group(1)} MB; it is about {mb} MB (site/player-needs.json)"
                        for m in SIZE.finditer(line) if int(m.group(1)) != mb]
         errors += [f"{name}:{n}: says {m.group(1)} GB of RAM; site/player-needs.json says {ram}"

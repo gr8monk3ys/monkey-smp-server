@@ -1,10 +1,10 @@
 // Which of the server's own data packs run on the live server this season, read from site/live-packs.json when the
-// site is built. A pack's features are shown only while it is "on": "off" and "unknown" both mean the site can't
-// say it runs. tools/live_packs.py checks the built pages against the same file.
+// site is built. A pack's features are shown only while it is "on": "off", "returning" (coming back this season,
+// not enabled yet) and "unknown" all mean the site can't say it runs. tools/live_packs.py checks the built pages against the same file.
 import list from "@live-packs";
 
 export type Pack = keyof typeof list.packs;
-export type PackState = "on" | "off" | "unknown";
+export type PackState = "on" | "off" | "returning" | "unknown";
 
 const states = list.packs as Record<Pack, PackState>;
 
@@ -29,11 +29,16 @@ export const NAMES: Record<Pack, string> = {
   "monkey-npcs": "the spawn NPCs (the Guide, the Town Crier)",
   "monkey-omens": "omens",
   "monkey-outposts": "outposts",
-  "monkey-rules": "the welcome screen and PvP grace for new players",
+  "monkey-rules": "PvP grace for new players (with its welcome screen)",
   "monkey-sieges": "outpost sieges",
   "monkey-standings": "the weekly standings (bounties, wars, pacts)",
   "monkey-wardrobe": "the wardrobe (skins, challenges, the first-week quest)",
 };
+
+/** The words of `parts` whose pack runs (a part with no pack always does), in the order given. */
+export function whereRunning(parts: [string, Pack?][]): string[] {
+  return parts.filter(([, pack]) => !pack || running(pack)).map(([words]) => words);
+}
 
 /** The packs of `packs` that aren't running, in the order given. */
 export function notRunning(packs: Pack[]): Pack[] {
@@ -46,12 +51,20 @@ export function sayList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
-/** The text of a "not running now" note for `packs` ("" when they all run). */
+/** "a", "a and b", "a; b; and c": the names have commas of their own, so a longer list takes semicolons. */
+function sayNames(packs: Pack[]): string {
+  const names = packs.map((pack) => NAMES[pack]);
+  return names.length > 2 ? `${names.slice(0, -1).join("; ")}; and ${names[names.length - 1]}` : sayList(names);
+}
+
+/** The text of a "not running now" note for `packs` ("" when they all run). Packs coming back this season are said
+ * apart from the rest. */
 export function offText(packs: Pack[]): string {
   const off = notRunning(packs);
-  if (!off.length) return "";
-  // The names have commas of their own, so a longer list is split with semicolons.
-  const names = off.map((pack) => NAMES[pack]);
-  const said = names.length > 2 ? `${names.slice(0, -1).join("; ")}; and ${names[names.length - 1]}` : sayList(names);
-  return `Not running on the server right now: ${said}.`;
+  const returning = off.filter((pack) => states[pack] === "returning");
+  const gone = off.filter((pack) => states[pack] !== "returning");
+  return [
+    gone.length ? `Not running on the server right now: ${sayNames(gone)}.` : "",
+    returning.length ? `Coming back this season, not running yet: ${sayNames(returning)}.` : "",
+  ].filter(Boolean).join(" ");
 }

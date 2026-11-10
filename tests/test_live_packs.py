@@ -59,7 +59,7 @@ def test_a_note_licenses_its_parent_element_only():
     assert live_packs.page_problems(page(inside), OFF) == []
     outside = f"<section><div>{note}</div><p>Supply drops land every Friday.</p></section>"
     assert len(live_packs.page_problems(page(outside), OFF)) == 1
-    other = f'<section><p data-off="monkey-omens">x</p><p>Supply drops land.</p></section>'
+    other = '<section><p data-off="monkey-omens">x</p><p>Supply drops land.</p></section>'
     assert len(live_packs.page_problems(page(other), OFF)) == 1
 
 
@@ -70,6 +70,14 @@ def test_the_head_counts_and_a_page_level_note_covers_it():
     assert live_packs.page_problems(page(note, head), OFF) == []
     deeper = f"<section>{note}</section>"
     assert len(live_packs.page_problems(page(deeper, head), OFF)) == 2
+
+
+
+def test_an_svg_title_is_body_text_not_head():
+    note = '<p data-off="monkey-drops">Not running on the server right now: supply drops.</p>'
+    icon = f'<section>{note}<svg><title>Supply drops</title></svg></section>'
+    assert live_packs.page_problems(page(icon), OFF) == []
+    assert len(live_packs.page_problems(page("<svg><title>Supply drops</title></svg>"), OFF)) == 1
 
 
 def test_scripts_and_styles_are_not_text():

@@ -25,6 +25,12 @@ def test_a_text_with_another_size_or_ram_fails():
                       "x.md:3: says 8 GB of RAM; site/player-needs.json says 16"]
 
 
+
+def test_a_size_whose_mods_word_wrapped_is_still_checked():
+    errors = player_needs.text_problems("It downloads about 520 MB:\nthe mods and resource packs.", "x.md", 380, 16)
+    assert errors == ["x.md:1: says the pack is 520 MB; it is about 380 MB (site/player-needs.json)"]
+
+
 def test_a_stale_size_in_the_file_fails_and_write_fixes_it(tmp_path):
     repo = Repo(tmp_path)
     repo.client.mkdir(parents=True)

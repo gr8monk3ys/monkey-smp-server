@@ -183,10 +183,11 @@ to server listings only, not to modpacks, so:
 
 ## What's in the pack, and may it be published
 
-Checked 2026-11-02 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
+Checked 2026-11-09 against Modrinth's API (by sha512 hash, every file in `client/modrinth.index.json`):
 
-- **All 201 files are on Modrinth** (179 mods, 22 resource packs) and download from
-  `cdn.modrinth.com`. Modrinth's rule for modpacks is that a file hosted on Modrinth may be used in a pack
+- **202 of the 203 files are on Modrinth** (180 of the 181 mods, and the 22 resource packs) and download from
+  `cdn.modrinth.com`. The other is Patina & Chime, pinned from its GitHub release while it waits for Modrinth's
+  moderation (ADR-0009). Modrinth's rule for modpacks is that a file hosted on Modrinth may be used in a pack
   whatever its license, so none of them needs extra permission.
 - **The overrides are the pack's own**: configs, `options.txt`, the generated Monkey SMP Wardrobe resource pack
   (`tools/wardrobe.py` draws its pixel art). No jars or zips, which Modrinth flags

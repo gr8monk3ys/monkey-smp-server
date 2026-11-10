@@ -2301,6 +2301,21 @@
       "fileSize": 2398861
     },
     {
+      "path": "mods/StorageDrawers-fabric-26.2.0.1.jar",
+      "hashes": {
+        "sha1": "68aa299b0bc284c5ca912f4184c9fbb859337b24",
+        "sha512": "8075e95785519191d35ad616318a60720353789df2363fcc17784fd181e44462139d08e9bf11906290fc6cb00f529bba57a5889c61c8ccb2abd86f5f8aefd3c8"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/guitPqEi/versions/cJA3JdCZ/StorageDrawers-fabric-26.2.0.1.jar"
+      ],
+      "fileSize": 1229145
+    },
+    {
       "path": "mods/stormiespiders-fabric-26.2-3.3.1.jar",
       "hashes": {
         "sha1": "6220f0ce00b88c8d0b273fbcdaf7f7b548678071",

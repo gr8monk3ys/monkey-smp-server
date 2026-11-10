@@ -168,6 +168,7 @@ dl { display: grid; gap: 10px; }
 .problem-when { color: var(--sage); font-size: 0.9375rem; }
 .problem-text { margin-top: 2px; color: var(--bone-2); overflow-wrap: anywhere; }
 .problem-more { color: var(--sage); }
+.problem .advice-title { color: var(--bone); font-weight: 700; }
 
 .history { display: grid; gap: 16px; min-width: 0; }
 .history-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; }
@@ -335,7 +336,9 @@ input[type="file"]:hover::file-selector-button { border-image-source: var(--fram
 #saved-box { margin-top: 16px; }
 #saved-list .about { font-family: var(--mono); font-size: 0.875rem; }
 #files-filter { width: 100%; margin-bottom: 8px; }
-#known-box { margin-top: 16px; }
+#known-box, #tempbans-box, #search-box { margin-top: 16px; }
+#search-list .about { font-family: var(--mono); font-size: 0.875rem; }
+.add .check { display: flex; align-items: center; gap: 8px; color: var(--bone); cursor: pointer; }
 /* A player's notes open under their row, across its whole width. */
 .notes { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 0 4px; }
 .notes .entries li { min-height: 0; }

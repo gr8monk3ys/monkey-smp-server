@@ -39,12 +39,16 @@ one has the names of who is online and the machine's numbers, so it never goes n
   A group goes once a day has passed since its last line. log is where the reader got to, so that a reading
   only reads what is new. read is false when the log couldn't be read and crashes is null when the reports couldn't,
   which says nothing about whether anything went wrong.
-- history is the last day's readings, oldest first, as [unix time, avg, p95, players, memory, load], with nulls for a
-  reading the server didn't answer. memory is the share of the machine's memory in use and load the 1-minute load as a
-  share of its threads, both in percent (load can pass 100: more is waiting than the threads can run). They are the
+- history is the last day's readings, oldest first, as [unix time, avg, p95, players, memory, cpu], with nulls for a
+  reading the server didn't answer. memory is the share of the machine's memory in use, and cpu the share of its CPU
+  in use since the reading before (from /proc/stat, host.cpu keeping the counters), both in percent. They are the
   machine's, so they are there while the server is off too. It is carried over from the file before, so a restart of
   this job loses nothing (a row from before memory and load were kept gets nulls for them), and it holds counts,
   never names.
+
+- advice is what the problems probably are, in plain words (tools/staff_watch.py), and alerts what it last told the
+  staff channel. With STAFF_WEBHOOK_URL in the environment, `write` posts a problem worth it there when it first shows
+  (then at most once in 6 hours while it lasts), says when a number is back to normal, and posts each new crash.
 
 It only reads: the release's version from the manifest (only that key: the manifest also holds the seed, which must
 never reach this file), the container's own `monkey rcon`, the log, and one line of each crash report (the rest of a
@@ -61,8 +65,10 @@ import os
 import re
 import shutil
 import sys
+import urllib.request
 from pathlib import Path
 
+import staff_watch
 import status as public
 
 import rcon as server
@@ -74,6 +80,7 @@ BACKUP_NAME = re.compile(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}")
 BACKUP_SETTINGS = Path("/etc/monkey-backup.env")
 BACKUP_FAILING = Path("/var/lib/monkey-backup/failing")
 MEMINFO = Path("/proc/meminfo")
+PROC_STAT = Path("/proc/stat")
 LOG_READ = 8 * 1024 * 1024      # the most of the log one reading takes; a flood is caught up with over the next ones
 ERRORS_KEPT = 30
 CRASHES_KEPT = 5
@@ -167,7 +174,31 @@ def memory(meminfo: Path = MEMINFO) -> tuple[dict | None, dict | None]:
     return mem, swap
 
 
-def host(live: Path, meminfo: Path = MEMINFO) -> dict:
+def cpu_times(proc_stat: Path = PROC_STAT) -> dict | None:
+    """The machine's CPU time so far, all of it and the idle part (idle and waiting on the disk), in the kernel's
+    ticks; None when /proc/stat can't be read (Windows, the tests)."""
+    try:
+        with open(proc_stat, encoding="ascii") as f:
+            first = f.readline().split()
+    except OSError:
+        return None
+    if len(first) < 6 or first[0] != "cpu" or not all(n.isdigit() for n in first[1:]):
+        return None
+    ticks = [int(n) for n in first[1:9]]       # user nice system idle iowait irq softirq steal; guest is in user
+    return {"total": sum(ticks), "idle": ticks[3] + ticks[4]}
+
+
+def cpu_busy(now: dict | None, before) -> float | None:
+    """The share of the CPU in use between two cpu_times() readings, in percent with one decimal."""
+    if not now or not isinstance(before, dict) or not all(isinstance(before.get(k), int) for k in ("total", "idle")):
+        return None
+    total, idle = now["total"] - before["total"], now["idle"] - before["idle"]
+    if total <= 0 or idle < 0 or idle > total:     # a reboot in between starts the counters again
+        return None
+    return round((total - idle) / total * 100, 1)
+
+
+def host(live: Path, meminfo: Path = MEMINFO, proc_stat: Path = PROC_STAT) -> dict:
     mem, swap = memory(meminfo)
     try:
         used = shutil.disk_usage(live)
@@ -178,7 +209,8 @@ def host(live: Path, meminfo: Path = MEMINFO) -> dict:
         load = [round(n, 2) for n in os.getloadavg()]
     except (OSError, AttributeError):   # Windows has no load average, and the tests run there too
         load = None
-    return {"memory": mem, "swap": swap, "load": load, "threads": os.cpu_count(), "disk": disk}
+    return {"memory": mem, "swap": swap, "load": load, "threads": os.cpu_count(), "disk": disk,
+            "cpu": cpu_times(proc_stat)}
 
 
 def release(live: Path) -> str | None:
@@ -339,17 +371,21 @@ def carried_over(old: dict, now: dt.datetime) -> list[list]:
             and row[0] > since]
 
 
-def shares(machine: dict) -> tuple[float | None, float | None]:
-    """(memory in use, 1-minute load per thread), each in percent with one decimal, None for what isn't known."""
-    mem, load, threads = machine.get("memory"), machine.get("load"), machine.get("threads")
+def shares(machine: dict, before: dict | None = None) -> tuple[float | None, float | None]:
+    """(memory in use, CPU in use since the reading before), each in percent with one decimal, None for what isn't
+    known: the first reading has no CPU number, since it needs two."""
+    mem = machine.get("memory")
     used = round((mem["total"] - mem["available"]) / mem["total"] * 100, 1) if mem and mem["total"] > 0 else None
-    busy = round(load[0] / threads * 100, 1) if load and threads else None
-    return used, busy
+    old = before.get("cpu") if isinstance(before, dict) else None
+    return used, cpu_busy(machine.get("cpu"), old)
 
 
 def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, meminfo: Path = MEMINFO,
-           settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING) -> dict:
-    """The status as of `now`, with the readings in the file `previous` carried over."""
+           settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING, proc_stat: Path = PROC_STAT,
+           post=None) -> dict:
+    """The status as of `now`, with the readings in the file `previous` carried over. `post(line)`, when given, sends
+    a line to the staff channel (staff_watch.alerts says which); without it, nothing is posted and the alert state
+    carries over as it was."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
     box = container(docker)
@@ -357,16 +393,32 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     ticking = tick(ask(docker, "tick query")) if up else None
     who = players(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
-    machine = host(live, meminfo)
+    machine = host(live, meminfo, proc_stat)
     reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,
-               who["count"] if who else None, *shares(machine)]
-    return {
+               who["count"] if who else None, *shares(machine, old.get("host"))]
+    data = {
         "version": VERSION, "checked": public.iso(now), "online": online, "container": box, "tick": ticking,
         "players": who, "host": machine, "release": release(live),
         "backups": {"local": last_backup(live), "offsite": offsite(settings, failing)},
         "problems": problems(live, now, old.get("problems")),
         "history": [*carried_over(old, now), reading],
     }
+    data["advice"] = staff_watch.advice(data)
+    data["alerts"] = old.get("alerts") if isinstance(old.get("alerts"), dict) else {}
+    if post is not None:
+        lines, data["alerts"] = staff_watch.alerts(data["alerts"], data["advice"], data["problems"].get("crashes"), now)
+        for line in lines:
+            post(line)
+    return data
+
+
+def post_webhook(url: str, line: str) -> None:
+    """One line to the staff channel, mentioning nobody. A post that fails changes nothing: the page still shows it."""
+    body = json.dumps({"content": line[:1900], "allowed_mentions": {"parse": []}}).encode()
+    request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json",
+                                                              "User-Agent": "monkey-staff"})
+    with contextlib.suppress(OSError, ValueError):
+        urllib.request.urlopen(request, timeout=10).close()
 
 
 def main(argv=None) -> int:
@@ -385,7 +437,11 @@ def main(argv=None) -> int:
     if args.command == "show":
         print(json.dumps(status(args.live, now, docker), indent=2))
         return 0
-    data = status(args.live, now, docker, previous=args.out)
+    # The staff channel only (deploy/monkey-staff.sh passes it in the environment, never on the command line), and
+    # never the public webhook: these messages name what is wrong on the machine.
+    hook = os.environ.get("STAFF_WEBHOOK_URL", "").strip()
+    post = (lambda line: post_webhook(hook, line)) if hook else None
+    data = status(args.live, now, docker, previous=args.out, post=post)
     public.write(args.out, data)
     count = data["players"]["count"] if data["players"] else "no"
     print(f"{args.out}: {'online' if data['online'] else 'offline'}, {count} player count, "

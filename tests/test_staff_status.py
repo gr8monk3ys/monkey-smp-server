@@ -150,13 +150,40 @@ def test_history_carries_over_keeps_a_day_and_holds_no_names(box):
     assert read(box, previous=box.out)["history"][:-1] == [[kept, 3.0, 4.0, 2, 61.5, 140.0]]
 
 
-@pytest.mark.parametrize("machine, want", [
-    ({"memory": {"total": 16000000, "available": 4000000}, "load": [3.0, 1.0, 1.0], "threads": 2}, (75.0, 150.0)),
-    ({"memory": None, "load": None, "threads": 2}, (None, None)),
-    ({"memory": {"total": 0, "available": 0}, "load": [1.0, 1.0, 1.0], "threads": None}, (None, None)),
+@pytest.mark.parametrize("machine, before, want", [
+    ({"memory": {"total": 16000000, "available": 4000000}, "cpu": {"total": 1300, "idle": 900}},
+     {"cpu": {"total": 1000, "idle": 800}}, (75.0, 66.7)),                  # 300 ticks, 100 of them idle
+    ({"memory": {"total": 16000000, "available": 4000000}, "cpu": {"total": 1300, "idle": 900}}, None, (75.0, None)),
+    ({"memory": None, "cpu": None}, {"cpu": {"total": 1, "idle": 1}}, (None, None)),
+    ({"memory": {"total": 0, "available": 0}, "cpu": {"total": 10, "idle": 5}}, {"cpu": {"total": 50, "idle": 5}},
+     (None, None)),                                                         # a reboot: the counters went back
+    ({"memory": None, "cpu": {"total": 10, "idle": 5}}, {"cpu": {"total": "x", "idle": 5}}, (None, None)),
 ])
-def test_the_machines_shares_in_a_reading(machine, want):
-    assert staff_status.shares(machine) == want
+def test_the_machines_shares_in_a_reading(machine, before, want):
+    assert staff_status.shares(machine, before) == want
+
+
+def test_cpu_times_from_proc_stat(tmp_path):
+    stat = tmp_path / "stat"
+    stat.write_text("cpu  100 5 50 800 20 3 2 1 0 0\ncpu0 50 2 25 400 10 1 1 0 0 0\nintr 1 2\n")
+    assert staff_status.cpu_times(stat) == {"total": 981, "idle": 820}
+    for bad in ("", "cpu x y z\n", "intr 1\n"):
+        stat.write_text(bad)
+        assert staff_status.cpu_times(stat) is None
+    assert staff_status.cpu_times(tmp_path / "missing") is None
+
+
+def test_cpu_use_is_worked_out_across_two_readings(box, tmp_path):
+    stat = tmp_path / "stat"
+    stat.write_text("cpu  100 0 100 800 0 0 0 0\n")
+    first = staff_status.status(box.live, NOW, docker(), meminfo=box.meminfo, settings=box.settings,
+                                failing=box.failing, proc_stat=stat)
+    assert first["history"][-1][5] is None and first["host"]["cpu"] == {"total": 1000, "idle": 800}
+    box.out.write_text(json.dumps(first))
+    stat.write_text("cpu  250 0 150 1000 0 0 0 0\n")       # 400 more ticks, 200 of them idle
+    later = staff_status.status(box.live, NOW + dt.timedelta(minutes=2), docker(), previous=box.out,
+                                meminfo=box.meminfo, settings=box.settings, failing=box.failing, proc_stat=stat)
+    assert later["history"][-1][5] == 50.0
 
 
 @pytest.mark.parametrize("text", ["", "not json", "[]", '{"history": 3}'])
@@ -517,9 +544,12 @@ def test_units_run_the_script_as_monkey_every_two_minutes():
 def test_the_script_is_posix_sh_and_reads_no_secret():
     text = (DEPLOY / "monkey-staff.sh").read_text()
     assert text.startswith("#!/bin/sh\n") and "set -eu" in text
-    assert '. "$ENV_FILE"' not in text and "rcon.password" not in text and "WEBHOOK" not in text
+    assert '. "$ENV_FILE"' not in text and "rcon.password" not in text
     assert "deploy_lock" not in text
-    assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR", "STAFF_DIR"}
+    # The one secret it reads is the staff channel's webhook, for the health alerts; never the public one.
+    assert set(re.findall(r"\$\(setting (\w+)", text)) == {"REPO_DIR", "LIVE_DIR", "STAFF_DIR", "STAFF_WEBHOOK_URL"}
+    assert "DISCORD_WEBHOOK_URL" not in text
+    assert re.findall(r"^.*\bSTAFF_WEBHOOK_URL\b.*$", text, re.M)[-1].startswith("STAFF_WEBHOOK_URL=$(setting")
     # A password on a command line shows in `ps`.
     assert "--plaintext" not in text
     for unit in UNITS:
@@ -563,7 +593,7 @@ def test_the_page_runs_under_the_strict_policy():
 
 FAKES = {
     "id": 'echo "${FAKE_ID:-0}"',
-    "python3": "echo FAKEPASSWORD",
+    "python3": '[ -z "${FAKE_PY_LOG:-}" ] || echo "$* hook=${STAFF_WEBHOOK_URL:-}" >>"$FAKE_PY_LOG"\necho FAKEPASSWORD',
     "sleep": 'echo "sleep $*" >>"$FAKE_CALLS"',
     "systemctl": 'echo "systemctl $*" >>"$FAKE_CALLS"',
     # FAKE_NO_READ is a path the caddy user can't read.
@@ -764,3 +794,39 @@ def test_the_status_job_refuses_root_and_needs_its_folder(staff):
     assert done.code == 1 and "run it as monkey" in done.out
     done = staff.run(FAKE_ID="1000")
     assert done.code == 1 and "--install" in done.out
+
+
+def test_the_status_job_hands_the_staff_webhook_over_in_the_environment_only(staff, tmp_path):
+    (tmp_path / "staff").mkdir()
+    env_file = tmp_path / "deploy.env"
+    env_file.write_text("STAFF_WEBHOOK_URL=https://discord.example/staff-hook\n"
+                        "DISCORD_WEBHOOK_URL=https://discord.example/public\n")
+    seen = tmp_path / "python3.log"
+    done = staff.run(FAKE_ID="1000", MONKEY_DEPLOY_ENV=env_file.as_posix(), FAKE_PY_LOG=seen.as_posix())
+    assert done.code == 0, done.out
+    write = [line for line in seen.read_text().splitlines() if " write " in line]
+    assert len(write) == 1 and write[0].endswith(" hook=https://discord.example/staff-hook")
+    assert "discord.example" not in write[0].split(" hook=")[0]          # not on the command line
+    # No staff webhook: none at all, never the public one.
+    env_file.write_text("DISCORD_WEBHOOK_URL=https://discord.example/public\n")
+    seen.unlink()
+    assert staff.run(FAKE_ID="1000", MONKEY_DEPLOY_ENV=env_file.as_posix(), FAKE_PY_LOG=seen.as_posix()).code == 0
+    assert [line for line in seen.read_text().splitlines() if " write " in line][0].endswith(" hook=")
+
+
+def test_the_status_reading_posts_only_when_asked(box, tmp_path):
+    posted = []
+    full = {"MemTotal": 16000000, "MemAvailable": 100000}
+    (tmp_path / "low").write_text("".join(f"{k}: {v} kB\n" for k, v in {**full, "SwapTotal": 0, "SwapFree": 0}.items()))
+    data = staff_status.status(box.live, NOW, docker(), meminfo=tmp_path / "low", settings=box.settings,
+                               failing=box.failing)
+    assert [a["id"] for a in data["advice"]] == ["memory"] and data["alerts"] == {}
+    data = staff_status.status(box.live, NOW, docker(), meminfo=tmp_path / "low", settings=box.settings,
+                               failing=box.failing, post=posted.append)
+    assert len(posted) == 1 and posted[0].startswith("Monkey SMP: The machine is nearly out of memory")
+    assert "memory" in data["alerts"]["posted"]
+    # The state carries over in the file: the next reading posts nothing new.
+    box.out.write_text(json.dumps(data))
+    staff_status.status(box.live, NOW + dt.timedelta(minutes=2), docker(), previous=box.out,
+                        meminfo=tmp_path / "low", settings=box.settings, failing=box.failing, post=posted.append)
+    assert len(posted) == 1

@@ -292,6 +292,23 @@ function howOften(group, now) {
   return `${plural(group.count, "time")} since ${DAY_CLOCK.format(new Date(group.first))}, last ${last}`;
 }
 
+// tools/staff_watch.py's advice: each likely cause, its mark and word by how much it matters, where it was seen, and
+// what to do.
+const ADVICE_MARKS = { alert: ["slow", "Needs a look"], warn: ["busy", "Worth a look"], info: ["good", "Usually harmless"] };
+
+function renderAdvice() {
+  const rows = (Array.isArray(state.data.advice) ? state.data.advice : []).filter((a) => a && a.title);
+  $("advice-box").hidden = !rows.length;
+  $("advice").replaceChildren(...rows.map((a) => {
+    const [kind, word] = ADVICE_MARKS[a.level] || ADVICE_MARKS.warn;
+    const item = problem(kind, word, "", a.title);
+    item.querySelector(".problem-text").classList.add("advice-title");
+    if (a.from) item.appendChild(el("p", "problem-when", `From: ${a.from}`));
+    if (a.fix) item.appendChild(el("p", "problem-text", a.fix));
+    return item;
+  }));
+}
+
 function renderProblems(now) {
   const p = state.data.problems;
   const rows = [];
@@ -410,12 +427,11 @@ const SPECS = {
     what: "Players online",
   },
   machine: {
-    // Load is a share of the machine's threads, so it can pass 100: the top follows it, to a cap, as the tick chart's does.
-    height: 150, unit: "%", yTop: (rows) => Math.min(300, Math.max(100, Math.ceil(Math.max(0, ...rows.map((r) => r[5] || 0)) / 50) * 50)),
-    yTicks: (top) => (top <= 100 ? [0, 50] : [0, 50, 200].filter((n) => n < top)),
-    series: [{ index: 5, name: "CPU load", key: "load", line: "line-2" }, { index: 4, name: "Memory in use", key: "memory", line: "line-1" }],
+    // Both are shares of the machine's whole, so the scale is always 0 to 100.
+    height: 150, unit: "%", yTop: () => 100, yTicks: () => [0, 50],
+    series: [{ index: 5, name: "CPU in use", key: "load", line: "line-2" }, { index: 4, name: "Memory in use", key: "memory", line: "line-1" }],
     format: (n) => String(Math.round(n)), step: false, limit: 100, limitLabel: "All of it", machine: true,
-    what: "The machine's memory and CPU load",
+    what: "The machine's memory and CPU in use",
   },
 };
 
@@ -603,6 +619,7 @@ function render() {
   $("layout").hidden = !state.data;
   if (state.data) {
     renderNow();
+    renderAdvice();
     renderProblems(now);
     renderCharts();
   }

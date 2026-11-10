@@ -286,6 +286,8 @@
     refilter();
   });
   // A saved command's Run button (desk.js): sent as if typed here, so it shows in the log with its answer.
+  // desk.js: a temporary ban changed the bans list.
+  window.addEventListener("monkey-players-changed", () => { if (current === "players") loadPlayers(); });
   window.addEventListener("monkey-run-command", (event) => sendCommand(String(event.detail.command)));
   $("cmd").addEventListener("keydown", (e) => {
     const history = consoleState.history;
@@ -355,7 +357,8 @@
     note("files", "");
     try {
       const data = await api("GET", `/api/file?${query({ path })}`);
-      files.file = { path, mtime: data.mtime, writable: writable !== false, text: data.text };
+      // The server says whether it can be saved: a file opened from elsewhere (a search, Mod settings) may be in logs/.
+      files.file = { path, mtime: data.mtime, writable: writable !== false && data.writable !== false, text: data.text };
       $("browser").hidden = true;
       $("editor").hidden = false;
       $("editor-name").textContent = path;

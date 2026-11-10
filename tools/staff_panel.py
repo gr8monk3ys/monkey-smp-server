@@ -83,6 +83,7 @@ import staff_desk
 import staff_events
 import staff_modcfg
 import staff_report
+import staff_spark
 import staff_status
 
 import rcon as server
@@ -1120,10 +1121,12 @@ def two_step_off(panel, user: str, name) -> dict:
 ROUTES.update(USER_ROUTES)
 NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
+TICKS: list = []    # f(panel), called on the scheduler's thread every SCHEDULE_TICK seconds (staff_desk: temp bans)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_desk.register(sys.modules[__name__])    # everyone who has joined, notes, saved commands, the changes searched
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
+staff_spark.register(sys.modules[__name__])   # the lag finder: spark's profiler and its report link
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
 

@@ -75,6 +75,12 @@
       </aside>
 
       <div class="column">
+        <section class="problems" id="advice-box" aria-labelledby="advice-title" hidden>
+          <h2 id="advice-title">What it probably is</h2>
+          <ul class="problem-list" id="advice"></ul>
+          <p class="fine">Read from the problems below and the machine's numbers. A guess from the words in the log, so
+            check before acting on it. The staff channel hears of the serious ones.</p>
+        </section>
         <section class="problems" aria-labelledby="problems-title">
           <h2 id="problems-title">Recent problems</h2>
           <div class="skeleton" aria-hidden="true"><i></i></div>
@@ -112,8 +118,8 @@
           <figure class="chart" id="machine-chart">
             <figcaption>
               <h3>The machine</h3>
-              <p>Memory in use, and CPU load as a share of the machine's threads. Load past 100% means more work is
-                waiting than the machine can run at once.</p>
+              <p>How much of the machine's memory and CPU is in use. The game shares them with the map, the backups and
+                everything else on the machine.</p>
             </figcaption>
             <p class="readout" id="machine-readout"></p>
             <div class="plot" id="machine-plot"></div>
@@ -127,7 +133,7 @@
             <summary>The readings as a table</summary>
             <div class="table-scroll" tabindex="0" role="region" aria-label="The readings">
               <table>
-                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th><th scope="col">Memory</th><th scope="col">CPU load</th></tr></thead>
+                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th><th scope="col">Memory</th><th scope="col">CPU in use</th></tr></thead>
                 <tbody id="rows"></tbody>
               </table>
             </div>
@@ -203,6 +209,19 @@
           <button class="btn danger" id="delete" type="button">Delete</button>
         </div>
       </div>
+      <section class="box" id="search-box">
+        <h3>Search all files</h3>
+        <p class="fine">Every file in the server's folder that the page can open, by name, or with "In the text" by
+          what is written in its settings files. Secrets in a line found stay hidden.</p>
+        <p class="attention" id="search-error" role="alert" hidden></p>
+        <div class="add">
+          <input id="search-q" type="search" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. view-distance or claims" aria-label="What to search for">
+          <label class="check"><input id="search-text" type="checkbox"> In the text</label>
+          <button class="btn primary" id="search-go" type="button">Search</button>
+        </div>
+        <p class="fine" id="search-count" role="status"></p>
+        <ul class="entries" id="search-list"></ul>
+      </section>
       <details class="table" id="history-box">
         <summary>History of changes to files</summary>
         <ul class="entries" id="file-history"></ul>
@@ -216,6 +235,28 @@
       <p class="note" id="players-note" role="status" hidden></p>
       <div class="confirm" id="players-confirm" hidden></div>
       <div class="cols" id="players-body"></div>
+      <section class="box" id="tempbans-box">
+        <h3>Temporary bans</h3>
+        <p class="fine">A ban that lifts by itself. The player sees when it ends. The page pardons them at that time,
+          unless someone pardoned them or banned them for good in the meantime.</p>
+        <p class="attention" id="tempbans-error" role="alert" hidden></p>
+        <p class="note" id="tempbans-note" role="status" hidden></p>
+        <div class="confirm" id="tempbans-confirm" hidden></div>
+        <ul class="entries" id="tempbans-list"></ul>
+        <div class="add" id="tempbans-add">
+          <input id="tempban-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Player name" aria-label="Player to ban for a time">
+          <select id="tempban-hours" aria-label="For how long">
+            <option value="1">1 hour</option>
+            <option value="6">6 hours</option>
+            <option value="24" selected>1 day</option>
+            <option value="72">3 days</option>
+            <option value="168">7 days</option>
+            <option value="720">30 days</option>
+          </select>
+          <input id="tempban-reason" type="text" maxlength="120" autocomplete="off" placeholder="Reason they will see (optional)" aria-label="Reason">
+          <button class="btn danger" id="tempban-go" type="button">Ban for a time</button>
+        </div>
+      </section>
       <section class="box" id="known-box">
         <div class="box-head">
           <h3>Everyone who has joined <span class="meta" id="known-count"></span></h3>
@@ -435,6 +476,31 @@
             </select>
             <button class="btn primary" id="sched-add" type="button" data-need="admin">Add schedule</button>
           </div>
+        </div>
+      </section>
+      <section class="box span" id="spark-box">
+        <h3>Find what causes lag</h3>
+        <p class="fine">Runs spark's profiler for a while, then links its report: which mods, entities and chunks the
+          game spends its time on. Run it while the server is slow, with players on. "Lag spikes" only looks at ticks
+          over 100 ms; "Memory" at what fills the memory.</p>
+        <p class="attention" id="spark-error" role="alert" hidden></p>
+        <p class="note" id="spark-note" role="status" hidden></p>
+        <p class="fine" id="spark-state" role="status"></p>
+        <p id="spark-result" hidden><a class="btn primary" id="spark-link" target="_blank" rel="noopener noreferrer">Open the report</a></p>
+        <div class="add">
+          <select id="spark-mode" aria-label="What to look at">
+            <option value="cpu">Everything the game does</option>
+            <option value="lag">Lag spikes only</option>
+            <option value="memory">Memory</option>
+          </select>
+          <select id="spark-seconds" aria-label="For how long">
+            <option value="60">1 minute</option>
+            <option value="120" selected>2 minutes</option>
+            <option value="300">5 minutes</option>
+            <option value="600">10 minutes</option>
+          </select>
+          <button class="btn primary" id="spark-start" type="button" data-need="admin">Start</button>
+          <button class="btn" id="spark-stop" type="button" data-need="admin" hidden>Stop now</button>
         </div>
       </section>
       <section class="box span" id="activity-box">

@@ -6,6 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import staff_desk
@@ -485,3 +486,131 @@ def test_without_hard_links_a_rename_still_works(desk, monkeypatch):
 def test_the_consoles_history_keeps_a_chat_line_as_its_command():
     script = (REPO.root / "deploy" / "staff" / "panel.js").read_text(encoding="utf-8")
     assert "const kept = saying ? `/${command}` : command;" in script and "history.push(kept)" in script
+
+
+# ---------------------------------------------------------------- temporary bans
+
+
+def tempban_setup(desk):
+    tb = staff_desk.tempbans(desk.panel)
+    clock = [1_800_000_000.0]
+    tb.clock = lambda: clock[0]
+    banned = desk.root / "banned-players.json"
+
+    def fake(argv, **how):
+        command = argv[-1] if "exec" in argv else ""
+        rows = json.loads(banned.read_text())
+        if command.startswith("ban "):
+            _, name, reason = command.split(" ", 2)
+            rows.append({"uuid": "u", "name": name, "reason": reason})
+            banned.write_text(json.dumps(rows))
+            return SimpleNamespace(returncode=0, stdout=f"Banned {name}: {reason}", stderr="")
+        if command.startswith("pardon "):
+            name = command.split(" ")[1]
+            banned.write_text(json.dumps([r for r in rows if r["name"].lower() != name.lower()]))
+            return SimpleNamespace(returncode=0, stdout=f"Unbanned {name}", stderr="")
+        return real(argv, **how)
+    real = desk.docker.__call__
+    desk.panel.docker.run = fake
+    return tb, clock, banned
+
+
+def test_a_temporary_ban_bans_now_and_lifts_itself_at_its_time(desk):
+    tb, clock, banned = tempban_setup(desk)
+    code, made = desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 24, "reason": "spawn killing"},
+                           headers=ADMIN)
+    assert code == 200 and made["until"] == clock[0] + 24 * 3600
+    ban = next(r for r in json.loads(banned.read_text()) if r["name"] == "Bravo")
+    assert ban["reason"] == "Banned until 2027-01-16 08:00 UTC: spawn killing"      # what the player sees
+    assert "diego tempban Bravo for 24 hours" in actions(desk)
+    listed = desk.call("GET", "/api/tempbans", headers=MOD)[1]["bans"]
+    assert [(b["name"], b["reason"], b["by"]) for b in listed] == [("Bravo", "spawn killing", "diego")]
+    assert tb.expire() == []                                    # not yet
+    clock[0] += 24 * 3600
+    assert tb.expire() == ["Bravo"]
+    assert all(r["name"] != "Bravo" for r in json.loads(banned.read_text()))
+    assert "temp-ban tempban-end Bravo: pardoned" in actions(desk)
+    assert desk.call("GET", "/api/tempbans")[1]["bans"] == []
+
+
+def test_a_ban_changed_by_hand_is_never_lifted_by_the_timer(desk):
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    rows = json.loads(banned.read_text())
+    next(r for r in rows if r["name"] == "Bravo")["reason"] = "Griefing: for good"     # banned again, for good
+    banned.write_text(json.dumps(rows))
+    clock[0] += 3601
+    assert tb.expire() == ["Bravo"]
+    assert any(r["name"] == "Bravo" for r in json.loads(banned.read_text()))        # still banned
+    assert "Bravo: forgotten" in actions(desk)
+
+
+def test_a_temporary_ban_waits_while_the_server_is_off(desk):
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    clock[0] += 3601
+
+    def off(argv, **how):
+        return SimpleNamespace(returncode=1, stdout="", stderr="no container")
+    working, desk.panel.docker.run = desk.panel.docker.run, off
+    assert tb.expire() == [] and len(desk.call("GET", "/api/tempbans")[1]["bans"]) == 1
+    desk.panel.docker.run = working
+    assert tb.expire() == ["Bravo"]
+
+
+def test_a_temporary_ban_can_be_lifted_early(desk):
+    tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 5})
+    assert desk.call("POST", "/api/tempban-end", {"name": "Bravo"}, headers=MOD)[0] == 403
+    code, done = desk.call("POST", "/api/tempban-end", {"name": "bravo"}, headers=ADMIN)
+    assert code == 200 and done["result"] == "pardoned"
+    assert desk.call("POST", "/api/tempban-end", {"name": "Bravo"})[0] == 404
+
+
+@pytest.mark.parametrize("body", [
+    {"name": "Bravo", "hours": 0}, {"name": "Bravo", "hours": 721}, {"name": "Bravo", "hours": "5"},
+    {"name": "Bravo", "hours": 1.5}, {"name": "B", "hours": 5}, {"name": "Bravo", "hours": 5, "reason": "a\x07b"},
+])
+def test_a_bad_temporary_ban_is_refused(desk, body):
+    tempban_setup(desk)
+    assert desk.call("POST", "/api/tempban", body)[0] == 400
+    assert not (desk.staff / "tempbans.json").exists()
+
+
+def test_a_ban_the_server_did_not_take_saves_nothing(desk):
+    assert desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 5})[0] == 502     # the plain fake answers no
+    assert not (desk.staff / "tempbans.json").exists()
+
+
+def test_the_scheduler_thread_lifts_them(desk):
+    assert any(callable(f) for f in staff_panel.TICKS)
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    clock[0] += 3601
+    for look in staff_panel.TICKS:
+        look(desk.panel)
+    assert desk.call("GET", "/api/tempbans")[1]["bans"] == []
+
+
+# ---------------------------------------------------------------- the file search
+
+
+def test_files_are_found_by_name_under_the_files_rules(desk):
+    code, data = desk.call("GET", "/api/file-search?q=PLAIN", headers=ADMIN)
+    assert code == 200 and [r["path"] for r in data["results"]] == ["config/plain.yml"]
+    names = [r["path"] for r in desk.call("GET", "/api/file-search?q=level")[1]["results"]]
+    assert names == []                                          # world/level.dat: the worlds are not open
+    assert [r["path"] for r in desk.call("GET", "/api/file-search?q=.db")[1]["results"]] == []
+    assert desk.call("GET", "/api/file-search?q=x", headers=ADMIN)[0] == 400
+    assert desk.call("GET", "/api/file-search?q=plain", headers=MOD)[0] == 403
+
+
+def test_a_text_search_shows_the_line_with_its_secrets_masked(desk):
+    (desk.root / "config" / "more.toml").write_text('[x]\nchannel = "general"\napi_token = "general-secret"\n')
+    data = desk.call("GET", "/api/file-search?q=general&text=1")[1]
+    rows = {(r["path"], r["line"]): r["text"] for r in data["results"]}
+    assert rows[("config/discord.toml", 3)] == 'channel = "general"'
+    assert rows[("config/more.toml", 3)] == 'api_token = "********"'
+    assert "general-secret" not in json.dumps(data) and "tok-real" not in json.dumps(data)
+    # Logs and crash reports aren't read for text, nor anything not plain text.
+    assert desk.call("GET", "/api/file-search?q=line&text=1")[1]["results"] == []

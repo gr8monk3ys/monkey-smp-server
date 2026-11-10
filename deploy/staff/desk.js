@@ -1,5 +1,6 @@
-// The staff page's everyday tools (tools/staff_desk.py answers them): the saved commands on the Console tab, everyone
-// who has joined (with staff's notes) on the Players tab, and the record of changes with a search on the Server tab.
+// The staff page's everyday tools (tools/staff_desk.py and tools/staff_spark.py answer them): the saved commands on
+// the Console tab; everyone who has joined (with staff's notes) and the temporary bans on the Players tab; the search
+// of all files on the Files tab; the lag finder and the record of changes with a search on the Server tab.
 // The same rules as panel.js: everything from the server goes in with textContent, no style attributes, no forms, no
 // confirm() or alert(). The panel checks every role; GET /api/me only hides what a login can't use.
 "use strict";
@@ -316,12 +317,152 @@
     activity.timer = setTimeout(() => loadActivity(false), SEARCH_MS);
   }
 
+  // ---------------------------------------------------------------- temporary bans (Players tab)
+
+  async function loadTempbans() {
+    $("tempbans-add").hidden = !can("admin");
+    try {
+      const data = await api("GET", "/api/tempbans");
+      const rows = (data.bans || []).map((b) => item(b.name,
+        [`until ${when(b.until)}`, b.reason, `by ${b.by}`].filter(Boolean).join(", "),
+        can("admin") && button("Lift now", "", () => confirmIn("tempbans-confirm", `Lift ${b.name}'s ban now? They can join at once.`,
+          `Yes, lift it`, async () => {
+            try {
+              const done = await api("POST", "/api/tempban-end", { name: b.name });
+              say("tempbans-note", `${b.name}: ${done.result}.`);
+              say("tempbans-error", null);
+            } catch (error) {
+              say("tempbans-error", error);
+            }
+            loadTempbans();
+            window.dispatchEvent(new Event("monkey-players-changed"));
+          }))));
+      $("tempbans-list").replaceChildren(...(rows.length ? rows : [emptyRow("No temporary bans.")]));
+    } catch (error) {
+      say("tempbans-error", error);
+    }
+  }
+
+  function addTempban() {
+    const name = $("tempban-name").value.trim();
+    const hours = Number($("tempban-hours").value);
+    const reason = $("tempban-reason").value.replace(/\s+/g, " ").trim();
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) {
+      say("tempbans-error", "A name is 3 to 16 letters, digits or underscores.");
+      return;
+    }
+    const length = $("tempban-hours").selectedOptions[0].textContent;
+    confirmIn("tempbans-confirm", `Ban ${name} for ${length}${reason ? ` for "${reason}"` : ""}? They are kicked if they are on, and can't join until it ends.`,
+      `Yes, ban ${name}`, async () => {
+        say("tempbans-error", null);
+        try {
+          await api("POST", "/api/tempban", { name, hours, reason });
+          $("tempban-name").value = "";
+          $("tempban-reason").value = "";
+          say("tempbans-note", `${name} is banned for ${length}.`);
+        } catch (error) {
+          say("tempbans-error", error);
+        }
+        loadTempbans();
+        window.dispatchEvent(new Event("monkey-players-changed"));
+      });
+  }
+
+  // ---------------------------------------------------------------- the search of all files (Files tab)
+
+  async function searchFiles() {
+    const q = $("search-q").value.trim();
+    if (q.length < 2) {
+      say("search-error", "Search for at least 2 characters.");
+      return;
+    }
+    say("search-error", null);
+    $("search-go").disabled = true;
+    try {
+      const data = await api("GET", `/api/file-search?${new URLSearchParams({ q, text: $("search-text").checked ? "1" : "0" })}`);
+      const rows = (data.results || []).map((r) => {
+        const open = button(r.line ? `${r.path}, line ${r.line}` : r.path, "", () =>
+          window.dispatchEvent(new CustomEvent("monkey-open-file", { detail: { path: r.path, writable: true } })));
+        open.className = "link";
+        const row = el("li", "item");
+        const main = el("div", "item-main");
+        main.append(open);
+        if (r.text) main.append(el("span", "about", r.text));
+        row.append(main);
+        return row;
+      });
+      $("search-list").replaceChildren(...(rows.length ? rows : [emptyRow("Nothing found.")]));
+      $("search-count").textContent = rows.length
+        ? `${rows.length} found${data.cut ? ": the search stopped early, so there may be more. Search for something longer." : "."}`
+        : "";
+    } catch (error) {
+      say("search-error", error);
+    }
+    $("search-go").disabled = false;
+  }
+
+  // ---------------------------------------------------------------- the lag finder (Server tab)
+
+  const SPARK_POLL_MS = 5_000;
+  const SPARK_LINK = /^https:\/\/spark\.lucko\.me\/[A-Za-z0-9]{6,32}$/;
+  const SPARK_MODES = { cpu: "everything the game does", lag: "lag spikes", memory: "memory" };
+  const sparkState = { timer: null };
+
+  async function loadSpark() {
+    clearTimeout(sparkState.timer);
+    try {
+      const data = await api("GET", "/api/spark");
+      const run = data.run;
+      const link = run && typeof run.link === "string" && SPARK_LINK.test(run.link) ? run.link : null;
+      $("spark-result").hidden = !link;
+      if (link) $("spark-link").href = link;
+      $("spark-start").hidden = data.running;
+      $("spark-stop").hidden = !data.running || !can("admin");
+      $("spark-start").disabled = !can("admin") || !data.installed;
+      let words = data.installed ? "No run yet." : "spark isn't in the server's mods, so this can't run.";
+      if (run) {
+        const what = `${SPARK_MODES[run.mode] || run.mode}, started by ${run.by} ${when(run.at)}`;
+        if (data.running) words = `Running (${what}). It ends at ${when(run.ends)}; the report link shows here then.`;
+        else if (link) words = `The last run (${what}) is ready.`;
+        else if (data.waiting) words = `Finished (${what}). Waiting for spark to upload the report...`;
+        else if (run.lost) words = `The server restarted during the last run (${what}), so it has no report.`;
+        else words = `The last run (${what}) left no report link in the log. The Console tab has spark's own words.`;
+      }
+      $("spark-state").textContent = words;
+      say("spark-error", null);
+      if ((data.running || data.waiting) && location.hash === "#server" && !document.hidden) {
+        sparkState.timer = setTimeout(loadSpark, SPARK_POLL_MS);
+      }
+    } catch (error) {
+      say("spark-error", error);
+    }
+  }
+
+  async function sparkCall(url, body, words) {
+    say("spark-error", null);
+    say("spark-note", null);
+    try {
+      await api("POST", url, body);
+      say("spark-note", words);
+    } catch (error) {
+      say("spark-error", error);
+    }
+    loadSpark();
+    loadActivity(false);
+  }
+
   // ---------------------------------------------------------------- wiring
 
   const VIEWS = {
     console: loadSaved,
-    players: loadKnown,
-    server: () => loadActivity(false),
+    players: () => {
+      loadKnown();
+      loadTempbans();
+    },
+    server: () => {
+      loadSpark();
+      loadActivity(false);
+    },
   };
 
   function show() {
@@ -350,11 +491,21 @@
     $("activity-kind").addEventListener("change", () => loadActivity(false));
     $("activity-q").addEventListener("input", searchSoon);
     $("activity-more").addEventListener("click", () => loadActivity(true));
+    $("tempban-go").addEventListener("click", addTempban);
+    $("search-go").addEventListener("click", searchFiles);
+    $("search-q").addEventListener("keydown", (e) => { if (e.key === "Enter") searchFiles(); });
+    $("spark-start").addEventListener("click", () => sparkCall("/api/spark",
+      { mode: $("spark-mode").value, seconds: Number($("spark-seconds").value) },
+      "Started. Keep playing as normal: the report comes when it ends."));
+    $("spark-stop").addEventListener("click", () => sparkCall("/api/spark-stop", {}, "Stopped. spark is uploading what it has."));
     // panel.js says when it changed something: a power action, a player list.
     window.addEventListener("monkey-changed", () => {
       const tab = location.hash.slice(1);
       if (tab === "server") loadActivity(false);
-      if (tab === "players") loadKnown();
+      if (tab === "players") {
+        loadKnown();
+        loadTempbans();
+      }
     });
     window.addEventListener("hashchange", show);
     show();

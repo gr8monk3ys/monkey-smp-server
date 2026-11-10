@@ -40,8 +40,8 @@
 # The hash cost is 8, not Caddy's default of 14: the machine has two threads and the game needs them, and at 14 one
 # check took about 600 ms of the VPS's CPU. A long random password doesn't need the slow hash to resist guessing.
 #
-# Reads only REPO_DIR, LIVE_DIR and STAFF_DIR (default /srv/monkey/staff) from /etc/monkey-deploy.env (or
-# MONKEY_DEPLOY_ENV). CADDY_DIR is for the tests. Needs python3 3.10 or newer, and for setting up the site caddy and curl.
+# Reads only REPO_DIR, LIVE_DIR, STAFF_DIR (default /srv/monkey/staff) and STAFF_WEBHOOK_URL (the staff channel, for
+# the health alerts) from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV). CADDY_DIR is for the tests. Needs python3 3.10 or newer, and for setting up the site caddy and curl.
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu
@@ -391,4 +391,6 @@ fi
 # Root would leave a file the monkey user's next run can't replace.
 [ "$(id -u)" != 0 ] || { echo "run it as monkey: sudo -u monkey sh $0" >&2; exit 1; }
 [ -d "$STAFF_DIR" ] || die "no $STAFF_DIR: run sudo sh $0 --install"
-python3 -B "$TOOL" write "$LIVE_DIR" --out "$STAFF_DIR/staff.json"
+# The staff channel's webhook goes in the environment, never on the command line (where ps shows it), and only the
+# staff one: tools/staff_watch.py's messages name what is wrong on the machine. Empty: nothing is posted.
+STAFF_WEBHOOK_URL=$(setting STAFF_WEBHOOK_URL '') python3 -B "$TOOL" write "$LIVE_DIR" --out "$STAFF_DIR/staff.json"

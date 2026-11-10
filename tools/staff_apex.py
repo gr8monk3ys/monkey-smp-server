@@ -1004,10 +1004,12 @@ class Extras:
 
     def run_scheduler(self) -> None:
         while not self.stop.is_set():
-            try:
-                self.tick()
-            except Exception as e:  # noqa: BLE001 (the loop must outlive one bad look)
-                print(f"monkey-panel: the scheduler failed once: {type(e).__name__}", file=sys.stderr, flush=True)
+            # The schedules, then each other module's own look (staff_panel.TICKS: the temporary bans' ends).
+            for look in (self.tick, *(lambda f=f: f(self.p) for f in sp.TICKS)):
+                try:
+                    look()
+                except Exception as e:  # noqa: BLE001 (the loop must outlive one bad look)
+                    print(f"monkey-panel: the scheduler failed once: {type(e).__name__}", file=sys.stderr, flush=True)
             self.stop.wait(SCHEDULE_TICK)
 
     # ------------------------------------------------ mods

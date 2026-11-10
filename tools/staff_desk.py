@@ -12,6 +12,10 @@ page", says what each one does.
     POST /api/saved-command-delete {"id"}                                                                   admin
     GET  /api/activity?user=&action=&q=&before=  the record of changes, newest first, 100 at a time         moderator
     GET  /api/activity-export?user=&action=&q=   the same search as a .csv file                             moderator
+    GET  /api/tempbans                         the bans that lift by themselves, and when                  moderator
+    POST /api/tempban {"name", "hours", "reason"?}  `ban NAME Banned until ...`, then `pardon NAME` at that time  admin
+    POST /api/tempban-end {"name"}             lifts one now (pardon), or forgets it if the ban is gone     admin
+    GET  /api/file-search?q=&text=1            files under server/ whose name has q, or (text=1) whose text does  admin
 
 The safety rules:
 - Everyone who has joined is read from files the server writes itself: usercache.json (names), the world's
@@ -24,6 +28,13 @@ The safety rules:
   a note about whom, never the text: a note can say why someone was banned, and the log is also posted to Discord.
 - A saved command goes through the console's own checks when it is saved (no seed, no stop, one line) and again
   when it is run: running one is an ordinary POST /api/command, with its own line in actions.log.
+- A temporary ban is the game's own ban, its reason starting TEMP_REASON and the time it ends. At that time (the
+  scheduler's thread looks every 20 seconds: staff_panel.TICKS) the page pardons the player, but only if the ban in
+  banned-players.json is still that one: a staff member who pardoned them, or banned them again for good, decides.
+  While the server is off it waits, and pardons once it is back.
+- The file search walks server/ under the Files tab's own rules (no worlds, libraries, versions, map files or
+  databases), at most SEARCH_FILES files and SEARCH_SECONDS seconds. A text search reads only plain-text config files
+  under SEARCH_TEXT_MAX, never logs/ or crash-reports/, and a line it shows has its secrets masked as the editor does.
 - The record of changes is only read here. A search reads at most ACTIVITY_READ of the end of actions.log. In the
   .csv a cell that a spreadsheet would run as a formula (it starts with = + - or @) gets a ' in front.
 
@@ -31,12 +42,14 @@ Stdlib only, Python 3.10 or newer.
 """
 import contextlib
 import csv
+import datetime as dt
 import io
 import json
 import os
 import re
 import secrets
 import threading
+import time
 from pathlib import Path
 
 sp = None   # tools/staff_panel.py (register)
@@ -51,6 +64,14 @@ ACTIVITY_READ = 8 * 1024 * 1024     # the most of actions.log a search reads, fr
 ACTIVITY_PAGE = 100
 ACTIVITY_EXPORT = 5000              # the most rows in one .csv
 TICKS_PER_HOUR = 20 * 3600
+TEMP_REASON = "Banned until"        # the start of a temporary ban's reason, as players see it
+TEMP_HOURS = (1, 24 * 30)
+SEARCH_FILES = 20000
+SEARCH_SECONDS = 5.0
+SEARCH_SHOWN = 200
+SEARCH_TEXT_MAX = 1024 * 1024
+TEXT_SUFFIXES = {".toml", ".json", ".json5", ".properties", ".yml", ".yaml", ".txt", ".cfg", ".conf", ".ini", ".snbt",
+                 ".mcmeta", ".md", ".csv", ".zs", ".js", ".mcfunction"}
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 _WORD = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _FORMULA = ("=", "+", "-", "@", "\t", "\r")
@@ -373,6 +394,156 @@ class Desk:
         return "staff-changes.csv", data, len(data)
 
 
+class TempBans:
+    """The bans that lift by themselves (tempbans.json: lowercase name -> {name, until, by, at, reason})."""
+
+    def __init__(self, panel):
+        self.p = panel
+        self._lock = threading.Lock()
+        self.clock = time.time
+
+    @property
+    def file(self) -> Path:
+        return self.p.staff / "tempbans.json"
+
+    def _load(self) -> dict | None:
+        if not self.file.exists():
+            return {}
+        data = _json(self.file)
+        rows = data.get("bans") if isinstance(data, dict) else None
+        return {k: v for k, v in rows.items() if isinstance(v, dict) and isinstance(v.get("until"), int | float)} \
+            if isinstance(rows, dict) else None
+
+    def _rows(self) -> dict:
+        rows = self._load()
+        if rows is None:
+            raise sp.Refused(500, "tempbans.json can't be read: fix or move it (STAFF_DIR) and reload.")
+        return rows
+
+    def _game_ban(self, name: str) -> dict | None:
+        rows = _json(self.p.root / "banned-players.json")
+        return next((r for r in rows if isinstance(r, dict) and str(r.get("name", "")).lower() == name.lower()), None) \
+            if isinstance(rows, list) else None
+
+    @staticmethod
+    def _until_words(until: float) -> str:
+        return dt.datetime.fromtimestamp(until, dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")  # noqa: UP017 (3.10)
+
+    def listed(self) -> dict:
+        rows = self._load() or {}
+        return {"bans": sorted(({k: v.get(k) for k in ("name", "until", "by", "at", "reason")} for v in rows.values()),
+                               key=lambda r: r["until"]), "now": self.clock()}
+
+    def add(self, user: str, body: dict) -> dict:
+        name = checked_player(body.get("name"))
+        hours = body.get("hours")
+        low, high = TEMP_HOURS
+        if not isinstance(hours, int) or isinstance(hours, bool) or not low <= hours <= high:
+            raise sp.Refused(400, f"A temporary ban lasts {low} to {high} hours.")
+        why = body.get("reason") or ""
+        why = checked_text(why, 120, "a reason") if why.strip() else ""
+        until = self.clock() + hours * 3600
+        reason = f"{TEMP_REASON} {self._until_words(until)}" + (f": {why}" if why else "")
+        with self._lock:
+            rows = self._rows()
+            done = self.p.command(user, {"command": f"ban {name} {reason}"})
+            if done.get("refused") or not self._game_ban(name):
+                raise sp.Refused(502, "The server didn't ban them (is it running?): nothing was saved. "
+                                      f"It said: {done.get('output') or 'nothing'}")
+            rows[name.lower()] = {"name": name, "until": until, "by": user, "at": sp.stamp(), "reason": why}
+            _save_json(self.file, {"version": 1, "bans": rows})
+        self.p.record(user, "tempban", f"{name} for {hours} hours")
+        return {"name": name, "until": until}
+
+    def _lift(self, who: str, key: str, row: dict, rows: dict) -> str:
+        """Pardons the player if the game's ban is still this one, then forgets it. What happened, in words."""
+        ban = self._game_ban(row["name"])
+        if ban is not None and str(ban.get("reason", "")).startswith(TEMP_REASON):
+            done = self.p.command(who, {"command": f"pardon {row['name']}"})
+            if done.get("refused"):
+                raise sp.Refused(502, "The server didn't take the pardon: is it running?")
+            said = "pardoned"
+        else:
+            said = "forgotten: the ban was already lifted or changed by hand"
+        del rows[key]
+        _save_json(self.file, {"version": 1, "bans": rows})
+        return said
+
+    def end(self, user: str, body: dict) -> dict:
+        name = checked_player(body.get("name"))
+        with self._lock:
+            rows = self._rows()
+            if name.lower() not in rows:
+                raise sp.Refused(404, "That player has no temporary ban.")
+            said = self._lift(user, name.lower(), rows[name.lower()], rows)
+        self.p.record(user, "tempban-end", f"{name}: {said}")
+        return {"name": name, "result": said}
+
+    def expire(self) -> list[str]:
+        """Lifts every ban whose time has come; one that can't be lifted now (the server is off) waits."""
+        now, ended = self.clock(), []
+        with self._lock:
+            rows = self._load()
+            if not rows:
+                return []
+            for key, row in list(rows.items()):
+                if row["until"] > now or not isinstance(row.get("name"), str):
+                    continue
+                try:
+                    said = self._lift("temp-ban", key, row, rows)
+                except (sp.Refused, sp.server.RconError):
+                    continue
+                self.p.record("temp-ban", "tempban-end", f"{row['name']}: {said}")
+                ended.append(row["name"])
+        return ended
+
+
+def search_files(panel, query: dict) -> dict:
+    """Files under server/ whose name has the text, or with text=1 whose lines do, under the Files tab's rules."""
+    q = query.get("q") or ""
+    if not 2 <= len(q) <= 100 or any(not c.isprintable() for c in q):
+        raise sp.Refused(400, "Search for 2 to 100 characters.")
+    by_text, wanted = query.get("text") == "1", q.lower()
+    root = os.path.realpath(panel.root)
+    started, seen, found, cut = time.monotonic(), 0, [], False
+    for folder, dirs, names in os.walk(root):
+        rel = Path(os.path.relpath(folder, root)).parts if folder != root else ()
+        dirs[:] = sorted(d for d in dirs if panel._rules((*rel, d)) != "refused"
+                         and not os.path.islink(os.path.join(folder, d)))
+        for name in sorted(names):
+            parts = (*rel, name)
+            seen += 1
+            if seen > SEARCH_FILES or time.monotonic() - started > SEARCH_SECONDS or len(found) >= SEARCH_SHOWN:
+                cut = True
+                break
+            rule = panel._rules(parts)
+            path = os.path.join(folder, name)
+            if rule == "refused" or os.path.islink(path) or name.startswith(".staff-"):
+                continue
+            if not by_text:
+                if wanted in name.lower():
+                    found.append({"path": "/".join(parts)})
+                continue
+            if rule != "writable" or os.path.splitext(name)[1].lower() not in TEXT_SUFFIXES:
+                continue
+            try:
+                if os.path.getsize(path) > SEARCH_TEXT_MAX:
+                    continue
+                text = Path(path).read_bytes().decode("utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            shown = sp.mask_secrets(text)[0].splitlines()
+            for number, line in enumerate(text.splitlines(), 1):
+                if wanted in line.lower():
+                    found.append({"path": "/".join(parts), "line": number,
+                                  "text": shown[number - 1].strip()[:200] if number <= len(shown) else ""})
+                    if len(found) >= SEARCH_SHOWN:
+                        break
+        if cut:
+            break
+    return {"results": found, "cut": cut, "text": by_text}
+
+
 _desk_lock = threading.Lock()
 
 
@@ -381,6 +552,14 @@ def desk(panel) -> Desk:
         found = getattr(panel, "_desk", None)
         if found is None:
             found = panel._desk = Desk(panel)
+        return found
+
+
+def tempbans(panel) -> TempBans:
+    with _desk_lock:
+        found = getattr(panel, "_tempbans", None)
+        if found is None:
+            found = panel._tempbans = TempBans(panel)
         return found
 
 
@@ -394,6 +573,10 @@ ROUTES = {
     ("POST", "/api/saved-command-delete"): lambda p, u, q, b: desk(p).delete_command(u, b),
     ("GET", "/api/activity"): lambda p, u, q, b: desk(p).activity(q),
     ("GET", "/api/activity-export"): lambda p, u, q, b: desk(p).activity_export(q),
+    ("GET", "/api/tempbans"): lambda p, u, q, b: tempbans(p).listed(),
+    ("POST", "/api/tempban"): lambda p, u, q, b: tempbans(p).add(u, b),
+    ("POST", "/api/tempban-end"): lambda p, u, q, b: tempbans(p).end(u, b),
+    ("GET", "/api/file-search"): lambda p, u, q, b: search_files(p, q),
 }
 NEEDS = {
     ("GET", "/api/known-players"): "moderator",
@@ -405,6 +588,10 @@ NEEDS = {
     ("POST", "/api/saved-command-delete"): "admin",
     ("GET", "/api/activity"): "moderator",
     ("GET", "/api/activity-export"): "moderator",
+    ("GET", "/api/tempbans"): "moderator",
+    ("POST", "/api/tempban"): "admin",
+    ("POST", "/api/tempban-end"): "admin",
+    ("GET", "/api/file-search"): "admin",
 }
 
 
@@ -415,3 +602,4 @@ def register(module) -> None:
     module.ROUTES.update(ROUTES)
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
+    module.TICKS.append(lambda panel: tempbans(panel).expire())

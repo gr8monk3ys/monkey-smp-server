@@ -77,9 +77,11 @@
   // brought into view, so the answer to a button far down a phone's page is not left off screen.
   function fail(tab, error) {
     const node = $(`${tab}-error`);
+    const text = error ? (error.message || String(error)) : "";
+    const fresh = text && (node.hidden || node.textContent !== text);   // a poll that fails again must not scroll again
     node.hidden = !error;
-    node.textContent = error ? (error.message || String(error)) : "";
-    if (error) node.scrollIntoView({ block: "nearest" });
+    node.textContent = text;
+    if (fresh) node.scrollIntoView({ block: "nearest" });
   }
 
   function note(tab, text) {

@@ -1,0 +1,24 @@
+{
+  "about": "Which of package/monkey/datapacks/ run on the live server this season: on, off, or unknown (not read yet). The site shows a pack's features only when it is on. To flip one, change its line. See tools/live_packs.py.",
+  "read": "2026-11-09",
+  "packs": {
+    "monkey-armor-repair": "on",
+    "monkey-boss": "on",
+    "monkey-camera": "on",
+    "monkey-clips": "off",
+    "monkey-drops": "off",
+    "monkey-events": "off",
+    "monkey-finale": "off",
+    "monkey-firsts": "off",
+    "monkey-lore": "off",
+    "monkey-nights": "on",
+    "monkey-no-netherite-armor": "off",
+    "monkey-npcs": "off",
+    "monkey-omens": "off",
+    "monkey-outposts": "off",
+    "monkey-rules": "off",
+    "monkey-sieges": "off",
+    "monkey-standings": "off",
+    "monkey-wardrobe": "unknown"
+  }
+}

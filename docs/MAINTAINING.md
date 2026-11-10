@@ -554,7 +554,9 @@ players") came from this harness on an i7-8700K.
    a split client/server jar or a patched mod is refused: do those by hand. Merge that pull request before the
    steps below; the release then takes the pack to players (docs/LIVE.md, "The staff page").
 1. Bump `version` in `package/monkey/manifest.json` (semver: patch = plugin bumps, minor = new content,
-   major = new Minecraft version or a world reset).
+   major = new Minecraft version or a world reset), and `versionId` in `client/modrinth.index.json` to the same
+   version (`validate.py` fails until they match). If the pack's mods changed, run
+   `python tools/player_needs.py --write` for the download size the site and docs state.
 2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
    pack, the wardrobe, events), date its entry at the top of `site/src/content/changes.mdx` too, in players' words
    (`docs/ADMIN.md`, "Telling players what changed").

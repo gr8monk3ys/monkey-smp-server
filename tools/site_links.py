@@ -23,7 +23,8 @@ launch as tools/season_calendar.py does ({date} the day in Pacific time, "Saturd
 "5 PM Pacific"; {eastern} "8 PM Eastern", with the weekday when it falls on the next day), with a <time>'s
 datetime set to LAUNCH_AT. The site works those out in TypeScript; this is what keeps the two in step. And
 sitemap.xml (site/src/app/sitemap.ts, a list kept by hand) must name every built page but the 404 page, and
-nothing that isn't one.
+nothing that isn't one. The live-pack list (site/live-packs.json) is checked too, and with --built, that no page
+sells a feature of a pack that isn't running (tools/live_packs.py).
 """
 import argparse
 import datetime as dt
@@ -34,6 +35,7 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
+import live_packs
 import season_calendar
 from repo import REPO
 
@@ -313,9 +315,9 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
     if errors:
         return errors
     errors += pack_problems(settings, repo) + calendar_problems(settings, repo) + stylesheet_problems(repo, write)
-    errors += rulebook_problems(repo, write)
+    errors += rulebook_problems(repo, write) + live_packs.list_problems(repo)
     if built is not None:
-        errors += built_problems(built, settings)
+        errors += built_problems(built, settings) + live_packs.built_problems(built, repo)
     return errors
 
 

@@ -1,7 +1,8 @@
 import { Fragment } from "react";
 import { guideMetadata, GuidePage } from "@/components/guide-page";
 import { rankIds } from "@/content/guide/pages";
-import { type Command, roles } from "@/content/guide/commands";
+import { type Command, type Group, roles } from "@/content/guide/commands";
+import { running } from "@/lib/live";
 
 export const dynamicParams = false;
 
@@ -33,12 +34,20 @@ function Commands({ cmds }: { cmds: Command[] }) {
   );
 }
 
+/** The groups and rows whose data pack runs on the live server now; a group left with no rows goes too. */
+function live(groups: Group[]): Group[] {
+  return groups
+    .filter((group) => !group.pack || running(group.pack))
+    .map((group) => group.cmds ? { ...group, cmds: group.cmds.filter((cmd) => !cmd.pack || running(cmd.pack)) } : group)
+    .filter((group) => !group.cmds || group.cmds.length > 0);
+}
+
 export default async function Rank({ params }: PageProps<"/guide/commands/[rank]">) {
   const { rank } = await params;
   const role = roles.find((r) => r.id === rank)!;
   return (
     <GuidePage href={`/guide/commands/${role.id}`} lede={role.intro}>
-      {role.groups.map((group, i) => (
+      {live(role.groups).map((group, i) => (
         <Fragment key={i}>
           {group.heading && <h2>{group.heading}</h2>}
           {group.note && <p className="small">{group.note}</p>}

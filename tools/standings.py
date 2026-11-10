@@ -1,15 +1,16 @@
-"""Weekly faction standings: one rank for every faction (an Open Parties and Claims party), from four columns.
+"""Weekly faction standings: one rank for every faction (an Open Parties and Claims party), from three columns.
 
 Each column gives the faction a share of its weight, in proportion to the column's leader, rounded:
 
-    Cup points (ev.cup, the whole season so far)     40
-    land (chunks its members have claimed)           20
-    Strength (its members' levels added up)          20
-    PvP kills by its members this week               20   (a war enemy's count twice: tools/diplomacy.py)
+    Cup points (ev.cup, the whole season so far)     50
+    Strength (its members' levels added up)          25
+    PvP kills by its members this week               25   (a war enemy's count twice: tools/diplomacy.py)
     + 5 for each bounty a member claimed this week
 
 so the leader of every column would have 100 (plus bounties). Ties on points go to more Cup points, then
 more kills; still tied, they share the rank. docs/SEASONS.md, "Weekly standings", says it for players.
+Land (chunks claimed) was a fourth column until November 2026 (Cup 40, land 20, Strength 20, kills 20). A week
+closed then keeps its land numbers and its formula in its file and still shows with them; nothing scores land now.
 
     python tools/standings.py show WORLD [--state DIR]   this week so far, printed (changes nothing)
     python tools/standings.py start WORLD --state DIR    starts the first week, if none is running
@@ -36,7 +37,8 @@ the launch (#launched rw.day), so test play never shows.
 WORLD is the live world folder (server/world). Everything is read from the files the server saves (every 5
 minutes, and when it stops), never from RCON, which can't list parties or scores:
   data/openpartiesandclaims/parties/*.nbt          each party: its owner and members
-  data/openpartiesandclaims/player-claims/*.nbt    each player's claimed chunks
+  data/openpartiesandclaims/player-claims/*.nbt    each player's claimed chunks (never scored: for the
+                                                   first-week quest's step and the recap's Land line)
   data/openpartiesandclaims/player-configs/*.toml  the party name (the owner's parties.name setting)
   data/minecraft/scoreboard.dat                     ev.cup, Strength, st.kills, st.warkills and st.bounty
   data/monkey/command_storage.dat                    the faction numbers and the week's war and pacts
@@ -84,13 +86,13 @@ DATAPACK = "monkey-standings"
 FN = f"data/{NS}/function/standings"
 STORE = f"{NS}:standings"   # command storage: week, last (written by this tool) and board (built from them)
 
-WEIGHTS = (("cup", 40), ("land", 20), ("strength", 20), ("kills", 20))
+WEIGHTS = (("cup", 50), ("strength", 25), ("kills", 25))
 BOUNTY_POINTS = 5
 MIN_WEEK_DAYS = 3     # close leaves a week younger than this alone: it was closed already (a retry, or a re-run)
 TOP = 10              # factions on the board and in the Discord post
 LAST_TOP = 5          # factions in last week's table on the board
 NAME_LIMIT = 20       # characters of a faction's name on the board
-FORMULA = ("Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the "
+FORMULA = ("Cup 50, Strength 25, kills this week 25 (a war enemy's count twice), each as a share of the "
            "leader; +5 a bounty; +1 an hour holding an outpost (at most 20).")
 
 
@@ -114,7 +116,7 @@ class Party:
 @dataclass
 class World:
     parties: list[Party]
-    claims: dict[str, int]                # player UUID -> chunks claimed
+    claims: dict[str, int]                # player UUID -> chunks claimed (the quest's step, the recap: never scored)
     scores: dict[str, dict[str, int]]     # objective -> holder -> score
     labels: dict[str, str]                # Cup holder -> the name staff gave it (cup/faction)
     numbers: dict[str, int] = field(default_factory=dict)   # party id -> faction number (tools/diplomacy.py)
@@ -187,7 +189,7 @@ class Row:
     name: str
     members: list[str] = field(default_factory=list)
     cup: int = 0
-    land: int = 0
+    land: int | None = None   # chunks claimed: only a week closed while land was a column has it (shown, not scored)
     strength: int = 0
     kills: int = 0
     bounties: int = 0
@@ -245,7 +247,7 @@ def match_cup(world: World, warn) -> tuple[dict[str, int], list[Row]]:
 
 
 def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Row]:
-    """This week's rows: Cup, land and Strength as they are now, kills and bounties since `baseline`."""
+    """This week's rows: Cup and Strength as they are now, kills and bounties since `baseline`."""
     base = baseline or {}
     scores = world.scores
     kills, kills_then = scores.get(KILLS, {}), base.get("kills", {})
@@ -253,8 +255,7 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
     bounty, bounty_then = folded(scores.get(BOUNTY, {})), folded(base.get("bounty", {}))
     cup, rows = match_cup(world, warn)
     for p in world.parties:
-        row = Row(p.name, list(p.members), cup=cup.get(p.id, 0), land=sum(world.claims.get(u, 0) for u in p.uuids),
-                  id=p.id)
+        row = Row(p.name, list(p.members), cup=cup.get(p.id, 0), id=p.id)
         for name in p.members:
             arena = scores.get(STRENGTH, {})
             row.strength += arena[name] if name in arena else scores.get(LEVEL, {}).get(name, 0)
@@ -266,17 +267,26 @@ def table(world: World, baseline: dict | None, warn=lambda msg: None) -> list[Ro
     return rank(rows)
 
 
+def record(row: Row) -> dict:
+    """A row as a closed week's file keeps it. No land: only a row read back from an old week has a number there."""
+    return {k: v for k, v in asdict(row).items() if not (k == "land" and v is None)}
+
+
 def table_text(rows: list[Row], limit: int | None = None) -> list[str]:
-    """The table in fixed-width columns (for a terminal and a Discord code block)."""
+    """The table in fixed-width columns (for a terminal and a Discord code block). A week closed while land was a
+    column keeps its Land column."""
     shown = rows if limit is None else rows[:limit]
+    land = any(r.land is not None for r in shown)
     bounty = any(r.bounties for r in shown)
     held = any(r.outposts for r in shown)
-    head = f"{'#':>2}  {'Faction':<18} {'Points':>6} {'Cup':>5} {'Land':>5} {'Str':>4} {'Kills':>5}"
+    head = f"{'#':>2}  {'Faction':<18} {'Points':>6} {'Cup':>5}" + (f" {'Land':>5}" if land else "")
+    head += f" {'Str':>4} {'Kills':>5}"
     out = [head + (f" {'Bounty':>6}" if bounty else "") + (f" {'Hold':>4}" if held else "")]
     for r in shown:
         name = r.name.replace("`", "'")
         name = name if len(name) <= 18 else name[:17] + "~"
-        line = f"{r.rank:>2}  {name:<18} {r.points:>6} {r.cup:>5} {r.land:>5} {r.strength:>4} {r.kills:>5}"
+        line = f"{r.rank:>2}  {name:<18} {r.points:>6} {r.cup:>5}" + (f" {r.land or 0:>5}" if land else "")
+        line += f" {r.strength:>4} {r.kills:>5}"
         out.append(line + (f" {r.bounties:>6}" if bounty else "") + (f" {r.outposts:>4}" if held else ""))
     if not rows:
         out.append("    no factions yet")
@@ -353,7 +363,9 @@ def board_name(name: str) -> str:
 
 def board_line(r: Row) -> str:
     name = board_name(r.name) or board_name(r.members[0] if r.members else "") or "?"
-    line = f"{r.rank}. {name}: {r.points}  [Cup {r.cup}, land {r.land}, Str {r.strength}, kills {r.kills}"
+    line = f"{r.rank}. {name}: {r.points}  [Cup {r.cup}"
+    line += f", land {r.land}" if r.land is not None else ""   # last week's table, if it closed while land counted
+    line += f", Str {r.strength}, kills {r.kills}"
     line += f", bounties {r.bounties}" if r.bounties else ""
     return line + (f", outposts {r.outposts}h]\n" if r.outposts else "]\n")
 
@@ -423,9 +435,11 @@ def update_board(rcon, rows: list[Row], week: dict | None, last: dict | None, no
 
 def discord_message(week: dict) -> str:
     """The Sunday recap (tools/recap.py): a closed week's table, then the lines its close kept. A week closed
-    before the recap existed has none, so it posts the table alone."""
+    before the recap existed has none, so it posts the table alone. The formula is the one the week was scored
+    with (its file keeps it), so a week closed while land counted says so when a retry posts it."""
     rows = [Row(**r) for r in week["rows"]]
-    head, foot = recap.heading(week), f"Scored as {FORMULA} `/trigger standings` shows the board in game."
+    scored = week.get("formula") or FORMULA
+    head, foot = recap.heading(week), f"Scored as {scored} `/trigger standings` shows the board in game."
     bare = recap.message(head, lambda n: table_text(rows, n), [], foot, DISCORD_LIMIT)
     # The week's war and pacts come first of the sections, in the room the table leaves (cut short with MORE).
     wars = diplomacy.discord_lines(week, DISCORD_LIMIT - recap.size(bare) - 1)
@@ -705,7 +719,7 @@ def closing(world: Path, data: World, rows: list[Row], week: dict | None, state:
         storage = None
     said = diplomacy.report(storage, data.scores, (read_json(before) or {}) if before else {})
     closed = {"start": week.get("start") if week else None, "end": now.isoformat(timespec="seconds"),
-              "formula": FORMULA, "rows": [asdict(r) for r in rows], "announced": False, "posted": False,
+              "formula": FORMULA, "rows": [record(r) for r in rows], "announced": False, "posted": False,
               "launched": recap.launched(data), **said, "wars_ended": False,
               "war_ends": diplomacy.week_end(data.scores, said["diplomacy_seq"])}
     if closed["launched"] or assume_launched:

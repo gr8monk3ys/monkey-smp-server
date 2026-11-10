@@ -104,7 +104,7 @@ def season_week(start: str | None, end: dt.datetime) -> int:
 
 @dataclass
 class Week:
-    rows: list[dict]           # the final table, best first: id (the party's), name, members, cup, land, kills, ...
+    rows: list[dict]           # the final table, best first: id (the party's), name, members, cup, kills, ...
     world: object              # standings.World at the close: parties, claims (UUID -> chunks), scores
     start: dict                # the week's starting point (STATE/week.json): start, kills, bounty, "recap" (baseline())
     previous: dict | None      # last week's closed file, if it closed after the launch

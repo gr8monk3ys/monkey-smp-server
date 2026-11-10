@@ -126,19 +126,57 @@ def test_a_party_file_with_a_bad_member_stops_standings_naming_it(world):
 
 def test_the_formula(world, capsys):
     rows = standings.table(standings.read_world(world), BASELINE, standings.warn)
-    got = [(r.rank, r.name, r.cup, r.land, r.strength, r.kills, r.bounties, r.points) for r in rows]
-    # Leaders: Cup 30, land 7, Strength 7, kills 6.
+    got = [(r.rank, r.name, r.cup, r.strength, r.kills, r.bounties, r.points) for r in rows]
+    # Three factions and a loose Cup entry. Leaders: Cup 30, Strength 7, kills 6.
     assert got == [
-        # 40 + 20 + 20 + round(20 * 4/6) = 93, + 5 for Sam's bounty
-        (1, "Red Monkeys", 30, 7, 7, 4, 1, 98),
-        # round(40 * 10/30) + round(20 * 4/7) + round(20 * 6/7) + 20; Tom's Strength is his real 1
-        (2, "Blue Herons", 10, 4, 6, 6, 0, 13 + 11 + 17 + 20),
-        # a Cup entry no faction is named like: a row of its own, with a warning
-        (3, "Green Team", 5, 0, 0, 0, 0, 7),
-        # negative Strength scores nothing (and isn't negative points)
-        (4, "LoneFake's faction", 0, 1, -2, 1, 0, 3 + 3),
+        # 50 + 25 + round(25 * 4/6) = 92, + 5 for Sam's bounty
+        (1, "Red Monkeys", 30, 7, 4, 1, 97),
+        # round(50 * 10/30) + round(25 * 6/7) + 25; Tom's Strength is his real 1
+        (2, "Blue Herons", 10, 6, 6, 0, 17 + 21 + 25),
+        # a Cup entry no faction is named like: a row of its own, with a warning; round(50 * 5/30)
+        (3, "Green Team", 5, 0, 0, 0, 8),
+        # negative Strength scores nothing (and isn't negative points); round(25 * 1/6)
+        (4, "LoneFake's faction", 0, -2, 1, 0, 4),
     ]
     assert "Green Team" in capsys.readouterr().err
+
+
+def test_three_factions_a_worked_example():
+    # Leaders: Cup 30 (Apes), Strength 8 (Apes), kills 10 (Bats).
+    rows = standings.rank([standings.Row("Cats", strength=6, kills=5, bounties=1),
+                           standings.Row("Bats", cup=15, strength=4, kills=10),
+                           standings.Row("Apes", cup=30, strength=8, kills=2)])
+    assert [(r.rank, r.name, r.points) for r in rows] == [
+        (1, "Apes", 50 + 25 + 5),      # both columns it leads in full, and 25 * 2/10 of the kills
+        (2, "Bats", 25 + 13 + 25),     # half the Cup leader: 25; 25 * 4/8 = 12.5 rounds up; the most kills
+        (3, "Cats", 0 + 19 + 13 + 5),  # no Cup points; 25 * 6/8 = 18.75; 25 * 5/10 = 12.5; + 5 for its bounty
+    ]
+    # A faction that leads every column has 100, and no column is left for land to fill.
+    assert standings.rank([standings.Row("Only", cup=1, strength=1, kills=1)])[0].points == 100
+    assert standings.WEIGHTS == (("cup", 50), ("strength", 25), ("kills", 25))
+
+
+def test_land_scores_nothing(world):
+    """Claims are not a column: whoever holds the most land, the table is the same."""
+    def scored():
+        rows = standings.table(standings.read_world(world), BASELINE)
+        return [(r.rank, r.name, r.points) for r in rows], rows
+
+    before, rows = scored()
+    assert before == [(1, "Red Monkeys", 97), (2, "Blue Herons", 63), (3, "Green Team", 8),
+                      (4, "LoneFake's faction", 4)]
+    # Nobody's land is in a row, in the week's file, on the board or in the table.
+    assert all(r.land is None and "land" not in standings.record(r) for r in rows)
+    assert "land" not in "".join(standings.board_line(r) for r in rows).lower()
+    assert "land" not in " ".join(standings.table_text(rows)).lower()
+    assert standings.table_text(rows)[0].split() == ["#", "Faction", "Points", "Cup", "Str", "Kills", "Bounty"]
+    # The last faction claims 500 chunks: more than everyone else together. Nothing moves.
+    FakeWorld(world).claims(PLAYERS["LoneFake"], {OVERWORLD: [(i, 0) for i in range(500)]})
+    assert standings.read_world(world).claims[PLAYERS["LoneFake"]] == 500
+    assert scored()[0] == before
+    # And with every claim gone.
+    shutil.rmtree(world / "data/openpartiesandclaims/player-claims")
+    assert scored()[0] == before
 
 
 def test_no_baseline_counts_every_kill(world):
@@ -170,11 +208,12 @@ def test_share_rounds_half_up_and_an_empty_column_scores_nothing():
     assert standings.share(5, 0, 20) == 0
     assert standings.share(-3, 4, 20) == 0
     assert sum(w for _, w in standings.WEIGHTS) == 100
+    assert "land" not in dict(standings.WEIGHTS) and "land" not in standings.FORMULA.lower()
 
 
 def test_ties_go_to_cup_then_kills_then_share_the_rank():
     rows = standings.rank([standings.Row("A", cup=10, kills=0), standings.Row("B", cup=10, kills=0),
-                           standings.Row("C", cup=5, kills=10), standings.Row("D", cup=10, kills=0, land=0)])
+                           standings.Row("C", cup=5, kills=10), standings.Row("D", cup=10, kills=0, strength=0)])
     assert [(r.name, r.rank) for r in rows][:3] == [("A", 1), ("B", 1), ("D", 1)]
     assert rows[3].name == "C" and rows[3].rank == 4
 
@@ -192,7 +231,7 @@ def test_cup_matches_on_the_owner_name_too(tmp_path):
 def long_rows(n=15):
     names = ['Ünïcödé "Quoted" \\ Faction With A Very Long Name', "@everyone", "§cColor"] + \
             [f"Faction {'X' * 30} {i}" for i in range(n - 3)]
-    return standings.rank([standings.Row(name, ["SomePlayer_123"], cup=1000 - i, land=64, strength=-20,
+    return standings.rank([standings.Row(name, ["SomePlayer_123"], cup=1000 - i, strength=-20,
                                          kills=999, bounties=9) for i, name in enumerate(names)])
 
 
@@ -366,6 +405,80 @@ def test_discord_message_is_a_table():
     assert "Bounty" in message and standings.FORMULA in message
 
 
+# A week closed while land was still a column (Cup 40, land 20, Strength 20, kills 20), as its file has it.
+OLD_FORMULA = ("Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the "
+               "leader; +5 a bounty; +1 an hour holding an outpost (at most 20).")
+OLD_ROWS = [
+    {"name": "Red Monkeys", "members": ["AlexFake", "SamFake"], "cup": 30, "land": 7, "strength": 7, "kills": 4,
+     "bounties": 1, "outposts": 0, "points": 98, "rank": 1, "id": "p-red"},
+    {"name": "Blue Herons", "members": ["RiaFake", "TomFake"], "cup": 10, "land": 4, "strength": 6, "kills": 6,
+     "bounties": 0, "outposts": 0, "points": 61, "rank": 2, "id": "p-blue"},
+    {"name": "LoneFake's faction", "members": ["LoneFake"], "cup": 0, "land": 0, "strength": -2, "kills": 1,
+     "bounties": 0, "outposts": 0, "points": 3, "rank": 3, "id": "p-lone"},
+]
+
+
+def old_week(state, **fields):
+    """A closed week's file from before land left the standings: the newest closed week in `state`."""
+    path = state / "weeks" / "2026-10-25.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    week = {"start": "2026-10-18T19:00:00-07:00", "end": "2026-10-25T19:00:00-07:00", "formula": OLD_FORMULA,
+            "rows": OLD_ROWS, "announced": True, "posted": True, "launched": True, **fields}
+    path.write_text(json.dumps(week, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def test_an_old_week_with_land_still_loads_and_shows_as_it_was_scored(world, tmp_path):
+    state = tmp_path / "state"
+    path = old_week(state)
+    before = path.read_bytes()
+    (state / "week.json").write_text(json.dumps(BASELINE))
+    # The Sunday post, if a retry posts it: its Land column, its points and the formula it was scored with.
+    message = standings.discord_message(json.loads(before))
+    table = message.split("```")[1].splitlines()
+    assert table[1].split() == ["#", "Faction", "Points", "Cup", "Land", "Str", "Kills", "Bounty"]
+    assert table[2].split() == ["1", "Red", "Monkeys", "98", "30", "7", "7", "4", "1"]
+    assert table[3].split() == ["2", "Blue", "Herons", "61", "10", "4", "6", "6", "0"]
+    assert f"Scored as {OLD_FORMULA}" in message and standings.FORMULA not in message
+    # The hourly board: this week so far has no land, last week's final table keeps its own.
+    server, out = FakeRcon(), tmp_path / "status" / "standings.json"
+    assert standings.board(world, state, server, SUNDAY, out) == 0
+    week, last = (next(c for c in server.sent if f" {key} set value " in c) for key in ("week", "last"))
+    assert "1. Red Monkeys: 97  [Cup 30, Str 7, kills 4, bounties 1]" in week and "land" not in week
+    assert "1. Red Monkeys: 98  [Cup 30, land 7, Str 7, kills 4, bounties 1]" in last
+    assert "3. LoneFake's faction: 3  [Cup 0, land 0, Str -2, kills 1]" in last
+    # The website's file: last week's ranks and points as they were, and never a land number.
+    public = json.loads(out.read_bytes())
+    assert public["last_week"]["factions"] == [{"rank": 1, "name": "Red Monkeys", "points": 98},
+                                               {"rank": 2, "name": "Blue Herons", "points": 61},
+                                               {"rank": 3, "name": None, "points": 3}]
+    assert b"land" not in out.read_bytes().lower()
+    assert path.read_bytes() == before   # reading it changes nothing in it
+
+
+def test_a_close_after_an_old_week_keeps_its_land_and_writes_the_new_week_without(world, tmp_path):
+    state = tmp_path / "state"
+    old = old_week(state, posted=False, announced=False)
+    # A retry of the old week's own close (the running week is young): it posts as it was scored and is kept whole.
+    (state / "week.json").write_text(json.dumps(BASELINE))
+    server, discord = FakeRcon(), FakeDiscord()
+    retry = dt.datetime(2026, 10, 25, 19, 20, tzinfo=PT)
+    assert standings.close(world, state, server, retry, WEBHOOK, discord) == 0
+    kept = json.loads(old.read_text(encoding="utf-8"))
+    assert kept["posted"] and kept["announced"] and kept["rows"] == OLD_ROWS and kept["formula"] == OLD_FORMULA
+    [(_, _, body)] = discord.posts
+    assert " Land " in body["content"] and f"Scored as {OLD_FORMULA}" in body["content"]
+    # The next Sunday's close: the new week's file has the new formula and no land, and the old file is as it was.
+    assert standings.close(world, state, server, SUNDAY, WEBHOOK, discord) == 0
+    new = json.loads((state / "weeks" / "2026-11-01.json").read_text(encoding="utf-8"))
+    assert new["formula"] == standings.FORMULA and all("land" not in r for r in new["rows"])
+    assert [(r["rank"], r["name"], r["points"]) for r in new["rows"]][:2] == [(1, "Red Monkeys", 97),
+                                                                             (2, "Blue Herons", 63)]
+    post = discord.posts[1][2]["content"]
+    assert " Land " not in post and f"Scored as {standings.FORMULA}" in post
+    assert json.loads(old.read_text(encoding="utf-8")) == kept
+
+
 def test_the_recap_carries_the_weeks_war_and_pacts_first():
     # A week with wars is not "a quiet week": the war and pacts lines come first, then the recap's own lines.
     week = {"start": None, "end": SUNDAY.isoformat(), "rows": [vars(r) for r in long_rows(3)],
@@ -506,9 +619,9 @@ def test_the_file_is_the_contract(world, tmp_path):
     assert data == {
         "version": 1, "checked": "2026-11-15T02:00:00Z", "season": 1, "week_closes": "2026-11-16T03:00:00Z",
         "factions": [{"rank": 1, "name": "Red Monkeys", "points": 103},
-                     {"rank": 2, "name": "Blue Herons", "points": 61},
-                     {"rank": 3, "name": "Green Team", "points": 7},
-                     {"rank": 4, "name": None, "points": 5}],
+                     {"rank": 2, "name": "Blue Herons", "points": 63},
+                     {"rank": 3, "name": "Green Team", "points": 8},
+                     {"rank": 4, "name": None, "points": 3}],
         "last_week": None}
     closed_week(state)
     public_board(world, tmp_path)
@@ -544,7 +657,7 @@ def test_only_names_ranks_and_points_get_out(world, tmp_path):
             assert secret.lower().encode() not in raw.lower(), secret
         data = json.loads(raw)
         only_allowed_keys(data)
-        assert data["last_week"]["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 98}
+        assert data["last_week"]["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 97}
     # The week's own file really did hold them: the test would catch them getting out.
     kept = next((state / "weeks").glob("*.json")).read_text()
     assert "AlexFake" in kept and "kills" in kept
@@ -560,7 +673,7 @@ def test_a_close_shows_the_closed_week_and_the_new_one(world, tmp_path):
     assert data["last_week"]["closed"] == "2026-11-09T03:00:00Z"
     assert data["week_closes"] == "2026-11-16T03:00:00Z"
     # The new week has no kills or bounties yet, so it has fewer points than the week it follows.
-    assert data["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 80}
+    assert data["factions"][0] == {"rank": 1, "name": "Red Monkeys", "points": 75}
 
 
 def test_nothing_is_written_before_the_launch(tmp_path, capsys):
@@ -859,14 +972,15 @@ def test_a_cup_entry_named_for_a_player_stays_out(tmp_path):
 
 
 def test_ties_share_a_rank_as_on_the_board():
-    rows = standings.rank([standings.Row("B", cup=5, land=5), standings.Row("A", cup=5, land=5), standings.Row("C")])
+    rows = standings.rank([standings.Row("B", cup=5, kills=5), standings.Row("A", cup=5, kills=5),
+                           standings.Row("C")])
     assert standings.public_rows([asdict(r) for r in rows], frozenset(), frozenset()) == [
-        {"rank": 1, "name": "A", "points": 60}, {"rank": 1, "name": "B", "points": 60},
+        {"rank": 1, "name": "A", "points": 75}, {"rank": 1, "name": "B", "points": 75},
         {"rank": 3, "name": "C", "points": 0}]
     # A tie on points alone goes to Cup, then kills, as on the board and in Discord; the public file keeps that rank.
-    rows = standings.rank([standings.Row("Land", land=10, strength=10), standings.Row("Cup", cup=10)])
+    rows = standings.rank([standings.Row("Fight", strength=10, kills=10), standings.Row("Cup", cup=10)])
     assert standings.public_rows([asdict(r) for r in rows], frozenset(), frozenset()) == [
-        {"rank": 1, "name": "Cup", "points": 40}, {"rank": 2, "name": "Land", "points": 40}]
+        {"rank": 1, "name": "Cup", "points": 50}, {"rank": 2, "name": "Fight", "points": 50}]
 
 
 def pacific(*when):

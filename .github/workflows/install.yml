@@ -1,0 +1,58 @@
+name: Clean install
+
+# The players' two ways in, from nothing (docs/MAINTAINING.md, "Tests"): the launcher pack as the Modrinth App
+# or Prism Launcher installs it, and the Windows installer against an empty Minecraft Launcher folder. Each
+# downloads the whole pack (about 380 MB), so this runs before every release (release.yml calls it and waits),
+# by hand (Actions > Clean install > Run workflow, before a tag), and on a pull request only when it touches
+# the pack (client/), the installer, the build or this test, so a dead download or a wrong hash shows on the PR
+# rather than at the tag. Never on every push: tools/checks.py covers the rest with unit tests.
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "client/**"
+      - "tools/build.py"
+      - "player/**"
+      - "tools/clean_install.py"
+      - ".github/workflows/install.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: install-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  launcher:
+    name: Launcher pack from clean (every file downloads and matches its hash)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build release files
+        run: python tools/build.py
+      - name: Install the pack into an empty folder as a launcher does
+        run: python tools/clean_install.py launcher dist/MonkeySMP-Client-*.mrpack "$RUNNER_TEMP/instance"
+
+  installer:
+    name: Windows installer from clean (empty Minecraft Launcher folder)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build release files
+        run: python tools/build.py
+      # The real .bat, as a double-click runs it, with APPDATA pointed at a scratch folder.
+      - name: Unzip the player zip, run its installer, check what it left
+        shell: powershell
+        run: |
+          python tools/clean_install.py installer (Get-Item dist/MonkeySMP-Player-*.zip).FullName "$env:RUNNER_TEMP\player"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

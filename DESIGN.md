@@ -263,12 +263,12 @@ The frame family: gold (with hover and pressed variants), bone outline (with a l
 ### Buttons
 Chunky gold blocks that press down a pixel.
 - **Shape:** gold frame with ink outline and two-step corners, no radius; 56 px tall minimum, 18 px side padding inside the 6 px frame.
-- **Primary:** gold fill, ink text, body face 700 at 1.0625rem. Used for "Get a pass", the Copy button on the plaque (48 px tall there, 44 px on phones) and the skip link.
+- **Primary:** gold fill, ink text, body face 700 at 1.0625rem. Used for "Get a pass", "Get the modpack" in the join steps (48 px tall), the Copy button on the plaque (48 px tall there, 44 px on phones) and the skip link.
 - **Hover / Focus:** hover swaps to a brighter gold frame; pressing swaps to a frame with a one-row bevel and moves the button down 2 px with no transition. Focus is a 2 px bone outline at 3 px offset (ink on stone surfaces).
-- **Ghost:** bone outline frame, no fill, bone text ("Join the Discord", "Support the server"). Hover fills it with canopy leaf. For secondary actions only: beside a gold button, or as the one action on the optional Supporter tier.
+- **Ghost:** bone outline frame, no fill, bone text ("Join the Discord", "Support the server", "Get the installer" under "Get the modpack"). Hover fills it with canopy leaf. For secondary actions only: beside a gold button, or as the one action on the optional Supporter tier.
 
 ### Chips / Tags
-- **Where tag:** ink block with bone label text, pinned 12 px into the top-left of every screenshot to say where it was taken (Overworld, The Nether, The End). The same ink block marks "optional" beside the Supporter heading.
+- **Where tag:** ink block with bone label text, pinned 12 px into the top-left of every screenshot to say where it was taken (Overworld, The Nether, The End). The same ink block marks "optional" beside the Supporter heading and "recommended" beside the launcher pack in the join steps.
 - **Date tag:** stone block with ink label text, the date of each changelog entry.
 
 ### Cards / Containers

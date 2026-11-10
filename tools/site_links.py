@@ -2,6 +2,7 @@
 
     python tools/site_links.py --check             exit 1 if something is wrong (validate.py runs this too)
     python tools/site_links.py                     the same, after copying Season Wrapped's stylesheet and the rulebook
+                                                   and writing the pack files' checksum list
     python tools/site_links.py --built site/out    also check a build's pages (checks.py's site step, after the build)
 
 config.json is the one place the site's links, the server address and the launch time live. The site (Next.js,
@@ -12,6 +13,9 @@ work without JavaScript; this checks the same file from the Python side:
   - when the modpack is served from the site itself (site/public/pack/), that file is there and is the pack of
     the version the manifest pins (or a site-only rebuild of it, "<version>-<label>", tools/build.py
     --site-build), since a player with another version's pack can't join;
+  - the pack and the installer, when the site serves them itself, have a SHA256SUMS.txt beside them that lists
+    exactly the files in that folder, each with the hash it has now (tools/checksums.py): the front page tells
+    players to check a download against it. Without --check, a missing or stale list is written again;
   - site/public/wrapped/site.css is a copy of the site's stylesheet (src/app/style.css): Season Wrapped's pages
     (tools/wrapped.py) are plain HTML that load it, since the built site's own CSS has a new name every build.
     Without --check, a stale copy is replaced instead of reported;
@@ -35,6 +39,7 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
+import checksums
 import live_packs
 import season_calendar
 from repo import REPO
@@ -137,6 +142,23 @@ def local_file(url: str) -> str:
     if not url or url.startswith("//") or re.match(r"[a-z][a-z0-9+.-]*:", url, re.IGNORECASE):
         return ""
     return re.split(r"[?#]", url, maxsplit=1)[0].lstrip("/")
+
+
+def checksum_problems(links: dict[str, str], repo=REPO, write=False) -> list[str]:
+    """Each folder the site serves the pack or the installer from has a SHA256SUMS.txt for its files (the front
+    page links to the one beside the first of the two: src/lib/config.ts, checksumsBeside)."""
+    errors = []
+    public = site(repo) / "public"
+    names = [name for key in ("MODPACK_URL", "INSTALLER_URL") if (name := local_file(links.get(key, "")))]
+    for folder in dict.fromkeys((public / name).parent for name in names if (public / name).is_file()):
+        label = folder.relative_to(repo.root).as_posix()
+        found = checksums.problems(folder, label)
+        if found and write:
+            checksums.write(folder)
+            print(f"updated {label}/{checksums.NAME}")
+            continue
+        errors += [f"{e} (run python tools/site_links.py)" for e in found]
+    return errors
 
 
 def calendar_problems(links: dict[str, str], repo=REPO) -> list[str]:
@@ -314,7 +336,8 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
     errors = config_problems(settings)
     if errors:
         return errors
-    errors += pack_problems(settings, repo) + calendar_problems(settings, repo) + stylesheet_problems(repo, write)
+    errors += pack_problems(settings, repo) + checksum_problems(settings, repo, write)
+    errors += calendar_problems(settings, repo) + stylesheet_problems(repo, write)
     errors += rulebook_problems(repo, write) + live_packs.list_problems(repo)
     if built is not None:
         errors += built_problems(built, settings) + live_packs.built_problems(built, repo)
@@ -323,7 +346,8 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
 
 def main(argv=None, repo=REPO) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--check", action="store_true", help="report a stale copied file instead of copying it")
+    ap.add_argument("--check", action="store_true",
+                    help="report a stale copied file or checksum list instead of writing it")
     ap.add_argument("--built", type=Path, metavar="DIR", help="also check a build's pages (site/out)")
     a = ap.parse_args(argv)
     errors = problems(repo, write=not a.check, built=a.built)

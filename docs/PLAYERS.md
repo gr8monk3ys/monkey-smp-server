@@ -5,7 +5,8 @@
 - **Minecraft Java Edition** (the one from minecraft.net; not Bedrock / Windows 10 Edition), on Windows,
   macOS or Linux.
 - **The Monkey SMP pack.** The server adds blocks, mobs and items, so plain Minecraft can't join. The easiest
-  way to get it is the Modrinth App (A below), on every computer.
+  way to get it is a launcher that installs packs, the Modrinth App or Prism Launcher (A below), on every
+  computer.
 - Your Minecraft username on the server's **guest list** (whitelist). Tell the host your exact name.
 - The server address from the host. Monkey SMP's own server is `monkeysmp.lscaturchio.xyz`.
 
@@ -15,30 +16,40 @@
 minutes on a fast computer, every time. Near the end, Windows may show **Not Responding** on and off for up
 to a minute. That's normal: don't close the window, and choose **Wait** if Windows asks.
 
-### A. The Modrinth App (recommended, Windows, macOS and Linux)
+### A. The Modrinth App or Prism Launcher (recommended; Windows, macOS and Linux)
 
-1. Install the [Modrinth App](https://modrinth.com/app) (free) and sign in with the Microsoft account you
-   play Minecraft with. You don't buy Minecraft again.
-2. Open the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp) and press **Install** (or search
-   for "Monkey SMP" in the app's Discover). It downloads about 380 MB: the mods and resource packs.
-3. Give the game enough memory: the instance's settings > **Java and memory**, 6 GB (8 GB if the computer has more
-   than 16 GB of RAM).
+Both are free launchers that install the whole pack from one file, with no installer to run. You sign in with
+the Microsoft account you play Minecraft with; you don't buy Minecraft again.
+
+1. Get the pack: **Get the modpack** on [the website](https://monkeysmp.lscaturchio.xyz/#join), or
+   `MonkeySMP-Client-<version>.mrpack` from the host. To make sure the file is the one we published, see
+   [Check a download](#check-a-download).
+2. Install it. The launcher downloads about 380 MB: the mods and resource packs.
+   - **[Modrinth App](https://modrinth.com/app):** open the file (double-click it). Or in the app, press **+**
+     (*Create new instance*) and choose **Upload a modpack**. The app asks you to confirm, because the pack
+     isn't published on Modrinth yet: choose **Install anyway**.
+   - **[Prism Launcher](https://prismlauncher.org):** **Add Instance > Import**, then choose the file.
+3. Give the game enough memory: 6 GB (8 GB if the computer has more than 16 GB of RAM). In the Modrinth App
+   that is the instance's settings > **Java and memory**; in Prism, the instance's **Settings > Java**.
    Too little memory makes the game stutter or crash.
 4. Press **Play**. The first start takes a few minutes. In the game: **Multiplayer > Add Server**, type the
    address, **Done**, **Join Server**.
 
-Can't find the pack on Modrinth? It is waiting for Modrinth's review. Until it's up, get
-`MonkeySMP-Client-<version>.mrpack` from the host and import it instead: in the app, **+ > Import**, choose
-the file. If your host runs an older release than the newest one, install the matching version from the
-pack's **Versions** tab, or import that release's `.mrpack`.
+The pack is also waiting for Modrinth's review. Once it is up as the
+[Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp), you can search for "Monkey SMP" in the Modrinth
+App (Discover) or in Prism (**Add Instance > Modrinth**) and install it from there instead of from a file. If
+your host runs an older release than the newest one, install the matching version from the pack's **Versions**
+tab, or import that release's `.mrpack`.
 
 ### B. Windows: the normal Minecraft Launcher
 
-If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`** from the host.
+If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`**: **Get the installer** on
+[the website](https://monkeysmp.lscaturchio.xyz/#join), or from the host.
 
 1. Start the Minecraft Launcher once, sign in, then **close it**.
 2. Unzip `MonkeySMP-Player-<version>.zip` and double-click **`Install for Minecraft Launcher.bat`**.
-   If Windows says *"Windows protected your PC"*, click **More info > Run anyway**.
+   Windows may say *"Windows protected your PC"*, because the file isn't signed: click **More info > Run
+   anyway**.
    It downloads about 380 MB (mods and resource packs) from their official websites and checks
    every file, and sets the game's memory from your computer's RAM. When it's done, press a key to close
    the window.
@@ -49,18 +60,27 @@ If you'd rather keep the normal launcher, get **`MonkeySMP-Player-<version>.zip`
 Your normal Minecraft isn't touched: Monkey SMP keeps its own mods, settings and worlds in a separate
 folder (`%APPDATA%\.monkey-smp`). To remove it, double-click **`Uninstall Monkey SMP.bat`**.
 
-### C. Prism Launcher
+### Check a download
 
-[Prism Launcher](https://prismlauncher.org) (free, Windows, macOS, Linux): **Add Instance > Modrinth**, search
-for "Monkey SMP", **OK**; or **Add Instance > Import** and choose the `.mrpack` from the host. Set the memory
-in the instance's **Settings > Java**, as in step 3 of A, then add the server as in step 4.
+Every file we publish has its SHA-256 in a list named `SHA256SUMS.txt`:
+[the website's list](https://monkeysmp.lscaturchio.xyz/pack/SHA256SUMS.txt) has the two player files, and each
+release's page on GitHub (releases after 3.3.0) has all three. To check a file, work out its SHA-256 and compare
+it with the line for that file:
+
+- Windows (PowerShell): `Get-FileHash MonkeySMP-Client-<version>.mrpack`
+- macOS: `shasum -a 256 MonkeySMP-Client-<version>.mrpack`
+- Linux: `sha256sum MonkeySMP-Client-<version>.mrpack`
+
+Capital and small letters count as the same. If the two differ, the file is damaged or isn't ours: delete it
+and download it again.
 
 ### Updating
 
 Always play the version that matches the server: 3.x is Minecraft 26.2; 2.x packs were 26.3 and 1.x packs 26.1.2,
 and neither joins a 3.x server, so reinstall the pack for 3.0.0. When the host says the pack changed:
 
-- **Modrinth App:** the Monkey SMP instance offers the update; take it before you play.
+- **Modrinth App:** a pack installed from a file is updated by installing the new file the same way. One
+  installed from Modrinth offers the update in the app; take it before you play.
 - **Minecraft Launcher (B):** unzip the new player zip and double-click the installer again. It updates the same
   "Monkey SMP" installation and keeps your settings, worlds and screenshots.
 - **Prism:** a pack installed from Modrinth updates on the instance's **Edit > Modpack** page; an imported
@@ -80,12 +100,12 @@ one of them the server turns you away ("This server requires ... installed on yo
 
 How to leave files out:
 
-- **Prism Launcher (C):** when you install or import the pack, Prism lists the optional files with tick boxes,
+- **Prism Launcher (A):** when you install or import the pack, Prism lists the optional files with tick boxes,
   all ticked. Untick what you don't want. Required files have no tick box. Later, switch mods off in the
   instance's **Edit > Mods**.
 - **Modrinth App (A):** install the pack as usual, then switch mods off in the instance's **Content** tab. The
   app doesn't mark which ones are optional, so only switch off the ones below.
-- **Minecraft Launcher (B):** the installer always installs everything. On a slow computer, use A or C.
+- **Minecraft Launcher (B):** the installer always installs everything. On a slow computer, use A.
 
 After an update, check the list again: an update can switch them back on.
 

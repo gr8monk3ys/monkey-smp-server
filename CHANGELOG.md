@@ -8,6 +8,16 @@
   put the jar on the live server by hand on 2026-11-09 and made it required to join; the pack now pins the same
   file (matched by its SHA-1 on Modrinth). A deploy finds that file already in place with the pinned hash, keeps it
   and manages it from then on, so the server ends up with one copy. Needs Fabric API (already in the pack).
+- **Every release lists the SHA-256 of its files.** `tools/build.py` writes `dist/SHA256SUMS.txt` beside the three
+  release files (`tools/checksums.py`, in the form `sha256sum` writes) and the release attaches it, after checking
+  that it covers the files as built. The website has the same list for the two player files it serves
+  (`site/public/pack/SHA256SUMS.txt`, written by `python tools/site_links.py`); the join steps link to it and say
+  how to check a download, and `validate.py` fails when the list is missing or doesn't match the files.
+- **Both ways a player installs the pack are tested from clean before a release.** The new Clean install workflow
+  (`tools/clean_install.py`) installs the launcher pack into an empty folder as the Modrinth App or Prism Launcher
+  does (a valid Modrinth pack; every file downloads and matches its size, SHA-1 and SHA-512), and on Windows runs
+  the player zip's `Install for Minecraft Launcher.bat` against an empty Minecraft Launcher folder and checks every
+  file it left. The Release workflow publishes nothing until both pass. It doesn't start the game.
 - Patina & Chime 0.2.1, the owner's own copper and amethyst mod, on the server and in the players' pack. It is
   still waiting for Modrinth's moderation, so it is pinned from its GitHub release instead: size and hash in the
   manifest, downloaded and checked on install like every other mod (ADR-0009). Players need the new pack to
@@ -31,6 +41,14 @@
   only its log says so. Data a pinned mod ships broken is listed as known, file by file (More Villagers: nine
   advancements and the `gilded_station` recipe don't parse on 26.2); see `docs/MAINTAINING.md`, "Updating the
   server, plugins and mods".
+
+### Changed
+
+- **The launcher pack is the first way in.** The website's join steps, `docs/PLAYERS.md`, the player zip's
+  `READ ME.txt` and the server's `READ ME FIRST.txt` now put the `.mrpack` in the Modrinth App or Prism Launcher
+  first, as the recommended path. The Windows installer is the second path, with one sentence on the warning
+  Windows shows because the file isn't signed, and what to click. `docs/QA.md` has the procedure for measuring
+  the memory the pack needs; the 16 GB stays marked as not measured until someone runs it.
 
 ### Fixed
 

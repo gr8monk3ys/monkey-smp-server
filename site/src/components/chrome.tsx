@@ -37,7 +37,10 @@ export function Footer({ items }: { items: NavItem[] }) {
           <Fragment key={item.label}>{i > 0 && " · "}<Item item={item} /></Fragment>
         ))}
       </p>
-      <p className="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+      <p className="small">
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Not an official Minecraft product. Not approved
+        by or associated with Mojang or Microsoft.
+      </p>
     </footer>
   );
 }

@@ -4,6 +4,11 @@
 
 ### Added
 
+- **The website has a privacy policy and terms of service** (`/privacy`, `/terms`), linked from every page's
+  footer. The privacy policy says what the site, the game server, the store and Discord record, who handles it,
+  how long backups last and how to get data copied or deleted. The terms cover who can play (13 and over),
+  payments through Tebex, renewals, refunds, seasons, bans and appeals. Link both from the Tebex store's
+  settings by hand.
 - Tests: the three boot tests (`tests/smoke.ps1`, `tests/docker-smoke.sh`, `tests/hosting-smoke.sh`) fail when
   data fails to load: a function, a tag, a data file that doesn't parse or doesn't pass validation, or one of our
   advancements. Before, a typo in one generated function passed every check, because the server starts anyway and
@@ -25,6 +30,8 @@
   toughness and +0.1 knockback resistance. Nothing about the armor changes; the bonus comes off when the piece does,
   when the power changes and at death (docs/MAINTAINING.md, "Patches this pack carries"). Staff reported it
   (2026-11-08).
+- **The front page's refunds answer said the 2-month pass doesn't renew.** It has renewed every 2 months since
+  2026-11-07 (docs/LIVE.md, "The store"); the answer now says so.
 
 ## [3.3.0] - 2026-11-08
 

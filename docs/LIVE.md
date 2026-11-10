@@ -1219,7 +1219,7 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
     tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
-    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py
+    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1465,6 +1465,10 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Temporary bans | admin | Ban for 1 hour to 30 days; lifted by the page at that time, or now with "Lift now". Moderators see the list. |
 | Search all files | admin | The Files tab's search, by name or in the text of settings files. |
 | Find what causes lag | admin | `tools/staff_spark.py`: spark's profiler for 1 to 10 minutes (everything, lag spikes only, or memory), then a link to its report. Moderators see the state and the link. |
+| Console commands | moderator | A moderator login runs only the commands on the owner's list (Console tab, "Commands moderators can run"; `staff/mod-commands.json`, mode 600). The standard list: `list`, `say`, `msg`, `tell`, `w`, `kick`, `whitelist add`, `whitelist remove`, `whitelist list`. An entry of two words allows only that pair. Commands that run other commands, make operators, reload code, stop the server or show addresses (`execute`, `function`, `op`, `reload`, `stop`, `ban-ip`...) can't be added. A list that can't be read allows nothing. Admins and owners run any command, as before. Changing the list is owner. |
+| A player's history | moderator | The Players tab: one player's lists, ban and reason, temporary ban, notes and every change in the record that names them (the newest 200 of the current `actions.log`). |
+| Who changed this block | moderator | The Players tab: Ledger's rows for one block or up to 8 around it, in the last 6 hours to 30 days, everything or only blocks, chests or kills, optionally one player. It only reads (`world/ledger.sqlite`, through its location index, at most 500 rows and 3 seconds); a rollback is still Ledger's own command in game. |
+| Updates on Modrinth | admin | The Mods tab: each enabled jar's sha512 is sent to Modrinth's `version_files/update` with the loader and game version, and the jars with a newer file are listed with a changelog link (kept 30 minutes; "Check for updates" asks again). Nothing else about the server is sent. An owner presses Update and types the mod's short name: the same install as the mod manager's, so the old jar moves to `mods-removed/`. A pinned mod has no Update button: it comes with a release. |
 | Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
 | Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |

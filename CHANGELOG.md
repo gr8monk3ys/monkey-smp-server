@@ -18,6 +18,13 @@
 
 ### Fixed
 
+- Timed jobs no longer fail when staff turned their data pack off. With the wardrobe pack off since 2026-11-06,
+  monkey-day failed every 10 minutes for 6 hours each day and then alerted staff, and monkey-sieges failed every
+  5 minutes (684 times by 11-09). Each job now names its packs (`JOB_PACKS` in deploy/lib.sh); when one is off it
+  logs that and sends nothing (`tools/rcon.py packs-on`). When it can't tell, it sends as before.
+- `monkey-deploy.timer` checks 1 minute after it starts (`OnActiveSec`). Stopped on 11-04 and started again on
+  11-08, it never fired: 5 minutes after the last check only counts once a check has run, so no release could
+  deploy itself. Install the new unit by hand (docs/LIVE.md, "The deploy timer that fires on start").
 - **The front page's refunds answer said the 2-month pass doesn't renew.** It has renewed every 2 months since
   2026-11-07 (docs/LIVE.md, "The store"); the answer now says so.
 

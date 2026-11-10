@@ -18,12 +18,7 @@ export default function WhatChanged() {
   preloadMono(); // commands in the prose
   return (
     <>
-      <Canopy label="Site" items={[
-        { label: "Join", href: "/#join" },
-        { label: "Rules", href: "/#rules" },
-        { label: "FAQ", href: "/#faq" },
-        { label: "Guide", href: "/guide" },
-      ]} />
+      <Canopy here="changes" />
 
       <main id="main">
         <section className="hero">
@@ -41,13 +36,7 @@ export default function WhatChanged() {
         </section>
       </main>
 
-      <Footer items={[
-        { label: "Monkey SMP", href: "/" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Live map", to: "MAP_URL" },
-        { label: "How it works", href: "/guide" },
-      ]} />
+      <Footer here="changes" />
     </>
   );
 }

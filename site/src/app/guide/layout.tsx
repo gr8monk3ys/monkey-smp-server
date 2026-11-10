@@ -9,26 +9,14 @@ export default function GuideLayout({ children }: { children: ReactNode }) {
   preloadMono(); // commands in the prose
   return (
     <>
-      <Canopy label="Site" items={[
-        { label: "Join", href: "/#join" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Commands", href: "/guide/commands/players" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-      ]} />
+      <Canopy here="guide" />
 
       <div className="docs">
         <GuideNav />
         <main id="main">{children}</main>
       </div>
 
-      <Footer items={[
-        { label: "Monkey SMP", href: "/" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Contact", to: "CONTACT_URL" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Live map", to: "MAP_URL" },
-        { label: "What changed", href: "/changes" },
-      ]} />
+      <Footer here="guide" />
     </>
   );
 }

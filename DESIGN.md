@@ -319,7 +319,15 @@ Stone blocks with an ink title in the display face, ink body text and ink links,
 A 2 px ink outline clipped to the stair shape, the image 16:9 and covering, a where tag in the corner, and a sage caption under it. The trailer uses the same frame.
 
 ### Navigation
-The header is a canopy-leaf band with the logo (48 px tall, 32 px on phones) on the left and bone, bold, underline-free links on the right; hover underlines them 6 px below the text. The canopy fringe hangs from its bottom edge. On phones the links wrap under the logo with tighter padding.
+The header is a canopy-leaf band with the logo (48 px tall, 32 px on phones) on the left and bone, bold, underline-free links on the right; hover underlines them 6 px below the text. The canopy fringe hangs from its bottom edge. On phones the links wrap under the logo with tighter padding. Every page has the same six links (Join, Pricing, Rules, Guide, Map, News); the current page's link keeps its underline.
+
+The footer is the same on every page: the logo and the address plaque, then three short lists of links (Play, Read, Talk) under sage body-face labels, then the Mojang line.
+
+### The dock
+The address and "Get a pass" stay in reach after the page's own plaque has scrolled away: a leaf-framed block in the bottom right corner on wide screens, a band along the bottom edge on phones. The address is a stone button (it copies); the pass is the gold button. It steps up into place, and it is hidden while any plaque or the footer is in view, so the address never shows twice.
+
+### Item slots
+Each feature in "The world" has a 12 × 12 pixel item sprite in a 64 px shade-framed slot (56 px on phones), drawn in the palette's own colours. They are decoration; the heading says what the feature is.
 
 ### Questions (FAQ)
 Rows separated by 2 px canopy-leaf lines. The summary is bone body text at 1.125rem, 700, with a 12 px gold pixel plus on the right that becomes a minus when open; hover turns the summary lit gold.

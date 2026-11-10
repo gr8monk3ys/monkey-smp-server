@@ -142,7 +142,11 @@ h3 { font: 700 1.3rem/1.2 var(--display); }
 .canopy nav a {
   padding: 10px; color: var(--bone); font-weight: 700; text-decoration: none;
 }
-.canopy nav a:hover { color: var(--bone); text-decoration: underline; text-underline-offset: 6px; }
+.canopy nav a:hover, .canopy nav a[aria-current="page"] {
+  color: var(--bone); text-decoration: underline; text-underline-offset: 6px;
+}
+/* Links in running text: the same words, with room for a thumb above and below them. */
+main :is(p, li, dd, figcaption) > a:not(.button) { padding-block: 10px; }
 
 /* A section crowned with leaves: a strip of the canopy colour with blocks hanging from it. */
 .crown { position: relative; border-top: 16px solid var(--leaf-2); }
@@ -158,7 +162,7 @@ main > section, footer { padding: 112px var(--gutter); }
 .hero {
   position: relative; display: grid; align-items: start; column-gap: 64px; padding-top: 96px; padding-bottom: 0;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "hook hook" "lede launch" "ways ways" "facts facts" "view view" "status status" "trailer trailer";
+  grid-template-areas: "hook hook" "lede launch" "ways ways" "facts facts" "status status" "view view" "trailer trailer";
 }
 .monkey {
   position: absolute; z-index: 1; top: -64px; right: var(--gutter);
@@ -237,7 +241,7 @@ main > section, footer { padding: 112px var(--gutter); }
   background: var(--shade); clip-path: var(--stair-in);
 }
 .where, .tag {
-  display: inline-block; padding: 0 6px; font: 700 0.8125rem/1.5 var(--body); color: var(--bone);
+  display: inline-block; padding: 0 6px; font: 700 0.875rem/1.5 var(--body); color: var(--bone);
   background: var(--ink) padding-box; border: 6px solid transparent; border-image: var(--frame-ink) 6 fill / 6px;
 }
 .where { position: absolute; z-index: 1; top: 12px; left: 12px; }
@@ -272,6 +276,13 @@ figcaption { margin-top: 12px; color: var(--sage); max-width: var(--measure); }
  * number, the number leads it. */
 #world { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); gap: 24px 64px; }
 .features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
+.features article { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 20px; align-items: start; }
+/* An item in its slot, as in an inventory: 12 pixels of sprite at four screen pixels each. */
+.slot {
+  display: block; width: 64px; height: 64px; padding: 2px;
+  background: var(--shade) padding-box; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
+}
+.slot svg { display: block; width: 48px; height: 48px; }
 .features .fig { margin: 0 0 8px; font: 700 2.25rem/1 var(--display); color: var(--bone); }
 .features h3 { margin-bottom: 0.4em; }
 .features p { margin: 0; max-width: var(--measure); }
@@ -290,6 +301,12 @@ figcaption { margin-top: 12px; color: var(--sage); max-width: var(--measure); }
 }
 .steps p { margin: 0; }
 .steps code { overflow-wrap: anywhere; }
+/* The two ways to install, one under the other: whose it is, what to do, and the file. */
+.paths { margin: 16px 0 0; }
+.paths div { padding: 14px 0 16px; border-top: 2px solid var(--leaf-2); }
+.paths dt { font-weight: 700; color: var(--bone); }
+.paths dd { margin: 0; }
+.paths .button { min-height: 48px; margin-top: 12px; }
 
 /* Pricing: one pass, the same for everyone, as the one solid block; the tiers beside it only change how you
  * look, so they are drawn as an outline. */
@@ -373,10 +390,40 @@ details p { margin: -4px 0 20px; max-width: var(--measure); }
   .kit figure:last-child { grid-column: 2; grid-row: 1 / span 2; }
 }
 
+/* The last word before the footer: the same way in as the first screen, with the monkey back to see you off. */
+.outro { position: relative; }
+.outro .monkey { top: 96px; width: 160px; height: 160px; }
+.outro :is(h2, .facts) { max-width: calc(100% - 184px); }
+.outro .facts { margin-top: 0; }
+.outro .ways { margin-top: 28px; }
+
+/* The footer: the logo and the address, then the site's links in three short lists. */
 footer { position: relative; padding-top: 112px; padding-bottom: 64px; background: var(--shade); }
-footer p:first-child a { color: var(--bone); font-weight: 700; }
-footer p:first-child a:hover { color: var(--gold-hi); }
+.foot { display: grid; grid-template-columns: max-content repeat(3, minmax(0, 1fr)); gap: 40px 72px; margin-bottom: 48px; }
+.foot-home { display: grid; gap: 24px; justify-items: start; align-content: start; }
+.foot h2 { margin: 0 0 6px; font: 700 0.95rem/1.5 var(--body); color: var(--sage); }
+.foot ul { list-style: none; margin: 0; padding: 0; }
+.foot li a { display: block; padding: 9px 0; color: var(--bone); font-weight: 700; text-decoration: none; }
+.foot li a:hover { color: var(--bone); text-decoration: underline; text-underline-offset: 6px; }
 footer .small { margin: 0; }
+
+/* The dock (components/plaque.tsx): the address and the pass, in reach once the page's own have scrolled away.
+ * A block in the corner on a wide screen, a band along the bottom of a phone. It steps up into place. */
+.dock {
+  position: fixed; z-index: 5; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 10px;
+  max-width: calc(100% - 48px); padding: 6px;
+  background: var(--leaf-2) padding-box; border: 6px solid transparent; border-image: var(--frame-leaf) 6 fill / 6px;
+  animation: rise 180ms steps(3, end);
+}
+@keyframes rise { from { transform: translateY(100%); } }
+.dock .button { flex: none; min-height: 48px; }
+.dock-address, .dock-address:hover, .dock-address:active {
+  flex: 1 1 auto; min-width: 0; min-height: 48px; gap: 12px; padding: 0 10px; color: var(--ink);
+  background: var(--stone) padding-box; border-image-source: var(--frame-stone);
+}
+.dock-address code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+.dock-address span { flex: none; min-width: 3.4em; font-size: 0.875rem; color: var(--ink-2); text-align: right; }
+.dock-address:hover span { text-decoration: underline; text-underline-offset: 4px; }
 
 @media (max-width: 960px) {
   #world { grid-template-columns: 1fr; }
@@ -388,6 +435,10 @@ footer .small { margin: 0; }
   .steps li > * { grid-column: 2; }
   .steps h3 { margin-top: 4px; }
   .monkey { width: 160px; height: 160px; top: -48px; }
+  .outro .monkey { top: 96px; width: 128px; height: 128px; }
+  .outro :is(h2, .facts) { max-width: calc(100% - 144px); }
+  .foot { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .foot-home { grid-column: 1 / -1; }
 }
 
 @media (max-width: 760px) {
@@ -402,7 +453,7 @@ footer .small { margin: 0; }
    * fit on the first screen. */
   /* What it takes goes right under the hook: a phone's browser bars hide the buttons on the first screen, so the
    * game, the price and the guarantee come before them. */
-  .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "facts" "launch" "ways" "view" "lede" "status" "trailer"; }
+  .hero { padding-top: 56px; padding-bottom: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hook" "facts" "launch" "ways" "status" "view" "lede" "trailer"; }
   .facts { margin-top: 0; }
   .view { margin-top: 28px; }
   .view .shot > img { aspect-ratio: 16 / 9; }
@@ -433,6 +484,23 @@ footer .small { margin: 0; }
   .tiers th { white-space: normal; }
   .ladder li { grid-template-columns: 1fr; gap: 2px; }
   .trailer { margin-top: 48px; }
+  .features article { grid-template-columns: 56px minmax(0, 1fr); gap: 16px; }
+  .slot { width: 56px; height: 56px; padding: 4px; }
+  .slot svg { width: 36px; height: 36px; }
+  .outro .monkey { top: 52px; width: 96px; height: 96px; }
+  .outro :is(h2, .facts) { max-width: calc(100% - 104px); }
+  .foot { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 24px; margin-bottom: 36px; }
+  .dock {
+    left: 0; right: 0; bottom: 0; gap: 8px; max-width: none; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    border: 0; border-top: 2px solid var(--ink); background: var(--leaf-2);
+  }
+  .dock .button { padding: 0 10px; }
+  /* The whole address has to be readable on a 360 px phone, so the word goes under it. */
+  .dock-address, .dock-address:hover, .dock-address:active {
+    flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; padding: 4px 6px;
+  }
+  .dock-address code { max-width: 100%; font-size: min(0.8125rem, 3.3vw); }
+  .dock-address span { min-width: 0; font-size: 0.75rem; text-align: left; }
 }
 
 /* The front page's seven links stay on one line down to a 360 px phone. */
@@ -444,6 +512,6 @@ footer .small { margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .counter i.drop { animation: none; }
+  .counter i.drop, .dock { animation: none; }
   .button:active, button:active, .button.ghost:active { transform: none; }
 }

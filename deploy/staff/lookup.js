@@ -95,7 +95,7 @@
       $("modcmds-list").textContent = rows.length ? `${rows.join(", ")}${who}` : "None: a moderator login can't use the console.";
       if (data.broken) say("modcmds-error", "mod-commands.json can't be read, so moderators can run nothing. Save the list again to fix it.");
       $("modcmds-input").value = rows.join(", ");
-      $("modcmds-input").title = `Commands that can be given: ${(data.can_allow || []).join(", ")}`;
+      $("modcmds-input").title = `Commands that can be given: ${data.can_allow || ""}`;
     } catch (error) {
       say("modcmds-error", error);
     }

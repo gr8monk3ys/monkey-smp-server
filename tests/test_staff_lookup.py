@@ -70,7 +70,7 @@ def test_admins_and_owners_use_the_console_as_before(box):  # noqa: F811
 def test_the_owner_sets_the_list_and_it_is_logged(box):  # noqa: F811
     code, answer = box.call("GET", "/api/mod-commands", headers=MOD)
     assert code == 200 and answer["default"] and "kick" in answer["commands"]
-    assert "kick" in answer["can_allow"] and "op" not in answer["can_allow"]
+    assert "kick" in answer["can_allow"] and " op," not in answer["can_allow"]
     code, answer = box.call("PUT", "/api/mod-commands", {"commands": ["/Time Set", "time set", " tp ", ""]})
     assert code == 200 and answer["commands"] == ["time set", "tp"]
     assert box.call("GET", "/api/mod-commands", headers=MOD)[1]["commands"] == ["time set", "tp"]
@@ -85,10 +85,19 @@ def test_the_owner_sets_the_list_and_it_is_logged(box):  # noqa: F811
                                      ["semi;colon"], "list", [1], ["x"] * 41, ["setblock"], ["give"],
                                      ["minecraft:data"], ["summon"], ["fill"], ["clone"], ["place"], ["item"],
                                      ["loot"], ["tellraw"], ["dialog"], ["team modify"], ["bossbar set"],
-                                     ["scoreboard objectives"], ["title"], ["some_mod_command"]])
+                                     ["scoreboard objectives"], ["title"], ["some_mod_command"],
+                                     ["gamemode"], ["gamemode creative"], ["minecraft:gamemode creative"],
+                                     ["ledger"], ["ledger purge"], ["ledger rollback"], ["ledger restore"]])
 def test_commands_that_lift_a_moderator_can_never_be_allowed(box, entries):  # noqa: F811
     assert box.call("PUT", "/api/mod-commands", {"commands": entries})[0] == 400
     assert not (box.staff / "mod-commands.json").exists()
+
+
+def test_a_second_word_limit_holds_for_the_command_too(box):  # noqa: F811
+    assert box.call("PUT", "/api/mod-commands", {"commands": ["gamemode spectator", "ledger search"]})[0] == 200
+    for command, code in (("gamemode spectator Alpha", 200), ("gamemode creative Alpha", 403),
+                          ("ledger search params:a", 200), ("ledger purge", 403)):
+        assert box.call("POST", "/api/command", {"command": command}, headers=MOD)[0] == code, command
 
 
 def test_a_broken_list_allows_nothing(box):  # noqa: F811
@@ -96,7 +105,8 @@ def test_a_broken_list_allows_nothing(box):  # noqa: F811
     (box.staff / "mod-commands.json").write_text("{broken")
     assert box.call("POST", "/api/command", {"command": "list"}, headers=MOD)[0] == 403
     (box.staff / "mod-commands.json").write_text(json.dumps({"commands": ["list", "op", "execute as",
-                                                                       "minecraft:execute run", "give"]}))
+                                                                       "minecraft:execute run", "give",
+                                                                       "gamemode", "ledger purge"]}))
     assert box.call("GET", "/api/mod-commands", headers=MOD)[1]["commands"] == ["list"]
 
 

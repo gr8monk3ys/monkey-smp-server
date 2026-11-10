@@ -54,11 +54,29 @@ DEFAULT_COMMANDS = ["list", "say", "msg", "tell", "w", "kick", "whitelist add", 
 # a forbidden list always misses one, and many commands can make a moderator an operator by the back door (setblock,
 # give, data or summon make a command block, which runs as the server; tellraw, team, bossbar and scoreboard take
 # text with a click that runs a command as whoever clicks it, an operator too). None of these take such text or NBT.
-# `minecraft:` in front is the same command. `ledger` is Ledger's own look-ups and rollbacks.
+# `minecraft:` in front is the same command. `ledger` is Ledger's own look-ups.
 CAN_ALLOW = {"list", "say", "msg", "tell", "w", "me", "teammsg", "tm", "kick", "ban", "pardon", "whitelist",
              "tp", "teleport", "spectate", "gamemode", "effect", "clear", "kill", "weather", "time", "difficulty",
              "gamerule", "xp", "experience", "enchant", "playsound", "stopsound", "spawnpoint", "worldborder",
              "locate", "ledger"}
+# Commands that are safe only with some second words, which the entry and the command must both name. Creative mode
+# lets a client make any item with any data (a book with a click, a spawn egg); Ledger's purge deletes the record of
+# who changed what, and its rollback and restore change the world.
+SECOND_WORDS = {"gamemode": {"survival", "adventure", "spectator"},
+                "ledger": {"search", "s", "page", "pg", "status"}}
+
+
+def _can_allow(words: list[str]) -> bool:
+    """Whether words (the first already without `minecraft:`) start a command moderators may ever be given."""
+    if not words or words[0] not in CAN_ALLOW:
+        return False
+    second = SECOND_WORDS.get(words[0])
+    return second is None or (len(words) > 1 and words[1] in second)
+
+
+def _can_allow_text() -> str:
+    limits = "; ".join(f"{c} only as {', '.join(sorted(w))}" for c, w in sorted(SECOND_WORDS.items()))
+    return f"{', '.join(sorted(CAN_ALLOW))} ({limits})"
 
 RADIUS_MAX = 8
 HOURS = (1, 24 * 30)
@@ -103,9 +121,10 @@ def checked_entries(value) -> list[str]:
             continue
         if not ENTRY.fullmatch(entry):
             raise sp.Refused(400, f"{entry[:40]!r}: one to three words of letters, digits and _ . : -")
-        first = entry.split()[0].removeprefix("minecraft:")
-        if first not in CAN_ALLOW:
-            raise sp.Refused(400, f"{first} can't be given to moderators. These can: {', '.join(sorted(CAN_ALLOW))}.")
+        words = entry.split()
+        words[0] = words[0].removeprefix("minecraft:")
+        if not _can_allow(words):
+            raise sp.Refused(400, f"{entry} can't be given to moderators. These can: {_can_allow_text()}.")
         if entry not in out:
             out.append(entry)
     return out
@@ -117,7 +136,7 @@ def allows(entries: list[str], command: str) -> bool:
     if not words:
         return False
     words[0] = words[0].removeprefix("minecraft:")
-    if words[0] not in CAN_ALLOW:
+    if not _can_allow(words):
         return False
     for entry in entries:
         want = entry.split()
@@ -146,12 +165,12 @@ class ModCommands:
         if not isinstance(rows, list):
             return [], {"broken": True}
         kept = [r for r in rows if isinstance(r, str) and ENTRY.fullmatch(r)
-                and r.split()[0].removeprefix("minecraft:") in CAN_ALLOW]
+                and _can_allow([r.split()[0].removeprefix("minecraft:"), *r.split()[1:]])]
         return kept, {"by": data.get("by"), "at": data.get("at")}
 
     def listed(self) -> dict:
         rows, about = self.entries()
-        return {"commands": rows, **about, "can_allow": sorted(CAN_ALLOW)}
+        return {"commands": rows, **about, "can_allow": _can_allow_text()}
 
     def save(self, user: str, body: dict) -> dict:
         rows = checked_entries(body.get("commands"))

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Canopy, Footer } from "@/components/chrome";
 import { Countdown } from "@/components/countdown";
+import { Item } from "@/components/item";
 import { JsonLd } from "@/components/json-ld";
 import { ConfigLink, LaunchTime, Store } from "@/components/links";
 import { Place } from "@/components/place";
@@ -27,15 +28,7 @@ export default function Home() {
   const event = launchEvent(pass);
   return (
     <>
-      <Canopy home="#" label="Sections" items={[
-        { label: "The world", href: "#world" },
-        ...(shots.length ? [{ label: "Gallery", href: "#gallery" }] : []),
-        { label: "Join", href: "#join" },
-        { label: "Pricing", href: "#pricing" },
-        { label: "Rules", href: "#rules" },
-        { label: "FAQ", href: "#faq" },
-        { label: "Guide", href: "/guide" },
-      ]} />
+      <Canopy here="home" />
 
       {event && <JsonLd data={event} />}
       <main id="main">
@@ -80,9 +73,12 @@ export default function Home() {
           <div className="features">
             {features.map((f) => (
               <article key={f.title}>
-                {f.fig && <p className="fig" aria-hidden="true">{f.fig}</p>}
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+                <Item name={f.item} />
+                <div>
+                  {f.fig && <p className="fig" aria-hidden="true">{f.fig}</p>}
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -127,10 +123,21 @@ export default function Home() {
             </li>
             <li>
               <h3>Install the modpack</h3>
-              <p>The server adds blocks, mobs and items, so you need the pack (about 380 MB). In the Modrinth App or
-                Prism Launcher, import <ConfigLink to="MODPACK_URL" download>the modpack</ConfigLink>. For the
-                regular Minecraft Launcher on Windows, unzip <ConfigLink to="INSTALLER_URL" download>the
-                installer</ConfigLink> and double-click <code>Install for Minecraft Launcher.bat</code>.</p>
+              <p>The server adds blocks, mobs and items, so you need the pack (about 380 MB). Pick the one for
+                your launcher.</p>
+              <dl className="paths">
+                <div>
+                  <dt>Modrinth App or Prism Launcher</dt>
+                  <dd>Import the modpack.</dd>
+                  <dd><ConfigLink to="MODPACK_URL" className="button ghost" download>Get the modpack</ConfigLink></dd>
+                </div>
+                <div>
+                  <dt>Minecraft Launcher on Windows</dt>
+                  <dd>Unzip the installer and double-click <code>Install for Minecraft Launcher.bat</code>.</dd>
+                  <dd><ConfigLink to="INSTALLER_URL" className="button ghost" download>Get the
+                    installer</ConfigLink></dd>
+                </div>
+              </dl>
             </li>
             <li>
               <h3>Connect</h3>
@@ -255,18 +262,26 @@ export default function Home() {
             </figure>
           </Place>
         </section>
+
+        <section id="start" className="outro">
+          <img className="monkey" src="/img/monkey.svg" alt="" width={160} height={160} loading="lazy" />
+          <h2>Come and play.</h2>
+          <ul className="facts">
+            <li>Minecraft Java on a PC</li>
+            <li>{pass.price} a month</li>
+            <li>Money back if it won&apos;t run</li>
+          </ul>
+          <div className="ways">
+            <Plaque address={config.ADDRESS} first={false} />
+            <div className="cta">
+              <ConfigLink to="STORE_URL" className="button">Get a pass</ConfigLink>
+              <ConfigLink to="DISCORD_INVITE" className="button ghost">Join the Discord</ConfigLink>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <Footer items={[
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Contact", to: "CONTACT_URL" },
-        { label: "Rules", href: "#rules" },
-        { label: "Live map", to: "MAP_URL" },
-        { label: "How it works", href: "/guide" },
-        { label: "Logo and banners", href: "#kit" },
-        { label: "Creator codes", href: "/creators" },
-        { label: "What changed", href: "/changes" },
-      ]} />
+      <Footer here="home" />
     </>
   );
 }

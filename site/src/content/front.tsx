@@ -1,39 +1,46 @@
 import type { ReactNode } from "react";
+import type { ItemName } from "@/components/item";
 import { ConfigLink } from "@/components/links";
 
 // The front page's lists, as data: the page (src/app/page.tsx) lays them out.
 
 /** The world (#world): what you get; where a feature has a hard number, the number leads it. */
-export const features: { fig?: string; title: string; text: ReactNode }[] = [
+export const features: { item: ItemName; fig?: string; title: string; text: ReactNode }[] = [
   {
+    item: "banner",
     fig: "Up to 4",
     title: "Factions, alliances, territory",
     text: <>Factions of up to four, each under its own banner. Your territory is 2 &times; 2 chunks a player and
       nobody may grief it; everything outside it is contested.</>,
   },
   {
+    item: "keep",
     title: "Land worth fighting over",
     text: <>Grand Capitals rebuilds villages and illager strongholds, Dungeons and Taverns adds dungeons worth the trip, and
       Crazy Chambers makes the trial chambers bigger. Sulfur caves and new animals are waiting between them.</>,
   },
   {
+    item: "map",
     fig: "3D",
     title: "A live map",
     text: <>BlueMap renders the world in 3D in your browser, so you can plan the next expedition before logging in.
       It is open to everyone: <ConfigLink to="MAP_URL">take a look</ConfigLink>.</>,
   },
   {
+    item: "clock",
     fig: "20 TPS",
     title: "Runs smooth",
     text: "A fast dedicated CPU, a pre-generated world and tuned mob ticking keep it at 20 TPS for the crowd we "
       + "let in.",
   },
   {
+    item: "sword",
     title: "Strength on the line",
     text: "Strength SMP is the centerpiece: win fights and your strength grows, lose them and it drains away. "
       + "Every fight has stakes.",
   },
   {
+    item: "voice",
     title: "Talk in the world",
     text: "Proximity voice chat is built in. Negotiate at the border, or hear them coming.",
   },

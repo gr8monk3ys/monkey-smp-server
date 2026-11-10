@@ -11,12 +11,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <>
-      <Canopy label="Site" items={[
-        { label: "Join", href: "/#join" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Guide", href: "/guide" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-      ]} />
+      <Canopy />
 
       <main id="main">
         <section className="hero lost">
@@ -33,13 +28,7 @@ export default function NotFound() {
         </section>
       </main>
 
-      <Footer items={[
-        { label: "Monkey SMP", href: "/" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Live map", to: "MAP_URL" },
-        { label: "What changed", href: "/changes" },
-      ]} />
+      <Footer />
     </>
   );
 }

@@ -9,13 +9,7 @@ export function LegalPage({ title, lede, updated, children }:
   { title: string; lede: ReactNode; updated: string; children: ReactNode }) {
   return (
     <>
-      <Canopy label="Site" items={[
-        { label: "The server", href: "/" },
-        { label: "Rules", href: "/guide/rules" },
-        { label: "Privacy", href: "/privacy" },
-        { label: "Terms", href: "/terms" },
-        { label: "Contact", to: "CONTACT_URL" },
-      ]} />
+      <Canopy />
 
       <main id="main">
         <section className="hero">
@@ -29,13 +23,7 @@ export function LegalPage({ title, lede, updated, children }:
         </section>
       </main>
 
-      <Footer items={[
-        { label: "Monkey SMP", href: "/" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Contact", to: "CONTACT_URL" },
-        { label: "Rules", href: "/guide/rules" },
-        { label: "How it works", href: "/guide" },
-      ]} />
+      <Footer />
     </>
   );
 }

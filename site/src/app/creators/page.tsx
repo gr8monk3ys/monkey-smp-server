@@ -15,13 +15,7 @@ export const metadata: Metadata = pageMetadata({
 export default function Creators() {
   return (
     <>
-      <Canopy label="Pages" items={[
-        { label: "The server", href: "/" },
-        { label: "Pricing", href: "/#pricing" },
-        { label: "Terms", href: "#terms" },
-        { label: "Guide", href: "/guide" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-      ]} />
+      <Canopy />
 
       <main id="main">
         <section className="hero">
@@ -57,13 +51,7 @@ export default function Creators() {
         </section>
       </main>
 
-      <Footer items={[
-        { label: "Monkey SMP", href: "/" },
-        { label: "Discord", to: "DISCORD_INVITE" },
-        { label: "Rules", href: "/#rules" },
-        { label: "Live map", to: "MAP_URL" },
-        { label: "How it works", href: "/guide" },
-      ]} />
+      <Footer />
     </>
   );
 }

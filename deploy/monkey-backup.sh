@@ -141,9 +141,10 @@ if [ "$mode" = restic-read ]; then
 fi
 PING_URL=$(setting_in "$ENV_FILE" PING_URL)
 
-# One backup at a time.
+# One backup at a time. A restore (the drill, a staff restore) holds the lock too, for up to its 3-hour timeout,
+# so the wait is longer than that: a slow restore delays a backup, it doesn't fail it.
 exec 8>"$BACKUP_LOCK"
-flock -w 3600 8 || die 'another backup has been running for an hour'
+flock -w 11400 8 || die 'a backup or a restore has held the backup lock for over 3 hours'
 mkdir -p "$STATE_DIR"
 
 # ---------------------------------------------------------------- helpers

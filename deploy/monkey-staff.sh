@@ -279,7 +279,9 @@ fi
 if [ "$MODE" = install-helper ]; then
     [ "$(id -u)" = 0 ] || die 'run as root: it installs a root service'
     # The path unit watches /srv/monkey/staff/requests: another STAFF_DIR would never be seen.
-    [ "$STAFF_DIR" = /srv/monkey/staff ] || die "the helper watches /srv/monkey/staff/requests, and STAFF_DIR is $STAFF_DIR"
+    watched=${HELPER_WATCHED:-/srv/monkey/staff}   # (another only for the tests)
+    unit_dir=${UNIT_DIR:-/etc/systemd/system}
+    [ "$STAFF_DIR" = "$watched" ] || die "the helper watches $watched/requests, and STAFF_DIR is $STAFF_DIR"
     # Root runs only root's copies, and takes the units from root's own clone, never from the checkout monkey can
     # write (docs/LIVE.md, "Root's own copies").
     root_dest=${ROOT_DEST:-/opt/monkey}
@@ -296,11 +298,11 @@ if [ "$MODE" = install-helper ]; then
     log "requests folder: $STAFF_DIR/requests"
     helper_changed=''
     for unit in $HELPER_UNITS; do
-        cmp -s "$root_src/deploy/$unit" "/etc/systemd/system/$unit" || helper_changed="$helper_changed $unit"
+        cmp -s "$root_src/deploy/$unit" "$unit_dir/$unit" || helper_changed="$helper_changed $unit"
     done
     for unit in $helper_changed; do
-        install -m 644 -o root -g root "$root_src/deploy/$unit" "/etc/systemd/system/$unit"
-        log "installed /etc/systemd/system/$unit"
+        install -m 644 -o root -g root "$root_src/deploy/$unit" "$unit_dir/$unit"
+        log "installed $unit_dir/$unit"
     done
     [ -z "$helper_changed" ] || systemctl daemon-reload
     systemctl enable --now monkey-staff-helper.path

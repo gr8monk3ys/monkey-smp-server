@@ -350,7 +350,9 @@ if restart_and_wait; then
     [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."
     discord "$msg"
     # Root runs its own copies (deploy/install-root.sh), which only the owner updates: say when they are behind.
-    stale=$(root_stale "$REPO_DIR" | tr '\n' ' ')
+    # Only when the checkout is the live release: a pin leaves it on another one, so comparing would mislead.
+    stale=''
+    [ "$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null)" != "$commit" ] || stale=$(root_stale "$REPO_DIR" | tr '\n' ' ')
     if [ -n "$stale" ]; then
         log "root's copies or units differ from $label: $stale"
         discord "Monkey SMP $label is live. Root's copies (backup, staff helper, restore drill) or systemd units are from another release: $stale. Owner: sudo sh /opt/monkey/deploy/install-root.sh (docs/LIVE.md, \"Root's own copies\")" "$STAFF_WEBHOOK_URL"

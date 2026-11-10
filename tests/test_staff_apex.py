@@ -489,6 +489,72 @@ def test_the_staff_script_installs_the_helper_only_as_its_own_step():
     assert "install -d -m 770 -o monkey -g monkey" in text
 
 
+@pytest.fixture
+def install_helper(tmp_path):
+    """Runs `monkey-staff.sh --install-helper` under dash as a fake root: root's copies in DEST, root's clone in SRC,
+    the units in UNITS; id, install and systemctl faked."""
+    shell = shutil.which("dash")
+    if not shell:
+        pytest.skip("needs dash (tools/checks.py puts Git for Windows' dash on PATH)")
+    dest, src, units, staff, bin_dir = (tmp_path / n for n in ("dest", "src", "units", "staff", "bin"))
+    calls = tmp_path / "calls"
+    for d in (dest / "deploy", dest / "tools", src / "deploy", units, staff, bin_dir):
+        d.mkdir(parents=True)
+    for f in ("deploy/monkey-staff-helper.sh", "deploy/monkey-backup.sh", "deploy/lib.sh", "tools/staff_apex.py"):
+        (dest / f).write_text("#\n", newline="\n")
+    for u in ("monkey-staff-helper.path", "monkey-staff-helper.service"):
+        (src / "deploy" / u).write_text(f"[Unit]\n# {u} v2\n", newline="\n")
+    fakes = {"id": 'echo "${FAKE_UID:-0}"',
+             "install": 'last=; prev=; dir=0\n'
+                        'for a in "$@"; do case $a in -d) dir=1 ;; esac; prev=$last; last=$a; done\n'
+                        'if [ $dir = 1 ]; then mkdir -p "$last"; else cp "$prev" "$last"; fi',
+             "systemctl": "exit 0"}
+    for name, body in fakes.items():
+        (bin_dir / name).write_text(f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n{body}\n', newline="\n")
+        (bin_dir / name).chmod(0o755)
+
+    def run(**env):
+        calls.unlink(missing_ok=True)
+        environ = {**os.environ, "PATH": bin_dir.as_posix() + os.pathsep + os.environ["PATH"],
+                   "FAKE_CALLS": calls.as_posix(), "MONKEY_DEPLOY_ENV": (tmp_path / "none").as_posix(),
+                   "STAFF_DIR": staff.as_posix(), "HELPER_WATCHED": staff.as_posix(), "ROOT_DEST": dest.as_posix(),
+                   "ROOT_SRC": src.as_posix(), "UNIT_DIR": units.as_posix(), **env}
+        done = subprocess.run([shell, (DEPLOY / "monkey-staff.sh").as_posix(), "--install-helper"], env=environ,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
+        return done.returncode, done.stdout, calls.read_text().splitlines() if calls.exists() else []
+
+    return SimpleNamespace(run=run, dest=dest, src=src, units=units, staff=staff)
+
+
+def test_install_helper_installs_root_clones_units_and_only_changed_ones(install_helper):
+    h = install_helper
+    code, out, calls = h.run()
+    assert code == 0, out
+    assert sorted(p.name for p in h.units.iterdir()) == ["monkey-staff-helper.path", "monkey-staff-helper.service"]
+    assert (h.units / "monkey-staff-helper.path").read_text() == "[Unit]\n# monkey-staff-helper.path v2\n"
+    assert (h.staff / "requests").is_dir()
+    assert "systemctl daemon-reload" in calls and "systemctl enable --now monkey-staff-helper.path" in calls
+    code, out, calls = h.run()   # nothing changed: no reload, no restart
+    assert code == 0 and "systemctl daemon-reload" not in calls
+    assert not any("restart" in c for c in calls) and not any("installed" in line for line in out.splitlines())
+
+
+def test_install_helper_refuses_without_root_or_root_copies(install_helper):
+    h = install_helper
+    code, out, _ = h.run(FAKE_UID="1000")
+    assert code == 1 and "run as root" in out
+    code, out, _ = h.run(HELPER_WATCHED="/srv/monkey/staff")
+    assert code == 1 and "the helper watches /srv/monkey/staff/requests" in out
+    (h.dest / "tools" / "staff_apex.py").unlink()
+    code, out, calls = h.run()
+    assert code == 1 and "tools/staff_apex.py is missing: install root's copies first" in out
+    assert not any(h.units.iterdir()) and not any(c.startswith("systemctl") for c in calls)
+    (h.dest / "tools" / "staff_apex.py").write_text("#\n")
+    (h.src / "deploy" / "monkey-staff-helper.service").unlink()
+    code, out, _ = h.run()
+    assert code == 1 and "deploy/monkey-staff-helper.service is missing" in out and not any(h.units.iterdir())
+
+
 # ---------------------------------------------------------------- schedules: when a run is due
 
 

@@ -23,5 +23,6 @@ Environment=GOMAXPROCS=1
 Nice=19
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
-# A deploy can make it wait up to 45 minutes, and the first upload sends the whole world.
-TimeoutStartSec=2h
+# A deploy can make it wait up to 45 minutes, a restore up to 3 hours 10 (the backup lock), and the first
+# upload sends the whole world.
+TimeoutStartSec=5h

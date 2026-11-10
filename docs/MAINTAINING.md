@@ -393,14 +393,16 @@ the server is still the pinned file (a different jar under that name fails the s
 first). `pack_sync.py` refuses the jar like any other that Modrinth doesn't know. So for each new release of the
 mod: publish it on GitHub, run the command above, then the smoke test and a test join.
 
-Patina & Chime on this server (0.2.0, tested 2026-11-09 on a scratch 3.3.0 server):
+Patina & Chime on this server (0.2.0 tested 2026-11-09 on a scratch 3.3.0 server; the pinned 0.2.1 adds only the
+game rule below):
 
 - The shatter note (a note block on an amethyst block, tuned to its top note) breaks grown amethyst clusters
   within 8 blocks. It breaks them with no player behind it, so Open Parties and Claims has nobody to refuse: a
   note block outside a claim should reach clusters inside it. That follows from the mod's code; it was not tried
-  inside a real claim. 0.2.0 has no switch for it. 0.2.1 adds one, the game rule `patinachime:shatter_note`
-  (patina-and-chime pull request 6, not released yet). When 0.2.1 is out, move the pin to it and run
-  `/gamerule patinachime:shatter_note false` once on the server; the value is saved with the world.
+  inside a real claim. 0.2.1 has a switch for it, the game rule `patinachime:shatter_note`, on by default. After
+  the release that brings the mod to the server, run `/gamerule patinachime:shatter_note false` once there; the
+  value is saved with the world. With the rule off the top note only plays (tried on a scratch server with a
+  0.2.1 build, a restart included).
 - Enchanting with amethyst shards is off wherever Easy Magic is installed, which is this server. Everything else
   the mod adds works next to the pack.
 

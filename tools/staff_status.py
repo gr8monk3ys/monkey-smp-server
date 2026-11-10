@@ -21,7 +21,7 @@ one has the names of who is online and the machine's numbers, so it never goes n
                               "last": "2026-11-15T01:40:00Z"}],
                   "lag": {"count": 1, "worst": 2034, "first": "2026-11-15T01:20:00Z", "last": "2026-11-15T01:20:00Z"},
                   "crashes": [{"when": "2026-11-14T22:00:00Z", "text": "Exception in server tick loop"}]},
-     "history": [[1794621600, 12.4, 18.7, 3]]}
+     "history": [[1794621600, 12.4, 18.7, 3, 75.0, 60.0]]}
 
 - online: the container is running and the server answered. container is null when docker itself failed; state is
   "not created" when there is no container. Memory and swap are in KiB, as /proc/meminfo gives them; disk in bytes.
@@ -39,9 +39,16 @@ one has the names of who is online and the machine's numbers, so it never goes n
   A group goes once a day has passed since its last line. log is where the reader got to, so that a reading
   only reads what is new. read is false when the log couldn't be read and crashes is null when the reports couldn't,
   which says nothing about whether anything went wrong.
-- history is the last day's readings, oldest first, as [unix time, avg, p95, players], with nulls for a reading the
-  server didn't answer. It is carried over from the file before, so a restart of this job loses nothing, and it holds
-  counts, never names.
+- history is the last day's readings, oldest first, as [unix time, avg, p95, players, memory, cpu], with nulls for a
+  reading the server didn't answer. memory is the share of the machine's memory in use, and cpu the share of its CPU
+  in use since the reading before (from /proc/stat, host.cpu keeping the counters), both in percent. They are the
+  machine's, so they are there while the server is off too. It is carried over from the file before, so a restart of
+  this job loses nothing (a row from before memory and load were kept gets nulls for them), and it holds counts,
+  never names.
+
+- advice is what the problems probably are, in plain words (tools/staff_watch.py), and alerts what it last told the
+  staff channel. With STAFF_WEBHOOK_URL in the environment, `write` posts a problem worth it there when it first shows
+  (then at most once in 6 hours while it lasts), says when a number is back to normal, and posts each new crash.
 
 It only reads: the release's version from the manifest (only that key: the manifest also holds the seed, which must
 never reach this file), the container's own `monkey rcon`, the log, and one line of each crash report (the rest of a
@@ -58,18 +65,22 @@ import os
 import re
 import shutil
 import sys
+import urllib.request
 from pathlib import Path
 
+import staff_watch
 import status as public
 
 import rcon as server
 
-VERSION = 1
+VERSION = 2         # 2: a reading's sixth number is CPU in use; in 1 it was the load average, so it is dropped
 HISTORY = dt.timedelta(hours=24)
+READING = 6                     # a row of the history: time, average, P95, players, memory, load
 BACKUP_NAME = re.compile(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}")
 BACKUP_SETTINGS = Path("/etc/monkey-backup.env")
 BACKUP_FAILING = Path("/var/lib/monkey-backup/failing")
 MEMINFO = Path("/proc/meminfo")
+PROC_STAT = Path("/proc/stat")
 LOG_READ = 8 * 1024 * 1024      # the most of the log one reading takes; a flood is caught up with over the next ones
 ERRORS_KEPT = 30
 CRASHES_KEPT = 5
@@ -163,7 +174,31 @@ def memory(meminfo: Path = MEMINFO) -> tuple[dict | None, dict | None]:
     return mem, swap
 
 
-def host(live: Path, meminfo: Path = MEMINFO) -> dict:
+def cpu_times(proc_stat: Path = PROC_STAT) -> dict | None:
+    """The machine's CPU time so far, all of it and the idle part (idle and waiting on the disk), in the kernel's
+    ticks; None when /proc/stat can't be read (Windows, the tests)."""
+    try:
+        with open(proc_stat, encoding="ascii") as f:
+            first = f.readline().split()
+    except OSError:
+        return None
+    if len(first) < 6 or first[0] != "cpu" or not all(n.isdigit() for n in first[1:]):
+        return None
+    ticks = [int(n) for n in first[1:9]]       # user nice system idle iowait irq softirq steal; guest is in user
+    return {"total": sum(ticks), "idle": ticks[3] + ticks[4]}
+
+
+def cpu_busy(now: dict | None, before) -> float | None:
+    """The share of the CPU in use between two cpu_times() readings, in percent with one decimal."""
+    if not now or not isinstance(before, dict) or not all(isinstance(before.get(k), int) for k in ("total", "idle")):
+        return None
+    total, idle = now["total"] - before["total"], now["idle"] - before["idle"]
+    if total <= 0 or idle < 0 or idle > total:     # a reboot in between starts the counters again
+        return None
+    return round((total - idle) / total * 100, 1)
+
+
+def host(live: Path, meminfo: Path = MEMINFO, proc_stat: Path = PROC_STAT) -> dict:
     mem, swap = memory(meminfo)
     try:
         used = shutil.disk_usage(live)
@@ -174,7 +209,8 @@ def host(live: Path, meminfo: Path = MEMINFO) -> dict:
         load = [round(n, 2) for n in os.getloadavg()]
     except (OSError, AttributeError):   # Windows has no load average, and the tests run there too
         load = None
-    return {"memory": mem, "swap": swap, "load": load, "threads": os.cpu_count(), "disk": disk}
+    return {"memory": mem, "swap": swap, "load": load, "threads": os.cpu_count(), "disk": disk,
+            "cpu": cpu_times(proc_stat)}
 
 
 def release(live: Path) -> str | None:
@@ -300,7 +336,9 @@ def problems(live: Path, now: dt.datetime, old) -> dict:
                 lag = lag or {"worst": 0, "count": 0, "first": stamp, "last": stamp}
                 lag.update(worst=max(lag["worst"], int(behind[1])), count=lag["count"] + 1, last=stamp)
                 mark_older(lag, first)
-        elif reader["up"] or level == b"FATAL":     # a FATAL before the start finishes is why it didn't
+        elif reader["up"] or level == b"FATAL" or staff_watch.blocks_start(said.decode("utf-8", "replace")):
+            # A FATAL before the start finishes is why it didn't, and so is an error staff_watch knows stops a start
+            # (a mod missing a dependency, the port taken); the dozen errors every start logs are only counted.
             text = plain(said.decode("utf-8", "replace"))
             row = errors.setdefault(_VARIES.sub("#", text)[:100], {"text": text, "count": 0, "first": stamp})
             row.update(text=text, count=row["count"] + 1, last=stamp)
@@ -325,18 +363,34 @@ def earlier(previous: Path | None) -> dict:
 
 
 def carried_over(old: dict, now: dt.datetime) -> list[list]:
-    """The readings in the file before, without those older than a day."""
+    """The readings in the file before, without those older than a day. A file from before version 2 had the load
+    average where CPU in use now goes: that number is dropped, not drawn as CPU."""
     rows = old.get("history")
     if not isinstance(rows, list):
         return []
     since = (now - HISTORY).timestamp()
-    return [row for row in rows if isinstance(row, list) and len(row) == 4 and isinstance(row[0], int | float)
+    if old.get("version") != VERSION:
+        rows = [[*row[:5], None] if isinstance(row, list) and len(row) == READING else row for row in rows]
+    return [[*row, *[None] * (READING - len(row))] for row in rows
+            if isinstance(row, list) and len(row) in (4, READING) and isinstance(row[0], int | float)
             and row[0] > since]
 
 
+def shares(machine: dict, before: dict | None = None) -> tuple[float | None, float | None]:
+    """(memory in use, CPU in use since the reading before), each in percent with one decimal, None for what isn't
+    known: the first reading has no CPU number, since it needs two."""
+    mem = machine.get("memory")
+    used = round((mem["total"] - mem["available"]) / mem["total"] * 100, 1) if mem and mem["total"] > 0 else None
+    old = before.get("cpu") if isinstance(before, dict) else None
+    return used, cpu_busy(machine.get("cpu"), old)
+
+
 def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, meminfo: Path = MEMINFO,
-           settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING) -> dict:
-    """The status as of `now`, with the readings in the file `previous` carried over."""
+           settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING, proc_stat: Path = PROC_STAT,
+           alerting: bool = False) -> tuple[dict, list[str]]:
+    """(the status as of `now`, with the readings in the file `previous` carried over; the lines to post to the staff
+    channel). With `alerting` off there are none and the alert state carries over as it was. The caller writes the
+    file before it posts, so a post is never sent again for want of the state that says it was."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
     box = container(docker)
@@ -344,15 +398,31 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     ticking = tick(ask(docker, "tick query")) if up else None
     who = players(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
+    machine = host(live, meminfo, proc_stat)
     reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,
-               who["count"] if who else None]
-    return {
+               who["count"] if who else None, *shares(machine, old.get("host"))]
+    data = {
         "version": VERSION, "checked": public.iso(now), "online": online, "container": box, "tick": ticking,
-        "players": who, "host": host(live, meminfo), "release": release(live),
+        "players": who, "host": machine, "release": release(live),
         "backups": {"local": last_backup(live), "offsite": offsite(settings, failing)},
         "problems": problems(live, now, old.get("problems")),
         "history": [*carried_over(old, now), reading],
     }
+    data["advice"] = staff_watch.advice(data)
+    data["alerts"] = old.get("alerts") if isinstance(old.get("alerts"), dict) else {}
+    lines: list[str] = []
+    if alerting:
+        lines, data["alerts"] = staff_watch.alerts(data["alerts"], data["advice"], data["problems"].get("crashes"), now)
+    return data, lines
+
+
+def post_webhook(url: str, line: str) -> None:
+    """One line to the staff channel, mentioning nobody. A post that fails changes nothing: the page still shows it."""
+    body = json.dumps({"content": line[:1900], "allowed_mentions": {"parse": []}}).encode()
+    request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json",
+                                                              "User-Agent": "monkey-staff"})
+    with contextlib.suppress(OSError, ValueError):
+        urllib.request.urlopen(request, timeout=10).close()
 
 
 def main(argv=None) -> int:
@@ -369,10 +439,22 @@ def main(argv=None) -> int:
     docker = server.Docker(args.live / "docker")
     now = server.job_time(args)
     if args.command == "show":
-        print(json.dumps(status(args.live, now, docker), indent=2))
+        print(json.dumps(status(args.live, now, docker)[0], indent=2))
         return 0
-    data = status(args.live, now, docker, previous=args.out)
-    public.write(args.out, data)
+    # The staff channel only (deploy/monkey-staff.sh passes it in the environment, never on the command line), and
+    # never the public webhook: these messages name what is wrong on the machine.
+    hook = os.environ.get("STAFF_WEBHOOK_URL", "").strip()
+    data, lines = status(args.live, now, docker, previous=args.out, alerting=bool(hook))
+    try:
+        public.write(args.out, data)
+    except OSError:
+        # Not written (a full disk, most likely), so the state that says what was posted isn't either, and the next
+        # run would post the same again: post only in the first run of each hour, which needs no memory.
+        if lines and now.minute < 2:
+            post_webhook(hook, "\n".join(lines))
+        raise
+    if lines:
+        post_webhook(hook, "\n".join(lines))
     count = data["players"]["count"] if data["players"] else "no"
     print(f"{args.out}: {'online' if data['online'] else 'offline'}, {count} player count, "
           f"{len(data['history'])} readings")

@@ -1,5 +1,31 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **The staff page catches up with the hosts' panels** (compared with Apex Hosting, BisectHosting's Starbase,
+  Pterodactyl and Pelican, AMP, Crafty, Multicraft and exaroton on 2026-11-10). New in `tools/staff_desk.py` and
+  `deploy/staff/desk.js`, with the same login, role and change checks as the rest (docs/LIVE.md, "The staff page"):
+  - Players: **everyone who has joined**, last seen first, with hours played and their lists, read from the
+    server's own files; and **staff notes** on a player, kept by UUID. A kick can carry a reason.
+  - Console: **Chat** and **Warnings and errors** views, a text filter, coloured warnings and errors, saying
+    something to everyone from Chat, and **saved commands** shared by admins.
+  - Server: the record of changes with a **search** (login, kind, text), older pages and a **.csv download**.
+  - Schedules can run **only when nobody is online** or **only when someone is**; a restart only when empty is called
+    off if someone joins during its warnings.
+  - Files: **new file**, **new folder**, **rename or move**, and find by name in a folder.
+  - Status: the machine's **memory and CPU in use over 24 hours**, as a chart beside tick time and players (CPU from
+    `/proc/stat` between readings). `staff.json`'s readings gain two numbers (older readings carry over with none).
+  - Status: **What it probably is** (`tools/staff_watch.py`): recent errors and crash reports matched to their likely
+    cause in plain words, with what to do (a mod missing a dependency, out of memory, a ticking entity, a broken data
+    pack...), plus lag that lasts, low memory or disk, swap and a failing off-site backup.
+  - **Health alerts** to the staff channel from the 2-minute status job, with `STAFF_WEBHOOK_URL` set: each new
+    crash, and what needs a look when it first shows (then at most every 6 hours), and when a number is back to normal.
+  - Server: **Find what causes lag**, spark's profiler started from the page, with the report link.
+  - Players: **temporary bans** that lift themselves (1 hour to 30 days), unless staff changed the ban meanwhile.
+  - Files: **search all files** by name or by the text of settings files, secrets masked.
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

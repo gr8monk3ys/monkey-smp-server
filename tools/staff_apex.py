@@ -27,8 +27,10 @@ The safety rules, as in staff_panel.py, are all here rather than in the page:
   deploy/monkey-staff-helper.sh, as root, reads only those and writes what happened to RESULTS, a root-owned folder
   the panel only reads.
 - Schedules: a command runs through the console's own checks (no seed, no stop), a restart through the power path
-  after warnings in chat, a backup through the helper. One thread runs them; each run's slot is saved before it
-  starts, so a restarted panel never runs the same one twice, and one it missed by over GRACE is skipped.
+  after warnings in chat, a backup through the helper. A schedule can run only when nobody is online or only when
+  someone is ("only"); a run whose condition doesn't hold, or can't be checked, is skipped and says so. One thread
+  runs them; each run's slot is saved before it starts, so a restarted panel never runs the same one twice, and one
+  it missed by over GRACE is skipped.
 - The world download stops saving (save-off, save-all flush) while it streams the zip, holds the deploy lock so no
   restart or backup lands meanwhile, and turns saving back on whatever happens. One at a time, owners only.
 - Bans by address: a real public IPv4 or IPv6 address, or a player name for an online player's address. A private,
@@ -75,6 +77,7 @@ JOBS_SHOWN = 20
 GAMERULE_CACHE = 20             # seconds a reading of the game rules is reused
 GAMERULE_THREADS = 4
 SCHEDULES_MAX = 50
+ONLY = ("always", "empty", "players")   # a schedule's condition: whenever, with nobody online, with someone online
 SCHEDULE_TICK = 20              # seconds between the scheduler's looks
 GRACE = 15 * 60                 # a run missed by more than this (the panel was down) is skipped, not run late
 INTERVAL_MIN = 10
@@ -812,11 +815,16 @@ class Extras:
         if not isinstance(enabled, bool):
             raise sp.Refused(400, "enabled is true or false.")
         row["enabled"] = enabled
+        only = body.get("only", old.get("only", "always"))
+        if only not in ONLY:
+            raise sp.Refused(400, "only is always, empty (nobody online) or players (someone online).")
+        row["only"] = only
         return row
 
     def _shown(self, row: dict, now: float) -> dict:
         out = {k: row.get(k) for k in ("id", "name", "kind", "command", "when", "enabled", "last_run", "last_result",
                                        "created_by")}
+        out["only"] = row.get("only") if row.get("only") in ONLY else "always"
         try:
             nxt = next_slot(row["when"], now + LEAD.get(row["kind"], 0), self.tz)
             out["describe"] = describe_when(row["when"])
@@ -926,7 +934,32 @@ class Extras:
             with self._sched:
                 self._running.discard(row["id"])
 
+    def players_on(self) -> int | None:
+        """How many players are on: 0 when the server isn't running, None when it runs and won't say."""
+        if not self.running():
+            return 0
+        who = self.p.who_is_on()
+        return who["count"] if who else None
+
+    def _held_back(self, row: dict) -> str | None:
+        """Why a run with a condition doesn't happen now, None when it may. A count the server won't give is never
+        taken as "nobody is on": a restart only when empty must not land on players."""
+        only = row.get("only")
+        if only not in ("empty", "players"):
+            return None
+        on = self.players_on()
+        if on is None:
+            return "skipped: the server didn't say who is online"
+        if only == "empty" and on:
+            return f"skipped: {on} online, and it runs only when nobody is"
+        if only == "players" and not on:
+            return "skipped: nobody is online"
+        return None
+
     def _do(self, row: dict) -> str:
+        held = self._held_back(row)
+        if held:
+            return held
         if row["kind"] == "command":
             done = self.p.command("schedule", {"command": row["command"]})
             said = " ".join(done["output"].split())[:120]
@@ -951,6 +984,11 @@ class Extras:
             return "skipped: the schedule was turned off during the warnings"
         if not self.running():
             return "skipped: the server was stopped during the warnings"
+        held = self._held_back(now_row)         # someone may have joined an empty server during the warnings
+        if held:
+            with contextlib.suppress(sp.server.RconError):
+                self.rcon("say The scheduled restart is called off.")
+            return held
         self.p.power_action("schedule", {"action": "restart-now"})
         return "restarted (after warnings at 5 minutes, 1 minute and 10 seconds)"
 
@@ -966,10 +1004,13 @@ class Extras:
 
     def run_scheduler(self) -> None:
         while not self.stop.is_set():
-            try:
-                self.tick()
-            except Exception as e:  # noqa: BLE001 (the loop must outlive one bad look)
-                print(f"monkey-panel: the scheduler failed once: {type(e).__name__}", file=sys.stderr, flush=True)
+            # The schedules first, then each other module's own look (staff_panel.SCHEDULER_LOOKS: temp bans' ends).
+            looks = [lambda: self.tick()] + [lambda look=look: look(self.p) for look in sp.SCHEDULER_LOOKS]
+            for look in looks:
+                try:
+                    look()
+                except Exception as e:  # noqa: BLE001 (the loop must outlive one bad look)
+                    print(f"monkey-panel: the scheduler failed once: {type(e).__name__}", file=sys.stderr, flush=True)
             self.stop.wait(SCHEDULE_TICK)
 
     # ------------------------------------------------ mods

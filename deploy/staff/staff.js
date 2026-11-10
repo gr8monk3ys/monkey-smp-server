@@ -19,7 +19,7 @@ const MARKS = {
   off: "M1 1h10v10H1zM3 3v6h6V3z",
   unknown: "M1 1h10v10H1zM3 3v6h6V3zM5 5h2v2H5z",
 };
-const LINE_LABELS = { avg: "Avg", p95: "P95" };
+const LINE_LABELS = { avg: "Avg", p95: "P95", memory: "Mem", load: "CPU" };   // short: the right margin is 34 px
 
 const state = { data: null, hours: 6, hover: null, keyed: false, trouble: null, missing: false };
 const charts = {};
@@ -239,11 +239,15 @@ function renderNow() {
     const used = host.swap.total - host.swap.free;
     row(machine, "Swap in use", [num(one(gb(used))), unit(`of ${one(gb(host.swap.total))} GB`)]);
   }
-  if (host.load) {
+  // CPU in use since the reading before (the history's sixth number), the same number the chart draws; the load
+  // average stays as the line under it, since it also counts work waiting for a turn.
+  const history = state.data.history || [];
+  const cpu = history.length ? history[history.length - 1][5] : null;
+  if (typeof cpu === "number" || host.load) {
     const threads = host.threads || 0;
-    row(machine, "CPU load", [num(host.load[0].toFixed(2)), unit(threads ? `of ${threads} threads` : "")],
-      `${host.load[1].toFixed(2)} over 5 minutes, ${host.load[2].toFixed(2)} over 15`,
-      threads ? meter(host.load[0] / threads) : null);
+    const load = host.load ? `Load ${host.load[0].toFixed(2)} over 1 minute${threads ? `, on ${threads} threads` : ""}` : "";
+    row(machine, "CPU in use", typeof cpu === "number" ? [num(String(Math.round(cpu))), unit("%")] : [unit("reading at the next check")],
+      load, typeof cpu === "number" ? meter(cpu / 100) : null);
   }
   if (host.disk) {
     const free = host.disk.free / host.disk.total;
@@ -290,6 +294,23 @@ function howOften(group, now) {
   const last = ago(now - Date.parse(group.last));
   if (group.count === 1) return last;
   return `${plural(group.count, "time")} since ${DAY_CLOCK.format(new Date(group.first))}, last ${last}`;
+}
+
+// tools/staff_watch.py's advice: each likely cause, its mark and word by how much it matters, where it was seen, and
+// what to do.
+const ADVICE_MARKS = { alert: ["slow", "Needs a look"], warn: ["busy", "Worth a look"], info: ["good", "Usually harmless"] };
+
+function renderAdvice() {
+  const rows = (Array.isArray(state.data.advice) ? state.data.advice : []).filter((a) => a && a.title);
+  $("advice-box").hidden = !rows.length;
+  $("advice").replaceChildren(...rows.map((a) => {
+    const [kind, word] = ADVICE_MARKS[a.level] || ADVICE_MARKS.warn;
+    const item = problem(kind, word, "", a.title);
+    item.querySelector(".problem-text").classList.add("advice-title");
+    if (a.from) item.appendChild(el("p", "problem-when", `From: ${a.from}`));
+    if (a.fix) item.appendChild(el("p", "problem-text", a.fix));
+    return item;
+  }));
 }
 
 function renderProblems(now) {
@@ -354,13 +375,14 @@ function segments(rows, index) {
   return out;
 }
 
-// The stretches with no reading, between the readings on each side.
-function gaps(rows) {
+// The stretches with no reading, between the readings on each side. `machine`: the machine's own numbers, which are
+// read while the server is off too, so only a reading that has neither of them (or none at all) is a gap.
+function gaps(rows, machine) {
   const out = [];
   let from = null;
   let previous = null;
   for (const r of rows) {
-    const empty = r[3] === null && r[1] === null;
+    const empty = machine ? missing(r[4]) && missing(r[5]) : r[3] === null && r[1] === null;
     if (empty && from === null) from = previous === null ? r[0] : previous;
     if (!empty) {
       if (from !== null) {
@@ -375,6 +397,9 @@ function gaps(rows) {
   if (from !== null && previous !== null) out.push([from, previous]);
   return out;
 }
+
+// A reading from before memory and load were kept has four numbers, so those two are undefined, not null.
+const missing = (value) => value === null || value === undefined;
 
 function timeTicks(start, end, hours, narrow) {
   const every = { 1: 15, 6: narrow ? 120 : 60, 24: narrow ? 480 : 240 }[hours];
@@ -405,6 +430,13 @@ const SPECS = {
     format: String, step: true,
     what: "Players online",
   },
+  machine: {
+    // Both are shares of the machine's whole, so the scale is always 0 to 100.
+    height: 150, unit: "%", yTop: () => 100, yTicks: () => [0, 50],
+    series: [{ index: 5, name: "CPU in use", key: "load", line: "line-2" }, { index: 4, name: "Memory in use", key: "memory", line: "line-1" }],
+    format: (n) => String(Math.round(n)), step: false, limit: 100, limitLabel: "All of it", machine: true,
+    what: "The machine's memory and CPU in use",
+  },
 };
 
 function drawChart(name) {
@@ -431,13 +463,13 @@ function drawChart(name) {
     const label = every < 60 ? CLOCK.format(new Date(t * 1000)) : HOUR.format(new Date(t * 1000));
     draw("text", { class: "axis", x: x(t), y: height - 6, "text-anchor": "middle" }, svg).textContent = label;
   }
-  for (const [from, to] of gaps(rows)) {
+  for (const [from, to] of gaps(rows, spec.machine)) {
     draw("rect", { class: "gap", x: x(from), y: pad.top, width: Math.max(2, x(to) - x(from)), height: height - pad.top - pad.bottom }, svg);
   }
   if (spec.limit) {
     draw("line", { class: "limit", x1: pad.left, x2: width - pad.right, y1: y(spec.limit), y2: y(spec.limit) }, svg);
     draw("text", { class: "axis", x: pad.left - 6, y: y(spec.limit) + 4, "text-anchor": "end" }, svg).textContent = String(spec.limit);
-    draw("text", { class: "limit-label", x: pad.left + 4, y: y(spec.limit) - 4 }, svg).textContent = "The limit";
+    draw("text", { class: "limit-label", x: pad.left + 4, y: y(spec.limit) - 4 }, svg).textContent = spec.limitLabel || "The limit";
   }
 
   const ends = [];
@@ -456,7 +488,7 @@ function drawChart(name) {
       draw("path", { class: `series ${s.line}`, d: path }, svg);
     }
     const lastRow = rows.length ? rows[rows.length - 1] : null;
-    if (lastRow && lastRow[s.index] !== null && s.key) ends.push({ key: s.key, y: y(lastRow[s.index]), x: x(lastRow[0]) });
+    if (lastRow && !missing(lastRow[s.index]) && s.key) ends.push({ key: s.key, y: y(lastRow[s.index]), x: x(lastRow[0]) });
   }
   // Direct labels at the lines' ends, pushed apart where the lines run close.
   ends.sort((a, b) => a.y - b.y);
@@ -476,7 +508,7 @@ function drawChart(name) {
   charts[name] = { spec, rows, x, y, cross, dots };
 
   const latest = rows.length ? rows[rows.length - 1] : null;
-  const words = spec.series.map((s) => `${s.name} ${latest && latest[s.index] !== null ? spec.format(latest[s.index]) + spec.unit : "no reading"}`);
+  const words = spec.series.map((s) => `${s.name} ${latest && !missing(latest[s.index]) ? spec.format(latest[s.index]) + spec.unit : "no reading"}`);
   svg.setAttribute("aria-label", `${spec.what}, the last ${plural(state.hours, "hour")}. Latest: ${words.join(", ")}. The table below has every reading. Arrow keys step through them.`);
 
   svg.addEventListener("pointermove", (e) => {
@@ -520,7 +552,7 @@ function point(t) {
       chart.cross.setAttribute("x2", chart.x(t));
     }
     chart.spec.series.forEach((s, i) => {
-      const value = r ? r[s.index] : null;
+      const value = r && !missing(r[s.index]) ? r[s.index] : null;
       chart.dots[i].setAttribute("visibility", value === null ? "hidden" : "visible");
       if (value !== null) {
         chart.dots[i].setAttribute("x", chart.x(t) - 4);
@@ -544,7 +576,7 @@ function readout(name, picked) {
       key.appendChild(el("i", `swatch ${s.line}`));
       key.appendChild(el("span", "", s.name));
     }
-    const value = r && r[s.index] !== null ? chart.spec.format(r[s.index]) + chart.spec.unit : "no reading";
+    const value = r && !missing(r[s.index]) ? chart.spec.format(r[s.index]) + chart.spec.unit : "no reading";
     key.appendChild(el("b", "", value));
     parts.push(key);
   }
@@ -557,14 +589,16 @@ function readout(name, picked) {
 function renderTable() {
   if (!$("table").open) return;
   const body = $("rows");
-  const fill = (v, text) => (v === null ? "no reading" : text);
+  const fill = (v, text) => (missing(v) ? "no reading" : text());
   const { rows } = visibleRows();
   body.replaceChildren(...[...rows].reverse().map((r) => {
     const tr = el("tr");
     tr.appendChild(el("td", "", DAY_CLOCK.format(new Date(r[0] * 1000))));
-    tr.appendChild(el("td", "", fill(r[1], r[1] === null ? "" : `${one(r[1])} ms`)));
-    tr.appendChild(el("td", "", fill(r[2], r[2] === null ? "" : `${one(r[2])} ms`)));
-    tr.appendChild(el("td", "", fill(r[3], String(r[3]))));
+    tr.appendChild(el("td", "", fill(r[1], () => `${one(r[1])} ms`)));
+    tr.appendChild(el("td", "", fill(r[2], () => `${one(r[2])} ms`)));
+    tr.appendChild(el("td", "", fill(r[3], () => String(r[3]))));
+    tr.appendChild(el("td", "", fill(r[4], () => `${Math.round(r[4])}%`)));
+    tr.appendChild(el("td", "", fill(r[5], () => `${Math.round(r[5])}%`)));
     return tr;
   }));
 }
@@ -589,6 +623,7 @@ function render() {
   $("layout").hidden = !state.data;
   if (state.data) {
     renderNow();
+    renderAdvice();
     renderProblems(now);
     renderCharts();
   }

@@ -1132,7 +1132,8 @@
 
   function describe(s) {
     const words = { command: `runs ${s.command}`, restart: "restarts the server (warnings at 5 min, 1 min, 10 s)", backup: "backs up off-site" }[s.kind];
-    return `${words}, ${s.describe}`;
+    const only = { empty: ", only when nobody is online", players: ", only when someone is online" }[s.only] || "";
+    return `${words}, ${s.describe}${only}`;
   }
 
   async function loadSchedules() {
@@ -1185,7 +1186,7 @@
     if (type === "interval") at.minutes = Number($("sched-minutes").value);
     else at.time = $("sched-time").value;
     if (type === "weekly") at.day = Number($("sched-day").value);
-    const body = { name: $("sched-name").value.trim(), kind, when: at, enabled: true };
+    const body = { name: $("sched-name").value.trim(), kind, when: at, enabled: true, only: $("sched-only").value };
     if (kind === "command") body.command = $("sched-command").value.trim();
     scheduleCall("POST", "/api/schedules", body, "Schedule added.");
   }

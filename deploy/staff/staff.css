@@ -54,6 +54,7 @@
   --frame-field: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23133f2b' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
   /* The marks on a message and on a row of Files, drawn like the status marks. */
   --mark-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' fill-rule='evenodd' d='M5 1h2v2h1v2h1v2h1v2h1v2H1V9h1V7h1V5h1V3h1z'/%3E%3C/svg%3E");
+  --mark-warn-amber: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f0a13c' fill-rule='evenodd' d='M5 1h2v2h1v2h1v2h1v2h1v2H1V9h1V7h1V5h1V3h1z'/%3E%3C/svg%3E");
   --mark-bad: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23ff8675' fill-rule='evenodd' d='M5 0h2v2h2v2h2v4H9v2H7v2H5v-2H3V8H1V4h2V2h2z'/%3E%3C/svg%3E");
   --mark-bad-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' fill-rule='evenodd' d='M5 0h2v2h2v2h2v4H9v2H7v2H5v-2H3V8H1V4h2V2h2z'/%3E%3C/svg%3E");
   --mark-done: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23b3dcbf' fill-rule='evenodd' d='M9 2h2v2H9zM7 4h2v2H7zM5 6h2v2H5zM3 8h2v2H3zM1 6h2v2H1z'/%3E%3C/svg%3E");
@@ -167,21 +168,22 @@ dl { display: grid; gap: 10px; }
 .problem-when { color: var(--sage); font-size: 0.9375rem; }
 .problem-text { margin-top: 2px; color: var(--bone-2); overflow-wrap: anywhere; }
 .problem-more { color: var(--sage); }
+.problem .advice-title { color: var(--bone); font-weight: 700; }
 
 .history { display: grid; gap: 16px; min-width: 0; }
 .history-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; }
-.range { display: flex; flex-wrap: wrap; gap: 6px; }
-.range button {
+.range, .views { display: flex; flex-wrap: wrap; gap: 6px; }
+.range button, .views button {
   min-height: 44px; padding: 0 12px; margin: 0;
   color: var(--bone); font: 700 0.9375rem/1.1 var(--body); cursor: pointer;
   background: none; border: 6px solid transparent; border-image: var(--frame-bone) 6 / 6px;
 }
-.range button:hover { border-image-source: var(--frame-bone-hover); }
-.range button:active { transform: translateY(2px); }
-.range button[aria-pressed="true"] {
+.range button:hover, .views button:hover { border-image-source: var(--frame-bone-hover); }
+.range button:active, .views button:active { transform: translateY(2px); }
+.range button[aria-pressed="true"], .views button[aria-pressed="true"] {
   color: var(--ink); background: var(--gold) padding-box; border-image: var(--frame-gold) 6 fill / 6px;
 }
-@media (prefers-reduced-motion: reduce) { .range button:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .range button:active, .views button:active { transform: none; } }
 
 .chart { padding: 12px 14px 8px; min-width: 0; }
 figcaption p { color: var(--sage); font-size: 0.9375rem; }
@@ -241,7 +243,7 @@ td { color: var(--bone-2); border-top: 1px solid var(--leaf-2); }
   .now { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 }
 @media (max-width: 380px) {
-  .range button { padding: 0 8px; }
+  .range button, .views button { padding: 0 8px; }
   .sentence { font-size: 1.125rem; }
 }
 
@@ -317,6 +319,30 @@ input[type="file"]:hover::file-selector-button { border-image-source: var(--fram
 .log .line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .log .cmd { color: var(--gold); }
 .log .out { color: var(--sage); }
+/* A warning or an error has its status colour, so it also has its mark (DESIGN.md, "Staff page"): the triangle or
+   the octagon before the line that starts it, not before the stack trace under it. */
+.log .warn { color: var(--warn); }
+.log .error { color: var(--bad); }
+.log .warn:not(.more)::before, .log .error:not(.more)::before {
+  content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 6px; vertical-align: -1px;
+  background: var(--mark-warn-amber) center / 11px 11px no-repeat;
+}
+.log .error:not(.more)::before { background-image: var(--mark-bad); }
+.log .line[hidden] { display: none; }
+/* Above the log: which lines show, a text filter, and how many of the lines that leaves. */
+.logbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.logbar input { flex: 1 1 12rem; }
+.logbar .meta { color: var(--sage); font-size: 0.9375rem; }
+#saved-box { margin-top: 16px; }
+#saved-list .about { font-family: var(--mono); font-size: 0.875rem; }
+#files-filter { width: 100%; margin-bottom: 8px; }
+#known-box, #tempbans-box, #search-box { margin-top: 16px; }
+#search-list .about { font-family: var(--mono); font-size: 0.875rem; }
+.add .check { display: flex; align-items: center; gap: 8px; color: var(--bone); cursor: pointer; }
+/* A player's notes open under their row, across its whole width. */
+.notes { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 0 4px; }
+.notes .entries li { min-height: 0; }
+.notes .entries .what { white-space: pre-wrap; }
 .cmdbar { display: flex; gap: 6px; }
 .cmdbar input { flex: 1; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, .log:focus-visible { outline-offset: 0; }

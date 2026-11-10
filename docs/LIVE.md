@@ -1051,7 +1051,7 @@ the site (the reasons are in docs/adr/0008-pass-prices-settled-before-the-first-
 | `monkey-standings.timer` | the VPS | Sundays at 7 PM Pacific: closes the week's faction standings and posts them (below) |
 | `monkey-standings-board.timer` | the VPS | every hour at :20: puts this week so far on the in-game board |
 | `monkey-news.timer` | the VPS | every 10 minutes: Monkey SMP news to the public channel, a few lines a week ("The news timer") |
-| `monkey-staff.timer` | the VPS | every 2 minutes: a reading for the staff page; it alerts nobody ("The staff page") |
+| `monkey-staff.timer` | the VPS | every 2 minutes: a reading for the staff page, and the health alerts to the staff channel ("The staff page") |
 | `monkey-report.timer` | the VPS | Mondays at 1:15 AM Pacific: last week's rule check for the staff page's Reports tab; it only reports ("The weekly rule check") |
 
 Uptime Kuma runs on the home PC because a monitor on the VPS goes down with the VPS, and the home PC is on all
@@ -1137,8 +1137,8 @@ own settings.
 ## The staff page
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
-word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time and
-players over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Its
+word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time,
+players and the machine's memory and CPU in use over the last 24 hours, what the problems probably are, who is online, memory, swap, CPU in use (and the load average under it), disk, the release and the last backup. Its
 other tabs (Console, Files, Players, Server) are the controls: they let staff run the server without a shell ("The
 controls", below). It names players, which the public status never does, so it is not linked from the website: pass the
 address on privately. Uptime Kuma still does the alerting; the Status tab only answers "how is it doing right now?".
@@ -1157,6 +1157,32 @@ text is filtered first: a line that mentions a secret is replaced whole, address
 and only the description of a crash report is read, because the rest can hold the seed. Log lines carry no date, so
 what the very first reading finds is marked as from before the page started watching. Lines logged between the last
 reading and a restart are missed, since each start replaces the log; a crash still shows, from its report.
+
+**What it probably is** sits above them (`tools/staff_watch.py`): each problem matched to a cause this kind of server
+has, in plain words with what to do, marked "Needs a look", "Worth a look" or "Usually harmless". From the log and
+the crash reports: the game out of memory, the disk full, the watchdog stopping a frozen game, an entity or block
+that crashes every tick, a mod missing a dependency, a mod's mixin failing, the port taken, a damaged chunk, a broken
+data pack, dropped connections (harmless). From the numbers: lag past the 50 ms limit for three readings in a row (6
+minutes), less than 10% of memory or disk free, over half the swap in use, the off-site backup failing. It is a guess
+from words in the log: check before acting on it. A line it doesn't know is left as it is.
+
+**Health alerts.** With `STAFF_WEBHOOK_URL` set in `/etc/monkey-deploy.env`, the same 2-minute job tells the staff
+channel (never the public one) what needs a look, as one message a reading:
+
+- a number (lag, memory, disk, the off-site backup) when it first shows, then "(still)" at most once in 6 hours while
+  it lasts, and "Cleared" once it has stayed back to normal for 10 minutes. After that it isn't raised again for an
+  hour, so a number hovering at its line doesn't post on every reading.
+- a cause from the log (out of memory, a missing dependency, the port taken...) once while it is in the day's list,
+  never "(still)". Errors that stop the server starting are kept for this; the dozen every start logs are only
+  counted, as before.
+- each new crash, with its description and likely cause, at most one message in 30 minutes; crashes in between are
+  counted in the next ("3 crash reports since the last message").
+
+What it posted is kept in `staff.json` (`alerts`), which is written before anything is posted, so a restart of the job
+doesn't post again. If the file can't be written (a full disk), the job can't remember, so it posts only in its first
+run of each hour. The first reading after it is set up is quiet about what was there before it watched: older log
+lines and crash reports already in the folder. The job reads the webhook from the env file and hands it over in the environment, never
+on a command line. Without it nothing is posted, and Uptime Kuma still says when the server is down.
 
 Set it up once, on a quiet day, after a release that has it is live:
 
@@ -1192,7 +1218,8 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
+    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1216,7 +1243,12 @@ sets itself. It changes nothing in how the server runs: the container, compose a
 
 - **Console**: the server log as it is written (the same masking as the Status tab: a line that mentions a secret is
   left out, addresses and links are masked) and a command box. Commands run as the server console, through the
-  container's own `monkey rcon`, one line at a time, with a 20-second limit.
+  container's own `monkey rcon`, one line at a time, with a 20-second limit. Above the log: Everything, Chat (what
+  players and the server said, and joins and leaves) or Warnings and errors, and a box that keeps only lines with
+  some text. Under Chat the box says what you type to everyone (`say`), unless it starts with `/`. Warnings and errors
+  are coloured, with their WARN or ERROR still in the line. **Saved commands** (admin): a label and a command, shared
+  by every admin, checked as the console checks a typed one, and Run sends it as if typed
+  (`/srv/monkey/staff/commands.json`, at most 40).
 - **Server**: running, stopped or restarting, and four buttons. Restart is the daily restart
   (`monkey-deploy.sh --restart`): players get the 5-minute warning, and it waits for the deploy lock. It is started
   apart from the controls, its output in `/srv/monkey/staff/power.log`, so it finishes even if the controls restart.
@@ -1226,10 +1258,35 @@ sets itself. It changes nothing in how the server runs: the container, compose a
   Restart now (`docker compose restart monkey`, no warning: the deploy script has no restart without one), Stop and
   Start (`docker compose up -d --no-build monkey`) take the deploy lock first; when a deploy, the daily restart, a timed
   job or an off-site backup holds it, the button says so and nothing happens. One power action at a time. Also here:
-  the timers' next and last runs, the last backup and the last 100 changes made on the page.
-- **Files**: `server/` of the live release: browse, edit text files, download, upload, delete.
+  the timers' next and last runs, the last backup and every change made on the page, newest first, 100 at a time,
+  with a search by login, kind of change and text, and a download of the search as a `.csv` (a cell a spreadsheet
+  would run as a formula gets a `'` in front). The search reads the last 8 MB of `actions.log`, and says so when the
+  file is longer.
+- **Files**: `server/` of the live release: browse, find by name in a folder, edit text files, download, upload,
+  delete, make a new file or folder, and rename or move a file within `server/`. **Search all files** (admin): every
+  file the page can open whose name has the text, or with "In the text" whose lines do (plain-text settings files
+  only, never `logs/` or `crash-reports/`). It searches the text as the editor shows it, secrets masked, so a search
+  never finds (or lets anyone guess) a password's value: searching `rcon.password` shows the line, `********`. It stops
+  after 20,000 files, 5 seconds or 200 results, and says so. A rename never replaces anything (a
+  name already taken is refused) and keeps no copy, since nothing is lost; it follows the same rules as a save, under
+  both its old name and its new one, so only an owner renames a jar, anything in `mods/` or `server.properties`.
 - **Players**: who is online, the whitelist, ops and bans, with add and remove. They are console commands
-  (`whitelist add NAME`, `op`, `ban`, `kick`...), and the controls refuse one whose name isn't a real player name.
+  (`whitelist add NAME`, `op`, `ban`, `kick`...), and the controls refuse one whose name isn't a real player name. A
+  kick can have a reason, which the player sees.
+  **Temporary bans** (admin; moderators see the list): the game's own ban, with a reason that starts "Banned until"
+  and the time it ends in UTC, so the player sees when. The page keeps them in `/srv/monkey/staff/tempbans.json` and
+  pardons the player at that time (its scheduler looks every 20 seconds), but only if the ban in
+  `banned-players.json` is still that one, word for word: a player pardoned by hand, or banned again, is left as staff
+  left them. While the server is off it waits, sending nothing, and pardons once it is back. "Lift now" pardons early.
+  1 hour to 30 days. A player banned already can't be banned for a time, nor banned for good over a temporary ban:
+  the game keeps the ban that is there ("Nothing changed"), so the page says to pardon or lift it first.
+  **Everyone who has joined** (moderator): every name in `usercache.json`, the last seen first, with when the server
+  last saved them (`world/players/data/UUID.dat`'s time, so a player who is on shows the last few minutes), hours
+  played (`minecraft:play_time` in their stats file, nothing else of it) and whether they are an operator,
+  whitelisted or banned. Nothing is asked over RCON. **Notes** are for staff only: a line of text per note, signed
+  with the login and the time, kept by the player's UUID so they follow a change of name
+  (`/srv/monkey/staff/player-notes.json`, mode 600, at most 50 a player). Any moderator adds one; an admin deletes
+  one. `actions.log` (and so the staff channel) says who wrote a note about whom, never what it says.
 
 What Diego can do: anything the server console can, but the two below; edit `config/`, `defaultconfigs/`, `mods/`,
 `server.properties`, the `.json` lists and the other config files in `server/`; upload a mod; restart, stop and start
@@ -1272,6 +1329,14 @@ text), uploads 64 MB. No program is run through a shell, and each has a time lim
 of memory and runs at low priority (`Nice=10`). Check it with `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --check`
 ("the controls answer a request with no login: 403" is right). To turn the controls off and keep the Status tab:
 `sudo systemctl disable --now monkey-panel` (the tabs then say the request failed).
+
+**Find what causes lag** (Server tab) runs `spark profiler start --timeout SECONDS` over RCON, with
+`--only-ticks-over 100` for lag spikes or `--alloc` for memory, one run at a time, and Stop now runs `spark profiler
+stop`. spark answers on its own thread, so the report link doesn't come back over RCON: the page reads the server's
+log from where it was when the run started, for a `https://spark.lucko.me/...` link, and shows the first it finds
+(for up to 3 minutes after the run ends, while spark uploads). A restart during a run ends the search. This was built
+from spark's documentation and not tried on the live server yet: if a finished run shows no link, the Console tab
+has spark's own words. A report shows the mods, the machine and the players online; spark keeps it on its own site.
 
 What it costs on the 2-thread machine: a reading took about 0.9 CPU-seconds, at low priority (measured on the VPS on
 4 November 2026, nobody online, `Nice=10`). A password check is bcrypt at cost 8, about 25 ms, not Caddy's default of 14,
@@ -1366,7 +1431,8 @@ nights): an admin without it can't run the event timer until they do.
 
 A jar runs as the server, so only an owner adds one: uploading a jar, installing a `.mrpack`, uploading a data pack
 (game code: functions, loot, recipes; turning packs on or off stays admin), and, in Files, saving,
-uploading or restoring a `.jar` or anything in `mods/` or `.fabric/` (checked again after links are followed). Only
+uploading, restoring or renaming a `.jar` or anything in `mods/` or `.fabric/`, or making a folder there (checked
+again after links are followed; a rename under both its old and its new name). Only
 an owner changes which jars run at all (owner, 2026-11-08): installing from Modrinth, turning a jar off or on,
 removing it, and keeping a pinned mod off or allowing it again. Admins see those buttons greyed out. An admin still
 searches Modrinth and answers "do players need it?", which only notes the answer and moves no jar.
@@ -1377,7 +1443,7 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Game rules | admin | `gamerule NAME VALUE` over RCON, for known rules only. |
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
-| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
+| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes; whoever is online, only when nobody is, or only when someone is. A run whose condition doesn't hold is skipped and says so; so is one when the server won't say who is on. A restart only when empty checks again after its warnings, and is called off if someone joined (chat then says so). A stopped server counts as nobody online. |
 | Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks, and the mod changes waiting for a release of the players' pack. |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
 | Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |
@@ -1393,6 +1459,12 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
 | SFTP card | admin | Host, port and user names, or "ask the owner". |
 | Event timer | admin | `tools/staff_events.py`: start (name and minutes), end now with "Event over", or stop early, over RCON (`monkey:events/timer/*`, from 3.2.0's data pack; while `monkey-events` is off the card says so). |
+| Everyone who has joined, notes | moderator | The Players tab's list, and adding a note. Deleting a note is admin; it stays in `player-notes.json`'s `deleted` list (the newest 200), so it can be put back by hand. |
+| Saved commands | admin | The Console tab's list: save, run, delete. A run is an ordinary console command. |
+| Search and download the changes | moderator | The Server tab's record of changes, searched, and as a `.csv`. |
+| Temporary bans | admin | Ban for 1 hour to 30 days; lifted by the page at that time, or now with "Lift now". Moderators see the list. |
+| Search all files | admin | The Files tab's search, by name or in the text of settings files. |
+| Find what causes lag | admin | `tools/staff_spark.py`: spark's profiler for 1 to 10 minutes (everything, lag spikes only, or memory), then a link to its report. Moderators see the state and the link. |
 | Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
 | Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |

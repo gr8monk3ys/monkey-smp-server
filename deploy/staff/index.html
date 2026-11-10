@@ -18,6 +18,7 @@
   <script src="events.js" defer></script>
   <script src="modcfg.js" defer></script>
   <script src="reports.js" defer></script>
+  <script src="desk.js" defer></script>
 </head>
 <body data-tab="status">
   <a class="skip" href="#main">Skip to content</a>
@@ -74,6 +75,12 @@
       </aside>
 
       <div class="column">
+        <section class="problems" id="advice-box" aria-labelledby="advice-title" hidden>
+          <h2 id="advice-title">What it probably is</h2>
+          <ul class="problem-list" id="advice"></ul>
+          <p class="fine">Read from the problems below and the machine's numbers. A guess from the words in the log, so
+            check before acting on it. The staff channel hears of the serious ones.</p>
+        </section>
         <section class="problems" aria-labelledby="problems-title">
           <h2 id="problems-title">Recent problems</h2>
           <div class="skeleton" aria-hidden="true"><i></i></div>
@@ -108,6 +115,16 @@
             <div class="plot" id="players-plot"></div>
           </figure>
 
+          <figure class="chart" id="machine-chart">
+            <figcaption>
+              <h3>The machine</h3>
+              <p>How much of the machine's memory and CPU is in use. The game shares them with the map, the backups and
+                everything else on the machine.</p>
+            </figcaption>
+            <p class="readout" id="machine-readout"></p>
+            <div class="plot" id="machine-plot"></div>
+          </figure>
+
           <p class="fine" id="how">A reading is taken every 2 minutes and covers about 5 seconds, so a short spike between
             readings won't show. P95 means 19 ticks in 20 were faster than this. Shaded stretches had no reading: the
             server was restarting, stopped or not answering.</p>
@@ -116,7 +133,7 @@
             <summary>The readings as a table</summary>
             <div class="table-scroll" tabindex="0" role="region" aria-label="The readings">
               <table>
-                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th></tr></thead>
+                <thead><tr><th scope="col">When</th><th scope="col">Average</th><th scope="col">P95</th><th scope="col">Players</th><th scope="col">Memory</th><th scope="col">CPU in use</th></tr></thead>
                 <tbody id="rows"></tbody>
               </table>
             </div>
@@ -131,12 +148,35 @@
       <p class="fine">Commands run as the server console. To stop or restart the server, use the Server tab. The lines the game
         logs each time a scheduled job connects (RCON) are left out; Files, logs has the whole file while it is under 2 MB.</p>
       <p class="attention" id="console-error" role="alert" hidden></p>
+      <div class="logbar">
+        <div class="views" id="console-views" role="group" aria-label="Which lines to show">
+          <button type="button" data-view="all" aria-pressed="true">Everything</button>
+          <button type="button" data-view="chat" aria-pressed="false">Chat</button>
+          <button type="button" data-view="problems" aria-pressed="false">Warnings and errors</button>
+        </div>
+        <input id="console-filter" type="search" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Only lines with..." aria-label="Show only lines with this text">
+        <p class="meta" id="console-count" role="status"></p>
+      </div>
       <div class="log" id="log" role="log" tabindex="0" aria-label="Server log"></div>
       <div class="cmdbar">
-        <label class="sr" for="cmd">Command</label>
+        <label class="sr" for="cmd" id="cmd-label">Command</label>
         <input id="cmd" type="text" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="list">
         <button class="btn primary" id="send" type="button">Send</button>
       </div>
+      <p class="fine" id="say-hint" hidden>In Chat, what you type is said to everyone as the server. Start with / to run a command instead.</p>
+      <section class="box" id="saved-box" hidden>
+        <h3>Saved commands</h3>
+        <p class="fine">Commands the staff use often, shared by everyone with an admin login. Run sends one to the server as if you had typed it.</p>
+        <p class="attention" id="saved-error" role="alert" hidden></p>
+        <p class="note" id="saved-note" role="status" hidden></p>
+        <div class="confirm" id="saved-confirm" hidden></div>
+        <ul class="entries" id="saved-list"></ul>
+        <div class="add">
+          <input id="saved-label" type="text" maxlength="40" autocomplete="off" placeholder="Label, e.g. Vote reminder" aria-label="Label for the saved command">
+          <input id="saved-command" type="text" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Command, e.g. say Vote for the server!" aria-label="Command to save">
+          <button class="btn primary" id="saved-add" type="button">Save command</button>
+        </div>
+      </section>
     </div>
 
     <div class="pane" id="tab-files" hidden>
@@ -147,9 +187,12 @@
       <div class="confirm" id="files-confirm" hidden></div>
       <div id="browser">
         <nav class="crumbs" id="crumbs" aria-label="Folder"></nav>
+        <input id="files-filter" type="search" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Find in this folder" aria-label="Show only names with this text">
         <ul class="entries" id="entries"></ul>
         <div class="actions" id="upload-bar">
           <button class="btn" id="upload-btn" type="button">Upload a file here</button>
+          <button class="btn" id="new-file" type="button">New file</button>
+          <button class="btn" id="new-folder" type="button">New folder</button>
           <input id="upload" type="file" hidden>
         </div>
       </div>
@@ -162,9 +205,23 @@
           <button class="btn primary" id="save" type="button">Save</button>
           <button class="btn" id="cancel" type="button">Close</button>
           <a class="btn" id="download" download>Download</a>
+          <button class="btn" id="rename" type="button">Rename or move</button>
           <button class="btn danger" id="delete" type="button">Delete</button>
         </div>
       </div>
+      <section class="box" id="search-box">
+        <h3>Search all files</h3>
+        <p class="fine">Every file in the server's folder that the page can open, by name, or with "In the text" by
+          what is written in its settings files. Secrets in a line found stay hidden.</p>
+        <p class="attention" id="search-error" role="alert" hidden></p>
+        <div class="add">
+          <input id="search-q" type="search" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. view-distance or claims" aria-label="What to search for">
+          <label class="check"><input id="search-text" type="checkbox"> In the text</label>
+          <button class="btn primary" id="search-go" type="button">Search</button>
+        </div>
+        <p class="fine" id="search-count" role="status"></p>
+        <ul class="entries" id="search-list"></ul>
+      </section>
       <details class="table" id="history-box">
         <summary>History of changes to files</summary>
         <ul class="entries" id="file-history"></ul>
@@ -178,6 +235,42 @@
       <p class="note" id="players-note" role="status" hidden></p>
       <div class="confirm" id="players-confirm" hidden></div>
       <div class="cols" id="players-body"></div>
+      <section class="box" id="tempbans-box">
+        <h3>Temporary bans</h3>
+        <p class="fine">A ban that lifts by itself. The player sees when it ends. The page pardons them at that time,
+          unless someone pardoned them or banned them for good in the meantime.</p>
+        <p class="attention" id="tempbans-error" role="alert" hidden></p>
+        <p class="note" id="tempbans-note" role="status" hidden></p>
+        <div class="confirm" id="tempbans-confirm" hidden></div>
+        <ul class="entries" id="tempbans-list"></ul>
+        <div class="add" id="tempbans-add">
+          <input id="tempban-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Player name" aria-label="Player to ban for a time">
+          <select id="tempban-hours" aria-label="For how long">
+            <option value="1">1 hour</option>
+            <option value="6">6 hours</option>
+            <option value="24" selected>1 day</option>
+            <option value="72">3 days</option>
+            <option value="168">7 days</option>
+            <option value="720">30 days</option>
+          </select>
+          <input id="tempban-reason" type="text" maxlength="120" autocomplete="off" placeholder="Reason they will see (optional)" aria-label="Reason">
+          <button class="btn danger" id="tempban-go" type="button">Ban for a time</button>
+        </div>
+      </section>
+      <section class="box" id="known-box">
+        <div class="box-head">
+          <h3>Everyone who has joined <span class="meta" id="known-count"></span></h3>
+          <input id="known-search" type="search" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Find a player" aria-label="Find a player by name">
+        </div>
+        <p class="fine">Whoever was on last comes first. Last seen is when the server last saved that player, so someone
+          who is on now shows the last few minutes. Notes are for the staff only: players never see them.</p>
+        <p class="attention" id="known-warning" role="status" hidden></p>
+        <p class="attention" id="known-error" role="alert" hidden></p>
+        <p class="note" id="known-note" role="status" hidden></p>
+        <div class="confirm" id="known-confirm" hidden></div>
+        <ul class="entries" id="known-list"></ul>
+        <div class="actions"><button class="btn" id="known-more" type="button" hidden>Show more</button></div>
+      </section>
       <section class="box" id="ipbans" hidden>
         <h3>Banned addresses</h3>
         <p class="fine">Bans an IP address, so nobody can join from it under any name. Type a public IPv4 or IPv6 address,
@@ -376,13 +469,55 @@
             <select id="sched-day" aria-label="Day"></select>
             <input id="sched-time" type="time" value="04:00" aria-label="Time">
             <input id="sched-minutes" type="number" min="10" max="10080" value="60" aria-label="Minutes between runs">
+            <select id="sched-only" aria-label="Whether it depends on who is online">
+              <option value="always">Whoever is online</option>
+              <option value="empty">Only when nobody is online</option>
+              <option value="players">Only when someone is online</option>
+            </select>
             <button class="btn primary" id="sched-add" type="button" data-need="admin">Add schedule</button>
           </div>
         </div>
       </section>
-      <section class="box span">
-        <h3>Recent changes made here</h3>
+      <section class="box span" id="spark-box">
+        <h3>Find what causes lag</h3>
+        <p class="fine">Runs spark's profiler for a while, then links its report: which mods, entities and chunks the
+          game spends its time on. Run it while the server is slow, with players on. "Lag spikes" only looks at ticks
+          over 100 ms; "Memory" at what fills the memory.</p>
+        <p class="attention" id="spark-error" role="alert" hidden></p>
+        <p class="note" id="spark-note" role="status" hidden></p>
+        <p class="fine" id="spark-state" role="status"></p>
+        <p id="spark-result" hidden><a class="btn primary" id="spark-link" target="_blank" rel="noopener noreferrer">Open the report</a></p>
+        <div class="add">
+          <select id="spark-mode" aria-label="What to look at">
+            <option value="cpu">Everything the game does</option>
+            <option value="lag">Lag spikes only</option>
+            <option value="memory">Memory</option>
+          </select>
+          <select id="spark-seconds" aria-label="For how long">
+            <option value="60">1 minute</option>
+            <option value="120" selected>2 minutes</option>
+            <option value="300">5 minutes</option>
+            <option value="600">10 minutes</option>
+          </select>
+          <button class="btn primary" id="spark-start" type="button" data-need="admin">Start</button>
+          <button class="btn" id="spark-stop" type="button" data-need="admin" hidden>Stop now</button>
+        </div>
+      </section>
+      <section class="box span" id="activity-box">
+        <h3>Changes made here</h3>
+        <p class="fine">Every command, save, upload and power action from this page, newest first: who did it and when.</p>
+        <p class="attention" id="activity-error" role="alert" hidden></p>
+        <div class="add">
+          <select id="activity-user" aria-label="Whose changes"><option value="">Everyone</option></select>
+          <select id="activity-kind" aria-label="Which kind of change"><option value="">Every kind</option></select>
+          <input id="activity-q" type="search" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="With this text" aria-label="Only changes with this text">
+        </div>
         <ul class="entries" id="actions"></ul>
+        <p class="fine" id="activity-cut" hidden>The record is longer than this page reads: the oldest changes are in actions.log on the machine.</p>
+        <div class="actions">
+          <button class="btn" id="activity-more" type="button" hidden>Show older</button>
+          <a class="btn" id="activity-export" href="/api/activity-export" download>Download as a .csv file</a>
+        </div>
       </section>
       </div>
     </div>

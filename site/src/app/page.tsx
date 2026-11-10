@@ -11,7 +11,7 @@ import { Plaque } from "@/components/plaque";
 import { Trailer } from "@/components/trailer";
 import { faq, features, GAME, ladder, PACK_MB, pass, RAM_GB, shots, tiers } from "@/content/front";
 import { rules } from "@/content/rules";
-import { builtPhase, config, launchStage, sayLaunch } from "@/lib/config";
+import { builtPhase, checksumsUrl, config, launchStage, sayLaunch } from "@/lib/config";
 import { preloadMono } from "@/lib/fonts";
 import { launchEvent, pageMetadata } from "@/lib/seo";
 
@@ -128,17 +128,26 @@ export default function Home() {
                 your launcher.</p>
               <dl className="paths">
                 <div>
-                  <dt>Modrinth App or Prism Launcher</dt>
-                  <dd>Import the modpack.</dd>
-                  <dd><ConfigLink to="MODPACK_URL" className="button ghost" download>Get the modpack</ConfigLink></dd>
+                  <dt>Modrinth App or Prism Launcher <span className="tag">recommended</span></dt>
+                  <dd>Get the pack and open the file with the Modrinth App, or in Prism Launcher choose Add
+                    Instance, then Import. The Modrinth App asks you to confirm, because the pack isn&apos;t on
+                    Modrinth yet: choose Install anyway. Then set the instance&apos;s memory to 6 GB.</dd>
+                  <dd><ConfigLink to="MODPACK_URL" className="button" download>Get the modpack</ConfigLink></dd>
                 </div>
                 <div>
                   <dt>Minecraft Launcher on Windows</dt>
-                  <dd>Unzip the installer and double-click <code>Install for Minecraft Launcher.bat</code>.</dd>
+                  <dd>Unzip the installer and double-click <code>Install for Minecraft Launcher.bat</code>. Windows
+                    may say it protected your PC, because the file isn&apos;t signed: click More info, then Run
+                    anyway.</dd>
                   <dd><ConfigLink to="INSTALLER_URL" className="button ghost" download>Get the
                     installer</ConfigLink></dd>
                 </div>
               </dl>
+              {checksumsUrl && (
+                <p className="check">To check a download, compare its SHA-256 with{" "}
+                  <a href={checksumsUrl}>SHA256SUMS.txt</a>. On Windows, <code>Get-FileHash</code> in PowerShell
+                  prints it; on macOS, <code>shasum -a 256</code>; on Linux, <code>sha256sum</code>.</p>
+              )}
             </li>
             <li>
               <h3>Connect</h3>

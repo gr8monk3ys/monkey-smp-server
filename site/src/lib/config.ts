@@ -41,6 +41,19 @@ export function target(key: LinkKey): { href: string; title?: string } {
   return { href: "#" };
 }
 
+/** Where the checksum list for a download is: SHA256SUMS.txt beside the first of `urls` that is a file of the
+ * site's own ("pack/a.mrpack" gives "/pack/SHA256SUMS.txt"), or "" when every one is a link elsewhere.
+ * tools/site_links.py checks that the list is there and matches the files. */
+export function checksumsBeside(urls: string[]): string {
+  const own = urls.find((url) => url && !url.startsWith("//") && !/^[a-z][a-z0-9+.-]*:/i.test(url));
+  if (own === undefined) return "";
+  const folder = own.split(/[?#]/)[0].replace(/^\/+/, "").split("/").slice(0, -1);
+  return ["", ...folder, "SHA256SUMS.txt"].join("/");
+}
+
+/** The checksum list for the pack and the installer, "" when neither is served from the site. */
+export const checksumsUrl = checksumsBeside([config.MODPACK_URL, config.INSTALLER_URL]);
+
 /** The season's phase when the site is built, for what the status block shows before its script runs (and
  * without JavaScript): before the launch, or after it. */
 export function builtPhase(): "preseason" | "live" {

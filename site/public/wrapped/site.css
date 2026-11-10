@@ -307,6 +307,8 @@ figcaption { margin-top: 12px; color: var(--sage); max-width: var(--measure); }
 .paths dt { font-weight: 700; color: var(--bone); }
 .paths dd { margin: 0; }
 .paths .button { min-height: 48px; margin-top: 12px; }
+/* How to check a download: closes the list, in the size of the pass's small print. */
+.steps .check { padding-top: 14px; border-top: 2px solid var(--leaf-2); font-size: 0.975rem; }
 
 /* Pricing: one pass, the same for everyone, as the one solid block; the tiers beside it only change how you
  * look, so they are drawn as an outline. */

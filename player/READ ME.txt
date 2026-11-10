@@ -3,35 +3,45 @@ MONKEY SMP - how to join (players)
 
 Monkey SMP is a modded Minecraft server. To join, your Minecraft needs the same mods.
 This folder sets that up for you. You need Minecraft Java Edition (the one you buy at
-minecraft.net) and about 2 GB of free disk space. Option A is for Windows 10 or 11;
-on a Mac or Linux, use option B.
+minecraft.net) and about 2 GB of free disk space. Option A works on Windows, Mac and
+Linux; option B is for Windows 10 or 11 only.
 
 
-OPTION A: THE NORMAL MINECRAFT LAUNCHER (most people)
------------------------------------------------------
+OPTION A: MODRINTH APP OR PRISM LAUNCHER (recommended)
+------------------------------------------------------
+  Both are free launchers that install the whole pack from one file.
+  1. Install one of them: https://modrinth.com/app or https://prismlauncher.org
+     Sign in with the Microsoft account you play Minecraft with.
+  2. Install the  MonkeySMP-Client-....mrpack  file from this folder:
+       Modrinth App:    double-click the file. Or in the app:
+                        + (Create new instance)  >  Upload a modpack  >  choose the file.
+                        The app asks you to confirm, because the pack is not published
+                        on Modrinth yet: choose "Install anyway".
+       Prism Launcher:  Add Instance  >  Import  >  choose the .mrpack file
+     The launcher downloads the mods and resource packs (about 380 MB).
+  3. Give the game 6 GB of memory: in the Modrinth App, the instance's settings >
+     "Java and memory"; in Prism Launcher, the instance's Settings > Java.
+  4. Press Play. The first start is slow (a few minutes) - that's normal for a modded game.
+  5. In the game: Multiplayer > Add Server. Type the server address the host gave you,
+     press Done, then Join Server.
+
+
+OPTION B: THE NORMAL MINECRAFT LAUNCHER (Windows only)
+------------------------------------------------------
   1. Start the Minecraft Launcher once, sign in, then CLOSE it.
   2. Double-click  "Install for Minecraft Launcher.bat"  in this folder.
-     - If Windows says "Windows protected your PC", click "More info" then "Run anyway".
+     - Windows may say "Windows protected your PC", because the file is not signed:
+       click "More info" then "Run anyway".
      - It downloads the mods and resource packs (about 380 MB) from their official
        websites and checks every file. This takes a few minutes.
      - When it says it's finished, press a key to close the window.
   3. Open the Minecraft Launcher. Next to the green Play button, click the box that says
      the version (e.g. "Latest release") and pick  "Monkey SMP".  Press Play.
      The first start is slow (a few minutes) - that's normal for a modded game.
-  4. In the game: Multiplayer > Add Server. Type the server address the host gave you,
-     press Done, then Join Server.
+  4. Add the server as in step 5 of option A.
 
   Your normal Minecraft is not changed: Monkey SMP keeps its own mods, settings and
   worlds in a separate folder.
-
-
-OPTION B: MODRINTH APP OR PRISM LAUNCHER (Mac, Linux, or if you already use one)
----------------------------------------------------------------------------------
-  Install one of them (both free): https://modrinth.com/app or https://prismlauncher.org
-  Import the  MonkeySMP-Client-....mrpack  file from this folder:
-    Modrinth App:      + (Create)  >  Import  >  choose the .mrpack file
-    Prism Launcher:    Add Instance  >  Import  >  choose the .mrpack file
-  Then launch it and add the server as in step 4 above.
 
 
 BEFORE YOU JOIN
@@ -41,8 +51,10 @@ BEFORE YOU JOIN
 
 UPDATING
 --------
-  When the host sends a newer version, unzip it and double-click the installer again.
-  It updates Monkey SMP and keeps your settings, worlds and screenshots.
+  When the host sends a newer version, unzip it.
+  Option A: install the new .mrpack file the same way as the first one.
+  Option B: double-click the installer again. It updates Monkey SMP and keeps your
+  settings, worlds and screenshots.
 
 
 IF SOMETHING GOES WRONG

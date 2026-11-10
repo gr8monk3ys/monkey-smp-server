@@ -13,7 +13,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 ignore = ["SIM115"]  # short scripts read small files with open(); the OS closes them
 
 [tool.ruff.lint.isort]
-known-first-party = ["add", "pack_sync", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "retention", "validate", "wardrobe", "events", "block_wheel", "rules", "map_border", "modrinth", "site_links", "join_addresses", "funnel", "season", "standings", "client_env", "challenges", "drops", "npcs", "lootrestock_patch", "macelimiter_patch", "datapacks", "rcon", "nbt", "saved_world", "checks", "local_ci", "season_calendar", "season_ics", "recap", "firsts", "diplomacy", "outposts", "omens", "news", "quest", "goal", "sieges", "lore", "monuments", "clips", "camera", "pin_github", "live_packs", "player_needs", "release_gate", "restore_drill"]
+known-first-party = ["add", "pack_sync", "build", "check_updates", "defaults", "entries", "launcher_profile", "loadtest", "patches", "pwsh_lock", "repo", "snapshot", "upstream", "retention", "validate", "wardrobe", "events", "block_wheel", "rules", "map_border", "modrinth", "site_links", "join_addresses", "funnel", "season", "standings", "client_env", "challenges", "drops", "npcs", "lootrestock_patch", "macelimiter_patch", "datapacks", "rcon", "nbt", "saved_world", "checks", "local_ci", "season_calendar", "season_ics", "recap", "firsts", "diplomacy", "outposts", "omens", "news", "quest", "goal", "sieges", "lore", "monuments", "clips", "camera", "pin_github", "live_packs", "player_needs", "release_gate", "restore_drill", "checksums", "clean_install"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

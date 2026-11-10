@@ -5,8 +5,8 @@ Each release has three downloads. Send each person only what they need.
 | File | Who gets it | What they do with it |
 |---|---|---|
 | `MonkeySMP-Server-<version>.zip` | **the host** (one person) | Runs the server on their Windows PC, Mac or Linux machine (or with Docker), or prepares it for an online host |
+| `MonkeySMP-Client-<version>.mrpack` | players using the Modrinth App or Prism Launcher: the recommended way, on any computer | Open it with the Modrinth App or import it into Prism Launcher (the player zip contains this file too) |
 | `MonkeySMP-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | Installs the game mods, then joins |
-| `MonkeySMP-Client-<version>.mrpack` | players using the Modrinth App or Prism Launcher, while the Modrinth page isn't up | Import it instead of using the player zip (the player zip contains this file too) |
 
 Most players need no file at all: the client pack is the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
 on Modrinth, which the Modrinth App installs and updates on any computer. Send them the link (once Modrinth has
@@ -63,7 +63,9 @@ Tell me your exact Minecraft username so I can add you to the guest list.
 ```
 
 Until Modrinth has approved the page, send `MonkeySMP-Client-<version>.mrpack` with it and change step 2 to
-"In the app, + > Import, choose the .mrpack file".
+"Double-click the .mrpack file (or in the app: + > Upload a modpack). The app asks you to confirm, because the
+pack isn't on Modrinth yet: choose Install anyway. It downloads the mods (~380 MB)", and the line about updates to
+"When the pack changes, I'll send the new file: install it the same way".
 
 For a Windows player who'd rather keep the normal Minecraft Launcher, send `MonkeySMP-Player-<version>.zip`
 with this instead:
@@ -74,7 +76,7 @@ Here's how to join Monkey SMP (Minecraft Java Edition, modded):
 1. Make sure you have Minecraft Java Edition and the normal Minecraft Launcher
    (minecraft.net). Start the launcher once, sign in, then close it.
 2. Unzip MonkeySMP-Player-<version>.zip and double-click "Install for Minecraft Launcher.bat".
-   If Windows says "protected your PC", click More info > Run anyway.
+   Windows may say it "protected your PC", because the file isn't signed: click More info > Run anyway.
    It downloads the mods (~380 MB) and adds "Monkey SMP" to your launcher. Takes a few minutes.
 3. Open the Minecraft Launcher, choose "Monkey SMP" next to the Play button, press Play.
    The first start is slow (a few minutes) - that's normal.

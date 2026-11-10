@@ -152,7 +152,10 @@ Disabler mod is installed (docs/RULES.md, B18).
 | `MonkeySMP-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
 | `MonkeySMP-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `MonkeySMP-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
 
-All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files.
+All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files. The build also
+writes `dist/SHA256SUMS.txt`, the SHA-256 of each of the three (`tools/checksums.py`), in the form `sha256sum`
+writes, so `sha256sum -c SHA256SUMS.txt` checks a folder of downloads. The release attaches it; players are told how
+to use it in [PLAYERS.md](PLAYERS.md#check-a-download).
 
 Then boot it locally on spare ports (doesn't disturb a server already running on this machine):
 
@@ -223,6 +226,29 @@ repo, and the included minutes ran out in October 2026):
 
 Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not) from its next push on, or
 start a manual run to boot it now (adding a label doesn't start a run).
+
+The players' side has its own workflow, **Clean install** (`.github/workflows/install.yml`), which proves both
+ways in from nothing with the real downloads (`tools/clean_install.py`):
+
+| Job | Runs on | What |
+|---|---|---|
+| Launcher pack from clean | Linux | builds, then installs the `.mrpack` into an empty folder as the Modrinth App or Prism Launcher does: the pack must be a valid Modrinth pack, every file must download and match its size, SHA-1 and SHA-512, and the overrides are unpacked |
+| Windows installer from clean | Windows | builds, unzips the player zip, runs `Install for Minecraft Launcher.bat` as a double-click does against a launcher folder that holds nothing but a `launcher_profiles.json` (`APPDATA` points at a scratch folder), then checks what it left: exactly the pack's files with the right hashes, the overrides, the Fabric version, the `monkey-smp` profile, a backup of the launcher's file, and nothing else in that file changed |
+
+Each job downloads the whole pack (about 380 MB), so the workflow runs before every release (the Release workflow
+calls it and publishes nothing until it passes), by hand (**Actions > Clean install > Run workflow**, or
+`gh workflow run install.yml --ref <branch>`), and on a PR only when the PR touches the pack (`client/`), `player/`,
+`tools/build.py`, the tool or the workflow, so a dead download or a wrong hash shows on the PR, not at the tag. The unit tests (`tests/test_clean_install.py`) run the same checks on every push with a made-up pack and
+recorded downloads, and check that the pack the build makes is a valid one. To run the real thing yourself (each
+folder must be empty or not exist yet):
+
+```bash
+python tools/build.py
+python tools/clean_install.py launcher dist/MonkeySMP-Client-X.Y.Z.mrpack /tmp/clean-launcher
+python tools/clean_install.py installer dist/MonkeySMP-Player-X.Y.Z.zip C:/temp/clean-installer   # Windows only
+```
+
+Neither starts the game: that the pack loads and plays is a person's job ([QA.md](QA.md)).
 
 ## Capturing changes from a live server
 
@@ -563,20 +589,27 @@ players") came from this harness on an i7-8700K.
 3. Put the new player files on the site, since the GitHub releases are private and players download the pack
    from there: `python tools/build.py`, replace the files in `site/public/pack/` with
    `dist/MonkeySMP-Client-X.Y.Z.mrpack` and `dist/MonkeySMP-Player-X.Y.Z.zip` and point `MODPACK_URL` and
-   `INSTALLER_URL` in `site/config.json` at them. `validate.py` fails while the site serves another version's pack.
+   `INSTALLER_URL` in `site/config.json` at them, then run `python tools/site_links.py`: it rewrites
+   `site/public/pack/SHA256SUMS.txt`, the list the front page links to so a player can check a download.
+   `validate.py` fails while the site serves another version's pack, or while that list is missing or doesn't match
+   the files beside it. The release workflow warns when a file on the site is not byte for byte the release's own.
    (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
    Between releases, when the live server gains a mod players need and no tag may go out yet, the site can serve a
    rebuild of the same version: `python tools/build.py --site-build LABEL` names the files and the pack
    `X.Y.Z-LABEL`. Never attach those to a release; the next release's pack replaces them, and its redirects in
    `site/vercel.json` come out then too.
-4. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+4. Merge to `main`, then prove the players' install from clean before the tag exists, because the live server
+   takes a new tag in its next deploy window whether or not the release was published: run the **Clean install**
+   workflow on `main` (`gh workflow run install.yml --ref main`), or `tools/clean_install.py` yourself (above).
+   Then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 5. Put the client pack on Modrinth. The Release workflow's `modrinth` job does it when the repo secret
    `MODRINTH_TOKEN` is set; otherwise run `python tools/modrinth.py` from a checkout of the tag, with the token in
    `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
    left `client/` alone, and moves the server listing to the newest version.
 
-The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and attaches
-`MonkeySMP-Server-X.Y.Z.zip`, `MonkeySMP-Client-X.Y.Z.mrpack` and `MonkeySMP-Player-X.Y.Z.zip`.
+The release workflow re-runs CI (including macOS) and the Clean install workflow, refuses to publish if the tag and manifest version differ, and attaches
+`MonkeySMP-Server-X.Y.Z.zip`, `MonkeySMP-Client-X.Y.Z.mrpack`, `MonkeySMP-Player-X.Y.Z.zip` and `SHA256SUMS.txt`
+(it stops if that list doesn't cover the three files as built).
 
 ### Releasing without Actions
 
@@ -589,10 +622,14 @@ git fetch origin --tags
 git worktree add --detach ../release-vX.Y.Z vX.Y.Z
 cd ../release-vX.Y.Z
 python tools/checks.py   # on Windows, Pester runs on Windows PowerShell 5.1 and on pwsh when it's installed
-GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md
+GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md   # also writes dist/SHA256SUMS.txt
+python tools/checksums.py --check dist
+python tools/clean_install.py launcher dist/MonkeySMP-Client-X.Y.Z.mrpack ../clean-launcher
+python tools/clean_install.py installer dist/MonkeySMP-Player-X.Y.Z.zip ../clean-installer   # on Windows
 gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
 python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)
 cd - && git worktree remove --force ../release-vX.Y.Z   # --force: notes.md is untracked
+rm -rf ../clean-launcher ../clean-installer             # two copies of the pack
 ```
 
 In PowerShell, set the tag with `$env:GITHUB_REF_NAME = 'vX.Y.Z'` before `python tools/build.py --notes notes.md`.

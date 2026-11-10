@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import checksums
 import site_links
 from repo import REPO, Repo
 
@@ -139,6 +140,8 @@ def fake_site(tmp_path, pack_version="1.2.3", manifest_version="1.2.3", settings
     (site / "src" / "app" / "style.css").write_text("body { color: green; }\n", encoding="utf-8")
     with zipfile.ZipFile(site / "public" / "pack" / "MonkeySMP-Client-1.2.3.mrpack", "w") as z:
         z.writestr("modrinth.index.json", json.dumps({"versionId": pack_version}))
+    (site / "public" / "pack" / "MonkeySMP-Player-1.2.3.zip").write_bytes(b"the installer")
+    checksums.write(site / "public" / "pack")
     repo.manifest.parent.mkdir(parents=True)
     repo.manifest.write_text(json.dumps({"version": manifest_version}), encoding="utf-8")
     return repo
@@ -182,8 +185,44 @@ def test_a_missing_pack_is_reported(tmp_path):
     repo = fake_site(tmp_path)
     site_links.main([], repo=repo)
     (tmp_path / "site" / "public" / "pack" / "MonkeySMP-Client-1.2.3.mrpack").unlink()
-    assert site_links.problems(repo) == ["site: MODPACK_URL is pack/MonkeySMP-Client-1.2.3.mrpack, but "
-                                         "site/public/pack/MonkeySMP-Client-1.2.3.mrpack doesn't exist"]
+    assert site_links.problems(repo) == [
+        "site: MODPACK_URL is pack/MonkeySMP-Client-1.2.3.mrpack, but "
+        "site/public/pack/MonkeySMP-Client-1.2.3.mrpack doesn't exist",
+        "site/public/pack/SHA256SUMS.txt: lists MonkeySMP-Client-1.2.3.mrpack, which isn't in site/public/pack/ "
+        "(run python tools/site_links.py)"]
+
+
+def test_the_served_files_need_their_checksum_list(tmp_path):
+    repo = fake_site(tmp_path)
+    site_links.main([], repo=repo)
+    pack = tmp_path / "site" / "public" / "pack"
+    (pack / "SHA256SUMS.txt").unlink()
+    assert site_links.problems(repo) == [
+        "site/public/pack/SHA256SUMS.txt: missing (run python tools/site_links.py)"]
+    assert site_links.main([], repo=repo) == 0, "writing makes the list again"
+    assert sorted(checksums.load(pack)) == ["MonkeySMP-Client-1.2.3.mrpack", "MonkeySMP-Player-1.2.3.zip"]
+    assert site_links.main(["--check"], repo=repo) == 0
+
+
+def test_a_checksum_list_that_drifted_from_the_files_is_reported(tmp_path):
+    repo = fake_site(tmp_path)
+    site_links.main([], repo=repo)
+    pack = tmp_path / "site" / "public" / "pack"
+    (pack / "MonkeySMP-Player-1.2.3.zip").write_bytes(b"another installer")
+    [error] = site_links.problems(repo)
+    assert error.startswith("site/public/pack/SHA256SUMS.txt: MonkeySMP-Player-1.2.3.zip is listed as ")
+    (pack / "MonkeySMP-Player-1.2.4.zip").write_bytes(b"the next installer")
+    assert len(site_links.problems(repo)) == 2, "a file the list doesn't name is reported too"
+    assert site_links.main(["--check"], repo=repo) == 1
+    assert site_links.main([], repo=repo) == 0 and site_links.problems(repo) == []
+
+
+def test_downloads_served_elsewhere_need_no_checksum_list(tmp_path):
+    repo = fake_site(tmp_path, settings=links(MODPACK_URL="https://modrinth.com/modpack/monkeysmp",
+                                              INSTALLER_URL="https://example.com/MonkeySMP-Player-1.2.3.zip"))
+    site_links.main([], repo=repo)
+    (tmp_path / "site" / "public" / "pack" / "SHA256SUMS.txt").unlink()
+    assert site_links.problems(repo) == []
 
 
 def test_a_pack_served_elsewhere_is_not_looked_for(tmp_path):

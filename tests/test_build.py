@@ -7,6 +7,7 @@ import pytest
 from conftest import PLAYER_FILES, fake_player
 
 import build
+import checksums
 from repo import REPO
 
 RELEASES = ["paper_repo", "fabric_repo"]
@@ -80,10 +81,26 @@ def test_build_main_writes_all_three_files(tmp_path, fabric_repo, capsys, monkey
     fake_player(fabric_repo)
     build.main(fabric_repo, tmp_path / "dist")
     assert sorted(p.name for p in (tmp_path / "dist").iterdir()) == [
-        "MonkeySMP-Client-2.0.0.mrpack", "MonkeySMP-Player-2.0.0.zip", "MonkeySMP-Server-2.0.0.zip"]
+        "MonkeySMP-Client-2.0.0.mrpack", "MonkeySMP-Player-2.0.0.zip", "MonkeySMP-Server-2.0.0.zip",
+        "SHA256SUMS.txt"]
     out = capsys.readouterr().out
     assert all(name in out for name in ("MonkeySMP-Server-2.0.0.zip", "MonkeySMP-Client-2.0.0.mrpack",
-                                        "MonkeySMP-Player-2.0.0.zip"))
+                                        "MonkeySMP-Player-2.0.0.zip", "SHA256SUMS.txt"))
+
+
+def test_build_main_lists_the_sha256_of_each_release_file(tmp_path, fabric_repo, monkeypatch):
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    fake_player(fabric_repo)
+    dist = tmp_path / "dist"
+    build.main(fabric_repo, dist)
+    assert checksums.problems(dist) == [], "what the release workflow checks before it publishes"
+    assert (dist / "SHA256SUMS.txt").read_bytes() == "".join(
+        f"{hashlib.sha256((dist / name).read_bytes()).hexdigest()}  {name}\n" for name in (
+            "MonkeySMP-Client-2.0.0.mrpack", "MonkeySMP-Player-2.0.0.zip", "MonkeySMP-Server-2.0.0.zip")).encode()
+    # A site build into the same folder lists its own three files, not the release's beside them.
+    build.main(fabric_repo, dist, ["--site-build", "ships"])
+    assert sorted(checksums.load(dist)) == [
+        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip"]
 
 
 def test_build_site_build_names_every_file_and_the_pack_by_its_label(tmp_path, fabric_repo, monkeypatch):
@@ -91,7 +108,8 @@ def test_build_site_build_names_every_file_and_the_pack_by_its_label(tmp_path, f
     fake_player(fabric_repo)
     build.main(fabric_repo, tmp_path / "dist", ["--site-build", "ships"])
     assert sorted(p.name for p in (tmp_path / "dist").iterdir()) == [
-        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip"]
+        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip",
+        "SHA256SUMS.txt"]
     index = json.loads(zipfile.ZipFile(tmp_path / "dist" / "MonkeySMP-Client-2.0.0-ships.mrpack").read(
         "modrinth.index.json"))
     assert index["versionId"] == "2.0.0-ships"
@@ -131,7 +149,8 @@ def test_build_main_writes_the_release_notes(tmp_path, fabric_repo, monkeypatch)
     build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
     notes = (tmp_path / "notes.md").read_text(encoding="utf-8")
     assert notes == "Fabric.\n\n- New mods.\n\n" + build.DOWNLOADS
-    assert notes.splitlines()[4] == "### Downloads" and notes.endswith(".mrpack.)\n")
+    assert notes.splitlines()[4] == "### Downloads" and notes.endswith("`sha256sum <file>` on Linux.\n")
+    assert "- **SHA256SUMS.txt** - the SHA-256 of each file above." in notes
 
 
 def test_build_main_needs_a_changelog_section_for_the_notes(tmp_path, fabric_repo, monkeypatch):

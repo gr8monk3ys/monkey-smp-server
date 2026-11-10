@@ -5,6 +5,8 @@
   dist/MonkeySMP-Client-<version>.mrpack  import into Prism Launcher / Modrinth App to play
   dist/MonkeySMP-Player-<version>.zip     for the official Minecraft Launcher: unzip, double-click
                                           Install for Minecraft Launcher.bat
+  dist/SHA256SUMS.txt                     the SHA-256 of each of the three, so a download can be checked
+                                          (tools/checksums.py)
 
 The player zip is everything in player/ (the installer) under MonkeySMP-Player-<version>/, plus the
 .mrpack (the same bytes as the standalone file) and installer/fabric-profile.json (a copy of
@@ -32,6 +34,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import checksums
 from repo import REPO, load_json
 
 TOP = "MonkeySMP-Server"
@@ -58,6 +61,8 @@ DOWNLOADS = "\n".join([
     "- **MonkeySMP-Player-*.zip** - for players who use the official Minecraft Launcher. Unzip, double-click "
     "`Install for Minecraft Launcher.bat`, read `READ ME.txt`. (Using the Modrinth App or Prism Launcher "
     "instead? Import the .mrpack.)",
+    "- **SHA256SUMS.txt** - the SHA-256 of each file above. To check a download, compare the file's own with its "
+    "line: `Get-FileHash <file>` in PowerShell, `shasum -a 256 <file>` on macOS, `sha256sum <file>` on Linux.",
 ]) + "\n"
 
 
@@ -177,8 +182,11 @@ def main(repo=REPO, dist: Path | None = None, argv=()):
     dist = Path(dist or repo.dist)
     dist.mkdir(parents=True, exist_ok=True)
     mrpack = build_client(version, repo, dist)
-    for path in (build_server(version, repo, dist), mrpack, build_player(version, mrpack, repo, dist)):
+    built = (build_server(version, repo, dist), mrpack, build_player(version, mrpack, repo, dist))
+    for path in built:
         print(f"{path}  {path.stat().st_size / 1e6:.1f} MB")
+    # Only the three just built: dist/ may still hold another version's files.
+    print(f"{checksums.write(dist, built)}  the SHA-256 of each file")
     if notes:
         args.notes.write_text(notes, encoding="utf-8", newline="\n")
         print(f"{args.notes}  release notes for {version}")

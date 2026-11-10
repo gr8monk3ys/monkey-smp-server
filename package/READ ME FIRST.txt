@@ -99,10 +99,11 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
   Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
   needs the mods. Send each player the file  MonkeySMP-Player-(version).zip  from the same
   release as this server. Inside it:
-    - "Install for Minecraft Launcher.bat" sets everything up in the normal Minecraft
-      Launcher on Windows (they then pick "Monkey SMP" next to the Play button).
-    - The .mrpack file is for Mac and Linux players, and anyone who already uses the
-      Modrinth App or Prism Launcher: they import it there.
+    - The .mrpack file is the easy way on any computer (Windows, Mac or Linux): they
+      open it with the Modrinth App or import it into Prism Launcher (both free).
+    - "Install for Minecraft Launcher.bat" is for Windows players who keep the normal
+      Minecraft Launcher (they then pick "Monkey SMP" next to the Play button).
+      Windows warns about it, because the file is not signed.
     - "READ ME.txt" explains it step by step, in plain language.
   Then they add your server address in Multiplayer > Add Server.
   Remember to add each player to the guest list (section 4).

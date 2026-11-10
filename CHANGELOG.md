@@ -49,6 +49,14 @@
   first, as the recommended path. The Windows installer is the second path, with one sentence on the warning
   Windows shows because the file isn't signed, and what to click. `docs/QA.md` has the procedure for measuring
   the memory the pack needs; the 16 GB stays marked as not measured until someone runs it.
+- **Weekly standings: land no longer counts.** A faction's rank comes from three columns: Cup 50, Strength 25,
+  kills 25 (before: Cup 40, land 20, Strength 20, kills 20). Bounties (+5) and outpost hours (+1, at most 20) are
+  as before, and claims themselves are unchanged. The board, the Discord table, `standings.py show` and the
+  formula text lose the land column; the website's file never had it. Closed weeks are not rewritten: a week
+  closed with the land column keeps its land numbers and formula in `STATE/weeks/`, and the board's last-week
+  table and a re-posted Discord table show it as it was scored. The Sunday recap's "Land" line (chunks claimed
+  that week, `tools/recap.py`) and the first-week quest's "Claim a chunk" step are unchanged. The
+  `monkey-standings` pack is regenerated (the board's footer); it is still off on the live server.
 
 ### Fixed
 

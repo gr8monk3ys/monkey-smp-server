@@ -159,25 +159,29 @@ Most weeks it is the act or pillar event from the table above. When a week has o
 
 ### Weekly standings
 
-Every faction gets one rank a week, from four things: event wins, land, strength and fighting. The Cup
+Every faction gets one rank a week, from three things: event wins, strength and fighting. The Cup
 alone decides the champion; the standings give the weeks between events something to play for, and a
 faction that never wins an event still has a column it can lead.
 
 | Column | What counts | Weight |
 | --- | --- | --- |
-| Cup | The faction's Season Cup points so far (`ev.cup`) | 40 |
-| Land | Chunks its members have claimed (Open Parties and Claims) | 20 |
-| Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 20 |
-| Kills | PvP kills by its members this week, outside the event arena; a war enemy's count twice (War and pacts, below) | 20 |
+| Cup | The faction's Season Cup points so far (`ev.cup`) | 50 |
+| Strength | Its members' Strength levels added up (a player in the arena counts with their own level) | 25 |
+| Kills | PvP kills by its members this week, outside the event arena; a war enemy's count twice (War and pacts, below) | 25 |
 | Bounties | +5 for each bounty a member claimed this week (the bounty board, below) | |
 | Outposts | +1 for each whole hour the faction held an outpost this week, at most 20 (Outposts, below) | |
 
 Each column gives a faction its share of the weight, in proportion to the leader of that column, rounded:
-the faction with the most land gets 20, one with half as much gets 10. Add the columns up and the bounties
+the faction with the most Cup points gets 50, one with half as many gets 25. Add the columns up and the bounties
 and outpost hours on top. The leader of every column would have 100. Example: the Red Monkeys have 30 Cup points (the most),
-7 chunks (the most), Strength 7 (the most) and 4 kills to the Blue Herons' 6: 40 + 20 + 20 + 13 = 93, and
-98 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
+Strength 7 (the most) and 4 kills to the Blue Herons' 6: 50 + 25 + 17 = 92, and
+97 with a claimed bounty. A tie on points goes to more Cup points, then more kills this week; still tied,
 the factions share the rank. Strength below zero counts as zero.
+
+Land is not a column. Until November 2026 it was the fourth (chunks a faction's members had claimed; the weights
+were Cup 40, land 20, Strength 20, kills 20). Claims themselves are unchanged. A week that closed with the land
+column keeps its land numbers and its formula in its file (`STATE/weeks/`), and the board and a re-posted
+Discord table still show that week with them; the website's file never held land.
 
 - **Who is a faction.** An Open Parties and Claims party; its name is the party name (`/openpac`), or
   "NAME's faction" after its owner if it has none. Players outside a party aren't ranked.

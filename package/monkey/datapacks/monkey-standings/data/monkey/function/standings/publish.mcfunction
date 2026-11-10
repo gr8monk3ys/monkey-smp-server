@@ -6,5 +6,5 @@ data modify storage monkey:standings board.extra append from storage monkey:stan
 data modify storage monkey:standings board.extra append from storage monkey:standings wanted
 data modify storage monkey:standings board.extra append value {text:"\n"}
 data modify storage monkey:standings board.extra append from storage monkey:standings last
-data modify storage monkey:standings board.extra append value {text:"\nScored as Cup 40, land 20, Strength 20, kills this week 20 (a war enemy's count twice), each as a share of the leader; +5 a bounty; +1 an hour holding an outpost (at most 20).\n/trigger standings shows this in chat.",color:"dark_gray"}
+data modify storage monkey:standings board.extra append value {text:"\nScored as Cup 50, Strength 25, kills this week 25 (a war enemy's count twice), each as a share of the leader; +5 a bounty; +1 an hour holding an outpost (at most 20).\n/trigger standings shows this in chat.",color:"dark_gray"}
 scoreboard players add #board st.ver 1

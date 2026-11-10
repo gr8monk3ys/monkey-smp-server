@@ -25,6 +25,7 @@ LOG_NAME=monkey-omens
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=omens.py
+JOB_PACKS='monkey-omens monkey-drops'
 JOB_WORLD=1
 JOB_FOR='omens'
 JOB_NONE='not an omen evening now, or no omen key saved yet'

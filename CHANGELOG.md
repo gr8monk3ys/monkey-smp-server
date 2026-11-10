@@ -2,8 +2,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- Tests: the three boot tests (`tests/smoke.ps1`, `tests/docker-smoke.sh`, `tests/hosting-smoke.sh`) fail when
+  data fails to load: a function, a tag, a data file that doesn't parse or doesn't pass validation, or one of our
+  advancements. Before, a typo in one generated function passed every check, because the server starts anyway and
+  only its log says so. Data a pinned mod ships broken is listed as known, file by file (More Villagers: nine
+  advancements and the `gilded_station` recipe don't parse on 26.2); see `docs/MAINTAINING.md`, "Updating the
+  server, plugins and mods".
+
 ### Fixed
 
+- Timed jobs no longer fail when staff turned their data pack off. With the wardrobe pack off since 2026-11-06,
+  monkey-day failed every 10 minutes for 6 hours each day and then alerted staff, and monkey-sieges failed every
+  5 minutes (684 times by 11-09). Each job now names its packs (`JOB_PACKS` in deploy/lib.sh); when one is off it
+  logs that and sends nothing (`tools/rcon.py packs-on`). When it can't tell, it sends as before.
+- `monkey-deploy.timer` checks 1 minute after it starts (`OnActiveSec`). Stopped on 11-04 and started again on
+  11-08, it never fired: 5 minutes after the last check only counts once a check has run, so no release could
+  deploy itself. Install the new unit by hand (docs/LIVE.md, "The deploy timer that fires on start").
 - The Armor power has a passive again. 3.3.0 removed upstream's, which turned diamond armor into netherite, and
   left nothing in its place. Now each diamond piece an Armor player wears gets what netherite has over it: +1 armor
   toughness and +0.1 knockback resistance. Nothing about the armor changes; the bonus comes off when the piece does,

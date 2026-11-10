@@ -115,7 +115,7 @@ The staff page's own sign-in at `/login`, as opposed to the browser's password b
 _Avoid_: SSO, account system, auth portal
 
 **Timed job**:
-A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly), the border acts (hourly, from Season II) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`.
+A systemd timer on the live VPS that sends a tool's RCON commands to the server on the wall clock, under the deploy lock: the week (hourly), the supply drops and the omens (every 10 minutes each), the outposts (hourly), the sieges (every 5 minutes), the border acts (hourly, from Season II) and the day (midnight UTC). Each is a thin `deploy/monkey-<job>.sh` over `timed_job` in `deploy/lib.sh`, with `--check` and `--install`, and its tool has `commands` and `send`. A job whose data pack staff turned off (`JOB_PACKS`) sends nothing and doesn't fail.
 _Avoid_: cron job, scheduled task, timer (alone: the deploy, backup and standings timers do more than send commands)
 
 ## Lifecycle

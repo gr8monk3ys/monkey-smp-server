@@ -43,8 +43,15 @@ docker compose down || true
 
 fail=0
 [ "$reached" = yes ] || { echo "the server never printed Done"; fail=1; }
-if grep -nE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop|---- Minecraft Crash Report' compose.log; then
+# grep -a: one stray byte in the log and grep calls the file binary, and prints "binary file matches", not the lines.
+if grep -anE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop|---- Minecraft Crash Report' compose.log; then
     echo "errors in the server log"; fail=1
+fi
+# Data that failed to load: the server starts anyway, so only the log says so. tests/smoke.ps1 says what counts.
+data_errors="Failed to load function |Couldn't load tag |Couldn't read tag list |Couldn't parse data file |Found validation problems in advancement |Found loot table element validation problem |Couldn't load advancements: .*[^a-z0-9_.-]monkey:"
+known_data="Couldn't parse data file 'morevillagers:[^']*' from 'morevillagers:(advancement/|recipe/gilded_station\.json')"
+if grep -anE "$data_errors" compose.log | grep -avE "$known_data"; then
+    echo "data that failed to load (above)"; fail=1
 fi
 if [ "$reached" = yes ] && ! grep -qE 'All dimensions are saved|Saving worlds' compose.log; then
     echo "no clean shutdown in the log, and the container's state is: $stopped"; fail=1

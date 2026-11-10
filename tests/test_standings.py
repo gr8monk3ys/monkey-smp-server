@@ -272,7 +272,8 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     # then the week's wars end (tools/diplomacy.py week_end)
     assert rcon.sent[-2] == 'data modify storage monkey:diplomacy batch set value [{f:"week_over",seq:0}]'
     assert rcon.sent[-1] == "function monkey:diplomacy/batch/run"
-    assert "kills 0" in rcon.sent[0] and "kills 4" in rcon.sent[1]
+    assert rcon.sent[0] == "save-all flush"   # the world is on disk before the close reads it
+    assert "kills 0" in rcon.sent[1] and "kills 4" in rcon.sent[2]
     [(url, kind, body)] = discord.posts
     assert url == WEBHOOK and kind == "application/json"
     assert body["allowed_mentions"] == {"parse": []}
@@ -290,9 +291,41 @@ def test_close_keeps_the_week_starts_the_next_and_posts_once(world, tmp_path, ca
     assert "made-up-secret-token" not in first.out + first.err + out.out + out.err
 
 
+def test_close_saves_the_world_before_it_reads_it(world, tmp_path, monkeypatch):
+    """The timer's close must not read a world up to 5 minutes old: a kill just before 7 PM would land in the next
+    week. It asks the running server to write everything first, as the staff page's board button does."""
+    state, server, order = tmp_path / "state", FakeRcon(), []
+    reads = standings.read_world
+    monkeypatch.setattr(standings, "read_world", lambda w: (order.append(list(server.sent)), reads(w))[1])
+    assert standings.close(world, state, server, SUNDAY, "", FakeDiscord()) == 0
+    assert order and all(sent == ["save-all flush"] for sent in order)
+
+
+def test_close_with_a_running_server_that_will_not_save_closes_nothing_and_fails(world, tmp_path, capsys):
+    state, server = tmp_path / "state", FakeRcon(fail=99)
+    assert standings.close(world, state, server, SUNDAY, WEBHOOK, FakeDiscord()) == 1   # the unit retries
+    assert not (state / "weeks").exists() and "save-all flush" in capsys.readouterr().err
+
+
+def test_close_with_a_stopped_server_reads_what_the_stop_saved(world, tmp_path):
+    state, server = tmp_path / "state", rcon.Recorder(running=False, fail=99)
+    assert standings.close(world, state, server, SUNDAY, "", FakeDiscord()) == 1   # the board can't go up
+    assert (state / "weeks" / "2026-11-01.json").exists()
+
+
+class SavesThenFails(rcon.Recorder):
+    """Saves the world, then is down for the next `fail` commands: a board or wars that fail after the close."""
+
+    def __call__(self, command):
+        if command == "save-all flush":
+            self.sent.append(command)
+            return ""
+        return super().__call__(command)
+
+
 def test_a_failed_post_or_board_is_retried_without_closing_again(world, tmp_path, capsys):
     state = tmp_path / "state"
-    rcon, discord = FakeRcon(fail=1), FakeDiscord(fail=1)
+    rcon, discord = SavesThenFails(fail=1), FakeDiscord(fail=1)
     assert standings.close(world, state, rcon, SUNDAY, WEBHOOK, discord) == 1
     closed = json.loads((state / "weeks" / "2026-11-01.json").read_text())
     assert not closed["posted"] and not closed["announced"]

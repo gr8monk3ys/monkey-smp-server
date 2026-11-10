@@ -136,7 +136,7 @@ def test_a_settings_save_changes_only_those_keys_and_keeps_the_secrets(apex):
 
 
 def test_values_sent_back_unchanged_keep_their_lines_byte_for_byte(apex):
-    text = ("#Minecraft server properties\n# odd\x0c comment  here\n"
+    text = ("#Minecraft server properties\n# odd\x0c commentâ€¨ here\n"
             "motd=line one\\nline two\r\n"
             "pvp=TRUE\n"
             "max-players=30\n"
@@ -305,7 +305,7 @@ def test_the_helper_script_is_plain_posix_sh_with_a_fixed_allow_list():
     assert "PathExistsGlob=/srv/monkey/staff/requests/*.req" in (DEPLOY / "monkey-staff-helper.path").read_text()
     service = (DEPLOY / "monkey-staff-helper.service").read_text()
     assert "User=root" in service and "StateDirectory=monkey-staff-helper" in service
-    assert "ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-staff-helper.sh" in service
+    assert "ExecStart=/bin/sh /opt/monkey/deploy/monkey-staff-helper.sh" in service   # root's copy
     shell = shutil.which("dash")
     if shell:
         for name in ("monkey-staff-helper.sh", "monkey-staff.sh"):
@@ -315,7 +315,10 @@ def test_the_helper_script_is_plain_posix_sh_with_a_fixed_allow_list():
 HELPER_FAKES = {
     "id": "echo 0",
     "sleep": 'echo "sleep $*" >>"$FAKE_CALLS"',
-    "flock": 'echo "flock $*" >>"$FAKE_CALLS"',
+    # flock FD, or flock FILE CMD...: runs CMD.
+    "flock": 'echo "flock $*" >>"$FAKE_CALLS"\n'
+             'while :; do case $1 in -w) shift 2 ;; -*) shift ;; *) break ;; esac; done\n'
+             'shift\n[ $# -eq 0 ] || exec "$@"',
     "runuser": 'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"',
     "chown": 'echo "chown $*" >>"$FAKE_CALLS"',
     "stat": 'case "$*" in *%U*) echo monkey ;; *) exec /usr/bin/stat "$@" ;; esac',
@@ -328,7 +331,7 @@ HELPER_FAKES = {
 # The repo's monkey-backup.sh needs root's keys; this one answers --restic like restic would.
 FAKE_BACKUP = """#!/bin/sh
 echo "backup.sh $*" >>"$FAKE_CALLS"
-[ "$1" = --restic ] || exit 2
+[ "$1" = --restic-read ] || exit 2   # read-only: the helper never writes to the repository
 shift
 case $1 in
     snapshots) cat "$FAKE_SNAPSHOTS" ;;
@@ -379,7 +382,10 @@ def helper(tmp_path):
                    "FAKE_CALLS": calls.as_posix(), "FAKE_SNAPSHOTS": snaps.as_posix(),
                    "MONKEY_DEPLOY_ENV": (tmp_path / "none").as_posix(), "REPO_DIR": repo.as_posix(),
                    "LIVE_DIR": live.as_posix(), "STAFF_DIR": staff_dir.as_posix(),
-                   "HELPER_RESULTS": results.as_posix(), "LOCK_FILE": (tmp_path / "deploy.lock").as_posix(), **env}
+                   "HELPER_RESULTS": results.as_posix(), "LOCK_FILE": (tmp_path / "deploy.lock").as_posix(),
+                   # root's copies (in /opt/monkey on the VPS): here the made-up checkout's
+                   "HELPER_BACKUP": (repo / "deploy" / "monkey-backup.sh").as_posix(),
+                   "HELPER_TOOLS": (repo / "tools").as_posix(), **env}
         done = subprocess.run([shell, (DEPLOY / "monkey-staff-helper.sh").as_posix()], env=environ,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
         out = {p.stem: json.loads(p.read_text()) for p in results.glob("*.json")} if results.exists() else {}
@@ -434,7 +440,7 @@ def test_the_helper_lists_the_snapshots_cut_down(helper):
     result = done.results[RID]
     assert result["state"] == "done"
     assert [s["short_id"] for s in result["snapshots"]] == ["b" * 8, "a" * 8]
-    assert "backup.sh --restic snapshots --json --tag world" in done.calls
+    assert "backup.sh --restic-read snapshots --json --tag world" in done.calls
 
 
 def test_the_helper_refuses_a_snapshot_that_is_not_hex(helper):
@@ -455,13 +461,15 @@ def test_the_helper_restores_a_snapshot_and_keeps_the_old_world(helper):
     kept = list((helper.live / "backups").glob("before-restore-*/world/level.dat"))
     assert len(kept) == 1 and kept[0].read_text() == "live"
     assert not list(helper.live.glob(".restore.*"))
-    restore = next(i for i, c in enumerate(done.calls) if c.startswith("backup.sh --restic restore"))
+    restore = next(i for i, c in enumerate(done.calls) if c.startswith("backup.sh --restic-read restore"))
     assert f"{snap}:{helper.live.as_posix()}/server/world" in done.calls[restore]
     stop = next(i for i, c in enumerate(done.calls) if c.endswith("stop monkey"))
     start = next(i for i, c in enumerate(done.calls) if c.endswith("up -d --no-build monkey"))
-    lock = next(i for i, c in enumerate(done.calls) if c.startswith("flock"))
-    # Downloaded while the server ran; the swap is under the lock, between the stop and the start.
-    assert restore < lock < stop < start
+    held = next(i for i, c in enumerate(done.calls) if c.startswith("flock") and "backup.lock" in c)
+    lock = next(i for i, c in enumerate(done.calls) if c.startswith("flock") and "backup.lock" not in c)
+    # Downloaded under the backup lock (no forget or prune meanwhile) while the server ran; the swap is under the
+    # deploy lock, between the stop and the start.
+    assert held < restore < lock < stop < start
 
 
 def test_a_failed_restore_leaves_the_world_and_the_server_alone(helper):
@@ -479,6 +487,72 @@ def test_the_staff_script_installs_the_helper_only_as_its_own_step():
     assert "monkey-staff-helper" not in install
     assert "--install-helper) MODE=install-helper" in text
     assert "install -d -m 770 -o monkey -g monkey" in text
+
+
+@pytest.fixture
+def install_helper(tmp_path):
+    """Runs `monkey-staff.sh --install-helper` under dash as a fake root: root's copies in DEST, root's clone in SRC,
+    the units in UNITS; id, install and systemctl faked."""
+    shell = shutil.which("dash")
+    if not shell:
+        pytest.skip("needs dash (tools/checks.py puts Git for Windows' dash on PATH)")
+    dest, src, units, staff, bin_dir = (tmp_path / n for n in ("dest", "src", "units", "staff", "bin"))
+    calls = tmp_path / "calls"
+    for d in (dest / "deploy", dest / "tools", src / "deploy", units, staff, bin_dir):
+        d.mkdir(parents=True)
+    for f in ("deploy/monkey-staff-helper.sh", "deploy/monkey-backup.sh", "deploy/lib.sh", "tools/staff_apex.py"):
+        (dest / f).write_text("#\n", newline="\n")
+    for u in ("monkey-staff-helper.path", "monkey-staff-helper.service"):
+        (src / "deploy" / u).write_text(f"[Unit]\n# {u} v2\n", newline="\n")
+    fakes = {"id": 'echo "${FAKE_UID:-0}"',
+             "install": 'last=; prev=; dir=0\n'
+                        'for a in "$@"; do case $a in -d) dir=1 ;; esac; prev=$last; last=$a; done\n'
+                        'if [ $dir = 1 ]; then mkdir -p "$last"; else cp "$prev" "$last"; fi',
+             "systemctl": "exit 0"}
+    for name, body in fakes.items():
+        (bin_dir / name).write_text(f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n{body}\n', newline="\n")
+        (bin_dir / name).chmod(0o755)
+
+    def run(**env):
+        calls.unlink(missing_ok=True)
+        environ = {**os.environ, "PATH": bin_dir.as_posix() + os.pathsep + os.environ["PATH"],
+                   "FAKE_CALLS": calls.as_posix(), "MONKEY_DEPLOY_ENV": (tmp_path / "none").as_posix(),
+                   "STAFF_DIR": staff.as_posix(), "HELPER_WATCHED": staff.as_posix(), "ROOT_DEST": dest.as_posix(),
+                   "ROOT_SRC": src.as_posix(), "UNIT_DIR": units.as_posix(), **env}
+        done = subprocess.run([shell, (DEPLOY / "monkey-staff.sh").as_posix(), "--install-helper"], env=environ,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
+        return done.returncode, done.stdout, calls.read_text().splitlines() if calls.exists() else []
+
+    return SimpleNamespace(run=run, dest=dest, src=src, units=units, staff=staff)
+
+
+def test_install_helper_installs_root_clones_units_and_only_changed_ones(install_helper):
+    h = install_helper
+    code, out, calls = h.run()
+    assert code == 0, out
+    assert sorted(p.name for p in h.units.iterdir()) == ["monkey-staff-helper.path", "monkey-staff-helper.service"]
+    assert (h.units / "monkey-staff-helper.path").read_text() == "[Unit]\n# monkey-staff-helper.path v2\n"
+    assert (h.staff / "requests").is_dir()
+    assert "systemctl daemon-reload" in calls and "systemctl enable --now monkey-staff-helper.path" in calls
+    code, out, calls = h.run()   # nothing changed: no reload, no restart
+    assert code == 0 and "systemctl daemon-reload" not in calls
+    assert not any("restart" in c for c in calls) and not any("installed" in line for line in out.splitlines())
+
+
+def test_install_helper_refuses_without_root_or_root_copies(install_helper):
+    h = install_helper
+    code, out, _ = h.run(FAKE_UID="1000")
+    assert code == 1 and "run as root" in out
+    code, out, _ = h.run(HELPER_WATCHED="/srv/monkey/staff")
+    assert code == 1 and "the helper watches /srv/monkey/staff/requests" in out
+    (h.dest / "tools" / "staff_apex.py").unlink()
+    code, out, calls = h.run()
+    assert code == 1 and "tools/staff_apex.py is missing: install root's copies first" in out
+    assert not any(h.units.iterdir()) and not any(c.startswith("systemctl") for c in calls)
+    (h.dest / "tools" / "staff_apex.py").write_text("#\n")
+    (h.src / "deploy" / "monkey-staff-helper.service").unlink()
+    code, out, _ = h.run()
+    assert code == 1 and "deploy/monkey-staff-helper.service is missing" in out and not any(h.units.iterdir())
 
 
 # ---------------------------------------------------------------- schedules: when a run is due

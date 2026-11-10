@@ -4,6 +4,7 @@
 # answering), it tries again every 10 minutes for about an hour; a retry never closes the week twice.
 [Unit]
 Description=Monkey SMP: weekly faction standings
+OnFailure=monkey-alert@%n.service
 After=network-online.target docker.service
 Wants=network-online.target
 StartLimitIntervalSec=2h

@@ -3,6 +3,7 @@
 # `sudo sh /srv/monkey/repo/deploy/monkey-border.sh --install` (docs/LIVE.md).
 [Unit]
 Description=Monkey SMP: border acts
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

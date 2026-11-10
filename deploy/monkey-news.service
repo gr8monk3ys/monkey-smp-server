@@ -3,6 +3,7 @@
 # (docs/LIVE.md). Skips the run when a deploy, restart or backup holds the deploy lock.
 [Unit]
 Description=Monkey SMP: news to Discord
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

@@ -1,0 +1,13 @@
+# Runs the restore drill (monkey-restore-drill.service) on the first Monday of each month at 11:00 Pacific, a quiet
+# hour. Turn it on only after a first run by hand passed (docs/LIVE.md, "Restore drill"):
+#   systemctl enable --now monkey-restore-drill.timer
+[Unit]
+Description=Monkey SMP: restore drill, monthly
+
+[Timer]
+OnCalendar=Mon *-*-01..07 11:00:00 America/Los_Angeles
+# A missed drill waits for next month rather than starting at boot, when the live server needs the machine.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

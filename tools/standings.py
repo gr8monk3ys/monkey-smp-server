@@ -742,7 +742,18 @@ def close(world: Path, state: Path, rcon, now: dt.datetime, url: str, urlopen=ur
     """Ends the week (unless it began under MIN_WEEK_DAYS ago, so a re-run or a retry closes nothing twice), then
     does whatever the newest closed week still lacks: the board, the chat announcement, the Discord post (only
     for a week that closed after the launch). The website's file goes out once the week is closed, on every run; if it
-    fails, the rest still happens and the run ends in 1, so the unit's retries try it again."""
+    fails, the rest still happens and the run ends in 1, so the unit's retries try it again.
+    A running server writes the world first (save-all flush, as the staff page's board button does), so a kill just
+    before the close counts in the week it happened, not in the next one. A running server that won't save closes
+    nothing and the run ends in 1: the unit's retries try again, and a failed unit alerts staff. A stopped server
+    saved everything as it stopped, so its world on disk is read as it is."""
+    try:
+        if rcon.running():
+            rcon("save-all flush")
+    except RconError as e:
+        print(f"could not save the world before the close (save-all flush): {e}. Not closing on a world that may be "
+              "minutes old; the next try does it", file=sys.stderr)
+        return 1
     week = read_json(week_file(state))
     start_ = since(week)
     data = read_world(world)

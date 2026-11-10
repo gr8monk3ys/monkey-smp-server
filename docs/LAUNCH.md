@@ -152,7 +152,7 @@ below).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:
   the load test refuses to run before it does.
 - [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
-  check `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots` lists hourly snapshots. The keys go
+  check `sh /opt/monkey/deploy/monkey-backup.sh --restic snapshots` lists hourly snapshots. The keys go
   in the password manager and `/etc/monkey-backup.env` (root only), nowhere else.
 - [ ] **Fri 6 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
@@ -202,7 +202,7 @@ claims. Testers do keep what they learned about where things are.
   `#end_open` is 1.
 - **Staff work goes in before the first buyer joins, or after the wipe.** Build Battle plots or anything else built in
   between goes back with the world.
-- [ ] **Before telling anyone: note the snapshot.** `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots`
+- [ ] **Before telling anyone: note the snapshot.** `sh /opt/monkey/deploy/monkey-backup.sh --restic snapshots`
   on the VPS, and note the newest ID from before any outside player has joined. Hourly snapshots last 48 hours, and after
   that only the last one of each day is kept, so for Saturday at 10 AM use one from the 11 AM Thursday run or later
   (the 10 AM Saturday backup's clean-up drops the 10 AM Thursday one). If it's gone,

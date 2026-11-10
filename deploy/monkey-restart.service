@@ -1,6 +1,7 @@
 # Restarts the server once (monkey-deploy.sh --restart). Started by monkey-restart.timer; install with docs/LIVE.md.
 [Unit]
 Description=Monkey SMP: daily restart
+OnFailure=monkey-alert@%n.service
 After=network-online.target docker.service
 Wants=network-online.target
 

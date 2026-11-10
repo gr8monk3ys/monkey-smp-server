@@ -3,6 +3,7 @@
 # (docs/LIVE.md).
 [Unit]
 Description=Monkey SMP: siege windows and the clock
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

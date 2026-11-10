@@ -1,0 +1,12 @@
+# Deletes server logs older than LOG_KEEP_DAYS (deploy/monkey-logs.sh), so "then they are deleted" on the privacy
+# page holds. Started by monkey-logs.timer, installed by deploy/install-root.sh (docs/LIVE.md, "Log pruning").
+[Unit]
+Description=Monkey SMP: delete old server logs
+OnFailure=monkey-alert@%n.service
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-logs.sh
+Nice=10

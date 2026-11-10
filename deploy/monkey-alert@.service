@@ -1,0 +1,14 @@
+# Posts "UNIT failed" to the staff Discord channel (deploy/monkey-alert.sh). Every monkey-* service starts it with
+# OnFailure=monkey-alert@%n.service, except the backup and the restore drill, which post their own results, and this
+# unit itself. At most one post per unit in 6 hours; see monkey-alert.sh. Installed by deploy/install-root.sh
+# (docs/LIVE.md, "Failure alerts"). Runs as monkey: it only reads the deploy settings and posts.
+[Unit]
+Description=Monkey SMP: tell staff that %i failed
+
+[Service]
+Type=oneshot
+User=monkey
+Group=monkey
+StateDirectory=monkey-alert
+ExecStart=/bin/sh /srv/monkey/repo/deploy/monkey-alert.sh %i
+TimeoutStartSec=2min

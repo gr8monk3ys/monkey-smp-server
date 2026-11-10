@@ -4,6 +4,7 @@
 # never waits on it.
 [Unit]
 Description=Monkey SMP: weekly rule check for the staff page
+OnFailure=monkey-alert@%n.service
 
 [Service]
 Type=oneshot

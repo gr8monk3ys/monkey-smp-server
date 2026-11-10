@@ -367,7 +367,7 @@ def test_the_wars_end_even_when_the_board_fails_and_a_late_retry_ends_only_the_c
     # The server was down for the wars' end too: a retry hours later, after a new war (seq 9) was declared in
     # the new week and saved, still sends only the closed week's own ends.
     world2, state2 = closing(tmp_path / "late")
-    down = rcon.Recorder(fail=99)
+    down = rcon.Recorder(running=False, fail=99)   # stopped: the close reads what the stop saved
     assert standings.close(world2, state2, down, SUNDAY, "", FakeDiscord()) == 1
     assert not json.loads((state2 / "weeks" / "2026-11-01.json").read_text())["wars_ended"]
     (world2 / "data" / "minecraft" / "scoreboard.dat").write_bytes(

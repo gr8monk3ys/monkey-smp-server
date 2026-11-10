@@ -3,6 +3,7 @@
 # `sudo sh /srv/monkey/repo/deploy/monkey-week.sh --install` (docs/LIVE.md).
 [Unit]
 Description=Monkey SMP: weekly challenges and launch weekend clock
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

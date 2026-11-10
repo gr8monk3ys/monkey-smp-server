@@ -2,6 +2,7 @@
 # monkey-staff.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` (docs/LIVE.md).
 [Unit]
 Description=Monkey SMP: staff page status
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

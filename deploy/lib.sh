@@ -51,6 +51,29 @@ log_each() {
 # "python_ok MINOR": python3 is installed and 3.MINOR or newer.
 python_ok() { python3 -c "import sys; sys.exit(sys.version_info < (3, $1))" 2>/dev/null; }
 
+# "release_gate COMMIT [TAG]": true when tools/release_gate.py says COMMIT may go live: GitHub has a published
+# release for TAG that points at COMMIT, and CI passed on it (no TAG: CI passed, for TRACK=<branch>). Its one line is
+# logged and kept in GATE_SAYS. RELEASE_GATE=off lets everything through (the emergency switch, docs/LIVE.md: GitHub
+# is down and a fix can't wait); a python3 older than 3.10 lets nothing through. GATE_TOOLS (default REPO_DIR/tools)
+# is the folder that holds the script.
+release_gate() {
+    if [ "${RELEASE_GATE:-on}" = off ]; then
+        GATE_SAYS='release gate: off (RELEASE_GATE=off in the settings)'
+        log "$GATE_SAYS"
+        return 0
+    fi
+    if ! python_ok 10; then
+        GATE_SAYS='release gate: needs python3 3.10 or newer; nothing goes live'
+        log "$GATE_SAYS"
+        return 1
+    fi
+    lib_rc=0
+    GATE_SAYS=$(python3 -B -I "${GATE_TOOLS:-$REPO_DIR/tools}/release_gate.py" "$1" ${2:+--tag "$2"} 2>&1) || lib_rc=$?
+    GATE_SAYS=$(printf '%s' "${GATE_SAYS:-release gate: no answer (exit $lib_rc)}" | tail -n 1)
+    log "$GATE_SAYS"
+    return "$lib_rc"
+}
+
 # "absolute PATH": PATH, made absolute against the working directory.
 absolute() { case $1 in /*) printf '%s\n' "$1" ;; *) printf '%s\n' "$PWD/$1" ;; esac; }
 
@@ -161,6 +184,35 @@ deploy_lock() {
         command exec 9>>"$lib_lock" || die "could not open the deploy lock $lib_lock"
     fi
     if [ "$1" = 0 ]; then flock -n 9; else flock -w "$1" 9; fi
+}
+
+# ---------------------------------------------------------------- root's own copies (deploy/install-root.sh)
+
+# What root runs, as repo paths: deploy/install-root.sh installs root-owned copies of these in ROOT_DEST (/opt/monkey),
+# from root's own clone of GitHub, and the root units run those copies, never the checkout the monkey user can write.
+ROOT_FILES='deploy/lib.sh deploy/install-root.sh deploy/monkey-backup.sh deploy/monkey-staff-helper.sh
+deploy/monkey-restore-drill.sh tools/staff_apex.py tools/release_gate.py tools/restore_drill.py tools/nbt.py'
+# The units installed even where there is no copy yet; every other monkey-* unit is updated only where it is installed.
+ROOT_NEW_UNITS='monkey-alert@.service monkey-logs.service monkey-logs.timer monkey-restore-drill.service
+monkey-restore-drill.timer'
+
+# "root_stale DIR": the files and units that root's copies (ROOT_DEST, else /opt/monkey) and /etc/systemd/system hold
+# in another version than the checkout DIR, one per line: what `install-root.sh` would change. Reads only.
+root_stale() {
+    lib_dest=${ROOT_DEST:-/opt/monkey}
+    for lib_f in $ROOT_FILES; do
+        cmp -s "$1/$lib_f" "$lib_dest/$lib_f" 2>/dev/null || printf '%s\n' "$lib_f"
+    done
+    for lib_u in "$1"/deploy/monkey-*.service "$1"/deploy/monkey-*.timer "$1"/deploy/monkey-*.path; do
+        [ -f "$lib_u" ] || continue
+        lib_n=${lib_u##*/}
+        lib_installed=${UNIT_DIR:-/etc/systemd/system}/$lib_n
+        if [ -f "$lib_installed" ]; then
+            cmp -s "$lib_u" "$lib_installed" || printf '%s\n' "$lib_n"
+        else
+            case " $(printf '%s' "$ROOT_NEW_UNITS" | tr '\n' ' ') " in *" $lib_n "*) printf '%s\n' "$lib_n" ;; esac
+        fi
+    done
 }
 
 # "changed_units UNIT...": the units whose copy in /etc/systemd/system differs from the deployed checkout's.

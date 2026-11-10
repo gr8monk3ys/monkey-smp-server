@@ -16,7 +16,10 @@
 # fix tagged in the afternoon goes live at 4 AM. The first deploy on a new machine doesn't wait.
 #
 # What a deploy does:
-#   1. git fetch; pick the newest vX.Y.Z tag (TRACK=tags, the default) or the tip of TRACK=<branch>
+#   1. git fetch; pick the newest vX.Y.Z tag (TRACK=tags, the default) or the tip of TRACK=<branch>, and ask
+#      the release gate (tools/release_gate.py): a tag goes live only once GitHub has a published release for
+#      it, pointing at the same commit, and CI passed on that commit (a branch: once CI passed). Until then it
+#      waits and the next run asks again. A pushed tag alone, or a tag moved in the checkout, deploys nothing.
 #   2. if players are online, warn them in chat 5 minutes and 1 minute ahead
 #   3. back up the world (monkey backup, while the server runs), keeping the newest KEEP_BACKUPS
 #   4. copy package/ of that commit over the live release folder, keeping server/, backups/, java/,
@@ -51,6 +54,7 @@ STAFF_WEBHOOK_URL=${STAFF_WEBHOOK_URL:-$DISCORD_WEBHOOK_URL}
 RESTART_MIN_UPTIME=${RESTART_MIN_UPTIME:-6}
 LOCK_FILE=${LOCK_FILE:-/tmp/monkey-deploy.lock}
 KEEP_BACKUPS=${KEEP_BACKUPS:-3}
+RELEASE_GATE=${RELEASE_GATE:-on}
 whole_number WARN_MINUTES "$WARN_MINUTES" minutes
 whole_number BOOT_TIMEOUT "$BOOT_TIMEOUT" seconds
 
@@ -193,7 +197,9 @@ if [ -n "$restart" ]; then
         exit 0
     fi
     discord "Daily restart: the server did not answer within ${BOOT_TIMEOUT}s and may be DOWN. Check: journalctl -u monkey-restart" "$STAFF_WEBHOOK_URL"
-    die "the server did not answer within ${BOOT_TIMEOUT}s after the daily restart"
+    # Exit 4: failed, and staff were told just now, so monkey-alert.sh (OnFailure=) posts nothing more.
+    log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s after the daily restart" >&2
+    exit 4
 fi
 
 # ---------------------------------------------------------------- what to deploy
@@ -250,6 +256,10 @@ if [ -n "$status_only" ]; then
         if in_window; then state='open'; else state='closed'; fi
         echo "window:   $DEPLOY_WINDOW $DEPLOY_TZ (now $(clock), $state)"
     fi
+    if [ "$commit" != "$deployed" ]; then
+        if [ "$TRACK" = tags ]; then release_gate "$commit" "$ref" >/dev/null || :; else release_gate "$commit" >/dev/null || :; fi
+        echo "gate:     $ref: ${GATE_SAYS#release gate: }"
+    fi
     exit 0
 fi
 
@@ -264,6 +274,15 @@ if [ "$commit" = "$failed" ] && [ -z "$tag" ]; then
 fi
 if [ -z "$now" ] && [ -z "$tag" ] && [ -n "$deployed" ] && ! in_window; then
     log "$ref is waiting for the $DEPLOY_WINDOW $DEPLOY_TZ deploy window (--now deploys it now)"
+    exit 0
+fi
+# The release gate, last, so a run with nothing to do asks GitHub nothing. A rollback below needs no gate: the
+# commit it puts back was live already.
+gated=0
+if [ "$TRACK" = tags ]; then release_gate "$commit" "$ref" || gated=$?; else release_gate "$commit" || gated=$?; fi
+if [ "$gated" -ne 0 ]; then
+    [ -z "$tag" ] || die "$tag was not deployed: ${GATE_SAYS#release gate: }"
+    log "$ref waits for the release gate; the next run asks again"
     exit 0
 fi
 
@@ -330,6 +349,14 @@ if restart_and_wait; then
     msg="Monkey SMP is back up on $label."
     [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."
     discord "$msg"
+    # Root runs its own copies (deploy/install-root.sh), which only the owner updates: say when they are behind.
+    # Only when the checkout is the live release: a pin leaves it on another one, so comparing would mislead.
+    stale=''
+    [ "$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null)" != "$commit" ] || stale=$(root_stale "$REPO_DIR" | tr '\n' ' ')
+    if [ -n "$stale" ]; then
+        log "root's copies or units differ from $label: $stale"
+        discord "Monkey SMP $label is live. Root's copies (backup, staff helper, restore drill) or systemd units are from another release: $stale. Owner: sudo sh /opt/monkey/deploy/install-root.sh (docs/LIVE.md, \"Root's own copies\")" "$STAFF_WEBHOOK_URL"
+    fi
     exit 0
 fi
 
@@ -340,8 +367,8 @@ if [ -n "$deployed" ]; then
     sync_package "$deployed"
     if restart_and_wait; then
         discord "Update to $label failed to start; rolled back to the previous version. The server is up."
-        exit 1
+        exit 4   # failed, and Discord was told: monkey-alert.sh (OnFailure=) posts nothing more
     fi
 fi
 discord "Update to $label failed and the server is DOWN. Check: journalctl -u monkey-deploy"
-exit 1
+exit 4

@@ -279,18 +279,30 @@ fi
 if [ "$MODE" = install-helper ]; then
     [ "$(id -u)" = 0 ] || die 'run as root: it installs a root service'
     # The path unit watches /srv/monkey/staff/requests: another STAFF_DIR would never be seen.
-    [ "$STAFF_DIR" = /srv/monkey/staff ] || die "the helper watches /srv/monkey/staff/requests, and STAFF_DIR is $STAFF_DIR"
-    for unit in $HELPER_UNITS monkey-staff-helper.sh monkey-backup.sh; do
-        [ -r "$REPO_DIR/deploy/$unit" ] || die "$REPO_DIR/deploy/$unit is missing: is the release with the helper deployed?"
+    watched=${HELPER_WATCHED:-/srv/monkey/staff}   # (another only for the tests)
+    unit_dir=${UNIT_DIR:-/etc/systemd/system}
+    [ "$STAFF_DIR" = "$watched" ] || die "the helper watches $watched/requests, and STAFF_DIR is $STAFF_DIR"
+    # Root runs only root's copies, and takes the units from root's own clone, never from the checkout monkey can
+    # write (docs/LIVE.md, "Root's own copies").
+    root_dest=${ROOT_DEST:-/opt/monkey}
+    root_src=${ROOT_SRC:-/opt/monkey/src}
+    for f in deploy/monkey-staff-helper.sh deploy/monkey-backup.sh deploy/lib.sh tools/staff_apex.py; do
+        [ -r "$root_dest/$f" ] || die "$root_dest/$f is missing: install root's copies first (sudo sh $root_dest/deploy/install-root.sh, or the first time docs/LIVE.md, \"Root's own copies\")"
+    done
+    for unit in $HELPER_UNITS; do
+        [ -r "$root_src/deploy/$unit" ] || die "$root_src/deploy/$unit is missing: install root's copies first (docs/LIVE.md, \"Root's own copies\")"
     done
     [ -d "$STAFF_DIR" ] || die "no $STAFF_DIR: run sudo sh $0 --install first"
     # The page (monkey) writes requests here; root reads them. Nobody else may look.
     install -d -m 770 -o monkey -g monkey "$STAFF_DIR/requests"
     log "requests folder: $STAFF_DIR/requests"
-    helper_changed=$(changed_units $HELPER_UNITS)
+    helper_changed=''
+    for unit in $HELPER_UNITS; do
+        cmp -s "$root_src/deploy/$unit" "$unit_dir/$unit" || helper_changed="$helper_changed $unit"
+    done
     for unit in $helper_changed; do
-        install -m 644 -o root -g root "$REPO_DIR/deploy/$unit" "/etc/systemd/system/$unit"
-        log "installed /etc/systemd/system/$unit"
+        install -m 644 -o root -g root "$root_src/deploy/$unit" "$unit_dir/$unit"
+        log "installed $unit_dir/$unit"
     done
     [ -z "$helper_changed" ] || systemctl daemon-reload
     systemctl enable --now monkey-staff-helper.path

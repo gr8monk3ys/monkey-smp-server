@@ -2,6 +2,7 @@
 # install with docs/LIVE.md. Read-only: it changes nothing on the server.
 [Unit]
 Description=Monkey SMP: weekly update check
+OnFailure=monkey-alert@%n.service
 After=network-online.target
 Wants=network-online.target
 

@@ -3,6 +3,7 @@
 # deploy, restart or backup holds the deploy lock.
 [Unit]
 Description=Monkey SMP: faction standings board update
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

@@ -5,6 +5,7 @@
 # try's time is kept in its StateDirectory. A retry after a run that did reach the server starts no second day.
 [Unit]
 Description=Monkey SMP: start a new wardrobe day
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

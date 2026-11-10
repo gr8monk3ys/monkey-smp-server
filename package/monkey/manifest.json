@@ -1886,6 +1886,18 @@
       }
     },
     {
+      "slug": "storagedrawers",
+      "project_id": "guitPqEi",
+      "version": "26.2.0.1+fabric",
+      "version_id": "cJA3JdCZ",
+      "file": "StorageDrawers-fabric-26.2.0.1.jar",
+      "url": "https://cdn.modrinth.com/data/guitPqEi/versions/cJA3JdCZ/StorageDrawers-fabric-26.2.0.1.jar",
+      "size": 1229145,
+      "hashes": {
+        "sha512": "8075e95785519191d35ad616318a60720353789df2363fcc17784fd181e44462139d08e9bf11906290fc6cb00f529bba57a5889c61c8ccb2abd86f5f8aefd3c8"
+      }
+    },
+    {
       "slug": "stormies-spiders",
       "project_id": "3dsI6Hle",
       "version": "3.3.1-fabric",

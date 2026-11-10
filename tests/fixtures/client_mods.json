@@ -2222,6 +2222,25 @@
   "items": 0,
   "entity_textures": 0
  },
+ "guitPqEi": {
+  "slug": "storagedrawers",
+  "modrinth": {
+   "client": "required",
+   "server": "required"
+  },
+  "id": "storagedrawers",
+  "environment": "*",
+  "ids": [
+   "storagedrawers"
+  ],
+  "depends": [
+   "fabric-api"
+  ],
+  "code": true,
+  "blockstates": 151,
+  "items": 166,
+  "entity_textures": 0
+ },
  "gvQqBUqZ": {
   "slug": "lithium",
   "modrinth": {

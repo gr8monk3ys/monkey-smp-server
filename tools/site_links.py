@@ -43,7 +43,8 @@ KEYS = ("ADDRESS", "DISCORD_INVITE", "CONTACT_URL", "STORE_URL", "MODPACK_URL", 
 # Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
 GUIDE = ("guide", "guide/factions", "guide/rules", "guide/week", "guide/standings", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
-PAGES = ("index.html", "changes.html", "creators.html", *(f"{page}.html" for page in GUIDE))
+PAGES = ("index.html", "changes.html", "creators.html", "privacy.html", "terms.html",
+         *(f"{page}.html" for page in GUIDE))
 # The page for a missing address (and Next's own copy of it): never in the sitemap.
 NOT_FOUND = ("404.html", "_not-found.html")
 RULEBOOK_END = "## Notes for admins"   # docs/RULES.md: what follows isn't shown to players

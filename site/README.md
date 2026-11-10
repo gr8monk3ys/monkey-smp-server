@@ -1,7 +1,7 @@
 # Monkey SMP site
 
 The public site at monkeysmp.lscaturchio.xyz: what the server is, how to join, pricing and the rules (`/`), the
-player guide (`/guide`), the player changelog (`/changes`) and the creator code terms (`/creators`).
+player guide (`/guide`), the player changelog (`/changes`), the creator code terms (`/creators`), the privacy policy (`/privacy`) and the terms of service (`/terms`).
 
 ## Stack
 
@@ -35,6 +35,7 @@ runs it with the other checks.
 | The guide | A docs layout: `src/app/guide/layout.tsx` puts the sidebar (`src/components/guide-nav.tsx`) beside each page under `src/app/guide/`. The pages, their order and sidebar headings are in `src/content/guide/pages.ts`; the prose in `src/content/guide/*.mdx`, the week in `week.ts`, commands by rank in `commands.tsx` (one page per rank) |
 | The player changelog | `src/content/changes.mdx`, newest first (docs/ADMIN.md, "Telling players what changed") |
 | The creator code page | `src/app/creators/page.tsx` |
+| The privacy policy and terms of service (`/privacy`, `/terms`) | The prose in `src/content/legal/*.mdx`; the frame both share in `src/components/legal-page.tsx`; each page's title and "last updated" day in `src/app/privacy/page.tsx` and `src/app/terms/page.tsx`. Every page's footer links both. Change the privacy policy when what the server records changes, and the terms when the store's packages do |
 | The header and footer | `src/components/chrome.tsx`. The footer adds "Season I Wrapped" (`src/lib/wrapped.ts`) once a season's `public/wrapped/season-<n>/index.html` is there at build time |
 | The server status (front page under the ways in, and one line on `/guide`) | `src/components/status.tsx`: it fetches `STATUS_URL` in the browser every 2 minutes and shows online or offline, the player count, the next event and the border. The page is built with a quiet fallback for the season's phase, which also shows without JavaScript and when the file is missing, more than 10 minutes old, or blocked; every state takes the same room |
 | The weekly standings (`/guide/standings`) | `src/components/standings.tsx` fetches `STANDINGS_URL` in the browser every 5 minutes and shows rank, faction name and points for this week so far and last week's final table, with `src/lib/standings.ts` reading the file all-or-nothing (a missing, unreadable, more than 3 hours old or future-dated file shows a quiet empty state, never part of a table). Names are plain text. Without JavaScript the page still says what the standings are and how points work (`src/content/guide/standings.mdx`). Unit tests: `bun test` |

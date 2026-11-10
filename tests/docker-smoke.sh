@@ -87,8 +87,17 @@ echo "--- stopped in ${took}s, exit code $exit_code"
 
 [ "$reached" = yes ] || { echo "the server never printed Done"; fail=1; }
 [ "$exit_code" = 0 ] || { echo "the container exited with $exit_code, not 0 (137 = killed before it finished saving)"; fail=1; }
-if grep -nE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop|---- Minecraft Crash Report' "$root/compose.log" "$log" 2>/dev/null; then
+# grep -a: one stray byte in the log and grep calls the file binary, and prints "binary file matches", not the lines.
+if grep -anE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loop|---- Minecraft Crash Report' "$root/compose.log" "$log" 2>/dev/null; then
     echo "errors in the server log"; fail=1
+fi
+# Data that failed to load: the server starts anyway, so only the log says so. tests/smoke.ps1 says what counts.
+data_errors="Failed to load function |Couldn't load tag |Couldn't read tag list |Couldn't parse data file |Found validation problems in advancement |Found loot table element validation problem |Couldn't load advancements: .*[^a-z0-9_.-]monkey:"
+known_data="Couldn't parse data file 'morevillagers:[^']*' from 'morevillagers:(advancement/|recipe/gilded_station\.json')"
+# Not as the test of an "if": grep's exit code is 2 when $log is missing, lines found or not, and pipefail keeps it.
+data=$(grep -ahE "$data_errors" "$root/compose.log" "$log" 2>/dev/null | grep -avE "$known_data" || true)
+if [ -n "$data" ]; then
+    echo "$data"; echo "data that failed to load (above)"; fail=1
 fi
 if [ "$reached" = yes ] && ! grep -qE 'All dimensions are saved|Saving worlds' "$log"; then
     echo "no clean shutdown in server/logs/latest.log"; fail=1

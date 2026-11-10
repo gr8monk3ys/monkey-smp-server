@@ -9,6 +9,12 @@
   how long backups last and how to get data copied or deleted. The terms cover who can play (13 and over),
   payments through Tebex, renewals, refunds, seasons, bans and appeals. Link both from the Tebex store's
   settings by hand.
+- Tests: the three boot tests (`tests/smoke.ps1`, `tests/docker-smoke.sh`, `tests/hosting-smoke.sh`) fail when
+  data fails to load: a function, a tag, a data file that doesn't parse or doesn't pass validation, or one of our
+  advancements. Before, a typo in one generated function passed every check, because the server starts anyway and
+  only its log says so. Data a pinned mod ships broken is listed as known, file by file (More Villagers: nine
+  advancements and the `gilded_station` recipe don't parse on 26.2); see `docs/MAINTAINING.md`, "Updating the
+  server, plugins and mods".
 
 ### Fixed
 

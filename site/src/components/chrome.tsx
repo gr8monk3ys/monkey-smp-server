@@ -97,7 +97,10 @@ export function Footer({ here = "elsewhere" }: { here?: Here }) {
             </nav>
           ))}
         </div>
-        <p className="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+        <p className="small">
+          <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Not an official Minecraft product. Not approved
+          by or associated with Mojang or Microsoft.
+        </p>
       </footer>
       <Dock address={config.ADDRESS} store={target("STORE_URL")} />
     </>

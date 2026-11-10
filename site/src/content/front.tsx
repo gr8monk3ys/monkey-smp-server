@@ -118,8 +118,8 @@ export const faq: { q: string; a: ReactNode }[] = [
     a: <>If you can&apos;t get the pack to run in your first 48 hours,{" "}
       <ConfigLink to="CONTACT_URL">contact us</ConfigLink> and you get your money back. In the first weeks after launch
       that can take a while, because Tebex has to clear a payment before it can return one. The monthly pass renews
-      until you cancel it, and you can cancel any time; the 2-month pass doesn&apos;t renew, and at 60 days it ends
-      before a 12-week season does.</>,
+      each month and the 2-month pass every 2 months, until you cancel, and you can cancel any time. The{" "}
+      <a href="/terms">terms</a> have the rest.</>,
   },
   {
     q: "Do I need the Discord?",

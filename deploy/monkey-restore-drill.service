@@ -1,0 +1,26 @@
+# The restore drill (monkey-restore-drill.sh): restores the newest off-site backup into a scratch folder, boots it
+# offline next to the live server, reports pass or fail to staff, and deletes it all. Run it with
+#   systemctl start monkey-restore-drill        (10 to 30 minutes; journalctl -u monkey-restore-drill -f to watch)
+# monkey-restore-drill.timer runs it monthly once a first run passed. Installed by deploy/install-root.sh.
+[Unit]
+Description=Monkey SMP: restore drill (restore the newest backup and boot it offline)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Root: only root may read /etc/monkey-backup.env (the restic password) and run docker. It runs root-owned copies
+# in /opt/monkey, never the checkout the monkey user can write.
+User=root
+ExecStart=/bin/sh /opt/monkey/deploy/monkey-restore-drill.sh
+# /var/lib/monkey-restore-drill/last-pass: when it last passed. restic's cache is the hourly backup's.
+StateDirectory=monkey-restore-drill
+CacheDirectory=monkey-backup
+Environment=RESTIC_CACHE_DIR=/var/cache/monkey-backup
+Environment=GOMAXPROCS=1
+# Behind the live server for CPU and disk; the drill server itself is held to one CPU at low priority.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# Up to an hour waiting for a backup to finish, the download, then up to 15 minutes to boot.
+TimeoutStartSec=4h

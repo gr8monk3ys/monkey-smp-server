@@ -13,7 +13,7 @@
   "actions": [
     {
       "label": "Discord",
-      "tooltip": "Factions, events, tickets and the full rulebook",
+      "tooltip": "Factions, events and tickets",
       "width": 140,
       "action": {
         "type": "minecraft:open_url",
@@ -31,11 +31,11 @@
     },
     {
       "label": "Rules",
-      "tooltip": "The short rules on the website",
+      "tooltip": "The full rulebook on the website",
       "width": 140,
       "action": {
         "type": "minecraft:open_url",
-        "url": "https://monkeysmp.lscaturchio.xyz/#rules"
+        "url": "https://monkeysmp.lscaturchio.xyz/guide/rules"
       }
     },
     {

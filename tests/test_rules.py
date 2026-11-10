@@ -194,3 +194,13 @@ def test_servercore_breeding_cap_and_villager_lobotomy_are_on():
 
     assert enabled_after("breeding-cap:") == "true"
     assert enabled_after("lobotomize-villagers:") == "true"
+
+
+def test_welcome_says_the_faction_size_the_server_allows_and_where_the_rulebook_is():
+    toml = (REPO.defaults / rules.PARTIES_CONFIG).read_text(encoding="utf-8")
+    size = int(re.search(r"maxPartyMembers = (\d+)", toml).group(1))
+    assert rules.faction_size() == size
+    welcome = json.loads(rules.rules_files()["data/monkey/dialog/welcome.json"])
+    text = welcome["body"][0]["contents"]
+    assert f"up to {rules.say_number(size)} players" in text and "Rules in the pause menu" in text
+    assert ("Rules", f"{rules.SITE}/guide/rules") in [(label, url) for label, url, _ in rules.LINKS]

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { ItemName } from "@/components/item";
 import { ConfigLink } from "@/components/links";
+import { running } from "@/lib/live";
+import playerNeeds from "@player-needs";
 
 // The front page's lists, as data: the page (src/app/page.tsx) lays them out.
 
@@ -52,6 +54,11 @@ export const shots: { name: string; where: string; alt: string; caption: ReactNo
 ];
 
 /** The game the server runs: the page's description and its lede both name it. */
+/** What a player's computer needs (site/player-needs.json, tools/player_needs.py): the client pack's download in
+ * MB, and the RAM. */
+export const PACK_MB = playerNeeds.pack_mb;
+export const RAM_GB = playerNeeds.ram_gb;
+
 export const GAME = "Minecraft Java 26.2";
 
 /** The pass's monthly price in US dollars: the price shown, the page's description and the launch event's offer
@@ -65,8 +72,8 @@ export const pass = {
   price: `$${PASS_USD}`,
   per: "/ month",
   alt: "or $8 for 2 months",
-  needs: "Needs Minecraft Java Edition on a PC (Windows, macOS or Linux) with 16 GB of RAM. If the pack won't run "
-    + "in your first 48 hours, you get your money back.",
+  needs: `Needs Minecraft Java Edition on a PC (Windows, macOS or Linux) with ${RAM_GB} GB of RAM. If the pack won't `
+    + "run in your first 48 hours, you get your money back.",
   perks: [
     "Full access to the server and every mod",
     "A vote on each season's twist",
@@ -124,7 +131,8 @@ export const faq: { q: string; a: ReactNode }[] = [
   {
     q: "Do I need the Discord?",
     a: <>No. You can buy a pass, get on the whitelist and play without it, and the{" "}
-      <a href="/guide/rules">rules</a>, <a href="/changes">news</a>, <a href="/guide/standings">standings</a> and{" "}
+      <a href="/guide/rules">rules</a>, <a href="/changes">news</a>
+      {running("monkey-standings") && <>, <a href="/guide/standings">standings</a></>} and{" "}
       <a href="/guide/week">weekly schedule</a> are all on this site. The Discord adds the member role, the forum,
       game chat while you&apos;re away, and the vote on each season&apos;s twist.</>,
   },

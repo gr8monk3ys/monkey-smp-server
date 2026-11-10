@@ -1,27 +1,36 @@
 import type { ReactNode } from "react";
+import { type Pack, running } from "@/lib/live";
 
 // Commands by rank: /guide/commands lists the ranks, and each rank with an `id` has its own page,
 // /guide/commands/<id> (pages.ts lists them). Each rank can do everything the ranks above it can.
+// A row or group with a `pack` shows only while that data pack runs on the live server (live-packs.json).
 
 /** A rank in the summary at the top; `id` links it to its own commands below. */
 export const ranks: { name: string; id?: string; does: string }[] = [
   { name: "Player", id: "players", does: "Play, claim land, join a faction, use voice chat, open the menus below." },
   {
     name: "Faction leader", id: "leaders",
-    does: "The owner of a faction's party: invites members and allies, declares war and makes pacts.",
+    does: running("monkey-standings")
+      ? "The owner of a faction's party: invites members and allies, declares war and makes pacts."
+      : "The owner of a faction's party: invites members and allies.",
   },
-  { name: "Supporter", id: "supporters", does: "Ember, Banner or Crown: a name color, a title and skins. No commands of their own." },
+  {
+    name: "Supporter", id: "supporters",
+    does: running("monkey-wardrobe")
+      ? "Ember, Banner or Crown: a name color, a title and skins. No commands of their own."
+      : "Ember, Banner or Crown: a name color and a title. No commands of their own.",
+  },
   { name: "Builder", does: "A player staff trust with build jobs. An admin switches them to creative for a job and back after." },
   { name: "Moderator", id: "moderators", does: "Warns, mutes, kicks and bans; watches quietly; checks and undoes griefing." },
   { name: "Admin", id: "admins", does: "Everything: ranks, the whitelist, events, and the server's own commands." },
 ];
 
 /** One row: a command (set in mono), a key, or a few words, and what it does. */
-export type Command = ({ code: string } | { kbd: string } | { term: string }) & { does: ReactNode };
+export type Command = ({ code: string } | { kbd: string } | { term: string }) & { does: ReactNode; pack?: Pack };
 
 /** A group of rows under a heading; `note` comes between the heading and the rows, `text` stands instead of
  * rows. */
-export type Group = { heading?: string; note?: ReactNode; text?: ReactNode; cmds?: Command[] };
+export type Group = { heading?: string; note?: ReactNode; text?: ReactNode; cmds?: Command[]; pack?: Pack };
 
 export type Role = { id: string; intro: ReactNode; groups: Group[]; after?: ReactNode };
 
@@ -34,13 +43,28 @@ export const roles: Role[] = [
       {
         heading: "Menus",
         cmds: [
-          { code: "/trigger wardrobe", does: "Your skins: the ones you've unlocked, and how to unlock the rest." },
-          { code: "/trigger challenges", does: "This week's three challenges and how far you've got. Hover one for what counts." },
-          { code: "/trigger standings", does: "This week's faction standings so far." },
-          { code: "/trigger diplomacy", does: "How your faction stands with every other: wars, pacts, offers." },
-          { code: "/trigger outposts", does: "The four outposts: where, who holds them, and your faction's hours." },
-          { code: "/trigger firsts", does: "The season's Server Firsts and who holds each." },
-          { code: "/trigger end_grace", does: "Ends your 48 hours of safety now. There's no getting it back." },
+          {
+            code: "/trigger wardrobe", pack: "monkey-wardrobe",
+            does: "Your skins: the ones you've unlocked, and how to unlock the rest.",
+          },
+          {
+            code: "/trigger challenges", pack: "monkey-wardrobe",
+            does: "This week's three challenges and how far you've got. Hover one for what counts.",
+          },
+          { code: "/trigger standings", pack: "monkey-standings", does: "This week's faction standings so far." },
+          {
+            code: "/trigger diplomacy", pack: "monkey-standings",
+            does: "How your faction stands with every other: wars, pacts, offers.",
+          },
+          {
+            code: "/trigger outposts", pack: "monkey-outposts",
+            does: "The four outposts: where, who holds them, and your faction's hours.",
+          },
+          { code: "/trigger firsts", pack: "monkey-firsts", does: "The season's Server Firsts and who holds each." },
+          {
+            code: "/trigger end_grace", pack: "monkey-rules",
+            does: "Ends your 48 hours of safety now. There's no getting it back.",
+          },
         ],
       },
       {
@@ -58,6 +82,7 @@ export const roles: Role[] = [
       },
       {
         heading: "Events",
+        pack: "monkey-events",
         cmds: [
           {
             code: "/trigger arena set 1",
@@ -85,7 +110,7 @@ export const roles: Role[] = [
         { code: "/oparties member invite <player>", does: "Invites a player. Four is the most a faction can have." },
         { code: "/oparties ally add <leader>", does: "Makes another party an ally. Allies get into your claims only if you allow them." },
         {
-          code: "/trigger diplomacy",
+          code: "/trigger diplomacy", pack: "monkey-standings",
           does: "For a leader it has buttons: declare war, offer a pact, accept one, break one. One move every 2 "
             + "minutes. Wars and offers end at Sunday's close; pacts stand until broken.",
         },
@@ -94,9 +119,12 @@ export const roles: Role[] = [
   },
   {
     id: "supporters",
-    intro: <>Nothing to type. Your name color shows by itself, and your skins appear in <code>/trigger wardrobe</code>{" "}
-      with an &quot;Unlocked&quot; line in chat. Banner and Crown supporters tell staff the title they want, and staff
-      set it.</>,
+    intro: running("monkey-wardrobe")
+      ? <>Nothing to type. Your name color shows by itself, and your skins appear in <code>/trigger wardrobe</code>{" "}
+        with an &quot;Unlocked&quot; line in chat. Banner and Crown supporters tell staff the title they want, and staff
+        set it.</>
+      : "Nothing to type. Your name color shows by itself. Banner and Crown supporters tell staff the title they "
+        + "want, and staff set it.",
     groups: [],
   },
   {
@@ -180,12 +208,21 @@ export const roles: Role[] = [
         heading: "The season's systems",
         note: "Each one lists its own commands in chat, clickable.",
         cmds: [
-          { code: "/function monkey:events/help", does: "Events: the arena, Anarchy, the Faction Raid, flags, books and the Cup." },
-          { code: "/function monkey:standings/help", does: "The standings board and bounties." },
-          { code: "/function monkey:diplomacy/help", does: "Faction numbers, and ending a war or pact by hand." },
-          { code: "/function monkey:drops/help", does: "Supply drops: status, a drop now, on and off." },
-          { code: "/function monkey:omens/help", does: "Omens: status, start, stop, on and off." },
-          { code: "/function monkey:outposts/help", does: "Outposts: status, freeing one, on and off." },
+          {
+            code: "/function monkey:events/help", pack: "monkey-events",
+            does: "Events: the arena, Anarchy, the Faction Raid, flags, books and the Cup.",
+          },
+          { code: "/function monkey:standings/help", pack: "monkey-standings", does: "The standings board and bounties." },
+          {
+            code: "/function monkey:diplomacy/help", pack: "monkey-standings",
+            does: "Faction numbers, and ending a war or pact by hand.",
+          },
+          { code: "/function monkey:drops/help", pack: "monkey-drops", does: "Supply drops: status, a drop now, on and off." },
+          { code: "/function monkey:omens/help", pack: "monkey-omens", does: "Omens: status, start, stop, on and off." },
+          {
+            code: "/function monkey:outposts/help", pack: "monkey-outposts",
+            does: "Outposts: status, freeing one, on and off.",
+          },
         ],
       },
       {

@@ -53,7 +53,7 @@ Here's how to join Monkey SMP (Minecraft Java Edition, modded):
 1. Install the Modrinth App (free, Windows, Mac or Linux): https://modrinth.com/app
    Sign in with the Microsoft account you play Minecraft with.
 2. Open https://modrinth.com/modpack/monkeysmp and press Install (or search "Monkey SMP"
-   in the app). It downloads the mods (~520 MB).
+   in the app). It downloads the mods (~380 MB).
 3. In the instance's settings, Java and memory: give it 6 GB. Then press Play.
    The first start is slow (a few minutes) - that's normal.
 4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
@@ -75,7 +75,7 @@ Here's how to join Monkey SMP (Minecraft Java Edition, modded):
    (minecraft.net). Start the launcher once, sign in, then close it.
 2. Unzip MonkeySMP-Player-<version>.zip and double-click "Install for Minecraft Launcher.bat".
    If Windows says "protected your PC", click More info > Run anyway.
-   It downloads the mods (~520 MB) and adds "Monkey SMP" to your launcher. Takes a few minutes.
+   It downloads the mods (~380 MB) and adds "Monkey SMP" to your launcher. Takes a few minutes.
 3. Open the Minecraft Launcher, choose "Monkey SMP" next to the Play button, press Play.
    The first start is slow (a few minutes) - that's normal.
 4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.

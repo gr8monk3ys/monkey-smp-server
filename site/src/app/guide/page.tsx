@@ -4,6 +4,7 @@ import { OldAnchors } from "@/components/old-anchors";
 import { ServerStatus } from "@/components/status";
 import FirstHour from "@/content/guide/first-hour.mdx";
 import { builtPhase, config } from "@/lib/config";
+import { sayList, whereRunning } from "@/lib/live";
 import { pageMetadata } from "@/lib/seo";
 
 // /guide is the address every nav and footer links as the guide, so its preview describes the whole guide, not
@@ -11,7 +12,8 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Player guide: how Monkey SMP works",
   description: "How the Monkey SMP factions server works: the first hour, factions and land claims, a week of "
-    + "challenges, drops and events, and every command by rank, from player to admin.",
+    + sayList(whereRunning([["challenges", "monkey-wardrobe"], ["drops", "monkey-drops"], ["events"]]))
+    + ", and every command by rank, from player to admin.",
   path: "/guide",
 });
 

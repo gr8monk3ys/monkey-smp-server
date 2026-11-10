@@ -28,6 +28,7 @@ It writes two folders, both generated (edit this file, not them). Rule numbers a
 The installer copies both into the world on every install (Install-PackageDatapacks).
 """
 import json
+import re
 from pathlib import Path
 
 import catchup
@@ -35,7 +36,7 @@ import catchup
 from challenges import LAUNCHED
 from datapacks import NS, function_tag, lines, mcmeta
 from events import ARENA_TAG
-from repo import Repo
+from repo import REPO, Repo
 
 RULES_PACK = "monkey-rules"
 NETHERITE_PACK = "monkey-no-netherite-armor"
@@ -71,10 +72,25 @@ CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
 DISCORD = "https://discord.gg/C25hy9Ca9W"
 SITE = "https://monkeysmp.lscaturchio.xyz"
 MAP = "https://map.monkeysmp.lscaturchio.xyz"
-LINKS = (("Discord", DISCORD, "Factions, events, tickets and the full rulebook"),
+LINKS = (("Discord", DISCORD, "Factions, events and tickets"),
          ("Live map", MAP, "The world as it is, in your browser"),
-         ("Rules", f"{SITE}/#rules", "The short rules on the website"),
+         ("Rules", f"{SITE}/guide/rules", "The full rulebook on the website"),
          ("Store", f"{SITE}/#pricing", "The Server Pass and supporter tiers"))
+
+# The server's Open Parties and Claims settings, which hold how many players a faction (a party) can have.
+PARTIES_CONFIG = "config/openpartiesandclaims-server.toml"
+NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def faction_size(repo=REPO) -> int:
+    """The most players a faction can have: maxPartyMembers in the Open Parties and Claims settings we ship."""
+    text = (repo.defaults / PARTIES_CONFIG).read_text(encoding="utf-8")
+    return int(re.search(r"(?m)^\s*maxPartyMembers\s*=\s*(\d+)\s*$", text).group(1))
+
+
+def say_number(n: int) -> str:
+    return NUMBER_WORDS[n] if 0 <= n < len(NUMBER_WORDS) else str(n)
+
 
 BANNED_ENCHANTMENTS = ("minecraft:fire_aspect", "minecraft:flame")
 # Vanilla 26.2's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
@@ -273,8 +289,9 @@ def rules_files() -> dict[str, str]:
         "title": {"text": "Welcome to Monkey SMP", "color": "gold"},
         "body": [
             {"type": "minecraft:plain_message", "width": 300, "contents": (
-                "A factions SMP: team up with up to three friends, claim land, and raid or defend it. "
-                "You agreed to the short rules on the way in; the full rulebook is in the Discord.")},
+                f"A factions SMP: team up in a faction of up to {say_number(faction_size())} players, claim land, "
+                "and raid or defend it. You agreed to the short rules on the way in; the full rulebook is on the "
+                "website, under Rules in the pause menu.")},
             {"type": "minecraft:plain_message", "width": 300, "contents": (
                 "Factions need members, and most start small. The recruiting posts in #smp-forum say who's "
                 "looking.")},

@@ -1,20 +1,25 @@
+import { type Pack, running, sayList, whereRunning as live } from "@/lib/live";
+
 // The guide's pages, in reading order: the sidebar lists them under these headings, and each page links to the
-// one before and after it.
+// one before and after it. A page with a `pack` is about that data pack's feature: while the pack isn't running
+// (site/live-packs.json) the page still builds, saying so, but the sidebar and the pager leave it out.
 
-export type GuidePage = { href: string; title: string; description: string };
+export type GuidePage = { href: string; title: string; description: string; pack?: Pack };
 
-export const sections: { title: string; pages: GuidePage[] }[] = [
+const everySection: { title: string; pages: GuidePage[] }[] = [
   {
     title: "Start here",
     pages: [
       {
         href: "/guide", title: "Your first hour",
-        description: "What happens when you join Monkey SMP: the Guide at spawn, 48 hours of safety, voice chat and "
-          + "launch night.",
+        description: `What happens when you join Monkey SMP: ${sayList(live([["the Guide at spawn", "monkey-npcs"],
+          ["48 hours of safety", "monkey-rules"], ["voice chat"], ["launch night"]]))}.`,
       },
       {
         href: "/guide/factions", title: "Factions and land",
-        description: "Factions of up to four, claiming land, allies, war and pacts, and trading by hand.",
+        description: running("monkey-standings")
+          ? "Factions of up to four, claiming land, allies, war and pacts, and trading by hand."
+          : "Factions of up to four, claiming land, allies, and trading by hand.",
       },
       {
         href: "/guide/rules", title: "The full rulebook",
@@ -27,13 +32,16 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
     pages: [
       {
         href: "/guide/week", title: "A week on the server",
-        description: "The week's rhythm on Monkey SMP: challenges, supply drops, omens, outposts, standings and the "
-          + "Saturday event.",
+        description: `The week's rhythm on Monkey SMP: ${sayList(live([["challenges", "monkey-wardrobe"],
+          ["supply drops", "monkey-drops"], ["omens", "monkey-omens"], ["outposts", "monkey-outposts"],
+          ["standings", "monkey-standings"], ["the Saturday event"]]))}.`,
       },
       {
-        href: "/guide/standings", title: "Weekly standings",
-        description: "Monkey SMP's weekly faction standings: this week's table, last week's final one, and how a "
-          + "faction's points add up.",
+        href: "/guide/standings", title: "Weekly standings", pack: "monkey-standings",
+        description: running("monkey-standings")
+          ? "Monkey SMP's weekly faction standings: this week's table, last week's final one, and how a "
+            + "faction's points add up."
+          : "Monkey SMP's weekly faction standings are not running on the server right now.",
       },
     ],
   },
@@ -68,13 +76,22 @@ export const sections: { title: string; pages: GuidePage[] }[] = [
   },
 ];
 
+/** Every page the guide builds, shown or not (the sitemap lists them all). */
+export const allPages = everySection.flatMap((section) => section.pages);
+
+/** The sidebar's sections: the pages whose pack runs. */
+export const sections = everySection
+  .map((section) => ({ ...section, pages: section.pages.filter((p) => !p.pack || running(p.pack)) }))
+  .filter((section) => section.pages.length);
+
+/** The pages the sidebar and the pager show, in reading order. */
 export const pages = sections.flatMap((section) => section.pages);
 
 /** The ids of the per-rank command pages (/guide/commands/<id>), in reading order. */
-export const rankIds = pages.flatMap((p) => p.href.match(/^\/guide\/commands\/([^/]+)$/)?.[1] ?? []);
+export const rankIds = allPages.flatMap((p) => p.href.match(/^\/guide\/commands\/([^/]+)$/)?.[1] ?? []);
 
 export function guidePage(href: string): GuidePage {
-  const found = pages.find((p) => p.href === href);
+  const found = allPages.find((p) => p.href === href);
   if (!found) throw new Error(`No guide page at ${href}`);
   return found;
 }

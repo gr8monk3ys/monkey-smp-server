@@ -4,11 +4,12 @@ import { Countdown } from "@/components/countdown";
 import { Item } from "@/components/item";
 import { JsonLd } from "@/components/json-ld";
 import { ConfigLink, LaunchTime, Store } from "@/components/links";
+import { Live, OffNote } from "@/components/live";
 import { Place } from "@/components/place";
 import { ServerStatus } from "@/components/status";
 import { Plaque } from "@/components/plaque";
 import { Trailer } from "@/components/trailer";
-import { faq, features, GAME, ladder, pass, shots, tiers } from "@/content/front";
+import { faq, features, GAME, ladder, PACK_MB, pass, RAM_GB, shots, tiers } from "@/content/front";
 import { rules } from "@/content/rules";
 import { builtPhase, config, launchStage, sayLaunch } from "@/lib/config";
 import { preloadMono } from "@/lib/fonts";
@@ -123,7 +124,7 @@ export default function Home() {
             </li>
             <li>
               <h3>Install the modpack</h3>
-              <p>The server adds blocks, mobs and items, so you need the pack (about 380 MB). Pick the one for
+              <p>The server adds blocks, mobs and items, so you need the pack (about {PACK_MB} MB). Pick the one for
                 your launcher.</p>
               <dl className="paths">
                 <div>
@@ -142,7 +143,7 @@ export default function Home() {
             <li>
               <h3>Connect</h3>
               <p>The game takes about 3 minutes to start and may show Not Responding near the end. Don&apos;t close
-                it. Then Multiplayer, Add Server, <code>{config.ADDRESS}</code>. No port needed. A computer with 16 GB
+                it. Then Multiplayer, Add Server, <code>{config.ADDRESS}</code>. No port needed. A computer with {RAM_GB} GB
                 of RAM and a mid-range graphics card runs it well; the installer sets the game&apos;s memory for
                 you.</p>
             </li>
@@ -152,10 +153,13 @@ export default function Home() {
         <section id="pricing" className="crown">
           <h2>Pricing</h2>
           <p className="note">One price to play, the same for everyone. Supporter tiers are cosmetic only: nothing
-            that helps you fight, build faster or earn more. Everyone earns wardrobe skins for swords and helmets just
-            by playing: days online, months on the pass, friends invited and the weekly challenges
-            (<code>/trigger wardrobe</code> in game). Founder&apos;s Circlet is only for playing on Season I&apos;s
-            launch weekend.</p>
+            that helps you fight, build faster or earn more.<Live pack="monkey-wardrobe"> Everyone earns wardrobe
+            skins for swords and helmets just by playing: days online, months on the pass, friends invited and the
+            weekly challenges (<code>/trigger wardrobe</code> in game). Founder&apos;s Circlet is only for playing on
+            Season I&apos;s launch weekend.</Live></p>
+          {/* The tiers and the friend rewards below name skins: this note, straight in the section, covers them. */}
+          <OffNote packs={["monkey-wardrobe"]}>Skins in the tiers and the friend rewards don&apos;t show in game
+            while it is off.</OffNote>
 
           <Place className="plans">
             <article className="panel">

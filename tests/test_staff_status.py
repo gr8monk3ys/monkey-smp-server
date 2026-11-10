@@ -71,7 +71,9 @@ def test_reads_a_running_server(box):
     assert data["host"]["memory"] == {"total": 16000000, "available": 4000000}
     assert data["host"]["swap"] == {"total": 2000000, "free": 1500000}
     assert data["host"]["disk"]["total"] > 0 and data["host"]["threads"] >= 1
-    assert data["history"] == [[round(NOW.timestamp()), 12.5, 18.7, 3]]
+    assert data["history"][0][:5] == [round(NOW.timestamp()), 12.5, 18.7, 3, 75.0]     # 12 of 16 GB in use
+    load = data["history"][0][5]
+    assert len(data["history"][0]) == staff_status.READING and (load is None or load >= 0)
 
 
 def test_a_reading_is_never_later_than_the_checked_time(box):
@@ -119,7 +121,8 @@ def test_a_stopped_server_is_not_asked_and_leaves_a_gap(box):
     server.run = lambda argv, **how: (asked.append(argv), real(argv, **how))[1]
     data = read(box, server)
     assert data["online"] is False and data["tick"] is None and data["players"] is None
-    assert data["history"] == [[round(NOW.timestamp()), None, None, None]]
+    # The machine's own numbers are read whether or not the game answers.
+    assert data["history"][0][:5] == [round(NOW.timestamp()), None, None, None, 75.0]
     assert len(asked) == 1 and "ps" in asked[0]
 
 
@@ -141,6 +144,19 @@ def test_history_carries_over_keeps_a_day_and_holds_no_names(box):
     data = read(box, previous=box.out)
     assert [row[0] for row in data["history"]] == [kept, round(NOW.timestamp())]
     assert "Alpha" not in json.dumps(data["history"])
+    # A row from before memory and load were kept is carried over with nulls for them, so the day isn't lost.
+    assert data["history"][0] == [kept, 3.0, 4.0, 2, None, None]
+    box.out.write_text(json.dumps({"history": [[kept, 3.0, 4.0, 2, 61.5, 140.0], [kept, 1, 2, 3, 4], [kept] * 7]}))
+    assert read(box, previous=box.out)["history"][:-1] == [[kept, 3.0, 4.0, 2, 61.5, 140.0]]
+
+
+@pytest.mark.parametrize("machine, want", [
+    ({"memory": {"total": 16000000, "available": 4000000}, "load": [3.0, 1.0, 1.0], "threads": 2}, (75.0, 150.0)),
+    ({"memory": None, "load": None, "threads": 2}, (None, None)),
+    ({"memory": {"total": 0, "available": 0}, "load": [1.0, 1.0, 1.0], "threads": None}, (None, None)),
+])
+def test_the_machines_shares_in_a_reading(machine, want):
+    assert staff_status.shares(machine) == want
 
 
 @pytest.mark.parametrize("text", ["", "not json", "[]", '{"history": 3}'])
@@ -151,7 +167,7 @@ def test_an_unreadable_file_starts_the_history_afresh(box, text):
 
 def test_a_day_of_readings_stays_small(box):
     start = round(NOW.timestamp()) - 86000
-    box.out.write_text(json.dumps({"history": [[start + i * 120, 12.5, 18.7, 30] for i in range(716)]}))
+    box.out.write_text(json.dumps({"history": [[start + i * 120, 12.5, 18.7, 30, 75.5, 120.5] for i in range(716)]}))
     assert len(json.dumps(read(box, previous=box.out), separators=(",", ":"))) < 30_000
 
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **The staff page catches up with the hosts' panels** (compared with Apex Hosting, BisectHosting's Starbase,
+  Pterodactyl and Pelican, AMP, Crafty, Multicraft and exaroton on 2026-11-10). New in `tools/staff_desk.py` and
+  `deploy/staff/desk.js`, with the same login, role and change checks as the rest (docs/LIVE.md, "The staff page"):
+  - Players: **everyone who has joined**, last seen first, with hours played and their lists, read from the
+    server's own files; and **staff notes** on a player, kept by UUID. A kick can carry a reason.
+  - Console: **Chat** and **Warnings and errors** views, a text filter, coloured warnings and errors, saying
+    something to everyone from Chat, and **saved commands** shared by admins.
+  - Server: the record of changes with a **search** (login, kind, text), older pages and a **.csv download**.
+  - Schedules can run **only when nobody is online** or **only when someone is**; a restart only when empty is called
+    off if someone joins during its warnings.
+  - Files: **new file**, **new folder**, **rename or move**, and find by name in a folder.
+  - Status: the machine's **memory and CPU load over 24 hours**, as a chart beside tick time and players.
+    `staff.json`'s readings gain two numbers (older readings carry over with none).
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

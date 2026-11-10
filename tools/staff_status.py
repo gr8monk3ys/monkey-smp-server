@@ -21,7 +21,7 @@ one has the names of who is online and the machine's numbers, so it never goes n
                               "last": "2026-11-15T01:40:00Z"}],
                   "lag": {"count": 1, "worst": 2034, "first": "2026-11-15T01:20:00Z", "last": "2026-11-15T01:20:00Z"},
                   "crashes": [{"when": "2026-11-14T22:00:00Z", "text": "Exception in server tick loop"}]},
-     "history": [[1794621600, 12.4, 18.7, 3]]}
+     "history": [[1794621600, 12.4, 18.7, 3, 75.0, 60.0]]}
 
 - online: the container is running and the server answered. container is null when docker itself failed; state is
   "not created" when there is no container. Memory and swap are in KiB, as /proc/meminfo gives them; disk in bytes.
@@ -39,9 +39,12 @@ one has the names of who is online and the machine's numbers, so it never goes n
   A group goes once a day has passed since its last line. log is where the reader got to, so that a reading
   only reads what is new. read is false when the log couldn't be read and crashes is null when the reports couldn't,
   which says nothing about whether anything went wrong.
-- history is the last day's readings, oldest first, as [unix time, avg, p95, players], with nulls for a reading the
-  server didn't answer. It is carried over from the file before, so a restart of this job loses nothing, and it holds
-  counts, never names.
+- history is the last day's readings, oldest first, as [unix time, avg, p95, players, memory, load], with nulls for a
+  reading the server didn't answer. memory is the share of the machine's memory in use and load the 1-minute load as a
+  share of its threads, both in percent (load can pass 100: more is waiting than the threads can run). They are the
+  machine's, so they are there while the server is off too. It is carried over from the file before, so a restart of
+  this job loses nothing (a row from before memory and load were kept gets nulls for them), and it holds counts,
+  never names.
 
 It only reads: the release's version from the manifest (only that key: the manifest also holds the seed, which must
 never reach this file), the container's own `monkey rcon`, the log, and one line of each crash report (the rest of a
@@ -66,6 +69,7 @@ import rcon as server
 
 VERSION = 1
 HISTORY = dt.timedelta(hours=24)
+READING = 6                     # a row of the history: time, average, P95, players, memory, load
 BACKUP_NAME = re.compile(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}")
 BACKUP_SETTINGS = Path("/etc/monkey-backup.env")
 BACKUP_FAILING = Path("/var/lib/monkey-backup/failing")
@@ -330,8 +334,17 @@ def carried_over(old: dict, now: dt.datetime) -> list[list]:
     if not isinstance(rows, list):
         return []
     since = (now - HISTORY).timestamp()
-    return [row for row in rows if isinstance(row, list) and len(row) == 4 and isinstance(row[0], int | float)
+    return [[*row, *[None] * (READING - len(row))] for row in rows
+            if isinstance(row, list) and len(row) in (4, READING) and isinstance(row[0], int | float)
             and row[0] > since]
+
+
+def shares(machine: dict) -> tuple[float | None, float | None]:
+    """(memory in use, 1-minute load per thread), each in percent with one decimal, None for what isn't known."""
+    mem, load, threads = machine.get("memory"), machine.get("load"), machine.get("threads")
+    used = round((mem["total"] - mem["available"]) / mem["total"] * 100, 1) if mem and mem["total"] > 0 else None
+    busy = round(load[0] / threads * 100, 1) if load and threads else None
+    return used, busy
 
 
 def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, meminfo: Path = MEMINFO,
@@ -344,11 +357,12 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     ticking = tick(ask(docker, "tick query")) if up else None
     who = players(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
+    machine = host(live, meminfo)
     reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,
-               who["count"] if who else None]
+               who["count"] if who else None, *shares(machine)]
     return {
         "version": VERSION, "checked": public.iso(now), "online": online, "container": box, "tick": ticking,
-        "players": who, "host": host(live, meminfo), "release": release(live),
+        "players": who, "host": machine, "release": release(live),
         "backups": {"local": last_backup(live), "offsite": offsite(settings, failing)},
         "problems": problems(live, now, old.get("problems")),
         "history": [*carried_over(old, now), reading],

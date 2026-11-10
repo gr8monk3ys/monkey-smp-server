@@ -1,5 +1,5 @@
 // The staff page's controls: the tabs, and the Console, Files, Players and Server views (tools/staff_panel.py answers
-// the /api/ calls). The Status tab is staff.js and does not come through here. Everything from the server goes in with
+// the /api/ calls; desk.js adds the saved commands, everyone who has joined and the record of changes). The Status tab is staff.js and does not come through here. Everything from the server goes in with
 // textContent, nothing here may use a style attribute, a form, or confirm() and alert(): Caddy's Content-Security-Policy
 // refuses the first two, and a confirm step is two buttons on the page (deploy/Caddyfile.staff).
 "use strict";
@@ -91,21 +91,43 @@
     if (text) node.scrollIntoView({ block: "nearest" });
   }
 
-  // The in-page confirm step: what will happen, a button that does it, and one that doesn't.
-  function confirmStep(tab, message, yes, onYes) {
+  // The in-page confirm step: what will happen, a button that does it, and one that doesn't. `field`, when given,
+  // is a text box under the message ({label, placeholder, value, max}); what was typed is onYes's argument, and
+  // Enter in it presses the button.
+  function confirmStep(tab, message, yes, onYes, field) {
     const box = $(`${tab}-confirm`);
     const close = () => {
       box.hidden = true;
       box.replaceChildren();
     };
+    const parts = [el("p", "", message)];
+    let typed = null;
+    if (field) {
+      typed = el("input");
+      typed.type = "text";
+      typed.maxLength = field.max || 120;
+      typed.placeholder = field.placeholder || "";
+      typed.value = field.value || "";
+      typed.setAttribute("aria-label", field.label);
+      typed.autocomplete = "off";
+      typed.autocapitalize = "off";
+      typed.spellcheck = false;
+      const line = el("div", "typed");
+      line.append(typed);
+      parts.push(line);
+    }
     const row = el("div", "actions");
-    row.append(button(yes, "primary", () => {
+    const go = button(yes, "primary", () => {
+      const value = typed ? typed.value.replace(/\s+/g, " ").trim() : undefined;
       close();
-      onYes();
-    }), button("Cancel", "", close));
-    box.replaceChildren(el("p", "", message), row);
+      onYes(value);
+    });
+    row.append(go, button("Cancel", "", close));
+    if (typed) typed.addEventListener("keydown", (e) => { if (e.key === "Enter") go.click(); });
+    box.replaceChildren(...parts, row);
     box.hidden = false;
-    row.firstElementChild.focus();
+    box.scrollIntoView({ block: "nearest" });
+    (typed || go).focus();
   }
 
   const MONTH_CLOCK = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -129,7 +151,46 @@
 
   // ---------------------------------------------------------------- the console
 
-  const consoleState = { offset: null, busy: false, timer: null, history: [], at: 0 };
+  const consoleState = { offset: null, busy: false, timer: null, history: [], at: 0, view: "all", filter: "", level: "" };
+  // A line of the log as the game writes it: [12:00:00] [Server thread/INFO]: text. A line without that start
+  // belongs to the one before it (a stack trace under its error).
+  const LOG_HEAD = /^\[\d\d:\d\d:\d\d\] \[[^\]]*\/(INFO|WARN|ERROR|FATAL)\](?: \[[^\]]*\])?: (.*)$/;
+  // What players and the server said, and who came and went: <Name> text, [Server] text, [Name] text (say from a
+  // player), with the game's own "[Not Secure] " in front or not.
+  const CHAT = /^(?:\[Not Secure\] )?(?:<[^>]{1,40}> |\[Server\] |\[[A-Za-z0-9_]{3,16}\] )|^[A-Za-z0-9_]{3,16} (?:joined|left) the game$/;
+
+  // The classes of a line from the log: its level, and whether it is chat.
+  function kindOf(text) {
+    const head = LOG_HEAD.exec(text);
+    if (!head) return consoleState.level;         // a continuation: as the line it hangs under
+    const level = head[1] === "WARN" ? "warn" : head[1] === "INFO" ? "" : "error";
+    consoleState.level = level;
+    return level || (CHAT.test(head[2]) ? "chat" : "");
+  }
+
+  // Whether a line shows under the view and the filter chosen. The page's own lines (a command, its answer) show
+  // under Everything only.
+  function lineShows(node) {
+    const kinds = node.classList;
+    if (consoleState.view === "chat" && !kinds.contains("chat")) return false;
+    if (consoleState.view === "problems" && !kinds.contains("warn") && !kinds.contains("error")) return false;
+    return !consoleState.filter || node.textContent.toLowerCase().includes(consoleState.filter);
+  }
+
+  function countLines() {
+    const log = $("log");
+    const all = log.childElementCount;
+    const shown = all - log.querySelectorAll(".line[hidden]").length;
+    const narrowed = consoleState.view !== "all" || consoleState.filter;
+    $("console-count").textContent = narrowed ? `${shown} of ${all} lines` : "";
+  }
+
+  function refilter() {
+    const log = $("log");
+    for (const node of log.children) node.hidden = !lineShows(node);
+    countLines();
+    log.scrollTop = log.scrollHeight;
+  }
 
   function consoleActive() {
     return current === "console" && !document.hidden;
@@ -138,8 +199,13 @@
   function addLines(lines, kind) {
     const log = $("log");
     const stuck = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
-    for (const text of lines) log.appendChild(el("div", `line ${kind || ""}`.trim(), text));
+    for (const text of lines) {
+      const node = el("div", `line ${kind === undefined ? kindOf(text) : kind}`.trim(), text);
+      node.hidden = !lineShows(node);
+      log.appendChild(node);
+    }
     while (log.childElementCount > LOG_LINES) log.firstElementChild.remove();
+    countLines();
     if (stuck) log.scrollTop = log.scrollHeight;
   }
 
@@ -150,7 +216,10 @@
     try {
       const after = consoleState.offset === null ? "" : `?${query({ after: consoleState.offset })}`;
       const data = await api("GET", `/api/console${after}`);
-      if (data.reset) $("log").replaceChildren();
+      if (data.reset) {
+        $("log").replaceChildren();
+        consoleState.level = "";
+      }
       addLines(data.lines || []);
       consoleState.offset = data.offset;
       fail("console", null);
@@ -161,15 +230,19 @@
     if (consoleActive()) consoleState.timer = setTimeout(pollConsole, CONSOLE_MS);
   }
 
-  async function sendCommand() {
+  // `given`: a saved command (desk.js), sent as it is. Otherwise what is in the box: a command, or under Chat a
+  // message for everyone unless it starts with /.
+  async function sendCommand(given) {
     const input = $("cmd");
-    const command = input.value.trim();
-    if (!command) return;
+    const typed = typeof given === "string" ? given : input.value.trim();
+    if (!typed) return;
+    const saying = typeof given !== "string" && consoleState.view === "chat" && !typed.startsWith("/");
+    const command = saying ? `say ${typed}` : typed;
     const history = consoleState.history;
     if (history[history.length - 1] !== command) history.push(command);
     if (history.length > HISTORY_CMDS) history.shift();
     consoleState.at = history.length;
-    input.value = "";
+    if (typeof given !== "string") input.value = "";
     addLines([`> ${command}`], "cmd");
     const first = command.replace(/^\//, "").split(/\s+/)[0].toLowerCase();
     if (first === "stop") {
@@ -193,7 +266,25 @@
     input.focus();
   }
 
-  $("send").addEventListener("click", sendCommand);
+  $("send").addEventListener("click", () => sendCommand());
+  for (const node of $("console-views").children) {
+    node.addEventListener("click", () => {
+      consoleState.view = node.dataset.view;
+      for (const other of $("console-views").children) other.setAttribute("aria-pressed", String(other === node));
+      const chat = consoleState.view === "chat";
+      $("cmd").placeholder = chat ? "Say something to everyone" : "list";
+      $("cmd-label").textContent = chat ? "Message to everyone, or a command starting with /" : "Command";
+      $("send").textContent = chat ? "Say" : "Send";
+      $("say-hint").hidden = !chat;
+      refilter();
+    });
+  }
+  $("console-filter").addEventListener("input", () => {
+    consoleState.filter = $("console-filter").value.trim().toLowerCase();
+    refilter();
+  });
+  // A saved command's Run button (desk.js): sent as if typed here, so it shows in the log with its answer.
+  window.addEventListener("monkey-run-command", (event) => sendCommand(String(event.detail.command)));
   $("cmd").addEventListener("keydown", (e) => {
     const history = consoleState.history;
     if (e.key === "Enter") {
@@ -212,7 +303,7 @@
 
   // ---------------------------------------------------------------- files
 
-  const files = { dir: "", writableDir: true, file: null };
+  const files = { dir: "", writableDir: true, file: null, names: new Set() };
   const join = (dir, name) => (dir ? `${dir}/${name}` : name);
 
   function renderCrumbs() {
@@ -237,8 +328,11 @@
       $("editor").hidden = true;
       $("browser").hidden = false;
       renderCrumbs();
+      files.names = new Set(list(data, "entries").map((entry) => String(entry.name).toLowerCase()));
+      $("files-filter").value = "";
       const rows = list(data, "entries").map((entry) => {
         const item = el("li");
+        item.dataset.name = String(entry.name).toLowerCase();
         const what = el("span", "what");
         const full = join(files.dir, entry.name);
         item.className = entry.dir ? "dir" : "file";
@@ -270,6 +364,7 @@
       $("save").hidden = !files.file.writable;
       $("delete").hidden = !files.file.writable;
       $("download").href = `/api/download?${query({ path })}`;
+      $("rename").hidden = !files.file.writable;
       box.scrollTop = 0;
     } catch (error) {
       fail("files", error);
@@ -346,6 +441,75 @@
     $("upload-btn").disabled = false;
   }
 
+  // A name typed for a new file or folder: the same letters an upload's name may have.
+  function typedName(name) {
+    if (!FILE_NAME.test(name) || name === "." || name === "..") {
+      fail("files", new Error("A name can only have letters, digits and . _ + -"));
+      return false;
+    }
+    if (files.names.has(name.toLowerCase())) {
+      fail("files", new Error(`This folder already has something called ${name}.`));
+      return false;
+    }
+    return true;
+  }
+
+  function newFile() {
+    fail("files", null);
+    note("files", "");
+    confirmStep("files", `Make a new, empty file in ${files.dir || "server"}/. Give it a name with its ending, like notes.txt.`, "Make the file", async (name) => {
+      if (!typedName(name)) return;
+      const path = join(files.dir, name);
+      try {
+        // No mtime: the panel takes that as "there is no such file yet" and refuses one that is there after all.
+        await api("PUT", "/api/file", { path, text: "" });
+        await loadDir(files.dir);
+        await openFile(path, true);
+      } catch (error) {
+        fail("files", error);
+      }
+    }, { label: "The new file's name", placeholder: "notes.txt", max: 128 });
+  }
+
+  function newFolder() {
+    fail("files", null);
+    note("files", "");
+    confirmStep("files", `Make a new folder in ${files.dir || "server"}/.`, "Make the folder", async (name) => {
+      if (!typedName(name)) return;
+      try {
+        await api("POST", "/api/folder", { path: join(files.dir, name) });
+        await loadDir(files.dir);
+        note("files", `Made the folder ${name}.`);
+      } catch (error) {
+        fail("files", error);
+      }
+    }, { label: "The new folder's name", placeholder: "Folder name", max: 128 });
+  }
+
+  function renameFile() {
+    const f = files.file;
+    if (!f) return;
+    fail("files", null);
+    note("files", "");
+    if (f.writable && $("editor-text").value !== f.text) {
+      fail("files", new Error("Save or close your changes first: a rename would leave them behind."));
+      return;
+    }
+    confirmStep("files", `Give ${f.path} a new name, or a path from the server folder to move it (config/old/name.toml). Nothing is replaced: a name already taken is refused.`,
+      "Rename", async (to) => {
+        if (!to || to === f.path) return;
+        try {
+          const done = await api("POST", "/api/rename", { path: f.path, to });
+          const moved = done.path || to;
+          files.dir = moved.includes("/") ? moved.slice(0, moved.lastIndexOf("/")) : "";
+          await loadDir(files.dir);
+          note("files", `${f.path} is now ${moved}.`);
+        } catch (error) {
+          fail("files", error);
+        }
+      }, { label: "The file's new name or path", value: f.path, max: 400 });
+  }
+
   async function loadHistory() {
     if (!$("history-box").open) return;
     try {
@@ -383,6 +547,15 @@
   $("save").addEventListener("click", saveFile);
   $("cancel").addEventListener("click", closeFile);
   $("delete").addEventListener("click", deleteFile);
+  $("new-file").addEventListener("click", newFile);
+  $("new-folder").addEventListener("click", newFolder);
+  $("rename").addEventListener("click", renameFile);
+  $("files-filter").addEventListener("input", () => {
+    const wanted = $("files-filter").value.trim().toLowerCase();
+    for (const item of $("entries").children) {
+      if (item.dataset.name !== undefined) item.hidden = Boolean(wanted) && !item.dataset.name.includes(wanted);
+    }
+  });
   $("upload-btn").addEventListener("click", () => $("upload").click());
   $("upload").addEventListener("change", () => {
     const file = $("upload").files[0];
@@ -414,6 +587,7 @@
       const out = String(data.output || "").trim();
       note("players", out ? `Done. The server said: ${out}` : "Done.");
       await loadPlayers();
+      window.dispatchEvent(new Event("monkey-changed"));    // desk.js: the lists changed, and so did the record
     } catch (error) {
       fail("players", error);
     }
@@ -433,7 +607,8 @@
       row.appendChild(what);
       if (spec.remove) {
         row.appendChild(button(spec.remove.label, spec.remove.danger ? "danger" : "",
-          () => confirmStep("players", spec.remove.ask(name), spec.remove.yes(name), () => spec.remove.run(name))));
+          () => confirmStep("players", spec.remove.ask(name), spec.remove.yes(name), (why) => spec.remove.run(name, why),
+            spec.remove.reason ? { label: "Reason", placeholder: "Reason they will see (optional)", max: 120 } : undefined)));
       }
       if (spec.extra) row.appendChild(button(spec.extra.label, "", () => spec.extra.run(name)));
       ul.appendChild(row);
@@ -487,7 +662,7 @@
         group("Online now", data.online || [], {
           none: "Nobody is on.",
           remove: {
-            label: "Kick", danger: true, run: (name) => command(`kick ${name}`),
+            label: "Kick", danger: true, reason: true, run: (name, why) => command(`kick ${name}${why ? ` ${why}` : ""}`),
             ask: (name) => `Kick ${name}? They are disconnected now and can join again at once.`, yes: (name) => `Yes, kick ${name}`,
           },
         }),
@@ -671,23 +846,8 @@
     }
   }
 
-  async function loadActions() {
-    try {
-      const rows = list(await api("GET", "/api/actions"), "actions").map((a) => {
-        const item = el("li");
-        if (typeof a === "string") {
-          item.appendChild(el("span", "what", a));
-        } else {
-          item.append(el("span", "what", [a.action, a.target].filter(Boolean).join(" ")),
-            el("span", "meta", [a.user, when(a.time)].filter(Boolean).join(", ")));
-        }
-        return item;
-      });
-      $("actions").replaceChildren(...(rows.length ? rows : [emptyRow("Nothing yet.")]));
-    } catch (error) {
-      fail("server", error);
-    }
-  }
+  // The record of changes is desk.js's: it reads it again when told something changed.
+  const loadActions = () => window.dispatchEvent(new Event("monkey-changed"));
 
   for (const node of document.querySelectorAll("[data-power]")) {
     node.addEventListener("click", () => {
@@ -718,7 +878,6 @@
       loadPower();
       loadBackup();
       loadTimers();
-      loadActions();
     },
   };
 

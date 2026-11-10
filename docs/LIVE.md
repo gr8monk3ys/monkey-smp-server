@@ -1137,8 +1137,8 @@ own settings.
 ## The staff page
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
-word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time and
-players over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Its
+word for how the server is doing (Healthy, Busy, Slow, Offline, Not answering), with recent problems, tick time,
+players and the machine's memory and CPU load over the last 24 hours, who is online, memory, swap, CPU load, disk, the release and the last backup. Its
 other tabs (Console, Files, Players, Server) are the controls: they let staff run the server without a shell ("The
 controls", below). It names players, which the public status never does, so it is not linked from the website: pass the
 address on privately. Uptime Kuma still does the alerting; the Status tab only answers "how is it doing right now?".
@@ -1192,7 +1192,8 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py
+    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
+    tools/staff_desk.py
 ```
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
@@ -1216,7 +1217,12 @@ sets itself. It changes nothing in how the server runs: the container, compose a
 
 - **Console**: the server log as it is written (the same masking as the Status tab: a line that mentions a secret is
   left out, addresses and links are masked) and a command box. Commands run as the server console, through the
-  container's own `monkey rcon`, one line at a time, with a 20-second limit.
+  container's own `monkey rcon`, one line at a time, with a 20-second limit. Above the log: Everything, Chat (what
+  players and the server said, and joins and leaves) or Warnings and errors, and a box that keeps only lines with
+  some text. Under Chat the box says what you type to everyone (`say`), unless it starts with `/`. Warnings and errors
+  are coloured, with their WARN or ERROR still in the line. **Saved commands** (admin): a label and a command, shared
+  by every admin, checked as the console checks a typed one, and Run sends it as if typed
+  (`/srv/monkey/staff/commands.json`, at most 40).
 - **Server**: running, stopped or restarting, and four buttons. Restart is the daily restart
   (`monkey-deploy.sh --restart`): players get the 5-minute warning, and it waits for the deploy lock. It is started
   apart from the controls, its output in `/srv/monkey/staff/power.log`, so it finishes even if the controls restart.
@@ -1226,10 +1232,24 @@ sets itself. It changes nothing in how the server runs: the container, compose a
   Restart now (`docker compose restart monkey`, no warning: the deploy script has no restart without one), Stop and
   Start (`docker compose up -d --no-build monkey`) take the deploy lock first; when a deploy, the daily restart, a timed
   job or an off-site backup holds it, the button says so and nothing happens. One power action at a time. Also here:
-  the timers' next and last runs, the last backup and the last 100 changes made on the page.
-- **Files**: `server/` of the live release: browse, edit text files, download, upload, delete.
+  the timers' next and last runs, the last backup and every change made on the page, newest first, 100 at a time,
+  with a search by login, kind of change and text, and a download of the search as a `.csv` (a cell a spreadsheet
+  would run as a formula gets a `'` in front). The search reads the last 8 MB of `actions.log`, and says so when the
+  file is longer.
+- **Files**: `server/` of the live release: browse, find by name in a folder, edit text files, download, upload,
+  delete, make a new file or folder, and rename or move a file within `server/`. A rename never replaces anything (a
+  name already taken is refused) and keeps no copy, since nothing is lost; it follows the same rules as a save, under
+  both its old name and its new one, so only an owner renames a jar, anything in `mods/` or `server.properties`.
 - **Players**: who is online, the whitelist, ops and bans, with add and remove. They are console commands
-  (`whitelist add NAME`, `op`, `ban`, `kick`...), and the controls refuse one whose name isn't a real player name.
+  (`whitelist add NAME`, `op`, `ban`, `kick`...), and the controls refuse one whose name isn't a real player name. A
+  kick can have a reason, which the player sees.
+  **Everyone who has joined** (moderator): every name in `usercache.json`, the last seen first, with when the server
+  last saved them (`world/players/data/UUID.dat`'s time, so a player who is on shows the last few minutes), hours
+  played (`minecraft:play_time` in their stats file, nothing else of it) and whether they are an operator,
+  whitelisted or banned. Nothing is asked over RCON. **Notes** are for staff only: a line of text per note, signed
+  with the login and the time, kept by the player's UUID so they follow a change of name
+  (`/srv/monkey/staff/player-notes.json`, mode 600, at most 50 a player). Any moderator adds one; an admin deletes
+  one. `actions.log` (and so the staff channel) says who wrote a note about whom, never what it says.
 
 What Diego can do: anything the server console can, but the two below; edit `config/`, `defaultconfigs/`, `mods/`,
 `server.properties`, the `.json` lists and the other config files in `server/`; upload a mod; restart, stop and start
@@ -1377,7 +1397,7 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Game rules | admin | `gamerule NAME VALUE` over RCON, for known rules only. |
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
-| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes. |
+| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes; whoever is online, only when nobody is, or only when someone is. A run whose condition doesn't hold is skipped and says so; so is one when the server won't say who is on. A restart only when empty checks again after its warnings, and is called off if someone joined. A stopped server counts as nobody online. |
 | Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks, and the mod changes waiting for a release of the players' pack. |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
 | Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |

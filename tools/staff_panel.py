@@ -20,11 +20,16 @@ on another site must not be able to make a change in a staff member's name. Answ
     GET  /api/download?path=F         the file itself (a text file with its secrets masked)
     POST /api/upload?path=DIR&name=N  a file, the raw body
     POST /api/delete {"path"}         moves a file to the history
+    POST /api/folder {"path"}         makes an empty folder
+    POST /api/rename {"path", "to"}   a file's new name or folder; a name already taken is refused
     GET  /api/history                 the last 50 saved copies; POST /api/restore {"entry", "path"} puts one back
     GET  /api/players                 whitelist, ops, bans and who is online
     GET  /api/timers                  the monkey-*.timer schedules
     GET  /api/backups                 the last backup, as the status page has it
     GET  /api/actions                 the last 100 changes made here
+    GET  /api/known-players, /api/player-notes, /api/saved-commands, /api/activity
+                                      everyone who has joined, staff's notes on them, the console's saved
+                                      commands and the changes with a search (tools/staff_desk.py)
     GET  /api/reports                 the weekly rule checks written; GET /api/report?week=2026-W45 one of them
                                       (tools/staff_report.py; moderators too)
     GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
@@ -38,7 +43,8 @@ The safety rules, all here rather than in the page:
   read-only. A save checks the file wasn't saved by someone else since it was read, and writes a whole new file.
   Nothing is ever deleted: a file that is replaced, deleted or restored over goes to STAFF_DIR/history first, the newest
   200 kept. A value whose key says password, secret or token is shown as ******** and saved back as it was.
-  Only an owner saves, uploads or restores a jar, or anything in mods/ or .fabric/ (asked or reached through a link):
+  Only an owner saves, uploads, restores or renames a jar, or anything in mods/ or .fabric/ (asked or reached through
+  a link; a rename is checked under its old name and its new one):
   a jar runs as the server, so with it an admin could do anything the server's user can.
 - Commands: one line, no `seed` (the seed is secret) and no `stop` (the container would start again at once: the
   power controls stop it). Player commands need a real player name. Log lines and answers are masked as the status
@@ -73,6 +79,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import staff_apex
 import staff_auth
+import staff_desk
 import staff_events
 import staff_modcfg
 import staff_report
@@ -902,6 +909,40 @@ class Panel:
         self.record(user, "delete", "/".join(parts))
         return {"path": "/".join(parts), "entry": entry}
 
+    def new_folder(self, user: str, body: dict) -> dict:
+        path, parts = self.resolve(body.get("path"), "write")
+        if not parts or not UPLOAD_NAME.fullmatch(parts[-1]):
+            raise Refused(400, "A folder name may have letters, digits, ., _, + and - only.")
+        with self._files:
+            if not path.parent.is_dir():
+                raise Refused(404, "There is no such folder to make it in.")
+            try:
+                path.mkdir(mode=0o755)
+            except FileExistsError:
+                raise Refused(409, "Something already has that name.") from None
+        self.record(user, "new-folder", "/".join(parts))
+        return {"path": "/".join(parts)}
+
+    def rename(self, user: str, body: dict) -> dict:
+        """Gives a file a new name, or moves it to another folder of the server's. Nothing is lost by it, so it keeps
+        no copy; a name already taken is refused rather than replaced."""
+        if not isinstance(body.get("to"), str) or not UPLOAD_NAME.fullmatch(PurePosixPath(body["to"]).name):
+            raise Refused(400, "A file name may have letters, digits, ., _, + and - only.")
+        path, parts = self.resolve(body.get("path"), "write")
+        target, to_parts = self.resolve(body["to"], "write")
+        if not parts or not to_parts:
+            raise Refused(400, "Say which file, and its new name.")
+        with self._files:
+            if path.is_symlink() or not path.is_file():
+                raise Refused(400, "Only a file can be renamed here, not a folder.")
+            if not target.parent.is_dir():
+                raise Refused(404, "There is no such folder to move it to.")
+            if os.path.lexists(target):
+                raise Refused(409, "Something already has that name.")
+            os.rename(path, target)
+        self.record(user, "rename", f"{'/'.join(parts)} to {'/'.join(to_parts)}")
+        return {"path": "/".join(to_parts), "from": "/".join(parts)}
+
     def restore(self, user: str, body: dict) -> dict:
         entry, rel = body.get("entry"), body.get("path")
         if not isinstance(entry, str) or not ENTRY.fullmatch(entry):
@@ -1017,6 +1058,8 @@ ROUTES = {
     ("GET", "/api/download"): lambda p, u, q, b: p.download(q.get("path") or ""),
     ("POST", "/api/upload"): None,      # the body is the file: handled apart
     ("POST", "/api/delete"): lambda p, u, q, b: p.delete(u, b),
+    ("POST", "/api/folder"): lambda p, u, q, b: p.new_folder(u, b),
+    ("POST", "/api/rename"): lambda p, u, q, b: p.rename(u, b),
     ("GET", "/api/history"): lambda p, u, q, b: p.history_list(),
     ("POST", "/api/restore"): lambda p, u, q, b: p.restore(u, b),
     ("GET", "/api/players"): lambda p, u, q, b: p.players(),
@@ -1064,13 +1107,15 @@ NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
+staff_desk.register(sys.modules[__name__])    # everyone who has joined, notes, saved commands, the changes searched
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
 
 
 # The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.
-CODE_WRITES = {("PUT", "/api/file"), ("POST", "/api/upload"), ("POST", "/api/restore")}
+CODE_WRITES = {("PUT", "/api/file"), ("POST", "/api/upload"), ("POST", "/api/restore"), ("POST", "/api/folder"),
+               ("POST", "/api/rename")}
 
 
 def allowed(role: str, need: str) -> bool:
@@ -1205,8 +1250,10 @@ class Handler(BaseHTTPRequestHandler):
                 body = self.json_body(SAVE_MAX if method == "PUT" else JSON_MAX) if method != "GET" else {}
                 if code_write:
                     panel.code_guard(body.get("path"))
+                    if url.path == "/api/rename":       # a new name can make a file code, or server.properties
+                        panel.code_guard(body.get("to"))
                 result = ROUTES[(method, url.path)](panel, user, query, body)
-            if url.path == "/api/download":
+            if isinstance(result, tuple):       # a file to hand over: (name, bytes or path, size)
                 self.send_download(*result)
             elif hasattr(result, "stream"):     # staff_apex's world zip: it writes its own answer
                 result.stream(self)

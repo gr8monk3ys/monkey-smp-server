@@ -751,6 +751,58 @@ def test_a_restart_is_skipped_if_the_server_was_stopped_during_the_warnings(apex
     assert "restart-now" not in actions(apex)
 
 
+NOBODY = "There are 0 of a max of 30 players online: "
+
+
+@pytest.mark.parametrize("only, answer, runs", [
+    ("always", None, True), (None, None, True),         # None: a row from before the condition existed
+    ("empty", NOBODY, True), ("empty", None, False),    # the fixture's `list` answers 2 online
+    ("players", None, True), ("players", NOBODY, False),
+])
+def test_a_schedule_runs_only_when_its_condition_holds(apex, only, answer, runs):
+    if answer is not None:
+        apex.docker.answers["list"] = answer
+    apex.docker.answers["say hi"] = ""
+    row = {"id": "c", "name": "c", "kind": "command", "command": "say hi", **({"only": only} if only else {})}
+    result = apex.x._do(row)
+    sent = [c[-1] for c in apex.docker.calls if "exec" in c and c[-1] != "list"]
+    assert result.startswith("done" if runs else "skipped") and sent == (["say hi"] if runs else [])
+
+
+def test_a_count_the_server_will_not_give_is_never_taken_as_nobody_online(apex):
+    apex.docker.answers["list"] = "something else"
+    for only in ("empty", "players"):
+        result = apex.x._do({"id": "c", "name": "c", "kind": "restart", "only": only})
+        assert result == "skipped: the server didn't say who is online"
+    assert "restart-now" not in actions(apex)
+    # A stopped server has nobody on it: an only-when-empty backup still runs, an only-with-players one doesn't.
+    apex.x.running = lambda: False
+    assert apex.x.players_on() == 0
+    assert apex.x._held_back({"only": "empty"}) is None and "nobody" in apex.x._held_back({"only": "players"})
+
+
+def test_a_restart_only_when_empty_is_called_off_if_someone_joins_during_the_warnings(apex):
+    row = {**_restart_row(apex), "only": "empty"}
+    (apex.staff / "schedules.json").write_text(json.dumps({"schedules": [row]}))
+    apex.docker.answers["list"] = NOBODY
+    joined = "There are 1 of a max of 30 players online: Alpha"
+    apex.x.sleep = lambda seconds: apex.docker.answers.update({"list": joined})
+    result = apex.x._do(row)
+    assert result == "skipped: 1 online, and it runs only when nobody is" and "restart-now" not in actions(apex)
+
+
+def test_a_schedules_condition_is_checked_kept_and_shown(apex):
+    when = {"type": "daily", "time": "04:00"}
+    bad = {"name": "x", "kind": "restart", "when": when, "only": "sometimes"}
+    assert apex.call("POST", "/api/schedules", bad)[0] == 400
+    code, made = apex.call("POST", "/api/schedules", {"name": "x", "kind": "restart", "when": when, "only": "empty"})
+    assert code == 200 and made["schedule"]["only"] == "empty"
+    code, edited = apex.call("PUT", "/api/schedules", {"id": made["schedule"]["id"], "enabled": False})
+    assert code == 200 and edited["schedule"]["only"] == "empty"      # an edit of something else keeps it
+    _, made = apex.call("POST", "/api/schedules", {"name": "y", "kind": "backup", "when": when})
+    assert made["schedule"]["only"] == "always"
+
+
 def test_schedules_can_be_turned_off_and_deleted(apex):
     _, made = apex.call("POST", "/api/schedules", {"name": "n", "kind": "backup",
                                                    "when": {"type": "weekly", "time": "06:00", "day": 0}})

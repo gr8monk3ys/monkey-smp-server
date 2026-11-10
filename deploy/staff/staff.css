@@ -170,18 +170,18 @@ dl { display: grid; gap: 10px; }
 
 .history { display: grid; gap: 16px; min-width: 0; }
 .history-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; }
-.range { display: flex; flex-wrap: wrap; gap: 6px; }
-.range button {
+.range, .views { display: flex; flex-wrap: wrap; gap: 6px; }
+.range button, .views button {
   min-height: 44px; padding: 0 12px; margin: 0;
   color: var(--bone); font: 700 0.9375rem/1.1 var(--body); cursor: pointer;
   background: none; border: 6px solid transparent; border-image: var(--frame-bone) 6 / 6px;
 }
-.range button:hover { border-image-source: var(--frame-bone-hover); }
-.range button:active { transform: translateY(2px); }
-.range button[aria-pressed="true"] {
+.range button:hover, .views button:hover { border-image-source: var(--frame-bone-hover); }
+.range button:active, .views button:active { transform: translateY(2px); }
+.range button[aria-pressed="true"], .views button[aria-pressed="true"] {
   color: var(--ink); background: var(--gold) padding-box; border-image: var(--frame-gold) 6 fill / 6px;
 }
-@media (prefers-reduced-motion: reduce) { .range button:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .range button:active, .views button:active { transform: none; } }
 
 .chart { padding: 12px 14px 8px; min-width: 0; }
 figcaption p { color: var(--sage); font-size: 0.9375rem; }
@@ -241,7 +241,7 @@ td { color: var(--bone-2); border-top: 1px solid var(--leaf-2); }
   .now { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 }
 @media (max-width: 380px) {
-  .range button { padding: 0 8px; }
+  .range button, .views button { padding: 0 8px; }
   .sentence { font-size: 1.125rem; }
 }
 
@@ -317,6 +317,22 @@ input[type="file"]:hover::file-selector-button { border-image-source: var(--fram
 .log .line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .log .cmd { color: var(--gold); }
 .log .out { color: var(--sage); }
+/* A warning or an error keeps its own word in the line (WARN, ERROR), so the colour is never the only sign. */
+.log .warn { color: var(--warn); }
+.log .error { color: var(--bad); }
+.log .line[hidden] { display: none; }
+/* Above the log: which lines show, a text filter, and how many of the lines that leaves. */
+.logbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.logbar input { flex: 1 1 12rem; }
+.logbar .meta { color: var(--sage); font-size: 0.9375rem; }
+#saved-box { margin-top: 16px; }
+#saved-list .about { font-family: var(--mono); font-size: 0.875rem; }
+#files-filter { width: 100%; margin-bottom: 8px; }
+#known-box { margin-top: 16px; }
+/* A player's notes open under their row, across its whole width. */
+.notes { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 0 4px; }
+.notes .entries li { min-height: 0; }
+.notes .entries .what { white-space: pre-wrap; }
 .cmdbar { display: flex; gap: 6px; }
 .cmdbar input { flex: 1; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, .log:focus-visible { outline-offset: 0; }

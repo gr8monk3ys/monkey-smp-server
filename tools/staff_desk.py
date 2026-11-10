@@ -19,8 +19,9 @@ The safety rules:
   minecraft:play_time). Nothing else of the world is opened, and nothing is asked over RCON. A name is shown only
   when it is a real player name.
 - A note is plain text of at most NOTE_MAX characters, never a command. It is kept by the player's UUID when the
-  server knows one, so it follows a player through a change of name. actions.log says who wrote a note about whom,
-  never the text: a note can say why someone was banned, and the log is also posted to Discord.
+  server knows one, so it follows a player through a change of name. A deleted note stays in the file's "deleted"
+  list (the newest DELETED_KEPT), so nothing written about a player is lost by a click. actions.log says who wrote
+  a note about whom, never the text: a note can say why someone was banned, and the log is also posted to Discord.
 - A saved command goes through the console's own checks when it is saved (no seed, no stop, one line) and again
   when it is run: running one is an ordinary POST /api/command, with its own line in actions.log.
 - The record of changes is only read here. A search reads at most ACTIVITY_READ of the end of actions.log. In the
@@ -43,6 +44,7 @@ sp = None   # tools/staff_panel.py (register)
 PLAYERS_MAX = 2000                  # the most players listed, the last seen first
 NOTE_MAX = 500
 NOTES_EACH = 50                     # the most notes on one player
+DELETED_KEPT = 200                  # deleted notes kept in the file, for putting one back by hand
 LABEL_MAX = 40
 COMMANDS_MAX = 40
 ACTIVITY_READ = 8 * 1024 * 1024     # the most of actions.log a search reads, from its end
@@ -162,12 +164,15 @@ class Desk:
             ticks = self._play_time(players / "stats" / f"{uuid}.json")
             row = {"name": name, "last_seen": seen.get(uuid),
                    "hours": None if ticks is None else round(ticks / TICKS_PER_HOUR, 1),
-                   "notes": len(notes.get(uuid) or notes.get(f"name:{name.lower()}") or [])}
+                   "notes": len(notes.get(uuid, [])) + len(notes.get(f"name:{name.lower()}", []))}
             row.update({key: name.lower() in found for key, found in lists.items()})
             rows.append(row)
         # Whoever was on last comes first; a name the server only looked up (never joined) has no time and goes last.
         rows.sort(key=lambda r: (r["last_seen"] is None, -(r["last_seen"] or 0), r["name"].lower()))
-        return {"players": rows[:PLAYERS_MAX], "total": len(rows), "world": (players / "data").is_dir()}
+        # The game keeps the names of its 1000 most recent players only: those who joined before them have a file but
+        # no name here, and are counted rather than left out without a word.
+        return {"players": rows[:PLAYERS_MAX], "total": len(rows), "world": (players / "data").is_dir(),
+                "unnamed": len(set(seen) - set(names))}
 
     # ------------------------------------------------ notes on a player
 
@@ -181,11 +186,14 @@ class Desk:
         return {k: [n for n in v if isinstance(n, dict)] for k, v in notes.items() if isinstance(v, list)} \
             if isinstance(notes, dict) else {}
 
-    def _notes_for_writing(self) -> dict:
-        """The notes, or Refused when the file is there but can't be read: a save would then lose every note."""
-        if self.notes_file.exists() and not isinstance((_json(self.notes_file) or {}).get("notes"), dict):
+    def _notes_for_writing(self) -> tuple[dict, list]:
+        """(the notes, the deleted ones), or Refused when the file is there but can't be read: a save would then lose
+        every note."""
+        data = _json(self.notes_file) if self.notes_file.exists() else {"notes": {}}
+        if not isinstance(data, dict) or not isinstance(data.get("notes"), dict):
             raise sp.Refused(500, "player-notes.json can't be read: fix or move it (STAFF_DIR) and reload.")
-        return self._load_notes()
+        deleted = data.get("deleted")
+        return self._load_notes(), [d for d in deleted if isinstance(d, dict)] if isinstance(deleted, list) else []
 
     def _key(self, name: str) -> str:
         """Where a player's notes are kept: under the UUID when the server knows the name, else under the name."""
@@ -211,12 +219,12 @@ class Desk:
         text = checked_text(body.get("text"), NOTE_MAX, "a note")
         note = {"id": secrets.token_hex(6), "by": user, "at": sp.stamp(), "text": text}
         with self._notes:
-            notes = self._notes_for_writing()
+            notes, deleted = self._notes_for_writing()
             rows = notes.setdefault(self._key(name), [])
             if len(rows) >= NOTES_EACH:
                 raise sp.Refused(409, f"A player can have at most {NOTES_EACH} notes: delete an old one first.")
             rows.append(note)
-            _save_json(self.notes_file, {"version": 1, "notes": notes})
+            _save_json(self.notes_file, {"version": 1, "notes": notes, "deleted": deleted})
         self.p.record(user, "player-note", name)
         return {"name": name, "note": self._shown_note(note)}
 
@@ -225,7 +233,7 @@ class Desk:
         if not isinstance(nid, str):
             raise sp.Refused(400, "Say which note.")
         with self._notes:
-            notes = self._notes_for_writing()
+            notes, deleted = self._notes_for_writing()
             for key in (self._key(name), f"name:{name.lower()}"):
                 rows = notes.get(key, [])
                 kept = [n for n in rows if n.get("id") != nid]
@@ -234,7 +242,12 @@ class Desk:
                         notes[key] = kept
                     else:
                         del notes[key]
-                    _save_json(self.notes_file, {"version": 1, "notes": notes})
+                    # Kept in the same file, so a note deleted by mistake can be put back by hand (its text is in no
+                    # log). The newest DELETED_KEPT stay.
+                    gone = next(n for n in rows if n.get("id") == nid)
+                    deleted = [*deleted, {"player": key, "name": name, "deleted_by": user, "deleted_at": sp.stamp(),
+                                          **gone}][-DELETED_KEPT:]
+                    _save_json(self.notes_file, {"version": 1, "notes": notes, "deleted": deleted})
                     break
             else:
                 raise sp.Refused(404, "There is no such note.")

@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+from pathlib import Path
 
 import pytest
 import staff_desk
@@ -115,7 +116,7 @@ def test_a_play_time_that_is_not_a_count_is_unknown(desk, ticks):
 
 def test_a_server_with_no_world_or_usercache_yet_lists_nobody(box):  # noqa: F811
     code, data = box.call("GET", "/api/known-players")
-    assert code == 200 and data == {"ok": True, "players": [], "total": 0, "world": False}
+    assert code == 200 and data == {"ok": True, "players": [], "total": 0, "world": False, "unnamed": 0}
     (box.root / "usercache.json").write_text("{broken")
     assert box.call("GET", "/api/known-players")[1]["players"] == []
 
@@ -405,3 +406,82 @@ def test_the_consoles_chat_view_knows_the_games_chat_lines():
         assert bool(chat.search(m.group(2))) is is_chat, line
     assert head.match("[12:00:00] [Worker-Main-1/ERROR]: boom").group(1) == "ERROR"
     assert head.match("\tat net.minecraft.Foo.bar(Foo.java:1)") is None
+
+
+# ---------------------------------------------------------------- the review's fixes
+
+
+def test_the_note_count_adds_notes_kept_by_name_and_by_uuid(desk):
+    desk.staff.mkdir(parents=True, exist_ok=True)
+    note = {"id": "a", "by": "mia", "at": "2026-11-01T00:00:00Z", "text": "x"}
+    (desk.staff / "player-notes.json").write_text(json.dumps(
+        {"notes": {ALPHA: [note], "name:alpha": [{**note, "id": "b"}]}}))
+    alpha = next(p for p in desk.call("GET", "/api/known-players")[1]["players"] if p["name"] == "Alpha")
+    assert alpha["notes"] == 2 == len(desk.call("GET", "/api/player-notes?name=Alpha")[1]["notes"])
+
+
+def test_players_the_name_cache_has_dropped_are_counted(desk):
+    (desk.root / "world" / "players" / "data" / "00000009-0000-4000-8000-000000000009.dat").write_bytes(b"n")
+    data = desk.call("GET", "/api/known-players")[1]
+    assert data["unnamed"] == 1 and data["total"] == 3
+
+
+def test_a_deleted_note_is_kept_in_the_file_and_shown_nowhere(desk):
+    _, made = desk.call("POST", "/api/player-notes", {"name": "Alpha", "text": "x-ray suspicion"})
+    desk.call("POST", "/api/player-notes", {"name": "Alpha", "text": "second"})
+    which = {"name": "Alpha", "id": made["note"]["id"]}
+    assert desk.call("POST", "/api/player-note-delete", which, user="mia")[0] == 200
+    kept = json.loads((desk.staff / "player-notes.json").read_text())
+    assert [n["text"] for n in kept["notes"][ALPHA]] == ["second"]
+    gone = kept["deleted"][0]
+    assert gone["text"] == "x-ray suspicion" and gone["deleted_by"] == "mia" and gone["player"] == ALPHA
+    assert [n["text"] for n in desk.call("GET", "/api/player-notes?name=Alpha")[1]["notes"]] == ["second"]
+    # Adding another keeps the deleted list too.
+    desk.call("POST", "/api/player-notes", {"name": "Alpha", "text": "third"})
+    assert len(json.loads((desk.staff / "player-notes.json").read_text())["deleted"]) == 1
+
+
+def test_deleted_notes_kept_are_capped(desk, monkeypatch):
+    monkeypatch.setattr(staff_desk, "DELETED_KEPT", 2)
+    for i in range(4):
+        _, made = desk.call("POST", "/api/player-notes", {"name": "Alpha", "text": f"n{i}"})
+        desk.call("POST", "/api/player-note-delete", {"name": "Alpha", "id": made["note"]["id"]})
+    assert [d["text"] for d in json.loads((desk.staff / "player-notes.json").read_text())["deleted"]] == ["n2", "n3"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="needs symlinks")
+def test_a_link_is_not_renamed(desk):
+    os.symlink(desk.root / "config" / "plain.yml", desk.root / "config" / "link.yml")
+    code, answer = desk.call("POST", "/api/rename", {"path": "config/link.yml", "to": "config/moved.yml"})
+    assert code == 400 and "link" in answer["error"]
+    assert (desk.root / "config" / "plain.yml").read_text() == "a: 1\n"
+    assert os.path.islink(desk.root / "config" / "link.yml")
+
+
+def test_a_name_taken_just_before_the_rename_is_never_replaced(desk, monkeypatch):
+    """The game can make the new name between the check and the move: the move must fail, not replace it."""
+    real = os.link
+
+    def game_got_there_first(src, dst, *a, **k):
+        Path(dst).write_text("the game's file")
+        return real(src, dst, *a, **k)
+    monkeypatch.setattr(staff_panel.os, "link", game_got_there_first)
+    code, _ = desk.call("POST", "/api/rename", {"path": "config/plain.yml", "to": "config/new.yml"})
+    assert code == 409
+    assert (desk.root / "config" / "new.yml").read_text() == "the game's file"
+    assert (desk.root / "config" / "plain.yml").read_text() == "a: 1\n"
+
+
+def test_without_hard_links_a_rename_still_works(desk, monkeypatch):
+    def no_links(*a, **k):
+        raise OSError(1, "Operation not permitted")
+    monkeypatch.setattr(staff_panel.os, "link", no_links)
+    assert desk.call("POST", "/api/rename", {"path": "config/plain.yml", "to": "config/new.yml"})[0] == 200
+    assert (desk.root / "config" / "new.yml").read_text() == "a: 1\n"
+    assert not (desk.root / "config" / "plain.yml").exists()
+    assert desk.call("POST", "/api/rename", {"path": "config/new.yml", "to": "config/discord.toml"})[0] == 409
+
+
+def test_the_consoles_history_keeps_a_chat_line_as_its_command():
+    script = (REPO.root / "deploy" / "staff" / "panel.js").read_text(encoding="utf-8")
+    assert "const kept = saying ? `/${command}` : command;" in script and "history.push(kept)" in script

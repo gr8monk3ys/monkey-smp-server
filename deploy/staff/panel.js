@@ -162,7 +162,7 @@
   // The classes of a line from the log: its level, and whether it is chat.
   function kindOf(text) {
     const head = LOG_HEAD.exec(text);
-    if (!head) return consoleState.level;         // a continuation: as the line it hangs under
+    if (!head) return `${consoleState.level} more`;   // a continuation: as the line it hangs under, without its mark
     const level = head[1] === "WARN" ? "warn" : head[1] === "INFO" ? "" : "error";
     consoleState.level = level;
     return level || (CHAT.test(head[2]) ? "chat" : "");
@@ -239,7 +239,9 @@
     const saying = typeof given !== "string" && consoleState.view === "chat" && !typed.startsWith("/");
     const command = saying ? `say ${typed}` : typed;
     const history = consoleState.history;
-    if (history[history.length - 1] !== command) history.push(command);
+    // Kept as a command (with its /), so Up then Enter sends it again as it went, in Chat too: never "say say hi".
+    const kept = saying ? `/${command}` : command;
+    if (history[history.length - 1] !== kept) history.push(kept);
     if (history.length > HISTORY_CMDS) history.shift();
     consoleState.at = history.length;
     if (typeof given !== "string") input.value = "";

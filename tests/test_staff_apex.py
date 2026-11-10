@@ -783,12 +783,15 @@ def test_a_count_the_server_will_not_give_is_never_taken_as_nobody_online(apex):
 
 def test_a_restart_only_when_empty_is_called_off_if_someone_joins_during_the_warnings(apex):
     row = {**_restart_row(apex), "only": "empty"}
+    apex.docker.answers["say The scheduled restart is called off."] = ""
     (apex.staff / "schedules.json").write_text(json.dumps({"schedules": [row]}))
     apex.docker.answers["list"] = NOBODY
     joined = "There are 1 of a max of 30 players online: Alpha"
     apex.x.sleep = lambda seconds: apex.docker.answers.update({"list": joined})
     result = apex.x._do(row)
     assert result == "skipped: 1 online, and it runs only when nobody is" and "restart-now" not in actions(apex)
+    said = [c[-1] for c in apex.docker.calls if "exec" in c]
+    assert said[-1] == "say The scheduled restart is called off."      # players were told it was coming
 
 
 def test_a_schedules_condition_is_checked_kept_and_shown(apex):

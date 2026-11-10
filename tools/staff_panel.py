@@ -932,14 +932,26 @@ class Panel:
         target, to_parts = self.resolve(body["to"], "write")
         if not parts or not to_parts:
             raise Refused(400, "Say which file, and its new name.")
+        # resolve() follows links, so ask about the name as given: renaming a link would move the file it points to
+        # and leave the link pointing at nothing.
+        asked = os.path.join(os.path.realpath(self.root), *PurePosixPath(body["path"]).parts)
         with self._files:
-            if path.is_symlink() or not path.is_file():
-                raise Refused(400, "Only a file can be renamed here, not a folder.")
+            if os.path.islink(asked) or not path.is_file():
+                raise Refused(400, "Only a file can be renamed here, not a folder or a link.")
             if not target.parent.is_dir():
                 raise Refused(404, "There is no such folder to move it to.")
-            if os.path.lexists(target):
-                raise Refused(409, "Something already has that name.")
-            os.rename(path, target)
+            # A link to the new name then the old name taken away: link() fails on a name already taken, even one
+            # the game made a moment ago, where a rename would quietly replace it.
+            try:
+                os.link(path, target)
+            except FileExistsError:
+                raise Refused(409, "Something already has that name.") from None
+            except OSError:                 # a file system without hard links: the check, then the rename
+                if os.path.lexists(target):
+                    raise Refused(409, "Something already has that name.") from None
+                os.rename(path, target)
+            else:
+                os.unlink(path)
         self.record(user, "rename", f"{'/'.join(parts)} to {'/'.join(to_parts)}")
         return {"path": "/".join(to_parts), "from": "/".join(parts)}
 
@@ -984,13 +996,16 @@ class Panel:
                 return [{"name": r["name"], "reason": masked(str(r.get("reason") or ""))} for r in rows]
             return [r["name"] for r in rows]
 
-        online = None
-        box = staff_status.container(self.docker)
-        if box and box["state"] == "running":
-            who = staff_status.players(staff_status.ask(self.docker, "list"))
-            online = who["names"] if who else None
-        return {"online": online, "whitelist": names("whitelist.json"), "ops": names("ops.json"),
+        who = self.who_is_on()
+        return {"online": who["names"] if who else None, "whitelist": names("whitelist.json"), "ops": names("ops.json"),
                 "banned": names("banned-players.json", reasons=True)}
+
+    def who_is_on(self) -> dict | None:
+        """`list` over RCON as {"count", "max", "names"}; None when the server isn't running or doesn't say."""
+        box = staff_status.container(self.docker)
+        if not (box and box["state"] == "running"):
+            return None
+        return staff_status.players(staff_status.ask(self.docker, "list"))
 
     def timers(self) -> dict:
         argv = ["systemctl", "list-timers", "--all", "--no-pager"]

@@ -1386,7 +1386,8 @@ nights): an admin without it can't run the event timer until they do.
 
 A jar runs as the server, so only an owner adds one: uploading a jar, installing a `.mrpack`, uploading a data pack
 (game code: functions, loot, recipes; turning packs on or off stays admin), and, in Files, saving,
-uploading or restoring a `.jar` or anything in `mods/` or `.fabric/` (checked again after links are followed). Only
+uploading, restoring or renaming a `.jar` or anything in `mods/` or `.fabric/`, or making a folder there (checked
+again after links are followed; a rename under both its old and its new name). Only
 an owner changes which jars run at all (owner, 2026-11-08): installing from Modrinth, turning a jar off or on,
 removing it, and keeping a pinned mod off or allowing it again. Admins see those buttons greyed out. An admin still
 searches Modrinth and answers "do players need it?", which only notes the answer and moves no jar.
@@ -1397,7 +1398,7 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Game rules | admin | `gamerule NAME VALUE` over RCON, for known rules only. |
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
-| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes; whoever is online, only when nobody is, or only when someone is. A run whose condition doesn't hold is skipped and says so; so is one when the server won't say who is on. A restart only when empty checks again after its warnings, and is called off if someone joined. A stopped server counts as nobody online. |
+| Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes; whoever is online, only when nobody is, or only when someone is. A run whose condition doesn't hold is skipped and says so; so is one when the server won't say who is on. A restart only when empty checks again after its warnings, and is called off if someone joined (chat then says so). A stopped server counts as nobody online. |
 | Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks, and the mod changes waiting for a release of the players' pack. |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
 | Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |
@@ -1413,6 +1414,9 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Upload a world | admin | A `.zip`, up to 8 GB, checked on arrival. Swapped in only when `REPLACE` is typed. |
 | SFTP card | admin | Host, port and user names, or "ask the owner". |
 | Event timer | admin | `tools/staff_events.py`: start (name and minutes), end now with "Event over", or stop early, over RCON (`monkey:events/timer/*`, from 3.2.0's data pack; while `monkey-events` is off the card says so). |
+| Everyone who has joined, notes | moderator | The Players tab's list, and adding a note. Deleting a note is admin; it stays in `player-notes.json`'s `deleted` list (the newest 200), so it can be put back by hand. |
+| Saved commands | admin | The Console tab's list: save, run, delete. A run is an ordinary console command. |
+| Search and download the changes | moderator | The Server tab's record of changes, searched, and as a `.csv`. |
 | Update the leaderboard now | admin | `save-all flush` over RCON, then `sh deploy/monkey-standings.sh board` as `monkey`, so Cup points given a minute ago show. A busy deploy lock answers "skipped". |
 | Mod settings | admin | Each mod's config file (`config/`, and `.properties` files next to `server.properties`) as a form: `.toml`, `.properties`, `.json`, `.json5`. A save changes only the edited values, so comments and order stay. Secrets are hidden and locked. A file the form can't read opens in Files. Takes effect after a restart. `deploy/staff/mod-settings.json` names each mod's main keys. |
 | Strength SMP | admin | The Mod settings tab's Strength SMP card: the 9 ultimate cooldowns and 9 lifetimes (seconds, 2 to 86400), the armor ultimate charge and "powers only for tagged players", as `scoreboard players set $Config Strength_SMP+Config-...` over RCON. Takes effect at once and stays after a restart (the scores live in the world). Reset to defaults types `RESET`. Needs the server running. |

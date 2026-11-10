@@ -246,7 +246,12 @@
     try {
       const data = await api("GET", "/api/known-players");
       known.rows = (data.players || []).filter((p) => p && typeof p.name === "string");
-      say("known-error", data.world === false ? "The world has no players folder yet: last seen and play time show once someone has joined." : null);
+      const unnamed = data.unnamed || 0;
+      say("known-warning", data.world === false
+        ? "The world has no players folder yet: last seen and play time show once someone has joined."
+        : unnamed ? `${unnamed} more ${unnamed === 1 ? "player has" : "players have"} joined but the server no longer keeps ${unnamed === 1 ? "their name" : "their names"} (it keeps its 1000 most recent), so ${unnamed === 1 ? "isn't" : "aren't"} listed.`
+          : null);
+      say("known-error", null);
       renderKnown();
     } catch (error) {
       say("known-error", error);

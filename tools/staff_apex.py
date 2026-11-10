@@ -938,7 +938,7 @@ class Extras:
         """How many players are on: 0 when the server isn't running, None when it runs and won't say."""
         if not self.running():
             return 0
-        who = sp.staff_status.players(sp.staff_status.ask(self.p.docker, "list"))
+        who = self.p.who_is_on()
         return who["count"] if who else None
 
     def _held_back(self, row: dict) -> str | None:
@@ -986,6 +986,8 @@ class Extras:
             return "skipped: the server was stopped during the warnings"
         held = self._held_back(now_row)         # someone may have joined an empty server during the warnings
         if held:
+            with contextlib.suppress(sp.server.RconError):
+                self.rcon("say The scheduled restart is called off.")
             return held
         self.p.power_action("schedule", {"action": "restart-now"})
         return "restarted (after warnings at 5 minutes, 1 minute and 10 seconds)"

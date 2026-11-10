@@ -6,6 +6,8 @@ import pytest
 from conftest import (
     fabric_launcher,
     fabric_profile,
+    github_client_file,
+    github_pin,
     make_zip,
     paper_build,
     paper_builds_url,
@@ -17,7 +19,7 @@ import entries
 import patches
 import snapshot
 import validate
-from repo import load_json
+from repo import load_json, save_json
 from upstream import RecordedHttp, Upstream, fabric_profile_url
 
 MC = "26.1.2"
@@ -379,3 +381,75 @@ def test_snapshot_needs_a_path_for_server_and_client(what, capsys):
     with pytest.raises(SystemExit):
         snapshot.main([what])
     assert f"'{what}' needs a path" in capsys.readouterr().err
+
+
+# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
+
+def test_snapshot_fabric_server_keeps_a_github_pin(fabric, fabric_repo):
+    """A jar that is not on Modrinth but is still exactly the manifest's GitHub pin keeps that pin."""
+    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
+    pin = github_pin(homemade)
+    old = fabric_repo.load_manifest()
+    old["mods"].append(pin)
+    fabric_repo.save_manifest(old)
+    fabric.expect_lookup(homemade)
+
+    m = fabric.snapshot(fabric_repo)
+
+    assert [e["slug"] for e in m["mods"]] == ["edited", "mod", "patina-and-chime", "same"]
+    assert m["mods"][2] == pin
+    assert validate.validate(m, fabric_repo) == []
+
+
+def test_snapshot_fabric_server_fails_on_a_jar_that_is_no_longer_its_github_pin(fabric, fabric_repo):
+    """A new build of the mod under the old name: the pin is moved by hand (pin_github.py), not guessed."""
+    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
+    old = fabric_repo.load_manifest()
+    old["mods"].append(github_pin(b"the release that was pinned"))
+    fabric_repo.save_manifest(old)
+    fabric.expect_lookup(homemade)
+    before = fabric_repo.manifest.read_bytes()
+    with pytest.raises(SystemExit, match="homemade-1.0.jar"):
+        fabric.snapshot(fabric_repo)
+    assert fabric_repo.manifest.read_bytes() == before
+
+
+def test_snapshot_client_keeps_the_servers_github_pin(tmp_path, fake_modrinth, fabric_repo):
+    """private.jar is not on Modrinth: it stays in the pack only as the server's GitHub pin, byte for byte."""
+    mc = fabric_repo.load_manifest()["minecraft"]
+    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
+    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
+    pin = github_pin(b"not on modrinth", file="private.jar")
+    m = fabric_repo.load_manifest()
+    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
+    fabric_repo.save_manifest(m)
+    index_path = fabric_repo.client / "modrinth.index.json"
+    old = load_json(index_path)
+    old["files"].append(github_client_file(pin, b"not on modrinth"))
+    save_json(index_path, old)
+
+    index = snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
+
+    assert [f["path"] for f in index["files"]] == ["mods/private.jar", "mods/sodium.jar", "shaderpacks/shader.zip"]
+    assert index["files"][0] == github_client_file(pin, b"not on modrinth")
+    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == []
+
+
+def test_snapshot_client_drops_a_jar_that_is_no_longer_the_github_pin(tmp_path, fake_modrinth, fabric_repo):
+    mc = fabric_repo.load_manifest()["minecraft"]
+    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
+    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
+    pin = github_pin(b"the release that was pinned", file="private.jar")
+    m = fabric_repo.load_manifest()
+    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
+    fabric_repo.save_manifest(m)
+    index_path = fabric_repo.client / "modrinth.index.json"
+    old = load_json(index_path)
+    old["files"].append(github_client_file(pin, b"the release that was pinned"))
+    save_json(index_path, old)
+
+    index = snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
+
+    assert [f["path"] for f in index["files"]] == ["mods/sodium.jar", "shaderpacks/shader.zip"]
+    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == [
+        "client: mods/private.jar is missing (the server's GitHub pin patina-and-chime must be in the pack)"]

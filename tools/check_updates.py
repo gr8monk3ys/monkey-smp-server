@@ -149,6 +149,8 @@ def find_updates(manifest: dict, upstream: Upstream, lock_text: str | None = Non
             updates.append(found)
     for kind in entries.GROUPS:
         for e in entries.group(manifest, kind):
+            if entries.is_github(e):
+                continue  # pinned by hand from a GitHub release (ADR-0009): Modrinth has nothing to compare it to
             v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e)
             if not v:
                 continue

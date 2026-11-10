@@ -2,6 +2,7 @@ import hashlib
 import json
 
 import pytest
+from conftest import github_pin
 
 import add
 import entries
@@ -133,3 +134,17 @@ def test_main_adds_a_mod_to_the_fabric_release(fabric_repo, capsys):
     assert [e["slug"] for e in saved["mods"]] == sorted(e["slug"] for e in saved["mods"])
     assert "1 added, 1 already present" in capsys.readouterr().out
     assert validate.validate(saved, fabric_repo) == []
+
+
+def test_adds_a_mod_next_to_a_github_pin():
+    """A GitHub pin (ADR-0009) has no Modrinth project to compare the new mod to."""
+    http = RecordedHttp()
+    lithium = _project(http, "lithium", [
+        _version("lithium", "0.26.2", "release", "2026-09-20T00:00:00Z", "lithium-fabric-0.26.2.jar"),
+    ], kind="mod")
+    http.add("GET", f"{MODRINTH}/projects?ids={json_query(['lithium'])}", [lithium])
+    pin = github_pin(b"a mod of ours")
+    out, added = add.add(_fabric_manifest(mods=[pin]), "mod", ["lithium"], Upstream(http))
+    assert added == ["lithium"]
+    assert [e["slug"] for e in out["mods"]] == ["lithium", "patina-and-chime"]
+    assert out["mods"][1] == pin

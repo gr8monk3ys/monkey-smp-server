@@ -6,7 +6,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/monkey/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
+| `package/monkey/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply`, `tools/pin_github.py` |
 | `package/monkey/pwsh.lock` | the portable PowerShell 7 build per platform that `monkey.sh` downloads when `pwsh` is missing | by hand (see below) |
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/monkey/monkey.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
@@ -120,6 +120,7 @@ python tools/check_updates.py            # what's newer (same Minecraft version,
 python tools/check_updates.py --apply    # pin them
 python tools/add.py datapack <slug>...    # add new Modrinth projects at their newest stable build
 python tools/add.py mod <slug>...         # (Fabric) ...or mods; `plugin` on Paper
+python tools/pin_github.py patina-and-chime <tag> <jar>   # our own mod, from its GitHub release (below)
 python tools/validate.py --online        # download + hash-check everything
 ```
 
@@ -368,6 +369,44 @@ so look at its Modrinth page when updating the pack, and when changing Minecraft
 
 None since 3.0.0: every mod in the manifest is listed for 26.2.
 
+## Our own mods, pinned from GitHub
+
+A mod the owners wrote may be pinned from a release of its own GitHub repository instead of Modrinth
+([ADR-0009](adr/0009-our-own-mods-may-be-pinned-from-a-github-release.md)). Today that is one mod, Patina & Chime
+(`gr8monk3ys/patina-and-chime`), which is waiting for Modrinth's moderation. The repositories are listed in
+`entries.GITHUB_PINS`; `validate.py` refuses a GitHub download from anywhere else, and refuses one in the players'
+pack that isn't exactly the server's pin.
+
+```bash
+python tools/pin_github.py patina-and-chime v0.2.0 patina-and-chime-0.2.0+26.2.jar
+python tools/validate.py --online
+```
+
+That downloads the jar from the release and writes its size and hashes in two places: the mod's entry in
+`package/monkey/manifest.json` (`github` and `tag` where a Modrinth entry has `project_id` and `version_id`) and
+the same file in `client/modrinth.index.json`, replacing the release pinned before. The mod adds blocks and
+items, so both sides need the same build: a release that moves this pin is a new players' pack, and players who
+haven't updated are refused with "registry entries that are unknown to this client".
+
+Nothing else moves the pin. `check_updates.py` and `add.py` skip it, and a snapshot keeps it only while the jar on
+the server is still the pinned file (a different jar under that name fails the snapshot: pin the new release
+first). `pack_sync.py` refuses the jar like any other that Modrinth doesn't know. So for each new release of the
+mod: publish it on GitHub, run the command above, then the smoke test and a test join.
+
+Patina & Chime on this server (0.2.0, tested 2026-11-09 on a scratch 3.3.0 server):
+
+- The shatter note (a note block on an amethyst block, tuned to its top note) breaks grown amethyst clusters
+  within 8 blocks. It breaks them with no player behind it, so Open Parties and Claims has nobody to refuse: a
+  note block outside a claim should reach clusters inside it. That follows from the mod's code; it was not tried
+  inside a real claim. 0.2.0 has no switch for it. 0.2.1 adds one, the game rule `patinachime:shatter_note`
+  (patina-and-chime pull request 6, not released yet). When 0.2.1 is out, move the pin to it and run
+  `/gamerule patinachime:shatter_note false` once on the server; the value is saved with the world.
+- Enchanting with amethyst shards is off wherever Easy Magic is installed, which is this server. Everything else
+  the mod adds works next to the pack.
+
+When Modrinth approves the mod, take the entry out of both files and pin it with `add.py mod patina-and-chime`,
+so that the update check sees it again.
+
 ## Mods left out on purpose
 
 The shared mod folder has these; the pack doesn't. Check the reason still holds before adding one in a sync. Since 3.0.0 the folder is the list (docs/ADMIN.md), so this is short.
@@ -375,7 +414,6 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 | Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
 |---|---|
 | Improved Inventory Tabs | Not on Modrinth, so it can't be pinned (ADR-0002). |
-| Patina & Chime (`patina-and-chime`) | Awaiting moderation on Modrinth (the project returns 404), so it can't be pinned (ADR-0002). It adds mixins and advancements on both sides. Add it in a release once it is approved. |
 | Arrow In The Knee (`aitk`) | Says it runs on servers, but a mixin into a client class stops one from starting. Client pack only. |
 | PrickleMC, Crops Love Rain (NeoForge files) | The folder's `cropsloverain-3.2.1.jar` is the NeoForge build, and PrickleMC's NeoForge jar sits next to its Fabric one. The pack has the Fabric build of each. |
 | Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |

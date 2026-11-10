@@ -1442,6 +1442,18 @@
       }
     },
     {
+      "slug": "patina-and-chime",
+      "github": "gr8monk3ys/patina-and-chime",
+      "tag": "v0.2.0",
+      "version": "0.2.0+26.2",
+      "file": "patina-and-chime-0.2.0+26.2.jar",
+      "url": "https://github.com/gr8monk3ys/patina-and-chime/releases/download/v0.2.0/patina-and-chime-0.2.0%2B26.2.jar",
+      "size": 97590,
+      "hashes": {
+        "sha512": "d30cbbaeef36d8da1d8383cc03aa5bab03801066fe7822ae3ab7dd7389aee11e9fe0ec8cb15cc08933ae1e9fdb214149ba6dce47b4adbc73f9aa1f3478dc0c15"
+      }
+    },
+    {
       "slug": "phantoms-in-the-end",
       "project_id": "r69cUvfV",
       "version": "1.0.2+26.2.X",

@@ -30,6 +30,7 @@
 Hand-curated config defaults (package/monkey/defaults/) are not touched.
 """
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -199,13 +200,18 @@ def fabric_entry(upstream: Upstream, launcher: FabricLauncher) -> dict:
 
 # --- snapshot -----------------------------------------------------------------------------------
 
-def _match(paths: list[Path], originals: Path, found: dict, missing: list, new_patches: dict) -> list[dict]:
+def _match(paths: list[Path], originals: Path, found: dict, missing: list, new_patches: dict,
+           pins: dict | None = None) -> list[dict]:
     """Entries for files found on disk; a file not on Modrinth whose original (same name in
-    `originals`) is becomes that original plus a patch. Unknown files are appended to `missing`."""
+    `originals`) is becomes that original plus a patch. A file that is still exactly one of `pins` (the manifest's
+    GitHub pins by file name, ADR-0009) keeps that pin. Unknown files are appended to `missing`."""
     out = []
     for p in paths:
         orig = originals / p.name
-        if found[p]:
+        pin = (pins or {}).get(p.name)
+        if pin and not found[p] and entries.matches(pin, p.read_bytes()):
+            out.append(copy.deepcopy(pin))
+        elif found[p]:
             out.append(entries.from_disk(*found[p], disk_name=p.name))
         elif found.get(orig):
             base = entries.from_disk(*found[orig], disk_name=p.name)
@@ -245,10 +251,12 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
     missing = [p for p in plugin_paths if not found[p]]
     plugins = [entries.from_disk(*found[p], disk_name=p.name) for p in plugin_paths if found[p]]
     new_patches = {}
-    mods = _match(mod_paths, mod_originals, found, missing, new_patches)
+    pins = {e["file"]: e for e in old.get("mods", []) if entries.is_github(e)}
+    mods = _match(mod_paths, mod_originals, found, missing, new_patches, pins)
     datapacks = _match(pack_paths, pack_originals, found, missing, new_patches)
     if missing:
-        raise SystemExit("not on Modrinth (add them by hand or replace them):\n  "
+        raise SystemExit("not on Modrinth (add them by hand or replace them; a GitHub pin is re-pinned by hand, "
+                         "ADR-0009):\n  "
                          + "\n  ".join(str(p) for p in missing))
 
     server = fabric_entry(upstream, launcher) if launcher else paper_entry(upstream, server_dir, mc)
@@ -291,18 +299,24 @@ def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) ->
     old = load_json(index_path) if index_path.exists() else {}
     paths = [p for d in CLIENT_CONTENT for p in files_in(instance / d, (".jar", ".zip"))]
     found = identify(upstream, paths)
+    manifest = repo.load_manifest()
+    # The server's GitHub pins (ADR-0009) are not on Modrinth: their entries are kept while the jar is the same.
+    pins = {f["path"]: f for f in old.get("files", []) if entries.github_pin_of(f, manifest)}
     files, skipped = [], []
     for p in paths:
         rel = p.relative_to(instance).as_posix()
         if not found[p]:
-            skipped.append(rel)
+            pin = pins.get(rel)
+            if pin and hashlib.sha512(p.read_bytes()).hexdigest() == pin["hashes"]["sha512"]:
+                files.append(pin)
+            else:
+                skipped.append(rel)
             continue
         version, sha1, _ = found[p]
         f = next(x for x in version["files"] if x["hashes"]["sha1"] == sha1)
         files.append({"path": rel, "hashes": {"sha1": sha1, "sha512": f["hashes"]["sha512"]},
                       "env": client_env.env({"path": rel, "downloads": [f["url"]]}),
                       "downloads": [f["url"]], "fileSize": f["size"]})
-    manifest = repo.load_manifest()
     loader = fabric_loader(instance) or old.get("dependencies", {}).get("fabric-loader")
     if not loader:
         raise SystemExit("can't tell the Fabric loader version (no mmc-pack.json next to the instance)")

@@ -8,7 +8,7 @@ import copy
 import hashlib
 
 import pytest
-from conftest import paper_builds_url, serve_fabric_launcher
+from conftest import github_pin, paper_builds_url, serve_fabric_launcher
 
 import check_updates
 import entries
@@ -365,3 +365,10 @@ def test_main_counts_pin_problems(up, old, paper_repo, tmp_path, monkeypatch):
     check_updates.main(["--out", str(out)], repo=paper_repo, upstream=up)
     assert "- java windows-x64: Adoptium lists" in out.read_text()
     assert gh.read_text() == "count=5\n"  # four updates and one problem
+
+
+def test_a_github_pin_is_left_alone(up, fabric_manifest):
+    """Modrinth has nothing to compare it to: no request is made for it (an unrecorded one would raise)."""
+    m = fabric_pins(up, fabric_manifest)
+    m["mods"].append(github_pin(b"a mod of ours"))
+    assert check_updates.find_updates(m, up) == []

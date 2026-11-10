@@ -1701,6 +1701,21 @@
       "fileSize": 12362
     },
     {
+      "path": "mods/patina-and-chime-0.2.0+26.2.jar",
+      "hashes": {
+        "sha1": "a7bd9ef7a967f4c067df626900fb1a828d40c862",
+        "sha512": "d30cbbaeef36d8da1d8383cc03aa5bab03801066fe7822ae3ab7dd7389aee11e9fe0ec8cb15cc08933ae1e9fdb214149ba6dce47b4adbc73f9aa1f3478dc0c15"
+      },
+      "env": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "downloads": [
+        "https://github.com/gr8monk3ys/patina-and-chime/releases/download/v0.2.0/patina-and-chime-0.2.0%2B26.2.jar"
+      ],
+      "fileSize": 97590
+    },
+    {
       "path": "mods/peek-fabric-1.5.1+26.2.jar",
       "hashes": {
         "sha1": "c7b82a4e6974e5b01f7b898a738f4d9ba8cbef0c",

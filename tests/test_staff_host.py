@@ -643,6 +643,26 @@ def test_a_held_release_mod_players_need_shows_as_in_their_pack(apex):
     assert data["players_missing"] == []
 
 
+def test_a_mod_of_ours_pinned_from_github_reads_its_side_from_the_pack(apex):
+    # No Modrinth project to look up (ADR-0009): the pack lists the server's own file, so its env is the answer.
+    url = "https://github.com/gr8monk3ys/patina-and-chime/releases/download/v1.0/homemade-1.0.jar"
+    client_pack(apex, [{"path": "mods/homemade-1.0.jar", "env": {"client": "required", "server": "unsupported"},
+                        "downloads": [url]}])
+    for name in ("homemade-1.0.jar", "server.jar"):
+        jar(apex.root / "mods" / name, {"id": name[:-4].replace(".", "-"), "name": name})
+    pinned(apex, "homemade-1.0.jar", "server.jar")
+    manifest = apex.live / "monkey" / "manifest.json"
+    data = json.loads(manifest.read_text())
+    data["mods"] = [{"slug": "server", "file": "server.jar", "project_id": "Server12"},
+                    {"slug": "homemade", "github": "gr8monk3ys/patina-and-chime", "tag": "v1.0",
+                     "file": "homemade-1.0.jar", "url": url}]
+    manifest.write_text(json.dumps(data))
+    rows = {r["file"]: r for r in apex.call("GET", "/api/mods")[1]["mods"]}
+    assert rows["homemade-1.0.jar"]["client_side"] == "required"
+    assert rows["homemade-1.0.jar"]["in_players_pack"] is True and rows["homemade-1.0.jar"]["project"] is None
+    assert rows["server.jar"]["client_side"] == "unknown"
+
+
 @pytest.mark.parametrize("players", [["required"], {"a": 1}, 5, None])
 def test_mod_side_refuses_an_answer_that_is_not_text(apex, players):
     jar(apex.root / "mods" / "a.jar", {"id": "a", "name": "A"})

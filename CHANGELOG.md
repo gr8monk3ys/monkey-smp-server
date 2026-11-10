@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Tests: the three boot tests (`tests/smoke.ps1`, `tests/docker-smoke.sh`, `tests/hosting-smoke.sh`) fail when
+  data fails to load: a function, a tag, a data file that doesn't parse or doesn't pass validation, or one of our
+  advancements. Before, a typo in one generated function passed every check, because the server starts anyway and
+  only its log says so. Data a pinned mod ships broken is listed as known, file by file (More Villagers: nine
+  advancements and the `gilded_station` recipe don't parse on 26.2); see `docs/MAINTAINING.md`, "Updating the
+  server, plugins and mods".
+
 ## [3.3.0] - 2026-11-08
 
 Strength SMP's crossbow and armor ultimates fixed, the staff page's mod and file controls kept for the owner, and

@@ -78,8 +78,12 @@ def test_the_owner_sets_the_list_and_it_is_logged(box):  # noqa: F811
     assert "mod-commands time set, tp" in actions(box)
 
 
+# setblock, give, data and the rest can make a command block, which runs as the server; tellraw's click runs a
+# command as whoever clicks it.
 @pytest.mark.parametrize("entries", [["execute"], ["minecraft:op"], ["reload"], ["banlist ips"], ["a b c d"],
-                                     ["semi;colon"], "list", [1], ["x"] * 41])
+                                     ["semi;colon"], "list", [1], ["x"] * 41, ["setblock"], ["give"],
+                                     ["minecraft:data"], ["summon"], ["fill"], ["clone"], ["place"], ["item"],
+                                     ["loot"], ["tellraw"], ["dialog"]])
 def test_commands_that_lift_a_moderator_can_never_be_allowed(box, entries):  # noqa: F811
     assert box.call("PUT", "/api/mod-commands", {"commands": entries})[0] == 400
     assert not (box.staff / "mod-commands.json").exists()
@@ -89,7 +93,8 @@ def test_a_broken_list_allows_nothing(box):  # noqa: F811
     box.staff.mkdir(parents=True, exist_ok=True)
     (box.staff / "mod-commands.json").write_text("{broken")
     assert box.call("POST", "/api/command", {"command": "list"}, headers=MOD)[0] == 403
-    (box.staff / "mod-commands.json").write_text(json.dumps({"commands": ["list", "op", "execute as"]}))
+    (box.staff / "mod-commands.json").write_text(json.dumps({"commands": ["list", "op", "execute as",
+                                                                       "minecraft:execute run", "give"]}))
     assert box.call("GET", "/api/mod-commands", headers=MOD)[1]["commands"] == ["list"]
 
 
@@ -171,6 +176,20 @@ def test_block_history_stops_at_its_limit_and_says_so(box, monkeypatch):  # noqa
     found = look(box, x=5, y=64, z=4, radius=4)
     assert len(found["rows"]) == 3 and found["more"]
     assert [r["z"] for r in found["rows"]] == [7, 6, 5]
+
+
+def test_block_history_reads_the_asked_block_before_the_edges(box, monkeypatch):  # noqa: F811
+    # A busy column at the box's edge must not use up the cap before the asked block is read.
+    monkeypatch.setattr(staff_lookup, "LOOKUP_ROWS", 2)
+    _db(box, [*(place(f"2026-11-10 10:00:{i:02d}", "Alpha", "dirt", 0, 64, 5) for i in range(12)),
+              place("2026-11-10 09:00:00", "Bravo", "tnt", 4, 64, 5)])
+    assert look(box, x=4, y=64, z=5, radius=4)["stopped"]
+    import staff_report
+    ledger = staff_report.Ledger(box.root / "world" / "ledger.sqlite")
+    rows, stopped = staff_lookup._lookup(ledger, 4, 64, 5, 4, ledger.world_id("Overworld"), "2026-11-01 00:00:00",
+                                         -1, None, None)
+    ledger.db.close()
+    assert stopped and ledger.players[rows[0][7]] == "Bravo"   # the asked block's column was read first
 
 
 def test_block_history_over_http_is_a_moderators(box):  # noqa: F811

@@ -275,7 +275,7 @@
         const about = `${r.jar} now. Newer: ${r.version}${r.type && r.type !== "release" ? ` (${r.type})` : ""}, ${when(r.published)}.${r.pinned ? " Comes with the release: update it in a release, since the server puts the pinned jar back when it starts." : ""}`;
         // The install takes Modrinth's newest release, so a beta or alpha is shown but not offered: the button would
         // install a different file from the one listed.
-        const offer = can("owner") && !r.pinned && (r.type || "release") === "release";
+        const offer = can("owner") && r.slug && !r.pinned && (r.type || "release") === "release";
         return item(r.name || r.slug, `${about}${!r.pinned && r.type && r.type !== "release" ? " Not a release, so it isn't offered here." : ""}`,
           changelog, offer ? button("Update", "", () => askUpdate(r)) : null);
       }) : [emptyRow("Every mod Modrinth knows is up to date.")]));

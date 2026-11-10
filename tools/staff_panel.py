@@ -1121,7 +1121,7 @@ NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
 SCHEDULER_LOOKS: list = []   # f(panel), each called on the scheduler's thread every 20 s (staff_desk: temp bans' ends)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
-ROLE_GUARDS: dict = {}  # (method, path, role) -> f(panel, body), Refused when that role may not send this body
+ROLE_GUARDS: dict = {}  # (method, path) -> f(panel, role, body), Refused when that role may not send this body
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_desk.register(sys.modules[__name__])    # everyone who has joined, notes, saved commands, the changes searched
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
@@ -1270,9 +1270,9 @@ class Handler(BaseHTTPRequestHandler):
                     panel.code_guard(body.get("path"))
                     if url.path == "/api/rename":       # a new name can make a file code, or server.properties
                         panel.code_guard(body.get("to"))
-                guard = ROLE_GUARDS.get((method, url.path, role))
+                guard = ROLE_GUARDS.get((method, url.path))
                 if guard:
-                    guard(panel, body)
+                    guard(panel, role, body)
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if isinstance(result, tuple):       # a file to hand over: (name, bytes or path, size)
                 self.send_download(*result)

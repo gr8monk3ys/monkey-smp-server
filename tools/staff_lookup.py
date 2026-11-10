@@ -51,9 +51,14 @@ ENTRIES_MAX = 40
 DEFAULT_COMMANDS = ["list", "say", "msg", "tell", "w", "kick", "whitelist add", "whitelist remove", "whitelist list"]
 # The first words a moderator can never be allowed, whatever the list says: they run other commands (execute,
 # function, schedule, return), make operators, reload or change code (reload, datapack), stop saving, end the server,
-# show the seed or show or ban addresses (banlist ips, ban-ip). `minecraft:` in front is the same command.
+# show the seed or show or ban addresses (banlist ips, ban-ip). Also every command that can put a command block, a
+# command-block minecart or NBT in the world or in a hand (setblock, fill, clone, place, give, item, loot, summon,
+# data), since a command block runs as the server and could op its maker, and text with a click that runs a command
+# as whoever clicks it, an operator too (tellraw, dialog). `minecraft:` in front is the same command.
 NEVER = {"execute", "function", "schedule", "return", "op", "deop", "reload", "datapack", "stop", "seed", "save-off",
-         "ban-ip", "pardon-ip", "banlist", "debug", "jfr", "perf", "transfer", "trigger"}
+         "ban-ip", "pardon-ip", "banlist", "debug", "jfr", "perf", "transfer", "trigger",
+         "setblock", "fill", "clone", "place", "give", "item", "loot", "summon", "data", "tellraw", "dialog",
+         "publish", "setidletimeout", "forceload"}
 
 RADIUS_MAX = 8
 HOURS = (1, 24 * 30)
@@ -101,7 +106,8 @@ def checked_entries(value) -> list[str]:
         first = entry.split()[0].removeprefix("minecraft:")
         if first in NEVER:
             raise sp.Refused(400, f"{first} can't be allowed for moderators: it runs other commands, makes "
-                                  "operators, changes code, stops the server or shows addresses.")
+                                  "operators, can place a command block, changes code, stops the server or shows "
+                                  "addresses.")
         if entry not in out:
             out.append(entry)
     return out
@@ -141,7 +147,8 @@ class ModCommands:
         rows = data.get("commands") if isinstance(data, dict) else None
         if not isinstance(rows, list):
             return [], {"broken": True}
-        kept = [r for r in rows if isinstance(r, str) and ENTRY.fullmatch(r) and r.split()[0] not in NEVER]
+        kept = [r for r in rows if isinstance(r, str) and ENTRY.fullmatch(r)
+                and r.split()[0].removeprefix("minecraft:") not in NEVER]
         return kept, {"by": data.get("by"), "at": data.get("at")}
 
     def listed(self) -> dict:
@@ -208,7 +215,8 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
         if "actions_by_location" not in ledger.indexes:
             raise sp.Refused(503, "Ledger's database has no location index, and reading the whole table would slow "
                                   "the game: look it up in game with Ledger's own commands.")
-        world_label = query.get("world") or "Overworld"
+        world_label = query.get("world") or ("Overworld" if "Overworld" in ledger.worlds.values()
+                                             else next(iter(ledger.worlds.values()), "Overworld"))
         world = next((i for i, name in ledger.worlds.items() if name == world_label), None)
         if world is None:
             raise sp.Refused(400, f"world is one of: {', '.join(sorted(ledger.worlds.values()))}.")
@@ -250,17 +258,18 @@ def _lookup(ledger, x, y, z, radius, world, since, skip, wanted, who) -> tuple[l
              "where x = ? and y = ? and z between ? and ? and world_id = ? and time >= ?")
     rows, stopped = [], False
     try:
-        for cx in range(x - radius, x + radius + 1):
-            for cy in range(y - radius, y + radius + 1):
-                for row in ledger.db.execute(query, (cx, cy, z - radius, z + radius, world, since)):
-                    if row[8] == skip or (wanted is not None and row[1] not in wanted) \
-                            or (who is not None and row[7] != who):
-                        continue
-                    rows.append(row)
-                if len(rows) > LOOKUP_ROWS * 4:
-                    return rows, True
-                if time.monotonic() > deadline:
-                    return rows, True
+        # From the asked block outward, so a cap or the time limit keeps the rows nearest to it.
+        columns = sorted(((cx, cy) for cx in range(x - radius, x + radius + 1)
+                          for cy in range(y - radius, y + radius + 1)),
+                         key=lambda c: max(abs(c[0] - x), abs(c[1] - y)))
+        for cx, cy in columns:
+            for row in ledger.db.execute(query, (cx, cy, z - radius, z + radius, world, since)):
+                if row[8] == skip or (wanted is not None and row[1] not in wanted) \
+                        or (who is not None and row[7] != who):
+                    continue
+                rows.append(row)
+            if len(rows) > LOOKUP_ROWS * 4 or time.monotonic() > deadline:
+                return rows, True
     except sqlite3.OperationalError as e:
         if "interrupt" not in str(e).lower():
             raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
@@ -329,12 +338,21 @@ class Updates:
         return digest.hexdigest()
 
     def check(self, query: dict) -> dict:
-        with self._lock:
-            if self._kept and query.get("fresh") != "1" and time.time() - self._kept[0] < UPDATES_KEEP:
-                return {**self._kept[1], "cached": True}
+        kept = self._kept
+        if kept and query.get("fresh") != "1" and time.time() - kept[0] < UPDATES_KEEP:
+            return {**kept[1], "cached": True}
+        # One question to Modrinth at a time: a second asker gets the last answer or is told to wait, and never holds
+        # a request thread for as long as a slow Modrinth takes.
+        if not self._lock.acquire(blocking=False):
+            if kept:
+                return {**kept[1], "cached": True}
+            raise sp.Refused(409, "The page is asking Modrinth already: try again in a minute.")
+        try:
             result = self._check()
             self._kept = (time.time(), result)
             return {**result, "cached": False}
+        finally:
+            self._lock.release()
 
     def _check(self) -> dict:
         import staff_apex
@@ -409,8 +427,9 @@ def player_history(panel, name) -> dict:
     name = staff_desk.checked_player(name)
     desk = staff_desk.desk(panel)
     low = name.lower()
-    uuid = next((u for u, n in desk._names().items() if n.lower() == low), None)
-    shown = next((n for u, n in desk._names().items() if u == uuid), name)
+    names = desk._names()
+    uuid = next((u for u, n in names.items() if n.lower() == low), None)
+    shown = names.get(uuid, name) if uuid else name
 
     def listed(file: str) -> dict | None:
         rows = _json(panel.root / file)
@@ -430,11 +449,11 @@ def player_history(panel, name) -> dict:
     changes = [{"time": r["time"], "user": r["user"], "action": r["action"], "target": r["target"]}
                for r in rows if word.search(r["target"])][-HISTORY_ROWS:][::-1]
     notes = desk.notes(name)["notes"]
-    seen = None
-    if uuid and _UUID.fullmatch(uuid):
+    seen = ticks = None
+    if uuid and _UUID.fullmatch(uuid):      # a name goes in a file path only when it is a real UUID
         with contextlib.suppress(OSError):
             seen = (panel.root / "world" / "players" / "data" / f"{uuid}.dat").stat().st_mtime
-    ticks = desk._play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json") if uuid else None
+        ticks = desk._play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
     return {"name": shown, "known": uuid is not None, "last_seen": seen,
             "hours": None if ticks is None else round(ticks / staff_desk.TICKS_PER_HOUR, 1),
             "whitelisted": listed("whitelist.json") is not None, "op": listed("ops.json") is not None,
@@ -478,7 +497,7 @@ NEEDS = {
     ("GET", "/api/block-history"): "moderator",
     ("GET", "/api/mod-updates"): "admin",
     ("GET", "/api/player-history"): "moderator",
-    ("POST", "/api/command"): "moderator",      # a moderator's command is checked against the list: ROLE_GUARDS
+    ("POST", "/api/command"): "moderator",      # below admin, a command is checked against the list: ROLE_GUARDS
 }
 
 
@@ -489,4 +508,10 @@ def register(module) -> None:
     module.ROUTES.update(ROUTES)
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
-    module.ROLE_GUARDS[("POST", "/api/command", "moderator")] = lambda panel, body: mod_commands(panel).guard(body)
+    module.ROLE_GUARDS[("POST", "/api/command")] = guard_command
+
+
+def guard_command(panel, role: str, body: dict) -> None:
+    """Every role below admin (moderator today, any new one later) runs only the commands on the list."""
+    if sp.ROLES.index(role) < sp.ROLES.index("admin"):
+        mod_commands(panel).guard(body)

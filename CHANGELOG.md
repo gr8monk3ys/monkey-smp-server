@@ -29,8 +29,8 @@
   Ledger web look-ups, LiteBans-style player history, Modrinth update checks). New `tools/staff_lookup.py` and
   `deploy/staff/lookup.js`:
   - Console: **moderators can use the console** for the commands on a list the owner sets (`list`, `say`, `msg`,
-    `kick`, `whitelist add`... by default). Commands that run other commands, make operators or stop the server can
-    never be on it. Before, a moderator login couldn't send any command.
+    `kick`, `whitelist add`... by default). Commands that run other commands, make operators, can place a command
+    block or stop the server can never be on it. Before, a moderator login couldn't send any command.
   - Players: **a player's history** on one page: lists, ban and reason, temporary ban, notes and every staff change
     that names them.
   - Players: **who changed this block**, from Ledger's record, read-only, for a block or up to 8 blocks around it.

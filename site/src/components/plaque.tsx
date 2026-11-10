@@ -31,8 +31,8 @@ function useCopy(address: string, code: RefObject<HTMLElement | null>) {
   return { said, copy };
 }
 
-/** The server address on its stone plaque, with Copy. The first one on a page (`first`) carries the ids the
- * tools and the dock look for; the ones in the closing section and the footer don't repeat them. */
+/** The server address on its stone plaque, with Copy. A page can show it more than once, and an id must be
+ * unique, so only the first one on a page (`first`) carries the ids. Nothing looks them up today. */
 export function Plaque({ address, first = true }: { address: string; first?: boolean }) {
   const code = useRef<HTMLElement>(null);
   const { said, copy } = useCopy(address, code);

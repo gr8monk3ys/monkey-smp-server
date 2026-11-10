@@ -141,7 +141,9 @@ function renderVerdict(now) {
   const fresh = d && now - Date.parse(d.checked) <= STALE_MS;
   const nobody = fresh && d.online && d.players && d.players.count === 0;
   // For the Server tab's stop and restart steps (panel.js): how many players a stop would disconnect.
+  // A fresh reading of a stopped server is a known zero; no fresh reading is "not known" (no value).
   if (fresh && d.online && d.players) document.body.dataset.players = String(d.players.count);
+  else if (fresh && !d.online) document.body.dataset.players = "0";
   else delete document.body.dataset.players;
   $("note").hidden = !nobody;
   $("note").textContent = nobody ? "Nobody is on, so the server has little to do. These numbers will look different with a crowd." : "";

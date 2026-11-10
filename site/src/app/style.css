@@ -506,7 +506,7 @@ footer .small { margin: 0; }
   .dock-address span { min-width: 0; font-size: 0.75rem; text-align: left; }
 }
 
-/* The front page's seven links stay on one line down to a 360 px phone. */
+/* The nav's six links stay on one line down to a 360 px phone. */
 @media (max-width: 420px) {
   .canopy nav a { padding-inline: 3px; }
 }

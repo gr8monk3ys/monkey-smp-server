@@ -249,7 +249,11 @@ backup() {
         rcon 'save-all flush' >/dev/null || die 'save-all flush failed'
         sleep 3
     else
-        if ids=$(compose ps -q --status running monkey 2>/dev/null) && [ -z "$ids" ]; then
+        # Stopped only when nothing runs and the container ended the way a stop ends (exit 0, or 130/143 after
+        # SIGINT/SIGTERM), or there is none; a crash, a kill (137) or a restart loop may have cut a save short.
+        if ids=$(compose ps -q --status running monkey 2>/dev/null) && [ -z "$ids" ] &&
+            ended=$(compose ps -a --format '{{.State}} {{.ExitCode}}' monkey 2>/dev/null) &&
+            case $ended in '' | 'exited 0' | 'exited 130' | 'exited 143') true ;; *) false ;; esac; then
             kind=stopped
             log 'the server is stopped: it saved everything as it stopped; backing up its world as it is (tag: stopped)'
         else

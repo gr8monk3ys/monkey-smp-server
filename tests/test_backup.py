@@ -22,7 +22,8 @@ def backup(tmp_path):
     bin_dir, calls = tmp_path / "bin", tmp_path / "calls"
     bin_dir.mkdir()
     fakes = {
-        "docker": 'case " $* " in *" rcon "*) exit "${FAKE_RC_rcon:-0}" ;; *" ps "*) printf "${FAKE_PS-}"; '
+        "docker": 'case " $* " in *" rcon "*) exit "${FAKE_RC_rcon:-0}" ;; *" ps -a "*) printf "${FAKE_ENDED-}" ;;\n'
+                  '  *" ps "*) printf "${FAKE_PS-}"; '
                   'exit "${FAKE_RC_ps:-0}" ;; esac',
         "restic": 'case " $* " in *" --no-lock "*) echo "key=${AWS_ACCESS_KEY_ID-}" ;; esac\n'
                   'exit "${FAKE_RC_restic:-0}"',
@@ -93,6 +94,18 @@ def test_a_running_server_that_does_not_answer_is_backed_up_unflushed_and_staff_
     # It answers again: whole copies, and the count starts over.
     code, out, calls = backup()
     assert code == 0 and " --tag world --exclude " in sent(calls)
+
+
+@pytest.mark.parametrize("ended", ["exited 0", "exited 143", ""])
+def test_a_container_that_stopped_cleanly_is_stopped(backup, ended):
+    _, _, calls = backup(FAKE_RC_rcon="1", FAKE_PS="", FAKE_ENDED=ended, RCON_TRIES="1")
+    assert " --tag stopped " in sent(calls)
+
+
+@pytest.mark.parametrize("ended", ["exited 137", "exited 1", "restarting 137", "dead 0"])
+def test_a_container_that_crashed_or_restarts_is_unflushed_not_stopped(backup, ended):
+    _, _, calls = backup(FAKE_RC_rcon="1", FAKE_PS="", FAKE_ENDED=ended, RCON_TRIES="1")
+    assert " --tag unflushed " in sent(calls)
 
 
 def test_docker_that_cannot_say_is_unflushed_not_stopped(backup):

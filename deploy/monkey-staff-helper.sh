@@ -50,6 +50,7 @@ LOCK_WAIT=${HELPER_LOCK_WAIT:-1800}
 HERE=$(cd "$(dirname -- "$0")" && pwd)
 BACKUP=${HELPER_BACKUP:-$HERE/monkey-backup.sh}
 ROOT_TOOLS=${HELPER_TOOLS:-$HERE/../tools}
+BACKUP_LOCK=${MONKEY_BACKUP_LOCK:-/run/monkey-backup.lock}
 KEEP_RESULTS=50
 
 [ "$(id -u)" = 0 ] || die 'run as root (monkey-staff-helper.service does)'
@@ -208,7 +209,9 @@ do_restore() {
     result "$r_id" restore running "Restoring snapshot $short beside the live world. The server keeps running for now."
     # Beside the world, on the same disk, so the swap is a rename; the server is still up while restic downloads.
     stage=$(mktemp -d "$LIVE_DIR/.restore.XXXXXX") || { job_failed "$r_id" restore 'Could not make a folder beside the world.'; return 0; }
-    if ! timeout 3h sh "$BACKUP" --restic-read restore "$r_snap:$server/$level" --target "$stage/world"; then
+    # --restic-read takes no restic lock, so the backup lock keeps the hourly forget and prune away meanwhile.
+    if ! flock -w 3600 "$BACKUP_LOCK" timeout 3h sh "$BACKUP" --restic-read restore "$r_snap:$server/$level" \
+        --target "$stage/world"; then
         job_failed "$r_id" restore "restic could not restore snapshot $short: see journalctl -u monkey-staff-helper."
         return 0
     fi

@@ -136,7 +136,7 @@ def test_a_settings_save_changes_only_those_keys_and_keeps_the_secrets(apex):
 
 
 def test_values_sent_back_unchanged_keep_their_lines_byte_for_byte(apex):
-    text = ("#Minecraft server properties\n# odd\x0c comment  here\n"
+    text = ("#Minecraft server properties\n# odd\x0c commentâ€¨ here\n"
             "motd=line one\\nline two\r\n"
             "pvp=TRUE\n"
             "max-players=30\n"
@@ -315,7 +315,10 @@ def test_the_helper_script_is_plain_posix_sh_with_a_fixed_allow_list():
 HELPER_FAKES = {
     "id": "echo 0",
     "sleep": 'echo "sleep $*" >>"$FAKE_CALLS"',
-    "flock": 'echo "flock $*" >>"$FAKE_CALLS"',
+    # flock FD, or flock FILE CMD...: runs CMD.
+    "flock": 'echo "flock $*" >>"$FAKE_CALLS"\n'
+             'while :; do case $1 in -w) shift 2 ;; -*) shift ;; *) break ;; esac; done\n'
+             'shift\n[ $# -eq 0 ] || exec "$@"',
     "runuser": 'while [ "$1" != -- ]; do shift; done\nshift\nexec "$@"',
     "chown": 'echo "chown $*" >>"$FAKE_CALLS"',
     "stat": 'case "$*" in *%U*) echo monkey ;; *) exec /usr/bin/stat "$@" ;; esac',
@@ -462,9 +465,11 @@ def test_the_helper_restores_a_snapshot_and_keeps_the_old_world(helper):
     assert f"{snap}:{helper.live.as_posix()}/server/world" in done.calls[restore]
     stop = next(i for i, c in enumerate(done.calls) if c.endswith("stop monkey"))
     start = next(i for i, c in enumerate(done.calls) if c.endswith("up -d --no-build monkey"))
-    lock = next(i for i, c in enumerate(done.calls) if c.startswith("flock"))
-    # Downloaded while the server ran; the swap is under the lock, between the stop and the start.
-    assert restore < lock < stop < start
+    held = next(i for i, c in enumerate(done.calls) if c.startswith("flock") and "backup.lock" in c)
+    lock = next(i for i, c in enumerate(done.calls) if c.startswith("flock") and "backup.lock" not in c)
+    # Downloaded under the backup lock (no forget or prune meanwhile) while the server ran; the swap is under the
+    # deploy lock, between the stop and the start.
+    assert held < restore < lock < stop < start
 
 
 def test_a_failed_restore_leaves_the_world_and_the_server_alone(helper):

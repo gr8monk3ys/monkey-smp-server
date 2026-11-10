@@ -58,6 +58,8 @@ def run(tmp_path):
     for f in files:
         (src / f).parent.mkdir(parents=True, exist_ok=True)
         (src / f).write_text(f"# {f} v2\n", newline="\n")
+    for script in ("monkey-logs.sh", "monkey-alert.sh"):   # the deployed checkout (REPO_DIR is src here) has them
+        (src / "deploy" / script).write_text("#\n", newline="\n")
     for u in ("monkey-backup.service", "monkey-backup.timer", "monkey-logs.timer", "monkey-other.service"):
         (src / "deploy" / u).write_text(f"[Unit]\n# {u} v2\n", newline="\n")
     fakes = {
@@ -168,3 +170,10 @@ def test_check_lists_what_differs_and_changes_nothing_for_any_user(run):
     run()
     code, out, _ = run("--check", FAKE_UID="1000")
     assert code == 0 and out == [f"[install-root] root's copies and the units match {msys(run.src)}"]
+
+
+def test_the_log_timer_waits_for_a_checkout_that_has_its_scripts(run):
+    (run.src / "deploy" / "monkey-logs.sh").unlink()
+    code, out, calls = run()
+    assert code == 0 and not any("enable" in c for c in calls)
+    assert any("run this again once it is live" in line for line in out)

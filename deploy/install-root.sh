@@ -156,7 +156,12 @@ if [ -n "$changed" ]; then
         esac
     done
 fi
-systemctl enable --now monkey-logs.timer >/dev/null 2>&1 || log 'WARNING: could not start monkey-logs.timer'
+# The alert and log units run as monkey from the deployed checkout: start them only once it has their scripts.
+if [ -f "$REPO_DIR/deploy/monkey-logs.sh" ] && [ -f "$REPO_DIR/deploy/monkey-alert.sh" ]; then
+    systemctl enable --now monkey-logs.timer >/dev/null 2>&1 || log 'WARNING: could not start monkey-logs.timer'
+else
+    log "NOTE: $REPO_DIR has no monkey-logs.sh or monkey-alert.sh yet (the deploy hasn't brought $tag): run this again once it is live, to start monkey-logs.timer"
+fi
 printf '%s %s\n' "$tag" "$commit" >"$ROOT_DEST/INSTALLED.new"
 mv -f "$ROOT_DEST/INSTALLED.new" "$ROOT_DEST/INSTALLED"
 log "done: root's copies are $tag ($copied file(s) changed), units changed:${changed:- none}"

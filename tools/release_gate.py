@@ -80,12 +80,14 @@ def why_not(commit: str, tag: str | None, repo: str = REPO, urlopen=urllib.reque
         release = get(f"/repos/{repo}/releases/tags/{urllib.parse.quote(tag)}", urlopen)
         if release is None:
             return f"{tag} has no published release on GitHub yet"
+        if not isinstance(release, dict):
+            raise CantTell("GitHub's release was not in the shape expected")
         if release.get("draft") or release.get("prerelease"):
             return f"{tag}'s release is a draft or a pre-release"
         if release.get("tag_name") != tag:
             raise CantTell("GitHub's release was not in the shape expected")
         tagged = get(f"/repos/{repo}/commits/{urllib.parse.quote(tag)}", urlopen)
-        sha = (tagged or {}).get("sha")
+        sha = tagged.get("sha") if isinstance(tagged, dict) else None
         if not isinstance(sha, str) or not SHA.fullmatch(sha):
             raise CantTell(f"GitHub did not say which commit {tag} is")
         if sha != commit:

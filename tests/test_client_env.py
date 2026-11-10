@@ -5,12 +5,16 @@ from pathlib import Path
 import pytest
 
 import client_env
+import entries
 from repo import REPO, load_json
 
 FACTS = load_json(Path(__file__).parent / "fixtures" / "client_mods.json")
 INDEX = load_json(REPO.client / "modrinth.index.json")
-MODS = {client_env.project_id(f): f for f in INDEX["files"] if f["path"].startswith("mods/")}
-SERVER = {e["project_id"] for e in REPO.load_manifest()["mods"]}
+MANIFEST = REPO.load_manifest()
+# The server's GitHub pins (ADR-0009) are not Modrinth projects: always required, and no facts are recorded.
+PINNED = [f for f in INDEX["files"] if entries.github_pin_of(f, MANIFEST)]
+MODS = {client_env.project_id(f): f for f in INDEX["files"] if f["path"].startswith("mods/") and f not in PINNED}
+SERVER = {e["project_id"] for e in MANIFEST["mods"] if not entries.is_github(e)}
 REQUIRED = sorted(pid for pid in MODS if pid not in client_env.OPTIONAL_MODS)
 RECORD = "re-record tests/fixtures/client_mods.json with `python -I tests/fixtures/record_client_mods.py`"
 
@@ -31,6 +35,12 @@ def test_facts_cover_exactly_the_mods_in_the_pack():
 
 def test_the_index_marks_exactly_what_client_env_says():
     assert client_env.check(INDEX) == []
+
+
+def test_github_pins_are_required():
+    """They add blocks and items, so a player without one is refused at the door."""
+    assert None not in MODS  # every other mod is a Modrinth project
+    assert all(f["env"] == {"client": "required", "server": "unsupported"} for f in PINNED)
 
 
 def test_every_optional_mod_is_in_the_pack_with_a_known_kind():

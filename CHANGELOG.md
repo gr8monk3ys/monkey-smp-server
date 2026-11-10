@@ -4,6 +4,17 @@
 
 ### Added
 
+- Patina & Chime 0.2.0, the owner's own copper and amethyst mod, on the server and in the players' pack. It is
+  still waiting for Modrinth's moderation, so it is pinned from its GitHub release instead: size and hash in the
+  manifest, downloaded and checked on install like every other mod (ADR-0009). Players need the new pack to
+  join, because the mod adds blocks and items. Known on this server: its shatter note breaks amethyst clusters
+  with no player behind it, so a land claim can't refuse it (read from the mod's code, not tried in a claim; the
+  mod's 0.2.1 adds a game rule that turns the note off), and shard enchanting is off next to Easy Magic
+  (`docs/MAINTAINING.md`, "Our own mods, pinned from GitHub").
+- `tools/pin_github.py <mod> <tag> <jar>` pins a release of one of our own mods in the manifest and the players'
+  pack together. `validate.py` accepts a GitHub download only for the repositories in `entries.GITHUB_PINS`, only
+  as the exact release URL, and in the players' pack only as a copy of the server's pin; the update check, `add.py`
+  and the snapshots leave such a pin alone.
 - **The website has a privacy policy and terms of service** (`/privacy`, `/terms`), linked from every page's
   footer. The privacy policy says what the site, the game server, the store and Discord record, who handles it,
   how long backups last and how to get data copied or deleted. The terms cover who can play (13 and over),

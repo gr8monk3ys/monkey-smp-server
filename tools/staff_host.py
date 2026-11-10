@@ -652,26 +652,29 @@ class Host:
         return {"file": name, "client_side": noted, "in_players_pack": in_pack}
 
     def _client_pack(self) -> dict | None:
-        """The players' pack, client/modrinth.index.json in the repo checkout: its jar names and {Modrinth project:
-        client env}, or None when it can't be read."""
+        """The players' pack, client/modrinth.index.json in the repo checkout: its jar names, {Modrinth project:
+        client env} and {jar name: client env} (a mod of ours pinned from GitHub has no project, ADR-0009), or None
+        when it can't be read."""
         try:
             data = json.loads((self.p.repo / "client" / "modrinth.index.json").read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             return None
         if not isinstance(data, dict) or not isinstance(data.get("files"), list):
             return None
-        files, projects = set(), {}
+        files, projects, by_name = set(), {}, {}
         for f in data["files"]:
             if not isinstance(f, dict) or not isinstance(f.get("path"), str):
                 continue
-            files.add(f["path"].rsplit("/", 1)[-1])
+            name = f["path"].rsplit("/", 1)[-1]
+            files.add(name)
             env = f.get("env") if isinstance(f.get("env"), dict) else {}
             client = env.get("client") if env.get("client") in SIDES else "required"   # no env: every client has it
+            by_name[name] = client
             for url in f.get("downloads") or []:
                 m = CDN_PROJECT.match(url) if isinstance(url, str) else None
                 if m:
                     projects[m.group(1)] = client
-        return {"files": files, "projects": projects}
+        return {"files": files, "projects": projects, "by_name": by_name}
 
     def _context(self) -> dict:
         """What _notes_for reads, read once for a whole list."""
@@ -689,6 +692,8 @@ class Host:
         project = (side or {}).get("project") or (entry.get("project_id") if isinstance(entry.get("project_id"), str)
                                                    else None)
         client = side["client"] if side else projects.get(project, "unknown")
+        if client == "unknown" and not side and pack and entry.get("file") == base and "github" in entry:
+            client = pack["by_name"].get(base, "unknown")      # our own mod: the pack holds this very file
         h = ctx["held"].get(slug) if slug else None
         return {"held": {"by": clean(h.get("by"), 40), "at": clean(h.get("at"), 40),
                          "why": clean(h.get("why"), WHY_MAX)} if h is not None else None,

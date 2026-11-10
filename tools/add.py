@@ -24,7 +24,7 @@ def add(manifest: dict, kind: str, slugs: list[str], upstream: Upstream) -> tupl
     if not entries.kind_allowed(server_type, kind):
         raise SystemExit(f"a {server_type} server can't run {group}")
     current = entries.group(manifest, kind)
-    have = {e["slug"] for e in current} | {e["project_id"] for e in current}
+    have = {e["slug"] for e in current} | {e.get("project_id") for e in current}  # a GitHub pin has no project
     projects = {p["slug"]: p for p in upstream.modrinth_projects(slugs).values()}
     missing = [s for s in slugs if s not in projects]
     if missing:

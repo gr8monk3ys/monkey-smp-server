@@ -4,7 +4,7 @@ import shutil
 import zipfile
 
 import pytest
-from conftest import PLAYER_FILES, fake_player, make_zip, patched_entry
+from conftest import PLAYER_FILES, fake_player, github_client_file, github_pin, make_zip, patched_entry
 
 import build
 import defaults
@@ -382,3 +382,83 @@ def test_a_stale_generated_pack_fails_validation(monkeypatch, capsys):
     monkeypatch.setattr(validate.datapacks, "differences", lambda repo: ["package/monkey/datapacks/monkey-x/a"])
     assert validate.main([]) == 1
     assert "monkey-x/a is out of date (run python tools/datapacks.py)" in capsys.readouterr().out
+
+
+# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
+
+PIN_JAR = b"a mod of ours"
+
+
+def pinned_repo(repo, client=True):
+    """`repo` with one GitHub pin in its manifest and (unless client=False) the same file in the players' pack."""
+    pin = github_pin(PIN_JAR)
+    m = repo.load_manifest()
+    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
+    repo.save_manifest(m)
+    path = repo.client / "modrinth.index.json"
+    index = load_json(path)
+    if client:
+        index["files"].append(github_client_file(pin, PIN_JAR))
+        save_json(path, index)
+    return path, index
+
+
+def test_a_github_pin_is_valid_on_the_server_and_in_the_pack(fabric_repo):
+    pinned_repo(fabric_repo)
+    m = fabric_repo.load_manifest()
+    assert validate.validate(m, fabric_repo) == []
+    assert validate.validate_client(m, fabric_repo) == []
+
+
+def test_a_github_pin_is_not_valid_on_a_paper_server(paper_repo):
+    m = paper_repo.load_manifest()
+    m["mods"] = [github_pin(PIN_JAR)]
+    assert validate.validate(m, paper_repo) == ["mods: a paper server can't use mods (1 listed)"]
+
+
+def test_a_github_pin_must_be_in_the_players_pack(fabric_repo):
+    pinned_repo(fabric_repo, client=False)
+    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == [
+        "client: mods/homemade-1.0.jar is missing (the server's GitHub pin patina-and-chime must be in the pack)"]
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda f: f.update(fileSize=f["fileSize"] + 1),
+    lambda f: f["hashes"].update(sha512="0" * 128),
+    lambda f: f.update(downloads=[f["downloads"][0].replace("/v1.0/", "/v1.1/")]),
+    lambda f: f.update(downloads=f["downloads"] + ["https://example.com/homemade-1.0.jar"]),
+    lambda f: f.update(downloads=["https://github.com/someone/else/releases/download/v1.0/homemade-1.0.jar"]),
+])
+def test_the_pack_file_must_be_exactly_the_servers_github_pin(fabric_repo, mutate):
+    path, index = pinned_repo(fabric_repo)
+    mutate(index["files"][-1])
+    save_json(path, index)
+    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
+    assert ("client mods/homemade-1.0.jar: downloads must be Modrinth CDN URLs "
+            "(or be exactly a GitHub pin of the server manifest, ADR-0009)") in errors
+
+
+def test_a_github_download_the_server_does_not_pin_is_refused(fabric_repo):
+    """The pack can't carry a jar from GitHub on its own: only the server's pin, mirrored."""
+    path = fabric_repo.client / "modrinth.index.json"
+    index = load_json(path)
+    index["files"].append(github_client_file(github_pin(PIN_JAR), PIN_JAR))
+    save_json(path, index)
+    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
+    assert len(errors) == 1 and "downloads must be Modrinth CDN URLs" in errors[0]
+
+
+def test_verify_online_downloads_a_github_pin(capsys):
+    pin = github_pin(PIN_JAR)
+    m = copy.deepcopy(REPO.load_manifest())
+    http = RecordedHttp().add("GET", pin["url"], PIN_JAR)
+    for _, jre in entries.java_builds(m):
+        serve(http, jre, jre["file"].encode(), "sha256")
+    serve(http, m["server"], b"server", "sha256")
+    m["mods"] = [pin]
+    m["datapacks"] = []
+    assert validate.verify_online(m, Upstream(http)) == []
+    assert "ok  mod      homemade-1.0.jar" in capsys.readouterr().out
+    http.add("GET", pin["url"], PIN_JAR + b"!")
+    assert validate.verify_online(m, Upstream(http)) == [
+        "mod homemade-1.0.jar: download doesn't match the pinned size/hash"]

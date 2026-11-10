@@ -2,6 +2,7 @@ import copy
 import hashlib
 
 import pytest
+from conftest import github_pin
 
 import entries
 from check_updates import LOADERS
@@ -222,3 +223,65 @@ def test_with_all_groups_adds_mods_after_plugins():
 ])
 def test_kind_allowed(server_type, allowed):
     assert {k for k in entries.GROUPS if entries.kind_allowed(server_type, k)} == allowed
+
+
+# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
+
+PIN_JAR = b"a mod of ours"
+
+
+def test_github_builds_a_valid_pin():
+    pin = github_pin(PIN_JAR)
+    assert pin == {
+        "slug": "patina-and-chime", "github": "gr8monk3ys/patina-and-chime", "tag": "v1.0", "version": "1.0",
+        "file": "homemade-1.0.jar",
+        "url": "https://github.com/gr8monk3ys/patina-and-chime/releases/download/v1.0/homemade-1.0.jar",
+        "size": len(PIN_JAR), "hashes": {"sha512": hashlib.sha512(PIN_JAR).hexdigest()}}
+    assert entries.check("mod", pin) == []
+    assert entries.is_github(pin)
+    assert entries.matches(pin, PIN_JAR) and not entries.matches(pin, PIN_JAR + b"!")
+
+
+def test_only_the_listed_repositories_can_be_pinned():
+    """Adding a repository here is a decision (ADR-0009), not a side effect of another change."""
+    assert entries.GITHUB_PINS == ("gr8monk3ys/patina-and-chime",)
+    assert not any(host.startswith("https://github.com/gr8monk3ys") for host in entries.ALLOWED_HOSTS)
+
+
+def test_github_url_escapes_the_plus_as_github_does():
+    assert entries.github_url("gr8monk3ys/patina-and-chime", "v0.2.0", "patina-and-chime-0.2.0+26.2.jar") == (
+        "https://github.com/gr8monk3ys/patina-and-chime/releases/download/v0.2.0/patina-and-chime-0.2.0%2B26.2.jar")
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (lambda e: e.update(github="someone/else", url=entries.github_url("someone/else", e["tag"], e["file"])),
+     "'someone/else' is not a repository mods may be pinned from"),
+    (lambda e: e.update(url=entries.github_url(e["github"], "v2.0", e["file"])), "url must be https://github.com/"),
+    (lambda e: e.update(url=e["url"].replace("/releases/download/", "/raw/")), "url must be https://github.com/"),
+    (lambda e: e.update(url="https://cdn.modrinth.com/data/abc/versions/def/homemade-1.0.jar"), "url must be "),
+    (lambda e: e.update(project_id="abc"), "a GitHub pin can't also have 'project_id'"),
+    (lambda e: e.update(version_id="def"), "a GitHub pin can't also have 'version_id'"),
+    (lambda e: e.update(hashes={"sha256": "a" * 64}), "a GitHub pin needs a sha512"),
+    (lambda e: e.update(tag=""), "'tag' must be the release's tag"),
+    (lambda e: e.pop("version"), "missing 'version'"),
+    (lambda e: e.pop("tag"), "missing 'tag'"),
+    (lambda e: e.update(size=0), "bad size"),
+    (lambda e: e.update(file="a/b.jar", url=entries.github_url(e["github"], e["tag"], "a/b.jar")),
+     "characters Windows can't use"),
+])
+def test_check_catches_mistakes_in_a_github_pin(mutate, message):
+    pin = github_pin(PIN_JAR)
+    mutate(pin)
+    errors = entries.check("mod", pin)
+    assert any(message in e for e in errors), errors
+
+
+@pytest.mark.parametrize("kind", ["plugin", "datapack"])
+def test_only_a_mod_can_be_a_github_pin(kind):
+    assert entries.check(kind, github_pin(PIN_JAR)) == [
+        f"{kind} homemade-1.0.jar: only a mod can be pinned from a GitHub release (ADR-0009)"]
+
+
+def test_update_refuses_a_github_pin():
+    with pytest.raises(ValueError, match="pinned from GitHub"):
+        entries.updated("mod", github_pin(PIN_JAR), {})

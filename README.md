@@ -128,7 +128,7 @@ tests/                      <- pytest + Pester unit tests, smoke tests (Windows,
 ```
 
 - **Nothing third-party is committed or re-uploaded.** The release zip is ~100 KB of scripts and configs;
-  jars are fetched from Adoptium, Fabric and Modrinth (and PowerShell from Microsoft) on the host's machine ([ADR-0002](docs/adr/0002-download-and-verify-instead-of-redistributing.md)).
+  jars are fetched from Adoptium, Fabric and Modrinth (PowerShell from Microsoft, and the owner's own mod from its GitHub release, [ADR-0009](docs/adr/0009-our-own-mods-may-be-pinned-from-a-github-release.md)) on the host's machine ([ADR-0002](docs/adr/0002-download-and-verify-instead-of-redistributing.md)).
 - **Installs are idempotent.** `monkey.ps1 install` skips files that already match the manifest,
   replaces outdated ones, and removes mods that were dropped from the manifest. Config defaults are only
   copied when the file doesn't exist yet, so the host's edits are never overwritten.

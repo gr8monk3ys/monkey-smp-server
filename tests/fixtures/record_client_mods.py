@@ -2,7 +2,8 @@
 
   python -I tests/fixtures/record_client_mods.py [--jars FOLDER]
 
-For each mods/ file in client/modrinth.index.json this reads the jar's fabric.mod.json (and those of the
+For each mods/ file in client/modrinth.index.json (but the server's GitHub pins, ADR-0009: they are not
+Modrinth projects and are always required) this reads the jar's fabric.mod.json (and those of the
 jars nested inside it) and counts the block, item and entity assets it ships, and asks Modrinth whether
 the project calls its client and server halves required, optional or unsupported. tests/test_client_env.py
 checks tools/client_env.py against these facts. Run it after the client pack gains a mod (the tests say
@@ -24,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 import client_env  # noqa: E402
+import entries  # noqa: E402
 from repo import REPO, load_json  # noqa: E402
 from upstream import LiveHttp, Upstream  # noqa: E402
 
@@ -96,7 +98,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
     up = Upstream(LiveHttp())
     index = load_json(REPO.client / "modrinth.index.json")
-    files = [f for f in index["files"] if f["path"].startswith("mods/")]
+    manifest = REPO.load_manifest()
+    files = [f for f in index["files"] if f["path"].startswith("mods/") and not entries.github_pin_of(f, manifest)]
     projects = up.modrinth_projects(client_env.project_id(f) for f in files)
     facts = {}
     for f in files:

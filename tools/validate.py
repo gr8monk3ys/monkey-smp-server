@@ -110,8 +110,10 @@ def validate_client(manifest: dict, repo=REPO) -> list[str]:
     if index["dependencies"].get("minecraft") != manifest["minecraft"]:
         errors.append("client: minecraft version differs from the server manifest")
     for f in index["files"]:
-        if not f["downloads"] or not all(u.startswith("https://cdn.modrinth.com/") for u in f["downloads"]):
-            errors.append(f"client {f['path']}: downloads must be Modrinth CDN URLs")
+        modrinth = f["downloads"] and all(u.startswith("https://cdn.modrinth.com/") for u in f["downloads"])
+        if not modrinth and not entries.github_pin_of(f, manifest):
+            errors.append(f"client {f['path']}: downloads must be Modrinth CDN URLs "
+                          "(or be exactly a GitHub pin of the server manifest, ADR-0009)")
         if f["path"].startswith(("/", "..")) or ".." in f["path"].split("/"):
             errors.append(f"client {f['path']}: unsafe path")
     # Two versions of one mod: Fabric refuses to start (or picks one) when two jars have the same mod id.
@@ -122,6 +124,10 @@ def validate_client(manifest: dict, repo=REPO) -> list[str]:
             by_project.setdefault(m.group(1), []).append(f["path"])
     errors += [f"client: {' and '.join(sorted(paths))} are the same Modrinth project (keep one version)"
                for paths in by_project.values() if len(paths) > 1]
+    # A GitHub pin is a mod of ours that adds blocks or items: a player without it can't join.
+    paths = {f["path"] for f in index["files"]}
+    errors += [f"client: mods/{e['file']} is missing (the server's GitHub pin {e.get('slug')} must be in the pack)"
+               for e in entries.group(manifest, "mod") if entries.is_github(e) and f"mods/{e.get('file')}" not in paths]
     errors += client_env.check(index)  # which files a player may untick (optional) and which they need
     return errors + validate_profile(index, repo)
 

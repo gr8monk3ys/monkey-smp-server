@@ -329,7 +329,7 @@ Stone blocks with an ink title in the display face, ink body text and ink links,
 A 2 px ink outline clipped to the stair shape, the image 16:9 and covering, a where tag in the corner, and a sage caption under it. The trailer uses the same frame.
 
 ### Navigation
-The header is a canopy-leaf band with the logo (48 px tall, 32 px on phones) on the left and bone, bold, underline-free links on the right; hover underlines them 6 px below the text. The canopy fringe hangs from its bottom edge. On phones the links wrap under the logo with tighter padding. Every page has the same six links (Join, Pricing, Rules, Guide, Map, News); the current page's link keeps its underline.
+The header is a canopy-leaf band with the logo (48 px tall, 32 px on phones) on the left and bone, bold, underline-free links on the right; hover underlines them 6 px below the text. The canopy fringe hangs from its bottom edge. On phones the links wrap under the logo with tighter padding. Every page of the site has the same six links (Join, Pricing, Rules, Guide, Map, News); the current page's link keeps its underline. The Wrapped pages (`tools/wrapped.py`) are the exception: they keep their own three links (Everyone, Rules, What changed).
 
 The footer is the same on every page: the logo and the address plaque, then three short lists of links (Play, Read, Talk) under sage body-face labels, then the Mojang line.
 

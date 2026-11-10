@@ -692,9 +692,15 @@
   for (const node of document.querySelectorAll("[data-power]")) {
     node.addEventListener("click", () => {
       const action = node.dataset.power;
-      // staff.js leaves the latest player count on the body while its reading is fresh.
-      const on = action === "start" ? 0 : Number(document.body.dataset.players || 0);
-      const who = on > 0 ? ` ${on === 1 ? "1 player is" : `${on} players are`} on right now.` : "";
+      // staff.js leaves the latest player count on the body while its reading is fresh. With no fresh reading
+      // the step says so: silence would read as "nobody is on".
+      const count = document.body.dataset.players;
+      const on = Number(count || 0);
+      let who = "";
+      if (action !== "start") {
+        if (count === undefined) who = " The page can't tell how many players are on right now.";
+        else if (on > 0) who = ` ${on === 1 ? "1 player is" : `${on} players are`} on right now.`;
+      }
       confirmStep("server", POWER[action][0] + who, POWER[action][1], () => doPower(action));
     });
   }
@@ -726,7 +732,12 @@
     for (const a of $("tabs").children) {
       if (a.dataset.tab === current) {
         a.setAttribute("aria-current", "page");
-        a.scrollIntoView({ block: "nearest", inline: "nearest" });   // the row of tabs scrolls sideways on a phone
+        // The row of tabs scrolls sideways on a phone. Only the row moves: scrollIntoView would also move the
+        // page, because the row is in the sticky bar, inside the page's scroll padding.
+        const row = $("tabs").getBoundingClientRect();
+        const box = a.getBoundingClientRect();
+        if (box.left < row.left) $("tabs").scrollLeft -= row.left - box.left;
+        else if (box.right > row.right) $("tabs").scrollLeft += box.right - row.right;
       } else {
         a.removeAttribute("aria-current");
       }

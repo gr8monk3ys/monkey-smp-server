@@ -9,7 +9,7 @@ export type NavItem = { label: string; href: string } | { label: string; to: Lin
 /** Where a page sits in the site, for the nav: its link is marked as the current page. */
 export type Here = "home" | "guide" | "changes" | "elsewhere";
 
-function Item({ item, current }: { item: NavItem; current?: boolean }) {
+function NavLink({ item, current }: { item: NavItem; current?: boolean }) {
   return "to" in item
     ? <ConfigLink to={item.to}>{item.label}</ConfigLink>
     : <a href={item.href} aria-current={current ? "page" : undefined}>{item.label}</a>;
@@ -36,7 +36,7 @@ export function Canopy({ here = "elsewhere" }: { here?: Here }) {
           <img src="/kit/logo-1392w.png" alt="Monkey SMP" width={261} height={48} />
         </a>
         <nav aria-label="Site">
-          {items.map((item) => <Item key={item.label} item={item} current={item.at === here} />)}
+          {items.map((item) => <NavLink key={item.label} item={item} current={item.at === here} />)}
         </nav>
       </header>
     </>
@@ -92,7 +92,7 @@ export function Footer({ here = "elsewhere" }: { here?: Here }) {
             <nav key={list.title} aria-label={list.title}>
               <h2>{list.title}</h2>
               <ul>
-                {list.items.map((item) => <li key={item.label}><Item item={item} /></li>)}
+                {list.items.map((item) => <li key={item.label}><NavLink item={item} /></li>)}
               </ul>
             </nav>
           ))}

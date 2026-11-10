@@ -197,7 +197,9 @@ if [ -n "$restart" ]; then
         exit 0
     fi
     discord "Daily restart: the server did not answer within ${BOOT_TIMEOUT}s and may be DOWN. Check: journalctl -u monkey-restart" "$STAFF_WEBHOOK_URL"
-    die "the server did not answer within ${BOOT_TIMEOUT}s after the daily restart"
+    # Exit 4: failed, and staff were told just now, so monkey-alert.sh (OnFailure=) posts nothing more.
+    log "ERROR: the server did not answer within ${BOOT_TIMEOUT}s after the daily restart" >&2
+    exit 4
 fi
 
 # ---------------------------------------------------------------- what to deploy
@@ -347,6 +349,12 @@ if restart_and_wait; then
     msg="Monkey SMP is back up on $label."
     [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."
     discord "$msg"
+    # Root runs its own copies (deploy/install-root.sh), which only the owner updates: say when they are behind.
+    stale=$(root_stale "$REPO_DIR" | tr '\n' ' ')
+    if [ -n "$stale" ]; then
+        log "root's copies or units differ from $label: $stale"
+        discord "Monkey SMP $label is live. Root's copies (backup, staff helper, restore drill) or systemd units are from another release: $stale. Owner: sudo sh /opt/monkey/deploy/install-root.sh (docs/LIVE.md, \"Root's own copies\")" "$STAFF_WEBHOOK_URL"
+    fi
     exit 0
 fi
 
@@ -357,8 +365,8 @@ if [ -n "$deployed" ]; then
     sync_package "$deployed"
     if restart_and_wait; then
         discord "Update to $label failed to start; rolled back to the previous version. The server is up."
-        exit 1
+        exit 4   # failed, and Discord was told: monkey-alert.sh (OnFailure=) posts nothing more
     fi
 fi
 discord "Update to $label failed and the server is DOWN. Check: journalctl -u monkey-deploy"
-exit 1
+exit 4

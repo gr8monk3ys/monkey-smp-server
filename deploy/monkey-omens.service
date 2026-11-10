@@ -2,6 +2,7 @@
 # monkey-omens.timer; install with `sudo sh /srv/monkey/repo/deploy/monkey-omens.sh --install` (docs/LIVE.md).
 [Unit]
 Description=Monkey SMP: omens
+OnFailure=monkey-alert@%n.service
 After=docker.service
 
 [Service]

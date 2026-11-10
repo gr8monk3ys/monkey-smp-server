@@ -3,6 +3,7 @@
 # --install` (docs/LIVE.md, "The staff page").
 [Unit]
 Description=Monkey SMP: staff page controls
+OnFailure=monkey-alert@%n.service
 After=network.target docker.service
 
 [Service]

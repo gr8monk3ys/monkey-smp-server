@@ -24,6 +24,18 @@ can join again. A release tag is the point where both exist: the release workflo
 (billing), and the VPS pulls rather than being pushed to, so nothing here depends on Actions or on an
 SSH key into the server.
 
+### The release gate
+
+A tag alone doesn't go live. Before a deploy warns anyone, backs up or copies a file, it asks
+`tools/release_gate.py`: GitHub must have a **published** release for that tag (not a draft), the release must
+point at the tagged commit, and CI must have passed on that commit. "Not yet" and "can't tell" (GitHub down, a
+rate limit) both mean the deploy waits; the next run asks again. A tag pushed by mistake, or one whose CI failed,
+never goes live. `--status` shows the gate's answer. Protect `v*` tags on GitHub too (a tag ruleset), so a tag
+can't be moved to another commit.
+
+Emergency only: `RELEASE_GATE=off` in `/etc/monkey-deploy.env` lets every tag through (GitHub is down and a fix
+can't wait). Put it back to `on` straight after. `install-root.sh` says so while it is off.
+
 ## The machine
 
 One fast core matters more than anything else (docs/ADMIN.md, "How many players"): a current Ryzen
@@ -116,7 +128,9 @@ Running now (since October 2026): a Reizor Hosting "Ryzen 9 9950X VPS 16GB" in D
 | This week's standings so far | `sh /srv/monkey/repo/deploy/monkey-standings.sh show` (changes nothing); log: `journalctl -u monkey-standings -u monkey-standings-board -n 50` |
 | The Sunday recap, as it would post now | `sh /srv/monkey/repo/deploy/monkey-standings.sh preview` (changes nothing) |
 | Backup log (as root) | `journalctl -u monkey-backup -n 50` |
-| Off-site snapshots (as root) | `sh /srv/monkey/repo/deploy/monkey-backup.sh --restic snapshots` |
+| Off-site snapshots (as root) | `sh /opt/monkey/deploy/monkey-backup.sh --restic snapshots` |
+| Is a release cleared to go live? | `--status` above prints a `gate:` line for a release that isn't live yet ("The release gate") |
+| Old server logs | `sh /srv/monkey/repo/deploy/monkey-logs.sh --check` lists what the daily prune would delete ("Log pruning") |
 
 Logged in as root, become `monkey` for these, for example
 `runuser -u monkey -- sh /srv/monkey/repo/deploy/monkey-deploy.sh --now`. As root the deploy stops at
@@ -127,6 +141,76 @@ If a new release doesn't answer within `BOOT_TIMEOUT`, the script puts the previ
 it, posts to Discord, and skips the failed commit until a newer one appears. The world backup it took
 before the update is the newest folder in `backups/`. To try a skipped commit again (say, once the cause is
 fixed), delete `.deploy-failed` in `/srv/monkey/MonkeySMP-Server` and run the deploy with `--now`.
+
+## The server is down
+
+One page for when players say they can't join. Work down the list; stop at the first thing that explains it.
+All on the VPS over SSH, as `monkey` unless it says root.
+
+1. **Is it really down?** Uptime Kuma's Discord channel says since when. Then
+   `cd /srv/monkey/MonkeySMP-Server/docker && docker compose ps`.
+   - `Up`, and players still can't join: go to 5.
+   - `Restarting`, `Exited` or missing: go to 2.
+2. **Is a deploy, the daily restart or a backup running?** `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status`
+   and `systemctl list-units 'monkey-*' --state=activating`. One of them can hold the server down for up to 15
+   minutes. Wait for it; don't start the server by hand while one runs.
+3. **Why did it stop?** `docker compose logs --tail 200 monkey`. Common causes:
+   - `OutOfMemoryError`, or the container killed with code 137: memory. Run `free -g`, and check `MEMORY_GB` in
+     `docker/.env` against the 16 GB.
+   - A mod error at start: a release went live that doesn't start. The deploy rolls back by itself after
+     `BOOT_TIMEOUT`; read `journalctl -u monkey-deploy -n 100`.
+   - `No space left on device`: `df -h /srv`. Delete old folders in `/srv/monkey/MonkeySMP-Server/backups/`
+     (never `server/`).
+4. **Start it.** `docker compose up -d`, then `docker compose logs -f monkey` until `Done`. Then
+   `docker compose exec monkey monkey rcon list`.
+5. **Up, but nobody can join.**
+   - DNS: `dig +short SRV _minecraft._tcp.monkeysmp.lscaturchio.xyz` names `play.monkeysmp.lscaturchio.xyz`,
+     and `dig +short play.monkeysmp.lscaturchio.xyz` is the VPS address.
+   - Firewall: `sudo ufw status` lists 25565/tcp.
+   - The provider: their status page. A network or host problem is theirs.
+6. **The machine itself is gone** (no SSH, the provider says hours): run the home PC ("Fallback: home PC on
+   playit.gg") from the newest backup. Only one copy may run the world at a time.
+7. **Tell players.** One line in Discord: what is down, since when, and when you will look again.
+8. **After.** Check that backups ran (`journalctl -u monkey-backup -n 20`, as root) and write one line in the
+   staff channel on what happened.
+
+Failure alerts ("Monitoring, the daily restart and the update check") post to the staff channel when any
+`monkey-*` job fails. The line names the unit and the `journalctl` command to read.
+
+## Root's own copies
+
+The off-site backup, the staff page's helper and the restore drill run as root. Root runs only copies that root
+owns, in `/opt/monkey` (`deploy/` and `tools/`), never the checkout in `/srv/monkey/repo`. That checkout
+belongs to `monkey`. A script there that root ran would let anyone who gets in as `monkey` (or through the
+staff page) run code as root.
+
+`deploy/install-root.sh` makes and updates the copies, as root. It fetches the release from GitHub into root's
+own clone, `/opt/monkey/src`, asks the release gate, copies the files, and installs the systemd units that
+changed. It also installs the new units it knows (the failure alert, log pruning and the restore drill) and starts
+the log pruning timer. It never enables the restore drill's timer. It never touches the world, the backups or the
+settings.
+
+The first time, as root:
+
+```sh
+install -d -m 755 -o root -g root /opt/monkey
+git clone https://github.com/gr8monk3ys/monkey-smp-server.git /opt/monkey/src
+sh /opt/monkey/src/deploy/install-root.sh
+```
+
+After that, when a release changes them (the deploy posts "Root's copies ... are from another release" to the
+staff channel):
+
+```sh
+sh /opt/monkey/deploy/install-root.sh --check     # what would change; any user, changes nothing
+sudo sh /opt/monkey/deploy/install-root.sh        # the newest release; --tag=vX.Y.Z for another
+```
+
+`/opt/monkey/INSTALLED` holds the release and commit that are installed.
+
+Not covered yet: `--install` of the timed jobs and of the staff page (`monkey-staff.sh --install`) still copy
+their units from `/srv/monkey/repo` when root runs them. Those units run as `monkey`, so a changed unit gives
+`monkey` little it didn't have, but read the diff before you run them.
 
 ## One-off steps when upgrading
 
@@ -712,8 +796,29 @@ also sends the live server folder, encrypted, to a Cloudflare R2 bucket with [re
 6. `restic check --read-data-subset=5%` reads back a random 5% of the stored data and checks it, so damage in
    the bucket shows up within days instead of at restore time.
 
-When backups fail, or the server hasn't answered for 3 hours, it posts to the Discord webhook in
-`/etc/monkey-deploy.env`, once, and again when they work. A deploy still backs up into `backups/` before it
+When backups fail it posts to the staff webhook in `/etc/monkey-deploy.env` (`STAFF_WEBHOOK_URL`, else
+`DISCORD_WEBHOOK_URL`), once, and again when they work.
+
+**When the server doesn't answer.** The backup asks the server (`list`) up to 4 times, 30 seconds apart. If it
+still gets no answer, it backs up anyway instead of skipping the hour:
+
+- The container is stopped: the files on disk are whole (a stopped server saved as it stopped). The snapshot is
+  tagged `stopped`.
+- The container runs but doesn't answer (a hang, a long start): the files may be up to 5 minutes old (the
+  server's own autosave) and a file may be caught mid-write. The snapshot is tagged `unflushed` and the log says
+  WARNING.
+
+The trade-off: an `unflushed` snapshot may be imperfect, but an hour with no copy at all is worse. The tags keep
+the cost small. Pruning keeps tagged and untagged snapshots apart (`--group-by host,paths,tags`), so an
+`unflushed` one never pushes a whole one out of the 48 hours, days, weeks or months. The restore drill skips
+`unflushed` ones; when you restore by hand, `--restic snapshots` shows the tags, so pick the newest without
+`unflushed` unless that one is much older. On the third silent hour in a row the backup tells staff once. Before
+this change such hours were skipped, and only a 3-hour silence posted.
+
+**The dead-man's ping.** After each good backup it calls `PING_URL` from `/etc/monkey-backup.env`, if set (an
+https check URL, for example healthchecks.io with a 1-hour period and 2 hours' grace). When the pings stop, for
+any reason (the VPS is down, the timer stopped, backups fail), that service emails you. Empty means no ping and
+no error. The URL is never printed or logged. A deploy still backs up into `backups/` before it
 updates, and keeps the newest 3 there (`KEEP_BACKUPS` in `/etc/monkey-deploy.env`): R2 holds the history.
 
 **Cost.** R2's free tier (October 2026) is 10 GB-month of storage, 1 million writes and 10 million reads a
@@ -748,16 +853,16 @@ thousands of operations a month, far under the free amounts, and downloads cost 
 4. **The unit, the first backup and the timer:**
    ```sh
    cp /srv/monkey/repo/deploy/monkey-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload
-   sh /srv/monkey/repo/deploy/monkey-backup.sh --init
+   sh /opt/monkey/deploy/monkey-backup.sh --init
    systemctl start monkey-backup
    systemctl enable --now monkey-backup.timer
    ```
    `--init` creates the repository in the bucket. The first backup sends the whole server folder, so the
    server doesn't save until it is done (players can keep playing); later ones send only the changes.
-   `/srv/monkey/repo` is checked out at the live release, so these files arrive with the first release that
-   has them (or `git checkout --detach origin/main` there as `monkey`: the deploy script decides what is
-   live from its own record, not from that checkout).
-5. **Put the monthly restore drill (below) in your calendar.**
+   Root runs the backup from its own copy in `/opt/monkey`, not from `/srv/monkey/repo` ("Root's own copies"
+   above): install those first.
+5. **The restore drill.** Run it by hand once ("The restore drill on the VPS", below); when it passes, turn on
+   its monthly timer. Do the home PC drill a few times a year too.
 
 The VPS's token can delete (pruning needs to), so the bucket doesn't guard against someone who takes over the
 VPS. For that, now and then copy a drill's restored `server` folder (below) to a disk at home before
@@ -773,7 +878,7 @@ script reads the keys from the settings file, so none go on the command line.
 **On the VPS** (the world broke, or a mistake needs undoing), as root:
 
 ```sh
-sh /srv/monkey/repo/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/restore
+sh /opt/monkey/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/restore
 cd /srv/monkey/MonkeySMP-Server/docker && docker compose stop
 mv ../server/world ../server/world.before-restore && mv /srv/monkey/restore/world ../server/world
 chown -R monkey: ../server/world && docker compose up -d
@@ -786,13 +891,47 @@ is fine.
 
 **On a new VPS**: set it up as in "Set up (once)" above. In step 5, before running the deploy script the
 second time, do steps 2 and 3 of the off-site setup with the values from your password manager, then
-`sh /srv/monkey/repo/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/MonkeySMP-Server/server`
+`sh /opt/monkey/deploy/monkey-backup.sh --restic restore latest:/srv/monkey/MonkeySMP-Server/server --target /srv/monkey/MonkeySMP-Server/server`
 and `chown -R monkey: /srv/monkey/MonkeySMP-Server/server`. Then run the deploy script, and finish with step 4
 of the off-site setup. The Tebex jar comes with the manifest and its key with the restore (`server/mods/tebex`). The new VPS carries on the same series of snapshots.
 
-### Monthly restore drill (home PC)
+### The restore drill on the VPS
 
-Once a month, restore the newest snapshot onto the home PC and start it there. It proves the backups can be
+`deploy/monkey-restore-drill.sh` (root, its own copy in `/opt/monkey`) proves that the newest backup can be read
+and that the world in it loads. It changes nothing that is live:
+
+1. It checks there is room: free disk for a copy of the server folder and a release plus 1 GB, and free memory
+   for a 2 GB server plus 1 GB. Not enough: it stops before it does anything, and says so.
+2. It restores the newest snapshot that is not tagged `unflushed` into a new folder under `/var/tmp`
+   (`monkey-drill.XXXXXX`, root only). It reads R2 only through `monkey-backup.sh --restic-read`, which runs
+   only `snapshots`, `ls` and `restore`, with `--no-lock`, and with the read-only token when
+   `READ_AWS_ACCESS_KEY_ID` is set. So it writes nothing to the bucket.
+3. It checks the restored world: `level.dat` and region files.
+4. It copies in the live release's files (read only; the live `docker/.env` is left out) and boots the copy in
+   its own container, `monkey-drill-<time>`, with **no network** (`--network none`): no port, no Discord bot, no
+   store, no players. It is a separate container, not the live one.
+5. It waits up to 15 minutes for the copy to answer, then reads the world's clock. A pass needs the clock at or
+   past the one saved in `level.dat`: the world loaded; it didn't start a new one.
+6. It stops and removes the container, deletes the folder, and posts PASSED or FAILED with the snapshot's time
+   to the staff webhook.
+
+Run it by hand the first time, as root (about 10 to 25 minutes; my guess, not timed on the VPS):
+
+```sh
+systemctl start monkey-restore-drill && journalctl -u monkey-restore-drill -n 40
+```
+
+A pass ends with `PASSED: snapshot <id> from <time>`. When it passed once, turn on the monthly run (the first
+Monday of the month, 11 AM Pacific): `systemctl enable --now monkey-restore-drill.timer`. A drill keeps
+nothing; run it by hand with `DRILL_KEEP=1 sh /opt/monkey/deploy/monkey-restore-drill.sh` to keep the folder to
+look at (then delete it).
+
+It needs the Docker image the live server built (`monkey-smp-monkey`). If the copy can't boot without the
+network (a download the install wants), the drill fails and says so; that is worth knowing too.
+
+### Restore drill on the home PC
+
+A few times a year, restore the newest snapshot onto the home PC and start it there. It proves the backups can be
 read and the world loads, and it rehearses the playit.gg fallback below, which starts the same way.
 
 1. **Make room.** Stop any other Minecraft server on the PC first, test servers included: two servers fight
@@ -976,6 +1115,25 @@ busy. To run the Sunday job now (it still closes only a week at least 3 days old
 
 Both runs also write the public `standings.json` for the website, after the launch ("The website's standings", above).
 A retry of the close writes it again, the same but for `checked`.
+**Failure alerts.** Every `monkey-*` service has `OnFailure=monkey-alert@%n.service`. When one fails, systemd
+starts `monkey-alert@<unit>.service`, which runs `deploy/monkey-alert.sh` as `monkey`. It posts one line to the
+staff webhook: "Monkey SMP: <unit> failed. Check: journalctl -u <unit>". It reuses `STAFF_WEBHOOK_URL` (else
+`DISCORD_WEBHOOK_URL`) from `/etc/monkey-deploy.env`; there is no new secret. Repeats: at most one post per unit
+in 6 hours. More failures in that time are counted, and the next post says how many. A job that exits 4 has
+already told staff itself (a timed job that gave up, a deploy or daily restart that posted "DOWN"), so the alert
+posts nothing for it. The backup and the restore drill post their own results and have no `OnFailure=`. Log:
+`journalctl -u 'monkey-alert@*' -n 20`. `install-root.sh` installs the alert unit.
+
+**Log pruning.** The privacy page says server logs are kept as long as reports, bans and appeals need them, then
+deleted. `monkey-logs.timer` (daily, 4:30 AM UTC) runs `deploy/monkey-logs.sh` as `monkey`. In `server/logs`
+only, it deletes the rolled daily logs (`YYYY-MM-DD-N.log.gz`) older than `LOG_KEEP_DAYS` days, by the date in
+their name, and `debug-N.log.gz` files not written for that long. It never touches `latest.log`, `debug.log` or
+any other folder. `LOG_KEEP_DAYS` is in `/etc/monkey-deploy.env`: default 90, at least 14. The privacy page
+names no number of days yet; when it does, set the same number here. Before a report or appeal that needs an
+older log, copy that file out of `server/logs`. `sh /srv/monkey/repo/deploy/monkey-logs.sh --check` lists what
+the next run deletes. Not covered: the action log (the mod's own database) and Caddy's logs; they follow their
+own settings.
+
 ## The staff page
 
 `https://staff.monkeysmp.lscaturchio.xyz`, behind a password, for the people who run the server. It opens on one
@@ -1319,6 +1477,9 @@ runs at a time. Install it once (owner):
 ```sh
 sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper
 ```
+
+The helper runs root's copies in `/opt/monkey` ("Root's own copies"): install them first. `--install-helper`
+takes its units from root's clone, `/opt/monkey/src`.
 
 - **Version switch**: players are warned (5 minutes if anyone is on), a backup is taken, the server restarts on that
   release's files. The tag is pinned in `/srv/monkey/MonkeySMP-Server/.deploy-pin`, so the nightly deploy stays on it.

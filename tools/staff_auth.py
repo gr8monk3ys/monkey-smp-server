@@ -26,7 +26,7 @@ browser sent itself. The rest of /auth/ is the login page's:
     POST /auth/verify        {token}: confirms an email address
     POST /auth/password      {current, password}: ends this login's other sessions
     POST /auth/email         {current, email}: the new address gets a link; the old one is told
-    POST /auth/2fa/start     a new key, not on yet: {key, link} (an otpauth:// link for the app)
+    POST /auth/2fa/start     a key, not on yet: {key, link, qr, minutes} (an otpauth:// link, the same as a QR code)
     POST /auth/2fa/confirm   {current, code}: turns it on; answers 8 recovery codes, once; ends the other sessions
     POST /auth/2fa/off       {current, code}: a code from the app or a recovery code; ends the other sessions
     POST /auth/2fa/recovery  {current, code}: 8 new recovery codes; the old ones stop working
@@ -123,6 +123,8 @@ PENDING_LIFE = 15 * 60               # a new key, before the first code turns it
 RECOVERY_CODES = 8
 RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"    # no 0/o, 1/l/i: easy to copy from paper
 ISSUER = "Monkey SMP staff"
+KEY_RAN_OUT = ("That key has run out: press Turn on two-step login again for a new one, and delete the old "
+               "Monkey SMP staff account in your app.")
 WRONG_CODE = "That code isn't right. Check that your phone's clock is right, or use a recovery code."
 USED_CODE = "That code was already used: wait for the next one in your app."
 NO_CODE = "Type the 6-digit code from your app, or a recovery code."
@@ -484,6 +486,9 @@ class Auth:
         gone = [k for k, s in data["sessions"].items() if s.get("user") == name and k != keep]
         for k in gone:
             del data["sessions"][k]
+        user = data["users"].get(name)
+        if isinstance(user, dict):
+            user.pop("totp_pending", None)   # a key being set up dies with sessions ended for safety, kept or not
         return len(gone)
 
     def _new_token(self, data: dict, kind: str, name: str, life: float, email: str | None = None) -> str:
@@ -858,17 +863,27 @@ class Auth:
             self._send(user["email"], subject, text)
 
     def two_step_start(self, me: dict) -> dict:
-        """A new key, kept apart until a code from it turns it on: {key in groups of 4, otpauth:// link}."""
-        name = me["user"]
+        """A key, kept apart until a code from it turns it on: {key in groups of 4, otpauth:// link, the link as a QR
+        code, minutes left}. Asking again from the same session while the key is live gives the same key and the
+        time it has left (a second press doesn't break an account already in the app); any other time, a new key.
+        A key is never made to live longer; a password change or reset, or ending sessions, ends it (_end_sessions)."""
+        name, now = me["user"], self.clock()
         with self.store.change() as data:
             user = data["users"][name]
             if user.get("totp"):
                 raise AuthError(409, "Two-step login is already on.")
-            key = new_totp_key()
-            user["totp_pending"] = {"secret": key, "expires": self.clock() + PENDING_LIFE}
+            pending = user.get("totp_pending")
+            if not (isinstance(pending, dict) and pending.get("secret") and pending.get("expires", 0) > now
+                    and pending.get("session") == me["key"]):
+                pending = {"secret": new_totp_key(), "expires": now + PENDING_LIFE, "session": me["key"]}
+                user["totp_pending"] = pending
+        key = pending["secret"]
         label = urllib.parse.quote(f"{ISSUER}:{name}")
         link = f"otpauth://totp/{label}?secret={key}&issuer={urllib.parse.quote(ISSUER)}"
-        return {"key": " ".join(key[i:i + 4] for i in range(0, len(key), 4)), "link": link}
+        grid = qr_matrix(link)          # a 32-letter name, the longest, makes a 138-byte link: well inside the 213
+        return {"key": " ".join(key[i:i + 4] for i in range(0, len(key), 4)), "link": link,
+                "qr": qr_svg_data(link, grid), "modules": len(grid) + 8,
+                "minutes": max(1, int((pending["expires"] - now) // 60))}
 
     def two_step_confirm(self, me: dict, current, code) -> dict:
         """Turns it on with the password and a code from the new key; the recovery codes come back only now."""
@@ -879,8 +894,8 @@ class Auth:
             if user.get("totp"):
                 raise AuthError(409, "Two-step login is already on.")
             pending = user.get("totp_pending")
-            if not pending or pending.get("expires", 0) <= now:
-                raise AuthError(400, "That key has run out: start again.")
+            if not pending or pending.get("expires", 0) <= now or pending.get("session") != me["key"]:
+                raise AuthError(410, KEY_RAN_OUT)
             digits = re.sub(r"\s", "", code) if isinstance(code, str) else ""
             if not re.fullmatch(r"\d{6}", digits):
                 raise AuthError(400, "Type the 6-digit code your app shows for this key.")
@@ -1161,6 +1176,228 @@ TWO_STEP = {"/auth/2fa/start": None, "/auth/2fa/confirm": Auth.two_step_confirm,
 def from_settings(staff_dir: Path, env: dict | None = None) -> Auth:
     env = os.environ if env is None else env
     return Auth(Path(staff_dir) / "auth", Path(env.get("MONKEY_STAFF_MAIL_ENV") or MAIL_SETTINGS))
+
+
+# ---------------------------------------------------------------- a QR code for the authenticator app's link
+
+
+# A QR code (ISO/IEC 18004) of bytes, error correction level M, versions 1 to 10 (up to 213 bytes: an otpauth link
+# is about 130). The tables are the standard's for level M; index 0 is unused.
+QR_ECC_PER_BLOCK = (0, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26)
+QR_BLOCKS = (0, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5)
+QR_MAX_VERSION = 10
+
+
+def _qr_raw_modules(version: int) -> int:
+    """The modules left for data and error correction once the fixed patterns are drawn."""
+    result = (16 * version + 128) * version + 64
+    if version >= 2:
+        aligns = version // 7 + 2
+        result -= (25 * aligns - 10) * aligns - 55
+        if version >= 7:
+            result -= 36
+    return result
+
+
+def _qr_data_bytes(version: int) -> int:
+    return _qr_raw_modules(version) // 8 - QR_ECC_PER_BLOCK[version] * QR_BLOCKS[version]
+
+
+def _gf_multiply(x: int, y: int) -> int:
+    """Multiplication in GF(2^8) with the QR code's polynomial 0x11D."""
+    z = 0
+    for i in reversed(range(8)):
+        z = (z << 1) ^ ((z >> 7) * 0x11D)
+        z ^= ((y >> i) & 1) * x
+    return z
+
+
+def _rs_divisor(degree: int) -> list[int]:
+    result = [0] * (degree - 1) + [1]
+    root = 1
+    for _ in range(degree):
+        for j in range(degree):
+            result[j] = _gf_multiply(result[j], root)
+            if j + 1 < degree:
+                result[j] ^= result[j + 1]
+        root = _gf_multiply(root, 0x02)
+    return result
+
+
+def _rs_remainder(data: list[int], divisor: list[int]) -> list[int]:
+    result = [0] * len(divisor)
+    for byte in data:
+        factor = byte ^ result.pop(0)
+        result.append(0)
+        for i, coefficient in enumerate(divisor):
+            result[i] ^= _gf_multiply(coefficient, factor)
+    return result
+
+
+def _qr_codewords(text: bytes, version: int) -> list[int]:
+    """Byte mode, padded, with error correction added and the blocks interleaved."""
+    bits: list[int] = []
+
+    def put(value: int, length: int) -> None:
+        bits.extend((value >> i) & 1 for i in reversed(range(length)))
+
+    put(0b0100, 4)
+    put(len(text), 8 if version < 10 else 16)
+    for byte in text:
+        put(byte, 8)
+    capacity = _qr_data_bytes(version) * 8
+    put(0, min(4, capacity - len(bits)))
+    put(0, -len(bits) % 8)
+    data = [int("".join(map(str, bits[i:i + 8])), 2) for i in range(0, len(bits), 8)]
+    pad = 0xEC
+    while len(data) < capacity // 8:
+        data.append(pad)
+        pad ^= 0xEC ^ 0x11
+    blocks_n, ecc_n = QR_BLOCKS[version], QR_ECC_PER_BLOCK[version]
+    raw = _qr_raw_modules(version) // 8
+    short_n, short_len = blocks_n - raw % blocks_n, raw // blocks_n
+    divisor, blocks, at = _rs_divisor(ecc_n), [], 0
+    for i in range(blocks_n):
+        part = data[at:at + short_len - ecc_n + (0 if i < short_n else 1)]
+        at += len(part)
+        ecc = _rs_remainder(part, divisor)
+        if i < short_n:
+            part = [*part, 0]           # a place holder, skipped below, so all blocks are the same length
+        blocks.append(part + ecc)
+    return [block[i] for i in range(len(blocks[0])) for j, block in enumerate(blocks)
+            if i != short_len - ecc_n or j >= short_n]
+
+
+def _qr_alignments(version: int) -> list[int]:
+    if version == 1:
+        return []
+    aligns = version // 7 + 2
+    step = (version * 8 + aligns * 3 + 5) // (aligns * 4 - 4) * 2
+    return [6, *reversed([version * 4 + 10 - i * step for i in range(aligns - 1)])]
+
+
+QR_MASKS = (lambda x, y: (x + y) % 2 == 0, lambda x, y: y % 2 == 0, lambda x, y: x % 3 == 0,
+            lambda x, y: (x + y) % 3 == 0, lambda x, y: (x // 3 + y // 2) % 2 == 0,
+            lambda x, y: x * y % 2 + x * y % 3 == 0, lambda x, y: (x * y % 2 + x * y % 3) % 2 == 0,
+            lambda x, y: ((x + y) % 2 + x * y % 3) % 2 == 0)
+
+
+def _qr_penalty(grid: list[list[bool]]) -> int:
+    """The standard's four rules: long runs, 2x2 boxes, look-alikes of the corner squares and the dark balance. Every
+    mask gives a code that holds the same data; a lower score is one a camera finds more easily."""
+    size, score = len(grid), 0
+    look_alike = "10111010000"
+    for lines in (grid, [list(c) for c in zip(*grid, strict=True)]):
+        for line in lines:
+            run = 1
+            for a, b in zip(line, line[1:], strict=False):
+                run = run + 1 if a == b else 1
+                score += 3 if run == 5 else 1 if run > 5 else 0
+            text = "0000" + "".join("1" if d else "0" for d in line) + "0000"     # the quiet zone counts as light
+            score += 40 * sum(text.startswith(look, i) for i in range(len(text))
+                              for look in (look_alike, look_alike[::-1]))
+    score += 3 * sum(grid[y][x] == grid[y][x + 1] == grid[y + 1][x] == grid[y + 1][x + 1]
+                     for y in range(size - 1) for x in range(size - 1))
+    dark, total = sum(map(sum, grid)), size * size
+    return score + (-(-abs(dark * 20 - total * 10) // total) - 1) * 10     # ceil, less one, as the standard has it
+
+
+def qr_matrix(text: str) -> list[list[bool]]:
+    """The modules of a QR code for `text` (True is dark), without the quiet zone."""
+    raw = text.encode("utf-8")
+    version = next((v for v in range(1, QR_MAX_VERSION + 1)
+                    if 4 + (8 if v < 10 else 16) + 8 * len(raw) <= _qr_data_bytes(v) * 8), None)
+    if version is None:
+        raise ValueError("too long for a QR code here")
+    size = version * 4 + 17
+    grid = [[False] * size for _ in range(size)]
+    fixed = [[False] * size for _ in range(size)]
+
+    def mark(x: int, y: int, dark: bool, into: list[list[bool]] = grid) -> None:
+        into[y][x], fixed[y][x] = dark, True
+
+    for i in range(size):
+        mark(6, i, i % 2 == 0)
+        mark(i, 6, i % 2 == 0)
+    for cx, cy in ((3, 3), (size - 4, 3), (3, size - 4)):
+        for dy in range(-4, 5):
+            for dx in range(-4, 5):
+                if 0 <= cx + dx < size and 0 <= cy + dy < size:
+                    mark(cx + dx, cy + dy, max(abs(dx), abs(dy)) not in (2, 4))
+    spots = _qr_alignments(version)
+    last = len(spots) - 1
+    for i, ax in enumerate(spots):
+        for j, ay in enumerate(spots):
+            if (i, j) in ((0, 0), (0, last), (last, 0)):
+                continue                # where the finder patterns are
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    mark(ax + dx, ay + dy, max(abs(dx), abs(dy)) != 1)
+
+    def format_bits(mask: int, into: list[list[bool]] = grid) -> None:
+        value = mask                     # level M is 00 in front of the mask
+        rem = value
+        for _ in range(10):
+            rem = (rem << 1) ^ ((rem >> 9) * 0x537)
+        bits = (value << 10 | rem) ^ 0x5412
+        bit = [(bits >> i) & 1 == 1 for i in range(15)]
+        for i in range(6):
+            mark(8, i, bit[i], into)
+        mark(8, 7, bit[6], into)
+        mark(8, 8, bit[7], into)
+        mark(7, 8, bit[8], into)
+        for i in range(9, 15):
+            mark(14 - i, 8, bit[i], into)
+        for i in range(8):
+            mark(size - 1 - i, 8, bit[i], into)
+        for i in range(8, 15):
+            mark(8, size - 15 + i, bit[i], into)
+        mark(8, size - 8, True, into)
+
+    format_bits(0)                       # reserves the places; the chosen mask's bits go in at the end
+    if version >= 7:
+        rem = version
+        for _ in range(12):
+            rem = (rem << 1) ^ ((rem >> 11) * 0x1F25)
+        bits = version << 12 | rem
+        for i in range(18):
+            dark, a, b = (bits >> i) & 1 == 1, size - 11 + i % 3, i // 3
+            mark(a, b, dark)
+            mark(b, a, dark)
+
+    codewords, at = _qr_codewords(raw, version), 0
+    right = size - 1
+    while right >= 1:
+        if right == 6:
+            right = 5                    # the timing column is skipped
+        for vert in range(size):
+            for j in range(2):
+                x = right - j
+                y = size - 1 - vert if ((right + 1) & 2) == 0 else vert
+                if not fixed[y][x] and at < len(codewords) * 8:
+                    grid[y][x] = (codewords[at >> 3] >> (7 - (at & 7))) & 1 == 1
+                    at += 1
+        right -= 2
+
+    best: tuple[int, list[list[bool]]] | None = None
+    for mask, rule in enumerate(QR_MASKS):
+        trial = [[grid[y][x] ^ (not fixed[y][x] and rule(x, y)) for x in range(size)] for y in range(size)]
+        format_bits(mask, trial)
+        score = _qr_penalty(trial)
+        if best is None or score < best[0]:
+            best = (score, trial)
+    assert best is not None
+    return best[1]
+
+
+def qr_svg_data(text: str, grid: list[list[bool]] | None = None) -> str:
+    """The QR code as an SVG picture in a data: URL (the page's img-src allows data:), with a 4-module quiet zone."""
+    grid = grid or qr_matrix(text)
+    size = len(grid) + 8
+    path = "".join(f"M{x + 4} {y + 4}h1v1h-1z" for y, row in enumerate(grid) for x, dark in enumerate(row) if dark)
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" shape-rendering="crispEdges">'
+           f'<rect width="{size}" height="{size}" fill="#fff"/><path d="{path}" fill="#000"/></svg>')
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("ascii")).decode("ascii")
 
 
 # ---------------------------------------------------------------- the owner's command line

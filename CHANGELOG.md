@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Two-step login shows a QR code.** Turning it on in the staff page's account menu now shows a QR code for the
+  authenticator app, made by `tools/staff_auth.py` itself (no library), as well as the key to type. Pressing
+  it twice in one session gives the same key, never more time; a key that ran out (15 minutes), or a password
+  change or reset, ends it, and the page then offers to start again with a new key.
 - **The staff page catches up with the hosts' panels** (compared with Apex Hosting, BisectHosting's Starbase,
   Pterodactyl and Pelican, AMP, Crafty, Multicraft and exaroton on 2026-11-10). New in `tools/staff_desk.py` and
   `deploy/staff/desk.js`, with the same login, role and change checks as the rest (docs/LIVE.md, "The staff page"):

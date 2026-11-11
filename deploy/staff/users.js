@@ -158,13 +158,22 @@
         }
         turnOn.remove();
         const form = el("form");
-        const link = el("a", "link", "Open in your authenticator app");
+        const qr = el("img", "qr");
+        qr.src = started.qr;
+        qr.alt = "A QR code: scan it with your authenticator app";
+        qr.width = qr.height = started.modules * 4;     // whole pixels per module, so a camera reads it
+        const link = el("a", "link", "On this phone? Open it in your authenticator app");
         link.href = started.link;
         const key = el("p", "mono", started.key);
         const current = input("password", { autocomplete: "current-password", maxLength: 256 });
         const [code, codeField] = codeInput("The 6-digit code the app shows now");
-        form.append(el("p", "fine", "On this phone, tap the link. Elsewhere, add an account in the app by hand "
-                                    + "and type this key (time-based):"), key, link,
+        form.append(el("p", "fine", "1. In your authenticator app (Google Authenticator, Microsoft Authenticator, "
+                                    + "1Password and the like), add an account and scan this code with your phone:"),
+                    qr, link,
+                    el("p", "fine", "Can't scan it? Add the account by hand: choose a time-based key and type this:"),
+                    key,
+                    el("p", "fine", `2. Type the 6-digit code the app shows, and your password, within ${started.minutes} `
+                                    + "minutes."),
                     field("Current password", current), codeField, button("Turn it on", "primary", null, "submit"));
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
@@ -177,6 +186,7 @@
             box.replaceWith(twoStep(status, session));
             recoveryBox(status, done.recovery);
           } catch (error) {
+            if (error.status === 410) box.replaceWith(twoStep(status, session));   // the key ran out: the button again
             say(status, error.message, "error");
           }
         });

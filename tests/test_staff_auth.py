@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import http.client
 import json
 import os
@@ -532,6 +534,7 @@ def test_turning_two_step_on_needs_the_password_and_a_code_and_ends_other_sessio
     assert re.fullmatch(r"([A-Z2-7]{4} ){7}[A-Z2-7]{4}", started["key"])
     assert started["link"] == (f"otpauth://totp/Monkey%20SMP%20staff%3Adiego?secret={key}"
                                "&issuer=Monkey%20SMP%20staff")
+    assert started["qr"] == staff_auth.qr_svg_data(started["link"]) and started["minutes"] == 15
     # Not on until confirmed: the password alone still logs in.
     assert auth.auth.login("diego", GOOD, "203.0.113.1")[1]
     for current, code, message in ((OTHER, code_at(key, auth.clock.now), "Your current password isn't right."),
@@ -561,7 +564,68 @@ def test_a_pending_key_runs_out(auth):
     auth.clock.now += staff_auth.PENDING_LIFE + 1
     with pytest.raises(staff_auth.AuthError) as e:
         auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(key, auth.clock.now))
-    assert e.value.message == "That key has run out: start again."
+    assert e.value.message == staff_auth.KEY_RAN_OUT and e.value.code == 410
+    # Starting again gives a new key with the full time; the old one never comes back.
+    again = auth.auth.two_step_start(auth.auth.session(token))
+    fresh = again["key"].replace(" ", "")
+    assert fresh != key and again["minutes"] == 15
+    assert auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(fresh, auth.clock.now))["two_step"]
+
+
+def test_starting_twice_in_one_session_gives_the_same_key_and_never_more_time(auth):
+    auth.user("diego")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    _, other = auth.auth.login("diego", GOOD, "203.0.113.2")
+    me = auth.auth.session(token)
+    first = auth.auth.two_step_start(me)
+    auth.clock.now += 10 * 60
+    second = auth.auth.two_step_start(me)
+    assert second["key"] == first["key"] and second["minutes"] == 5
+    # Another session gets its own key, and the first session's key no longer turns two-step on.
+    theirs = auth.auth.two_step_start(auth.auth.session(other))["key"]
+    assert theirs != first["key"]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_confirm(me, GOOD, code_at(first["key"], auth.clock.now))
+    assert e.value.code == 410
+
+
+def test_a_password_change_ends_a_key_being_set_up(auth):
+    auth.user("diego")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    me = auth.auth.session(token)
+    key = auth.auth.two_step_start(me)["key"]
+    auth.auth.change_password(me, GOOD, OTHER)
+    assert "totp_pending" not in auth.auth.store.read()["users"]["diego"]
+    assert auth.auth.two_step_start(auth.auth.session(token))["key"] != key
+
+
+def test_the_longest_name_fits_in_a_qr_code(auth):
+    name = "a" * 32
+    auth.user(name)
+    _, token = auth.auth.login(name, GOOD, "203.0.113.1")
+    started = auth.auth.two_step_start(auth.auth.session(token))
+    assert len(started["link"].encode()) <= 213 and started["modules"] == len(staff_auth.qr_matrix(started["link"])) + 8
+
+
+# Each matched the qrcode library's matrix for the same text, level M and mask (7, 6 and 2) bit for bit, and
+# 736 other texts and masks did too; OpenCV reads them. Versions 1, 7 and 8: the link is a 7 or an 8.
+@pytest.mark.parametrize(("text", "size", "digest"), [
+    ("Monkey SMP", 21, "436f2fd09c684a16"),
+    ("otpauth://totp/Monkey%20SMP%20staff%3Adiego?secret=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+     "&issuer=Monkey%20SMP%20staff", 45, "e6d23c22f70789ac"),
+    ("x" * 150, 49, "1336208e16162851")])
+def test_the_qr_code_is_the_standard_one(text, size, digest):
+    grid = staff_auth.qr_matrix(text)
+    bits = "".join("1" if dark else "0" for row in grid for dark in row)
+    assert len(grid) == size and hashlib.sha256(bits.encode()).hexdigest()[:16] == digest
+
+
+def test_the_qr_code_is_an_svg_data_url_and_refuses_what_is_too_long():
+    url = staff_auth.qr_svg_data("Monkey SMP")
+    svg = base64.b64decode(url.removeprefix("data:image/svg+xml;base64,")).decode()
+    assert url.startswith("data:image/svg+xml;base64,") and svg.startswith("<svg") and 'viewBox="0 0 29 29"' in svg
+    with pytest.raises(ValueError):
+        staff_auth.qr_matrix("x" * 214)
 
 
 def test_with_two_step_on_the_password_gives_a_challenge_and_the_code_a_session(auth):

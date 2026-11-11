@@ -10,7 +10,8 @@
 The checks: ruff, pytest, validate.py, the generated packs (datapacks.py --check), `dash -n` on every POSIX sh
 script, Pester, the staff page (in staff-ui/, with bun: lint, typecheck, and deploy/staff must be its build) and the
 site (in site/, with bun: install from the lockfile, lint, typecheck, unit tests and build, then
-tools/site_links.py --built checks the built pages against site/config.json). None of them boots the server;
+tools/site_links.py --built checks the built pages against site/config.json, and the browser checks read every built
+page in Chrome at phone and desktop width with axe-core). None of them boots the server;
 that is CI's boot jobs and tests/smoke.ps1. On Windows, Git for Windows' own dash is used when dash isn't on
 PATH, for `dash -n` and for the pytest tests that run deploy/lib.sh under dash. Exit status 1 if any check failed.
 """
@@ -60,10 +61,12 @@ def pester(root: Path) -> list[list[str]]:
 
 
 def site() -> list[list[str]]:
-    """The site's own checks, run in site/ (site/README.md), then its built pages against config.json."""
+    """The site's own checks, run in site/ (site/README.md), then its built pages against config.json, then the
+    built pages in a browser (site/e2e: axe-core's WCAG A/AA rules, one h1, nothing wider than a phone)."""
     return [["bun", "install", "--frozen-lockfile"],
             *(["bun", "run", script] for script in ("lint", "typecheck", "test", "build")),
-            [sys.executable, "-X", "utf8", "../tools/site_links.py", "--check", "--built", "out"]]
+            [sys.executable, "-X", "utf8", "../tools/site_links.py", "--check", "--built", "out"],
+            ["bun", "run", "test:a11y"]]
 
 
 def staff_ui() -> list[list[str]]:
@@ -96,7 +99,8 @@ CHECKS = (
     Check("sh", "dash", lambda root: [["dash", "-n", str(p)] for p in sh_scripts(root)],
           "dash -n on every POSIX sh script"),
     Check("pester", "powershell", pester, "the PowerShell unit tests (Pester 5)"),
-    Check("site", "bun", lambda root: site(), "the site: install, lint, typecheck, build, and its built pages", "site"),
+    Check("site", "bun", lambda root: site(),
+          "the site: install, lint, typecheck, build, its built pages, and in a browser", "site"),
     Check("staff-ui", "bun", lambda root: staff_ui(),
           "the staff page: install, lint, typecheck, and deploy/staff is its build", "staff-ui"),
 )

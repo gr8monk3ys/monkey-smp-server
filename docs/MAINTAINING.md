@@ -217,7 +217,7 @@ repo, and the included minutes ran out in October 2026):
 
 | Job | Runs on | What |
 |---|---|---|
-| Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7, the site: bun install, lint, typecheck, unit tests, build), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
+| Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7, the site: bun install, lint, typecheck, unit tests, build, then every built page in Chrome with axe-core), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
 | Linux (native) | PRs out of draft that touch `package/`, the build (`build.py`, `repo.py`) or the boot tests; pushes to `main` that do; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
 | Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
 | Windows | PRs out of draft that touch the installer, the manifest, `pwsh.lock`, `package/docker/`, the launchers (`.bat`), `player/`, the build or the PowerShell tests; tags; manual runs | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |

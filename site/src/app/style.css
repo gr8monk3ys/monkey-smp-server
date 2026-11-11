@@ -211,6 +211,13 @@ main > section, footer { padding: 112px var(--gutter); }
 }
 @keyframes place { from { transform: translateY(-18px); } }
 
+/* The front page opens with the same move: the monkey drops into place, then the hook under it. Only a transform,
+ * so the words are there to read (and to count as painted) from the first frame. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero .monkey { animation: place 320ms steps(4, end) backwards; }
+  .hero .monkey + h1 { animation: place 320ms 80ms steps(4, end) backwards; }
+}
+
 .ways { grid-area: ways; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; margin-top: 36px; }
 .plaque {
   --ring: var(--ink);
@@ -377,6 +384,16 @@ summary::after {
 details[open] summary::after { -webkit-mask-image: var(--icon-minus); mask-image: var(--icon-minus); }
 summary:hover { color: var(--gold-hi); }
 details p { margin: -4px 0 20px; max-width: var(--measure); }
+/* An answer folds open in three steps, like a block placed, where the browser can animate a row to its full height
+ * (::details-content); elsewhere it opens at once, as it always did, and with JavaScript off it works the same. */
+@media (prefers-reduced-motion: no-preference) {
+  .faq details { interpolate-size: allow-keywords; }
+  .faq details::details-content {
+    block-size: 0; overflow: clip;
+    transition: block-size 240ms steps(3, end), content-visibility 240ms allow-discrete;
+  }
+  .faq details[open]::details-content { block-size: auto; }
+}
 
 /* Press kit: each image at a whole-number scale of its pixels. */
 .kit { display: grid; gap: 40px; margin-top: 40px; justify-items: start; }

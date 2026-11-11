@@ -23,6 +23,9 @@ const LINES: Record<string, { stroke: string; fill: string; bg: string }> = {
 };
 
 interface Series { index: number; name: string; key?: string; line: string }
+/** A moment on a chart: a crash (a coral line), a stall the log recorded (an amber tick at the top), or the day's peak
+ * (a square on the line with its number). */
+export interface Marker { t: number; kind: "crash" | "stall" | "peak"; label: string; v?: number }
 interface Spec {
   height: number;
   unit: string;
@@ -121,6 +124,31 @@ function specs(data: any): Record<string, Spec> {
   };
 }
 
+/** Crashes and the stalls the log recorded, from staff.json's problems. The log keeps a stall's first and last time
+ * and a count, not every one, so those two are marked. */
+function healthMarks(data: any): Marker[] {
+  const p = data.problems || {};
+  const out: Marker[] = [];
+  for (const c of p.crashes || []) {
+    const t = Date.parse(c.when) / 1000;
+    if (Number.isFinite(t)) out.push({ t, kind: "crash", label: "Crash" });
+  }
+  if (p.lag) {
+    const first = Date.parse(p.lag.first) / 1000;
+    const last = Date.parse(p.lag.last) / 1000;
+    if (Number.isFinite(first)) out.push({ t: first, kind: "stall", label: p.lag.count > 1 && last !== first ? "Stalls from" : "Stall" });
+    if (Number.isFinite(last) && last !== first) out.push({ t: last, kind: "stall", label: "last stall" });
+  }
+  return out;
+}
+
+/** The most players at once in the readings shown (the latest such reading), if anyone was on. */
+function peakMark(rows: Row[]): Marker | null {
+  let best: Row | null = null;
+  for (const r of rows) if (!missing(r[3]) && (best === null || r[3] >= best[3])) best = r;
+  return best && best[3] > 0 ? { t: best[0], kind: "peak", label: `Peak ${best[3]}`, v: best[3] } : null;
+}
+
 function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -145,12 +173,13 @@ interface Shared {
   point: (t: number | null, keyed: boolean) => void;
 }
 
-function Chart({ spec, title, caption, shared }: { spec: Spec; title: string; caption?: string; shared: Shared }) {
+function Chart({ spec, title, caption, shared, marks = [] }: { spec: Spec; title: string; caption?: string; shared: Shared; marks?: Marker[] }) {
   const [ref, width] = useWidth();
   const { rows, start, end, hours, hover, keyed, point } = shared;
-  // The same sides on every chart, so their times line up under the crosshair.
-  const pad = { left: 30, right: 34, top: 8, bottom: 22 };
-  const height = spec.height;
+  const shownMarks = marks.filter((m) => m.t >= start && m.t <= end);
+  // The same sides on every chart, so their times line up under the crosshair; room on top for the marks' words.
+  const pad = { left: 30, right: 34, top: shownMarks.some((m) => m.kind !== "peak") ? 20 : 8, bottom: 22 };
+  const height = spec.height + pad.top - 8;
   const top = spec.yTop(rows);
   const x = (t: number) => pad.left + (t - start) / (end - start) * (width - pad.left - pad.right);
   const y = (v: number) => height - pad.bottom - Math.min(v, top) / top * (height - pad.top - pad.bottom);
@@ -259,6 +288,27 @@ function Chart({ spec, title, caption, shared }: { spec: Spec; title: string; ca
               </g>
             )}
             {lines}
+            {shownMarks.map((m, i) => {
+              const at = x(m.t);
+              const left = at > width - pad.right - 60;
+              if (m.kind === "peak" && m.v !== undefined) {
+                return (
+                  <g key={`m${i}`}>
+                    <rect className="fill-bone stroke-shade" strokeWidth={1} shapeRendering="crispEdges" x={at - 4} y={y(m.v) - 4} width={8} height={8} />
+                    <text className="fill-bone font-bold" x={left ? at - 7 : at + 7} y={Math.max(pad.top + 10, y(m.v) - 6)} textAnchor={left ? "end" : "start"}>{m.label}</text>
+                  </g>
+                );
+              }
+              const crash = m.kind === "crash";
+              return (
+                <g key={`m${i}`}>
+                  {crash
+                    ? <line className="stroke-bad" strokeWidth={2} shapeRendering="crispEdges" x1={at} x2={at} y1={pad.top - 6} y2={height - pad.bottom} />
+                    : <rect className="fill-warn" shapeRendering="crispEdges" x={at - 2} y={pad.top - 8} width={4} height={8} />}
+                  <text className={crash ? "fill-bad" : "fill-warn"} x={left ? at - 5 : at + 5} y={pad.top - 9} textAnchor={left ? "end" : "start"}>{m.label}</text>
+                </g>
+              );
+            })}
             {ends.map((e) => (
               <text key={e.key} className="fill-sage" x={e.x + 5} y={Math.min(e.y + 4, height - pad.bottom)}>{LINE_LABELS[e.key]}</text>
             ))}
@@ -300,6 +350,8 @@ export default function Charts({ data }: { data: any }) {
     },
   };
   const all3 = specs(data);
+  const health = healthMarks(data);
+  const peak = peakMark(rows);
   const fill = (v: unknown, text: () => string) => (missing(v) ? "no reading" : text());
 
   return (
@@ -313,8 +365,8 @@ export default function Charts({ data }: { data: any }) {
           setHover(null);
         }}
       />
-      <Chart spec={all3.tick} title="Time per tick" caption="Lower is better. Past the 50 ms line, the game falls behind and players feel lag." shared={shared} />
-      <Chart spec={all3.players} title="Players online" shared={shared} />
+      <Chart spec={all3.tick} title="Time per tick" caption="Lower is better. Past the 50 ms line, the game falls behind and players feel lag. A coral line marks a crash; an amber tick, a stall the server's log recorded." shared={shared} marks={health} />
+      <Chart spec={all3.players} title="Players online" caption={peak ? `The most at once in this range: ${peak.v}.` : undefined} shared={shared} marks={peak ? [peak] : []} />
       <Chart
         spec={all3.machine}
         title="The machine"

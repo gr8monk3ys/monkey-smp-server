@@ -296,8 +296,11 @@ Not part of `site/`: a React app in `staff-ui/` (Vite, Tailwind, the site's toke
 `deploy/staff/` and served by Caddy behind a login, under a policy that allows no inline script or style, so every
 look is a class (`staff-ui/README.md`). A tool for a quick look, so it keeps the ground, faces and frames and drops the
 show: no placed blocks, no gallery. One word in the display face says how the server is, with the sentence that
-explains it; the numbers sit in a rail on the left and the charts on the right (one column on phones), with recent
-problems above the charts, each marked with a shape and a word. The numbers use the body face, not the display face:
+explains it. Under it the Status tab is a dashboard: a row of cards (players, ticks a second, memory, disk, off-site
+backups, uptime), each with its 24-hour line where the history has one, then the charts (crashes as coral lines,
+stalls as amber ticks, the players' peak as a square), an hour-by-day heatmap, the problems on one 24-hour axis,
+player cards with a pixel head drawn from the name (no skin service: the policy allows this site's images only), and
+the staff's actions this week. Every chart is SVG with attributes, never a style attribute. The numbers use the body face, not the display face:
 at this size the display face's 2 reads as an 8. Gold fills only what can be pressed to do something: the chosen time range and the main step of a view.
 
 On a desktop the tabs are a rail on the left, in the shade colour, each with its icon, the open one filled gold; on a

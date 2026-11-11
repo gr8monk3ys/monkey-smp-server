@@ -3,8 +3,11 @@
 import type { ReactNode } from "react";
 import { LOW_DISK, agoMs, currentVerdict, isFresh, useStatus, type VerdictKind } from "../../lib/status";
 import { Mark, Message, Panel, Panels, cx, type MarkKind } from "../../ui/kit";
-import Charts, { DAY_CLOCK } from "./charts";
+import Charts from "./charts";
+import { Cards, Heatmap } from "./cards";
+import { PlayerCards, StaffWeek } from "./people";
 import { Advice, Problems } from "./problems";
+import { Timeline } from "./timeline";
 
 const CRITICAL_DISK = 0.05;
 const CLOCK = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
@@ -56,38 +59,6 @@ function Skeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
-function Game({ d }: { d: any }) {
-  return (
-    <Panel title="The game">
-      <Stats>
-        {d.tick ? (
-          <>
-            <Stat label="Ticks a second" value={one(d.tick.tps)} unit={`of ${Math.round(d.tick.target)}`} />
-            <Stat label="Time per tick" value={one(d.tick.avg)} unit={`ms of ${Math.round(1000 / d.tick.target)}`}
-              small={`P95 ${one(d.tick.p95)} ms, P99 ${one(d.tick.p99)} ms`} />
-          </>
-        ) : (
-          <Stat label="Ticks a second" value="No reading" word />
-        )}
-        {d.players ? (
-          <Stat label="Players" value={String(d.players.count)} unit={`of ${d.players.max}`} />
-        ) : (
-          <Stat label="Players" value="No reading" word />
-        )}
-      </Stats>
-      {d.players && (
-        <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label="Who is on">
-          {d.players.names.length ? (
-            d.players.names.map((name: string) => <li key={name} className="bg-leaf px-2 py-0.5 font-semibold text-bone wrap-anywhere">{name}</li>)
-          ) : (
-            <li className="text-sage">Nobody on right now</li>
-          )}
-        </ul>
-      )}
-    </Panel>
-  );
-}
-
 function Machine({ d }: { d: any }) {
   const host = d.host || {};
   const history: any[] = d.history || [];
@@ -125,27 +96,7 @@ function Machine({ d }: { d: any }) {
   );
 }
 
-function Upkeep({ d, now }: { d: any; now: number }) {
-  const box = d.container;
-  const running = box && box.state === "running" && box.uptime;
-  const backups = d.backups || {};
-  const offsite: [MarkKind, string] = ({ on: ["good", "On"], failing: ["slow", "Failing"], "not set up": ["busy", "Not set up"] } as Record<string, [MarkKind, string]>)[backups.offsite] || ["unknown", "Unknown"];
-  const local = backups.local ? new Date(backups.local) : null;
-  return (
-    <Panel title="Upkeep">
-      <Stats>
-        <Stat label="Release" value={d.release || "Unknown"} word />
-        {box && <Stat label={running ? "Running for" : "Container"} value={running ? box.uptime : box.state} word />}
-        {/* The copy a deploy takes before it updates; the hourly backups are the off-site row. */}
-        <Stat label="Copy before the last update" word
-          value={local ? agoMs(now - local.getTime()) : "None found"} small={local ? DAY_CLOCK.format(local) : undefined} />
-        <Stat label="Off-site backups" word value={<><Mark kind={offsite[0]} />{offsite[1]}</>} />
-      </Stats>
-    </Panel>
-  );
-}
-
-export default function StatusTab() {
+export default function StatusTab({ active }: { active: boolean }) {
   const s = useStatus();
   const d = s.data;
   const now = s.now;
@@ -182,23 +133,29 @@ export default function StatusTab() {
 
       {d ? (
         <div className="flex flex-col gap-4">
-          <Panels>
-            <Game d={d} />
-            <Machine d={d} />
-            <Upkeep d={d} now={now} />
-            <Problems data={d} now={now} />
-          </Panels>
+          <Cards d={d} now={now} />
           <Advice data={d} />
           <Panel title="Over time">
             <Charts data={d} />
           </Panel>
+          <Panels>
+            <Heatmap d={d} />
+            <Timeline d={d} />
+          </Panels>
+          <Panels>
+            <PlayerCards d={d} active={active} />
+            <StaffWeek active={active} />
+          </Panels>
+          <Panels>
+            <Problems data={d} now={now} />
+            <Machine d={d} />
+          </Panels>
         </div>
       ) : (
         !s.loaded && (
           <Panels>
-            <Panel title="The game"><Skeleton /></Panel>
-            <Panel title="The machine"><Skeleton /></Panel>
-            <Panel title="Upkeep"><Skeleton rows={2} /></Panel>
+            <Panel title="Players online"><Skeleton rows={2} /></Panel>
+            <Panel title="Ticks a second"><Skeleton rows={2} /></Panel>
             <Panel title="Recent problems"><Skeleton rows={1} /></Panel>
           </Panels>
         )

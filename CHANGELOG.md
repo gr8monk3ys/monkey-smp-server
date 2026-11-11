@@ -49,6 +49,10 @@
   or style). The VPS still needs no Node: the build in `deploy/staff/` is committed, and `tools/checks.py` fails when
   it is not the build of `staff-ui/` (`staff-ui/README.md`). The old `*.js` and `*.css` files there are gone; a path
   checkout on the VPS leaves them in place, unused, until the next deploy (docs/LIVE.md).
+- **The Status tab is a dashboard**: cards with 24-hour lines, crashes, stalls and the peak marked on the charts, an
+  hour-by-day heatmap of players online, the problems on one 24-hour axis, player cards (new this week, away 7+ days)
+  and the staff's actions this week. It reads only what the page already had (`staff.json`, the player list and the
+  staff log); nothing new is collected.
 - Typed confirms keep their button off until the word matches, and the mod settings' reset asks for the word RESET.
 
 ## [3.4.0] - 2026-11-10

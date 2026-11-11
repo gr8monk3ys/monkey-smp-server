@@ -89,6 +89,7 @@ import staff_modcfg
 import staff_report
 import staff_spark
 import staff_status
+import staff_trends
 
 import rcon as server
 
@@ -329,8 +330,10 @@ class Panel:
     def __init__(self, live: Path, staff: Path, repo: Path, lock_file: Path = Path("/tmp/monkey-deploy.lock"),
                  webhook: str = "", run=subprocess.run, spawn=spawn_detached, alive=pid_alive, lock=None,
                  post=post_webhook, backup_settings: Path = staff_status.BACKUP_SETTINGS,
-                 backup_failing: Path = staff_status.BACKUP_FAILING, auth: staff_auth.Auth | None = None):
+                 backup_failing: Path = staff_status.BACKUP_FAILING, auth: staff_auth.Auth | None = None,
+                 standings: Path = Path("/srv/monkey/standings")):
         self.live, self.staff, self.repo = Path(live), Path(staff), Path(repo)
+        self.standings = Path(standings)     # tools/standings.py's state: its closed weeks, for the trends
         self.root = self.live / "server"
         self.history = self.staff / "history"
         self.webhook, self.run, self.spawn, self.alive, self.post = webhook, run, spawn, alive, post
@@ -1129,6 +1132,7 @@ staff_spark.register(sys.modules[__name__])   # the lag finder: spark's profiler
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
 staff_lookup.register(sys.modules[__name__])  # moderators' commands, block history, mod updates, a player's history
+staff_trends.register(sys.modules[__name__])  # the longer trends: a month of readings, players per day, Ledger's counts
 
 
 # The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.
@@ -1344,7 +1348,8 @@ def from_settings(env: dict | None = None) -> Panel:
                  repo=Path(setting("REPO_DIR", "/srv/monkey/repo")),
                  lock_file=Path(setting("LOCK_FILE", "/tmp/monkey-deploy.lock")),
                  webhook=setting("STAFF_WEBHOOK_URL"),    # never DISCORD_WEBHOOK_URL: that channel is public
-                 auth=staff_auth.from_settings(Path(setting("STAFF_DIR", "/srv/monkey/staff")), env))
+                 auth=staff_auth.from_settings(Path(setting("STAFF_DIR", "/srv/monkey/staff")), env),
+                 standings=Path(setting("STANDINGS_DIR", "/srv/monkey/standings")))
 
 
 def main(argv=None) -> int:

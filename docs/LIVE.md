@@ -1224,7 +1224,7 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
     tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
-    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
+    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py tools/staff_trends.py
 ```
 
 A path checkout adds and replaces files but deletes none, so the old page's files (`staff.js`, `panel.js` and the like,
@@ -1611,6 +1611,45 @@ sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --remove-sftp-user diego
 first login, in case sshd misbehaves. `--remove-sftp-user` unmounts, takes the fstab line and the ACLs out and
 removes the user and key; the server's files stay as they are. Not run on a real machine yet: the tests check only
 its arguments and its text, so watch the first run.
+
+### Trends: a month of numbers
+
+`staff.json` holds one day. For longer charts the same 2-minute job runs `tools/staff_trends.py update` after it, under
+`nice` and without the webhook, and keeps three files in `/srv/monkey/staff/trends/` (mode 600: they hold names). A
+run that fails leaves its file as it was and never stops the status file or the other two parts. A kept file the
+page can't read (cut short, hand-edited) is started again, and the run log says so.
+
+- `history.json`: the readings folded into hours, 30 days of them (about 50 KB): tick average, the worst P95, players
+  on average and at most, memory and CPU in use. Every run works out again the hours `staff.json` still has, so a
+  restart of the job loses nothing. The oldest hour, which `staff.json` may hold only part of, keeps the row made from
+more readings.
+- `players.json`, at most every 10 minutes: who played each day and for how long, from the game's own "joined the
+  game" and "left the game" lines. Each finished `logs/*.log.gz` is read once, in order; `latest.log` is kept apart
+  and read as a stream from where the last run stopped (only the lines it needs are held), from its start again once
+  it is a new file. A session ends at its leave line, at "Stopping server", at the next start (a crash: where
+  the log last spoke), or, for someone still on, now (those minutes count; it is no finished session yet). Days are
+  Pacific. A renamed player counts as new, and so does one back after a year. Everyone in the first log looks new, so
+  that day's "new" is left blank, its players are left out of retention, and that week's row is `partial`.
+- `world.json`, at most every hour: Ledger's block breaks and places by players, per hour and per player per day,
+  with stone, diamond ore and ancient debris counted apart. It opens `world/ledger.sqlite` read-only and asks only
+  through its `player_id` index, one player at a time, starting after the last row it counted, so it never touches
+  Dynamic Lights' rows. A run stops after 300,000 rows or 4 seconds of the database's time, or when the game holds
+  the database, keeps what it counted and goes on at the next 2-minute run; the first run reads each player's rows
+  once and keeps the last 30 days. Without that index it counts nothing, says so in `note`, and tries again hourly.
+
+The page asks the controls for them (all `GET`, moderator and up, the same login and role checks as the rest):
+
+| Request | Answer |
+| --- | --- |
+| `/api/trend-history?days=30` (1-30) | one row an hour: `[hour (unix), avg, p95, players, players_max, memory, cpu, readings]` |
+| `/api/trend-players?days=30` (1-45) | per day: players, new players, hours played, sessions, the median session; session lengths in six buckets; per week of new players, how many joined again 1 and 7 days after their first day (`due_*` is how many have had that long) |
+| `/api/trend-world?days=7` (1-30) | blocks broken and placed per hour, and this week's top 10 by blocks broken |
+| `/api/trend-ores?days=7` (1-30) | per player: stone, diamond ore and ancient debris mined, per 1,000 stone, and `outlier` by the weekly report's x-ray test (at least 500 stone and 10 ores, 3 times the median). A hint for a closer look, never proof |
+| `/api/trend-standings` | each closed week's faction table from `STANDINGS_DIR/weeks/` (rank, points, Cup, Strength, kills, bounties, outposts), never the members |
+
+Before the first run the answers are 404 "No trends yet"; a damaged file is 503 until the next run starts it again. `sudo -u monkey python3 /srv/monkey/repo/tools/staff_trends.py
+show /srv/monkey/MonkeySMP-Server --staff /srv/monkey/staff` prints what a run would keep and changes nothing. The
+routes need the panel restarted after a deploy, as the other controls do; the job picks up the new tool by itself.
 
 ### The weekly rule check (the Reports tab)
 

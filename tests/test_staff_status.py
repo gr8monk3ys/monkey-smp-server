@@ -816,6 +816,9 @@ def test_the_status_job_hands_the_staff_webhook_over_in_the_environment_only(sta
     write = [line for line in seen.read_text().splitlines() if " write " in line]
     assert len(write) == 1 and write[0].endswith(" hook=https://discord.example/staff-hook")
     assert "discord.example" not in write[0].split(" hook=")[0]          # not on the command line
+    # The trends run after it, with no webhook at all.
+    trends = [line for line in seen.read_text().splitlines() if "staff_trends.py update" in line]
+    assert len(trends) == 1 and trends[0].endswith(" hook=") and "--staff" in trends[0]
     # No staff webhook: none at all, never the public one.
     env_file.write_text("DISCORD_WEBHOOK_URL=https://discord.example/public\n")
     seen.unlink()

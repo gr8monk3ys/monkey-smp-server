@@ -55,11 +55,11 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
-      # The site's check (site/: lint, typecheck, build) needs bun; the version the lockfile was made with.
+      # The site's and the staff page's checks (site/, staff-ui/) need bun; the version the lockfile was made with.
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: 1.4.3
-      - name: tools/checks.py (ruff, pytest, validate, datapacks, sh, pester, site)
+      - name: tools/checks.py (ruff, pytest, validate, datapacks, sh, pester, site, staff-ui)
         run: python tools/checks.py --strict
       - name: Unit tests on Python 3.11
         run: python3.11 -m pytest -q -p no:cacheprovider

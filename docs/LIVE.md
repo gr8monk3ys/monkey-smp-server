@@ -1149,6 +1149,11 @@ address on privately. Uptime Kuma still does the alerting; the Status tab only a
 deploy or the daily restart the page says offline, which is true. The file keeps 24 hours of readings. Caddy serves
 it, the page (`deploy/staff/`, from the checkout, so a deploy updates it) and the site's fonts, and nothing else.
 
+The page is a React app whose source is `staff-ui/` (Vite, Tailwind, `staff-ui/README.md`). The VPS has no Node, so the
+built page is committed in `deploy/staff/` (`app.js`/`app.css` for the staff page, `auth.js`/`auth.css` for the login,
+reset and email pages) and Caddy serves those files as they are. A change to `staff-ui/` is built with `bun run build`
+and committed with it; `tools/checks.py` (`staff-ui`) fails when `deploy/staff/` isn't the build of the source.
+
 Recent problems comes from `server/logs/latest.log` and `server/crash-reports/`: errors since the server finished
 starting, stalls of 2 seconds or more (`Can't keep up!`) and crashes, each kept for a day after its last line. Warnings
 and the errors logged during a start aren't listed. A mod can log an error that does no harm, so a listed error is
@@ -1221,6 +1226,9 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
     tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py tools/staff_trends.py
 ```
+
+A path checkout adds and replaces files but deletes none, so the old page's files (`staff.js`, `panel.js` and the like,
+from before the React page) stay in `deploy/staff/` until the next deploy's forced checkout. Nothing loads them.
 
 If the page is already set up, that and `sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install` again add the
 controls: it copies `monkey-panel.service`, starts it and puts the new `Caddyfile.staff` in place. A deploy updates

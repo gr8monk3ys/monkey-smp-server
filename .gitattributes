@@ -18,3 +18,5 @@ package/docker/** text eol=lf
 *.command text eol=lf
 package/monkey/pwsh.lock text eol=lf
 *.class binary
+# The staff page build is compared byte for byte with a fresh build (tools/staff_ui_fresh.py): LF everywhere.
+deploy/staff/** text eol=lf

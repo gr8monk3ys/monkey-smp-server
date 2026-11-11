@@ -18,11 +18,17 @@ bun dev            # http://localhost:3000, reloads as you edit
 bun run build      # the site in out/ (check it with: bunx serve out)
 bun run lint
 bun run typecheck
+bun run test       # unit tests (src/)
+bun run test:a11y  # every built page in Chrome, phone and desktop, with axe-core (build first)
 ```
 
-`python tools/checks.py site` (from the repo root) runs install, lint, typecheck and build, then
-`tools/site_links.py --built site/out`, which checks every built link and launch time against `config.json`. CI
-runs it with the other checks.
+`python tools/checks.py site` (from the repo root) runs install, lint, typecheck, the unit tests and build, then
+`tools/site_links.py --built site/out`, which checks every built link and launch time against `config.json`, then the
+browser checks in `e2e/`: every page in the sitemap (and the 404) at phone and desktop width, with no serious or
+critical axe-core WCAG A/AA problem, one h1 and nothing wider than the screen, plus the questions opening from the
+keyboard and the changelog feed. They use the Chrome already installed (the GitHub runners have one), so nothing
+downloads a browser; `PW_CHANNEL=msedge` picks Edge instead. `e2e/serve.ts` serves `out/` with clean URLs, as Vercel
+does. CI runs it all with the other checks.
 
 ## Where things live
 
@@ -33,7 +39,7 @@ runs it with the other checks.
 | The front page's copy | `src/app/page.tsx`; its lists (the world, gallery, pass, supporter tiers, invite ladder, FAQ) in `src/content/front.tsx` |
 | The rules (front page) and creator terms | `src/content/rules.tsx` |
 | The guide | A docs layout: `src/app/guide/layout.tsx` puts the sidebar (`src/components/guide-nav.tsx`) beside each page under `src/app/guide/`. The pages, their order and sidebar headings are in `src/content/guide/pages.ts`; the prose in `src/content/guide/*.mdx`, the week in `week.ts`, commands by rank in `commands.tsx` (one page per rank) |
-| The player changelog | `src/content/changes.mdx`, newest first (docs/ADMIN.md, "Telling players what changed") |
+| The player changelog | `src/content/changes.mdx`, newest first (docs/ADMIN.md, "Telling players what changed"). Its dated entries also build `/changes/feed.xml`, an RSS feed (`src/lib/feed.ts`); each item links to its entry's id on `/changes` (its date and title), so retitling an entry moves its link |
 | The creator code page | `src/app/creators/page.tsx` |
 | The privacy policy and terms of service (`/privacy`, `/terms`) | The prose in `src/content/legal/*.mdx`; the frame both share in `src/components/legal-page.tsx`; each page's title and "last updated" day in `src/app/privacy/page.tsx` and `src/app/terms/page.tsx`. Every page's footer links both. Change the privacy policy when what the server records changes, and the terms when the store's packages do |
 | The header and footer | `src/components/chrome.tsx`. The footer adds "Season I Wrapped" (`src/lib/wrapped.ts`) once a season's `public/wrapped/season-<n>/index.html` is there at build time |

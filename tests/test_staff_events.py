@@ -1,4 +1,5 @@
-"""tools/staff_events.py: the event timer and the leaderboard update on the staff page, and deploy/staff/events.js."""
+"""tools/staff_events.py: the event timer and the leaderboard update on the staff page, and the Server tab's event
+timer (staff-ui/src/tabs/server)."""
 import re
 import subprocess
 from types import SimpleNamespace
@@ -10,7 +11,6 @@ from test_staff_panel import actions, box  # noqa: F401 (box is a fixture)
 
 import events
 from rcon import RconError
-from repo import REPO
 
 
 class FakeServer:
@@ -195,17 +195,13 @@ def test_a_failed_leaderboard_says_why(ev):
 # ---------------------------------------------------------------- the page
 
 
-def test_the_page_has_every_element_events_js_uses():
-    page = REPO.root / "deploy" / "staff"
-    script = (page / "events.js").read_text(encoding="utf-8")
-    html = (page / "index.html").read_text(encoding="utf-8")
-    assert '<script src="events.js" defer></script>' in html
-    ids = set(re.findall(r'\$\("([a-z0-9-]+)"\)', script))
-    assert ids and all(f'id="{i}"' in html for i in ids), ids - set(re.findall(r'id="([a-z0-9-]+)"', html))
-    for path in ("/api/event-timer", "/api/leaderboard", "/api/me"):
-        assert path in script
-    code = "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("//"))
-    assert "innerHTML" not in code and not re.search(r"\b(confirm|alert)\(", code)
+def test_the_server_tab_asks_for_every_events_route_and_never_confirms():
+    from staff_ui import only_text, source
+    tab = source("tabs", "server")
+    for path in ("/api/event-timer", "/api/leaderboard"):
+        assert f'"{path}"' in tab
+    only_text(tab)
+    assert 'id: "server"' in source("shell", "tabs.ts")
 
 
 def test_the_lock_is_held_through_the_save_and_given_back_when_it_fails(ev):

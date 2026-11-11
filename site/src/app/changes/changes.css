@@ -20,3 +20,6 @@
   .changes article { position: relative; padding-left: calc(10rem + 40px); }
   .changes h3 time { position: absolute; left: 0; top: 30px; margin: 0; }
 }
+/* The feed link, above the first update. */
+.feed { margin: 0; }
+.feed a { color: var(--sage); }

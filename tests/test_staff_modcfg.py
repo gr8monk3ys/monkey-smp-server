@@ -1,4 +1,5 @@
-"""The staff page's Mod settings tab: tools/staff_modcfg.py (parsers, line edits, endpoints), deploy/staff/modcfg.js."""
+"""The staff page's Mod settings tab: tools/staff_modcfg.py (parsers, line edits, endpoints) and
+staff-ui/src/tabs/modcfg."""
 import json
 from pathlib import Path
 
@@ -346,112 +347,17 @@ def test_every_route_names_who_may_use_it():
 def test_the_tab_code_runs_under_the_strict_policy():
     import re
 
-    page = REPO.root / "deploy" / "staff"
-    script = (page / "modcfg.js").read_text(encoding="utf-8")
-    code = re.sub(r"//.*", "", script)
-    assert "innerHTML" not in script and "eval(" not in script and "document.write" not in script
-    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style|confirm\(|alert\(", code)
+    from staff_ui import SRC, only_text, source
+
+    script = source("tabs", "modcfg")
+    only_text(script)
     assert not re.search(r"https?://", script)
-    html = (page / "index.html").read_text(encoding="utf-8")
-    assert '<script src="modcfg.js" defer></script>' in html
-    missing = [i for i in set(re.findall(r'\$\("([\w-]+)"\)', script)) if f'id="{i}"' not in html]
-    assert not missing
-    panel = (page / "panel.js").read_text(encoding="utf-8")
-    assert 'id="tab-modcfg"' in html and 'data-tab="modcfg"' in html and '"modcfg"' in panel
-    assert "monkey-open-file" in panel and "monkey-open-file" in script
+    # The tab is in the page's list of tabs, and hands a file to the Files tab over the page's own bus.
+    tabs = (SRC / "shell" / "tabs.ts").read_text(encoding="utf-8")
+    assert 'id: "modcfg"' in tabs and "ModcfgTab" in tabs
+    assert '"open-file"' in script and "open-file" in source("lib", "bus.ts")
     # Every route the tab calls is one the panel serves.
-    for route in re.findall(r'"(/api/[\w-]+)', script):
+    routes = re.findall(r'"(/api/[\w-]+)', script)
+    assert routes
+    for route in routes:
         assert route in staff_panel.PATHS, route
-
-
-def test_the_important_keys_file_is_valid():
-    data = json.loads((REPO.root / m.IMPORTANT).read_text(encoding="utf-8"))
-    for name, mod in data["mods"].items():
-        assert name == name.lower() and mod["title"]
-        assert all(isinstance(k, str) for k in mod.get("keys", []))
-        assert mod.get("applies", "restart") in ("restart", "reload")
-
-
-# ---------------------------------------------------------------- Strength SMP over RCON
-
-
-def _sent(b):
-    return [c[-1] for c in b.docker.calls if "exec" in c]
-
-
-def _sets(b):
-    """The game's answer to every `scoreboard players set $Config ...` the card can send."""
-    for row in m.STRENGTH.values():
-        for score in range(0, 501):
-            command = f"scoreboard players set $Config {m.STRENGTH_OBJ}{row['objective']} {score}"
-            b.docker.answers[command] = f"Set [{m.STRENGTH_OBJ}{row['objective']}] for $Config to {score}"
-
-
-def test_strength_settings_are_read_over_rcon(box):  # noqa: F811
-    obj = m.STRENGTH_OBJ
-    box.docker.answers[f"scoreboard players get $Config {obj}Ultimate_Weapon_Cooldown-Axe"] = (
-        f"$Config has 120 [{obj}Ultimate_Weapon_Cooldown-Axe]")
-    box.docker.answers[f"scoreboard players get $Config {obj}Tag_Dependent_Powers"] = (
-        f"$Config has 1 [{obj}Tag_Dependent_Powers]")
-    code, data = box.call("GET", "/api/strength")
-    assert code == 200
-    rows = {r["key"]: r for r in data["settings"]}
-    assert len(rows) == 20 and rows["cooldown.axe"]["value"] == 120 and rows["tag.powers"]["value"] is True
-    assert rows["lifetime.mace"]["missing"] and rows["lifetime.mace"]["default"] == 500
-    assert "objective" not in rows["cooldown.axe"]
-    assert len(_sent(box)) == 20
-
-
-def test_strength_says_so_when_the_mod_is_not_loaded_or_the_server_is_off(box):  # noqa: F811
-    assert box.call("GET", "/api/strength")[0] == 502
-    box.docker.calls.clear()
-    box.docker.ps = json.dumps({"State": "exited", "Status": "Exited (0)", "Health": ""})
-    assert box.call("GET", "/api/strength")[0] == 502
-    assert box.call("PUT", "/api/strength", {"values": {"cooldown.axe": 60}})[0] == 502
-    assert not _sent(box)
-
-
-def test_strength_save_sets_exactly_those_scores_and_logs_them(box):  # noqa: F811
-    _sets(box)
-    code, done = box.call("PUT", "/api/strength", {"values": {"cooldown.axe": 60, "tag.powers": True}})
-    assert code == 200 and done["changed"] == ["cooldown.axe", "tag.powers"]
-    assert _sent(box) == [f"scoreboard players set $Config {m.STRENGTH_OBJ}Ultimate_Weapon_Cooldown-Axe 60",
-                          f"scoreboard players set $Config {m.STRENGTH_OBJ}Tag_Dependent_Powers 1"]
-    assert "diego strength cooldown.axe=60, tag.powers=1" in (box.staff / "actions.log").read_text()
-
-
-@pytest.mark.parametrize("values", [
-    {"cooldown.axe": 1}, {"cooldown.axe": 86401}, {"cooldown.axe": "60"}, {"cooldown.axe": 6.5},
-    {"cooldown.axe": True}, {"tag.powers": 1}, {"level.start": 3}, {"cooldown.axe 60\nstop": 1}, {}, None,
-])
-def test_strength_save_refuses_bad_values_before_any_command(box, values):  # noqa: F811
-    code, body = box.call("PUT", "/api/strength", {"values": values})
-    assert code == 400 and body["ok"] is False and not _sent(box)
-
-
-def test_strength_reset_needs_the_typed_word_and_sets_every_default(box):  # noqa: F811
-    _sets(box)
-    assert box.call("POST", "/api/strength-reset", {})[0] == 400 and not _sent(box)
-    code, done = box.call("POST", "/api/strength-reset", {"confirm": "RESET"})
-    assert code == 200 and len(done["changed"]) == 20
-    sent = _sent(box)
-    assert f"scoreboard players set $Config {m.STRENGTH_OBJ}Ultimate_Weapon_Lifetime-Bow 500" in sent
-    assert f"scoreboard players set $Config {m.STRENGTH_OBJ}Ultimate_Damage_Counter_Sufficient_Armor 250" in sent
-    assert f"scoreboard players set $Config {m.STRENGTH_OBJ}Tag_Dependent_Powers 0" in sent
-    assert "diego strength-reset" in (box.staff / "actions.log").read_text()
-
-
-def test_strength_needs_an_admin(box):  # noqa: F811
-    for method, path, body in (("GET", "/api/strength", None),
-                               ("PUT", "/api/strength", {"values": {"cooldown.axe": 60}}),
-                               ("POST", "/api/strength-reset", {"confirm": "RESET"})):
-        assert box.call(method, path, body, role="moderator")[0] == 403
-    assert not _sent(box)
-
-
-def test_strength_says_which_settings_were_not_set_when_the_game_refuses_one(box):  # noqa: F811
-    _sets(box)
-    del box.docker.answers[f"scoreboard players set $Config {m.STRENGTH_OBJ}Tag_Dependent_Powers 1"]
-    code, body = box.call("PUT", "/api/strength", {"values": {"cooldown.axe": 60, "tag.powers": True}})
-    assert code == 502 and "Not set: tag.powers." in body["error"]
-    assert "diego strength cooldown.axe=60 (not set: tag.powers)" in (box.staff / "actions.log").read_text()

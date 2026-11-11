@@ -80,15 +80,34 @@
     node.className = kind === "error" ? "attention" : "note";
     node.hidden = !text;
     node.textContent = text || "";
+    if (text && node.closest(".account-body")) node.scrollIntoView({ block: "nearest" });   // the menu scrolls
   }
 
   // ------------------------------------------------ the account menu
+
+  // A folded section of the menu: its title and a word on its state show; the form opens on a click, so the whole
+  // menu fits on a phone. The menu itself scrolls inside the sticky top bar (auth.css, .account-body).
+  function fold(title, state, content, open) {
+    const box = el("details", "fold");
+    const head = el("summary");
+    head.append(el("span", "", title));
+    if (state) head.append(el("small", "", state));
+    box.append(head, content);
+    box.open = Boolean(open);
+    return box;
+  }
+
+  function twoStepState(session) {
+    if (!session.two_step) return "Off";
+    const left = Number(session.recovery_left);
+    return Number.isFinite(left) ? `On, ${left} recovery code${left === 1 ? "" : "s"}` : "On";
+  }
 
   function passwordForm(status) {
     const form = el("form");
     const current = input("password", { autocomplete: "current-password", maxLength: 256 });
     const fresh = input("password", { autocomplete: "new-password", maxLength: 256, minLength: 12 });
-    form.append(el("h3", "", "Change password"), field("Current password", current),
+    form.append(field("Current password", current),
                 field("New password (12 characters or more)", fresh), button("Change password", "", null, "submit"));
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -107,7 +126,7 @@
     const form = el("form");
     const email = input("email", { autocomplete: "email", maxLength: 254, value: session.email || "" });
     const current = input("password", { autocomplete: "current-password", maxLength: 256 });
-    form.append(el("h3", "", "Change email"), field("New email", email), field("Current password", current),
+    form.append(field("New email", email), field("Current password", current),
                 button("Change email", "", null, "submit"));
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -142,7 +161,11 @@
 
   function twoStep(status, session) {
     const box = el("div", "two-step");
-    box.append(el("h3", "", "Two-step login"));
+    const redo = () => {             // draw it again for the new state, and say the state on the fold's title
+      const small = box.closest("details")?.querySelector(":scope > summary small");
+      if (small) small.textContent = twoStepState(session);
+      box.replaceWith(twoStep(status, session));
+    };
     if (!session.two_step) {
       box.append(el("p", "fine", "Off. With it on, logging in needs a 6-digit code from an authenticator app on "
                                  + "your phone, as well as the password."));
@@ -183,10 +206,10 @@
             current.value = code.value = "";
             session.two_step = true;
             session.recovery_left = done.recovery.length;
-            box.replaceWith(twoStep(status, session));
+            redo();
             recoveryBox(status, done.recovery);
           } catch (error) {
-            if (error.status === 410) box.replaceWith(twoStep(status, session));   // the key ran out: the button again
+            if (error.status === 410) redo();   // the key ran out: the button again
             say(status, error.message, "error");
           }
         });
@@ -217,12 +240,12 @@
           const done = await call("POST", "/auth/2fa/off", body);
           say(status, `Two-step login is off.${ended(done.ended)}`);
           session.two_step = false;
-          box.replaceWith(twoStep(status, session));
+          redo();
         } else {
           const done = await call("POST", "/auth/2fa/recovery", body);
           say(status, "New recovery codes are below. The old ones don't work any more.");
           session.recovery_left = done.recovery.length;
-          box.replaceWith(twoStep(status, session));
+          redo();
           recoveryBox(status, done.recovery);
         }
         current.value = code.value = "";
@@ -262,8 +285,10 @@
       body.append(el("p", "fine", "This login is the browser's password box: ask the owner for a new password."));
     } else {
       const mail = session.email ? `${session.email}${session.email_verified ? "" : " (not confirmed yet)"}` : "none";
-      body.append(el("p", "fine", `Email: ${mail}`), twoStep(status, session), passwordForm(status),
-                  emailForm(status, session),
+      body.append(el("p", "fine", `Email: ${mail}`),
+                  fold("Two-step login", twoStepState(session), twoStep(status, session), session.two_step_needed),
+                  fold("Change password", "", passwordForm(status)),
+                  fold("Change email", "", emailForm(status, session)),
                   button("Log out", "primary", async () => {
                     try {
                       await call("POST", "/auth/logout", {});

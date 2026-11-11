@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 import staff_status
+from staff_ui import SRC, only_text, source
 
 import rcon
 from repo import REPO
@@ -588,12 +589,14 @@ def test_the_page_runs_under_the_strict_policy():
     assert not re.search(r"\sstyle=|\son\w+=", html)
     assert not re.search(r"https?://", html)
     assert re.search(r'<meta name="robots" content="noindex', html)
-    script = (PAGE / "staff.js").read_text(encoding="utf-8")
-    assert "innerHTML" not in script and "eval(" not in script and "document.write" not in script
+    # The Status tab is in the shell's list of tabs, and its source keeps to text and SVG attributes.
+    assert re.search(r'id: "status"', source("shell", "tabs.ts"))
+    script = source("tabs", "status")
+    only_text(script)
     assert not re.search(r"https?://(?!www\.w3\.org/)", script)
     # A style attribute set from code is what the policy refuses.
-    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style", script)
-    style = (PAGE / "staff.css").read_text(encoding="utf-8")
+    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style|\sstyle=\{", script)
+    style = (SRC / "styles" / "app.css").read_text(encoding="utf-8")
     assert not re.search(r"https?://", style.replace("http://www.w3.org/2000/svg", ""))
 
 

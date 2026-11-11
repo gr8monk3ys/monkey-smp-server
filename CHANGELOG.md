@@ -41,6 +41,16 @@
   - Mods: **updates on Modrinth**, checked by each jar's hash, with the changelog; the owner updates a mod from there.
     A release's pinned mods are shown but updated with a release.
 
+### Changed
+
+- **The staff page is rebuilt in React** (Vite, Tailwind 4, in `staff-ui/`), in the site's look: a rail of tabs on a
+  desktop, one sideways row on a phone, framed panels, and charts drawn as SVG. Every tab, the login, reset and
+  confirm pages, roles, two-step login and the account menu work as before, under the same policy (no inline script
+  or style). The VPS still needs no Node: the build in `deploy/staff/` is committed, and `tools/checks.py` fails when
+  it is not the build of `staff-ui/` (`staff-ui/README.md`). The old `*.js` and `*.css` files there are gone; a path
+  checkout on the VPS leaves them in place, unused, until the next deploy (docs/LIVE.md).
+- Typed confirms keep their button off until the word matches, and the mod settings' reset asks for the word RESET.
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

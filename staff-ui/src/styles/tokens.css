@@ -1,0 +1,78 @@
+/* Copied from the old deploy/staff/staff.css, which copied site/src/app/style.css (DESIGN.md). */
+@font-face {
+  font-family: "Pixelify Sans Monkey";
+  src: url("/fonts/pixelify-sans-monkey-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson-next-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+:root {
+  --shade: #0e3122;
+  --ground: #133f2b;
+  --leaf-2: #1f6142;
+  --leaf-3: #2b7a4b;
+  --bone: #f9f8f5;
+  --bone-2: #e2dcce;
+  --sage: #b3dcbf;
+  --gold: #e8b23a;
+  --ink: #1a1f23;
+  --ring: var(--bone);
+
+  /* Status: said in a word and a shape as well, never by colour alone. */
+  --ok: var(--sage);
+  --warn: #f0a13c;
+  --bad: #ff8675;
+
+  /* The charts' lines, checked for colour blindness against --shade (dataviz's validate_palette.js). */
+  --line-1: #c2871a;
+  --line-2: #49a36e;
+  --line-solo: #b3dcbf;
+
+  --display: "Pixelify Sans Monkey", sans-serif;
+  --body: "Atkinson Hyperlegible Next", sans-serif;
+  --wide: 76rem;
+  --measure: 32em;
+  --gutter: max(16px, calc((100% - var(--wide)) / 2));
+
+  --frame-gold: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f3cb6b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-bone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E");
+  --frame-bone-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23f9f8f5' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  /* A step that takes something away (stop, kick, ban, delete): the outline in the status coral. */
+  --frame-bad: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23ff8675' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E");
+  --frame-bad-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%23ff8675' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  --frame-shade: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%230e3122' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  /* Text boxes and menus: an ink edge round the page's own green, so they show on a box and on the page alike. */
+  --frame-field: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23133f2b' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  /* The marks on a message and on a row of Files, drawn like the status marks. */
+  --mark-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' fill-rule='evenodd' d='M5 1h2v2h1v2h1v2h1v2h1v2H1V9h1V7h1V5h1V3h1z'/%3E%3C/svg%3E");
+  --mark-warn-amber: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f0a13c' fill-rule='evenodd' d='M5 1h2v2h1v2h1v2h1v2h1v2H1V9h1V7h1V5h1V3h1z'/%3E%3C/svg%3E");
+  --mark-bad: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23ff8675' fill-rule='evenodd' d='M5 0h2v2h2v2h2v4H9v2H7v2H5v-2H3V8H1V4h2V2h2z'/%3E%3C/svg%3E");
+  --mark-bad-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' fill-rule='evenodd' d='M5 0h2v2h2v2h2v4H9v2H7v2H5v-2H3V8H1V4h2V2h2z'/%3E%3C/svg%3E");
+  --mark-done: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23b3dcbf' fill-rule='evenodd' d='M9 2h2v2H9zM7 4h2v2H7zM5 6h2v2H5zM3 8h2v2H3zM1 6h2v2H1z'/%3E%3C/svg%3E");
+  --mark-folder: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23b3dcbf' fill-rule='evenodd' d='M1 2h4v1h6v8H1z'/%3E%3C/svg%3E");
+  --mark-file: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23e2dcce' fill-rule='evenodd' d='M2 1h6v2h2v8H2zM4 5v1h4V5zM4 7v1h4V7z'/%3E%3C/svg%3E");
+  --hint: #8db99c;   /* placeholders: 5:1 on --ground */
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+
+/* The rest of the site's frame family (site/src/app/style.css). */
+:root {
+  --leaf: #184e35;    /* the logo's tile: the pricing band */
+  --gold-hi: #f3cb6b;
+  --ink-2: #2e3530;   /* secondary text on stone */
+  --stone: #b6bcad;   /* reference: the address plaque, the rule tablets */
+  --frame-gold-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23f0bf52' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23f8d98a' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23c98f1f' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-gold-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23e8b23a' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c98f1f' d='M4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-stone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%23b6bcad' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%23c9cec1' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23959b8e' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-leaf: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3Cpath fill='%232b7a4b' d='M4 2h6v2H4z'/%3E%3Cpath fill='%23184e35' d='M2 8h10v2H2zM4 10h6v2H4z'/%3E%3C/svg%3E");
+  --frame-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%231a1f23' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3Cpath fill='%231a1f23' d='M4 2h6v10H4zM2 4h10v6H2z'/%3E%3C/svg%3E");
+  --frame-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M4 0h6v2H4zM4 12h6v2H4zM0 4h2v6H0zM12 4h2v6h-2zM2 2h2v2H2zM10 2h2v2h-2zM2 10h2v2H2zM10 10h2v2h-2z'/%3E%3C/svg%3E");
+  --moss: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%232b7a4b' d='M0 0h32v2H0zM0 2h6v2H0zM10 2h4v2h-4zM18 2h8v2h-8zM2 4h2v2H2zM20 4h2v2h-2z'/%3E%3Cpath fill='%231f6142' d='M6 2h2v2H6zM28 2h2v2h-2zM12 4h2v4h-2zM22 4h2v4h-2zM2 6h2v2H2z'/%3E%3C/svg%3E");
+}

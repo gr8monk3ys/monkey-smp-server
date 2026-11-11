@@ -292,17 +292,22 @@ otherwise. Every state, the quiet fallback included, fills the same two lines a 
 status arrives. The guide hub has the same status as one line under its lede.
 
 ### Staff page
-Not part of `site/`: plain HTML, CSS and JS in `deploy/staff/`, served by Caddy behind a password, under a policy that
-allows no inline script or style. A tool for a quick look, so it keeps the ground, faces and frames and drops the
+Not part of `site/`: a React app in `staff-ui/` (Vite, Tailwind, the site's tokens and pixel frames), built into
+`deploy/staff/` and served by Caddy behind a login, under a policy that allows no inline script or style, so every
+look is a class (`staff-ui/README.md`). A tool for a quick look, so it keeps the ground, faces and frames and drops the
 show: no placed blocks, no gallery. One word in the display face says how the server is, with the sentence that
 explains it; the numbers sit in a rail on the left and the charts on the right (one column on phones), with recent
 problems above the charts, each marked with a shape and a word. The numbers use the body face, not the display face:
 at this size the display face's 2 reads as an 8. Gold fills only what can be pressed to do something: the chosen time range and the main step of a view.
 
-The header and the tabs stay at the top of every tab. The header repeats the status word and its mark, so the
-server's state is in view while you work in another tab. A tab is a word with a bone bar under the open one; on a
-phone the tabs are one row that scrolls sideways. They are ordered by job: watching (Status, Players, Console,
-Reports), running (Server, Settings, Mods, Mod settings, Files), then Users.
+On a desktop the tabs are a rail on the left, in the shade colour, each with its icon, the open one filled gold; on a
+phone they are one row of words under the header that scrolls sideways, with a bone bar under the open one, and the
+header shows the monkey alone. The header stays at the top of every tab: it repeats the status word and its mark, so
+the server's state is in view while you work in another tab, and holds the account menu (two-step login, password,
+email, log out). The tabs are ordered by job: watching (Status, Players, Console, Reports), running (Server, Settings,
+Mods, Mod settings, Files), then Users for owners. Each tab is panels in the site's framed blocks: a headline in the
+display face, a line on what the tab does, then one panel per job, two side by side where the screen is wide. The
+login, reset and confirm pages are one framed card under the leaf header, with the monkey above it.
 
 A button that takes something away (stop, restart now, kick, ban, remove, delete, reset) has a coral outline and
 coral text, never a gold fill, and always asks first. Messages come in three kinds, each with its own mark: a

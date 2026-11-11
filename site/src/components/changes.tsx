@@ -1,12 +1,14 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { dayLabel } from "@/lib/config";
+import { entryId } from "@/lib/feed";
 
 /** One update in the player changelog (src/content/changes.mdx): its date on a stone tag, its title, and the
- * list under it. An update not released yet has no date and says so in its label ("Next update"). */
+ * list under it. An update not released yet has no date and says so in its label ("Next update"). Its id (date and
+ * title) is where the feed's item for it links (src/lib/feed.ts). */
 export function Entry({ date, label, title, children }:
   { date?: string; label?: string; title: string; children: ReactNode }) {
   return (
-    <article>
+    <article id={entryId(date, title)}>
       <h3>
         <time className="label" dateTime={date}>{label ?? (date ? dayLabel(date) : "Next update")}</time>
         {title}

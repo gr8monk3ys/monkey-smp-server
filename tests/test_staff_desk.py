@@ -13,8 +13,6 @@ import staff_desk
 import staff_panel
 from test_staff_panel import actions, box  # noqa: F401 (box is the fixture: a panel over a fake server folder)
 
-from repo import REPO
-
 ALPHA, BRAVO, CAROL = (f"0000000{i}-0000-4000-8000-00000000000{i}" for i in (1, 2, 3))
 MOD, ADMIN = {"X-Staff-Role": "moderator"}, {"X-Staff-Role": "admin"}
 
@@ -367,28 +365,23 @@ def test_a_rename_through_a_link_cannot_leave_the_server_folder_or_reach_code(de
 
 
 def test_the_page_has_every_element_the_scripts_use():
-    page = REPO.root / "deploy" / "staff"
-    html = (page / "index.html").read_text(encoding="utf-8")
-    assert '<script src="desk.js" defer></script>' in html
-    ids = set(re.findall(r'id="([a-z0-9-]+)"', html))
-    for name in ("desk.js", "panel.js", "staff.js"):
-        script = (page / name).read_text(encoding="utf-8")
-        used = set(re.findall(r'\$\("([a-z0-9-]+)"\)', script))
-        assert used <= ids, (name, used - ids)
-        code = "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("//"))
-        assert "innerHTML" not in code and not re.search(r"\b(confirm|alert)\(", code)
-        assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style", code)
-    script = (page / "desk.js").read_text(encoding="utf-8")
+    """desk.js's routes are spread over the Console, Players, Files and Server tabs, so this reads the whole
+    staff-ui/src/tabs folder (source("tabs")) and checks the tabs exist in the shell."""
+    from staff_ui import only_text, source
+    tabs = source("tabs")
+    shell = source("shell", "tabs.ts")
+    for tab in ("status", "console", "files", "players", "server"):
+        assert f'id: "{tab}"' in shell
+    only_text(tabs)
     for _, path in staff_desk.ROUTES:
-        assert path in script
-    # Every id is on the page once.
-    every = re.findall(r'id="([a-z0-9-]+)"', html)
-    assert len(every) == len(set(every)), sorted({i for i in every if every.count(i) > 1})
+        assert path in tabs
 
 
 def test_the_consoles_chat_view_knows_the_games_chat_lines():
-    """The patterns in panel.js, checked here against lines as the game writes them (Python's re reads them alike)."""
-    script = (REPO.root / "deploy" / "staff" / "panel.js").read_text(encoding="utf-8")
+    """The patterns in the Console tab's source, checked here against lines as the game writes them (Python's re
+    reads them alike)."""
+    from staff_ui import source
+    script = source("tabs", "console")
     head = re.compile(re.search(r"const LOG_HEAD = /(.*)/;", script).group(1))
     chat = re.compile(re.search(r"const CHAT = /(.*)/;", script).group(1))
     said = {
@@ -484,8 +477,9 @@ def test_without_hard_links_a_rename_still_works(desk, monkeypatch):
 
 
 def test_the_consoles_history_keeps_a_chat_line_as_its_command():
-    script = (REPO.root / "deploy" / "staff" / "panel.js").read_text(encoding="utf-8")
-    assert "const kept = saying ? `/${command}` : command;" in script and "history.push(kept)" in script
+    from staff_ui import source
+    script = source("tabs", "console")
+    assert "const kept = saying ? `/${command}` : command;" in script and "history.current.push(kept)" in script
 
 
 # ---------------------------------------------------------------- temporary bans

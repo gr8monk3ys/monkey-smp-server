@@ -252,6 +252,18 @@ def test_only_modrinths_api_is_posted_to(box):  # noqa: F811
         staff_lookup.post_json("https://example.com/v2/version_files/update", {})
 
 
+def test_the_mods_tab_asks_for_updates_and_never_confirm():
+    import re
+
+    from staff_ui import SRC, only_text, source
+
+    script = source("tabs", "mods", "Updates.tsx")
+    only_text(script)
+    assert '"/api/mod-updates"' in script and '"/api/modrinth-install"' in script and "fresh=1" in script
+    assert not re.search(r"https?://", script)
+    assert 'id: "mods"' in (SRC / "shell" / "tabs.ts").read_text(encoding="utf-8")
+
+
 # ---------------------------------------------------------------- one player's history
 
 
@@ -272,16 +284,13 @@ def test_a_players_history_brings_their_lists_ban_notes_and_changes_together(des
 
 
 def test_the_page_has_every_element_lookup_js_uses():
-    import re
-    page = REPO.root / "deploy" / "staff"
-    html = (page / "index.html").read_text(encoding="utf-8")
-    assert '<script src="lookup.js" defer></script>' in html
-    ids = set(re.findall(r'id="([a-z0-9-]+)"', html))
-    script = (page / "lookup.js").read_text(encoding="utf-8")
-    used = set(re.findall(r'\$\("([a-z0-9-]+)"\)', script))
-    assert used <= ids, used - ids
-    code = "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("//"))
-    assert "innerHTML" not in code and not re.search(r"\b(confirm|alert)\(", code)
-    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style", code)
+    """The look-ups are spread over three tabs (Console: mod-commands, Players: history and blocks, Mods: updates),
+    so this reads the whole staff-ui/src/tabs folder."""
+    from staff_ui import only_text, source
+    tabs = source("tabs")
+    shell = source("shell", "tabs.ts")
+    assert 'id: "players"' in shell
+    assert (REPO.root / "staff-ui" / "src" / "tabs" / "players" / "index.tsx").is_file()
+    only_text(tabs)
     for _, path in staff_lookup.ROUTES:
-        assert path in script
+        assert path in tabs

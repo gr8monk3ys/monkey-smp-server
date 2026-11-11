@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import pytest
 import staff_auth
 import staff_panel
+from staff_ui import only_text, source
 from test_staff_status import FAKES
 
 from repo import REPO
@@ -1023,14 +1024,13 @@ def test_an_owner_turns_off_two_step_from_the_users_tab_and_it_is_recorded(web):
 
 
 def test_the_login_page_asks_for_the_code_the_way_phones_fill_it():
-    html = (PAGE / "login.html").read_text(encoding="utf-8")
-    field = re.search(r'<input id="code"[^>]*>', html)[0]
-    assert 'autocomplete="one-time-code"' in field and 'inputmode="numeric"' in field
-    assert "Use a recovery code" in html
-    script = (PAGE / "auth.js").read_text(encoding="utf-8")
-    assert "/auth/login/code" in script and "challenge" in script
-    users = (PAGE / "users.js").read_text(encoding="utf-8")
-    assert "/auth/2fa/confirm" in users and "/api/users/2fa-off" in users
+    pages = source("auth", "Pages.tsx")
+    field = pages[pages.index('label={recovery ? "Recovery code" : "Code from your app"}'):]
+    field = field[:field.index("/>")]
+    assert '"one-time-code"' in field and '"numeric"' in field
+    assert "Use a recovery code" in pages
+    assert "/auth/login/code" in pages and "challenge" in pages
+    assert "/auth/2fa/confirm" in source("shell", "Account.tsx") and "/api/users/2fa-off" in source("tabs", "users")
 
 
 # ---------------------------------------------------------------- mail
@@ -1170,17 +1170,17 @@ def test_the_pages_run_under_the_strict_policy(name):
     assert re.search(r'<meta name="robots" content="noindex', html)
 
 
-@pytest.mark.parametrize("name", ["auth.js", "users.js"])
-def test_the_scripts_only_use_text(name):
-    script = (PAGE / name).read_text(encoding="utf-8")
-    assert "innerHTML" not in script and "eval(" not in script and "document.write" not in script
-    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style", script) and not re.search(r"https?://", script)
-    assert "localStorage" not in script and "X-Monkey-Staff" in script
+@pytest.mark.parametrize("parts", [("auth",), ("lib", "auth.ts"), ("shell", "Account.tsx"), ("tabs", "users")])
+def test_the_scripts_only_use_text(parts):
+    script = source(*parts)
+    only_text(script)
+    assert not re.search(r"https?://", script)
+    assert "X-Monkey-Staff" in source("lib", "auth.ts")
 
 
 def test_the_login_page_has_a_forgot_link_and_the_reset_token_stays_out_of_requests():
-    assert "Forgot password?" in (PAGE / "login.html").read_text(encoding="utf-8")
-    script = (PAGE / "auth.js").read_text(encoding="utf-8")
+    script = source("auth")
+    assert "Forgot password?" in script
     assert "location.hash" in script and "history.replaceState" in script and "location.search" not in script
 
 

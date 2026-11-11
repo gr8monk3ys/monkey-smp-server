@@ -1,4 +1,5 @@
-"""The staff page's hosting controls: tools/staff_apex.py, deploy/monkey-staff-helper.sh, deploy/staff/server.js."""
+"""The staff page's hosting controls: tools/staff_apex.py, deploy/monkey-staff-helper.sh and the Server tab
+(staff-ui/src/tabs/server)."""
 import datetime as dt
 import io
 import json
@@ -971,19 +972,13 @@ def test_the_address_bans_are_listed(apex):
 
 
 def test_the_new_page_code_runs_under_the_strict_policy():
-    page = DEPLOY / "staff"
-    script = (page / "server.js").read_text(encoding="utf-8")
-    code = re.sub(r"//.*", "", script)
-    assert "innerHTML" not in script and "eval(" not in script and "document.write" not in script
-    assert not re.search(r"\.style\.|setAttribute\(\s*[\"']style|confirm\(|alert\(", code)
-    assert not re.search(r"https?://", script)
-    assert not re.search(r"https?://", (page / "server.css").read_text(encoding="utf-8"))
-    html = (page / "index.html").read_text(encoding="utf-8")
-    assert '<script src="server.js" defer></script>' in html and 'href="server.css"' in html
-    # Every element server.js looks up is on the page.
-    ids = set(re.findall(r'\$\("([\w-]+)"\)', script))
-    missing = [i for i in ids if f'id="{i}"' not in html]
-    assert not missing
-    panel = (page / "panel.js").read_text(encoding="utf-8")
-    for tab in ("settings", "mods"):
-        assert f'id="tab-{tab}"' in html and f'data-tab="{tab}"' in html and f'"{tab}"' in panel
+    # The settings, mods and server tabs (staff-ui/src/tabs): text only, no style attribute, no confirm(), and no
+    # address of another site in the tabs' code (the links the server returns are not in the source).
+    from staff_ui import code, only_text, source
+    tabs = source("tabs")
+    only_text(tabs)
+    assert not re.search(r"https?://", code(tabs))
+    shell = source("shell", "tabs.ts")
+    for tab in ("settings", "mods", "server"):
+        assert f'id: "{tab}"' in shell
+        assert source("tabs", tab)

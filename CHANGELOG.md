@@ -41,6 +41,20 @@
   - Mods: **updates on Modrinth**, checked by each jar's hash, with the changelog; the owner updates a mod from there.
     A release's pinned mods are shown but updated with a release.
 
+### Changed
+
+- **The staff page is rebuilt in React** (Vite, Tailwind 4, in `staff-ui/`), in the site's look: a rail of tabs on a
+  desktop, one sideways row on a phone, framed panels, and charts drawn as SVG. Every tab, the login, reset and
+  confirm pages, roles, two-step login and the account menu work as before, under the same policy (no inline script
+  or style). The VPS still needs no Node: the build in `deploy/staff/` is committed, and `tools/checks.py` fails when
+  it is not the build of `staff-ui/` (`staff-ui/README.md`). The old `*.js` and `*.css` files there are gone; a path
+  checkout on the VPS leaves them in place, unused, until the next deploy (docs/LIVE.md).
+- **The Status tab is a dashboard**: cards with 24-hour lines, crashes, stalls and the peak marked on the charts, an
+  hour-by-day heatmap of players online, the problems on one 24-hour axis, player cards (new this week, away 7+ days)
+  and the staff's actions this week. It reads only what the page already had (`staff.json`, the player list and the
+  staff log); nothing new is collected.
+- Typed confirms keep their button off until the word matches, and the mod settings' reset asks for the word RESET.
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

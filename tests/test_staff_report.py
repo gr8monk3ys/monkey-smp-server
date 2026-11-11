@@ -1,5 +1,5 @@
 """The staff page's weekly rule check: tools/staff_report.py, its panel routes, deploy/monkey-report.* and the Reports
-tab (deploy/staff/reports.js). A made-up world: a tiny Ledger database, stats, parties, usercache and logs."""
+tab (staff-ui/src/tabs/reports). A made-up world: a tiny Ledger database, stats, parties, usercache and logs."""
 import datetime as dt
 import gzip
 import json
@@ -10,6 +10,8 @@ import sqlite3
 import pytest
 import staff_report
 from nbt_writer import Ints, nbt
+from staff_ui import only_text
+from staff_ui import source as ui_source
 from test_staff_panel import box  # noqa: F401 (the fixture: the real panel over HTTP)
 
 from repo import REPO
@@ -401,14 +403,10 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
 
 
 def test_the_reports_tab_is_on_the_page():
-    html = (PAGE / "index.html").read_text(encoding="utf-8")
-    assert '<script src="reports.js" defer></script>' in html and 'data-tab="reports"' in html
-    assert 'id="tab-reports"' in html
-    assert '"reports"' in re.search(r"const TABS = \[[^\]]*\]", (PAGE / "panel.js").read_text()).group(0)
-    script = (PAGE / "reports.js").read_text(encoding="utf-8")
+    assert 'id: "reports"' in ui_source("shell", "tabs.ts")
+    script = ui_source("tabs", "reports")
     assert script.isascii()
-    assert "innerHTML" not in script and "eval(" not in script and "document.write" not in script
-    assert not re.search(r"\b(confirm|alert)\(", script) and ".style" not in script
+    only_text(script)
     assert "DISCORD_MAX = 1990" in script
 
 

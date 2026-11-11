@@ -124,13 +124,12 @@ def test_only_a_report_link_is_taken(text, found):
 
 
 def test_the_page_uses_every_route_and_only_opens_a_report_link():
-    from repo import REPO
-    script = (REPO.root / "deploy" / "staff" / "desk.js").read_text(encoding="utf-8")
+    from staff_ui import source
+    script = source("tabs", "server")
     for _, path in staff_spark.ROUTES:
         assert f'"{path}"' in script
     # The link's href is set only after the page checks its shape again.
-    assert 'SPARK_LINK.test(run.link)' in script and 'rel="noopener noreferrer"' in (
-        REPO.root / "deploy" / "staff" / "index.html").read_text(encoding="utf-8")
+    assert 'SPARK_LINK.test(run.link)' in script and 'rel="noopener noreferrer"' in script
 
 
 @pytest.mark.parametrize("line", [

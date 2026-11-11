@@ -39,6 +39,18 @@ def test_readings_fold_into_hours_and_a_restart_loses_nothing():
     assert later["hours"] == []
 
 
+def test_the_hour_staff_json_is_still_filling_is_worked_out_again():
+    base = int(NOW.timestamp()) // HOUR * HOUR
+    first = staff_trends.history({}, {"history": [[base + 60, 10.0, 10.0, 1, 50.0, 5.0]]}, NOW)
+    again = staff_trends.history(first, {"history": [[base + 60, 10.0, 10.0, 1, 50.0, 5.0],
+                                                     [base + 180, 20.0, 30.0, 3, 50.0, 5.0]]}, NOW)
+    assert again["hours"] == [[base, 15.0, 30.0, 2.0, 3, 50.0, 5.0, 2]]
+
+
+def test_a_staff_json_of_the_wrong_shape_is_no_reading():
+    assert staff_trends.history({}, ["not", "a", "dict"], NOW)["hours"] == []
+
+
 def test_a_broken_staff_json_keeps_the_hours_there_were():
     kept = {"hours": [[int(NOW.timestamp()) // HOUR * HOUR, 1.0, 2.0, 1.0, 1, 1.0, 1.0, 1], "junk", [1, 2]]}
     assert staff_trends.history(kept, {"history": "nope"}, NOW)["hours"] == kept["hours"][:1]
@@ -95,8 +107,40 @@ def test_a_finished_log_is_read_once(logs, monkeypatch):
     real = staff_trends.staff_report.read_log
     monkeypatch.setattr(staff_trends.staff_report, "read_log", lambda p, d: read.append(p.name) or real(p, d))
     again = staff_trends.players(logs, json.loads(json.dumps(data)), NOW + dt.timedelta(minutes=10))
-    assert read == ["latest.log"]
+    assert read == []                   # the finished logs aren't read again; latest.log goes on from its place
     assert staff_trends.merged_days(again)[0]["2026-11-09"] == staff_trends.merged_days(data)[0]["2026-11-09"]
+
+
+def test_latest_log_keeps_only_the_lines_it_needs_and_goes_on_from_its_place(logs):
+    latest = logs / "server" / "logs" / "latest.log"
+    lines, mark, went_on = staff_trends.latest_lines(latest, None)
+    assert not went_on and mark["offset"] == latest.stat().st_size and mark["day"] == "2026-11-16"
+    assert [t for _, t in lines] == ["Starting minecraft server version 26.2", "Alpha joined the game",
+                                     "Alpha left the game", "Dan joined the game"]
+    assert staff_trends.latest_lines(latest, mark)[:2] == ([], mark)     # unchanged: nothing read
+    with open(latest, "a", encoding="utf-8") as f:
+        f.write(log([("23:40:00", "Saving the game"), ("00:10:00", "Dan left the game")]) + "[00:11:00] [Ser")
+    lines, mark2, went_on = staff_trends.latest_lines(latest, mark)
+    # Only the new lines, past midnight on the next day; the line not finished yet waits.
+    assert went_on and lines == [(dt.datetime(2026, 11, 17, 0, 10), "Dan left the game")]
+    assert mark2["offset"] < latest.stat().st_size and mark2["day"] == "2026-11-17"
+    latest.write_text(log([("01:00:00", "Starting minecraft server version 26.2")]), encoding="utf-8")
+    assert not staff_trends.latest_lines(latest, mark2)[2]               # a new file: read from its start
+
+
+def test_the_next_run_reads_latest_log_from_its_place(logs, monkeypatch):
+    data = json.loads(json.dumps(staff_trends.players(logs, {}, NOW)))
+    with open(logs / "server" / "logs" / "latest.log", "a", encoding="utf-8") as f:
+        f.write(log([("23:59:00", "Dan left the game")]))
+    seen = []
+    real = staff_trends.latest_lines
+    monkeypatch.setattr(staff_trends, "latest_lines", lambda p, m: seen.append(m) or real(p, m))
+    again = staff_trends.players(logs, data, NOW + dt.timedelta(minutes=10))
+    assert seen == [data["live"]["mark"]]
+    days, _ = staff_trends.merged_days(again)
+    assert days["2026-11-16"]["minutes"]["Dan"] == 59
+    assert "Dan" not in days.get("2026-11-17", {"minutes": {}})["minutes"]
+    assert 59 in days["2026-11-16"]["sessions"]
 
 
 def test_a_server_that_stopped_without_a_word_ends_the_sessions_where_it_last_spoke(tmp_path):
@@ -117,9 +161,37 @@ def test_the_tenth_log_of_a_day_comes_after_the_ninth():
 def test_retention_counts_who_joined_again_after_1_and_7_days(logs):
     days, first = staff_trends.merged_days(staff_trends.players(logs, {}, NOW))
     rows = staff_trends.retention(days, first, dt.date(2026, 11, 17))
-    assert rows[0] == {"week": "2026-11-09", "new": 3, "due_1d": 3, "back_1d": 1, "due_7d": 3, "back_7d": 1}
+    assert rows[0] == {"week": "2026-11-09", "new": 3, "partial": False, "due_1d": 3, "back_1d": 1, "due_7d": 3,
+                       "back_7d": 1}
     # Dan's evening ran past midnight: that is one visit, not a return.
-    assert rows[1] == {"week": "2026-11-16", "new": 1, "due_1d": 1, "back_1d": 0, "due_7d": 0, "back_7d": 0}
+    assert rows[1] == {"week": "2026-11-16", "new": 1, "partial": False, "due_1d": 1, "back_1d": 0, "due_7d": 0,
+                       "back_7d": 0}
+
+
+def test_the_week_the_logs_begin_is_partial_and_its_first_day_left_out(logs):
+    data = staff_trends.players(logs, {}, NOW)
+    assert data["start"] == "2026-11-09"
+    days, first = staff_trends.merged_days(data)
+    rows = staff_trends.retention(days, first, dt.date(2026, 11, 17), data["start"])
+    # Alpha and Bravo may have played before the logs began: only Carol is new that week.
+    assert rows[0] == {"week": "2026-11-09", "new": 1, "partial": True, "due_1d": 1, "back_1d": 0, "due_7d": 1,
+                       "back_7d": 0}
+    assert not rows[1]["partial"]
+
+
+def test_a_first_day_that_is_no_date_is_left_out():
+    days = {"2026-11-09": {"minutes": {"A": 5}, "sessions": [5], "joined": ["A"]}, "junk": {"minutes": {}}}
+    assert staff_trends.retention(days, {"A": "not a day", "B": 7}, dt.date(2026, 11, 17)) == []
+    merged, first = staff_trends.merged_days({"base": {"days": days, "first": {"A": "x"}},
+                                              "live": {"days": {}, "first": {}}})
+    assert "junk" not in merged and first == {}
+
+
+def test_first_days_older_than_a_year_are_forgotten(logs):
+    old = {"version": 1, "base": {"first": {"Gone": "2025-01-01", "Kept": "2026-06-01"}, "start": "2025-01-01"}}
+    data = staff_trends.players(logs, old, NOW)
+    assert "Gone" not in data["base"]["first"] and data["base"]["first"]["Kept"] == "2026-06-01"
+    assert data["start"] == "2025-01-01"                # the day the logs began stays
 
 
 # ---------------------------------------------------------------- Ledger's counts
@@ -180,6 +252,45 @@ def test_a_capped_run_stops_and_the_next_one_goes_on(world, monkeypatch):
     assert done["caught_up"] and done["hours"] == {"2026-11-16 10": [1, 1], "2026-11-16 11": [2, 0]}
 
 
+def test_without_the_player_index_the_hourly_gate_still_applies(world):
+    db = sqlite3.connect(world / "server" / "world" / "ledger.sqlite")
+    db.execute("drop index actions_player_id")
+    db.commit()
+    db.close()
+    data = staff_trends.world(world, {}, NOW)
+    assert data["caught_up"] and "no player_id index" in data["note"]
+    assert not staff_trends.due(json.loads(json.dumps(data)), staff_trends.WORLD_EVERY, NOW + dt.timedelta(minutes=2))
+
+
+def test_a_busy_ledger_keeps_what_was_counted(world, monkeypatch):
+    real = staff_trends.staff_report.Ledger
+
+    class Busy:
+        """Ledger's database, locked by the game after the first query."""
+        def __init__(self, db):
+            self.db, self.calls = db, 0
+
+        def execute(self, *a):
+            self.calls += 1
+            if self.calls > 1:
+                raise sqlite3.OperationalError("database is locked")
+            return self.db.execute(*a)
+
+        def __getattr__(self, name):
+            return getattr(self.db, name)
+
+    def opened(path):
+        led = real(path)
+        led.db = Busy(led.db)
+        return led
+
+    monkeypatch.setattr(staff_trends.staff_report, "Ledger", opened)
+    monkeypatch.setattr(staff_trends, "WORLD_CHUNK", 1)
+    data = staff_trends.world(world, {}, NOW)
+    assert not data["caught_up"] and data["rows"] == 1 and "busy" in data["note"]
+    assert sum(sum(v) for v in data["hours"].values()) == 1 and data["cursors"]
+
+
 def test_a_run_that_left_work_goes_on_at_the_next_pass_not_an_hour_later():
     ran = {"version": 1, "at": "2026-11-17T09:00:00Z", "caught_up": True}
     assert not staff_trends.due(ran, staff_trends.WORLD_EVERY, NOW + dt.timedelta(minutes=2))
@@ -200,6 +311,29 @@ def test_update_writes_each_part_and_a_missing_source_spoils_none(tmp_path, logs
     assert staff_trends.update(logs, staff, NOW + dt.timedelta(minutes=2))[1] == "players: not due yet"
     if os.name != "nt":
         assert (staff / "trends" / "players.json").stat().st_mode & 0o777 == 0o600
+
+
+def test_a_kept_file_of_the_wrong_shape_starts_that_part_again_and_the_others_go_on(tmp_path, logs, world):
+    staff = tmp_path / "staff"
+    staff_trends.save(staff / "trends" / "players.json",
+                      {"version": 1, "at": "2026-11-17T08:00:00Z", "caught_up": True,
+                       "base": {"days": {"2026-11-09": []}, "first": {}}, "live": {"days": {}, "first": {}}})
+    staff_trends.save(staff / "trends" / "history.json", {"version": 1, "hours": "nope"})
+    said = staff_trends.update(logs, staff, NOW)  # world: the same live folder
+    assert said[1].startswith("players: ") and "started again" in said[1]
+    assert said[2].startswith("world: ")            # the run went on past it
+    again = staff_trends.load(staff / "trends" / "players.json")
+    assert staff_trends.readable("players", again, NOW) and again["base"]["days"]["2026-11-09"]["minutes"]
+    # The state the review found: a day that is not a dict made make() itself fail.
+    staff_trends.save(staff / "trends" / "players.json", {**again, "base": {**again["base"], "last": "not a time"}})
+    said = staff_trends.update(logs, staff, NOW + dt.timedelta(minutes=20))
+    assert "started again" in said[1] and "not updated" not in said[1]
+
+
+def test_a_damaged_file_answers_503_not_500(box):  # noqa: F811
+    staff_trends.save(box.staff / "trends" / "players.json",
+                      {"version": 1, "base": {"days": {"2026-11-09": 5}, "first": {}}, "live": {}})
+    assert box.call("GET", "/api/trend-players", headers=MOD)[0] == 503
 
 
 def test_show_writes_nothing(tmp_path, logs):
@@ -243,9 +377,14 @@ def test_players_per_day_and_session_lengths(box, logs):  # noqa: F811
     staff_trends.save(box.staff / "trends" / "players.json", staff_trends.players(logs, {}, NOW))
     answer = staff_trends.trend_players(box.panel, {}, NOW)
     nine = next(r for r in answer["days"] if r["day"] == "2026-11-09")
-    assert nine == {"day": "2026-11-09", "unique": 2, "new": 2, "hours": 4.8, "sessions": 2, "median_minutes": 160}
+    # The logs begin that day: who was new can't be told.
+    assert nine == {"day": "2026-11-09", "unique": 2, "new": None, "hours": 4.8, "sessions": 2,
+                    "median_minutes": 160}
+    assert next(r for r in answer["days"] if r["day"] == "2026-11-10")["new"] == 1
     counts = {b["bucket"]: b["count"] for b in answer["session_lengths"]}
-    assert counts == {"under 10 min": 0, "10-30 min": 1, "30-60 min": 1, "1-2 h": 1, "2-4 h": 1, "4 h and more": 1}
+    # Dan is still on: his evening so far counts in his hours, not as a finished session.
+    assert counts == {"under 10 min": 0, "10-30 min": 1, "30-60 min": 1, "1-2 h": 1, "2-4 h": 0, "4 h and more": 1}
+    assert next(r for r in answer["days"] if r["day"] == "2026-11-16")["sessions"] == 1
 
 
 def test_top_miners_and_the_ore_hint(box, world):  # noqa: F811

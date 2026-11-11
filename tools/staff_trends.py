@@ -25,8 +25,10 @@ What a run keeps, each file written whole (a temporary file renamed over it, mod
   restart loses nothing; its oldest hour, which it holds only part of, is kept as it was. About 50 KB a month.
 - trends/players.json, at most every PLAYERS_EVERY: who played each day and for how long, from the game's own
   "NAME joined the game" and "NAME left the game" lines in logs/*.log.gz (each read once, in order) and latest.log
-  (read again each time, kept apart in "live"). A session that a log ends without a leave line ends at the server's
-  "Stopping server", its next "Starting minecraft server", or (latest.log) now. Days are Pacific, as the log's times.
+  (kept apart in "live", read as a stream from where the last run stopped: latest_lines). A session that a log ends
+  without a leave line ends at the server's "Stopping server", its next "Starting minecraft server", or (latest.log)
+  now, which counts its minutes but no finished session. Days are Pacific, as the log's times. Everyone in the first
+  log looks new: retention leaves that day out and marks its week partial ("start").
   The stats files' play_time counts too, but only all-time, so the logs are the one source that says when.
   A name is the name at the time: a player who renames counts as new under the new name.
 - trends/world.json, at most every WORLD_EVERY: Ledger's block-break and block-place rows by players, counted per
@@ -63,6 +65,7 @@ sp = None   # tools/staff_panel.py (register)
 VERSION = 1
 KEEP = dt.timedelta(days=30)
 KEEP_PLAYERS = dt.timedelta(days=45)     # a week's cohort needs its 7 days after it
+KEEP_FIRST = dt.timedelta(days=365)      # a first day older than this is forgotten: back after a year counts as new
 PLAYERS_EVERY = dt.timedelta(minutes=10)
 WORLD_EVERY = dt.timedelta(hours=1)
 WORLD_ROWS = 300_000
@@ -108,6 +111,16 @@ def save(path: Path, data: dict) -> None:
         raise
 
 
+def _date(value) -> dt.date | None:
+    """An ISO day (YYYY-MM-DD), or None for anything else."""
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return None
+    try:
+        return dt.date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def due(data: dict, every: dt.timedelta, now: dt.datetime) -> bool:
     """Whether a part runs now: `every` after its last run, or at once while its last run left work for the next
     (a first read of a big Ledger database goes on every 2 minutes, a slice at a time, until it has caught up)."""
@@ -144,15 +157,16 @@ def hours_of(readings: list) -> dict[int, list]:
 
 
 def history(old: dict, status: dict, now: dt.datetime) -> dict:
-    """The hours kept before, with those staff.json holds worked out again (but its oldest, which it holds only part
-    of), and none older than KEEP."""
+    """The hours kept before, with those staff.json holds worked out again, and none older than KEEP. Its oldest hour
+    may have lost readings off the end: a row kept from more readings than staff.json still has for it stays."""
     since = (now - KEEP).timestamp()
     kept = {int(r[0]): r for r in old.get("hours") or [] if isinstance(r, list) and len(r) == 8
             and isinstance(r[0], int) and r[0] >= since}
-    fresh = hours_of(status.get("history") if isinstance(status.get("history"), list) else [])
-    oldest = min(fresh, default=None)
+    readings = status.get("history") if isinstance(status, dict) else None
+    fresh = hours_of(readings if isinstance(readings, list) else [])
     for hour, row in fresh.items():
-        if hour != oldest or hour not in kept:
+        was = kept.get(hour)
+        if not (was and isinstance(was[7], int) and was[7] > row[7]):
             kept[hour] = row
     return {"version": VERSION, "at": iso(now), "hours": [kept[h] for h in sorted(kept) if h >= since]}
 
@@ -171,13 +185,13 @@ class Sessions:
         self.open = {n: dt.datetime.fromisoformat(t) for n, t in open_.items() if isinstance(t, str)}
         self.last = dt.datetime.fromisoformat(last) if isinstance(last, str) else None
 
-    def _end(self, name: str, until: dt.datetime) -> None:
+    def _end(self, name: str, until: dt.datetime, finished: bool = True) -> None:
         start = self.open.pop(name)
         if until < start:
             return
         whole = round((until - start).total_seconds() / 60)
         sessions = self.days.setdefault(_day(start), {"minutes": {}, "sessions": [], "joined": []})["sessions"]
-        if len(sessions) < SESSIONS_A_DAY:
+        if finished and len(sessions) < SESSIONS_A_DAY:   # one still going is no short session
             sessions.append(whole)
         at = start
         while at < until:       # minutes go to the day they were played on
@@ -196,9 +210,9 @@ class Sessions:
         if name not in self.first or self.first[name] > _day(when):
             self.first[name] = _day(when)
 
-    def end_all(self, until: dt.datetime) -> None:
+    def end_all(self, until: dt.datetime, finished: bool = True) -> None:
         for name in list(self.open):
-            self._end(name, until)
+            self._end(name, until, finished)
 
     def feed(self, lines: list[tuple[dt.datetime, str]]) -> None:
         for when, text in lines:
@@ -235,6 +249,61 @@ def _logs(folder: Path) -> list[tuple[str, Path, dt.date]]:
     return [(name, path, day) for _, name, path, day in sorted(found)]
 
 
+def _wanted(text: str) -> bool:
+    return text.startswith((_START, _STOP)) or bool(_JOIN.match(text) or _LEFT.match(text))
+
+
+def latest_lines(path: Path, mark: dict | None) -> tuple[list[tuple[dt.datetime, str]], dict, bool] | None:
+    """latest.log's join, leave, start and stop lines, read as a stream from where `mark` (the last run's) stopped
+    when it is still the same file, else from its start: (lines, the new mark, whether it went on from `mark`).
+    Only those lines are kept, with an empty one for the line before each start and for the last line (Sessions
+    ends a crash's sessions when the log last spoke). A line not finished yet is read next time. None: too big to
+    read from its start (LATEST_MAX), left for when it is rotated."""
+    size = path.stat().st_size
+    with open(path, "rb") as f:
+        # The same file: it starts with the bytes it started with last time (up to 256; a short one grows).
+        on = (isinstance(mark, dict) and isinstance(mark.get("head"), str) and isinstance(mark.get("offset"), int)
+              and 0 < mark["offset"] <= size and isinstance(mark.get("day"), str)
+              and isinstance(mark.get("hms"), list) and f.read(len(mark["head"]) // 2).hex() == mark["head"])
+        if not on and size > LATEST_MAX:
+            return None
+        offset = mark["offset"] if on else 0
+        prev = tuple(mark["hms"]) if on else None
+        f.seek(offset)
+        kept, wraps, at = [], 0, None
+        for raw in f:
+            if not raw.endswith(b"\n"):
+                break
+            offset += len(raw)
+            m = staff_report._LOG_LINE.match(raw.decode("utf-8", "replace").rstrip("\r\n"))
+            if not m:
+                continue
+            hms = (m[1], m[2], m[3])
+            if prev is not None and hms < prev:
+                wraps += 1
+            text = m[4].rstrip()
+            if text.startswith(_START) and at:
+                kept.append((*at, ""))
+            if _wanted(text):
+                kept.append((wraps, hms, text))
+            prev, at = hms, (wraps, hms)
+        f.seek(0)
+        head = f.read(min(256, offset)).hex()
+    if at and (not kept or kept[-1][:2] != at):
+        kept.append((*at, ""))
+    if on:
+        day = dt.date.fromisoformat(mark["day"])
+    else:
+        day = dt.datetime.fromtimestamp(path.stat().st_mtime, calendar.PACIFIC).date() - dt.timedelta(days=wraps)
+    lines = [(dt.datetime.combine(day + dt.timedelta(days=k), dt.time(*map(int, hms))), text) for k, hms, text in kept]
+    return lines, {"head": head, "offset": offset, "day": (day + dt.timedelta(days=wraps)).isoformat(),
+                   "hms": list(prev) if prev else None}, on
+
+
+def _copy(data):
+    return json.loads(json.dumps(data))
+
+
 def players(live: Path, old: dict, now: dt.datetime) -> dict:
     """The finished logs not read yet added to what was kept ("base"), then latest.log on top of that ("live")."""
     folder = live / "server" / "logs"
@@ -259,23 +328,40 @@ def players(live: Path, old: dict, now: dt.datetime) -> dict:
     cutoff = _day(pacific_now - KEEP_PLAYERS)
     days = {d: v for d, v in days.items() if d >= cutoff}
     read = [n for n in read if n[:10] >= cutoff or n == newest]
-    base = {"read": read, "days": days, "first": first, "open": open_, "last": last}
+    # The day the logs begin: everyone in the first one looks new, so retention marks that week (see retention()).
+    start = base.get("start") if _date(base.get("start")) else min(
+        (d for d in first.values() if _date(d)), default=None)
+    first_cutoff = _day(pacific_now - KEEP_FIRST)
+    first = {n: d for n, d in first.items() if _date(d) and d >= first_cutoff}
+    base = {"read": read, "days": days, "first": first, "open": open_, "last": last, "start": start}
 
     live_days: dict = {}
     live_first: dict = {}
-    latest = folder / "latest.log"
+    mark = state = None
     caught_up = took < LOGS_A_RUN
-    try:
-        small = latest.stat().st_size <= LATEST_MAX
-    except OSError:
-        small = False
-    if caught_up and small:
-        on_top = Sessions(live_days, live_first, open_, last)
-        on_top.feed(staff_report.read_log(latest, None))
-        on_top.end_all(max(pacific_now, on_top.last) if on_top.last else pacific_now)
-        live_first = {n: d for n, d in live_first.items() if n not in first}
-    return {"version": VERSION, "at": iso(now), "base": base,
-            "live": {"days": live_days, "first": live_first}, "caught_up": caught_up}
+    if caught_up:
+        was = old.get("live") if isinstance(old.get("live"), dict) else {}
+        # Going on from the last run's place needs the same base under it: no finished log read this time.
+        cached = was.get("state") if took == 0 and isinstance(was.get("state"), dict) else None
+        try:
+            got = latest_lines(folder / "latest.log", was.get("mark") if cached else None)
+        except OSError:
+            got = None
+        if got is not None:
+            lines, mark, went_on = got
+            if went_on:
+                on_top = Sessions(cached["days"], cached["first"], cached["open"], cached["last"])
+            else:
+                on_top = Sessions({}, {}, open_, last)
+            on_top.feed(lines)
+            o, la = on_top.state()
+            state = {"days": on_top.days, "first": on_top.first, "open": o, "last": la}
+            live_days = _copy(on_top.days)
+            ended = Sessions(live_days, {}, o, la)     # those still on, up to now: minutes, not finished sessions
+            ended.end_all(max(pacific_now, ended.last) if ended.last else pacific_now, finished=False)
+            live_first = {n: d for n, d in on_top.first.items() if n not in first}
+    return {"version": VERSION, "at": iso(now), "base": base, "start": start or min(live_first.values(), default=None),
+            "live": {"days": live_days, "first": live_first, "mark": mark, "state": state}, "caught_up": caught_up}
 
 
 # ---------------------------------------------------------------- Ledger's counts
@@ -294,6 +380,7 @@ def world(live: Path, old: dict, now: dt.datetime, seconds: float = WORLD_SECOND
     try:
         if "actions_player_id" not in ledger.indexes:
             out["note"] = "Ledger's database has no player_id index: nothing was counted"
+            out["caught_up"] = True      # nothing to go on with: the hourly gate applies
             return out
         brk, place = ledger.act("block-break"), ledger.act("block-place")
         skip = ledger.sources.get("command", -1)
@@ -336,8 +423,9 @@ def world(live: Path, old: dict, now: dt.datetime, seconds: float = WORLD_SECOND
                 if stopped:
                     break
         except sqlite3.OperationalError as e:
+            # Out of time, or the game holding the database: what was counted stays, the rest is read next time.
             if "interrupt" not in str(e).lower():
-                raise
+                out["note"] = f"Ledger's database was busy ({e}): the rest next time"
             stopped = True
         finally:
             ledger.db.set_progress_handler(None, 0)
@@ -363,15 +451,24 @@ def update(live: Path, staff: Path, now: dt.datetime, write: bool = True) -> lis
     for name, make, every in parts:
         path = folder / f"{name}.json"
         old = load(path)
+        restart = ""
+        if old and not readable(name, old, now):
+            old, restart = {}, ", started again (what was kept was not in the shape expected)"
         if every and not due(old, every, now):
             said.append(f"{name}: not due yet")
             continue
         try:
-            data = make(old)
+            try:
+                data = make(old)
+            except _SHAPE:
+                if not old:
+                    raise
+                old, restart = {}, ", started again (what was kept was not in the shape expected)"
+                data = make(old)
         except FileNotFoundError:
             said.append(f"{name}: its source isn't there yet")
             continue
-        except (OSError, ValueError, sqlite3.Error) as e:
+        except (OSError, sqlite3.Error, *_SHAPE) as e:
             said.append(f"{name}: not updated ({type(e).__name__})")
             continue
         if write:
@@ -380,8 +477,22 @@ def update(live: Path, staff: Path, now: dt.datetime, write: bool = True) -> lis
             except OSError as e:
                 said.append(f"{name}: not written ({type(e).__name__})")
                 continue
-        said.append(f"{name}: {summary(name, data)}")
+        said.append(f"{name}: {summary(name, data)}{restart}")
     return said
+
+
+# What a file of the wrong shape (hand-edited, cut short, an older layout) raises when it is read.
+_SHAPE = (KeyError, TypeError, AttributeError, ValueError, IndexError)
+
+
+def readable(name: str, data: dict, now: dt.datetime) -> bool:
+    """Whether the page can answer from a kept file: one it can't is started again rather than kept for ever."""
+    try:
+        for answer in ANSWERS[name]:
+            answer(data, None, now)
+    except _SHAPE:
+        return False
+    return True
 
 
 def summary(name: str, data: dict) -> str:
@@ -418,9 +529,37 @@ def _pacific_today(now: dt.datetime | None) -> dt.date:
     return (now or dt.datetime.now(server.UTC)).astimezone(calendar.PACIFIC).date()
 
 
+def _span(part: str, days: int | None) -> int:
+    return DAYS[part][2] if days is None else days
+
+
+def _answer(panel, part: str, query: dict, now: dt.datetime | None, *answers) -> dict:
+    days = _days(query, part)
+    data = _file(panel, "world" if part == "ores" else part)
+    try:
+        return answers[0](data, days, now)
+    except _SHAPE:
+        raise sp.Refused(503, "The trends file is damaged: the staff job's next run starts it again.") from None
+
+
 def trend_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
-    days = _days(query, "history")
-    data = _file(panel, "history")
+    return _answer(panel, "history", query, now, history_answer)
+
+
+def trend_players(panel, query: dict, now: dt.datetime | None = None) -> dict:
+    return _answer(panel, "players", query, now, players_answer)
+
+
+def trend_world(panel, query: dict, now: dt.datetime | None = None) -> dict:
+    return _answer(panel, "world", query, now, world_answer)
+
+
+def trend_ores(panel, query: dict, now: dt.datetime | None = None) -> dict:
+    return _answer(panel, "ores", query, now, ores_answer)
+
+
+def history_answer(data: dict, days: int | None, now: dt.datetime | None) -> dict:
+    days = _span("history", days)
     since = (now or dt.datetime.now(server.UTC)).timestamp() - days * 86400
     return {"columns": ["hour", "avg", "p95", "players", "players_max", "memory", "cpu", "readings"],
             "hours": [r for r in data.get("hours", []) if r[0] >= since], "at": data.get("at"), "days": days}
@@ -431,30 +570,38 @@ def merged_days(data: dict) -> tuple[dict, dict]:
     days: dict = {}
     for layer in (data["base"]["days"], data["live"]["days"]):
         for day, v in layer.items():
+            if not _date(day):
+                continue
             into = days.setdefault(day, {"minutes": {}, "sessions": [], "joined": []})
             for name, minutes in v.get("minutes", {}).items():
                 into["minutes"][name] = round(into["minutes"].get(name, 0) + minutes, 1)
             into["sessions"] += v.get("sessions", [])
             into["joined"] = sorted({*into["joined"], *v.get("joined", [])})
-    return days, {**data["live"]["first"], **data["base"]["first"]}
+    first = {**data["live"]["first"], **data["base"]["first"]}
+    return days, {n: d for n, d in first.items() if _date(d)}
 
 
-def retention(days: dict, first: dict, today: dt.date) -> list[dict]:
+def retention(days: dict, first: dict, today: dt.date, logs_start: str | None = None) -> list[dict]:
     """For players new in each week (Monday to Sunday, Pacific): how many played again a day or more after their
-    first day, and 7 days or more after it. A player counts towards a share once that much time has passed."""
+    first day, and 7 days or more after it. A player counts towards a share once that much time has passed.
+    Everyone in the first log looks new, players from before the logs began too: those seen first on its day are
+    left out, and that week's row says "partial"."""
     played: dict[str, set[dt.date]] = {}
     for day, v in days.items():
-        for name in v["joined"]:    # the days they joined: a session that runs past midnight is no coming back
-            played.setdefault(name, set()).add(dt.date.fromisoformat(day))
+        for name in v.get("joined", []):    # the days they joined: a session that runs past midnight is no return
+            if _date(day):
+                played.setdefault(name, set()).add(dt.date.fromisoformat(day))
+    began = _date(logs_start)
     weeks: dict[dt.date, list[str]] = {}
     for name, day in first.items():
-        start = dt.date.fromisoformat(day)
-        if day in days:     # first seen within the days kept: a cohort can be followed
+        start = _date(day)
+        if start and day in days and start != began:    # first seen within the days kept: a cohort can be followed
             weeks.setdefault(start - dt.timedelta(days=start.weekday()), []).append(name)
+    began_week = began - dt.timedelta(days=began.weekday()) if began else None
     out = []
     for week in sorted(weeks):
         names = weeks[week]
-        row = {"week": week.isoformat(), "new": len(names)}
+        row = {"week": week.isoformat(), "new": len(names), "partial": week == began_week}
         for n in (1, 7):
             ready = [p for p in names if dt.date.fromisoformat(first[p]) + dt.timedelta(days=n) <= today]
             back = [p for p in ready
@@ -464,10 +611,10 @@ def retention(days: dict, first: dict, today: dt.date) -> list[dict]:
     return out
 
 
-def trend_players(panel, query: dict, now: dt.datetime | None = None) -> dict:
-    span = _days(query, "players")
-    data = _file(panel, "players")
+def players_answer(data: dict, span: int | None, now: dt.datetime | None) -> dict:
+    span = _span("players", span)
     days, first = merged_days(data)
+    began = data.get("start") if _date(data.get("start")) else None
     today = _pacific_today(now)
     since = (today - dt.timedelta(days=span - 1)).isoformat()
     rows, lengths = [], [0] * (len(SESSION_BUCKETS) + 1)
@@ -476,23 +623,23 @@ def trend_players(panel, query: dict, now: dt.datetime | None = None) -> dict:
         sessions = v["sessions"]
         for s in sessions:
             lengths[sum(1 for edge in SESSION_BUCKETS if s >= edge)] += 1
-        new = sum(1 for n in v["minutes"] if first.get(n) == day)
+        # On the day the logs begin, "new" can't be told: everyone in that log looks it.
+        new = None if day == began else sum(1 for n in v["minutes"] if first.get(n) == day)
         rows.append({"day": day, "unique": len(v["minutes"]), "new": new,
                      "hours": round(sum(v["minutes"].values()) / 60, 1), "sessions": len(sessions),
                      "median_minutes": round(statistics.median(sessions)) if sessions else None})
     edges = ["under 10 min", "10-30 min", "30-60 min", "1-2 h", "2-4 h", "4 h and more"]
     return {"days": rows, "session_lengths": [{"bucket": e, "count": c} for e, c in zip(edges, lengths, strict=True)],
-            "retention": retention(days, first, today), "zone": "Pacific", "at": data.get("at"),
-            "complete": bool(data.get("caught_up"))}
+            "retention": retention(days, first, today, began), "logs_start": began, "zone": "Pacific",
+            "at": data.get("at"), "complete": bool(data.get("caught_up"))}
 
 
 def _week_start(today: dt.date) -> str:
     return (today - dt.timedelta(days=today.weekday())).isoformat()
 
 
-def trend_world(panel, query: dict, now: dt.datetime | None = None) -> dict:
-    span = _days(query, "world")
-    data = _file(panel, "world")
+def world_answer(data: dict, span: int | None, now: dt.datetime | None) -> dict:
+    span = _span("world", span)
     today = _pacific_today(now)
     since = (today - dt.timedelta(days=span - 1)).isoformat()
     hours = [[h, *v] for h, v in sorted(data.get("hours", {}).items()) if h[:10] >= since]
@@ -510,11 +657,10 @@ def trend_world(panel, query: dict, now: dt.datetime | None = None) -> dict:
             "zone": "Pacific", "at": data.get("at"), "complete": bool(data.get("caught_up")), "note": data.get("note")}
 
 
-def trend_ores(panel, query: dict, now: dt.datetime | None = None) -> dict:
+def ores_answer(data: dict, span: int | None, now: dt.datetime | None) -> dict:
     """Diamond ore and ancient debris per 1,000 stone, per player, with the weekly report's x-ray test
-    (staff_report.Week.check_xray): enough stone and ores, and well above the others' median."""
-    span = _days(query, "ores")
-    data = _file(panel, "world")
+    (staff_report.xray_rule): enough stone and ores, and well above the others' median."""
+    span = _span("ores", span)
     since = (_pacific_today(now) - dt.timedelta(days=span - 1)).isoformat()
     totals: dict[str, list[int]] = {}
     for day, cells in data.get("days", {}).items():
@@ -528,19 +674,17 @@ def trend_ores(panel, query: dict, now: dt.datetime | None = None) -> dict:
         if stone or diamond or debris:
             rows.append({"name": name, "stone": stone, "diamond": diamond, "debris": debris,
                          "per_k": round(1000 * (diamond + debris) / stone, 1) if stone else None})
-    rates = [r["per_k"] for r in rows if r["stone"] >= staff_report.XRAY_STONE and r["per_k"] is not None]
-    median = statistics.median(rates) if len(rates) >= 3 else None
+    median, flagged = staff_report.xray_rule({r["name"]: (r["diamond"] + r["debris"], r["per_k"]) for r in rows
+                                              if r["stone"] >= staff_report.XRAY_STONE})
     for r in rows:
-        enough = r["stone"] >= staff_report.XRAY_STONE and r["diamond"] + r["debris"] >= staff_report.XRAY_ORES
-        # As the weekly report does it: a median of 0 compares with the fixed rate, or any ore at all would stand out.
-        rate = r["per_k"] or 0
-        high = rate >= staff_report.XRAY_TIMES * median if median else rate >= staff_report.XRAY_RATE
-        r["outlier"] = bool(enough and rate >= 2 and high)
+        r["outlier"] = r["name"] in flagged
     rows.sort(key=lambda r: (-(r["per_k"] or 0), r["name"].lower()))
     return {"players": rows, "median_per_k": median, "since": since, "zone": "Pacific", "at": data.get("at"),
             "complete": bool(data.get("caught_up")),
             "about": "A hint, never proof: strip-mining at diamond level or trading for ores shows high too."}
 
+
+ANSWERS = {"history": (history_answer,), "players": (players_answer,), "world": (world_answer, ores_answer)}
 
 STANDINGS_KEPT = 52
 _WEEK_FILE = re.compile(r"\d{4}-\d{2}-\d{2}\.json")

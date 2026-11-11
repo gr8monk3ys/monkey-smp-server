@@ -352,6 +352,16 @@ def log_files(logs: Path, start: dt.datetime, end: dt.datetime) -> list[tuple[Pa
     return out
 
 
+def xray_rule(rates: dict[str, tuple[int, float]]) -> tuple[float | None, set[str]]:
+    """The x-ray test on {name: (diamond ore and ancient debris, per 1,000 stone)} for players who mined at least
+    XRAY_STONE stone: (the median rate, or None with fewer than 3 players; the names that stand out). A median of 0
+    compares with XRAY_RATE, or any ore at all would stand out. tools/staff_trends.py uses it too."""
+    median = statistics.median(r for _, r in rates.values()) if len(rates) >= 3 else None
+    flagged = {who for who, (n, per_k) in rates.items()
+               if n >= XRAY_ORES and per_k >= 2 and (per_k >= XRAY_TIMES * median if median else per_k >= XRAY_RATE)}
+    return median, flagged
+
+
 def read_log(path: Path, day: dt.date | None) -> list[tuple[dt.datetime, str]]:
     """The server thread's lines with their Pacific times. A time earlier than the line before is the next day.
     latest.log has no date in its name: it ends on the day it was last written."""
@@ -524,10 +534,9 @@ class Week:
             if stone[who] >= XRAY_STONE:
                 rates[who] = (d + debris, per_k)
         self.mining.sort(key=lambda r: (-(r["diamond"] + r["debris"]), r["name"].lower()))
-        median = statistics.median(r for _, r in rates.values()) if len(rates) >= 3 else None
+        median, flagged = xray_rule(rates)
         for who, (n, per_k) in rates.items():
-            high = per_k >= XRAY_TIMES * median if median else per_k >= XRAY_RATE
-            if n >= XRAY_ORES and high and per_k >= 2:
+            if who in flagged:
                 compared = f"{XRAY_TIMES} times the median {median}" if median else f"{XRAY_RATE} per 1,000"
                 self.grid.add(who, "xray", UNCLEAR, "per 1,000 stone",
                               [row(f"{n} diamond ore or ancient debris in {stone_word(who, self.mining)} stone: "

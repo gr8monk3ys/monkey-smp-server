@@ -394,3 +394,9 @@ fi
 # The staff channel's webhook goes in the environment, never on the command line (where ps shows it), and only the
 # staff one: tools/staff_watch.py's messages name what is wrong on the machine. Empty: nothing is posted.
 STAFF_WEBHOOK_URL=$(setting STAFF_WEBHOOK_URL '') python3 -B "$TOOL" write "$LIVE_DIR" --out "$STAFF_DIR/staff.json"
+# The longer trends (tools/staff_trends.py): a month of hourly readings, players per day, Ledger's counts. Niced, as the
+# game needs the machine's 2 threads more, without the webhook, and a run that fails never fails the status above.
+if [ -r "$REPO_DIR/tools/staff_trends.py" ]; then
+    nice -n 10 python3 -B "$REPO_DIR/tools/staff_trends.py" update "$LIVE_DIR" --staff "$STAFF_DIR" \
+        || log 'trends: not updated this time (the next run tries again)'
+fi

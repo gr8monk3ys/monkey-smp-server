@@ -4,6 +4,14 @@
 
 ### Added
 
+- **A month of trends for the staff page** (`tools/staff_trends.py`, run by the 2-minute staff job after the status
+  file, niced). It keeps 30 days of hourly readings, players per day from the game log's join and leave lines (unique,
+  new, hours, sessions and their lengths, and how many new players came back after 1 and 7 days), and Ledger's block
+  breaks and places per hour and per player, read through its player index from where the last run stopped, at most
+  4 seconds a run. Five new read-only requests for moderators and up: `/api/trend-history`, `/api/trend-players`,
+  `/api/trend-world` (with this week's top miners), `/api/trend-ores` (diamond and ancient debris per 1,000 stone, an
+  x-ray hint) and `/api/trend-standings` (each closed week's faction table). docs/LIVE.md, "Trends: a month of
+  numbers". The charts come with the new staff page.
 - **Two-step login shows a QR code.** Turning it on in the staff page's account menu now shows a QR code for the
   authenticator app, made by `tools/staff_auth.py` itself (no library), as well as the key to type. Pressing
   it twice in one session gives the same key, never more time; a key that ran out (15 minutes), or a password

@@ -36,20 +36,32 @@ a.link { display: inline-block; }
 
 /* The account menu, top right of the staff page. */
 .account { position: relative; color: var(--bone); }
-.account summary {
+.account > summary {
   display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; cursor: pointer; list-style: none;
   border: 6px solid transparent; border-image: var(--frame-bone) 6 / 6px; font-weight: 700;
 }
-.account summary::-webkit-details-marker { display: none; }
-.account summary small { color: var(--sage); font-weight: 400; }
-.account[open] summary { border-image: var(--frame-bone-hover) 6 fill / 6px; }
+.account > summary::-webkit-details-marker { display: none; }
+.account > summary small { color: var(--sage); font-weight: 400; }
+.account[open] > summary { border-image: var(--frame-bone-hover) 6 fill / 6px; }
 .account-body {
   position: absolute; right: 0; z-index: 5; display: grid; gap: 14px; width: min(24rem, calc(100vw - 32px));
   margin-top: 6px; padding: 14px; border: 6px solid transparent; border-image: var(--frame-shade) 6 fill / 6px;
   background: var(--shade) padding-box;
+  /* It hangs from the sticky top bar, so the page can't scroll it into view: it scrolls itself, kept under the
+     bar (about 6.5rem tall on a phone, less on a wide screen). */
+  max-height: calc(100dvh - 8rem); overflow-y: auto; overscroll-behavior: contain;
 }
 .account-body form { display: grid; gap: 8px; }
-.account-body h3 { padding-bottom: 4px; border-bottom: 2px solid var(--leaf-2); }
+/* Its sections fold: the title and the state show, the form opens on a click. */
+.fold { display: grid; gap: 8px; }
+.fold > summary {
+  display: flex; align-items: baseline; gap: 8px; min-height: 44px; padding: 8px 0 6px; cursor: pointer;
+  list-style: none; color: var(--bone); font-weight: 700; border-bottom: 2px solid var(--leaf-2);
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "\25B8"; color: var(--sage); }
+.fold[open] > summary::before { content: "\25BE"; }
+.fold > summary small { margin-left: auto; color: var(--sage); font-weight: 400; }
 
 /* Two-step login, in the account menu: the key to type, and the recovery codes shown once. */
 .two-step { display: grid; gap: 8px; }

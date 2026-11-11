@@ -564,18 +564,47 @@ def test_a_pending_key_runs_out(auth):
     auth.clock.now += staff_auth.PENDING_LIFE + 1
     with pytest.raises(staff_auth.AuthError) as e:
         auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(key, auth.clock.now))
-    assert e.value.message == staff_auth.KEY_RAN_OUT
-    # Starting again gives the same key, already in the app, with its time started again.
-    assert auth.auth.two_step_start(auth.auth.session(token))["key"].replace(" ", "") == key
-    assert auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(key, auth.clock.now))["two_step"]
+    assert e.value.message == staff_auth.KEY_RAN_OUT and e.value.code == 410
+    # Starting again gives a new key with the full time; the old one never comes back.
+    again = auth.auth.two_step_start(auth.auth.session(token))
+    fresh = again["key"].replace(" ", "")
+    assert fresh != key and again["minutes"] == 15
+    assert auth.auth.two_step_confirm(auth.auth.session(token), GOOD, code_at(fresh, auth.clock.now))["two_step"]
 
 
-def test_starting_twice_gives_the_same_key(auth):
+def test_starting_twice_in_one_session_gives_the_same_key_and_never_more_time(auth):
+    auth.user("diego")
+    _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
+    _, other = auth.auth.login("diego", GOOD, "203.0.113.2")
+    me = auth.auth.session(token)
+    first = auth.auth.two_step_start(me)
+    auth.clock.now += 10 * 60
+    second = auth.auth.two_step_start(me)
+    assert second["key"] == first["key"] and second["minutes"] == 5
+    # Another session gets its own key, and the first session's key no longer turns two-step on.
+    theirs = auth.auth.two_step_start(auth.auth.session(other))["key"]
+    assert theirs != first["key"]
+    with pytest.raises(staff_auth.AuthError) as e:
+        auth.auth.two_step_confirm(me, GOOD, code_at(first["key"], auth.clock.now))
+    assert e.value.code == 410
+
+
+def test_a_password_change_ends_a_key_being_set_up(auth):
     auth.user("diego")
     _, token = auth.auth.login("diego", GOOD, "203.0.113.1")
     me = auth.auth.session(token)
-    first = auth.auth.two_step_start(me)
-    assert auth.auth.two_step_start(me)["key"] == first["key"]
+    key = auth.auth.two_step_start(me)["key"]
+    auth.auth.change_password(me, GOOD, OTHER)
+    assert "totp_pending" not in auth.auth.store.read()["users"]["diego"]
+    assert auth.auth.two_step_start(auth.auth.session(token))["key"] != key
+
+
+def test_the_longest_name_fits_in_a_qr_code(auth):
+    name = "a" * 32
+    auth.user(name)
+    _, token = auth.auth.login(name, GOOD, "203.0.113.1")
+    started = auth.auth.two_step_start(auth.auth.session(token))
+    assert len(started["link"].encode()) <= 213 and started["modules"] == len(staff_auth.qr_matrix(started["link"])) + 8
 
 
 # Each matched the qrcode library's matrix for the same text, level M and mask (7, 6 and 2) bit for bit, and

@@ -1424,7 +1424,9 @@ The CLI also has `list`, `set-role`, `send-verify` and `end-sessions`: `sudo -u 
 (`monkey-panel.service`), with the same login, header and change checks. Every change is one line in `actions.log`.
 Who may use what: the login's role (`moderator`, `admin`, `owner`). The page greys out or hides what a login can't use;
 the controls refuse it whatever the page sends. With the new login (`tools/staff_auth.py`), an admin or owner login
-without two-step login works as a moderator until it turns two-step on from the account menu, which says so (it shows a QR code to scan with an authenticator app, the key to type by hand, and the same key again if it is started twice). The
+without two-step login works as a moderator until it turns two-step on from the account menu, which says so. The menu
+shows a QR code to scan with an authenticator app and the key to type by hand. Pressing it twice in the same session
+gives the same key; after 15 minutes, a password change or a reset, it gives a new one. The
 password box (`--use-basic-auth`) has no two-step login and gives owner: keep it for emergencies. **Before a deploy
 that brings this in, every admin turns two-step on**, and never deploy it during an event (17:00 to 21:30 on event
 nights): an admin without it can't run the event timer until they do.

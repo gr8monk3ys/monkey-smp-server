@@ -161,7 +161,7 @@
         const qr = el("img", "qr");
         qr.src = started.qr;
         qr.alt = "A QR code: scan it with your authenticator app";
-        qr.width = qr.height = 200;
+        qr.width = qr.height = started.modules * 4;     // whole pixels per module, so a camera reads it
         const link = el("a", "link", "On this phone? Open it in your authenticator app");
         link.href = started.link;
         const key = el("p", "mono", started.key);
@@ -173,8 +173,7 @@
                     el("p", "fine", "Can't scan it? Add the account by hand: choose a time-based key and type this:"),
                     key,
                     el("p", "fine", `2. Type the 6-digit code the app shows, and your password, within ${started.minutes} `
-                                    + "minutes. Starting again later gives this same key, so the account in the app "
-                                    + "keeps working."),
+                                    + "minutes."),
                     field("Current password", current), codeField, button("Turn it on", "primary", null, "submit"));
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
@@ -187,7 +186,7 @@
             box.replaceWith(twoStep(status, session));
             recoveryBox(status, done.recovery);
           } catch (error) {
-            if (/run out/.test(error.message)) box.replaceWith(twoStep(status, session));   // the button again
+            if (error.status === 410) box.replaceWith(twoStep(status, session));   // the key ran out: the button again
             say(status, error.message, "error");
           }
         });

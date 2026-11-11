@@ -123,8 +123,8 @@ PENDING_LIFE = 15 * 60               # a new key, before the first code turns it
 RECOVERY_CODES = 8
 RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"    # no 0/o, 1/l/i: easy to copy from paper
 ISSUER = "Monkey SMP staff"
-KEY_RAN_OUT = ("That key has run out: press Turn on two-step login again. It gives the same key, so the app "
-               "keeps it.")
+KEY_RAN_OUT = ("That key has run out: press Turn on two-step login again for a new one, and delete the old "
+               "Monkey SMP staff account in your app.")
 WRONG_CODE = "That code isn't right. Check that your phone's clock is right, or use a recovery code."
 USED_CODE = "That code was already used: wait for the next one in your app."
 NO_CODE = "Type the 6-digit code from your app, or a recovery code."
@@ -486,6 +486,9 @@ class Auth:
         gone = [k for k, s in data["sessions"].items() if s.get("user") == name and k != keep]
         for k in gone:
             del data["sessions"][k]
+        user = data["users"].get(name)
+        if isinstance(user, dict):
+            user.pop("totp_pending", None)   # a key being set up dies with sessions ended for safety, kept or not
         return len(gone)
 
     def _new_token(self, data: dict, kind: str, name: str, life: float, email: str | None = None) -> str:
@@ -861,20 +864,26 @@ class Auth:
 
     def two_step_start(self, me: dict) -> dict:
         """A key, kept apart until a code from it turns it on: {key in groups of 4, otpauth:// link, the link as a QR
-        code, minutes left}. Asking again gives the same key with its time started again, so a key already in the
-        app keeps working; it changes only once two-step login was on and is off again."""
-        name = me["user"]
+        code, minutes left}. Asking again from the same session while the key is live gives the same key and the
+        time it has left (a second press doesn't break an account already in the app); any other time, a new key.
+        A key is never made to live longer; a password change or reset, or ending sessions, ends it (_end_sessions)."""
+        name, now = me["user"], self.clock()
         with self.store.change() as data:
             user = data["users"][name]
             if user.get("totp"):
                 raise AuthError(409, "Two-step login is already on.")
             pending = user.get("totp_pending")
-            key = pending["secret"] if isinstance(pending, dict) and pending.get("secret") else new_totp_key()
-            user["totp_pending"] = {"secret": key, "expires": self.clock() + PENDING_LIFE}
+            if not (isinstance(pending, dict) and pending.get("secret") and pending.get("expires", 0) > now
+                    and pending.get("session") == me["key"]):
+                pending = {"secret": new_totp_key(), "expires": now + PENDING_LIFE, "session": me["key"]}
+                user["totp_pending"] = pending
+        key = pending["secret"]
         label = urllib.parse.quote(f"{ISSUER}:{name}")
         link = f"otpauth://totp/{label}?secret={key}&issuer={urllib.parse.quote(ISSUER)}"
+        grid = qr_matrix(link)          # a 32-letter name, the longest, makes a 138-byte link: well inside the 213
         return {"key": " ".join(key[i:i + 4] for i in range(0, len(key), 4)), "link": link,
-                "qr": qr_svg_data(link), "minutes": PENDING_LIFE // 60}
+                "qr": qr_svg_data(link, grid), "modules": len(grid) + 8,
+                "minutes": max(1, int((pending["expires"] - now) // 60))}
 
     def two_step_confirm(self, me: dict, current, code) -> dict:
         """Turns it on with the password and a code from the new key; the recovery codes come back only now."""
@@ -885,8 +894,8 @@ class Auth:
             if user.get("totp"):
                 raise AuthError(409, "Two-step login is already on.")
             pending = user.get("totp_pending")
-            if not pending or pending.get("expires", 0) <= now:
-                raise AuthError(400, KEY_RAN_OUT)
+            if not pending or pending.get("expires", 0) <= now or pending.get("session") != me["key"]:
+                raise AuthError(410, KEY_RAN_OUT)
             digits = re.sub(r"\s", "", code) if isinstance(code, str) else ""
             if not re.fullmatch(r"\d{6}", digits):
                 raise AuthError(400, "Type the 6-digit code your app shows for this key.")
@@ -1289,8 +1298,8 @@ def _qr_penalty(grid: list[list[bool]]) -> int:
                               for look in (look_alike, look_alike[::-1]))
     score += 3 * sum(grid[y][x] == grid[y][x + 1] == grid[y + 1][x] == grid[y + 1][x + 1]
                      for y in range(size - 1) for x in range(size - 1))
-    dark = sum(map(sum, grid))
-    return score + abs(dark * 20 - size * size * 10) // (size * size) * 10
+    dark, total = sum(map(sum, grid)), size * size
+    return score + (-(-abs(dark * 20 - total * 10) // total) - 1) * 10     # ceil, less one, as the standard has it
 
 
 def qr_matrix(text: str) -> list[list[bool]]:
@@ -1304,8 +1313,8 @@ def qr_matrix(text: str) -> list[list[bool]]:
     grid = [[False] * size for _ in range(size)]
     fixed = [[False] * size for _ in range(size)]
 
-    def mark(x: int, y: int, dark: bool) -> None:
-        grid[y][x], fixed[y][x] = dark, True
+    def mark(x: int, y: int, dark: bool, into: list[list[bool]] = grid) -> None:
+        into[y][x], fixed[y][x] = dark, True
 
     for i in range(size):
         mark(6, i, i % 2 == 0)
@@ -1325,7 +1334,7 @@ def qr_matrix(text: str) -> list[list[bool]]:
                 for dx in range(-2, 3):
                     mark(ax + dx, ay + dy, max(abs(dx), abs(dy)) != 1)
 
-    def format_bits(mask: int) -> None:
+    def format_bits(mask: int, into: list[list[bool]] = grid) -> None:
         value = mask                     # level M is 00 in front of the mask
         rem = value
         for _ in range(10):
@@ -1333,17 +1342,17 @@ def qr_matrix(text: str) -> list[list[bool]]:
         bits = (value << 10 | rem) ^ 0x5412
         bit = [(bits >> i) & 1 == 1 for i in range(15)]
         for i in range(6):
-            mark(8, i, bit[i])
-        mark(8, 7, bit[6])
-        mark(8, 8, bit[7])
-        mark(7, 8, bit[8])
+            mark(8, i, bit[i], into)
+        mark(8, 7, bit[6], into)
+        mark(8, 8, bit[7], into)
+        mark(7, 8, bit[8], into)
         for i in range(9, 15):
-            mark(14 - i, 8, bit[i])
+            mark(14 - i, 8, bit[i], into)
         for i in range(8):
-            mark(size - 1 - i, 8, bit[i])
+            mark(size - 1 - i, 8, bit[i], into)
         for i in range(8, 15):
-            mark(8, size - 15 + i, bit[i])
-        mark(8, size - 8, True)
+            mark(8, size - 15 + i, bit[i], into)
+        mark(8, size - 8, True, into)
 
     format_bits(0)                       # reserves the places; the chosen mask's bits go in at the end
     if version >= 7:
@@ -1370,22 +1379,20 @@ def qr_matrix(text: str) -> list[list[bool]]:
                     at += 1
         right -= 2
 
-    best = None
+    best: tuple[int, list[list[bool]]] | None = None
     for mask, rule in enumerate(QR_MASKS):
         trial = [[grid[y][x] ^ (not fixed[y][x] and rule(x, y)) for x in range(size)] for y in range(size)]
-        grid_before = grid
-        grid = trial
-        format_bits(mask)
-        score = _qr_penalty(grid)
+        format_bits(mask, trial)
+        score = _qr_penalty(trial)
         if best is None or score < best[0]:
-            best = (score, grid)
-        grid = grid_before
+            best = (score, trial)
+    assert best is not None
     return best[1]
 
 
-def qr_svg_data(text: str) -> str:
+def qr_svg_data(text: str, grid: list[list[bool]] | None = None) -> str:
     """The QR code as an SVG picture in a data: URL (the page's img-src allows data:), with a 4-module quiet zone."""
-    grid = qr_matrix(text)
+    grid = grid or qr_matrix(text)
     size = len(grid) + 8
     path = "".join(f"M{x + 4} {y + 4}h1v1h-1z" for y, row in enumerate(grid) for x, dark in enumerate(row) if dark)
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" shape-rendering="crispEdges">'

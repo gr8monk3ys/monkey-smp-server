@@ -670,9 +670,10 @@ def test_the_scheduler_runs_a_slot_once_even_after_a_restart(apex):
     fresh = staff_apex.Extras(apex.panel)
     fresh.clock, fresh.sleep = apex.x.clock, apex.x.sleep
     assert fresh.tick() == []
+    # The run's thread saves the result, then writes actions.log (_finish): wait for both.
     for _ in range(100):
         rows = json.loads((apex.staff / "schedules.json").read_text())["schedules"]
-        if rows[0]["last_result"] != "running":
+        if rows[0]["last_result"] != "running" and "schedule schedule-run vote" in actions(apex):
             break
         threading.Event().wait(0.05)
     assert rows[0]["last_result"].startswith("done")

@@ -37,19 +37,24 @@ export function Timeline({ d }: { d: any }) {
   const crashes = (p.crashes || []).map((c: any) => Date.parse(c.when) / 1000).filter(inDay);
   lanes.push({ label: "Crashes", about: crashes.length ? plural(crashes.length, "crash") : "none", kind: "bad", spans: crashes.map((t: number) => [t, t]) });
 
-  if (p.lag) {
-    const a = Date.parse(p.lag.first) / 1000, b = Date.parse(p.lag.last) / 1000;
-    lanes.push({ label: "Stalls", about: `${plural(p.lag.count, "stall")}, the worst ${(p.lag.worst / 1000).toFixed(1)} s`, kind: "warn",
-      spans: Number.isFinite(a) && Number.isFinite(b) ? [[Math.max(a, start), Math.min(b, end)]] : [] });
+  // A span cut to the day, or none when it ended before the day began (or starts after it).
+  const clip = (first: string, last: string): [number, number] | null => {
+    const a = Date.parse(first) / 1000, b = Date.parse(last) / 1000;
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b < start || a > end) return null;
+    return [Math.max(a, start), Math.min(b, end)];
+  };
+
+  const lag = p.lag ? clip(p.lag.first, p.lag.last) : null;
+  if (p.lag && lag) {
+    lanes.push({ label: "Stalls", about: `${plural(p.lag.count, "stall")}, the worst ${(p.lag.worst / 1000).toFixed(1)} s`, kind: "warn", spans: [lag] });
   } else {
     lanes.push({ label: "Stalls", about: "none", kind: "warn", spans: [] });
   }
 
-  const errors: any[] = (p.errors || []).slice().sort((a: any, b: any) => b.count - a.count).slice(0, LANES_OF_ERRORS);
+  const errors: any[] = (p.errors || []).filter((e: any) => clip(e.first, e.last)).sort((a: any, b: any) => b.count - a.count).slice(0, LANES_OF_ERRORS);
   for (const e of errors) {
-    const a = Date.parse(e.first) / 1000, b = Date.parse(e.last) / 1000;
-    if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
-    lanes.push({ label: e.text, about: plural(e.count, "time"), kind: "sage", spans: [[Math.max(a, start), Math.min(b, end)]] });
+    const span = clip(e.first, e.last);
+    if (span) lanes.push({ label: e.text, about: plural(e.count, "time"), kind: "sage", spans: [span] });
   }
 
   // Gaps: no reading for three checks or more, so the server or the check was down. A check's step is the usual

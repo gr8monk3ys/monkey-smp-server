@@ -255,8 +255,10 @@ def test_roles_decide_what_a_login_may_ask(box):
     assert box.call("GET", "/api/me", headers=mod)[1]["role"] == "moderator"
     assert box.call("GET", "/api/players", headers=mod)[0] == 200
     assert box.call("GET", "/api/files", headers=mod)[0] == 403
-    assert box.call("POST", "/api/command", {"command": "list"}, headers=mod)[0] == 403
-    assert box.call("POST", "/api/command", {"command": "list"}, headers={"X-Staff-Role": "admin"})[0] == 200
+    # A moderator runs only the commands on the owner's list (tools/staff_lookup.py); list is on it, time isn't.
+    assert box.call("POST", "/api/command", {"command": "list"}, headers=mod)[0] == 200
+    assert box.call("POST", "/api/command", {"command": "time set day"}, headers=mod)[0] == 403
+    assert box.call("POST", "/api/command", {"command": "time set day"}, headers={"X-Staff-Role": "admin"})[0] == 200
     assert box.call("GET", "/api/me", headers={"X-Staff-Role": "root"})[0] == 403
 
 

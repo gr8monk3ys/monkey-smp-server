@@ -19,6 +19,7 @@
   <script src="modcfg.js" defer></script>
   <script src="reports.js" defer></script>
   <script src="desk.js" defer></script>
+  <script src="lookup.js" defer></script>
 </head>
 <body data-tab="status">
   <a class="skip" href="#main">Skip to content</a>
@@ -177,6 +178,20 @@
           <button class="btn primary" id="saved-add" type="button">Save command</button>
         </div>
       </section>
+      <section class="box" id="modcmds-box">
+        <h3>Commands moderators can run</h3>
+        <p class="fine" id="modcmds-about">A moderator login can use this console for these commands only. An entry of two
+          words allows only that pair: "whitelist add" allows <code>whitelist add NAME</code>, never <code>whitelist off</code>.
+          Only known commands that can't run others, make operators, place a command block or send a click can be added
+          (point at the box to see them).</p>
+        <p class="attention" id="modcmds-error" role="alert" hidden></p>
+        <p class="note" id="modcmds-note" role="status" hidden></p>
+        <p class="mono" id="modcmds-list"></p>
+        <div class="add" id="modcmds-edit" hidden>
+          <input id="modcmds-input" type="text" maxlength="1200" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="list, say, msg, kick, whitelist add" aria-label="Commands moderators can run, separated by commas">
+          <button class="btn primary" id="modcmds-save" type="button">Save the list</button>
+        </div>
+      </section>
     </div>
 
     <div class="pane" id="tab-files" hidden>
@@ -270,6 +285,60 @@
         <div class="confirm" id="known-confirm" hidden></div>
         <ul class="entries" id="known-list"></ul>
         <div class="actions"><button class="btn" id="known-more" type="button" hidden>Show more</button></div>
+      </section>
+      <section class="box" id="phist-box">
+        <h3>A player's history</h3>
+        <p class="fine">Everything the page knows about one player in one place: their lists, a ban and its reason, a
+          temporary ban, staff's notes, and every staff change that names them (kicks, bans, notes, commands).</p>
+        <p class="attention" id="phist-error" role="alert" hidden></p>
+        <div class="add">
+          <input id="phist-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Player name" aria-label="Player whose history to show">
+          <button class="btn primary" id="phist-go" type="button">Show history</button>
+        </div>
+        <p class="fine" id="phist-summary" role="status"></p>
+        <ul class="entries" id="phist-list"></ul>
+      </section>
+      <section class="box" id="blocks-box">
+        <h3>Who changed this block</h3>
+        <p class="fine">From Ledger's record: who placed, broke or took from a block and the blocks around it. Stand on
+          the spot and press F3 for its coordinates. It only reads: to undo grief, use Ledger's rollback in game. Times
+          are Pacific.</p>
+        <p class="attention" id="blocks-error" role="alert" hidden></p>
+        <div class="add">
+          <input id="blocks-x" type="text" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="X" aria-label="X coordinate">
+          <input id="blocks-y" type="text" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Y" aria-label="Y coordinate">
+          <input id="blocks-z" type="text" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="Z" aria-label="Z coordinate">
+          <select id="blocks-world" aria-label="World">
+            <option value="Overworld" selected>Overworld</option>
+            <option value="Nether">Nether</option>
+            <option value="End">End</option>
+          </select>
+        </div>
+        <div class="add">
+          <select id="blocks-radius" aria-label="How far around it">
+            <option value="0">That block only</option>
+            <option value="2" selected>2 blocks around</option>
+            <option value="5">5 blocks around</option>
+            <option value="8">8 blocks around</option>
+          </select>
+          <select id="blocks-hours" aria-label="How far back">
+            <option value="6">Last 6 hours</option>
+            <option value="24">Last day</option>
+            <option value="72" selected>Last 3 days</option>
+            <option value="168">Last week</option>
+            <option value="720">Last 30 days</option>
+          </select>
+          <select id="blocks-kind" aria-label="What kind of change">
+            <option value="all" selected>Everything</option>
+            <option value="blocks">Blocks placed and broken</option>
+            <option value="containers">Items into and out of chests</option>
+            <option value="kills">Kills</option>
+          </select>
+          <input id="blocks-player" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Only this player (optional)" aria-label="Only this player">
+          <button class="btn primary" id="blocks-go" type="button">Look up</button>
+        </div>
+        <p class="fine" id="blocks-summary" role="status"></p>
+        <ul class="entries" id="blocks-list"></ul>
       </section>
       <section class="box" id="ipbans" hidden>
         <h3>Banned addresses</h3>
@@ -704,6 +773,20 @@
           </div>
           <p class="attention bad" id="mods-missing" role="status" hidden></p>
           <ul class="entries" id="mods-list"></ul>
+        </section>
+        <section class="box span" id="updates-box" data-need="admin">
+          <div class="box-head">
+            <h3>Updates on Modrinth <span class="meta" id="updates-count"></span></h3>
+            <button class="btn" id="updates-go" type="button" data-need="admin">Check for updates</button>
+          </div>
+          <p class="fine">Asks Modrinth, by each jar's hash, whether it has a newer Fabric file for this game version. Only
+            the hashes, the loader and the game version are sent. Read the changelog first. Only the owner updates a mod:
+            type its short name to install the new file, and the old jar moves to mods-removed/. A release's own (pinned)
+            mods are updated with a release, since the server puts their files back when it starts.</p>
+          <p class="attention" id="updates-error" role="alert" hidden></p>
+          <p class="note" id="updates-note" role="status" hidden></p>
+          <div class="confirm" id="updates-confirm" hidden></div>
+          <ul class="entries" id="updates-list"></ul>
         </section>
         <section class="box span" id="mods-pack-box" hidden>
           <h3>Players' pack: waiting for a release <span class="meta" id="mods-pack-count"></span></h3>

@@ -32,6 +32,10 @@ on another site must not be able to make a change in a staff member's name. Answ
                                       commands and the changes with a search (tools/staff_desk.py)
     GET  /api/reports                 the weekly rule checks written; GET /api/report?week=2026-W45 one of them
                                       (tools/staff_report.py; moderators too)
+    GET  /api/mod-commands, /api/block-history, /api/player-history, /api/mod-updates
+                                      the console commands a moderator may run (an owner PUTs the list), who
+                                      changed a block (Ledger), one player's history and the mods with a newer
+                                      file on Modrinth (tools/staff_lookup.py)
     GET  /api/users                   the staff page's own logins (owners only); POST /api/users adds one, and
                                       /api/users/{role,disable,delete,sessions,link,2fa-off} change one
                                       (tools/staff_auth.py)
@@ -80,6 +84,7 @@ import staff_apex
 import staff_auth
 import staff_desk
 import staff_events
+import staff_lookup
 import staff_modcfg
 import staff_report
 import staff_spark
@@ -1116,12 +1121,14 @@ NEEDS.update(dict.fromkeys(USER_ROUTES, "owner"))
 PATHS.update(path for _, path in USER_ROUTES)
 SCHEDULER_LOOKS: list = []   # f(panel), each called on the scheduler's thread every 20 s (staff_desk: temp bans' ends)
 RAW: dict = {}      # (method, path) -> the most bytes: routes whose body is a file, handed over as (stream, length)
+ROLE_GUARDS: dict = {}  # (method, path) -> f(panel, role, body), Refused when that role may not send this body
 staff_apex.register(sys.modules[__name__])   # settings, game rules, backups, schedules, mods, world, IP bans
 staff_desk.register(sys.modules[__name__])    # everyone who has joined, notes, saved commands, the changes searched
 staff_events.register(sys.modules[__name__])  # the event timer and the leaderboard update
 staff_spark.register(sys.modules[__name__])   # the lag finder: spark's profiler and its report link
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
+staff_lookup.register(sys.modules[__name__])  # moderators' commands, block history, mod updates, a player's history
 
 
 # The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.
@@ -1263,6 +1270,9 @@ class Handler(BaseHTTPRequestHandler):
                     panel.code_guard(body.get("path"))
                     if url.path == "/api/rename":       # a new name can make a file code, or server.properties
                         panel.code_guard(body.get("to"))
+                guard = ROLE_GUARDS.get((method, url.path))
+                if guard:
+                    guard(panel, role, body)
                 result = ROUTES[(method, url.path)](panel, user, query, body)
             if isinstance(result, tuple):       # a file to hand over: (name, bytes or path, size)
                 self.send_download(*result)

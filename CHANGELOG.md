@@ -29,6 +29,17 @@
   - Server: **Find what causes lag**, spark's profiler started from the page, with the report link.
   - Players: **temporary bans** that lift themselves (1 hour to 30 days), unless staff changed the ban meanwhile.
   - Files: **search all files** by name or by the text of settings files, secrets masked.
+- **Staff page look-ups** (a second comparison, 2026-11-10: BisectHosting's per-user command lists, CoreProtect and
+  Ledger web look-ups, LiteBans-style player history, Modrinth update checks). New `tools/staff_lookup.py` and
+  `deploy/staff/lookup.js`:
+  - Console: **moderators can use the console** for the commands on a list the owner sets (`list`, `say`, `msg`,
+    `kick`, `whitelist add`... by default). Only known commands that can't run others, make operators, place a command
+    block or send a click can be on it. Before, a moderator login couldn't send any command.
+  - Players: **a player's history** on one page: lists, ban and reason, temporary ban, notes and every staff change
+    that names them.
+  - Players: **who changed this block**, from Ledger's record, read-only, for a block or up to 8 blocks around it.
+  - Mods: **updates on Modrinth**, checked by each jar's hash, with the changelog; the owner updates a mod from there.
+    A release's pinned mods are shown but updated with a release.
 
 ## [3.4.0] - 2026-11-10
 

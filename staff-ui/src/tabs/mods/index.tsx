@@ -4,7 +4,7 @@ import { get, post } from "../../lib/api";
 import { when } from "../../lib/format";
 import { useMessages, useOnShow } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Actions, Button, Empty, Fine, Message, Messages, PageHead, Panel, Panels, Row, Rows } from "../../ui/kit";
+import { Actions, Button, Fine, Message, Messages, PageHead, Panel, Panels, Row, Rows } from "../../ui/kit";
 import { HELD_NOTE, ModsContext, PINNED_NOTE, playersNeed, type ModCtl } from "./ctl";
 import DataPacks, { type PacksHandle } from "./DataPacks";
 import InstalledMods, { type ModsData } from "./InstalledMods";
@@ -161,7 +161,6 @@ export default function ModsTab({ active }: TabProps) {
                   about={w.action === "remove" && w.how === "off" ? "Still only turned off: pack_sync.py asks before it takes it out of the pack." : ""}
                 />
               ))}
-              {!waiting.length && <Empty>Nothing waiting.</Empty>}
             </Rows>
           </Panel>
         )}

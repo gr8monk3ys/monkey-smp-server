@@ -47,6 +47,10 @@ export function agoMs(ms: number): string {
 /** One word for how the server is doing, and the sentence that explains it (the old staff.js verdict()). */
 export function verdict(d: any, now: number): Verdict {
   const age = now - Date.parse(d.checked);
+  if (Number.isNaN(age)) {
+    return { kind: "unknown", word: "Can't tell",
+      text: "The last reading has no time it was taken, so there is no telling how old its numbers are." };
+  }
   if (age > STALE_MS) {
     return { kind: "unknown", word: "Not updating",
       text: `The last reading is from ${agoMs(age)}, so the numbers below are old. The job that takes them, or the whole machine, may be down.` };

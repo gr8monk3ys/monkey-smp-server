@@ -1,5 +1,5 @@
 // Small hooks every tab uses.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { messageOf } from "./api";
 
 /**
@@ -30,7 +30,8 @@ export function useMessages() {
       setBusy(false);
     }
   }, []);
-  return { error, note, busy, fail, say, clear, run, setError, setNote };
+  // One object while nothing in it changes, so a hook can list it as a dependency.
+  return useMemo(() => ({ error, note, busy, fail, say, clear, run, setError, setNote }), [error, note, busy, fail, say, clear, run]);
 }
 export type Messages = ReturnType<typeof useMessages>;
 

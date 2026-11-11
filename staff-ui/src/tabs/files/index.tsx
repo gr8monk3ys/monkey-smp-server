@@ -102,9 +102,20 @@ export default function FilesTab({ active }: TabProps) {
   }, active);
 
   // Another tab (a search, Mod settings) wants a file in the raw editor.
+  // With changes not saved, it asks first, the same as Close: they are lost otherwise.
   useBus("open-file", (detail) => {
     window.location.hash = "#files";
-    void openFile(String(detail.path), detail.writable);
+    const path = String(detail.path);
+    if (dirty && file && file.path !== path) {
+      ask({
+        message: `Open ${path} and leave ${file.path} without saving? Your changes are lost.`,
+        yes: "Yes, open it",
+        onYes: () => void openFile(path, detail.writable),
+      });
+      return;
+    }
+    if (dirty && file) return;   // the same file, with changes: keep them
+    void openFile(path, detail.writable);
   });
 
   // A change not saved is not lost to a closed browser tab without a warning.

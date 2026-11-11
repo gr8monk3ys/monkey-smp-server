@@ -44,9 +44,8 @@ export default function Roster({ active }: { active: boolean }) {
       const done = await post("/api/command", { command: text });
       const out = String(done.output || "").trim();
       m.say(out ? `Done. The server said: ${out}` : "Done.");
-      await load();
       changed(); // the lists changed, and so did the record
-      emit("players-changed", {});
+      emit("players-changed", {});   // this list reloads itself from it, with the other players' panels
     });
 
   const banned = data.banned || data.bans || [];

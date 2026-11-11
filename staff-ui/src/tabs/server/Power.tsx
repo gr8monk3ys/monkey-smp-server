@@ -13,6 +13,9 @@ const ERRORS_SHOWN = 8;
 // are those after the server's next start time, which GET /api/power says (its "since" when running). A normal
 // restart waits 5 minutes, so the time of the click is not when the server started.
 const PRESSED_KEY = "monkey-panel-pressed";
+// Forgotten an hour after the press: the 5-minute warning and a slow start fit well inside it, and later errors are
+// the Status tab's, not this restart's.
+const PRESSED_MS = 60 * 60_000;
 
 type Action = "restart" | "restart-now" | "stop" | "start";
 
@@ -31,13 +34,16 @@ const STATES: Record<string, [MarkKind, string]> = {
 
 interface Pressed {
   before: string | null;
+  at: number;   // when it was pressed (ms)
 }
+
+const current = (p: Pressed | null, now: number) => (p && typeof p.at === "number" && now - p.at < PRESSED_MS ? p : null);
 
 // sessionStorage can throw (storage off, a private window): then the page works without remembering.
 function pressedRead(): Pressed | null {
   try {
     const kept = JSON.parse(sessionStorage.getItem(PRESSED_KEY) || "null");
-    return kept && typeof kept === "object" ? kept : null;
+    return current(kept && typeof kept === "object" ? kept : null, Date.now());
   } catch {
     return null;
   }
@@ -56,7 +62,8 @@ export function Power({ active }: { active: boolean }) {
   const status = useStatus();
   const [confirm, ask] = useConfirm();
   const [power, setPower] = useState<{ state?: string; since?: string | null } | null>(null);
-  const [pressed, setPressed] = useState<Pressed | null>(pressedRead);
+  const [kept, setPressed] = useState<Pressed | null>(pressedRead);
+  const pressed = current(kept, status.now);
 
   const load = async () => {
     try {
@@ -75,7 +82,7 @@ export function Power({ active }: { active: boolean }) {
       await post("/api/power", { action });
       m.say(POWER[action][2]);
       if (action !== "stop") {
-        const next = { before: power?.state === "running" ? power.since || null : null };
+        const next = { before: power?.state === "running" ? power.since || null : null, at: Date.now() };
         pressedWrite(next);
         setPressed(next);
       }

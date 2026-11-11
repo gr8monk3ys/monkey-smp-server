@@ -64,6 +64,7 @@ export default function ConsoleTab({ active }: TabProps) {
   const offset = useRef<number | null>(null);
   const level = useRef("");
   const polling = useRef(false);
+  const busy = useRef(false);   // a command is on its way: state alone lets a quick second Enter through
   const history = useRef<string[]>([]);
   const at = useRef(0);
   const log = useRef<HTMLDivElement>(null);
@@ -120,6 +121,11 @@ export default function ConsoleTab({ active }: TabProps) {
   const send = async (given?: string) => {
     const typed = typeof given === "string" ? given : cmd.trim();
     if (!typed) return;
+    if (busy.current) {
+      // One at a time, so a kick or ban is never sent twice; what is typed stays in the box.
+      if (typeof given === "string") addLines([`Not sent: ${typed}. Wait for the last command's answer, then run it again.`], "out");
+      return;
+    }
     const saying = typeof given !== "string" && view === "chat" && !typed.startsWith("/");
     const command = saying ? `say ${typed}` : typed;
     // Kept as a command (with its /), so Up then Enter sends it again as it went, in Chat too: never "say say hi".
@@ -138,6 +144,7 @@ export default function ConsoleTab({ active }: TabProps) {
       addLines(["Not sent. The world seed is kept secret."], "out");
       return;
     }
+    busy.current = true;
     setSending(true);
     try {
       const data = await api("POST", "/api/command", { command });
@@ -147,6 +154,7 @@ export default function ConsoleTab({ active }: TabProps) {
     } catch (e) {
       fail(e);
     }
+    busy.current = false;
     setSending(false);
     input.current?.focus();
   };

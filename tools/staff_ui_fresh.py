@@ -27,14 +27,19 @@ def build(into: Path) -> None:
     subprocess.run([bun, "run", "build"], cwd=SOURCE, env=env, check=True, stdout=subprocess.DEVNULL)
 
 
+def _lf(path: Path) -> bytes:
+    """A file's bytes with CRLF read as LF: a Windows checkout with core.autocrlf is not a stale build
+    (.gitattributes keeps deploy/staff LF anyway)."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def differences(built: Path, page: Path) -> list[str]:
     """What is wrong with `page` against a fresh build in `built`, one line each (none when it is fresh)."""
     made = {p.relative_to(built).as_posix() for p in built.rglob("*") if p.is_file()}
     there = {p.relative_to(page).as_posix() for p in page.rglob("*") if p.is_file()} - KEPT
     problems = [f"missing from deploy/staff: {name}" for name in sorted(made - there)]
     problems += [f"in deploy/staff but not built from staff-ui/ (delete it): {name}" for name in sorted(there - made)]
-    problems += [f"stale: {name}" for name in sorted(made & there)
-                 if (built / name).read_bytes() != (page / name).read_bytes()]
+    problems += [f"stale: {name}" for name in sorted(made & there) if _lf(built / name) != _lf(page / name)]
     return problems
 
 

@@ -80,7 +80,7 @@
     node.className = kind === "error" ? "attention" : "note";
     node.hidden = !text;
     node.textContent = text || "";
-    if (text) node.scrollIntoView({ block: "nearest" });      // in the account menu it may be scrolled away
+    if (text && node.closest(".account-body")) node.scrollIntoView({ block: "nearest" });   // the menu scrolls
   }
 
   // ------------------------------------------------ the account menu
@@ -98,7 +98,9 @@
   }
 
   function twoStepState(session) {
-    return session.two_step ? `On, ${session.recovery_left} recovery codes` : "Off";
+    if (!session.two_step) return "Off";
+    const left = Number(session.recovery_left);
+    return Number.isFinite(left) ? `On, ${left} recovery code${left === 1 ? "" : "s"}` : "On";
   }
 
   function passwordForm(status) {
@@ -286,7 +288,7 @@
       body.append(el("p", "fine", `Email: ${mail}`),
                   fold("Two-step login", twoStepState(session), twoStep(status, session), session.two_step_needed),
                   fold("Change password", "", passwordForm(status)),
-                  fold("Change email", session.email_verified ? "Confirmed" : "", emailForm(status, session)),
+                  fold("Change email", "", emailForm(status, session)),
                   button("Log out", "primary", async () => {
                     try {
                       await call("POST", "/auth/logout", {});

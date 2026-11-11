@@ -34,31 +34,41 @@ function inline(text: string): string {
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, words: string, href: string) => `<a href="${absolute(href)}">${words}</a>`);
 }
 
-/** An entry's body (a markdown list, now and then a paragraph) as HTML. */
+type Block = { list: boolean; text: string; sub: string[] };
+
+/** An entry's body (a markdown list, now and then a paragraph) as HTML. An indented `- ` line is a bullet under
+ * the one above it, as /changes shows it (one level deep, all the changelog uses). */
 export function bodyHtml(body: string): string {
-  const blocks: { list: boolean; text: string }[] = [];
-  let open: { list: boolean; text: string } | null = null;
+  const blocks: Block[] = [];
+  let open: Block | null = null;
   for (const line of body.split(/\r?\n/)) {
     if (!line.trim()) {
       open = null;
       continue;
     }
-    if (/^\s*- /.test(line)) {
-      open = { list: true, text: line.replace(/^\s*- /, "") };
+    if (/^\s+- /.test(line) && blocks.at(-1)?.list) {
+      open = blocks.at(-1)!;
+      open.sub.push(line.replace(/^\s+- /, ""));
+    } else if (/^- /.test(line)) {
+      open = { list: true, text: line.slice(2), sub: [] };
       blocks.push(open);
     } else if (open) {
-      open.text += ` ${line.trim()}`;
+      if (open.sub.length) open.sub[open.sub.length - 1] += ` ${line.trim()}`;
+      else open.text += ` ${line.trim()}`;
     } else {
-      open = { list: false, text: line.trim() };
+      open = { list: false, text: line.trim(), sub: [] };
       blocks.push(open);
     }
   }
   let html = "";
   for (const [i, block] of blocks.entries()) {
-    const startsList = block.list && !blocks[i - 1]?.list;
-    const endsList = block.list && !blocks[i + 1]?.list;
-    html += (startsList ? "<ul>" : "") + (block.list ? `<li>${inline(block.text)}</li>` : `<p>${inline(block.text)}</p>`)
-      + (endsList ? "</ul>" : "");
+    if (!block.list) {
+      html += `<p>${inline(block.text)}</p>`;
+      continue;
+    }
+    const sub = block.sub.length ? `<ul>${block.sub.map((s) => `<li>${inline(s)}</li>`).join("")}</ul>` : "";
+    html += (blocks[i - 1]?.list ? "" : "<ul>") + `<li>${inline(block.text)}${sub}</li>`
+      + (blocks[i + 1]?.list ? "" : "</ul>");
   }
   return html;
 }
@@ -75,7 +85,12 @@ export function feedEntries(mdx: string): FeedEntry[] {
   return entries;
 }
 
-/** The feed itself: RSS 2.0, each item's body as escaped HTML, dated at noon Pacific on its day. */
+/** When an entry dated `day` went out, for the feed: 20:00 UTC that day, which is noon Pacific in winter and 1 PM
+ * in summer. Entries have no time of day, so any fixed hour on the right day will do; this one is the same day
+ * everywhere from Hawaii to India. */
+const published = (day: string) => new Date(`${day}T20:00:00Z`).toUTCString();
+
+/** The feed itself: RSS 2.0, each item's body as escaped HTML. */
 export function rss(entries: FeedEntry[], { title, description }: { title: string; description: string }): string {
   const page = `${SITE_URL}/changes`;
   const items = entries.map((e) => [
@@ -83,7 +98,7 @@ export function rss(entries: FeedEntry[], { title, description }: { title: strin
     `<title>${escape(e.title)}</title>`,
     `<link>${page}#${e.id}</link>`,
     `<guid isPermaLink="true">${page}#${e.id}</guid>`,
-    `<pubDate>${new Date(`${e.date}T12:00:00-08:00`).toUTCString()}</pubDate>`,
+    `<pubDate>${published(e.date)}</pubDate>`,
     `<description>${escape(e.html)}</description>`,
     "</item>",
   ].join(""));
@@ -95,7 +110,7 @@ export function rss(entries: FeedEntry[], { title, description }: { title: strin
     `<atom:link href="${page}/feed.xml" rel="self" type="application/rss+xml"/>`,
     `<description>${escape(description)}</description>`,
     "<language>en-us</language>",
-    ...(entries[0] ? [`<lastBuildDate>${new Date(`${entries[0].date}T12:00:00-08:00`).toUTCString()}</lastBuildDate>`] : []),
+    ...(entries[0] ? [`<lastBuildDate>${published(entries[0].date)}</lastBuildDate>`] : []),
     ...items,
     "</channel></rss>",
     "",

@@ -17,7 +17,13 @@ const TYPES: Record<string, string> = {
 };
 
 async function find(pathname: string): Promise<string | null> {
-  const clean = normalize(decodeURIComponent(pathname)).replace(/^[/\\]+/, "");
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null; // a malformed escape (/%E0%A4%A) is a missing page, not a crash
+  }
+  const clean = normalize(decoded).replace(/^[/\\]+/, "");
   if (clean.startsWith("..")) return null;
   const tries = clean === "" || clean === "." ? ["index.html"] : [`${clean}.html`, clean, join(clean, "index.html")];
   for (const name of tries) {

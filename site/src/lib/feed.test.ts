@@ -45,6 +45,11 @@ test("anything else that looks like HTML is escaped", () => {
   assert.equal(bodyHtml("A paragraph."), "<p>A paragraph.</p>");
 });
 
+test("an indented bullet stays under the one above it", () => {
+  assert.equal(bodyHtml("- Top\n  - Under,\n    still under\n- Next"),
+    "<ul><li>Top<ul><li>Under, still under</li></ul></li><li>Next</li></ul>");
+});
+
 test("the feed is RSS with each item linking to its entry on /changes", () => {
   const xml = rss(feedEntries(SAMPLE), CHANGES);
   assert.match(xml, /^<\?xml version="1.0" encoding="UTF-8"\?>/);

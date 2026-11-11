@@ -5,3 +5,6 @@ package-lock.json
 /out/
 next-env.d.ts
 *.tsbuildinfo
+# Playwright's output (bun run test:a11y)
+/test-results/
+/playwright-report/

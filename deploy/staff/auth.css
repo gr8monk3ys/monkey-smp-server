@@ -54,6 +54,8 @@ a.link { display: inline-block; }
 /* Two-step login, in the account menu: the key to type, and the recovery codes shown once. */
 .two-step { display: grid; gap: 8px; }
 .two-step .mono { color: var(--bone); overflow-wrap: anywhere; letter-spacing: 0.04em; }
+/* The QR code keeps its white quiet zone and square modules on the dark page, whatever the theme. */
+.two-step .qr { width: 200px; height: 200px; max-width: 100%; background: #fff; image-rendering: pixelated; }
 .recovery { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
 .recovery li { color: var(--bone); }
 

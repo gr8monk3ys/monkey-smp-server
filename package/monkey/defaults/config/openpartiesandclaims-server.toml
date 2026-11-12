@@ -2,6 +2,13 @@
 #claims at most 2 x 2 chunks, so a faction's territory is 2 x 2 chunks per member (rule 35).
 #Only these options are set here; the mod fills in every other one with its default on first start.
 [serverConfig]
+	#Monkey SMP: the mod's own defaults name a permission system (prometheus) and a party system
+	#(argonauts_guilds) this pack doesn't have, so every start warns and falls back to these two (seen live on
+	#11 November 2026). Naming them changes nothing but the warnings.
+	#The permission system to use for everything that requires permission checks (e.g. permission_api, ftb_ranks, luck_perms, prometheus). Non-built-in permission systems can be registered through the API with an addon.
+	permissionSystem = "luck_perms"
+	#The player party system to prefer and use for anything that can't support multiple systems (e.g. default, ftb_teams, argonauts, argonauts_guilds). Non-built-in party systems can be registered through the API with an addon.
+	primaryPartySystem = "default"
 	[serverConfig.claims]
 		#The maximum number of chunks that a player can claim. Additional claims can be configured in the player config.
 		#This value can be overridden with a player permission.

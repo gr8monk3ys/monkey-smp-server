@@ -1,0 +1,34 @@
+{
+  "parent": "morevillagers:kill_villager",
+  "display": {
+    "icon": {
+      "id": "minecraft:iron_axe"
+    },
+    "title": {
+      "translate": "advancements.kill_babyvillager.title"
+    },
+    "description": {
+      "translate": "advancements.kill_babyvillager.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "killedbabyvillager": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:villager",
+          "minecraft:flags": {
+            "is_baby": true
+          }
+        }
+      }
+    }
+  },
+  "rewards": {
+    "experience": 10
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "parent": "morevillagers:first_village",
+  "display": {
+    "icon": {
+      "id": "minecraft:cod"
+    },
+    "title": {
+      "translate": "advancements.tame_cat.title"
+    },
+    "description": {
+      "translate": "advancements.tame_cat.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "plains": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:cat",
+          "minecraft:location": {
+            "structures": "minecraft:village_plains"
+          }
+        }
+      }
+    },
+    "desert": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:cat",
+          "minecraft:location": {
+            "structures": "minecraft:village_desert"
+          }
+        }
+      }
+    },
+    "savanna": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:cat",
+          "minecraft:location": {
+            "structures": "minecraft:village_savanna"
+          }
+        }
+      }
+    },
+    "snowy": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:cat",
+          "minecraft:location": {
+            "structures": "minecraft:village_snowy"
+          }
+        }
+      }
+    },
+    "taiga": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "minecraft:entity_type": "minecraft:cat",
+          "minecraft:location": {
+            "structures": "minecraft:village_taiga"
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "plains",
+      "desert",
+      "savanna",
+      "snowy",
+      "taiga"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

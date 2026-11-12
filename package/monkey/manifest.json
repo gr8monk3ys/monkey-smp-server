@@ -1319,6 +1319,10 @@
       "size": 1380132,
       "hashes": {
         "sha512": "12788b71440f934db8503ecbb7a99890615eea44c4f15e3c2859088f371e17a93568fef0a83970c54e4f64ba76053e414f02312f77360ebf3f767c6852496a99"
+      },
+      "patch": {
+        "path": "patches/more-villagers-re-employed",
+        "base_sha512": "12788b71440f934db8503ecbb7a99890615eea44c4f15e3c2859088f371e17a93568fef0a83970c54e4f64ba76053e414f02312f77360ebf3f767c6852496a99"
       }
     },
     {

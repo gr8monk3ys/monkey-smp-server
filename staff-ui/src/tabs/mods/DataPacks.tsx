@@ -78,6 +78,21 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
       },
     });
 
+  // Packs with dialog, worldgen, enchantment and similar data load only at startup: turning one on or off without a
+  // restart left logins failing on 2026-11-10. The server refuses that, so ask here and send the restart with it.
+  const toggleWithRestart = (p: any) =>
+    packStep(
+      `${p.enabled ? "Turn off" : "Turn on"} ${p.name}? It has ${p.startup_only.join(", ")} data, which the game loads only at startup, so the server restarts after a 5-minute warning to players.`,
+      p.enabled ? "Turn off and restart" : "Turn on and restart",
+      p.name,
+      () =>
+        call(
+          "/api/datapack-toggle",
+          { name: p.name, enabled: !p.enabled, restart: true },
+          `${p.enabled ? "Turned off" : "Turned on"}. The server restarts in 5 minutes; watch the Server tab.`,
+        ),
+    );
+
   const restore = () =>
     openStep({
       message: "Turn the saved set of data packs back on, in the order they had? The saved list stays until you clear it.",
@@ -181,7 +196,8 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
         {data && !packs.length && <Empty>No data packs in this world.</Empty>}
         {packs.map((p) => {
           const state = p.enabled === null ? "" : p.enabled ? "on" : "off";
-          const facts = [p.kind === "folder" ? "folder" : size(p.size), state, p.release ? "release" : ""].filter(Boolean);
+          const startup: string[] = p.startup_only ?? [];
+          const facts = [p.kind === "folder" ? "folder" : size(p.size), state, p.release ? "release" : "", startup.length ? "needs a restart" : ""].filter(Boolean);
           return (
             <Row
               key={p.name}
@@ -197,7 +213,7 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
                     <Button
                       small
                       need="admin"
-                      onClick={() => call("/api/datapack-toggle", { name: p.name, enabled: !p.enabled }, p.enabled ? "Turned off." : "Turned on.")}
+                      onClick={() => (startup.length ? toggleWithRestart(p) : call("/api/datapack-toggle", { name: p.name, enabled: !p.enabled }, p.enabled ? "Turned off." : "Turned on."))}
                     >
                       {p.enabled ? "Turn off" : "Turn on"}
                     </Button>

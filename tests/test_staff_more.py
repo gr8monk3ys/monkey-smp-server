@@ -200,6 +200,46 @@ def test_a_data_pack_is_turned_on_and_off_by_the_server(apex):
     assert apex.call("POST", "/api/datapack-toggle", {"name": "gone.zip", "enabled": True})[0] == 404
     assert apex.call("POST", "/api/datapack-reload", {})[0] == 200
     assert "datapack-enable loot.zip" in actions(apex) and "datapack-reload" in actions(apex)
+    assert not apex.spawned    # a function-only pack needs no restart
+
+
+DIALOG_PACK = zipped({"pack.mcmeta": json.dumps({"pack": {"pack_format": 80, "description": "Rules"}}),
+                      "data/monkey/dialog/rules.json": "{}", "data/monkey/function/a.mcfunction": "say hi"})
+
+
+def test_a_pack_with_startup_only_data_is_only_toggled_with_a_restart(apex):
+    # 2026-11-10: a dialog pack turned on without a restart left logins failing until the next restart.
+    packs = world(apex)
+    (packs / "rules.zip").write_bytes(DIALOG_PACK)
+    apex.docker.answers['datapack enable "file/rules.zip"'] = "Enabling pack [file/rules.zip (world)]"
+    code, data = apex.call("GET", "/api/datapacks")
+    assert code == 200 and next(p for p in data["packs"] if p["name"] == "rules.zip")["startup_only"] == ["dialog"]
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True})
+    assert code == 409 and "restart" in data["error"]
+    assert "datapack-enable" not in actions(apex) and not apex.spawned
+    assert apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": "yes"})[0] == 400
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": True})
+    assert code == 200 and data["restarting"] is True
+    assert "datapack-enable rules.zip" in actions(apex) and "restart (5-minute warning)" in actions(apex)
+    assert apex.spawned and "--restart" in apex.spawned[0]
+    # A second one while that restart is under way is refused before the pack is touched.
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": False, "restart": True})
+    assert code == 409 and "datapack-disable" not in actions(apex)
+
+
+def test_startup_kinds_reads_folders_and_zips(tmp_path):
+    folder = tmp_path / "pack"
+    (folder / "data" / "x" / "worldgen" / "biome").mkdir(parents=True)
+    (folder / "data" / "x" / "worldgen" / "biome" / "a.json").write_text("{}")
+    (folder / "data" / "x" / "loot_table").mkdir(parents=True)
+    (folder / "data" / "x" / "loot_table" / "a.json").write_text("{}")
+    assert staff_more.pack_startup_kinds(folder) == ["worldgen"]
+    zip_path = tmp_path / "rules.zip"
+    zip_path.write_bytes(DIALOG_PACK)
+    assert staff_more.pack_startup_kinds(zip_path) == ["dialog"]
+    (tmp_path / "bad.zip").write_bytes(b"not a zip")
+    assert staff_more.pack_startup_kinds(tmp_path / "bad.zip") == []
+    assert staff_more.pack_startup_kinds(tmp_path / "missing") == []
 
 
 # ---------------------------------------------------------------- troubleshooting: all off, then back on

@@ -49,7 +49,8 @@ if grep -anE 'Incompatible mods|Mixin apply.*failed|Exception in server tick loo
 fi
 # Data that failed to load: the server starts anyway, so only the log says so. tests/smoke.ps1 says what counts.
 data_errors="Failed to load function |Couldn't load tag |Couldn't read tag list |Couldn't parse data file |Found validation problems in advancement |Found loot table element validation problem |Couldn't load advancements: .*[^a-z0-9_.-]monkey:"
-known_data="Couldn't parse data file 'morevillagers:[^']*' from 'morevillagers:(advancement/|recipe/gilded_station\.json')"
+# Known broken data: none ("^$" matches no error line). More Villagers' files are patched (monkey/patches).
+known_data="^$"
 if grep -anE "$data_errors" compose.log | grep -avE "$known_data"; then
     echo "data that failed to load (above)"; fail=1
 fi

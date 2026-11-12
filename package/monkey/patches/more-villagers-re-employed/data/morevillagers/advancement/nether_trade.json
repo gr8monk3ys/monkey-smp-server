@@ -1,0 +1,35 @@
+{
+  "parent": "morevillagers:first_trade",
+  "display": {
+    "icon": {
+      "id": "minecraft:netherrack"
+    },
+    "title": {
+      "translate": "advancements.nether_trade.title"
+    },
+    "description": {
+      "translate": "advancements.nether_trade.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "netherian": {
+      "trigger": "minecraft:villager_trade",
+      "conditions": {
+        "villager": {
+          "minecraft:entity_type": "minecraft:villager",
+          "minecraft:nbt": "{VillagerData:{profession:\"morevillagers:netherian\"}}",
+          "minecraft:location": {
+            "dimension": "minecraft:the_nether"
+          }
+        }
+      }
+    }
+  },
+  "rewards": {
+    "experience": 100
+  }
+}

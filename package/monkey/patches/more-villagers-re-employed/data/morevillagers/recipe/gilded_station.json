@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "@@",
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": "minecraft:oak_log",
+    "@": "minecraft:gold_block"
+  },
+  "result": {
+    "id": "morevillagers:gilded_station",
+    "components": {
+      "minecraft:lore": [
+        {
+          "text": "WIP",
+          "color": "red",
+          "italic": false
+        }
+      ]
+    }
+  }
+}

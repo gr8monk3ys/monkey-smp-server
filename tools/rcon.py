@@ -34,8 +34,10 @@ the server isn't running), 1 a command wasn't accepted, NOT_RUNNING the server i
 run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
+import contextlib
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 import sys
@@ -53,6 +55,7 @@ PACK_OFF = 5
 # 28 times an hour, and each listing re-reads every pack and mod on the server's main thread (2026-11-11).
 PACKS_CACHE = ".packs-enabled.json"
 PACKS_CACHE_S = 1800
+PACKS_FORGOT = ".packs-forgot"     # when staff last changed a pack (forget_packs)
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -183,36 +186,46 @@ def packs_off(rcon, packs: Iterable[str], answer: str | None = None) -> list[str
     return [p for p in packs if not re.search(rf"file/{re.escape(p)}(?![\w.-])", answer)]
 
 
+def _forgot_at(folder: Path) -> float:
+    try:
+        return float((Path(folder) / PACKS_FORGOT).read_text(encoding="ascii"))
+    except (OSError, ValueError):
+        return 0.0
+
+
 def enabled_list(rcon, folder: Path, box: str, now: Callable[[], float] = time.time) -> str:
     """The server's answer to `datapack list enabled`: the copy in folder/PACKS_CACHE when it came from container
-    `box` under PACKS_CACHE_S ago, else asked now and kept there. A copy that can't be read or written is skipped."""
+    `box` under PACKS_CACHE_S ago and after the last forget_packs, else asked now and kept there (unless staff
+    changed a pack while it was being asked). A copy that can't be read or written is skipped."""
     cache = Path(folder) / PACKS_CACHE
     try:
         kept = json.loads(cache.read_text(encoding="utf-8"))
-        if (isinstance(kept, dict) and kept.get("box") == box and isinstance(kept.get("answer"), str)
-                and 0 <= now() - float(kept.get("at", -1)) < PACKS_CACHE_S):
+        at = float(kept.get("at", -1)) if isinstance(kept, dict) else -1.0
+        if (kept.get("box") == box and isinstance(kept.get("answer"), str) and 0 <= now() - at < PACKS_CACHE_S
+                and at > _forgot_at(folder)):
             return kept["answer"]
-    except (OSError, ValueError, TypeError):
+    except (OSError, ValueError, TypeError, AttributeError):
         pass
+    asked = now()
     answer = rcon("datapack list enabled")
-    if "enabled" in answer:
-        tmp = cache.with_name(cache.name + ".tmp")
+    if "enabled" in answer and _forgot_at(folder) < asked:
+        tmp = cache.with_name(f"{cache.name}.{os.getpid()}.tmp")
         try:
-            tmp.write_text(json.dumps({"box": box, "at": now(), "answer": answer}), encoding="utf-8")
+            tmp.write_text(json.dumps({"box": box, "at": asked, "answer": answer}), encoding="utf-8")
             tmp.replace(cache)
         except OSError:
-            pass
+            with contextlib.suppress(OSError):
+                tmp.unlink()
     return answer
 
 
-def forget_packs(folder: Path) -> None:
-    """Drops packs-on's copy of the enabled list: staff turned a pack on or off, or reloaded."""
-    try:
+def forget_packs(folder: Path, now: Callable[[], float] = time.time) -> None:
+    """Drops packs-on's copy of the enabled list: staff turned a pack on or off, or reloaded. The time it was dropped
+    is kept too, so a timed job that asked the server just before can't put back a list from before the change."""
+    with contextlib.suppress(OSError):
+        (Path(folder) / PACKS_FORGOT).write_text(repr(now()), encoding="ascii")
+    with contextlib.suppress(OSError):
         (Path(folder) / PACKS_CACHE).unlink()
-    except FileNotFoundError:
-        pass
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------- a timed job's command line

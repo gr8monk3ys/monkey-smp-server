@@ -478,3 +478,37 @@ def test_the_deploy_asks_the_gate_before_it_warns_backs_up_or_copies_anything():
     assert text.index("in_window; then") < gate < text.index("warn_players \"Server update") < text.index(
         "sync_package \"$commit\"\n")
     assert '[ -z "$tag" ] || die "$tag was not deployed' in text   # --tag (the staff switch) says why
+
+
+def deploy_function(name):
+    text = (DEPLOY / "monkey-deploy.sh").read_text()
+    start = text.index(f"{name}() {{")
+    return text[start:text.index("\n}\n", start) + 3]
+
+
+def test_every_restart_applies_the_pack_changes_staff_left_for_it_first():
+    text = (DEPLOY / "monkey-deploy.sh").read_text()
+    body = deploy_function("restart_and_wait")
+    assert body.index("packs_at_restart") < body.index("compose up")
+    assert text.count("compose up -d") == 1      # every restart goes through restart_and_wait
+
+
+def test_pack_changes_are_made_just_before_the_stop_then_forgotten(sh, tmp_path):
+    docker = tmp_path / "docker"
+    docker.mkdir()
+    pending = docker / ".packs-at-restart"
+    pending.write_text('enable monkey-rules\ndisable old pack.zip\nwipe x\nenable bad"name\n', newline="\n")
+    code, out, calls = sh(deploy_function("packs_at_restart") + " packs_at_restart",
+                          LIVE_DIR=tmp_path.as_posix(), FAKE_OUT_docker="ok")
+    assert code == 0 and not pending.exists()
+    sent = [c.split(" rcon ", 1)[1] for c in calls if " rcon " in c]
+    assert sent == ['datapack enable "file/monkey-rules"', 'datapack disable "file/old pack.zip"', "save-all flush"]
+    assert any("skipping a bad data pack name" in line for line in out)
+
+
+def test_pack_changes_wait_while_the_server_is_down(sh, tmp_path):
+    (tmp_path / "docker").mkdir()
+    pending = tmp_path / "docker" / ".packs-at-restart"
+    pending.write_text("enable monkey-rules\n", newline="\n")
+    code, out, calls = sh(deploy_function("packs_at_restart") + " packs_at_restart", LIVE_DIR=tmp_path.as_posix())
+    assert code == 0 and pending.exists() and not any(" rcon " in c for c in calls)

@@ -135,8 +135,27 @@ in_window() {
 
 # ---------------------------------------------------------------- helpers
 
+# Data packs staff turned on or off "with a restart" on the staff page (tools/staff_more.py, AT_RESTART): packs
+# with data the game reads only at startup (dialog, worldgen, ...). Changed live they half-load and players can't
+# join (2026-11-10), so they change here, after the warning and seconds before the stop; the world saves the
+# change on the way down and the next start loads them whole. The file is removed once applied.
+packs_at_restart() {
+    pending="$LIVE_DIR/docker/.packs-at-restart"
+    [ -f "$pending" ] || return 0
+    running || { log "data pack changes wait in $pending: the server is not running"; return 0; }
+    while IFS=' ' read -r verb name; do
+        case "$verb" in enable | disable) ;; *) continue ;; esac
+        case "$name" in '' | *'"'* | *'\'*) log "skipping a bad data pack name in $pending"; continue ;; esac
+        said=$(rcon "datapack $verb \"file/$name\"") || said='no answer'
+        log "data pack $name: $verb at the restart: $said"
+    done <"$pending"
+    rm -f "$pending"
+    rcon 'save-all flush' >/dev/null || true
+}
+
 # Recreates the container (its entrypoint installs, then starts) and waits for RCON to answer.
 restart_and_wait() {
+    packs_at_restart
     compose up -d --build --force-recreate
     wait_for_live --while-running
 }

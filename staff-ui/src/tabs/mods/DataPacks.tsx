@@ -68,8 +68,9 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
         try {
           const done = await post("/api/datapacks-save-off", { confirm: "ALL OFF" });
           const failed = failedWords(done.failed);
+          const keptOn = (done.kept_on || []).join(", ");
           m.say(
-            `Saved ${done.saved} packs and turned ${done.off.length} off.${failed ? ` These didn't turn off: ${failed}.` : ""} Turn them back on one at a time to find the trouble, or all at once with Turn saved set back on.`,
+            `Saved ${done.saved} packs and turned ${done.off.length} off.${failed ? ` These didn't turn off: ${failed}.` : ""}${keptOn ? ` These stay on, because their data loads only at startup (turn one off with its own button, which restarts the server): ${keptOn}.` : ""} Turn them back on one at a time to find the trouble, or all at once with Turn saved set back on.`,
           );
         } catch (e) {
           m.fail(e);
@@ -82,14 +83,14 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
   // restart left logins failing on 2026-11-10. The server refuses that, so ask here and send the restart with it.
   const toggleWithRestart = (p: any) =>
     packStep(
-      `${p.enabled ? "Turn off" : "Turn on"} ${p.name}? It has ${p.startup_only.join(", ")} data, which the game loads only at startup, so the server restarts after a 5-minute warning to players.`,
+      `${p.enabled ? "Turn off" : "Turn on"} ${p.name}? It has ${p.startup_only.join(", ")} data, which the game loads only at startup. The server restarts after a 5-minute warning to players, and the pack is ${p.enabled ? "turned off" : "turned on"} just before it stops.`,
       p.enabled ? "Turn off and restart" : "Turn on and restart",
       p.name,
       () =>
         call(
           "/api/datapack-toggle",
           { name: p.name, enabled: !p.enabled, restart: true },
-          `${p.enabled ? "Turned off" : "Turned on"}. The server restarts in 5 minutes; watch the Server tab.`,
+          `The server restarts in 5 minutes and ${p.enabled ? "turns the pack off" : "turns the pack on"} just before it stops. Watch the Server tab.`,
         ),
     );
 
@@ -197,7 +198,13 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
         {packs.map((p) => {
           const state = p.enabled === null ? "" : p.enabled ? "on" : "off";
           const startup: string[] = p.startup_only ?? [];
-          const facts = [p.kind === "folder" ? "folder" : size(p.size), state, p.release ? "release" : "", startup.length ? "needs a restart" : ""].filter(Boolean);
+          const later = p.at_restart === "enable" ? "turns on at the restart" : p.at_restart === "disable" ? "turns off at the restart" : "";
+          const facts = [
+            p.kind === "folder" ? "folder" : size(p.size),
+            state,
+            p.release ? "release" : "",
+            later || (startup.length ? "changes only with a restart" : ""),
+          ].filter(Boolean);
           return (
             <Row
               key={p.name}
@@ -209,7 +216,7 @@ export default function DataPacks({ handle }: { handle: Ref<PacksHandle> }) {
               about={p.description}
               actions={
                 <>
-                  {running && p.enabled !== null && (
+                  {running && p.enabled !== null && !later && (
                     <Button
                       small
                       need="admin"

@@ -1,0 +1,32 @@
+{
+  "parent": "morevillagers:first_trade",
+  "display": {
+    "icon": {
+      "id": "minecraft:diamond"
+    },
+    "title": {
+      "translate": "advancements.master_trade.title"
+    },
+    "description": {
+      "translate": "advancements.master_trade.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "villagertrade": {
+      "trigger": "minecraft:villager_trade",
+      "conditions": {
+        "villager": {
+          "minecraft:entity_type": "minecraft:villager",
+          "minecraft:nbt": "{VillagerData:{level:5}}"
+        }
+      }
+    }
+  },
+  "rewards": {
+    "experience": 50
+  }
+}

@@ -55,6 +55,17 @@
   staff log); nothing new is collected.
 - Typed confirms keep their button off until the word matches, and the mod settings' reset asks for the word RESET.
 
+### Fixed
+
+- **More Villagers' gilded station recipe and its 9 advancements load again.** The pinned build (1.26.7.1, the
+  newest for 26.2) ships them in the 26.1 format, so 26.2 dropped them on every start: the gilded station couldn't
+  be crafted and none of those advancements existed. A patch (`monkey/patches/more-villagers-re-employed`)
+  rewrites the 10 files in 26.2's format (entity predicates as `minecraft:` sub-predicates, plain-id recipe keys,
+  the lore as a text component); nothing else changes. The boot tests no longer let these errors through.
+- Open Parties and Claims names the permission and party systems it already fell back to (`luck_perms`,
+  `default`), so its two "isn't registered" warnings stop. Behaviour is the same. A live server keeps its own
+  config, so set the two lines in its `config/openpartiesandclaims-server.toml` by hand.
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

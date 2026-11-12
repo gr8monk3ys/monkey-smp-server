@@ -8,6 +8,7 @@ import struct
 import urllib.parse
 import zipfile
 import zlib
+from pathlib import Path
 
 import pytest
 import staff_host
@@ -200,6 +201,81 @@ def test_a_data_pack_is_turned_on_and_off_by_the_server(apex):
     assert apex.call("POST", "/api/datapack-toggle", {"name": "gone.zip", "enabled": True})[0] == 404
     assert apex.call("POST", "/api/datapack-reload", {})[0] == 200
     assert "datapack-enable loot.zip" in actions(apex) and "datapack-reload" in actions(apex)
+    assert not apex.spawned    # a function-only pack needs no restart
+
+
+def execs(b) -> list[str]:
+    return [c[-1] for c in b.docker.calls if "exec" in c]
+
+
+DIALOG_PACK = zipped({"pack.mcmeta": json.dumps({"pack": {"pack_format": 80, "description": "Rules"}}),
+                      "data/monkey/dialog/rules.json": "{}", "data/monkey/function/a.mcfunction": "say hi"})
+
+
+def test_a_pack_with_startup_only_data_is_only_toggled_with_a_restart(apex):
+    # 2026-11-10: a dialog pack turned on without a restart left logins failing until the next restart.
+    packs = world(apex)
+    (packs / "rules.zip").write_bytes(DIALOG_PACK)
+    later = Path(apex.panel.docker.folder) / staff_more.AT_RESTART
+    code, data = apex.call("GET", "/api/datapacks")
+    row = next(p for p in data["packs"] if p["name"] == "rules.zip")
+    assert code == 200 and row["startup_only"] == ["dialog"] and row["at_restart"] is None
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True})
+    assert code == 409 and "restart" in data["error"]
+    assert apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": "yes"})[0] == 400
+    assert "datapack" not in actions(apex) and not apex.spawned and not later.exists()
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": True})
+    assert code == 200 and data["restarting"] is True
+    # Not touched live: the restart script turns it on just before the stop.
+    assert not any("datapack enable" in c for c in execs(apex))
+    assert later.read_text() == "enable rules.zip\n"
+    assert "datapack-enable-at-restart rules.zip" in actions(apex) and "restart (5-minute warning)" in actions(apex)
+    assert apex.spawned and "--restart" in apex.spawned[0]
+    rows = apex.call("GET", "/api/datapacks")[1]["packs"]
+    assert next(p for p in rows if p["name"] == "rules.zip")["at_restart"] == "enable"
+    # A second one while that restart is under way is refused and leaves the file as it was.
+    code, data = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": False, "restart": True})
+    assert code == 409 and later.read_text() == "enable rules.zip\n"
+
+
+def test_a_restart_that_does_not_start_leaves_no_pack_change_waiting(apex, monkeypatch):
+    packs = world(apex)
+    (packs / "rules.zip").write_bytes(DIALOG_PACK)
+
+    def refuse(user, body):
+        raise staff_panel.Refused(409, "A stop is already under way.")
+
+    monkeypatch.setattr(apex.panel, "power_action", refuse)
+    code, _ = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": True})
+    assert code == 409 and not (Path(apex.panel.docker.folder) / staff_more.AT_RESTART).exists()
+
+
+def test_troubleshooting_leaves_startup_only_packs_on(apex):
+    packs = world(apex)
+    (packs / "rules.zip").write_bytes(DIALOG_PACK)
+    (packs / "loot.zip").write_bytes(PACK)
+    apex.docker.answers["datapack list enabled"] = ("There are 3 data packs enabled: [vanilla (built-in)], "
+                                                    "[file/rules.zip (world)], [file/loot.zip (world)]")
+    code, data = apex.call("POST", "/api/datapacks-save-off", {"confirm": "ALL OFF"})
+    assert code == 200 and data["kept_on"] == ["rules.zip"] and data["saved"] == 1
+    assert not any("rules.zip" in c and "disable" in c for c in execs(apex))
+
+
+def test_startup_kinds_reads_folders_and_zips(tmp_path):
+    folder = tmp_path / "pack"
+    (folder / "data" / "x" / "worldgen" / "biome").mkdir(parents=True)
+    (folder / "data" / "x" / "worldgen" / "biome" / "a.json").write_text("{}")
+    (folder / "data" / "x" / "loot_table").mkdir(parents=True)
+    (folder / "data" / "x" / "loot_table" / "a.json").write_text("{}")
+    assert staff_more.pack_startup_kinds(folder) == ["worldgen"]
+    (folder / "data" / "x" / "some_mod_kind").mkdir()      # a kind this file doesn't know needs a restart too
+    assert staff_more.pack_startup_kinds(folder) == ["some_mod_kind", "worldgen"]
+    zip_path = tmp_path / "rules.zip"
+    zip_path.write_bytes(DIALOG_PACK)
+    assert staff_more.pack_startup_kinds(zip_path) == ["dialog"]
+    (tmp_path / "bad.zip").write_bytes(b"not a zip")
+    assert staff_more.pack_startup_kinds(tmp_path / "bad.zip") == []
+    assert staff_more.pack_startup_kinds(tmp_path / "missing") == []
 
 
 # ---------------------------------------------------------------- troubleshooting: all off, then back on

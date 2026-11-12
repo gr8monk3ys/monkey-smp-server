@@ -197,3 +197,55 @@ def test_packs_on_gives_lib_sh_its_exit_code(capsys, server, code, said):
     packs = ["monkey-boss"] if code == 0 else ["monkey-boss", "monkey-sieges"]
     assert rcon.main(["packs-on", *packs, "--docker", "d"], server=lambda folder: server) == code
     assert capsys.readouterr().out == said
+
+
+def test_packs_on_keeps_the_list_for_the_same_container(tmp_path):
+    server = rcon.Recorder({"datapack": LISTED})
+    for _ in range(3):
+        assert rcon.main(["packs-on", "monkey-boss", "--docker", str(tmp_path)], server=lambda folder: server) == 0
+    assert server.sent == ["datapack list enabled"]
+
+
+def test_the_kept_list_is_dropped_by_staff_age_or_a_new_container(tmp_path):
+    server = rcon.Recorder({"datapack": LISTED})
+    clock = [1000.0]
+    assert rcon.enabled_list(server, tmp_path, "box1", now=lambda: clock[0]) == LISTED
+    assert rcon.enabled_list(server, tmp_path, "box1", now=lambda: clock[0]) == LISTED
+    assert len(server.sent) == 1
+    rcon.enabled_list(server, tmp_path, "box2", now=lambda: clock[0])            # restarted: a new container
+    assert len(server.sent) == 2
+    clock[0] += rcon.PACKS_CACHE_S
+    rcon.enabled_list(server, tmp_path, "box2", now=lambda: clock[0])            # too old
+    assert len(server.sent) == 3
+    rcon.forget_packs(tmp_path, now=lambda: clock[0])                            # staff changed a pack
+    clock[0] += 1
+    rcon.enabled_list(server, tmp_path, "box2", now=lambda: clock[0])
+    assert len(server.sent) == 4
+    rcon.enabled_list(server, tmp_path, "box2", now=lambda: clock[0])            # kept again after that
+    assert len(server.sent) == 4
+    rcon.forget_packs(tmp_path)
+    rcon.forget_packs(tmp_path)                                                  # nothing to drop: fine
+
+
+def test_a_list_asked_for_before_a_staff_change_is_not_kept(tmp_path):
+    clock = [1000.0]
+
+    class ChangedWhileAsking(rcon.Recorder):
+        def __call__(self, command):
+            answer = super().__call__(command)
+            clock[0] += 1
+            rcon.forget_packs(tmp_path, now=lambda: clock[0])     # staff turns a pack off mid-question
+            clock[0] += 1
+            return answer
+
+    server = ChangedWhileAsking({"datapack": LISTED})
+    assert rcon.enabled_list(server, tmp_path, "box1", now=lambda: clock[0]) == LISTED
+    assert not (tmp_path / rcon.PACKS_CACHE).exists()
+
+
+def test_an_answer_that_is_not_the_list_is_never_kept(tmp_path):
+    server = rcon.Recorder({"datapack": "something else"})
+    rcon.enabled_list(server, tmp_path, "box1")
+    assert not (tmp_path / rcon.PACKS_CACHE).exists()
+    (tmp_path / rcon.PACKS_CACHE).write_text("not json", encoding="utf-8")
+    assert rcon.enabled_list(rcon.Recorder({"datapack": LISTED}), tmp_path, "box1") == LISTED

@@ -264,8 +264,18 @@ run `migrate_names.py` on it first.
 Before this release, Sulfur Cube Expansion's charged cubes made Ledger write about 29 million rows a day of a
 button placed and broken every tick (docs/MAINTAINING.md, "Patches this pack carries"): `world/ledger.sqlite` was
 57 GB on 14 November 2026, growing about 8 GB a day, 99.9% of it those rows. The patch stops new ones; the old ones
-stay until this step takes them out. Do it once the release is live (before, the churn would only come back), as
-`monkey`, in two runs of the same command: one with the server running, one with it stopped.
+stay until this step takes them out. Do it once the release is live (before, the churn would only come back).
+
+First, as root, update root's own copies ("Root's own copies"): the off-site backup runs
+`/opt/monkey/deploy/monkey-backup.sh`, and only this release's copy leaves the prune's two files out of R2. Without
+it, every snapshot from then on carries the 57 GB file again.
+
+```sh
+sh /opt/monkey/deploy/install-root.sh --check && sh /opt/monkey/deploy/install-root.sh
+```
+
+Then, as `monkey`, two runs of the same command: one with the server running, one with it stopped (between :05
+and :55, so the hourly backup's save-off doesn't meet a stopped server).
 
 ```sh
 python3 /srv/monkey/repo/tools/ledger_prune.py /srv/monkey/MonkeySMP-Server/server/world

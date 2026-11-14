@@ -17,6 +17,9 @@ from the `command` source, with no player, and is one of the churn's three shape
     block-break  air over mangrove_button        (the marker taking it away)
     block-place  air over air                    (the marker's fill finding nothing; never a change)
 
+and the button in it is the one upstream's fill makes, {face:"floor",facing:"north",powered:"true"}, so a staff
+/fill of other buttons keeps its rows.
+
 Every other row is copied as it is, with its id. Deleting from the old file instead would take hours with the server
 stopped and leave it 57 GB on disk.
 
@@ -24,7 +27,8 @@ The copy reads the old file read-only in batches of ids, each a short read, so L
 meanwhile. The finish holds world/session.lock for its whole run, so the server can't start under it. It folds the
 old file's write-ahead log in, copies the rows added since, the small tables again (new players and blocks), and what
 Ledger changed in rows already copied (a rollback or restore flips `rolled_back`, a purge deletes rows), then builds
-the indexes, checks the file and renames the two, the old one with its -wal and -shm. Nothing in the old file's rows
+the indexes (and any views or triggers), checks the file and swaps the two, the old one with its -wal and -shm;
+ledger.sqlite exists at every step of the swap. Nothing in the old file's rows
 changes; it is kept for staff to delete once the server runs well on the new one (docs/LIVE.md, "Ledger's history").
 """
 import argparse
@@ -42,6 +46,7 @@ SIDECARS = ("-wal", "-shm")
 PROGRESS = "ledger_prune_progress"  # in the new file only: the old file's newest id copied so far
 BATCH = 5_000_000  # ids per read of the old file
 BUTTON, AIR = "minecraft:mangrove_button", "minecraft:air"
+BUTTON_STATE = '{face:"floor",facing:"north",powered:"true"}'  # as Ledger writes it
 
 
 class PruneError(Exception):
@@ -92,10 +97,10 @@ def churn(con) -> tuple[str, list]:
     if None in (source, button, air, place, brk):
         return "0", []  # this history never had the churn
     where = ('"source" = ? AND player_id IS NULL AND ('
-             "(action_id = ? AND object_id = ? AND old_object_id = ?) OR "
-             "(action_id = ? AND object_id = ? AND old_object_id = ?) OR "
+             "(action_id = ? AND object_id = ? AND old_object_id = ? AND block_state IS ?) OR "
+             "(action_id = ? AND object_id = ? AND old_object_id = ? AND old_block_state IS ?) OR "
              "(action_id = ? AND object_id = ? AND old_object_id = ?))")
-    return where, [source, place, button, air, brk, air, button, place, air, air]
+    return where, [source, place, button, air, BUTTON_STATE, brk, air, button, BUTTON_STATE, place, air, air]
 
 
 def _open(world: Path) -> sqlite3.Connection:
@@ -124,9 +129,10 @@ def copy(world: Path) -> int:
         raise PruneError(f"no {world / DB}")
     if (world / KEPT).exists():
         raise PruneError(f"{KEPT} is already there: delete it (or put it back) first")
-    fresh = not (world / NEW).exists()
-    con = _open(world)
+    fresh = not (world / NEW).exists()  # only until its tables are committed: then batches are worth keeping
+    con = None
     try:
+        con = _open(world)
         con.execute("BEGIN")
         if fresh:
             actions = con.execute("SELECT sql FROM old.sqlite_master WHERE name = 'actions'").fetchone()
@@ -138,6 +144,7 @@ def copy(world: Path) -> int:
         elif not _has(con, "main", PROGRESS):
             raise PruneError(f"{NEW} is not one of this tool's copies: delete it first")
         con.execute("COMMIT")
+        fresh = False
         where, args = churn(con)
         newest = con.execute("SELECT coalesce(max(id), 0) FROM old.actions").fetchone()[0]
         done = con.execute(f"SELECT upto FROM {PROGRESS}").fetchone()[0]
@@ -150,9 +157,10 @@ def copy(world: Path) -> int:
             con.execute("COMMIT")
             done = upto
     except BaseException:
-        if con.in_transaction:
-            con.execute("ROLLBACK")
-        con.close()
+        if con is not None:
+            if con.in_transaction:
+                con.execute("ROLLBACK")
+            con.close()
         if fresh:
             (world / NEW).unlink(missing_ok=True)
         raise
@@ -201,15 +209,18 @@ def finish(world: Path) -> dict:
             # New rows carry on after the old file's last id, not after the last kept one.
             con.execute("DELETE FROM main.sqlite_sequence")
             con.execute("INSERT INTO main.sqlite_sequence SELECT * FROM old.sqlite_sequence")
-            indexes = con.execute("SELECT sql FROM old.sqlite_master WHERE type = 'index' AND sql IS NOT NULL")
-            for (sql,) in indexes.fetchall():
-                con.execute(sql)
-            con.execute(f"DROP TABLE {PROGRESS}")
+            # Indexes, then any views and triggers, so the new file has the old one's whole schema.
+            rest = con.execute("SELECT type, name, sql FROM old.sqlite_master WHERE sql IS NOT NULL "
+                               "AND type IN ('index', 'view', 'trigger') "
+                               "ORDER BY type = 'index' DESC").fetchall()
+            for _kind, name, sql in rest:
+                if not _has(con, "main", name):  # a finish run again after a failed swap built them already
+                    con.execute(sql)
             kept_rows = con.execute("SELECT count(*) FROM main.actions").fetchone()[0]
+            if con.execute("PRAGMA main.quick_check").fetchone()[0] != "ok":
+                raise PruneError(f"{NEW} failed SQLite's check; nothing was swapped")
             con.execute("COMMIT")
             con.execute("DETACH DATABASE old")
-            if con.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                raise PruneError(f"{NEW} failed SQLite's integrity check; nothing was swapped")
             con.execute("PRAGMA journal_mode = WAL")  # as Ledger keeps it
         except BaseException:
             if con.in_transaction:
@@ -218,15 +229,24 @@ def finish(world: Path) -> dict:
         finally:
             con.close()
 
+        # ledger.sqlite exists at every step: the old file gets its second name first, then the new one replaces
+        # the first name in one rename. The progress table stays until then, so a finish that fails here can run
+        # again.
         st = db.stat()
         if os.geteuid() == 0:
             os.chown(new, st.st_uid, st.st_gid)
         os.chmod(new, st.st_mode & 0o777)
-        os.rename(db, kept)
+        os.link(db, kept)
         for side in SIDECARS:  # the old file's (empty after the checkpoint): they go with it
             if Path(str(db) + side).exists():
-                os.rename(str(db) + side, str(kept) + side)
-        os.rename(new, db)
+                os.replace(str(db) + side, str(kept) + side)
+        os.replace(new, db)
+        con = sqlite3.connect(db)
+        try:
+            con.execute(f"DROP TABLE IF EXISTS {PROGRESS}")
+            con.commit()
+        finally:
+            con.close()
     return {"rows_before": upto, "rows_kept": kept_rows, "bytes_before": st.st_size, "bytes_after": db.stat().st_size}
 
 

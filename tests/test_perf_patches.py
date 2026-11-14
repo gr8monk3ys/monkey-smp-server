@@ -222,7 +222,7 @@ def test_effects_library_flames_and_stun_boxes_run_every_step():
 
 CHARGED = "data/more_archetypes/function/"
 KEPT = "sulfur_cube_charge_kept"
-BUTTON = "minecraft:mangrove_button[powered=true,face=floor]"
+BUTTON = "minecraft:mangrove_button[powered=true,face=floor,facing=north]"
 MIDDLE = "align xyz positioned ~0.5 ~0.5 ~0.5"
 
 
@@ -266,5 +266,5 @@ def test_the_marker_pass_runs_before_the_cube_pass():
 
 def test_blaze_attack_animation_declares_26_2s_data_format():
     meta = json.loads(patched("blaze-attack-animation", "pack.mcmeta"))["pack"]
-    assert meta["min_format"] == meta["max_format"] == [107, 1]
+    assert meta["min_format"] == meta["max_format"] == 107  # any 107.x, as tools/datapacks.py declares
     assert "pack_format" not in meta

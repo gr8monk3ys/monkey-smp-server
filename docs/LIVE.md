@@ -288,7 +288,8 @@ The first run, with the server up, reads the whole old file once, read-only (116
 November), and copies every other row, with its id, into `ledger.sqlite.pruning`: 8.9 million of 281 million rows.
 The second, with the server stopped, adds only what Ledger wrote since and what it changed (a rollback, a purge),
 builds the indexes, swaps the new file in and keeps the old one as `ledger.sqlite.before-prune`. Which run it is
-comes from the world's lock, so the server is down only for the second; that run holds the lock until the swap, so
+comes from the world's lock, so the server is down only for the second (a few minutes: it reads the old file once
+more to catch rollbacks and purges since the copy, then builds the indexes); that run holds the lock until the swap, so
 a server started meanwhile (a deploy, the staff page) stops at "session.lock: already locked" instead of writing
 into the file being replaced. Both run in batches the server barely notices, and neither is needed again: a
 history without the churn is copied whole. Check `ledger search` and the staff page's

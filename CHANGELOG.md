@@ -64,7 +64,7 @@
   the cube stays in its block; it still goes the tick after the cube leaves. The rows already written stay until
   they are cleaned up by hand (docs/LIVE.md, "Ledger's history").
 - **Blaze Attack Animation's two warnings at every start and data pack reload stop.** Its `pack.mcmeta` declared
-  `"pack_format": 107.1`, which 26.2 only reads as `min_format`/`max_format`; a patch declares it that way.
+  `"pack_format": 107.1`, which 26.2 only reads as `min_format`/`max_format`; a patch declares it as 107 (any 107.x).
 - **More Villagers' gilded station recipe and its 9 advancements load again.** The pinned build (1.26.7.1, the
   newest for 26.2) ships them in the 26.1 format, so 26.2 dropped them on every start: the gilded station couldn't
   be crafted and none of those advancements existed. A patch (`monkey/patches/more-villagers-re-employed`)

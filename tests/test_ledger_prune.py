@@ -28,13 +28,14 @@ OBJECTS = {"minecraft:air": 1, "minecraft:mangrove_button": 2, "minecraft:stone"
 SOURCES = {"player": 1, "command": 2, "gravity": 3}
 
 
-def row(action, obj, old, source, player=None, t="2026-11-14 03:00:00"):
+def row(action, obj, old, source, player=None, t="2026-11-14 03:00:00", state=None, old_state=None):
     return (ACTIONS[action], t, 590, -20, -1340, 1, OBJECTS[f"minecraft:{obj}"], OBJECTS[f"minecraft:{old}"],
-            None, None, SOURCES[source], player, None, 0)
+            state, old_state, SOURCES[source], player, None, 0)
 
 
-CHURN = [row("block-place", "mangrove_button", "air", "command"),
-         row("block-break", "air", "mangrove_button", "command"),
+CUBE = '{face:"floor",facing:"north",powered:"true"}'  # as the live Ledger wrote the churn's button
+CHURN = [row("block-place", "mangrove_button", "air", "command", state=CUBE),
+         row("block-break", "air", "mangrove_button", "command", old_state=CUBE),
          row("block-place", "air", "air", "command")]
 KEEP = [row("block-place", "stone", "air", "player", player=1),               # a player building
         row("block-break", "air", "mangrove_button", "player", player=1),     # a player breaking a button
@@ -82,6 +83,69 @@ def test_only_the_churn_leaves_and_every_other_row_keeps_its_id(tmp_path):
     assert r["rows_kept"] == len(KEEP) and r["rows_before"] == len(before)
     # The old file is kept, whole, beside the new one.
     assert actions(w / "ledger.sqlite.before-prune") == before
+
+
+def test_a_staff_fill_of_other_buttons_keeps_its_rows(tmp_path):
+    east = '{face:"floor",facing:"east",powered:"false"}'
+    staff = [row("block-place", "mangrove_button", "air", "command", state=east),
+             row("block-break", "air", "mangrove_button", "command", old_state=east)]
+    w = world(tmp_path, CHURN + staff)
+    assert ledger_prune.finish(w)["rows_kept"] == 2
+
+
+def test_an_interrupted_first_copy_keeps_its_batches(tmp_path, monkeypatch):
+    monkeypatch.setattr(ledger_prune, "BATCH", 3)
+    w = world(tmp_path, KEEP + CHURN)
+    real, calls = sqlite3.Connection.execute, []
+
+    def stop_in_the_second_batch(con, sql, *a):
+        if sql.startswith("INSERT INTO main.actions"):
+            calls.append(sql)
+            if len(calls) == 2:
+                raise KeyboardInterrupt
+        return real(con, sql, *a)
+    with holding(w):
+        monkeypatch.setattr(ledger_prune, "_open", lambda world, _o=ledger_prune._open: Wrap(_o(world),
+                                                                                             stop_in_the_second_batch))
+        with pytest.raises(KeyboardInterrupt):
+            ledger_prune.copy(w)
+        monkeypatch.undo()
+        db = sqlite3.connect(w / "ledger.sqlite.pruning")
+        assert db.execute("SELECT upto FROM ledger_prune_progress").fetchone() == (3,)  # the first batch stayed
+        db.close()
+        assert ledger_prune.copy(w) == len(KEEP + CHURN)
+    assert ledger_prune.finish(w)["rows_kept"] == len(KEEP)
+
+
+class Wrap:
+    """A connection whose execute goes through `hook` (sqlite3.Connection.execute can't be patched)."""
+
+    def __init__(self, con, hook):
+        self.con, self.hook = con, hook
+
+    def execute(self, sql, *a):
+        return self.hook(self.con, sql, *a)
+
+    def __getattr__(self, name):
+        return getattr(self.con, name)
+
+
+def test_a_failed_swap_leaves_the_old_file_in_place(tmp_path, monkeypatch):
+    w = world(tmp_path, KEEP + CHURN)
+    before = actions(w / "ledger.sqlite")
+    real = os.replace
+
+    def refuse_the_new_file(src, dst):
+        if str(src).endswith(".pruning"):
+            raise OSError("disk went away")
+        return real(src, dst)
+    monkeypatch.setattr(ledger_prune.os, "replace", refuse_the_new_file)
+    with pytest.raises(OSError):
+        ledger_prune.finish(w)
+    assert actions(w / "ledger.sqlite") == before  # never missing, and still the old history
+    monkeypatch.undo()
+    (w / "ledger.sqlite.before-prune").unlink()  # "put it back": it is the same file under a second name
+    assert ledger_prune.finish(w)["rows_kept"] == len(KEEP)  # the finished copy runs again
 
 
 def test_the_new_file_has_the_old_tables_indexes_and_sequence(tmp_path):

@@ -71,7 +71,7 @@ def test_a_server_that_answers_is_flushed_and_backed_up_whole(backup):
     assert rcon[:3] == ["list", "save-off", "save-all flush"] and rcon[-1] == "save-on"
     assert " --tag world --exclude " in sent(calls)   # one tag: a whole copy
     # tools/ledger_prune.py's working copy and the 57 GB file it replaces stay off R2.
-    assert "--exclude ledger.sqlite.pruning --exclude ledger.sqlite.before-prune" in sent(calls)
+    assert "--exclude ledger.sqlite.pruning* --exclude ledger.sqlite.before-prune*" in sent(calls)  # and sidecars
     forget = next(c for c in calls if c.startswith("restic forget"))
     assert "--tag world --group-by host,paths,tags --keep-hourly 48" in forget
     assert not any(c.startswith("curl") for c in calls)   # no PING_URL: no ping, no error

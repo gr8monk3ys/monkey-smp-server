@@ -276,7 +276,7 @@ backup() {
         --exclude "$SERVER/libraries" --exclude "$SERVER/versions" --exclude "$SERVER/cache" \
         --exclude "$SERVER/logs" --exclude "$SERVER/bluemap" --exclude "$SERVER/plugins/.paper-remapped" \
         --exclude "$SERVER/.fabric" --exclude '*.jar' --exclude session.lock \
-        --exclude 'ledger.sqlite.pruning' --exclude 'ledger.sqlite.before-prune' \
+        --exclude 'ledger.sqlite.pruning*' --exclude 'ledger.sqlite.before-prune*' \
         "$SERVER" || rc=$?
     save_on || die 'save-on failed after the backup'
     exec 9<&-

@@ -57,6 +57,14 @@
 
 ### Fixed
 
+- **Ledger's history stops growing by about 8 GB a day.** A charged sulfur cube (Sulfur Cube Expansion) broke and
+  placed the powered button under it every tick, and Ledger logged both: about 29 million rows a day, 99.9% of the
+  live server's `world/ledger.sqlite` (57 GB by 14 November). At that rate the disk would fill in about two weeks,
+  and Ledger's row ids (at most 2,147,483,647) would run out in about two months. A patch keeps the button while
+  the cube stays in its block; it still goes the tick after the cube leaves. The rows already written stay until
+  they are cleaned up by hand (docs/LIVE.md, "Ledger's history").
+- **Blaze Attack Animation's two warnings at every start and data pack reload stop.** Its `pack.mcmeta` declared
+  `"pack_format": 107.1`, which 26.2 only reads as `min_format`/`max_format`; a patch declares it that way.
 - **More Villagers' gilded station recipe and its 9 advancements load again.** The pinned build (1.26.7.1, the
   newest for 26.2) ships them in the 26.1 format, so 26.2 dropped them on every start: the gilded station couldn't
   be crafted and none of those advancements existed. A patch (`monkey/patches/more-villagers-re-employed`)

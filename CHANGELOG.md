@@ -65,6 +65,11 @@
   and the staff's actions this week. It reads only what the page already had (`staff.json`, the player list and the
   staff log); nothing new is collected.
 - Typed confirms keep their button off until the word matches, and the mod settings' reset asks for the word RESET.
+- **Root runs less of the staff page's code.** The backup helper's queue, snapshot list and world-zip unpacking are
+  `tools/helper_queue.py`, and root's copy of that file replaces its copy of all of `tools/staff_apex.py`: root's
+  trusted Python for the helper shrinks from about 1,400 lines to about 250. `install-root.sh` now takes the file list
+  from the release it installs, not its own copy, and removes root copies a release no longer lists; from 3.5.x run it
+  twice (docs/LIVE.md, "Root's own copies").
 
 ### Fixed
 

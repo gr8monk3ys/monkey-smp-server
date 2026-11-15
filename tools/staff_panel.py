@@ -80,6 +80,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlsplit
 
+import helper_queue
 import staff_apex
 import staff_auth
 import staff_desk
@@ -98,7 +99,7 @@ sys.modules.setdefault("staff_panel", sys.modules[__name__])
 
 PORT = 8130
 LOOPBACK = {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
-USER = re.compile(r"[A-Za-z0-9_-]{1,64}")
+USER = helper_queue.USER   # a login name, as the backup helper takes it too
 PLAYER = re.compile(r"[A-Za-z0-9_]{3,16}")
 UPLOAD_NAME = re.compile(r"[A-Za-z0-9._+-]{1,128}")
 ENTRY = re.compile(r"\d{8}T\d{6}\.\d{6}Z-[A-Za-z0-9_-]{1,64}")

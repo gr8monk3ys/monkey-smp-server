@@ -106,6 +106,10 @@ _Avoid_: vanity domain, referral link, alias
 The private page, behind a password, where the people who run the live server see how it is doing, names of who is online included, and run it without a shell: console commands, the config files in `server/`, the whitelist, ops and bans, and restart, stop and start (docs/LIVE.md, "The staff page"). Every change is recorded and every file it replaces is kept in its history; it never shows the seed or a password, and never opens the worlds. It is separate from the public status on the website, which only ever has a count.
 _Avoid_: dashboard, portal, admin panel
 
+**Backup helper**:
+The root service behind the staff page (`deploy/monkey-staff-helper.sh`, started by `monkey-staff-helper.path`) that does what the page, as `monkey`, may not: off-site backups, the snapshot list, restores, version switches, world resets and world uploads. The page asks through a queue of request files holding only fixed words and checked values and reads back the helper's results (`tools/helper_queue.py`); the helper checks every value again itself. Root runs only its own copies of the two (docs/LIVE.md, "Root's own copies").
+_Avoid_: sudo script (its unit and script names, and the messages that name them, say `monkey-staff-helper`: that is its name there)
+
 **Rule check**:
 The weekly report on the staff page's Reports tab: for each player, which server rules they may have broken that ISO week, each with a level (clear, likely, unclear) and the rows behind it (`tools/staff_report.py`; docs/LIVE.md, "The weekly rule check"). It only reports: staff decide, it never punishes, messages or rolls back.
 _Avoid_: anticheat, auto-mod, violations report

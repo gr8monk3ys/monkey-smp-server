@@ -191,7 +191,7 @@ deploy_lock() {
 # What root runs, as repo paths: deploy/install-root.sh installs root-owned copies of these in ROOT_DEST (/opt/monkey),
 # from root's own clone of GitHub, and the root units run those copies, never the checkout the monkey user can write.
 ROOT_FILES='deploy/lib.sh deploy/install-root.sh deploy/monkey-backup.sh deploy/monkey-staff-helper.sh
-deploy/monkey-restore-drill.sh tools/staff_apex.py tools/release_gate.py tools/restore_drill.py tools/nbt.py'
+deploy/monkey-restore-drill.sh tools/helper_queue.py tools/release_gate.py tools/restore_drill.py tools/nbt.py'
 # The units installed even where there is no copy yet; every other monkey-* unit is updated only where it is installed.
 ROOT_NEW_UNITS='monkey-alert@.service monkey-logs.service monkey-logs.timer monkey-restore-drill.service
 monkey-restore-drill.timer'

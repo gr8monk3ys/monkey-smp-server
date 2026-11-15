@@ -430,7 +430,7 @@ class Panel:
         command = self.checked_command(body.get("command"))
         self.record(user, "command", masked(command))
         try:
-            done = self.docker.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=COMMAND_TIMEOUT)
+            done = self.docker.raw(command, timeout=COMMAND_TIMEOUT)
         except server.RconError:
             raise Refused(502, "Docker did not answer in time: is the server running?") from None
         output = "\n".join(masked_lines(done.stdout.strip()))
@@ -477,17 +477,7 @@ class Panel:
 
     def started(self) -> str | None:
         """When the running container started (UTC, to the second), None when docker didn't say."""
-        try:
-            done = self.docker.compose("ps", "-q", "monkey", timeout=COMMAND_TIMEOUT)
-            box = done.stdout.strip().splitlines()[0] if done.returncode == 0 and done.stdout.strip() else ""
-            if not re.fullmatch(r"[0-9a-f]{12,64}", box):
-                return None
-            done = self.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", box], stdin=subprocess.DEVNULL,
-                            capture_output=True, text=True, timeout=COMMAND_TIMEOUT)
-        except (server.RconError, OSError, subprocess.TimeoutExpired):
-            return None
-        m = re.match(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)", done.stdout.strip()) if done.returncode == 0 else None
-        return f"{m[1]}Z" if m else None
+        return self.docker.started(timeout=COMMAND_TIMEOUT)
 
     def power_action(self, user: str, body: dict) -> dict:
         action = body.get("action")

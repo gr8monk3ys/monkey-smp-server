@@ -95,7 +95,7 @@ wait_for_live() {
 # If players are online, warns them in chat WARN_MINUTES and 1 minute ahead.
 warn_players() {
     [ "$WARN_MINUTES" -gt 0 ] || return 0
-    online=$(rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1)
+    online=$(players_online)
     [ "${online:-0}" -gt 0 ] || return 0
     log "$online player(s) online; warning them $WARN_MINUTES minutes ahead"
     rcon "say Server restart in $WARN_MINUTES minutes for a settings update (about 3 minutes offline)." >/dev/null || true

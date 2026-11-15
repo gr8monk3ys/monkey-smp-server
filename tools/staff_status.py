@@ -91,8 +91,6 @@ _TICK = re.compile(r"(?P<state>.*?)Target tick rate: (?P<target>[\d.]+) per seco
                    r"Average time per tick: (?P<avg>[\d.]+)ms.*?"
                    r"P50: (?P<p50>[\d.]+)ms P95: (?P<p95>[\d.]+)ms P99: (?P<p99>[\d.]+)ms\. "
                    r"Sample: (?P<sample>\d+)", re.S)
-_LIST = re.compile(r"There are (\d+) of a max of (\d+) players online:?(.*)", re.S)
-_UP = re.compile(r"Up (.+?)(?: \(.*\))?$")
 # Anchored to the whole line, so nothing a player says can pass for one: chat is always the text of an INFO line.
 _LOG_LINE = re.compile(rb"^\[\d\d:\d\d:\d\d\] \[([^\]\n]*)/(ERROR|FATAL|WARN|INFO)\](?: \[[^\]\n]*\])?: ([^\n]*)$",
                        re.M)
@@ -121,35 +119,12 @@ def tick(answer: str) -> dict | None:
             "sample": int(m["sample"])}
 
 
-def players(answer: str) -> dict | None:
-    """`list`'s answer: how many, the most there can be, and who."""
-    m = _LIST.search(answer)
-    if not m:
-        return None
-    return {"count": int(m[1]), "max": int(m[2]), "names": [n.strip() for n in m[3].split(",") if n.strip()]}
+players = server.online      # `list`'s answer (tools/rcon.py owns the rule)
 
 
 def container(docker) -> dict | None:
-    """What docker says about the server's container, None when docker failed. `--all`, so a stopped container
-    reads as stopped rather than as no container."""
-    try:
-        done = docker.compose("ps", "--all", "--format", "json", "monkey", timeout=60)
-    except server.RconError:
-        return None
-    if done.returncode != 0:
-        return None
-    rows: list[dict] = []
-    try:
-        for line in done.stdout.splitlines():   # one object a line since compose 2.21, one array before it
-            row = json.loads(line)
-            rows += row if isinstance(row, list) else [row]
-    except ValueError:
-        return None
-    if not rows:
-        return {"state": "not created", "uptime": None, "health": None}
-    up = _UP.match(rows[0].get("Status", ""))
-    return {"state": rows[0].get("State", "unknown"), "uptime": up[1] if up else None,
-            "health": rows[0].get("Health") or None}
+    """What docker says about the server's container (the adapter's state())."""
+    return docker.state()
 
 
 def ask(docker, command: str) -> str:

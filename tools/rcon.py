@@ -38,6 +38,7 @@ run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
 import datetime as dt
+import json
 import re
 import subprocess
 import sys
@@ -59,8 +60,21 @@ REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "In
            "RCON is turned off")
 
 
+TIMEOUT = 180       # seconds a command may take through `docker compose exec` (a reload, a big save)
+_LIST = re.compile(r"There are (\d+) of a max of (\d+) players online:?(.*)", re.S)
+_UP = re.compile(r"Up (.+?)(?: \(.*\))?$")
+
+
 class RconError(Exception):
     pass
+
+
+def online(answer: str) -> dict | None:
+    """`list`'s answer: {"count", "max", "names"}, None when it isn't that answer."""
+    m = _LIST.search(answer or "")
+    if not m:
+        return None
+    return {"count": int(m[1]), "max": int(m[2]), "names": [n.strip() for n in m[3].split(",") if n.strip()]}
 
 
 def checked(command: str, answer: str, code: int = 0, errors: str = "") -> str:
@@ -94,8 +108,49 @@ class Docker:
     def running(self) -> bool:
         return bool(self.container())
 
-    def __call__(self, command: str) -> str:
-        done = self.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=180)
+    def state(self) -> dict | None:
+        """What docker says about the server's container: {"state", "uptime", "health"}, None when docker failed.
+        `--all`, so a stopped container reads as stopped rather than as no container."""
+        try:
+            done = self.compose("ps", "--all", "--format", "json", "monkey", timeout=60)
+        except RconError:
+            return None
+        if done.returncode != 0:
+            return None
+        rows: list[dict] = []
+        try:
+            for line in done.stdout.splitlines():   # one object a line since compose 2.21, one array before it
+                row = json.loads(line)
+                rows += row if isinstance(row, list) else [row]
+        except ValueError:
+            return None
+        if not rows:
+            return {"state": "not created", "uptime": None, "health": None}
+        up = _UP.match(rows[0].get("Status", ""))
+        return {"state": rows[0].get("State", "unknown"), "uptime": up[1] if up else None,
+                "health": rows[0].get("Health") or None}
+
+    def started(self, timeout: int = 60) -> str | None:
+        """When the container started (UTC, to the second), None when docker didn't say."""
+        try:
+            done = self.compose("ps", "-q", "monkey", timeout=timeout)
+            box = done.stdout.strip().splitlines()[0] if done.returncode == 0 and done.stdout.strip() else ""
+            if not re.fullmatch(r"[0-9a-f]{12,64}", box):
+                return None
+            done = self.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", box], stdin=subprocess.DEVNULL,
+                            capture_output=True, text=True, timeout=timeout)
+        except (RconError, OSError, subprocess.TimeoutExpired):
+            return None
+        m = re.match(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)", done.stdout.strip()) if done.returncode == 0 else None
+        return f"{m[1]}Z" if m else None
+
+    def raw(self, command: str, timeout: int = TIMEOUT) -> subprocess.CompletedProcess:
+        """One command's whole result (stdout, stderr, returncode), not checked: the staff console shows a refusal
+        as the server's own words. RconError when docker couldn't be run."""
+        return self.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=timeout)
+
+    def __call__(self, command: str, timeout: int = TIMEOUT) -> str:
+        done = self.raw(command, timeout)
         return checked(command, done.stdout.strip(), done.returncode, done.stderr)
 
 
@@ -112,7 +167,13 @@ class Recorder:
     def container(self) -> str:
         return "box1" if self.up else ""
 
-    def __call__(self, command: str) -> str:
+    def state(self) -> dict | None:
+        return {"state": "running" if self.up else "exited", "uptime": None, "health": None}
+
+    def started(self, timeout: int = 60) -> str | None:
+        return None
+
+    def __call__(self, command: str, timeout: int = TIMEOUT) -> str:
         if self.fail:
             self.fail -= 1
             raise RconError("the server is down")

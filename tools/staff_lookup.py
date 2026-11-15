@@ -470,7 +470,7 @@ def player_history(panel, name) -> dict:
     if uuid and _UUID.fullmatch(uuid):      # a name goes in a file path only when it is a real UUID
         with contextlib.suppress(OSError):
             seen = (panel.root / "world" / "players" / "data" / f"{uuid}.dat").stat().st_mtime
-        ticks = desk._play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
+        ticks = desk.play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
     return {"name": shown, "known": uuid is not None, "last_seen": seen,
             "hours": None if ticks is None else round(ticks / staff_desk.TICKS_PER_HOUR, 1),
             "whitelisted": listed("whitelist.json") is not None, "op": listed("ops.json") is not None,

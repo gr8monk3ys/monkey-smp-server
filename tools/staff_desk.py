@@ -148,7 +148,7 @@ class Desk:
         return {r["name"].lower() for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)} \
             if isinstance(rows, list) else set()
 
-    def _play_time(self, path: Path) -> int | None:
+    def play_time(self, path: Path) -> int | None:
         """Ticks played, from the game's own stats file; read again only when the file has changed."""
         try:
             st = path.stat()
@@ -184,7 +184,7 @@ class Desk:
         notes = self._load_notes()
         rows = []
         for uuid, name in names.items():
-            ticks = self._play_time(players / "stats" / f"{uuid}.json")
+            ticks = self.play_time(players / "stats" / f"{uuid}.json")
             row = {"name": name, "last_seen": seen.get(uuid),
                    "hours": None if ticks is None else round(ticks / TICKS_PER_HOUR, 1),
                    "notes": len(notes.get(uuid, [])) + len(notes.get(f"name:{name.lower()}", []))}
@@ -530,7 +530,7 @@ def search_files(panel, query: dict) -> dict:
     started, seen, found, cut = time.monotonic(), 0, [], False
     for folder, dirs, names in os.walk(root):
         rel = Path(os.path.relpath(folder, root)).parts if folder != root else ()
-        dirs[:] = sorted(d for d in dirs if panel._rules((*rel, d)) != "refused"
+        dirs[:] = sorted(d for d in dirs if panel.file_rule((*rel, d)) != "refused"
                          and not os.path.islink(os.path.join(folder, d)))
         for name in sorted(names):
             parts = (*rel, name)
@@ -538,7 +538,7 @@ def search_files(panel, query: dict) -> dict:
             if seen > SEARCH_FILES or time.monotonic() - started > SEARCH_SECONDS or len(found) >= SEARCH_SHOWN:
                 cut = True
                 break
-            rule = panel._rules(parts)
+            rule = panel.file_rule(parts)
             path = os.path.join(folder, name)
             if rule == "refused" or os.path.islink(path) or name.startswith(".staff-"):
                 continue

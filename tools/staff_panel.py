@@ -545,7 +545,7 @@ class Panel:
     # ------------------------------------------------ paths
 
     @staticmethod
-    def _rules(parts: tuple[str, ...]) -> str:
+    def file_rule(parts: tuple[str, ...]) -> str:
         """'refused', 'read-only' or 'writable' for a path inside the server folder, as its parts."""
         if not parts:
             return "writable"
@@ -595,7 +595,7 @@ class Panel:
             raise Refused(403, "That path leads outside the server folder.")
         real_parts = tuple(PurePosixPath(Path(os.path.relpath(real, root)).as_posix()).parts) if real != root else ()
         real_parts = tuple(p for p in real_parts if p != ".")
-        rules = {self._rules(parts), self._rules(real_parts)}
+        rules = {self.file_rule(parts), self.file_rule(real_parts)}
         if "refused" in rules:
             raise Refused(403, "That file or folder is not open to the staff page (the worlds, the game's own files, "
                                "the map's files and databases).")
@@ -611,7 +611,7 @@ class Panel:
             return None
         is_dir = stat.S_ISDIR(st.st_mode)
         here = (*parts, d.name)
-        rule = self._rules(here)
+        rule = self.file_rule(here)
         root = os.path.realpath(self.root)
         if d.is_symlink():
             real = os.path.realpath(d.path)
@@ -620,7 +620,7 @@ class Panel:
                     return None
             except ValueError:
                 return None
-            rule = max(rule, self._rules(Path(os.path.relpath(real, root)).parts), key=["writable", "read-only",
+            rule = max(rule, self.file_rule(Path(os.path.relpath(real, root)).parts), key=["writable", "read-only",
                                                                                          "refused"].index)
         if rule == "refused":
             if not (len(here) == 1 and here[0].lower().startswith("world")):
@@ -645,10 +645,10 @@ class Panel:
                 if len(rows) >= LIST_MAX:
                     break
         rows.sort(key=lambda r: (not r["dir"], r["name"].lower()))
-        return {"path": "/".join(parts), "writable": self._rules(parts) == "writable",
+        return {"path": "/".join(parts), "writable": self.file_rule(parts) == "writable",
                 "entries": rows}
 
-    def _text(self, path: Path) -> tuple[str, os.stat_result]:
+    def read_text(self, path: Path) -> tuple[str, os.stat_result]:
         try:
             st = path.stat()
         except FileNotFoundError:
@@ -666,16 +666,16 @@ class Panel:
         """The text as staff see it: secret values masked and, in logs/ and crash-reports/, every line masked as the
         console's are (a crash report can hold the seed and players' addresses)."""
         shown, secrets = mask_secrets(text)
-        if self._rules(parts) == "read-only":
+        if self.file_rule(parts) == "read-only":
             shown = "\n".join(masked_lines(shown)) + ("\n" if shown.endswith("\n") else "")
         return shown, secrets
 
     def read_file(self, rel: str) -> dict:
         path, parts = self.resolve(rel)
-        text, st = self._text(path)
+        text, st = self.read_text(path)
         shown, secrets = self._shown(text, parts)
         return {"path": "/".join(parts), "text": shown, "mtime": st.st_mtime, "size": st.st_size,
-                "masked": secrets, "writable": self._rules(parts) == "writable"}
+                "masked": secrets, "writable": self.file_rule(parts) == "writable"}
 
     def download(self, rel: str) -> tuple[str, bytes | Path, int]:
         """(file name, bytes or path to stream, size). Text has its secrets masked, as on screen. A file that isn't
@@ -693,7 +693,7 @@ class Panel:
             try:
                 shown = self._shown(data.decode("utf-8"), parts)[0].encode("utf-8")
             except UnicodeDecodeError:
-                if self._rules(parts) == "read-only":       # an old log is .log.gz: it can't be masked as it is
+                if self.file_rule(parts) == "read-only":       # an old log is .log.gz: it can't be masked as it is
                     raise Refused(415, "Only plain-text logs and crash reports can be downloaded here: they are "
                                        "masked first.") from None
                 if b"\x00" not in data:                     # text in another encoding: masked, byte for byte
@@ -705,7 +705,7 @@ class Panel:
                 else:
                     shown = data
             return parts[-1], shown, len(shown)
-        if self._rules(parts) == "read-only":
+        if self.file_rule(parts) == "read-only":
             raise Refused(413, "A log or crash report over 2 MB can't be downloaded here: it isn't masked.")
         if self._has_secret(path):
             raise Refused(413, "That file is over 2 MB and has a secret in it: it can't be masked, so it can't be "
@@ -798,7 +798,7 @@ class Panel:
 
     # ------------------------------------------------ changes
 
-    def _write(self, path: Path, data: bytes, like: os.stat_result | None) -> os.stat_result:
+    def write_file(self, path: Path, data: bytes, like: os.stat_result | None) -> os.stat_result:
         """Writes the file whole: a temporary file in the same folder, flushed to disk, renamed over it, with the old
         file's mode and owner."""
         fd, tmp = tempfile.mkstemp(prefix=".staff-", suffix=".tmp", dir=path.parent)
@@ -844,10 +844,10 @@ class Panel:
                     raise Refused(400, "That is not a file.")
                 if mtime is None or st.st_mtime != mtime:
                     raise Refused(409, "Someone else saved this file since you opened it: open it again.")
-                old, _ = self._text(path)
+                old, _ = self.read_text(path)
                 new = unmask_secrets(text, old)
                 self._keep(path, parts, user)
-            done = self._write(path, new.encode("utf-8"), st)
+            done = self.write_file(path, new.encode("utf-8"), st)
         self.record(user, "save", "/".join(parts))
         return {"path": "/".join(parts), "mtime": done.st_mtime, "size": done.st_size}
 
@@ -963,7 +963,7 @@ class Panel:
                     raise Refused(400, "A folder has that name.")
                 self._keep(path, parts, user)
             path.parent.mkdir(parents=True, exist_ok=True)
-            done = self._write(path, Path(source).read_bytes(), st)
+            done = self.write_file(path, Path(source).read_bytes(), st)
         self.record(user, "restore", f"{'/'.join(parts)} from {entry}")
         return {"path": "/".join(parts), "mtime": done.st_mtime}
 
@@ -1075,7 +1075,8 @@ PATHS = {path for _, path in ROUTES}
 
 # Who may ask what. A role is X-Staff-Role from the login in front of the page, exactly one and a known one: a missing
 # role is refused, never taken as owner (a `Connection: X-Staff-Role` makes Caddy drop the copied one). The basic_auth
-# logins get owner from deploy/Caddyfile.staff. A request not listed needs admin.
+# logins get owner from deploy/Caddyfile.staff. Every request names its role in NEEDS: one left out stops the panel
+# at startup.
 ROLES = ("moderator", "admin", "owner")
 NEEDS = {
     ("GET", "/api/me"): "moderator",
@@ -1085,6 +1086,10 @@ NEEDS = {
     ("GET", "/api/timers"): "moderator",
     ("GET", "/api/backups"): "moderator",
     ("GET", "/api/actions"): "moderator",
+    # The file manager and the power controls: admins.
+    **dict.fromkeys([("GET", "/api/files"), ("GET", "/api/file"), ("GET", "/api/download"), ("GET", "/api/history"),
+                     ("PUT", "/api/file"), ("POST", "/api/upload"), ("POST", "/api/delete"), ("POST", "/api/folder"),
+                     ("POST", "/api/rename"), ("POST", "/api/restore"), ("POST", "/api/power")], "admin"),
 }
 ROUTES[("GET", "/api/me")] = None     # who is asking: handled apart, from the request
 PATHS.add("/api/me")
@@ -1119,6 +1124,12 @@ staff_spark.register(sys.modules[__name__])   # the lag finder: spark's profiler
 staff_modcfg.register(sys.modules[__name__])  # the Mod settings tab: mod config files as forms
 staff_report.register(sys.modules[__name__])  # the Reports tab: the weekly rule check
 staff_lookup.register(sys.modules[__name__])  # moderators' commands, block history, mod updates, a player's history
+
+# Every request names the least role that may make it: one left out is a mistake caught here, at startup, never a
+# quiet default (it used to fall back to admin).
+_NO_ROLE = sorted(set(ROUTES) - set(NEEDS))
+if _NO_ROLE:
+    raise RuntimeError(f"staff routes with no role in NEEDS: {_NO_ROLE}")
 
 
 # The file manager's writes that could put code in place: a non-owner's is checked with Panel.code_guard first.
@@ -1231,7 +1242,7 @@ class Handler(BaseHTTPRequestHandler):
             user, role = self.checked(method)
             if (method, url.path) not in ROUTES:
                 raise Refused(405 if url.path in PATHS else 404, "There is no such request.")
-            if not allowed(role, NEEDS.get((method, url.path), "admin")):
+            if not allowed(role, NEEDS[(method, url.path)]):
                 raise Refused(403, "Your login's role can't do that.")
             code_write = role != "owner" and (method, url.path) in CODE_WRITES
             if code_write and url.path == "/api/upload":

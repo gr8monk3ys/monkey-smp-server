@@ -267,10 +267,10 @@ install_timer() {
 #   JOB_DOWN    what a stopped server means, for --check's "server: not running (JOB_DOWN)"
 # and optionally JOB_WORLD=1 (the tool takes the saved world first), JOB_SHOW (a tool subcommand whose output
 # --check logs first: drops' spots), JOB_NONE (why there may be no commands, for --check; with it, sending
-# asks for the commands first, and none means nothing is logged and no lock is taken) and JOB_PACKS (the world
-# data packs its commands need, by folder name: when staff turned one off, sending logs that and stops with
-# nothing sent and exit 0, so a pack turned off on purpose isn't a failure every run, a retry or a staff alert;
-# when it can't tell, it sends as before).
+# asks for the commands first, and none means nothing is logged and no lock is taken). The world data packs a job's
+# commands need are the tool's own JOB_PACKS (tools/rcon.py, run_job): `TOOL packs-on` checks them, and when staff
+# turned one off, sending logs that and stops with nothing sent and exit 0, so a pack turned off on purpose isn't a
+# failure every run, a retry or a staff alert; when it can't tell, it sends as before.
 #
 # With no option it waits up to 30 minutes for the deploy lock, so it never lands while a deploy, the daily
 # restart or an off-site backup has the server stopped or not saving, sends, and logs each line the tool prints;
@@ -283,6 +283,11 @@ install_timer() {
 # It reads only REPO_DIR, LIVE_DIR and LOCK_FILE from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV), without
 # sourcing it; the staff webhook (STAFF_WEBHOOK_URL, else DISCORD_WEBHOOK_URL) only to post that a job gave up.
 # No secret is printed or asked for.
+# A timed job's tool's exit codes (tools/rcon.py: NOT_RUNNING, GAVE_UP, PACK_OFF; a test checks they agree).
+JOB_NOT_RUNNING=3
+JOB_GAVE_UP=4
+JOB_PACK_OFF=5
+
 timed_job() {
     case "${1:-}" in
         '') lib_mode=send ;;
@@ -318,21 +323,20 @@ timed_job() {
 
     if [ "$lib_mode" = send ]; then
         [ -z "${JOB_NONE:-}" ] || [ -n "$lib_out" ] || return 0
-        if [ -n "${JOB_PACKS:-}" ]; then
-            lib_on=0
-            lib_packs=$(python3 -B "$REPO_DIR/tools/rcon.py" packs-on $JOB_PACKS --docker "$LIVE_DIR/docker" 2>/dev/null) || lib_on=$?
-            if [ "$lib_on" = 5 ]; then
-                log "$lib_packs (staff turned it off): nothing sent"
-                return 0
-            fi
+        # The data packs the tool needs (its JOB_PACKS): one staff turned off skips the job, before the lock.
+        lib_on=0
+        lib_packs=$(python3 -B "$lib_tool" packs-on --docker "$LIVE_DIR/docker" 2>/dev/null) || lib_on=$?
+        if [ "$lib_on" = "$JOB_PACK_OFF" ]; then
+            log "$lib_packs (staff turned it off): nothing sent"
+            return 0
         fi
         deploy_lock 1800 || die "the deploy lock was taken for 30 minutes ($JOB_RETRY)"
         lib_sent=0
         log_each python3 -B -u "$lib_tool" send "$@" --docker "$LIVE_DIR/docker" || lib_sent=$?
         case $lib_sent in
             0) return 0 ;;
-            3) die "the server isn't running ($JOB_RETRY)" ;;
-            4) ;;
+            "$JOB_NOT_RUNNING") die "the server isn't running ($JOB_RETRY)" ;;
+            "$JOB_GAVE_UP") ;;
             *) die "not every command went through ($JOB_RETRY)" ;;
         esac
         lib_staff=${STAFF_WEBHOOK_URL:-$(setting STAFF_WEBHOOK_URL)}
@@ -340,7 +344,7 @@ timed_job() {
         [ -n "$lib_staff" ] || log 'no webhook in the settings; not posting'
         discord "Monkey SMP: $LOG_NAME gave up on $JOB_FOR after retrying. Check: journalctl -u $LOG_NAME" "$lib_staff"
         log "gave up; the timer's next run starts afresh"
-        return 4
+        return "$JOB_GAVE_UP"
     fi
     log 'commands for now:'
     [ -n "$lib_out" ] || log "  none${JOB_NONE:+ ($JOB_NONE)}"
@@ -352,13 +356,11 @@ timed_job() {
         1) log "server: not running ($JOB_DOWN)" ;;
         *) log "server: can't tell (docker failed; see above)" ;;
     esac
-    if [ -n "${JOB_PACKS:-}" ]; then
-        lib_on=0
-        lib_packs=$(python3 -B "$REPO_DIR/tools/rcon.py" packs-on $JOB_PACKS --docker "$LIVE_DIR/docker" 2>&1) || lib_on=$?
-        case $lib_on in
-            0|5) log "$lib_packs" ;;
-            *) log "data packs: can't tell ($lib_packs)" ;;
-        esac
-    fi
+    lib_on=0
+    lib_packs=$(python3 -B "$lib_tool" packs-on --docker "$LIVE_DIR/docker" 2>&1) || lib_on=$?
+    case $lib_on in
+        0|"$JOB_PACK_OFF") log "$lib_packs" ;;
+        *) log "data packs: can't tell ($lib_packs)" ;;
+    esac
     log 'check finished: nothing was changed'
 }

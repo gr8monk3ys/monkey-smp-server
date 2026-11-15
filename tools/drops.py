@@ -56,6 +56,7 @@ from events import STATE
 from repo import Repo
 
 DATAPACK = "monkey-drops"
+JOB_PACKS = (DATAPACK,)   # the data packs the timed job needs on (deploy/lib.sh skips it while one is off)
 FN = f"data/{NS}/function/drops"
 STORE = f"{NS}:drops"
 LOOT_TABLE = f"{NS}:drops/supply"
@@ -699,7 +700,7 @@ def main(argv=None) -> int:
     if args.command == "spots":
         return show_spots(args.world, server.job_time(args))
     return server.run_job(args, lambda when: commands(args.world, when),
-                          lambda rcon, when: send(rcon, args.world, when))
+                          lambda rcon, when: send(rcon, args.world, when), needs=JOB_PACKS)
 
 
 if __name__ == "__main__":

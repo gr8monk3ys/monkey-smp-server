@@ -22,7 +22,6 @@ LOG_NAME=monkey-week
 . "$(dirname -- "$0")/lib.sh"
 
 JOB_TOOL=challenges.py
-JOB_PACKS=monkey-wardrobe
 JOB_FOR='the weekly challenges'
 JOB_RETRY='the next hour tries again'
 JOB_DOWN='nothing would be sent this hour'

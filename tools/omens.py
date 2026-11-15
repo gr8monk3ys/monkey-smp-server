@@ -57,6 +57,7 @@ from repo import Repo
 from rules import OBJECTIVE as RULES
 
 DATAPACK = "monkey-omens"
+JOB_PACKS = (DATAPACK, drops.DATAPACK)   # the packs the timed job needs on (lib.sh skips it while one is off)
 FN = f"data/{NS}/function/omens"
 STORE = f"{NS}:omens"
 BAR = f"{NS}:omen"
@@ -806,7 +807,7 @@ def main(argv=None) -> int:
     if args.command == "plan":
         return show_plan(args.world, server.job_time(args))
     return server.run_job(args, lambda when: commands(args.world, when),
-                          lambda rcon, when: send(rcon, args.world, when))
+                          lambda rcon, when: send(rcon, args.world, when), needs=JOB_PACKS)
 
 
 if __name__ == "__main__":

@@ -18,3 +18,7 @@ known-first-party = ["add", "pack_sync", "build", "check_updates", "defaults", "
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tools"]
+# A full run makes ~340k temp files; keeping three runs' worth used up /tmp's inodes (tmpfs) on 2026-11-14.
+# Keep only the temp folders of tests that failed, from the last run.
+tmp_path_retention_policy = "failed"
+tmp_path_retention_count = 1

@@ -487,9 +487,11 @@ def test_a_crash_report_removed_mid_scan_does_not_hide_the_others(box, monkeypat
 
     def gone():
         raise FileNotFoundError("removed")
-    monkeypatch.setattr(staff_status.os, "scandir",
-                        lambda _: [SimpleNamespace(name="crash-0.txt", path="crash-0.txt", stat=gone), *real])
-    assert [row["text"] for row in staff_status.recent_crashes(folder, 0)] == ["Still here"]
+    with monkeypatch.context() as m:    # os.scandir is the whole os module's: undone before pytest's own cleanup
+        m.setattr(staff_status.os, "scandir",
+                  lambda _: [SimpleNamespace(name="crash-0.txt", path="crash-0.txt", stat=gone), *real])
+        found = staff_status.recent_crashes(folder, 0)
+    assert [row["text"] for row in found] == ["Still here"]
 
 
 def test_the_log_reader_keeps_no_log_text_and_a_full_day_stays_small(box):

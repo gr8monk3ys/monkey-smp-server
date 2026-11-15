@@ -27,6 +27,10 @@ class Busy(Exception):
     """The database was locked or busy (the game writing): try again later."""
 
 
+class NoIndex(Exception):
+    """The database lacks the index a query needs: reading the whole table instead would slow the game."""
+
+
 class Ledger:
     """Ledger's database, read-only, and the names its numbers stand for."""
 
@@ -91,7 +95,9 @@ class Ledger:
         all) and player WHO (None: anyone): (rows, stopped), stopped when MOST rows or SECONDS of the database's
         time ran out first. One indexed (x, y) column at a time, from the asked block outward, so a cap keeps the
         rows nearest to it. Each row: time, action, x, y, z, object, old object, player, source, rolled_back, id.
-        Busy when the database is locked."""
+        Busy when the database is locked, NoIndex when it has no location index."""
+        if "actions_by_location" not in self.indexes:
+            raise NoIndex("actions_by_location")
         deadline = time.monotonic() + seconds
         skip = self.sources.get("command", -1)
         self.db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)

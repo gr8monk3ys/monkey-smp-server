@@ -293,3 +293,25 @@ def test_the_page_has_every_element_lookup_js_uses():
     only_text(tabs)
     for _, path in staff_lookup.ROUTES:
         assert path in tabs
+
+
+def test_the_box_query_needs_the_location_index_and_says_so(tmp_path):
+    import sqlite3
+
+    import ledger
+    path = tmp_path / "ledger.sqlite"
+    db = sqlite3.connect(path)
+    db.executescript("""
+        create table ActionIdentifiers (id integer primary key, action_identifier text);
+        create table ObjectIdentifiers (id integer primary key, identifier text);
+        create table sources (id integer primary key, name text);
+        create table worlds (id integer primary key, identifier text);
+        create table players (id integer primary key, player_id blob, player_name text, first_join text);
+        create table actions (id integer primary key, action_id int, time text, x int, y int, z int, world_id int,
+                              object_id int, old_object_id int, source int, player_id int, rolled_back int);
+    """)
+    db.close()
+    found = ledger.Ledger(path)
+    with pytest.raises(ledger.NoIndex):
+        found.around(0, 64, 0, 2, 1, "2026-11-01", None, None, most=8, seconds=3)
+    found.close()

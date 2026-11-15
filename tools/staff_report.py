@@ -205,9 +205,10 @@ def row(what: str, time: str | None = None, world: str | None = None, pos=None) 
 
 
 def parties(server_dir: Path) -> dict[str, list[str]] | None:
-    """Open Parties and Claims' parties: file name -> member names, owner first (saved_world's reading, a party
-    file it can't read left out). None when there are none to read."""
-    found = saved_world.parties(server_dir / "world", skip_unreadable=True)
+    """Open Parties and Claims' parties: file name -> member names, owner first (saved_world's lenient reading: a
+    file it can't read left out, every member entry it can kept; no party names, so no TOML, which needs 3.11).
+    None when there are none to read."""
+    found = saved_world.parties(server_dir / "world", lenient=True, named=False)
     if found is None:
         return None
     out = {}

@@ -136,10 +136,6 @@ class Desk:
 
     # ------------------------------------------------ everyone who has joined
 
-    def _names(self) -> dict[str, str]:
-        """uuid -> name: everyone who has joined (saved_world.names)."""
-        return saved_world.names(self.p.root)
-
     def _listed(self, file: str) -> set[str]:
         rows = _json(self.p.root / file)
         return {r["name"].lower() for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)} \
@@ -164,7 +160,7 @@ class Desk:
         return ticks
 
     def known_players(self) -> dict:
-        names = self._names()
+        names = saved_world.names(self.p.root)
         players = self.p.root / "world" / "players"
         seen: dict[str, float] = {}
         with contextlib.suppress(OSError), os.scandir(players / "data") as it:
@@ -214,7 +210,7 @@ class Desk:
 
     def _key(self, name: str) -> str:
         """Where a player's notes are kept: under the UUID when the server knows the name, else under the name."""
-        for uuid, known in self._names().items():
+        for uuid, known in saved_world.names(self.p.root).items():
             if known.lower() == name.lower():
                 return uuid
         return f"name:{name.lower()}"
@@ -328,7 +324,7 @@ class Desk:
 
     # ------------------------------------------------ the record of changes, searched
 
-    def _action_rows(self) -> tuple[list[dict], bool]:
+    def action_rows(self) -> tuple[list[dict], bool]:
         """(every line of actions.log this reads, oldest first, each with its place in the file; whether the file is
         longer than what was read)."""
         try:
@@ -369,7 +365,7 @@ class Desk:
         before = query.get("before") or ""
         if before and not before.isdigit():
             raise sp.Refused(400, "before must be a whole number.")
-        rows, cut = self._action_rows()
+        rows, cut = self.action_rows()
         users, actions = sorted({r["user"] for r in rows}), sorted({r["action"] for r in rows})
         found = [r for r in rows if wanted(r) and (not before or r["at"] < int(before))]
         page = found[-ACTIVITY_PAGE:][::-1]
@@ -379,7 +375,7 @@ class Desk:
 
     def activity_export(self, query: dict) -> tuple[str, bytes, int]:
         wanted = self._wanted(query)
-        rows = [r for r in self._action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
+        rows = [r for r in self.action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
         out = io.StringIO()
         sheet = csv.writer(out, lineterminator="\r\n")
         sheet.writerow(["time (UTC)", "login", "action", "what"])

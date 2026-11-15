@@ -263,5 +263,29 @@ def test_an_unreadable_party_file_stops_standings_but_the_rule_check_skips_it(tm
     (world.path / saved_world.PARTIES / "bad.nbt").write_bytes(b"not nbt")
     with pytest.raises(ValueError):
         saved_world.parties(world.path)
-    found = saved_world.parties(world.path, skip_unreadable=True)
+    found = saved_world.parties(world.path, lenient=True)
     assert [p.id for p in found] == ["good"]
+
+
+def test_the_rule_check_keeps_every_member_it_can_read_and_reads_no_party_name(tmp_path, monkeypatch):
+    """One bad member entry used to drop the whole party for the Rule check, so its members became strangers; and
+    the party name (TOML, which needs Python 3.11) is never read when the caller doesn't show it."""
+    alpha, bravo = "00000001-0000-4000-8000-000000000001", "00000002-0000-4000-8000-000000000002"
+    world = FakeWorld(tmp_path).party("p", member(alpha, "Alpha"), [member(bravo, "Bravo"),
+                                                                     {"uuid": "bad", "username": "Carol"}])
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)                              # standings: stops, as it always has
+    monkeypatch.setattr(saved_world, "party_name", lambda *a: pytest.fail("read a party name"))
+    [party] = saved_world.parties(world.path, lenient=True, named=False)
+    assert [(m.uuid, m.username) for m in party.members] == [(alpha, "Alpha"), (bravo, "Bravo"), ("", "Carol")]
+    assert party.owner.username == "Alpha" and party.name == ""
+
+
+@pytest.mark.parametrize("config", ['playerConfig = "x"', "[playerConfig]\nparties = 1",
+                                    "[playerConfig.parties]\nname = 3"])
+def test_a_party_name_from_a_badly_shaped_config_is_none(tmp_path, config):
+    owner = "00000001-0000-4000-8000-000000000001"
+    path = tmp_path / saved_world.PLAYER_CONFIGS / f"{owner}.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text(config)
+    assert saved_world.party_name(tmp_path, owner) == ""

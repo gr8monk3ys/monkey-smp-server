@@ -152,25 +152,45 @@ def faction_name(name: str, leader: str) -> str:
     return name or f"{leader}{UNNAMED_PARTY}"
 
 
-def parties(folder: Path, skip_unreadable: bool = False) -> list[Party] | None:
+def parties(folder: Path, lenient: bool = False, named: bool = True) -> list[Party] | None:
     """Every party saved, by file name; None when the world has no parties folder (no party made yet).
     A party file not shaped as Open Parties and Claims saves it (a member whose UUID isn't one, say) is a
-    ValueError naming it: standings has always stopped there rather than rank a faction without them. With
-    skip_unreadable such a file (or one that can't be read) is left out instead: the Rule check reports on the rest."""
+    ValueError naming it: standings has always stopped there rather than rank a faction without them.
+    lenient (the Rule check): a file that can't be read is left out, and in one that can, each member entry that
+    can be read is kept (with uuid "" when its uuid can't be), so one bad entry never makes party-mates strangers.
+    named=False skips each owner's party name (a TOML file a caller that doesn't show it needn't parse)."""
     where = folder / PARTIES
     if not where.is_dir():
         return None
     found = []
     for path in sorted(where.glob("*.nbt")):
         try:
-            found.append(_party(folder, path))
+            found.append(_lenient_party(folder, path, named) if lenient else _party(folder, path, named))
         except (OSError, ValueError):
-            if not skip_unreadable:
+            if not lenient:
                 raise
     return found
 
 
-def _party(folder: Path, path: Path) -> Party:
+def _lenient_party(folder: Path, path: Path, named: bool) -> Party:
+    data = nbt.read(path)
+    rows = data.get("members")
+    members: list[Member] = []
+    for p in [data.get("owner"), *(rows if isinstance(rows, list) else [])]:
+        if not isinstance(p, dict):
+            continue
+        try:
+            u = uuid_text(p.get("uuid"))
+        except (ValueError, TypeError, KeyError, struct.error):
+            u = ""
+        name = p.get("username") if isinstance(p.get("username"), str) else ""
+        if (u and all(m.uuid != u for m in members)) or (not u and name and all(m.username != name for m in members)):
+            members.append(Member(u, name))
+    owner = members[0] if members and isinstance(data.get("owner"), dict) else None
+    return Party(path.stem, owner, members, party_name(folder, owner.uuid) if named and owner and owner.uuid else "")
+
+
+def _party(folder: Path, path: Path, named: bool = True) -> Party:
     data = nbt.read(path)
     if not isinstance(data.get("owner"), dict):
         return Party(path.stem, None, [], "")
@@ -180,7 +200,7 @@ def _party(folder: Path, path: Path) -> Party:
             u = uuid_text(p["uuid"])
             if all(m.uuid != u for m in members):
                 members.append(Member(u, p.get("username") or ""))
-    return Party(path.stem, members[0], members, party_name(folder, members[0].uuid))
+    return Party(path.stem, members[0], members, party_name(folder, members[0].uuid) if named else "")
 
 
 # ---------------------------------------------------------------- players
@@ -224,7 +244,9 @@ def party_name(folder: Path, owner_uuid: str) -> str:
         config = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return ""
-    name = config.get("playerConfig", {}).get("parties", {}).get("name", "")
+    player = config.get("playerConfig")
+    parties = player.get("parties") if isinstance(player, dict) else None
+    name = parties.get("name", "") if isinstance(parties, dict) else ""
     return name.strip() if isinstance(name, str) else ""
 
 

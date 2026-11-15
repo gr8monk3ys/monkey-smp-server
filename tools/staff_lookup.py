@@ -45,8 +45,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-import ledger as ledger_db
-from ledger import Ledger
+from ledger import Busy, Ledger, NoIndex
+
+import saved_world
 
 sp = None   # tools/staff_panel.py (register)
 
@@ -99,7 +100,7 @@ _ID = re.compile(r"[A-Za-z0-9]{1,16}")
 _SLUG = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 HISTORY_ROWS = 200
-_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_UUID = saved_world.UUID
 
 
 def _json(path: Path):
@@ -232,13 +233,10 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
     except sqlite3.Error:
         raise sp.Refused(503, "Ledger's database can't be opened right now: try again in a minute.") from None
     try:
-        if "actions_by_location" not in ledger.indexes:
-            raise sp.Refused(503, "Ledger's database has no location index, and reading the whole table would slow "
-                                  "the game: look it up in game with Ledger's own commands.")
         world_label = query.get("world") or ("Overworld" if "Overworld" in ledger.worlds.values()
                                              else next(iter(ledger.worlds.values()), "Overworld"))
-        world = next((i for i, name in ledger.worlds.items() if name == world_label), None)
-        if world is None:
+        world = ledger.world_id(world_label)
+        if world < 0:
             raise sp.Refused(400, f"world is one of: {', '.join(sorted(ledger.worlds.values()))}.")
         who = None
         if player:
@@ -251,8 +249,11 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
         since = staff_report.stamp(now - dt.timedelta(hours=hours))
         try:
             rows, stopped = ledger.around(x, y, z, radius, world, since, wanted, who, LOOKUP_ROWS * 4, LOOKUP_SECONDS)
-        except ledger_db.Busy:
+        except Busy:
             raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
+        except NoIndex:
+            raise sp.Refused(503, "Ledger's database has no location index, and reading the whole table would slow "
+                                  "the game: look it up in game with Ledger's own commands.") from None
     finally:
         ledger.close()
     rows.sort(key=lambda r: (r[0], r[-1]), reverse=True)     # newest first; id breaks ties
@@ -417,7 +418,7 @@ def player_history(panel, name) -> dict:
     name = staff_desk.checked_player(name)
     desk = staff_desk.desk(panel)
     low = name.lower()
-    names = desk._names()
+    names = saved_world.names(panel.root)
     uuid = next((u for u, n in names.items() if n.lower() == low), None)
     shown = names.get(uuid, name) if uuid else name
 
@@ -435,7 +436,7 @@ def player_history(panel, name) -> dict:
     temp = temp.get("bans", temp) if isinstance(temp, dict) else {}
     temp = temp.get(low) if isinstance(temp, dict) else None
     word = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", re.I)
-    rows, cut = desk._action_rows()
+    rows, cut = desk.action_rows()
     changes = [{"time": r["time"], "user": r["user"], "action": r["action"], "target": r["target"]}
                for r in rows if word.search(r["target"])][-HISTORY_ROWS:][::-1]
     notes = desk.notes(name)["notes"]

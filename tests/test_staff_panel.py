@@ -46,7 +46,9 @@ class FakeDocker:
         if argv[:2] == ["docker", "inspect"]:
             return SimpleNamespace(returncode=0, stdout="2026-11-06T09:30:00.123456789Z\n", stderr="")
         if "ps" in argv and "-q" in argv:
-            return SimpleNamespace(returncode=0, stdout="0123456789abcdef\n", stderr="")
+            # As docker does: `--status running` lists the container only while self.ps says it runs.
+            stopped = "--status" in argv and '"State":"running"' not in self.ps.replace(" ", "")
+            return SimpleNamespace(returncode=0, stdout="" if stopped else "0123456789abcdef\n", stderr="")
         if "ps" in argv:
             return SimpleNamespace(returncode=0, stdout=self.ps, stderr="")
         if "exec" in argv:

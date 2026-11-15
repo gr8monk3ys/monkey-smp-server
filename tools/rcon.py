@@ -47,12 +47,12 @@ from pathlib import Path
 import packs
 
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart).
+# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart). deploy/lib.sh names
+# these three (JOB_NOT_RUNNING, ...): a test checks it has the same numbers.
 NOT_RUNNING = 3
 GAVE_UP = 4
 # `packs-on`: a data pack the job needs is off (staff turned it off; deploy/lib.sh's timed_job skips the job).
 PACK_OFF = 5
-# deploy/lib.sh names these (a test checks it has the same numbers).
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -172,10 +172,12 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
     return 0 if send(rcon, commands, log, **how) else 1
 
 
-def packs_off(rcon, names: Iterable[str], folder: Path | None = None) -> list[str]:
+def packs_off(rcon, names: Iterable[str], folder: Path | None = None, fresh: bool = False) -> list[str]:
     """Which of the world data packs NAMES (folder names, e.g. monkey-wardrobe) are off on the running server:
-    tools/packs.py's rule, from its kept copy when FOLDER (the docker folder) is given. RconError when the server
-    isn't running or its answer can't be read, so an answer it can't read never reads as "off"."""
+    tools/packs.py's rule. With FOLDER (the docker folder) the kept copy is used (and refreshed), unless `fresh`:
+    then the server is asked and the copy refreshed. Without FOLDER the server is asked and nothing is kept: for a
+    decision that can't wait out a copy staff's `monkey rcon` didn't drop. RconError when the server isn't running
+    or its answer can't be read, so an answer it can't read never reads as "off"."""
     names = list(names)
     if not names:
         return []
@@ -183,7 +185,7 @@ def packs_off(rcon, names: Iterable[str], folder: Path | None = None) -> list[st
     if folder is not None and not box:
         raise RconError("server not running")
     try:
-        said = packs.listing(rcon, folder, box) if folder is not None else rcon(packs.LIST)
+        said = packs.listing(rcon, folder, box, fresh=fresh) if folder is not None else rcon(packs.LIST)
         return packs.off(said, names)
     except packs.Unreadable as e:
         raise RconError(str(e)) from None
@@ -241,6 +243,7 @@ def main(argv=None, server=Docker) -> int:
     on = sub.add_parser("packs-on")
     on.add_argument("packs", nargs="+", help="world data pack folder names (monkey-wardrobe)")
     on.add_argument("--docker", type=Path, required=True, help="the release's docker folder")
+    on.add_argument("--fresh", action="store_true", help="ask the server, not the kept list (it keeps the answer)")
     args = ap.parse_args(argv)
     rcon = server(args.docker)
     if args.command == "running":
@@ -249,14 +252,14 @@ def main(argv=None, server=Docker) -> int:
         except RconError as e:
             print(e, file=sys.stderr)
             return 2
-    return packs_on(rcon, args.packs, args.docker)
+    return packs_on(rcon, args.packs, args.docker, fresh=args.fresh)
 
 
-def packs_on(rcon, names: list[str], folder: Path) -> int:
+def packs_on(rcon, names: list[str], folder: Path, fresh: bool = False) -> int:
     """`packs-on`'s answer: prints which pack is off (or that all are on) and returns PACK_OFF, 0, or 2 when it
     can't tell (the server isn't running, docker failed, an answer it can't read)."""
     try:
-        off = packs_off(rcon, names, folder)
+        off = packs_off(rcon, names, folder, fresh)
     except RconError as e:
         print(e, file=sys.stderr)
         return 2

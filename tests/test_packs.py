@@ -132,3 +132,26 @@ def test_a_job_with_no_packs_never_asks_the_server(capsys):
     server = rcon.Recorder()
     assert rcon.packs_on(server, [], ".") == 0 and server.sent == []
     assert capsys.readouterr().out == "data packs on: none needed\n"
+
+
+def test_packs_on_fresh_asks_the_server_even_with_a_kept_list(tmp_path):
+    """install-standings.sh: staff may have just turned the pack on with `monkey rcon`, which drops nothing."""
+    server = rcon.Recorder({"datapack": LISTED})
+    assert rcon.main(["packs-on", "monkey-boss", "--docker", str(tmp_path)], server=lambda folder: server) == 0
+    assert rcon.main(["packs-on", "monkey-boss", "--docker", str(tmp_path)], server=lambda folder: server) == 0
+    assert len(server.sent) == 1                                          # the second used the kept list
+    assert rcon.main(["packs-on", "monkey-boss", "--docker", str(tmp_path), "--fresh"],
+                     server=lambda folder: server) == 0
+    assert len(server.sent) == 2
+
+
+def test_the_border_asks_the_server_not_the_kept_list(tmp_path, monkeypatch):
+    """A boss left out of its act is left out for good, so the border never decides from a list up to 30 minutes old."""
+    import border
+    seen = []
+    monkeypatch.setattr(rcon, "packs_off", lambda server, names, folder=None, fresh=False: seen.append(folder) or [])
+    server = rcon.Recorder()
+    server.folder = tmp_path                                              # as rcon.Docker has
+    assert border.without_packs_off(server, ["function monkey:boss/act {act:1}"], print) == [
+        "function monkey:boss/act {act:1}"]
+    assert seen == [None]

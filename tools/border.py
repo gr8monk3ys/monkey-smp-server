@@ -213,7 +213,9 @@ def without_packs_off(rcon, commands: list[str], log=print) -> list[str]:
     if not needed:
         return commands
     try:
-        off = set(server.packs_off(rcon, needed, getattr(rcon, "folder", None)))
+        # Asked now, not from the timers' kept list: a boss left out is left out of its act for good, and staff may
+        # have just turned the pack on with `monkey rcon` (which doesn't drop that list). Once an hour, at most.
+        off = set(server.packs_off(rcon, needed))
     except server.RconError as e:
         log(f"can't tell whether {', '.join(needed)} is on ({e}): sending it all")
         return commands

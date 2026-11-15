@@ -94,7 +94,6 @@ ALL_OFF_WORD = "ALL OFF"
 # with any other kind is turned on or off only at a restart. An allowlist, so a kind this file doesn't know is safe.
 RELOADABLE = frozenset({"advancement", "function", "item_modifier", "loot_table", "predicate", "recipe", "structure",
                         "tags"})
-AT_RESTART = pack_state.AT_RESTART    # the restart queue (tools/packs.py owns it)
 
 
 def startup_kinds(paths) -> list[str]:
@@ -149,7 +148,6 @@ def clean(value, most: int) -> str:
 
 
 pack_entry = pack_state.pack_entry
-enabled_in = pack_state.on       # the one rule for "is this pack on" (tools/packs.py)
 
 
 def zip_problem(z: zipfile.ZipFile, files_max: int, total_max: int) -> str | None:
@@ -370,18 +368,16 @@ class More:
             return []
 
     def _listing(self) -> str:
-        """The server's enabled list, asked now (staff see the live state) and kept for the timers' packs-on.
-        RconError or pack_state.Unreadable when it didn't answer with the list."""
-        try:
-            box = self.p.docker.container()
-        except sp.server.RconError:
-            box = ""
+        """The server's enabled list, asked now (staff see the live state) and kept for the timers' packs-on: one
+        `docker compose ps` for the container (none running is RconError), one command. RconError or
+        pack_state.Unreadable when it didn't answer with the list."""
+        box = self.p.docker.container()
+        if not box:
+            raise sp.server.RconError("the server isn't running")
         return pack_state.listing(self.x.rcon, self.p.docker.folder, box, fresh=True)
 
     def _enabled(self, names) -> set[str] | None:
         """Which of NAMES the server has on, or None when it isn't running or didn't answer."""
-        if not self.x.running():
-            return None
         try:
             return set(pack_state.on(self._listing(), names))
         except (sp.server.RconError, pack_state.Unreadable):
@@ -597,8 +593,8 @@ class More:
             names = self._entry_names()
             folder = self._packs_folder()
             # A pack with data the game reads only at startup stays on: turning it off live half-unloads it.
-            kept_on = [n for n in enabled_in(said, names) if pack_startup_kinds(folder / n)]
-            packs = [f"file/{n}" for n in enabled_in(said, names) if n not in kept_on]
+            kept_on = [n for n in pack_state.on(said, names) if pack_startup_kinds(folder / n)]
+            packs = [f"file/{n}" for n in pack_state.on(said, names) if n not in kept_on]
             if not packs:
                 raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
             self.p.staff.mkdir(parents=True, exist_ok=True)

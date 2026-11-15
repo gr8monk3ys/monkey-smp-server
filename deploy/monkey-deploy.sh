@@ -135,7 +135,7 @@ in_window() {
 
 # ---------------------------------------------------------------- helpers
 
-# Data packs staff turned on or off "with a restart" on the staff page (tools/staff_more.py, AT_RESTART): packs
+# Data packs staff turned on or off "with a restart" on the staff page (the queue's format: tools/packs.py): packs
 # with data the game reads only at startup (dialog, worldgen, ...). Changed live they half-load and players can't
 # join (2026-11-10), so they change here, after the warning and seconds before the stop; the world saves the
 # change on the way down and the next start loads them whole. The file is removed once applied.

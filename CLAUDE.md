@@ -22,6 +22,15 @@ are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server.
 - Domain terms: `GLOSSARY.md`. Decisions not to re-litigate: `docs/adr/`.
 - Never commit worlds, jars, datapacks or a live `server.properties` (it holds the RCON password).
 
+## Working agreements
+
+- Feature freeze for the rest of Season I: fixes, monitoring and simplification only. New gameplay packs and new
+  staff page features wait for Season II.
+- Keep a PR under about 800 changed lines, generated output (builds, fixtures, lock files) aside.
+- No two live releases within 48 hours unless the second fixes something broken live.
+- A release needs CI's boot tests green and the Clean install workflow passing (docs/MAINTAINING.md, "Releasing").
+- When something breaks on the live server, start with `docs/RUNBOOK.md`.
+
 ## Agent skills
 
 ### Issue tracker

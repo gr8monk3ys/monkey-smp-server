@@ -283,7 +283,7 @@ Run the commands from the server console or with `monkey.ps1 rcon "<command>"`:
   gives the Nether the matching one at its 1:8 scale (625 wide, centred on spawn / 8). The End's is left
   alone. After that the borders are yours to grow, e.g. `worldborder set 5500 12000` (12000 ticks, 10 minutes,
   to widen) and `execute in minecraft:the_nether run worldborder set 687.5 12000`. The pack never touches them again.
-  Season I's world is the exception: staff set its Nether to 2500 by hand (docs/LIVE.md, "3.0.0"), so the border acts
+  Season I's world is the exception: staff set its Nether to 2500 by hand (docs/upgrades/HISTORY.md, "3.0.0"), so the border acts
   leave the Nether alone. `worldborder set 687.5` there would shrink it.
 - **Rule 26, PvP grace** (pack `monkey-rules`). The first time the server sees a player, they get grace
   (unless the launch hour is running) and, a few seconds later, the welcome screen. Someone who played here

@@ -6,8 +6,8 @@
 
 The front page and the guide read it from https://map.monkeysmp.lscaturchio.xyz/status.json (site/config.json's
 STATUS_URL): Caddy serves the file next to the live map, with an allow-origin header for the site, so no new
-port opens (deploy/Caddyfile, docs/LIVE.md, "The website's status"). The file is public, so it holds counts and
-the published schedule only: never a player's name, an address or anything from the settings.
+port opens (deploy/Caddyfile, docs/upgrades/HISTORY.md, "The website's status"). The file is public, so it holds
+counts and the published schedule only: never a player's name, an address or anything from the settings.
 
     {"version": 1, "checked": "2026-11-15T02:00:00Z", "season": 1, "phase": "live", "opens": "2026-11-08T01:00:00Z",
      "online": true, "players": 3,

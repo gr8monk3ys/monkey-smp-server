@@ -335,7 +335,7 @@ on 2026-11-07.
 ## [3.1.1] - 2026-11-04
 
 Mace Limiter, the one jar the shared folder gained after 3.1.0. It runs on the server only, so players keep the 3.1.0
-pack and no world moves (docs/LIVE.md, "3.1.1: Mace Limiter"). Also here: the staff page and the store's 2-month pass,
+pack and no world moves (docs/upgrades/HISTORY.md, "3.1.1: Mace Limiter"). Also here: the staff page and the store's 2-month pass,
 which main gained after 3.1.0.
 
 ### Added
@@ -373,7 +373,7 @@ which main gained after 3.1.0.
 The owners' final mod list, and much less work per tick for a full server: the owners expect 30 players at worst on
 launch night. Players reinstall the client pack. No world has to move for the deploy, but new structures only appear
 in land generated after it, so the launch world made on Thursday 5 November has them and the test world's land
-doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: the final mod list and the speed patches").
+doesn't. Two configs to copy by hand on the live server (docs/upgrades/HISTORY.md, "3.1.0: the final mod list and the speed patches").
 
 ### Added
 
@@ -424,7 +424,7 @@ doesn't. Two configs to copy by hand on the live server (docs/LIVE.md, "3.1.0: t
 
 Minecraft 26.2 and the owners' mod list, on a new world: the release Season I launches on. It replaces 2.11.0, which
 was never tagged or deployed, and has everything 2.11.0 had. Players reinstall the client pack. After it deploys
-there are steps by hand (docs/LIVE.md, "3.0.0: Minecraft 26.2 and a new world"): one Tebex jar, the Nether
+there are steps by hand (docs/upgrades/HISTORY.md, "3.0.0: Minecraft 26.2 and a new world"): one Tebex jar, the Nether
 anti-xray config, the new world, pre-generation and the map.
 
 ### Changed
@@ -556,7 +556,7 @@ pack, a small download (only the wardrobe's resource pack changed).
   the NPCs, every chunk) and the configs. Only our identifiers' shapes change and only inside NBT strings, so
   players' names and their own words (signs, books, party names) stay as written. Stop the server, back it
   up, then run it on the server package folder
-  (`--apply`; without it, it only lists what it would change). docs/LIVE.md, "Monkey SMP names (2.10.0)", has the
+  (`--apply`; without it, it only lists what it would change). docs/upgrades/HISTORY.md, "Monkey SMP names (2.10.0)", has the
   live VPS's steps.
 
 - **Monkey SMP news**: one plain line in the public Discord channel for a rare Server First (the Nether, a
@@ -564,7 +564,7 @@ pack, a small download (only the wardrobe's resource pack changed).
   this season to finish a rare advancement (Monsters Hunted, A Balanced Diet, Adventuring Time...) or new
   factions: "Steve killed the Ender Dragon. First this season." At most a few a day and each once a season,
   read from the saved world every 10 minutes (`tools/news.py`, `deploy/monkey-news.sh`, `monkey-news.timer`).
-  Off until the owner adds `NEWS_WEBHOOK_URL` on the VPS and installs the timer (docs/LIVE.md, "The news
+  Off until the owner adds `NEWS_WEBHOOK_URL` on the VPS and installs the timer (docs/upgrades/HISTORY.md, "The news
   timer"). Not yet run against a live server.
 
 ## [2.9.1] - 2026-10-29
@@ -572,7 +572,7 @@ pack, a small download (only the wardrobe's resource pack changed).
 Season I's new date: it opens on Saturday 7 November, a week later. This must be live before Monday
 2 November, when 2.9.0's calendar would start week 1 and the supply drops. The client pack's mods are the
 same as 2.9.0's, so players don't need to update it. After it deploys, place the Town Crier again
-(docs/ADMIN.md, "Spawn NPCs") and run `deploy/npc-claims.sh` once (docs/LIVE.md, "NPCs in claims").
+(docs/ADMIN.md, "Spawn NPCs") and run `deploy/npc-claims.sh` once (docs/upgrades/HISTORY.md, "NPCs in claims").
 
 ### Added
 
@@ -598,7 +598,7 @@ same as 2.9.0's, so players don't need to update it. After it deploys, place the
   only ops could use them. `defaults/config/openpartiesandclaims-server.toml` now adds
   `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` to `forcedEntityProtectionExceptionList`: anyone may right-click an Easy NPC in any claim with an empty hand,
   while the claim still protects its blocks and nobody can hit the NPCs or use items on them. On the live
-  server, run `deploy/npc-claims.sh` once (one restart; docs/LIVE.md, "NPCs in claims"). Not yet tried in game.
+  server, run `deploy/npc-claims.sh` once (one restart; docs/upgrades/HISTORY.md, "NPCs in claims"). Not yet tried in game.
 - The update check's "Verify every pinned download" step piped into `tee` without `pipefail`, so a broken
   download never reached its issue. It runs under `bash` now.
 - docs: LAUNCH.md put the R2 keys in `/etc/monkey-deploy.env` (the backup reads `/etc/monkey-backup.env`) and
@@ -701,7 +701,7 @@ bedrock, loot chests that refill, and the mods the folder dropped taken out. Sam
 151 -> 166 (about 278 MB of downloads, was 213 MB); client pack 179 -> 197 mods, 216 -> 234 files, about 542 MB
 (was 502 MB). Players must update the client pack: several new mods are needed on both sides, so an old pack
 can't join. The new structures only generate in new land, so Season I needs a new world: on the live VPS follow
-docs/LIVE.md, "A new world for Season I (2.8.0)", once this is live. A host who keeps an old world gets the
+docs/upgrades/HISTORY.md, "A new world for Season I (2.8.0)", once this is live. A host who keeps an old world gets the
 new mods, but the new structures and End only in land nobody has visited, should run
 `gamerule keep_inventory false` (the dropped corpse mod had turned it on), and should place the spawn NPCs again
 (docs/ADMIN.md, "Spawn NPCs"): only a newly placed one has the tag that keeps Random Mob Sizes off it.
@@ -790,7 +790,7 @@ new mods, but the new structures and End only in land nobody has visited, should
   with the new pack joined a test server with exactly the manifest's mods and stayed on, voice chat connected.
   Not tested in game: WorldEdit (fake players couldn't run it), Carry On with animals, the enchanting table and
   trades with Enchantment Disabler.
-- docs: docs/LIVE.md, "A new world for Season I (2.8.0)" (the switch, the carry with `--season 1`, the checks,
+- docs: docs/upgrades/HISTORY.md, "A new world for Season I (2.8.0)" (the switch, the carry with `--season 1`, the checks,
   the spawn claim, pre-generation with the End, the map, NPCs and the board, and what lives only in the world);
   docs/LAUNCH.md points to it; docs/ADMIN.md has WorldEdit, "Mod settings" and Endercon; docs/PLAYERS.md the
   new size, low-end list and what's new; README, the site and the Modrinth text say Endercon and about 560 MB.
@@ -960,7 +960,7 @@ VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
   Code of Conduct, ServerCore and claims settings change with one restart (under the deploy lock, with warnings in
   chat and a copy of each file), then it makes the spawn claim over RCON, installs python3 for the update check,
   and installs the two timers. It skips steps already done, `--check` only reports, and it reads no secrets. See
-  "One-off steps when upgrading" in `docs/LIVE.md`.
+  "2.5.0" in `docs/upgrades/HISTORY.md`.
 - Daily restart, update check and load-test results go to `STAFF_WEBHOOK_URL` in `/etc/monkey-deploy.env` when it
   is set (a staff-only channel), else to `DISCORD_WEBHOOK_URL`.
 - Live server: **`deploy/monkey-loadtest.sh`** measures what the VPS can carry: `tools/loadtest.py` with 25 fake
@@ -1037,7 +1037,7 @@ VPS, run `deploy/upgrade-2.5.0.sh` once after 2.5.0 is live (docs/LIVE.md).
   26.3", for Minecraft 26.1 to 26.3), and no other mod does the same job on 26.3.
 - These defaults are copied only where the server doesn't have the file yet. On an existing server, set
   `enable-code-of-conduct=true`, `maxPlayerClaims = 4` and the two ServerCore switches yourself (server
-  stopped), then make the spawn claim: the commands are in `docs/LIVE.md` ("The short rules, ServerCore and
+  stopped), then make the spawn claim: the commands are in `docs/upgrades/HISTORY.md` ("The short rules, ServerCore and
   claims").
 
 ## [2.4.2] - 2026-10-25

@@ -143,7 +143,7 @@ below).
 
 - [ ] **Thu 5 Nov: the launch world.** Check 3.1.0 deployed at 4-5 AM first: its new structures only appear in land
   generated after it. Testers played in the world made on 2 November, so replace it with a fresh copy of the same
-  seed (docs/LIVE.md, "3.1.0: the final mod list and the speed patches", then "3.0.0: Minecraft 26.2 and a new
+  seed (docs/upgrades/HISTORY.md, "3.1.0: the final mod list and the speed patches", then "3.0.0: Minecraft 26.2 and a new
   world"), take testers back off the
   whitelist, and start Chunky. Do the load test and the rehearsal on this world. Walk the spawn area, monuments and
   NPC spots: the terrain changed.
@@ -168,17 +168,17 @@ below).
 - [ ] **By Fri 6 Nov: the 2.6.0 one-time steps.** Each is done once 2.6.0 is live; check none is still to
   do: `sh /srv/monkey/repo/deploy/monkey-week.sh --check` (the week timer runs) and
   `sudo sh /srv/monkey/repo/deploy/install-standings.sh --check` (the standings timers). Anything left:
-  docs/LIVE.md, "The weekly challenges' timer" and "The weekly standings". Without the week timer the
+  docs/upgrades/HISTORY.md, "The weekly challenges' timer", and docs/LIVE.md, "The weekly standings". Without the week timer the
   challenge week never turns over and Founder's Circlet's window doesn't close at midnight on Sunday.
 - [ ] **By Fri 6 Nov: the 2.7.0 one-time steps**, once 2.7.0 is live: `sh /srv/monkey/repo/deploy/monkey-drops.sh
   --check` says the drops timer runs, and the Guide and the Town Crier stand at spawn. Anything left:
-  docs/LIVE.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
+  docs/upgrades/HISTORY.md, "The supply drops' timer" and "The spawn NPCs". Without the timer there are no weeknight drops;
   a release places no NPCs by itself.
 - [ ] **By Fri 6 Nov: the last release's one-time steps**, once it is live. A deploy only copies `package/`, so
   these are by hand: `sudo sh /srv/monkey/repo/deploy/monkey-sieges.sh --install` (a 7-day war counts from its
   clock, so without it a war never ends on time, even with siege windows off); the status file, with
   `sudo sh /srv/monkey/repo/deploy/monkey-status.sh --install`, the new Caddyfile and `sudo systemctl reload caddy`
-  (docs/LIVE.md, "The sieges timer" and "The website's status"); and the Guide placed again (docs/ADMIN.md, "Spawn NPCs"),
+  (docs/upgrades/HISTORY.md, "The sieges timer" and "The website's status"); and the Guide placed again (docs/ADMIN.md, "Spawn NPCs"),
   or "Talk to the Guide" never counts in the first-week quest: a placed NPC keeps what it was placed with.
 - [ ] **Fri 6 Nov: rehearse on the drill copy**, never the live world: `function monkey:rules/launch`,
   watch PvP and the Nether close and open again an hour later, then `python tools/block_wheel.py "rehearsal"`

@@ -18,9 +18,13 @@
 #   1. git fetch in ROOT_SRC (/opt/monkey/src, root's clone over https, never the monkey checkout) and picks the tag
 #   2. asks the release gate (tools/release_gate.py, root's copy): a published release on GitHub that is this commit,
 #      and green CI. Not yet: nothing is installed
-#   3. checks out the tag and copies the root files (ROOT_FILES in lib.sh) to ROOT_DEST (/opt/monkey/deploy and
-#      /opt/monkey/tools), owned by root and writable by root only; each copy is a new file moved into place, so a
-#      script that is running keeps the copy it started with
+#   3. checks out the tag and copies the root files to ROOT_DEST (/opt/monkey/deploy and /opt/monkey/tools), owned by
+#      root and writable by root only; each copy is a new file moved into place, so a script that is running keeps
+#      the copy it started with. The list (ROOT_FILES, and ROOT_NEW_UNITS for step 4) is the TAG's own, read from its
+#      deploy/lib.sh as text, not this script's: a release that adds a root file gets it on the first run, and
+#      --tag=vOLD puts back that release's files. A file the tag lists but lacks is a warning, and root's copy of it
+#      stays as it is. Root's copies under deploy/ and tools/ that the tag doesn't list (plain files, not links) are
+#      removed, each logged. A tag with no list at all is older than root's copies: nothing is installed
 #   4. copies the monkey-* units that changed into /etc/systemd/system, and the new ones (ROOT_NEW_UNITS), then
 #      daemon-reload; restarts the timers and path units that changed (that never runs their service), and starts
 #      monkey-logs.timer. It never enables the restore drill's timer: that waits for a first pass by hand.
@@ -34,6 +38,8 @@ LOG_NAME=install-root
 . "$(dirname -- "$0")/lib.sh"
 
 HERE=$(cd "$(dirname -- "$0")" && pwd)
+ROOT_FILES=$(printf '%s' "$ROOT_FILES" | tr '\n' ' ')
+ROOT_NEW_UNITS=$(printf '%s' "$ROOT_NEW_UNITS" | tr '\n' ' ')
 ENV_FILE=${MONKEY_DEPLOY_ENV:-/etc/monkey-deploy.env}
 REPO_DIR=${REPO_DIR:-$(setting REPO_DIR /srv/monkey/repo)}
 SRC=${ROOT_SRC:-/opt/monkey/src}
@@ -56,9 +62,53 @@ if [ -n "$tag" ]; then
     case ${tag#v} in *[!0-9.]* | *..* | *.) die "--tag takes a release tag, vX.Y.Z, not '$tag'" ;; esac
 fi
 
+# "list_in FILE NAME": the words of NAME='...' in FILE (a lib.sh) on one line, read as text and never run; nothing
+# when FILE has no such list.
+list_in() {
+    [ -f "$1" ] || return 0
+    awk -v n="$2=" -v q="'" '
+        !on && index($0, n q) == 1 { on = 1; $0 = substr($0, length(n) + 2) }
+        on { i = index($0, q); if (i) { print substr($0, 1, i - 1); exit } print }' "$1" | tr '\n' ' '
+}
+
+# "release_lists DIR": sets ROOT_FILES and ROOT_NEW_UNITS from DIR/deploy/lib.sh; false when it has no ROOT_FILES.
+release_lists() {
+    rl_files=$(list_in "$1/deploy/lib.sh" ROOT_FILES)
+    [ -n "$(printf '%s' "$rl_files" | tr -d ' ')" ] || return 1
+    rl_units=$(list_in "$1/deploy/lib.sh" ROOT_NEW_UNITS)
+    for rl_f in $rl_files; do
+        case $rl_f in
+            */*/* | *..* | *[!A-Za-z0-9_./-]*) die "$1/deploy/lib.sh lists '$rl_f': root files are deploy/NAME or tools/NAME" ;;
+            deploy/?* | tools/?*) ;;
+            *) die "$1/deploy/lib.sh lists '$rl_f': root files are deploy/NAME or tools/NAME" ;;
+        esac
+    done
+    for rl_u in $rl_units; do
+        case $rl_u in
+            *[!A-Za-z0-9_.@-]*) die "$1/deploy/lib.sh lists the unit '$rl_u'" ;;
+            monkey-?*) ;;
+            *) die "$1/deploy/lib.sh lists the unit '$rl_u'" ;;
+        esac
+    done
+    ROOT_FILES=$rl_files
+    ROOT_NEW_UNITS=$rl_units
+}
+
+# "unlisted": root's copies in ROOT_DEST/deploy and ROOT_DEST/tools that ROOT_FILES doesn't list, as repo paths, one
+# per line: plain files only (a link is left alone).
+unlisted() {
+    for ul_p in "$ROOT_DEST"/deploy/* "$ROOT_DEST"/tools/*; do
+        [ -f "$ul_p" ] && [ ! -L "$ul_p" ] || continue
+        ul_rel=${ul_p#"$ROOT_DEST"/}
+        case " $ROOT_FILES " in *" $ul_rel "*) continue ;; esac
+        printf '%s\n' "$ul_rel"
+    done
+}
+
 if [ "$mode" = check ]; then
-    # Against the deployed checkout: what this release would change for root.
-    stale=$(root_stale "$REPO_DIR")
+    # Against the deployed checkout and its lists: what this release would change for root.
+    release_lists "$REPO_DIR" || true
+    stale=$(root_stale "$REPO_DIR"; unlisted | sed 's/$/ (to remove)/')
     if [ -z "$stale" ]; then
         log "root's copies and the units match $REPO_DIR"
     else
@@ -114,9 +164,8 @@ release_gate "$commit" "$tag" || die "$tag was not installed: ${GATE_SAYS#releas
 # ---------------------------------------------------------------- 3. root's copies
 
 git -C "$SRC" -c advice.detachedHead=false checkout --quiet --force --detach "$commit"
-for f in $ROOT_FILES; do
-    [ -f "$SRC/$f" ] || die "$tag has no $f: it is older than root's copies (install-root.sh came with them)"
-done
+release_lists "$SRC" ||
+    die "$tag has no ROOT_FILES in deploy/lib.sh: it is older than root's copies (install-root.sh came with them)"
 for d in "$ROOT_DEST" "$ROOT_DEST/deploy" "$ROOT_DEST/tools"; do
     install -d -m 755 -o root -g root "$d"
 done
@@ -124,12 +173,18 @@ root_only "$ROOT_DEST/deploy"
 root_only "$ROOT_DEST/tools"
 copied=0
 for f in $ROOT_FILES; do
-    if ! cmp -s "$SRC/$f" "$ROOT_DEST/$f"; then
+    if [ ! -f "$SRC/$f" ]; then
+        log "WARNING: $tag has no $f: root's copy of it is kept as it is"
+    elif ! cmp -s "$SRC/$f" "$ROOT_DEST/$f"; then
         install -m 644 -o root -g root "$SRC/$f" "$ROOT_DEST/$f.new"
         mv -f "$ROOT_DEST/$f.new" "$ROOT_DEST/$f"
         log "installed $ROOT_DEST/$f"
         copied=$((copied + 1))
     fi
+done
+unlisted | while IFS= read -r f; do
+    rm -f "$ROOT_DEST/$f"
+    log "removed $ROOT_DEST/$f: $tag doesn't list it"
 done
 
 # ---------------------------------------------------------------- 4. the units

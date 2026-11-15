@@ -65,8 +65,13 @@ import zipfile
 import zlib
 from pathlib import Path
 
-import helper_queue as hq
-import staff_more
+if __name__ == "__main__":
+    # REMOVE after the next release: the backup helper of 3.5.0 and older runs `python3 -B -I tools/staff_host.py
+    # unzip-world ZIP DEST` from the checkout until install-root.sh replaces it. -I leaves tools/ off sys.path.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import helper_queue as hq  # noqa: E402
+import staff_more  # noqa: E402
 
 sp = None   # tools/staff_panel.py (register)
 ax = None   # tools/staff_apex.py (register)
@@ -1040,3 +1045,7 @@ def register(module, apex) -> None:
     module.PATHS.update(path for _, path in ROUTES)
     module.RAW.update(RAW)
     staff_more.register(module, apex, sys.modules[__name__])   # Java, data packs, the icon and modpacks
+
+
+if __name__ == "__main__":   # REMOVE after the next release, with the sys.path line at the top
+    sys.exit(hq.main(sys.argv[1:], name="staff_host"))

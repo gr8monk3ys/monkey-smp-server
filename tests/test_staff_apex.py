@@ -240,6 +240,17 @@ def test_a_request_holds_only_fixed_words(apex):
     assert apex.call("POST", "/api/snapshots", {})[0] == 409
 
 
+def test_a_request_helper_queue_refuses_is_a_400_and_writes_nothing(apex):
+    installed(apex)
+    for args, fields, said in ((("restore", "abc;reboot"), {}, "A snapshot ID is 8 to 64 hex digits."),
+                               (("deploy",), {"tag": "v3.1"}, "The helper doesn't take that tag."),
+                               (("stop",), {}, "The helper doesn't take that stop.")):
+        with pytest.raises(staff_apex.sp.Refused) as e:
+            apex.x.request("diego", *args, **fields)
+        assert (e.value.code, e.value.message) == (400, said)
+    assert not list(apex.x.requests.iterdir())
+
+
 def write_result(b, rid, **data):
     (b.x.results / f"{rid}.json").write_text(json.dumps(data))
 

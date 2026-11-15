@@ -89,6 +89,13 @@ def test_waiting_requests_that_cant_be_read_name_no_action(tmp_path):
     assert hq.pending_actions(tmp_path) == ["deploy"]
 
 
+def test_only_the_first_request_max_bytes_of_a_waiting_request_are_read(tmp_path):
+    # As the helper reads it (head -c 2048): an action past that is not there, padding after one doesn't matter.
+    (tmp_path / "20261106T100000Z-0000aaaa.req").write_text("x" * hq.REQUEST_MAX + "\naction=restore\n")
+    (tmp_path / "20261106T110000Z-0000bbbb.req").write_text("action=reset\n" + "x" * 10 * hq.REQUEST_MAX)
+    assert hq.pending_actions(tmp_path) == ["reset"]
+
+
 # ---------------------------------------------------------------- results
 
 
@@ -105,6 +112,8 @@ def test_the_results_are_read_newest_first_and_bad_ones_skipped(tmp_path):
         (tmp_path / "20261106T140000Z-0000eeee.json").symlink_to(tmp_path / "20261106T130000Z-0000dddd.json")
     assert [rid for rid, _ in hq.results(tmp_path)] == ["20261106T130000Z-0000dddd", "20261106T100000Z-0000aaaa"]
     assert list(hq.results(tmp_path / "missing")) == []
+    # Only the newest names are looked at: a bad one among them is left out, not made up for with an older one.
+    assert [rid for rid, _ in hq.results(tmp_path, 2)] == ["20261106T130000Z-0000dddd"]
     big = tmp_path / "20261106T150000Z-0000ffff.json"
     big.write_text(json.dumps({"action": "backup-now", "pad": "x" * hq.RESULT_MAX}))
     assert hq.read_result(big) is None
@@ -180,6 +189,16 @@ def test_a_world_zip_unpacks_only_its_world_folder(tmp_path):
     third.mkdir()
     done = subprocess.run([*cli, str(bad), str(third)], capture_output=True, text=True)
     assert done.returncode == 1 and done.stderr.startswith("helper_queue: ") and not list(third.iterdir())
+    # The helper of 3.5.0 and older runs staff_host.py's own command, from the checkout, until install-root.sh
+    # replaces it (remove with that command after the next release).
+    old = [sys.executable, "-B", "-I", str(REPO.root / "tools" / "staff_host.py"), "unzip-world"]
+    fourth = tmp_path / "fourth"
+    fourth.mkdir()
+    done = subprocess.run([*old, str(src), str(fourth)], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert (fourth / "world" / "level.dat").read_text() == "lvl"
+    done = subprocess.run([*old, str(bad), str(third)], capture_output=True, text=True)
+    assert done.returncode == 1 and done.stderr.startswith("staff_host: ") and not list(third.iterdir())
 
 
 def test_a_world_zip_needs_room_to_unpack(tmp_path, monkeypatch):

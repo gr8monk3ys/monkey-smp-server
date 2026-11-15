@@ -108,7 +108,7 @@ _Avoid_: dashboard, portal, admin panel
 
 **Backup helper**:
 The root service behind the staff page (`deploy/monkey-staff-helper.sh`, started by `monkey-staff-helper.path`) that does what the page, as `monkey`, may not: off-site backups, the snapshot list, restores, version switches, world resets and world uploads. The page asks through a queue of request files holding only fixed words and checked values and reads back the helper's results (`tools/helper_queue.py`); the helper checks every value again itself. Root runs only its own copies of the two (docs/LIVE.md, "Root's own copies").
-_Avoid_: staff helper, sudo script
+_Avoid_: sudo script (its unit and script names, and the messages that name them, say `monkey-staff-helper`: that is its name there)
 
 **Rule check**:
 The weekly report on the staff page's Reports tab: for each player, which server rules they may have broken that ISO week, each with a level (clear, likely, unclear) and the rows behind it (`tools/staff_report.py`; docs/LIVE.md, "The weekly rule check"). It only reports: staff decide, it never punishes, messages or rolls back.

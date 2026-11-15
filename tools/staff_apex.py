@@ -45,7 +45,6 @@ import concurrent.futures
 import contextlib
 import datetime as dt
 import ipaddress
-import itertools
 import json
 import math
 import os
@@ -634,23 +633,24 @@ class Extras:
         return hq.pending(self.requests)
 
     def request(self, user: str, action: str, snapshot: str = "", **fields: str) -> str:
-        """Writes one request for the helper (tools/helper_queue.py) and returns its id."""
-        hq.check_request(action, **fields)
+        """Writes one request for the helper (tools/helper_queue.py, which checks every value) and returns its id."""
         if not self.installed():
             raise sp.Refused(503, "The root helper isn't installed, so backups, restores, version switches and world "
                                   "resets or uploads can't be started from here. The owner installs it: "
                                   "sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper")
-        if snapshot and not hq.SNAPSHOT_ID.fullmatch(snapshot):
-            raise sp.Refused(400, "A snapshot ID is 8 to 64 hex digits.")
         with self._helper:
             if len(self.pending_requests()) >= HELPER_PENDING_MAX:
                 raise sp.Refused(409, "The helper has requests waiting already: give it a minute.")
-            return hq.write_request(self.requests, action, user, snapshot, **fields)
+            try:
+                return hq.write_request(self.requests, action, user, snapshot, **fields)
+            except ValueError as e:
+                raise sp.Refused(400, "A snapshot ID is 8 to 64 hex digits." if str(e) == "snapshot" else
+                                      f"The helper doesn't take that {e}.") from None
 
     def jobs(self) -> list[dict]:
         return [{"id": rid, "action": data["action"], "state": str(data.get("state", ""))[:20],
                  "time": str(data.get("time", ""))[:40], "message": sp.masked(str(data.get("message", "")))[:300]}
-                for rid, data in itertools.islice(hq.results(self.results), JOBS_SHOWN)]
+                for rid, data in hq.results(self.results, JOBS_SHOWN)]
 
     def helper(self) -> dict:
         return {"installed": self.installed(), "jobs": self.jobs(), "pending": self.pending_requests()}
@@ -683,9 +683,7 @@ class Extras:
         for job in self.jobs():
             if job["action"] == "restore" and job["state"] == "running":
                 raise sp.Refused(409, "A restore is under way already.")
-        with self._helper:
-            waiting = hq.pending_actions(self.requests)
-        if "restore" in waiting:
+        if "restore" in hq.pending_actions(self.requests):
             raise sp.Refused(409, "A restore is waiting to start already.")
         rid = self.request(user, "restore", snapshot)
         self.p.record(user, "world-restore", snapshot[:8])

@@ -87,11 +87,13 @@ def pending(folder) -> list[str]:
 
 
 def pending_actions(folder) -> list[str]:
-    """The actions of the requests waiting in `folder` (one that can't be read, or names none, is left out)."""
+    """The actions of the requests waiting in `folder`, from at most REQUEST_MAX bytes of each, as the helper reads
+    them (one that can't be read, or names none, is left out)."""
     found = []
     for rid in pending(folder):
         try:
-            text = (Path(folder) / f"{rid}.req").read_text(encoding="ascii", errors="replace")[:REQUEST_MAX]
+            with open(Path(folder) / f"{rid}.req", "rb") as f:
+                text = f.read(REQUEST_MAX).decode("ascii", errors="replace")
         except OSError:
             continue
         m = re.search(r"^action=([a-z-]+)$", text, re.M)
@@ -116,14 +118,15 @@ def read_result(path) -> dict | None:
     return data
 
 
-def results(folder):
-    """(id, result) for each good result in `folder`, newest first."""
+def results(folder, newest: int | None = None):
+    """(id, result) for each good result in `folder`, newest first; with `newest`, only among that many newest names
+    (a bad one among them is left out, not made up for), so a folder of bad files costs at most that many reads."""
     try:
         names = sorted((e.name for e in os.scandir(folder)
                         if e.name.endswith(".json") and REQUEST_ID.fullmatch(e.name[:-5])), reverse=True)
     except OSError:
         return
-    for name in names:
+    for name in names[:newest]:
         data = read_result(Path(folder) / name)
         if data is not None:
             yield name[:-5], data
@@ -219,8 +222,9 @@ def unzip_world(src, dest) -> Path:
 
 # ---------------------------------------------------------------- what the helper runs
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="the backup helper's snapshot list and world unpacking")
+def main(argv=None, name: str = "helper_queue") -> int:
+    """The command line; `name` starts its error lines (tools/staff_host.py passes its own for the old helper)."""
+    ap = argparse.ArgumentParser(prog=name, description="the backup helper's snapshot list and world unpacking")
     sub = ap.add_subparsers(dest="command", required=True)
     sub.add_parser("snapshots", help="restic snapshots --json on stdin, the page's list on stdout")
     unzip = sub.add_parser("unzip-world", help="check a world zip and unpack it into DEST/world")
@@ -231,14 +235,14 @@ def main(argv=None) -> int:
         try:
             data = json.loads(sys.stdin.read())
         except ValueError:
-            print("helper_queue: restic's snapshot list is not JSON", file=sys.stderr)
+            print(f"{name}: restic's snapshot list is not JSON", file=sys.stderr)
             return 1
         json.dump(reduce_snapshots(data), sys.stdout)
         return 0
     try:
         unzip_world(args.zip, args.dest)
     except (Problem, OSError, zipfile.BadZipFile, ValueError) as e:
-        print(f"helper_queue: {e if isinstance(e, Problem) else type(e).__name__}", file=sys.stderr)
+        print(f"{name}: {e if isinstance(e, Problem) else type(e).__name__}", file=sys.stderr)
         return 1
     return 0
 

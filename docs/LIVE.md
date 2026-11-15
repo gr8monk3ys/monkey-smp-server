@@ -211,11 +211,15 @@ sudo sh /opt/monkey/deploy/install-root.sh        # the newest release; --tag=vX
 
 `/opt/monkey/INSTALLED` holds the release and commit that are installed.
 
-Of `tools/`, the staff page's helper runs only `tools/helper_queue.py`: the snapshot list as root, and the world
-upload's unpacking as `monkey` (root's copy all the same). Older releases ran root's copy of
-`tools/staff_apex.py`, all of the page's hosting controls. Once `install-root.sh` has installed a release with
-`helper_queue.py`, nothing runs that old copy, and it can go: `sudo rm /opt/monkey/tools/staff_apex.py`. Until then
-the old helper still needs it.
+The file list is the release's own (`ROOT_FILES` in its `deploy/lib.sh`), so a release that adds a root file
+installs it in one run, and `--tag=vX.Y.Z` puts back that release's files. A root copy in `/opt/monkey/deploy` or
+`/opt/monkey/tools` that the release no longer lists is removed (and logged). Of `tools/`, the staff page's helper
+runs only `tools/helper_queue.py`: the snapshot list as root, and the world upload's unpacking as `monkey` (root's
+copy all the same); older releases ran root's copy of `tools/staff_apex.py` instead.
+
+From 3.5.x only, run `install-root.sh` twice: 3.5.x's copy still uses its own list, so its first run installs the new
+helper and the new `install-root.sh` but not `helper_queue.py`; the second run (the new script) adds it and removes
+`staff_apex.py`. Until then the snapshot list and world uploads from the page fail.
 
 Not covered yet: `--install` of the timed jobs and of the staff page (`monkey-staff.sh --install`) still copy
 their units from `/srv/monkey/repo` when root runs them. Those units run as `monkey`, so a changed unit gives

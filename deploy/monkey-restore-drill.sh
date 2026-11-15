@@ -160,11 +160,11 @@ level_time=$(python3 -B -I "$TOOLS/restore_drill.py" level-time "$scratch/server
 regions=$(find "$scratch/server/$world" -path '*/region/*.mca' -size +0 2>/dev/null | wc -l)
 [ "$regions" -gt 0 ] || fail "the restored world has no region files"
 log "the world on disk: level.dat reads (game time $level_time), $regions region files"
-# The staff page's memory setting (server/monkey-launch.json) is the live machine's: the copy gets the drill's own.
-launch="$scratch/server/monkey-launch.json"
-if [ -f "$launch" ]; then
-    sed -i "s/\"memory_gb\": *[0-9][0-9]*/\"memory_gb\": $MEMORY_GB/" "$launch"
-    log "the copy's memory setting: $MEMORY_GB GB (the drill's, not the live server's)"
+# The staff page's Java settings (server/monkey-launch.json) are the live machine's: an 8 GB heap doesn't fit the
+# drill's container, and the start would cap it. The copy goes without them and gets DRILL_MEMORY_GB.
+if [ -f "$scratch/server/monkey-launch.json" ]; then
+    rm -f -- "$scratch/server/monkey-launch.json"
+    log "left out the live server's Java settings (monkey-launch.json): the copy gets $MEMORY_GB GB"
 fi
 
 # ---------------------------------------------------------------- 4. what a snapshot leaves out

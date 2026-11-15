@@ -173,7 +173,7 @@ def test_a_good_snapshot_passes_and_nothing_is_left_behind(drill):
     code, logged, calls, paths = drill()
     assert code == 0, logged
     assert "the world on disk: level.dat reads (game time 5000), 1 region files" in logged
-    assert any(line.startswith("the copy's memory setting:") for line in logged)
+    assert any(line.startswith("left out the live server's Java settings") for line in logged)
     assert logged[-1].startswith("Monkey SMP restore drill PASSED: restored and booted in 1 min, world time 5100")
     assert "Snapshot: a1b2c3d4 from 2026-11-09T09:00Z" in logged[-1]   # not the newer, unflushed one
     restore = next(c for c in calls if c.startswith("backup --restic-read restore"))

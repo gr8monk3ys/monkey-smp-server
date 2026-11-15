@@ -101,9 +101,12 @@ def drill(tmp_path):
     (live / "server" / "world" / "level.dat").write_bytes(level_dat(999))
     # The fake snapshot: what restic restores.
     snap = tmp_path / "snapshot"
-    (snap / "world" / "region").mkdir(parents=True)
+    # A 26.x world: region files under dimensions/<ns>/<dimension>/region, none in world/region (the drill once
+    # looked only there and failed every live drill).
+    regions = snap / "world" / "dimensions" / "minecraft" / "overworld" / "region"
+    regions.mkdir(parents=True)
     (snap / "world" / "level.dat").write_bytes(level_dat(5000))
-    (snap / "world" / "region" / "r.0.0.mca").write_bytes(b"region")
+    (regions / "r.0.0.mca").write_bytes(b"region")
     (snap / "server.properties").write_text("level-name=world\n")
     (tmp_path / "snapshots.json").write_text(json.dumps(snapshots()))
     scratch_root = tmp_path / "scratch"

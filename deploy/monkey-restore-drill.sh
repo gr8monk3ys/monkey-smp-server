@@ -155,7 +155,9 @@ rm -rf -- "$scratch/restored"
 world=$(setting_in "$scratch/server/server.properties" level-name world)
 level_time=$(python3 -B -I "$TOOLS/restore_drill.py" level-time "$scratch/server/$world/level.dat") ||
     fail "the restored world's level.dat can't be read"
-regions=$(find "$scratch/server/$world/region" -name '*.mca' -size +0 2>/dev/null | wc -l)
+# Any dimension's region files: world/region before 26.x, world/dimensions/<ns>/<dimension>/region on 26.x (a 26.2
+# world has no world/region at all, so looking only there failed every drill).
+regions=$(find "$scratch/server/$world" -path '*/region/*.mca' -size +0 2>/dev/null | wc -l)
 [ "$regions" -gt 0 ] || fail "the restored world has no region files"
 log "the world on disk: level.dat reads (game time $level_time), $regions region files"
 

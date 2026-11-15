@@ -155,9 +155,17 @@ rm -rf -- "$scratch/restored"
 world=$(setting_in "$scratch/server/server.properties" level-name world)
 level_time=$(python3 -B -I "$TOOLS/restore_drill.py" level-time "$scratch/server/$world/level.dat") ||
     fail "the restored world's level.dat can't be read"
-regions=$(find "$scratch/server/$world/region" -name '*.mca' -size +0 2>/dev/null | wc -l)
+# Any dimension's region files: world/region before 26.x, world/dimensions/<ns>/<dimension>/region on 26.x (a 26.2
+# world has no world/region at all, so looking only there failed every drill).
+regions=$(find "$scratch/server/$world" -path '*/region/*.mca' -size +0 2>/dev/null | wc -l)
 [ "$regions" -gt 0 ] || fail "the restored world has no region files"
 log "the world on disk: level.dat reads (game time $level_time), $regions region files"
+# The staff page's Java settings (server/monkey-launch.json) are the live machine's: an 8 GB heap doesn't fit the
+# drill's container, and the start would cap it. The copy goes without them and gets DRILL_MEMORY_GB.
+if [ -f "$scratch/server/monkey-launch.json" ]; then
+    rm -f -- "$scratch/server/monkey-launch.json"
+    log "left out the live server's Java settings (monkey-launch.json): the copy gets $MEMORY_GB GB"
+fi
 
 # ---------------------------------------------------------------- 4. what a snapshot leaves out
 
@@ -201,7 +209,8 @@ if [ -z "$up" ]; then
     fail "the restored server did not answer RCON within ${TIMEOUT}s (the world on disk read fine)"
 fi
 said=$(docker exec "$name" monkey rcon 'time query gametime' 2>/dev/null || :)
-game_time=$(printf '%s' "$said" | sed -n 's/.*[Tt]he time is \([0-9][0-9]*\).*/\1/p' | head -n 1)
+# "The time is N" before 26.x, "The game time is N tick(s)" on 26.2.
+game_time=$(printf '%s' "$said" | sed -n 's/.*[Tt]ime is \([0-9][0-9]*\).*/\1/p' | head -n 1)
 [ -n "$game_time" ] || fail "the restored server answered, but not with its game time"
 [ "$game_time" -ge "$level_time" ] ||
     fail "the restored server's game time ($game_time) is behind its level.dat's ($level_time)"

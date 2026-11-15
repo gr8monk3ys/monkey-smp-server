@@ -101,10 +101,14 @@ def drill(tmp_path):
     (live / "server" / "world" / "level.dat").write_bytes(level_dat(999))
     # The fake snapshot: what restic restores.
     snap = tmp_path / "snapshot"
-    (snap / "world" / "region").mkdir(parents=True)
+    # A 26.x world: region files under dimensions/<ns>/<dimension>/region, none in world/region (the drill once
+    # looked only there and failed every live drill).
+    regions = snap / "world" / "dimensions" / "minecraft" / "overworld" / "region"
+    regions.mkdir(parents=True)
     (snap / "world" / "level.dat").write_bytes(level_dat(5000))
-    (snap / "world" / "region" / "r.0.0.mca").write_bytes(b"region")
+    (regions / "r.0.0.mca").write_bytes(b"region")
     (snap / "server.properties").write_text("level-name=world\n")
+    (snap / "monkey-launch.json").write_text('{\n  "memory_gb": 8,\n  "flags": []\n}\n')    # the live machine's
     (tmp_path / "snapshots.json").write_text(json.dumps(snapshots()))
     scratch_root = tmp_path / "scratch"
     scratch_root.mkdir()
@@ -116,7 +120,8 @@ def drill(tmp_path):
                   '"rm "*) rm -f "$FAKE_STATE/container"; exit 0 ;; '
                   '"logs "*) echo "boot log line"; exit 0 ;; esac\n'
                   'case " $* " in *" rcon list "*) exit "${FAKE_RC_list:-0}" ;; '
-                  '*" time query gametime "*) echo "The time is ${FAKE_GAMETIME-5100}"; exit 0 ;; esac\nexit 0',
+                  '*" time query gametime "*) echo "The game time is ${FAKE_GAMETIME-5100} tick(s)"; exit 0 ;; '
+                  'esac\nexit 0',
         "flock": "exit 0", "sleep": "exit 0", "chown": "exit 0", "rsync": "exit 0", "curl": "exit 0",
         "timeout": 'shift\nexec "$@"',
         "df": 'echo "Filesystem 1024-blocks Used Available Capacity Mounted"\n'
@@ -169,6 +174,7 @@ def test_a_good_snapshot_passes_and_nothing_is_left_behind(drill):
     code, logged, calls, paths = drill()
     assert code == 0, logged
     assert "the world on disk: level.dat reads (game time 5000), 1 region files" in logged
+    assert any(line.startswith("left out the live server's Java settings") for line in logged)
     assert logged[-1].startswith("Monkey SMP restore drill PASSED: restored and booted in 1 min, world time 5100")
     assert "Snapshot: a1b2c3d4 from 2026-11-09T09:00Z" in logged[-1]   # not the newer, unflushed one
     restore = next(c for c in calls if c.startswith("backup --restic-read restore"))

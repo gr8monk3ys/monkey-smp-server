@@ -11,6 +11,9 @@
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
     saved_world.command_storage(folder, "monkey")       # `data ... storage monkey:<key>`: key -> compound (None)
     saved_world.advancements(folder, {"minecraft:end/kill_dragon"})   # player UUID -> advancement -> when done
+    saved_world.player_list(server_dir, "whitelist")    # whitelist.json ([]: missing; None: unreadable)
+    saved_world.player_lists(server_dir)                # ({kind: entries}, ["<kind>.json" that can't be read])
+    saved_world.list_entry(entries, name, uuid)         # a player's entry on one (by uuid when it has one)
 
 The files, relative to the world folder:
   data/minecraft/scoreboard.dat                                 scores, display names and teams
@@ -222,6 +225,55 @@ def names(server_dir: Path) -> dict[str, str]:
     return {r["uuid"].lower(): r["name"] for r in rows
             if isinstance(r, dict) and isinstance(r.get("uuid"), str) and UUID.fullmatch(r["uuid"].lower())
             and isinstance(r.get("name"), str) and PLAYER_NAME.fullmatch(r["name"])}
+
+
+PLAYER_LISTS = ("whitelist", "ops", "banned-players", "banned-ips")   # <kind>.json in the server folder
+
+
+def player_list(server_dir: Path, kind: str) -> list[dict] | None:
+    """One of the server folder's player lists (PLAYER_LISTS), as the server saves it: its entries, [] when the
+    file is missing (nobody listed yet), None when it can't be read. Entries are kept as saved, except: a player
+    list's entry is kept only when its name is a string, with its uuid lowercased ("" when it has none or it isn't
+    a uuid); a banned-ips entry only when its ip is a string."""
+    if kind not in PLAYER_LISTS:
+        raise ValueError(f"not a player list: {kind!r}")
+    try:
+        rows = json.loads((Path(server_dir) / f"{kind}.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rows, list):
+        return None
+    if kind == "banned-ips":
+        return [r for r in rows if isinstance(r, dict) and isinstance(r.get("ip"), str)]
+    def uuid(r: dict) -> str:
+        u = r.get("uuid")
+        return u.lower() if isinstance(u, str) and UUID.fullmatch(u.lower()) else ""
+
+    return [{**r, "uuid": uuid(r)} for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)]
+
+
+def player_lists(server_dir: Path, kinds: tuple[str, ...] = ("whitelist", "ops", "banned-players")) \
+        -> tuple[dict[str, list[dict]], list[str]]:
+    """Several player lists at once: kind -> its entries ([] for one that can't be read), and the file names
+    ("<kind>.json") of those that can't be read, for the page to say it can't tell rather than "not listed"."""
+    lists, unreadable = {}, []
+    for kind in kinds:
+        entries = player_list(server_dir, kind)
+        if entries is None:
+            unreadable.append(f"{kind}.json")
+        lists[kind] = entries or []
+    return lists, unreadable
+
+
+def list_entry(entries: list[dict], name: str, uuid: str | None = None) -> dict | None:
+    """A player's entry on a player list. Knowing their uuid, an entry with a uuid is theirs only when it is the
+    same uuid (a player who took someone's old name is not on that one's lists), and only an entry without a uuid
+    goes by its name (any case). Not knowing it (they never joined), every entry goes by its name."""
+    low, uuid = name.lower(), (uuid or "").lower()
+    return next((r for r in entries
+                 if (r["uuid"] == uuid if uuid and r["uuid"] else r["name"].lower() == low)), None)
 
 
 def play_time(stats_file: Path) -> int | None:

@@ -863,6 +863,13 @@ def test_players_lists_and_who_is_online(box):
     assert box.call("GET", "/api/players")[1]["online"] is None
 
 
+def test_a_list_that_cant_be_read_is_none_and_a_missing_one_empty(box):
+    (box.root / "whitelist.json").write_text("[{broken")
+    (box.root / "ops.json").unlink()
+    answer = box.call("GET", "/api/players")[1]
+    assert answer["whitelist"] is None and answer["ops"] == [] and answer["banned"][0]["name"] == "Zed"
+
+
 def test_timers_from_systemctls_json_and_text():
     rows = staff_panel.timers_from_json(json.dumps([
         {"next": int(staff_panel.server.parse_time("2026-11-15T02:00:00Z").timestamp()) * 1_000_000, "left": 1,

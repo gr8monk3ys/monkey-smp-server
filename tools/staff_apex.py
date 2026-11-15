@@ -1000,16 +1000,7 @@ class Extras:
     # ------------------------------------------------ bans by address
 
     def ip_bans(self) -> dict:
-        def rows(name):
-            try:
-                data = json.loads((self.p.root / name).read_text(encoding="utf-8"))
-            except FileNotFoundError:
-                return []
-            except (OSError, ValueError):
-                return None
-            return [r for r in data if isinstance(r, dict)] if isinstance(data, list) else None
-
-        ips = rows("banned-ips.json")
+        ips = sp.saved_world.player_list(self.p.root, "banned-ips")
         out = None
         if ips is not None:
             out = []

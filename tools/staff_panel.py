@@ -92,6 +92,7 @@ import staff_spark
 import staff_status
 
 import rcon as server
+import saved_world
 
 # Run as `python3 tools/staff_panel.py serve` this module is __main__; staff_auth's late `from staff_panel import ...`
 # must get this same module, not a second copy that registers the routes again with its own Refused class.
@@ -971,24 +972,18 @@ class Panel:
     # ------------------------------------------------ what it only reads
 
     def players(self) -> dict:
-        def names(file: str, reasons: bool = False) -> list | None:
-            try:
-                rows = json.loads((self.root / file).read_text(encoding="utf-8"))
-            except FileNotFoundError:
-                return []
-            except (OSError, ValueError):
+        def names(kind: str, reasons: bool = False) -> list | None:
+            rows = saved_world.player_list(self.root, kind)
+            if rows is None:
                 return None
-            if not isinstance(rows, list):
-                return None
-            rows = sorted((r for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)),
-                          key=lambda r: r["name"].lower())
+            rows = sorted(rows, key=lambda r: r["name"].lower())
             if reasons:
                 return [{"name": r["name"], "reason": masked(str(r.get("reason") or ""))} for r in rows]
             return [r["name"] for r in rows]
 
         who = self.who_is_on()
-        return {"online": who["names"] if who else None, "whitelist": names("whitelist.json"), "ops": names("ops.json"),
-                "banned": names("banned-players.json", reasons=True)}
+        return {"online": who["names"] if who else None, "whitelist": names("whitelist"), "ops": names("ops"),
+                "banned": names("banned-players", reasons=True)}
 
     def who_is_on(self) -> dict | None:
         """`list` over RCON as {"count", "max", "names"}; None when the server isn't running or doesn't say."""

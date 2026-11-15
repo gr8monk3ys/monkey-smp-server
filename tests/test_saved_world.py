@@ -289,3 +289,45 @@ def test_a_party_name_from_a_badly_shaped_config_is_none(tmp_path, config):
     path.parent.mkdir(parents=True)
     path.write_text(config)
     assert saved_world.party_name(tmp_path, owner) == ""
+
+
+# ---------------------------------------------------------------- the server's player lists
+
+
+def test_a_player_list_missing_is_empty_and_one_that_cant_be_read_is_none(tmp_path):
+    import json
+    assert saved_world.player_list(tmp_path, "whitelist") == []
+    for broken in ("[{not json", json.dumps({"name": "Alpha"})):
+        (tmp_path / "whitelist.json").write_text(broken)
+        assert saved_world.player_list(tmp_path, "whitelist") is None          # can't tell, never "not listed"
+    with pytest.raises(ValueError, match="not a player list"):
+        saved_world.player_list(tmp_path, "usercache")
+    (tmp_path / "ops.json").write_text(json.dumps([{"uuid": ALEX, "name": "Alex"}]))
+    lists, unreadable = saved_world.player_lists(tmp_path)
+    assert lists == {"whitelist": [], "ops": [{"uuid": ALEX, "name": "Alex"}], "banned-players": []}
+    assert unreadable == ["whitelist.json"]
+
+
+def test_a_player_list_keeps_entries_shaped_as_saved_and_matches_any_case(tmp_path):
+    import json
+    (tmp_path / "ops.json").write_text(json.dumps([
+        {"uuid": ALEX.upper(), "name": "Alex", "level": 4},     # an uppercase uuid: kept, lowercased
+        {"uuid": 7, "name": "Sam"},                             # a uuid that isn't text: ""
+        {"uuid": RIA, "name": None}, {"uuid": RIA}, "junk", 3]))
+    ops = saved_world.player_list(tmp_path, "ops")
+    assert ops == [{"uuid": ALEX, "name": "Alex", "level": 4}, {"uuid": "", "name": "Sam"}]
+    assert saved_world.list_entry(ops, "aLeX")["level"] == 4                        # no uuid known: by name
+    assert saved_world.list_entry(ops, "whoever", ALEX.upper())["name"] == "Alex"   # by uuid, any case
+    assert saved_world.list_entry(ops, "sam", SAM)["name"] == "Sam"                 # an entry with no uuid: by name
+    assert saved_world.list_entry(ops, "Nobody") is None and saved_world.list_entry(ops, "Ria", RIA) is None
+    (tmp_path / "banned-ips.json").write_text(json.dumps([{"ip": "8.8.8.8"}, {"ip": 8}, {"name": "x"}, "y"]))
+    assert saved_world.player_list(tmp_path, "banned-ips") == [{"ip": "8.8.8.8"}]
+
+
+def test_a_player_who_took_someones_old_name_is_not_on_their_lists(tmp_path):
+    """Matching by name or uuid marked the new holder of a name as banned, an operator or whitelisted."""
+    import json
+    (tmp_path / "banned-players.json").write_text(json.dumps([{"uuid": ALEX, "name": "Alex", "reason": "griefing"}]))
+    bans = saved_world.player_list(tmp_path, "banned-players")
+    assert saved_world.list_entry(bans, "Alex", RIA) is None                    # Ria is called Alex now: not banned
+    assert saved_world.list_entry(bans, "Ria", ALEX)["reason"] == "griefing"    # the banned one, renamed: still

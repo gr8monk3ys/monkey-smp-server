@@ -868,8 +868,12 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
     tools/helper_queue.py tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py \
-    tools/staff_events.py tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
+    tools/staff_events.py tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py \
+    tools/staff_report.py tools/packs.py tools/rcon.py tools/ledger.py tools/saved_world.py tools/nbt.py \
+    tools/season_calendar.py tools/status.py
 ```
+
+(Every module the staff page imports, so a path checkout never leaves it half updated.)
 
 A path checkout adds and replaces files but deletes none, so the old page's files (`staff.js`, `panel.js` and the like,
 from before the React page) stay in `deploy/staff/` until the next deploy's forced checkout. Nothing loads them.
@@ -927,9 +931,12 @@ sets itself. It changes nothing in how the server runs: the container, compose a
   kick can have a reason, which the player sees.
   **Temporary bans** (admin; moderators see the list): the game's own ban, with a reason that starts "Banned until"
   and the time it ends in UTC, so the player sees when. The page keeps them in `/srv/monkey/staff/tempbans.json` and
-  pardons the player at that time (its scheduler looks every 20 seconds), but only if the ban in
-  `banned-players.json` is still that one, word for word: a player pardoned by hand, or banned again, is left as staff
-  left them. While the server is off it waits, sending nothing, and pardons once it is back. "Lift now" pardons early.
+  pardons the player at that time (its scheduler looks every 20 seconds), unless `banned-players.json` shows their
+  ban with other words: a player banned again, or a ban changed by hand, is left as staff left them. A ban the file
+  no longer shows is pardoned anyway (harmless if there's none). While the server is off it waits, sending nothing,
+  and pardons once it is back. "Lift now" pardons early. While `banned-players.json` can't be read, a temporary ban is
+  refused and a due one waits, said once in the journal and in the record of changes (`tempban-wait`): fix the file,
+  never move or delete it (the running server keeps its bans, and a missing file would read as "nobody banned").
   1 hour to 30 days. A player banned already can't be banned for a time, nor banned for good over a temporary ban:
   the game keeps the ban that is there ("Nothing changed"), so the page says to pardon or lift it first.
   **Everyone who has joined** (moderator): every name in `usercache.json`, the last seen first, with when the server

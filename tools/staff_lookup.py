@@ -422,16 +422,14 @@ def player_history(panel, name) -> dict:
     uuid = next((u for u, n in names.items() if n.lower() == low), None)
     shown = names.get(uuid, name) if uuid else name
 
-    def listed(file: str) -> dict | None:
-        rows = _json(panel.root / file)
-        if not isinstance(rows, list):
-            return None
-        for r in rows:
-            if isinstance(r, dict) and (str(r.get("name", "")).lower() == low or (uuid and r.get("uuid") == uuid)):
-                return r
-        return None
+    # A list that can't be read is named in "unreadable" (its field stays false, its ban None): the page says it
+    # can't tell rather than "not listed".
+    lists, unreadable = saved_world.player_lists(panel.root)
 
-    ban = listed("banned-players.json")
+    def listed(kind: str) -> dict | None:
+        return saved_world.list_entry(lists[kind], name, uuid)
+
+    ban = listed("banned-players")
     temp = (_json(panel.staff / "tempbans.json") or {})
     temp = temp.get("bans", temp) if isinstance(temp, dict) else {}
     temp = temp.get(low) if isinstance(temp, dict) else None
@@ -447,7 +445,7 @@ def player_history(panel, name) -> dict:
         ticks = desk.play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
     return {"name": shown, "known": uuid is not None, "last_seen": seen,
             "hours": None if ticks is None else round(ticks / staff_desk.TICKS_PER_HOUR, 1),
-            "whitelisted": listed("whitelist.json") is not None, "op": listed("ops.json") is not None,
+            "whitelisted": listed("whitelist") is not None, "op": listed("ops") is not None, "unreadable": unreadable,
             "ban": {k: _text(ban.get(k), 200) for k in ("reason", "source", "created", "expires")} if ban else None,
             "tempban": {k: temp.get(k) for k in ("until", "by", "at", "reason")} if isinstance(temp, dict) else None,
             "notes": notes, "changes": changes, "cut": cut}

@@ -64,7 +64,10 @@
   live server's `world/ledger.sqlite` (57 GB by 14 November). At that rate the disk would fill in about two weeks,
   and Ledger's row ids (at most 2,147,483,647) would run out in about two months. A patch keeps the button while
   the cube stays in its block; it still goes the tick after the cube leaves. The rows already written stay until
-  they are cleaned up by hand (docs/LIVE.md, "Ledger's history").
+  they are cleaned up by hand (docs/LIVE.md, "Ledger's history"): first update root's copies
+  (`sh /opt/monkey/deploy/install-root.sh`, so the off-site backup leaves the prune's files out of R2), then
+  `tools/ledger_prune.py` twice, with the server up and then stopped (new: it keeps every other row with its id,
+  and keeps the old file as `ledger.sqlite.before-prune`).
 - **Blaze Attack Animation's two warnings at every start and data pack reload stop.** Its `pack.mcmeta` declared
   `"pack_format": 107.1`, which 26.2 only reads as `min_format`/`max_format`; a patch declares it as 107 (any 107.x).
 - **More Villagers' gilded station recipe and its 9 advancements load again.** The pinned build (1.26.7.1, the
@@ -74,7 +77,8 @@
   the lore as a text component); nothing else changes. The boot tests no longer let these errors through.
 - Open Parties and Claims names the permission and party systems it already fell back to (`luck_perms`,
   `default`), so its two "isn't registered" warnings stop. Behaviour is the same. A live server keeps its own
-  config, so set the two lines in its `config/openpartiesandclaims-server.toml` by hand.
+  config, so set the two lines in its `config/openpartiesandclaims-server.toml` by hand:
+  `permissionSystem = "luck_perms"` and `primaryPartySystem = "default"` (done on the live server 11 November).
 
 ## [3.4.0] - 2026-11-10
 

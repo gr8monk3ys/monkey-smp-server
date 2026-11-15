@@ -27,7 +27,8 @@ launch as tools/season_calendar.py does ({date} the day in Pacific time, "Saturd
 "5 PM Pacific"; {eastern} "8 PM Eastern", with the weekday when it falls on the next day), with a <time>'s
 datetime set to LAUNCH_AT. The site works those out in TypeScript; this is what keeps the two in step. And
 sitemap.xml (site/src/app/sitemap.ts, a list kept by hand) must name every built page but the 404 page, and
-nothing that isn't one. The live-pack list (site/live-packs.json) is checked too, and with --built, that no page
+nothing that isn't one. Every old pack URL that site/vercel.json redirects must land on the current pack or
+installer. The live-pack list (site/live-packs.json) is checked too, and with --built, that no page
 sells a feature of a pack that isn't running (tools/live_packs.py).
 """
 import argparse
@@ -158,6 +159,35 @@ def checksum_problems(links: dict[str, str], repo=REPO, write=False) -> list[str
             print(f"updated {label}/{checksums.NAME}")
             continue
         errors += [f"{e} (run python tools/site_links.py)" for e in found]
+    return errors
+
+
+def redirect_problems(links: dict[str, str], repo=REPO) -> list[str]:
+    """site/vercel.json sends each old pack URL (/pack/...) to the current one: every such redirect must land on
+    the pack or installer config.json names, of the same kind (.mrpack to the pack, .zip to the installer), and
+    that file must be on the site. Each release rewrites these by hand; one left behind points at a deleted file."""
+    path = site(repo) / "vercel.json"
+    if not path.is_file():
+        return []
+    try:
+        rules = json.loads(path.read_text(encoding="utf-8")).get("redirects") or []
+    except (ValueError, AttributeError):
+        return ["site/vercel.json: not a JSON object"]
+    current = {".mrpack": local_file(links.get("MODPACK_URL", "")), ".zip": local_file(links.get("INSTALLER_URL", ""))}
+    errors = []
+    for rule in rules:
+        source = rule.get("source", "") if isinstance(rule, dict) else ""
+        if not source.startswith("/pack/"):
+            continue
+        kind = ".mrpack" if source.endswith(".mrpack") else ".zip" if source.endswith(".zip") else None
+        want = current.get(kind) if kind else None
+        if not want:
+            continue      # served elsewhere (Modrinth): nothing on the site to point at
+        dest = rule.get("destination", "")
+        if dest.lstrip("/") != want:
+            errors.append(f"site/vercel.json: {source} redirects to {dest}, not the current {kind} (/{want})")
+        elif not (site(repo) / "public" / want).is_file():
+            errors.append(f"site/vercel.json: {source} redirects to /{want}, which isn't in site/public")
     return errors
 
 
@@ -337,6 +367,7 @@ def problems(repo=REPO, write=False, built: Path | None = None) -> list[str]:
     if errors:
         return errors
     errors += pack_problems(settings, repo) + checksum_problems(settings, repo, write)
+    errors += redirect_problems(settings, repo)
     errors += calendar_problems(settings, repo) + stylesheet_problems(repo, write)
     errors += rulebook_problems(repo, write) + live_packs.list_problems(repo)
     if built is not None:

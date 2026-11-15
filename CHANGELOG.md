@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **No Lunge's warning at every start and data pack reload stops.** Its `pack.mcmeta` named no `pack_format`
+  beside its old `supported_formats`; a patch adds `"pack_format": 48`, as 26.2's warning asks.
+
 ## [3.5.0] - 2026-11-14
 
 ### Added

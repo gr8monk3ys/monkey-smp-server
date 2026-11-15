@@ -228,3 +228,64 @@ def test_a_border_not_shaped_as_saved_is_a_value_error_naming_it(tmp_path, root)
     FakeWorld(tmp_path)._write(rel, nbt(root, gzipped=True))
     with pytest.raises(ValueError, match=names_file(tmp_path, rel)):
         saved_world.border(tmp_path)
+
+
+def test_names_are_one_rule_for_the_usercache(tmp_path):
+    """staff_report kept the uuid's case and standings didn't check the name: a name the Rule check looked up by the
+    stats file's lowercase uuid could go missing. Now every reader gets this."""
+    import json
+    (tmp_path / "usercache.json").write_text(json.dumps([
+        {"uuid": "ABCDEF01-0000-4000-8000-000000000001", "name": "Alpha"},     # uppercase: kept, lowercased
+        {"uuid": "00000002-0000-4000-8000-000000000002", "name": "Br@vo"},     # not a player's name
+        {"uuid": "not-a-uuid", "name": "Carol"},
+        {"name": "NoUuid"}, "junk"]))
+    assert saved_world.names(tmp_path) == {"abcdef01-0000-4000-8000-000000000001": "Alpha"}
+    (tmp_path / "usercache.json").write_text("{not json")
+    assert saved_world.names(tmp_path) == {} and saved_world.names(tmp_path / "missing") == {}
+
+
+@pytest.mark.parametrize(("stats", "ticks"), [
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": 72000}}}, 72000),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": -1}}}, None),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": True}}}, None),
+    ({"stats": {}}, None), ([], None),
+])
+def test_play_time_reads_a_stats_file(tmp_path, stats, ticks):
+    import json
+    path = tmp_path / "u.json"
+    path.write_text(json.dumps(stats))
+    assert saved_world.play_time(path) == ticks
+    assert saved_world.play_time(tmp_path / "missing.json") is None
+
+
+def test_an_unreadable_party_file_stops_standings_but_the_rule_check_skips_it(tmp_path):
+    world = FakeWorld(tmp_path).party("good", member("00000001-0000-4000-8000-000000000001", "Alpha"))
+    (world.path / saved_world.PARTIES / "bad.nbt").write_bytes(b"not nbt")
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)
+    found = saved_world.parties(world.path, lenient=True)
+    assert [p.id for p in found] == ["good"]
+
+
+def test_the_rule_check_keeps_every_member_it_can_read_and_reads_no_party_name(tmp_path, monkeypatch):
+    """One bad member entry used to drop the whole party for the Rule check, so its members became strangers; and
+    the party name (TOML, which needs Python 3.11) is never read when the caller doesn't show it."""
+    alpha, bravo = "00000001-0000-4000-8000-000000000001", "00000002-0000-4000-8000-000000000002"
+    world = FakeWorld(tmp_path).party("p", member(alpha, "Alpha"), [member(bravo, "Bravo"),
+                                                                     {"uuid": "bad", "username": "Carol"}])
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)                              # standings: stops, as it always has
+    monkeypatch.setattr(saved_world, "party_name", lambda *a: pytest.fail("read a party name"))
+    [party] = saved_world.parties(world.path, lenient=True, named=False)
+    assert [(m.uuid, m.username) for m in party.members] == [(alpha, "Alpha"), (bravo, "Bravo"), ("", "Carol")]
+    assert party.owner.username == "Alpha" and party.name == ""
+
+
+@pytest.mark.parametrize("config", ['playerConfig = "x"', "[playerConfig]\nparties = 1",
+                                    "[playerConfig.parties]\nname = 3"])
+def test_a_party_name_from_a_badly_shaped_config_is_none(tmp_path, config):
+    owner = "00000001-0000-4000-8000-000000000001"
+    path = tmp_path / saved_world.PLAYER_CONFIGS / f"{owner}.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text(config)
+    assert saved_world.party_name(tmp_path, owner) == ""

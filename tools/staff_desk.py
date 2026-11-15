@@ -54,6 +54,8 @@ import threading
 import time
 from pathlib import Path
 
+import saved_world
+
 sp = None   # tools/staff_panel.py (register)
 
 PLAYERS_MAX = 2000                  # the most players listed, the last seen first
@@ -74,7 +76,7 @@ SEARCH_SHOWN = 200
 SEARCH_TEXT_MAX = 1024 * 1024
 TEXT_SUFFIXES = {".toml", ".json", ".json5", ".properties", ".yml", ".yaml", ".txt", ".cfg", ".conf", ".ini", ".snbt",
                  ".mcmeta", ".md", ".csv", ".zs", ".js", ".mcfunction"}
-_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_UUID = saved_world.UUID
 _WORD = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _FORMULA = ("=", "+", "-", "@", "\t", "\r")
 
@@ -134,15 +136,6 @@ class Desk:
 
     # ------------------------------------------------ everyone who has joined
 
-    def _names(self) -> dict[str, str]:
-        """uuid -> name, from usercache.json: every player the server has looked up, so everyone who has joined."""
-        rows = _json(self.p.root / "usercache.json")
-        if not isinstance(rows, list):
-            return {}
-        return {r["uuid"].lower(): r["name"] for r in rows
-                if isinstance(r, dict) and isinstance(r.get("uuid"), str) and _UUID.fullmatch(r["uuid"].lower())
-                and isinstance(r.get("name"), str) and sp.PLAYER.fullmatch(r["name"])}
-
     def _listed(self, file: str) -> set[str]:
         rows = _json(self.p.root / file)
         return {r["name"].lower() for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)} \
@@ -159,10 +152,7 @@ class Desk:
             kept = self._played.get(key)
         if kept and kept[0] == mark:
             return kept[1]
-        data = _json(path)
-        custom = (data.get("stats") or {}).get("minecraft:custom") if isinstance(data, dict) else None
-        ticks = custom.get("minecraft:play_time") if isinstance(custom, dict) else None
-        ticks = ticks if isinstance(ticks, int) and not isinstance(ticks, bool) and ticks >= 0 else None
+        ticks = saved_world.play_time(path)
         with self._cache:
             if len(self._played) > PLAYERS_MAX * 2:
                 self._played.clear()
@@ -170,7 +160,7 @@ class Desk:
         return ticks
 
     def known_players(self) -> dict:
-        names = self._names()
+        names = saved_world.names(self.p.root)
         players = self.p.root / "world" / "players"
         seen: dict[str, float] = {}
         with contextlib.suppress(OSError), os.scandir(players / "data") as it:
@@ -220,7 +210,7 @@ class Desk:
 
     def _key(self, name: str) -> str:
         """Where a player's notes are kept: under the UUID when the server knows the name, else under the name."""
-        for uuid, known in self._names().items():
+        for uuid, known in saved_world.names(self.p.root).items():
             if known.lower() == name.lower():
                 return uuid
         return f"name:{name.lower()}"
@@ -334,7 +324,7 @@ class Desk:
 
     # ------------------------------------------------ the record of changes, searched
 
-    def _action_rows(self) -> tuple[list[dict], bool]:
+    def action_rows(self) -> tuple[list[dict], bool]:
         """(every line of actions.log this reads, oldest first, each with its place in the file; whether the file is
         longer than what was read)."""
         try:
@@ -375,7 +365,7 @@ class Desk:
         before = query.get("before") or ""
         if before and not before.isdigit():
             raise sp.Refused(400, "before must be a whole number.")
-        rows, cut = self._action_rows()
+        rows, cut = self.action_rows()
         users, actions = sorted({r["user"] for r in rows}), sorted({r["action"] for r in rows})
         found = [r for r in rows if wanted(r) and (not before or r["at"] < int(before))]
         page = found[-ACTIVITY_PAGE:][::-1]
@@ -385,7 +375,7 @@ class Desk:
 
     def activity_export(self, query: dict) -> tuple[str, bytes, int]:
         wanted = self._wanted(query)
-        rows = [r for r in self._action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
+        rows = [r for r in self.action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
         out = io.StringIO()
         sheet = csv.writer(out, lineterminator="\r\n")
         sheet.writerow(["time (UTC)", "login", "action", "what"])

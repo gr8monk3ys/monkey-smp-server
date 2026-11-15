@@ -94,8 +94,8 @@ def test_it_reads_names_times_and_play_time_and_nothing_else_of_the_world(desk):
 def test_play_time_is_read_again_only_when_the_file_changes(desk, monkeypatch):
     stats = desk.root / "world" / "players" / "stats" / f"{ALPHA}.json"
     read = []
-    real = staff_desk._json
-    monkeypatch.setattr(staff_desk, "_json", lambda path: (read.append(path.name), real(path))[1])
+    real = staff_desk.saved_world.play_time
+    monkeypatch.setattr(staff_desk.saved_world, "play_time", lambda path: (read.append(path.name), real(path))[1])
     desk.call("GET", "/api/known-players")
     desk.call("GET", "/api/known-players")
     assert read.count(stats.name) == 1

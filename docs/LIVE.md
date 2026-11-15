@@ -868,8 +868,12 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
     tools/helper_queue.py tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py \
-    tools/staff_events.py tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
+    tools/staff_events.py tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py \
+    tools/staff_report.py tools/packs.py tools/rcon.py tools/ledger.py tools/saved_world.py tools/nbt.py \
+    tools/season_calendar.py tools/status.py
 ```
+
+(Every module the staff page imports, so a path checkout never leaves it half updated.)
 
 A path checkout adds and replaces files but deletes none, so the old page's files (`staff.js`, `panel.js` and the like,
 from before the React page) stay in `deploy/staff/` until the next deploy's forced checkout. Nothing loads them.

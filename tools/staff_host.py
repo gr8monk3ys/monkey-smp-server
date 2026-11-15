@@ -469,7 +469,7 @@ class Host:
 
     def _write_note(self, name: str, data: dict) -> None:
         """Writes one of them whole, readable by the server's user."""
-        self.p._write(self.p.root / name, (json.dumps(data, indent=1, sort_keys=True) + "\n").encode("utf-8"), None)
+        self.p.write_file(self.p.root / name, (json.dumps(data, indent=1, sort_keys=True) + "\n").encode("utf-8"), None)
 
     def _manifests(self):
         """The release's monkey/manifest.json, as JSON objects: the live package's first, then the repo checkout's."""
@@ -899,7 +899,7 @@ class Host:
         for job in self.x.jobs():
             if job["action"] in WORLD_JOBS and job["state"] == "running" and not self._stale(job.get("time", "")):
                 raise sp.Refused(409, f"The helper is busy with a {job['action']} already: wait for it to finish.")
-        for rid in self.x._pending():
+        for rid in self.x.pending_requests():
             with contextlib.suppress(OSError):
                 text = (self.x.requests / f"{rid}.req").read_text(encoding="ascii", errors="replace")
                 if any(f"action={a}\n" in text for a in WORLD_JOBS):

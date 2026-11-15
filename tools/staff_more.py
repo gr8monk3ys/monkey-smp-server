@@ -473,7 +473,8 @@ class More:
         return pack_state.at_restart(self.p.docker.folder)
 
     def _set_at_restart(self, name: str, verb: str | None) -> None:
-        pack_state.set_at_restart(self.p.docker.folder, name, verb, lambda path, data: self.p._write(path, data, None))
+        pack_state.set_at_restart(self.p.docker.folder, name, verb,
+                                  lambda path, data: self.p.write_file(path, data, None))
 
     def datapack_toggle(self, user: str, body: dict) -> dict:
         name, enabled, restart = body.get("name"), body.get("enabled"), body.get("restart", False)
@@ -484,7 +485,7 @@ class More:
             raise sp.Refused(409, "The server isn't running: a data pack is turned on or off while it runs.")
         verb = "enable" if enabled else "disable"
         if not kinds:
-            said = self.x._said(f'datapack {verb} "file/{name}"')
+            said = self.x.said(f'datapack {verb} "file/{name}"')
             self._forget()
             self.p.record(user, f"datapack-{verb}", name)
             return {"name": name, "enabled": enabled, "said": said, "restarting": False}
@@ -599,7 +600,7 @@ class More:
                 raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
             self.p.staff.mkdir(parents=True, exist_ok=True)
             data = json.dumps({"by": user, "at": sp.stamp(), "packs": packs}, indent=1) + "\n"
-            self.p._write(self._saved_path(), data.encode("utf-8"), None)
+            self.p.write_file(self._saved_path(), data.encode("utf-8"), None)
             why = {}
             for pack in reversed(packs):        # the top one first
                 refused = self._switch(pack, False)
@@ -654,7 +655,7 @@ class More:
     def datapack_reload(self, user: str) -> dict:
         if not self.x.running():
             raise sp.Refused(409, "The server isn't running: the packs load when it starts.")
-        said = self.x._said("reload")
+        said = self.x.said("reload")
         self._forget()
         self.p.record(user, "datapack-reload")
         return {"said": said}

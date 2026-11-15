@@ -655,7 +655,7 @@ class Extras:
     def installed(self) -> bool:
         return self.unit.exists() and self.requests.is_dir()
 
-    def _pending(self) -> list[str]:
+    def pending_requests(self) -> list[str]:
         try:
             return sorted(e.name[:-4] for e in os.scandir(self.requests) if e.name.endswith(".req"))
         except OSError:
@@ -675,7 +675,7 @@ class Extras:
         if snapshot and not SNAPSHOT_ID.fullmatch(snapshot):
             raise sp.Refused(400, "A snapshot ID is 8 to 64 hex digits.")
         with self._helper:
-            if len(self._pending()) >= HELPER_PENDING_MAX:
+            if len(self.pending_requests()) >= HELPER_PENDING_MAX:
                 raise sp.Refused(409, "The helper has requests waiting already: give it a minute.")
             rid = f"{dt.datetime.now(sp.server.UTC):%Y%m%dT%H%M%SZ}-{secrets.token_hex(4)}"
             lines = [f"action={action}", f"user={user if sp.USER.fullmatch(user) else 'unknown'}"]
@@ -716,7 +716,7 @@ class Extras:
         return rows
 
     def helper(self) -> dict:
-        return {"installed": self.installed(), "jobs": self.jobs(), "pending": self._pending()}
+        return {"installed": self.installed(), "jobs": self.jobs(), "pending": self.pending_requests()}
 
     def backup_now(self, user: str) -> dict:
         rid = self.request(user, "backup-now")
@@ -753,7 +753,7 @@ class Extras:
             if job["action"] == "restore" and job["state"] == "running":
                 raise sp.Refused(409, "A restore is under way already.")
         with self._helper:
-            pending = list(self._pending())
+            pending = list(self.pending_requests())
         for rid in pending:
             with contextlib.suppress(OSError):
                 if "action=restore" in (self.requests / f"{rid}.req").read_text(encoding="ascii", errors="replace"):
@@ -1109,7 +1109,7 @@ class Extras:
             raise sp.Refused(400, f"A reason is one line of at most {REASON_MAX} characters.")
         command = f"ban-ip {target}" + (f" {reason.strip()}" if reason.strip() else "")
         self.p.record(user, "ban-ip", shown)
-        return {"said": self._said(command)}
+        return {"said": self.said(command)}
 
     def ip_pardon(self, user: str, body: dict) -> dict:
         ip = body.get("ip")
@@ -1126,9 +1126,9 @@ class Extras:
         if ip not in {r["ip"] for r in banned}:
             ip = public_ip(ip)
         self.p.record(user, "pardon-ip", "an address")
-        return {"said": self._said(f"pardon-ip {ip}")}
+        return {"said": self.said(f"pardon-ip {ip}")}
 
-    def _said(self, command: str) -> str:
+    def said(self, command: str) -> str:
         try:
             return sp.masked(self.rcon(command))
         except sp.server.RconError as e:

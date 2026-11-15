@@ -867,7 +867,7 @@ class ModConfigs:
 
     def read(self, rel) -> dict:
         path, parts, fmt = self._file(rel)
-        text, st = self.p._text(path)
+        text, st = self.p.read_text(path)
         name = "/".join(parts)
         starts = _line_starts(text)
         try:
@@ -875,7 +875,7 @@ class ModConfigs:
         except Bad as e:
             return {"path": name, "format": fmt, "mtime": st.st_mtime, "fields": [], "skipped": 0,
                     "error": f"This file can't be read as a form ({e}): edit it in Files.",
-                    "writable": self.p._rules(parts) == "writable"}
+                    "writable": self.p.file_rule(parts) == "writable"}
         out = []
         for row in rows:
             shown = {k: v for k, v in row.items() if k not in ("start", "end", "layout")}
@@ -889,7 +889,7 @@ class ModConfigs:
         info = self.important().get(mod_name(name), {})
         important = [k for k in info.get("keys", []) if isinstance(k, str)]
         return {"path": name, "format": fmt, "mtime": st.st_mtime, "fields": out, "skipped": skipped,
-                "important": important, "writable": self.p._rules(parts) == "writable",
+                "important": important, "writable": self.p.file_rule(parts) == "writable",
                 "applies": info.get("applies", "restart")}
 
     def save(self, user: str, body: dict) -> dict:
@@ -900,7 +900,7 @@ class ModConfigs:
             raise sp.Refused(400, "mtime must be the number the file was read with.")
         path, parts, fmt = self._file(body.get("path"))
         name = "/".join(parts)
-        text, st = self.p._text(path)
+        text, st = self.p.read_text(path)
         if st.st_mtime != mtime:
             raise sp.Refused(409, "Someone else saved this file since you opened it: reload it.")
         starts = _line_starts(text)

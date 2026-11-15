@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Canopy, Footer } from "@/components/chrome";
-import { Countdown } from "@/components/countdown";
+import { Countdown, LaunchHold } from "@/components/countdown";
 import { Item } from "@/components/item";
 import { JsonLd } from "@/components/json-ld";
 import { ConfigLink, LaunchTime, Store } from "@/components/links";
@@ -67,6 +67,7 @@ export default function Home() {
           {config.STATUS_URL && <ServerStatus url={config.STATUS_URL} mapUrl={config.MAP_URL}
             launchAt={config.LAUNCH_AT} builtPhase={builtPhase()} />}
           <Trailer />
+          <LaunchHold launchAt={config.LAUNCH_AT} />
         </section>
 
         <section id="world">

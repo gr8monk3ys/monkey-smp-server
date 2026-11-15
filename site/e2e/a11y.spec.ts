@@ -34,6 +34,15 @@ for (const path of pages()) {
     await expect(page.locator("h1")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, "the page is wider than the screen").toBeLessThanOrEqual(0);
+
+    // Chrome may draw the page as soon as an inline script has run, with nothing after the script read yet. A
+    // phone's layout puts some later elements above earlier ones (the hero's facts above the countdown), so a
+    // script in the middle of a section lets the page be drawn half-read and then jump.
+    const midSection = await page.evaluate(() =>
+      [...document.querySelectorAll("main script:not([type='application/ld+json'])")]
+        .filter((s) => s.nextElementSibling || !s.parentElement?.matches("main > *"))
+        .map((s) => s.textContent?.slice(0, 60)));
+    expect(midSection, "an inline script must be the last element of its section of <main>").toEqual([]);
   });
 }
 

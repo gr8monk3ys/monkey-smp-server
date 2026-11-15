@@ -25,9 +25,8 @@ const built = () => null;
  *
  * Until the page's script runs, the built page holds the room the countdown will take (.pending, style.css), so
  * nothing below it jumps when it appears: the blocks and the visitor's own time before the launch, just the line
- * saying the server is open after it. `stage` is where the launch stood when the page was built; the small inline
- * script corrects that before the page is drawn (the launch has passed since, or LAUNCH_AT isn't a time), and lets
- * the room go if the page's script still hasn't run a few seconds after the page loaded. */
+ * saying the server is open after it. `stage` is where the launch stood when the page was built; LaunchHold
+ * corrects that before the page is drawn. */
 export function Countdown({ launchAt, stage, children }:
   { launchAt: string; stage: LaunchStage; children: ReactNode }) {
   const launch = new Date(launchAt).getTime();
@@ -43,13 +42,9 @@ export function Countdown({ launchAt, stage, children }:
   }) + "." : "";
 
   const held = { soon: "launch pending", live: "launch pending live", unset: "launch" }[stage];
-  // A number in the script (NaN when LAUNCH_AT isn't a time); JSON.stringify keeps it a plain literal.
-  const hold = `(function(d,l,n){if(!(l>0)){d.classList.remove("pending");return}d.classList.toggle("live",n>=l);`
-    + `addEventListener("load",function(){setTimeout(function(){d.classList.remove("pending")},3000)})})`
-    + `(document.currentScript.parentNode,${JSON.stringify(isNaN(launch) ? 0 : launch)},Date.now())`;
 
   return (
-    // The inline script may change the class before React starts, so the first render's class can differ.
+    // LaunchHold may change the class before React starts, so the first render's class can differ.
     <div className={running ? "launch" : held} suppressHydrationWarning>
       <p className="when">
         <span id="launch-label">{live ? "Season I is live" : "Season I launch"}</span>
@@ -70,7 +65,22 @@ export function Countdown({ launchAt, stage, children }:
       <p id="countdown" hidden={!running}>
         {live ? "The server is open: copy the address below and join." : yours}
       </p>
-      <script dangerouslySetInnerHTML={{ __html: hold }} />
     </div>
   );
+}
+
+/** The small inline script that corrects the built Countdown before the page is drawn (the launch has passed
+ * since the build, or LAUNCH_AT isn't a time), and lets the held room go if the page's script still hasn't run a
+ * few seconds after the page loaded.
+ *
+ * It goes last in the section that holds the Countdown, not inside it: Chrome may draw the page as soon as an
+ * inline script has run, and a phone's hero puts elements that come later in the page (the facts) above the
+ * countdown, so a script beside the countdown let the page be drawn half-read and then jump. */
+export function LaunchHold({ launchAt }: { launchAt: string }) {
+  const launch = new Date(launchAt).getTime();
+  // A number in the script (0 when LAUNCH_AT isn't a time); JSON.stringify keeps it a plain literal.
+  const hold = `(function(d,l,n){if(!(l>0)){d.classList.remove("pending");return}d.classList.toggle("live",n>=l);`
+    + `addEventListener("load",function(){setTimeout(function(){d.classList.remove("pending")},3000)})})`
+    + `(document.querySelector(".launch"),${JSON.stringify(isNaN(launch) ? 0 : launch)},Date.now())`;
+  return <script dangerouslySetInnerHTML={{ __html: hold }} />;
 }

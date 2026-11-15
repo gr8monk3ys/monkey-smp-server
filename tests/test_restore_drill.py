@@ -120,7 +120,7 @@ def drill(tmp_path):
                   '"rm "*) rm -f "$FAKE_STATE/container"; exit 0 ;; '
                   '"logs "*) echo "boot log line"; exit 0 ;; esac\n'
                   'case " $* " in *" rcon list "*) exit "${FAKE_RC_list:-0}" ;; '
-                  '*" time query gametime "*) echo "The time is ${FAKE_GAMETIME-5100}"; exit 0 ;; esac\nexit 0',
+                  '*" time query gametime "*) echo "The game time is ${FAKE_GAMETIME-5100} tick(s)"; exit 0 ;; esac\nexit 0',
         "flock": "exit 0", "sleep": "exit 0", "chown": "exit 0", "rsync": "exit 0", "curl": "exit 0",
         "timeout": 'shift\nexec "$@"',
         "df": 'echo "Filesystem 1024-blocks Used Available Capacity Mounted"\n'

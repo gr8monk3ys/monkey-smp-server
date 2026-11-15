@@ -209,7 +209,8 @@ if [ -z "$up" ]; then
     fail "the restored server did not answer RCON within ${TIMEOUT}s (the world on disk read fine)"
 fi
 said=$(docker exec "$name" monkey rcon 'time query gametime' 2>/dev/null || :)
-game_time=$(printf '%s' "$said" | sed -n 's/.*[Tt]he time is \([0-9][0-9]*\).*/\1/p' | head -n 1)
+# "The time is N" before 26.x, "The game time is N tick(s)" on 26.2.
+game_time=$(printf '%s' "$said" | sed -n 's/.*[Tt]ime is \([0-9][0-9]*\).*/\1/p' | head -n 1)
 [ -n "$game_time" ] || fail "the restored server answered, but not with its game time"
 [ "$game_time" -ge "$level_time" ] ||
     fail "the restored server's game time ($game_time) is behind its level.dat's ($level_time)"

@@ -1,6 +1,6 @@
 {
   "name": "Monkey SMP",
-  "version": "3.4.0",
+  "version": "3.6.0",
   "minecraft": "26.2",
   "java": {
     "vendor": "Eclipse Temurin JRE",
@@ -267,6 +267,10 @@
       "size": 435218,
       "hashes": {
         "sha512": "81a0e3e799794301ec04a4ccbed3199205d7a78355e5973672d50d779024b5c33650429c2a39a0832922e8167014c48efa9380a300bc6677ffdf4f09fddc375e"
+      },
+      "patch": {
+        "path": "patches/blaze-attack-animation",
+        "base_sha512": "81a0e3e799794301ec04a4ccbed3199205d7a78355e5973672d50d779024b5c33650429c2a39a0832922e8167014c48efa9380a300bc6677ffdf4f09fddc375e"
       }
     },
     {
@@ -1319,6 +1323,10 @@
       "size": 1380132,
       "hashes": {
         "sha512": "12788b71440f934db8503ecbb7a99890615eea44c4f15e3c2859088f371e17a93568fef0a83970c54e4f64ba76053e414f02312f77360ebf3f767c6852496a99"
+      },
+      "patch": {
+        "path": "patches/more-villagers-re-employed",
+        "base_sha512": "12788b71440f934db8503ecbb7a99890615eea44c4f15e3c2859088f371e17a93568fef0a83970c54e4f64ba76053e414f02312f77360ebf3f767c6852496a99"
       }
     },
     {
@@ -1427,6 +1435,10 @@
       "size": 3357,
       "hashes": {
         "sha512": "e9cbdae3d399d8d5eaf61c89bee78c36f588b0d04a8d08031583c3f3d0825d1227399c67e512a6834578a98a20e84c73de6f7e5ab5c6e864838478aa52ea224a"
+      },
+      "patch": {
+        "path": "patches/no-lunge",
+        "base_sha512": "e9cbdae3d399d8d5eaf61c89bee78c36f588b0d04a8d08031583c3f3d0825d1227399c67e512a6834578a98a20e84c73de6f7e5ab5c6e864838478aa52ea224a"
       }
     },
     {

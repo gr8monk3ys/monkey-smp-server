@@ -46,7 +46,9 @@ class FakeDocker:
         if argv[:2] == ["docker", "inspect"]:
             return SimpleNamespace(returncode=0, stdout="2026-11-06T09:30:00.123456789Z\n", stderr="")
         if "ps" in argv and "-q" in argv:
-            return SimpleNamespace(returncode=0, stdout="0123456789abcdef\n", stderr="")
+            # As docker does: `--status running` lists the container only while self.ps says it runs.
+            stopped = "--status" in argv and '"State":"running"' not in self.ps.replace(" ", "")
+            return SimpleNamespace(returncode=0, stdout="" if stopped else "0123456789abcdef\n", stderr="")
         if "ps" in argv:
             return SimpleNamespace(returncode=0, stdout=self.ps, stderr="")
         if "exec" in argv:
@@ -859,6 +861,13 @@ def test_players_lists_and_who_is_online(box):
                                       "ops": ["Alpha"], "banned": [{"name": "Zed", "reason": "griefing"}]}
     box.docker.ps = json.dumps({"State": "exited", "Status": "Exited (0)"})
     assert box.call("GET", "/api/players")[1]["online"] is None
+
+
+def test_a_list_that_cant_be_read_is_none_and_a_missing_one_empty(box):
+    (box.root / "whitelist.json").write_text("[{broken")
+    (box.root / "ops.json").unlink()
+    answer = box.call("GET", "/api/players")[1]
+    assert answer["whitelist"] is None and answer["ops"] == [] and answer["banned"][0]["name"] == "Zed"
 
 
 def test_timers_from_systemctls_json_and_text():

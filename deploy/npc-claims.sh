@@ -1,5 +1,5 @@
 #!/bin/sh
-# The one-off step for the spawn NPCs on a live server installed before 2.9.1 (docs/LIVE.md, "NPCs in claims").
+# The one-off step for the spawn NPCs on a live server installed before 2.9.1 (docs/upgrades/HISTORY.md, "NPCs in claims").
 # defaults/config/openpartiesandclaims-server.toml ships `forcedEntityProtectionExceptionList = ["minecraft:minecart",
 # "hand$easy_npc:humanoid", "hand$easy_npc:humanoid_slim"]`, so anyone may right-click an Easy NPC (the Guide, the
 # Town Crier) with an empty hand in any claim, spawn's server claim included. This adds those entries to the live

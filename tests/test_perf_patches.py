@@ -218,3 +218,59 @@ def test_effects_library_flames_and_stun_boxes_run_every_step():
     assert len(world_scans(text)) == 1 + 18 + 2  # every mob's effects, the 18 decreasers (one tick in 21), 2 passes
     assert server_stops_at(text) is None
     assert "advancement revoke @a only s_effects_lib:technical/tick" in lines
+
+
+CHARGED = "data/more_archetypes/function/"
+KEPT = "sulfur_cube_charge_kept"
+BUTTON = "minecraft:mangrove_button[powered=true,face=floor,facing=north]"
+MIDDLE = "align xyz positioned ~0.5 ~0.5 ~0.5"
+
+
+def test_a_charged_cube_keeps_its_button_instead_of_placing_it_every_tick():
+    """Upstream's marker broke the button every tick and the cube placed it again (Ledger logged both, every tick)."""
+    cube = commands(patched("sulfur-cube-expansion", CHARGED + "charged_tick.mcfunction"))
+    place, keep = cube[-2:]
+    # A button only where there is air, as upstream; then any cube on its powered button keeps it.
+    assert place == f"execute at @s if block ~ ~ ~ #minecraft:air run fill ~ ~ ~ ~ ~ ~ {BUTTON} replace #minecraft:air"
+    assert keep == f"execute at @s if block ~ ~ ~ {BUTTON} run function more_archetypes:charged_tick_2"
+
+
+def test_a_cube_on_its_button_has_one_marker_in_the_middle_of_the_block_kept_for_a_tick():
+    """Made if missing, so a marker killed by a command or a cleanup can't leave the button behind for good."""
+    keep = commands(patched("sulfur-cube-expansion", CHARGED + "charged_tick_2.mcfunction"))
+    marker = "@e[type=minecraft:marker,tag=sulfur_cube_dinamic_charge,distance=..0.01]"
+    assert keep == [
+        f"execute {MIDDLE} unless entity {marker} run summon minecraft:marker ~ ~ ~ "
+        '{Tags:["sulfur_cube_dinamic_charge"]}',
+        f"execute {MIDDLE} as {marker} run tag @s add {KEPT}"]
+
+
+def test_a_marker_no_cube_kept_still_takes_its_button_away():
+    marker = commands(patched("sulfur-cube-expansion", CHARGED + "charged_marker_tick.mcfunction"))
+    cleanup, keep, kill, clear = marker
+    assert "kill @e[type=item," in cleanup and '"minecraft:mangrove_button"' in cleanup  # before the keep, every tick
+    assert keep == f"execute if entity @s[tag={KEPT}] run return run tag @s remove {KEPT}"
+    assert kill == "kill @s"
+    assert clear == f"fill ~ ~ ~ ~ ~ ~ minecraft:air replace {BUTTON}"
+
+
+def test_the_marker_pass_runs_before_the_cube_pass():
+    """The kept mark a cube sets is read by its marker on the next tick, so markers must go first in a tick."""
+    lines = commands(patched("sulfur-cube-expansion", CUBES))
+    markers = lines.index("execute unless entity @s as @e[tag=sulfur_cube_dinamic_charge] at @s "
+                          "run function more_archetypes:charged_marker_tick")
+    cubes = lines.index("execute unless entity @s as @e[type=minecraft:sulfur_cube] at @s "
+                        "run function more_archetypes:tick")
+    assert markers < cubes
+
+
+def test_blaze_attack_animation_declares_26_2s_data_format():
+    meta = json.loads(patched("blaze-attack-animation", "pack.mcmeta"))["pack"]
+    assert meta["min_format"] == meta["max_format"] == 107  # any 107.x, as tools/datapacks.py declares
+    assert "pack_format" not in meta
+
+
+def test_no_lunge_names_its_pack_format_for_26_2():
+    """Its supported_formats [48, 81] without pack_format made 26.2 warn at every start and data pack reload."""
+    meta = json.loads(patched("no-lunge", "pack.mcmeta"))["pack"]
+    assert meta["pack_format"] == 48 and meta["min_format"] == 48 and meta["max_format"] == 107

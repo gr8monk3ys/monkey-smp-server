@@ -39,6 +39,7 @@ from datapacks import NS, function_tag, lines, mcmeta, say, text
 from repo import Repo
 
 DATAPACK = "monkey-sieges"
+JOB_PACKS = (DATAPACK,)   # the data packs the timed job needs on (deploy/lib.sh skips it while one is off)
 FN = f"data/{NS}/function/sieges"
 STORE = f"{NS}:sieges"
 OBJ = "sg"
@@ -309,7 +310,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.command == "windows":
         return show_windows(server.job_time(args))
-    return server.run_job(args, commands, send)
+    return server.run_job(args, commands, send, needs=JOB_PACKS)
 
 
 if __name__ == "__main__":

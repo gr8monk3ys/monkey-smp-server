@@ -1,5 +1,5 @@
 #!/bin/sh
-# The one-off steps for 2.5.0 on the live VPS (docs/LIVE.md, "One-off steps when upgrading" and "Monitoring,
+# The one-off steps for 2.5.0 on the live VPS (docs/upgrades/HISTORY.md, "2.5.0", and docs/LIVE.md, "Monitoring,
 # the daily restart and the update check"). Run it as root once 2.5.0 is live, so the deployed checkout has the
 # timer files and the server has the short rules. Started with systemd-run it carries on if the SSH connection
 # drops while the server is stopped:
@@ -68,7 +68,7 @@ config/servercore/config.yml|breeding-cap.enabled|true
 config/openpartiesandclaims-server.toml|maxPlayerClaims|4'
 FILES='config/DistantHorizons.toml server.properties config/servercore/config.yml config/openpartiesandclaims-server.toml'
 CONDUCT=$SERVER_DIR/codeofconduct/en_us.txt  # what enable-code-of-conduct shows; 2.5.0 brings it
-# docs/LIVE.md, "The short rules, ServerCore and claims": PvP off in server claims, then the server claims the
+# docs/upgrades/HISTORY.md, "The short rules, ServerCore and claims": PvP off in server claims, then the server claims the
 # 7 x 7 chunks around the world spawn (the console's ~ ~), skipping chunks a player already claimed.
 CLAIM_COMMANDS='opac server-claims-config set claims.protection.exceptions.playersByPlayers false
 oclaims server claim in minecraft:overworld ~-48 ~-48 ~48 ~48'
@@ -90,18 +90,6 @@ wait_for_live() {
         if rcon list >/dev/null; then return 0; fi
     done
     return 1
-}
-
-# If players are online, warns them in chat WARN_MINUTES and 1 minute ahead.
-warn_players() {
-    [ "$WARN_MINUTES" -gt 0 ] || return 0
-    online=$(rcon list | sed -n 's/.*There are \([0-9][0-9]*\) of.*/\1/p' | head -n 1)
-    [ "${online:-0}" -gt 0 ] || return 0
-    log "$online player(s) online; warning them $WARN_MINUTES minutes ahead"
-    rcon "say Server restart in $WARN_MINUTES minutes for a settings update (about 3 minutes offline)." >/dev/null || true
-    [ "$WARN_MINUTES" -le 1 ] || sleep $(((WARN_MINUTES - 1) * 60))
-    rcon 'say Server restart in 1 minute. Find a safe spot.' >/dev/null || true
-    sleep 60
 }
 
 # Starts the server again if this script stopped it. Also the exit trap, so an error, Ctrl+C, a dropped SSH
@@ -293,7 +281,7 @@ for f in $FILES; do
             log "$(label "$f"): already set" ;;
         missing*)
             log "$(label "$f"): $f has no ${state#missing } setting, so a newer mod renamed it: set it by hand" \
-                'with the server stopped (docs/LIVE.md, "One-off steps when upgrading")'
+                'with the server stopped (docs/upgrades/HISTORY.md, "2.5.0")'
             problems=$((problems + 1)) ;;
         *)
             log "$(label "$f"): to do; now:"
@@ -310,7 +298,8 @@ elif [ "$MODE" = check ]; then
 else
     take_lock
     if running; then
-        [ "$MODE" = now ] || warn_players
+        # lib.sh's: an unanswered `list` warns to be safe, never reads as nobody online.
+        [ "$MODE" = now ] || warn_players 'Server restart' 'Server restart' 'for a settings update (about 3 minutes offline)'
         stopped=1
         log 'stopping the server'
         logged compose stop monkey

@@ -11,6 +11,9 @@
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
     saved_world.command_storage(folder, "monkey")       # `data ... storage monkey:<key>`: key -> compound (None)
     saved_world.advancements(folder, {"minecraft:end/kill_dragon"})   # player UUID -> advancement -> when done
+    saved_world.player_list(server_dir, "whitelist")    # whitelist.json ([]: missing; None: unreadable)
+    saved_world.player_lists(server_dir)                # ({kind: entries}, ["<kind>.json" that can't be read])
+    saved_world.list_entry(entries, name, uuid)         # a player's entry on one (by uuid when it has one)
 
 The files, relative to the world folder:
   data/minecraft/scoreboard.dat                                 scores, display names and teams
@@ -33,6 +36,7 @@ only where a party name is read).
 """
 import datetime as dt
 import json
+import re
 import struct
 import uuid
 from collections.abc import Iterator
@@ -151,27 +155,136 @@ def faction_name(name: str, leader: str) -> str:
     return name or f"{leader}{UNNAMED_PARTY}"
 
 
-def parties(folder: Path) -> list[Party] | None:
+def parties(folder: Path, lenient: bool = False, named: bool = True) -> list[Party] | None:
     """Every party saved, by file name; None when the world has no parties folder (no party made yet).
     A party file not shaped as Open Parties and Claims saves it (a member whose UUID isn't one, say) is a
-    ValueError naming it: standings has always stopped there rather than rank a faction without them."""
+    ValueError naming it: standings has always stopped there rather than rank a faction without them.
+    lenient (the Rule check): a file that can't be read is left out, and in one that can, each member entry that
+    can be read is kept (with uuid "" when its uuid can't be), so one bad entry never makes party-mates strangers.
+    named=False skips each owner's party name (a TOML file a caller that doesn't show it needn't parse)."""
     where = folder / PARTIES
     if not where.is_dir():
         return None
     found = []
     for path in sorted(where.glob("*.nbt")):
-        data = nbt.read(path)
-        if not isinstance(data.get("owner"), dict):
-            found.append(Party(path.stem, None, [], ""))
-            continue
-        members: list[Member] = []
-        with _shaped(path):
-            for p in [data["owner"], *data.get("members", [])]:
-                u = uuid_text(p["uuid"])
-                if all(m.uuid != u for m in members):
-                    members.append(Member(u, p.get("username") or ""))
-        found.append(Party(path.stem, members[0], members, party_name(folder, members[0].uuid)))
+        try:
+            found.append(_lenient_party(folder, path, named) if lenient else _party(folder, path, named))
+        except (OSError, ValueError):
+            if not lenient:
+                raise
     return found
+
+
+def _lenient_party(folder: Path, path: Path, named: bool) -> Party:
+    data = nbt.read(path)
+    rows = data.get("members")
+    members: list[Member] = []
+    for p in [data.get("owner"), *(rows if isinstance(rows, list) else [])]:
+        if not isinstance(p, dict):
+            continue
+        try:
+            u = uuid_text(p.get("uuid"))
+        except (ValueError, TypeError, KeyError, struct.error):
+            u = ""
+        name = p.get("username") if isinstance(p.get("username"), str) else ""
+        if (u and all(m.uuid != u for m in members)) or (not u and name and all(m.username != name for m in members)):
+            members.append(Member(u, name))
+    owner = members[0] if members and isinstance(data.get("owner"), dict) else None
+    return Party(path.stem, owner, members, party_name(folder, owner.uuid) if named and owner and owner.uuid else "")
+
+
+def _party(folder: Path, path: Path, named: bool = True) -> Party:
+    data = nbt.read(path)
+    if not isinstance(data.get("owner"), dict):
+        return Party(path.stem, None, [], "")
+    members: list[Member] = []
+    with _shaped(path):
+        for p in [data["owner"], *data.get("members", [])]:
+            u = uuid_text(p["uuid"])
+            if all(m.uuid != u for m in members):
+                members.append(Member(u, p.get("username") or ""))
+    return Party(path.stem, members[0], members, party_name(folder, members[0].uuid) if named else "")
+
+
+# ---------------------------------------------------------------- players
+
+PLAYER_NAME = re.compile(r"[A-Za-z0-9_]{3,16}")
+UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def names(server_dir: Path) -> dict[str, str]:
+    """uuid (lowercase, 8-4-4-4-12) -> name, from the server folder's usercache.json: every player the server has
+    looked up, so everyone who has joined. A row whose uuid or name isn't a player's is left out; {} when the file
+    can't be read."""
+    try:
+        rows = json.loads((Path(server_dir) / "usercache.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(rows, list):
+        return {}
+    return {r["uuid"].lower(): r["name"] for r in rows
+            if isinstance(r, dict) and isinstance(r.get("uuid"), str) and UUID.fullmatch(r["uuid"].lower())
+            and isinstance(r.get("name"), str) and PLAYER_NAME.fullmatch(r["name"])}
+
+
+PLAYER_LISTS = ("whitelist", "ops", "banned-players", "banned-ips")   # <kind>.json in the server folder
+
+
+def player_list(server_dir: Path, kind: str) -> list[dict] | None:
+    """One of the server folder's player lists (PLAYER_LISTS), as the server saves it: its entries, [] when the
+    file is missing (nobody listed yet), None when it can't be read. Entries are kept as saved, except: a player
+    list's entry is kept only when its name is a string, with its uuid lowercased ("" when it has none or it isn't
+    a uuid); a banned-ips entry only when its ip is a string."""
+    if kind not in PLAYER_LISTS:
+        raise ValueError(f"not a player list: {kind!r}")
+    try:
+        rows = json.loads((Path(server_dir) / f"{kind}.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rows, list):
+        return None
+    if kind == "banned-ips":
+        return [r for r in rows if isinstance(r, dict) and isinstance(r.get("ip"), str)]
+    def uuid(r: dict) -> str:
+        u = r.get("uuid")
+        return u.lower() if isinstance(u, str) and UUID.fullmatch(u.lower()) else ""
+
+    return [{**r, "uuid": uuid(r)} for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)]
+
+
+def player_lists(server_dir: Path, kinds: tuple[str, ...] = ("whitelist", "ops", "banned-players")) \
+        -> tuple[dict[str, list[dict]], list[str]]:
+    """Several player lists at once: kind -> its entries ([] for one that can't be read), and the file names
+    ("<kind>.json") of those that can't be read, for the page to say it can't tell rather than "not listed"."""
+    lists, unreadable = {}, []
+    for kind in kinds:
+        entries = player_list(server_dir, kind)
+        if entries is None:
+            unreadable.append(f"{kind}.json")
+        lists[kind] = entries or []
+    return lists, unreadable
+
+
+def list_entry(entries: list[dict], name: str, uuid: str | None = None) -> dict | None:
+    """A player's entry on a player list. Knowing their uuid, an entry with a uuid is theirs only when it is the
+    same uuid (a player who took someone's old name is not on that one's lists), and only an entry without a uuid
+    goes by its name (any case). Not knowing it (they never joined), every entry goes by its name."""
+    low, uuid = name.lower(), (uuid or "").lower()
+    return next((r for r in entries
+                 if (r["uuid"] == uuid if uuid and r["uuid"] else r["name"].lower() == low)), None)
+
+
+def play_time(stats_file: Path) -> int | None:
+    """Ticks played, from a player's stats file (world/players/stats/UUID.json); None when it can't say."""
+    try:
+        data = json.loads(Path(stats_file).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    custom = (data.get("stats") or {}).get("minecraft:custom") if isinstance(data, dict) else None
+    ticks = custom.get("minecraft:play_time") if isinstance(custom, dict) else None
+    return ticks if isinstance(ticks, int) and not isinstance(ticks, bool) and ticks >= 0 else None
 
 
 def party_name(folder: Path, owner_uuid: str) -> str:
@@ -183,7 +296,9 @@ def party_name(folder: Path, owner_uuid: str) -> str:
         config = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return ""
-    name = config.get("playerConfig", {}).get("parties", {}).get("name", "")
+    player = config.get("playerConfig")
+    parties = player.get("parties") if isinstance(player, dict) else None
+    name = parties.get("name", "") if isinstance(parties, dict) else ""
     return name.strip() if isinstance(name, str) else ""
 
 

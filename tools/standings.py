@@ -123,14 +123,8 @@ class World:
 
 
 def usernames(world: Path) -> dict[str, str]:
-    cache = world.parent / "usercache.json"
-    if not cache.is_file():
-        return {}
-    try:
-        entries = json.loads(cache.read_text(encoding="utf-8"))
-    except ValueError:
-        return {}
-    return {str(e["uuid"]).lower(): e["name"] for e in entries if isinstance(e, dict) and "uuid" in e and "name" in e}
+    """uuid -> name for the world's server (saved_world.names: one rule for the usercache)."""
+    return saved_world.names(world.parent)
 
 
 def read_parties(world: Path, names: dict[str, str]) -> list[Party]:

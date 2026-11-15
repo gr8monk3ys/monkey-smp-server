@@ -19,7 +19,7 @@ needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
 COMPOSE = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
 RCON = f"{COMPOSE} exec -T monkey monkey rcon"
 # The 2.5.0 upgrade is a one-shot kept as it ran: its own wait_for_live and warn_players predate lib.sh's.
-OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live", "warn_players"}}
+OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live"}}
 
 
 def functions(text):
@@ -61,7 +61,8 @@ def test_the_deploy_loads_lib_before_it_touches_the_checkout():
 def sh(tmp_path):
     """Runs a dash snippet with lib.sh loaded and fake flock, docker, python3, curl and sleep first on PATH; each
     fake records its arguments in `calls` (curl its JSON from stdin too) and exits with FAKE_RC_<name> (default 0).
-    python3's `packs-on` (tools/rcon.py) prints FAKE_OUT_packs (default: the packs are on) and exits FAKE_RC_packs."""
+    python3's `packs-on` (a job tool's: tools/rcon.py, run_job) prints FAKE_OUT_packs (default: the packs are
+    on) and exits FAKE_RC_packs."""
     if not DASH:
         pytest.skip("needs dash")
     bin_dir, calls = tmp_path / "bin", tmp_path / "calls"
@@ -181,7 +182,7 @@ def test_the_timers_send_under_the_deploy_lock_and_log_each_line(sh, tmp_path, s
     # Only drops and omens (JOB_NONE: often nothing to send) ask for the commands first; each then asks whether
     # its data packs are on (JOB_PACKS) before the lock.
     assert len([c for c in calls if c.startswith("python3")]) == (3 if script in OFTEN_NONE else 2)
-    assert calls[send - 2].endswith(f" packs-on {PACKS[script]} --docker /srv/live/docker")
+    assert calls[send - 2].endswith(f"/tools/{PACKS[script]} packs-on --docker /srv/live/docker")
     code, logged, calls = job(sh, tmp_path, script, FAKE_OUT_python3="x", FAKE_RC_flock="1")
     assert code == 1 and logged[-1] == f"ERROR: the deploy lock was taken for 30 minutes ({retry})"
     assert calls[-1] == "flock -w 1800 9"
@@ -210,9 +211,9 @@ def test_a_job_that_gives_up_alerts_staff_and_exits_4_so_systemd_stops_retrying(
 
 
 OFTEN_NONE = ("monkey-drops.sh", "monkey-omens.sh")
-PACKS = {"monkey-week.sh": "monkey-wardrobe", "monkey-day.sh": "monkey-wardrobe", "monkey-sieges.sh": "monkey-sieges",
-         "monkey-drops.sh": "monkey-drops", "monkey-omens.sh": "monkey-omens monkey-drops",
-         "monkey-outposts.sh": "monkey-outposts"}
+# Each timed job's tool, which declares its data packs itself (its JOB_PACKS) and checks them with `TOOL packs-on`.
+PACKS = {"monkey-week.sh": "challenges.py", "monkey-day.sh": "wardrobe.py", "monkey-sieges.sh": "sieges.py",
+         "monkey-drops.sh": "drops.py", "monkey-omens.sh": "omens.py", "monkey-outposts.sh": "outposts.py"}
 
 
 @needs_dash
@@ -259,7 +260,7 @@ def test_check_shows_the_commands_the_timer_and_the_server_and_takes_no_lock(sh,
         "server: running", "data packs on: x", "check finished: nothing was changed"]
     assert not any(c.startswith("flock") for c in calls)
     assert calls[-2].endswith(" running --docker /srv/live/docker")
-    assert calls[-1].endswith(f" packs-on {PACKS[script]} --docker /srv/live/docker")
+    assert calls[-1].endswith(f"/tools/{PACKS[script]} packs-on --docker /srv/live/docker")
     _, logged, _ = job(sh, tmp_path, script, "--check", FAKE_RC_packs="2", FAKE_OUT_packs="server not running")
     assert logged[-2] == "data packs: can't tell (server not running)"
 
@@ -478,3 +479,37 @@ def test_the_deploy_asks_the_gate_before_it_warns_backs_up_or_copies_anything():
     assert text.index("in_window; then") < gate < text.index("warn_players \"Server update") < text.index(
         "sync_package \"$commit\"\n")
     assert '[ -z "$tag" ] || die "$tag was not deployed' in text   # --tag (the staff switch) says why
+
+
+def deploy_function(name):
+    text = (DEPLOY / "monkey-deploy.sh").read_text()
+    start = text.index(f"{name}() {{")
+    return text[start:text.index("\n}\n", start) + 3]
+
+
+def test_every_restart_applies_the_pack_changes_staff_left_for_it_first():
+    text = (DEPLOY / "monkey-deploy.sh").read_text()
+    body = deploy_function("restart_and_wait")
+    assert body.index("packs_at_restart") < body.index("compose up")
+    assert text.count("compose up -d") == 1      # every restart goes through restart_and_wait
+
+
+def test_pack_changes_are_made_just_before_the_stop_then_forgotten(sh, tmp_path):
+    docker = tmp_path / "docker"
+    docker.mkdir()
+    pending = docker / ".packs-at-restart"
+    pending.write_text('enable monkey-rules\ndisable old pack.zip\nwipe x\nenable bad"name\n', newline="\n")
+    code, out, calls = sh(deploy_function("packs_at_restart") + " packs_at_restart",
+                          LIVE_DIR=tmp_path.as_posix(), FAKE_OUT_docker="ok")
+    assert code == 0 and not pending.exists()
+    sent = [c.split(" rcon ", 1)[1] for c in calls if " rcon " in c]
+    assert sent == ['datapack enable "file/monkey-rules"', 'datapack disable "file/old pack.zip"', "save-all flush"]
+    assert any("skipping a bad data pack name" in line for line in out)
+
+
+def test_pack_changes_wait_while_the_server_is_down(sh, tmp_path):
+    (tmp_path / "docker").mkdir()
+    pending = tmp_path / "docker" / ".packs-at-restart"
+    pending.write_text("enable monkey-rules\n", newline="\n")
+    code, out, calls = sh(deploy_function("packs_at_restart") + " packs_at_restart", LIVE_DIR=tmp_path.as_posix())
+    assert code == 0 and pending.exists() and not any(" rcon " in c for c in calls)

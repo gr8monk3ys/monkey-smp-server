@@ -32,11 +32,11 @@ What a run keeps, each file written whole (a temporary file renamed over it, mod
   The stats files' play_time counts too, but only all-time, so the logs are the one source that says when.
   A name is the name at the time: a player who renames counts as new under the new name.
 - trends/world.json, at most every WORLD_EVERY: Ledger's block-break and block-place rows by players, counted per
-  hour, and per player per day (broken, placed, stone, diamond ore, ancient debris). Read-only (mode=ro), only through
-  Ledger's player_id index, one player at a time from the row after the last one counted (that index holds the row id
-  too, so it goes straight there), at most WORLD_ROWS rows and WORLD_SECONDS of the database's time a run; what is
-  left is read the next hour. Dynamic Lights' rows (source "command") never come up: they have no player. The first
-  run reads each player's rows once, keeping the last 30 days.
+  hour, and per player per day (broken, placed, stone, diamond ore, ancient debris). Read-only (tools/ledger.py's
+  player_rows_after), only through Ledger's player_id index, one player at a time from the row after the last one
+  counted (that index holds the row id too, so it goes straight there), at most WORLD_ROWS rows and WORLD_SECONDS of
+  the database's time a run; what is left is read the next hour. Dynamic Lights' rows (source "command") never come
+  up: they have no player. The first run reads each player's rows once, keeping the last 30 days.
 
 The VPS has 2 threads and the game needs them, so the job runs under nice (deploy/monkey-staff.sh) and its reads are
 capped; a failed part leaves its file as it was and the others go on. Stdlib only (plus tools/), Python 3.10 or newer.
@@ -55,6 +55,7 @@ import time
 from pathlib import Path
 
 import staff_report
+from ledger import Busy, Ledger, NoIndex
 from status import iso
 
 import rcon as server
@@ -376,64 +377,58 @@ def world(live: Path, old: dict, now: dt.datetime, seconds: float = WORLD_SECOND
     since = staff_report.stamp(pacific_now - KEEP)
     out = {"version": VERSION, "at": iso(now), "cursors": cursors, "hours": hours, "days": days, "caught_up": False,
            "zone": "Pacific"}
-    ledger = staff_report.Ledger(live / "server" / "world" / "ledger.sqlite")
+    ledger = Ledger(live / "server" / "world" / "ledger.sqlite")
+    deadline = time.monotonic() + seconds
+    ledger.db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)
+    brk, place = ledger.act("block-break"), ledger.act("block-place")
+    counted, stopped = 0, False
     try:
-        if "actions_player_id" not in ledger.indexes:
-            out["note"] = "Ledger's database has no player_id index: nothing was counted"
-            out["caught_up"] = True      # nothing to go on with: the hourly gate applies
-            return out
-        brk, place = ledger.act("block-break"), ledger.act("block-place")
-        skip = ledger.sources.get("command", -1)
-        query = ("select id, time, action_id, old_object_id, source from actions "
-                 "indexed by actions_player_id where player_id = ? and id > ? order by id limit ?")
-        deadline = time.monotonic() + seconds
-        ledger.db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)
-        counted, stopped = 0, False
-        try:
-            for pid, name in sorted(ledger.players.items()):
-                if not isinstance(pid, int) or pid < 1 or not isinstance(name, str):
-                    continue
-                key = str(pid)
-                while not stopped:
-                    rows = ledger.db.execute(query, (pid, cursors.get(key, 0), WORLD_CHUNK)).fetchall()
-                    for rid, t, a, oo, source in rows:
-                        cursors[key] = rid
-                        if source == skip or a not in (brk, place) or not isinstance(t, str) or t < since:
-                            continue
-                        hour = hours.setdefault(t[:13], [0, 0])
-                        cell = days.setdefault(t[:10], {}).setdefault(name, [0, 0, 0, 0, 0])
-                        if a == brk:
-                            hour[0] += 1
-                            cell[0] += 1
-                            what = ledger.objects.get(oo, "")
-                            if what in staff_report.STONE:
-                                cell[2] += 1
-                            elif what in staff_report.DIAMOND:
-                                cell[3] += 1
-                            elif what == "ancient_debris":
-                                cell[4] += 1
-                        else:
-                            hour[1] += 1
-                            cell[1] += 1
-                    counted += len(rows)
-                    if len(rows) < WORLD_CHUNK:
-                        break
-                    if counted >= most or time.monotonic() > deadline:
-                        stopped = True
-                if stopped:
+        for pid, name in sorted(ledger.players.items()):
+            if not isinstance(pid, int) or pid < 1 or not isinstance(name, str):
+                continue
+            key = str(pid)
+            while not stopped:
+                rows, cursors[key], read = ledger.player_rows_after(pid, cursors.get(key, 0), WORLD_CHUNK)
+                for _, t, a, oo in rows:
+                    if a not in (brk, place) or not isinstance(t, str) or t < since:
+                        continue
+                    hour = hours.setdefault(t[:13], [0, 0])
+                    cell = days.setdefault(t[:10], {}).setdefault(name, [0, 0, 0, 0, 0])
+                    if a == brk:
+                        hour[0] += 1
+                        cell[0] += 1
+                        what = ledger.objects.get(oo, "")
+                        if what in staff_report.STONE:
+                            cell[2] += 1
+                        elif what in staff_report.DIAMOND:
+                            cell[3] += 1
+                        elif what == "ancient_debris":
+                            cell[4] += 1
+                    else:
+                        hour[1] += 1
+                        cell[1] += 1
+                counted += read
+                if read < WORLD_CHUNK:
                     break
-        except sqlite3.OperationalError as e:
-            # Out of time, or the game holding the database: what was counted stays, the rest is read next time.
-            if "interrupt" not in str(e).lower():
-                out["note"] = f"Ledger's database was busy ({e}): the rest next time"
-            stopped = True
-        finally:
-            ledger.db.set_progress_handler(None, 0)
-        out["caught_up"] = not stopped
-        out["rows"] = counted
+                if counted >= most or time.monotonic() > deadline:
+                    stopped = True
+            if stopped:
+                break
+    except NoIndex:
+        out["note"] = "Ledger's database has no player_id index: nothing was counted"
+        out["caught_up"] = True      # nothing to go on with: the hourly gate applies
+        return out
+    except Busy as e:
+        # The game holding the database: what was counted stays, the rest is read next time.
+        out["note"] = f"Ledger's database was busy ({e}): the rest next time"
+        stopped = True
+    except sqlite3.OperationalError:
+        stopped = True               # out of time: the same, the rest next time
     finally:
-        with contextlib.suppress(sqlite3.Error):
-            ledger.db.close()
+        ledger.db.set_progress_handler(None, 0)
+        ledger.close()
+    out["caught_up"] = not stopped
+    out["rows"] = counted
     out["hours"] = {h: v for h, v in hours.items() if h >= since[:13]}
     out["days"] = {d: v for d, v in days.items() if d >= since[:10]}
     return out

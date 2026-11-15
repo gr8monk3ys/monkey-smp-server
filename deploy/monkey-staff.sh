@@ -286,7 +286,7 @@ if [ "$MODE" = install-helper ]; then
     # write (docs/LIVE.md, "Root's own copies").
     root_dest=${ROOT_DEST:-/opt/monkey}
     root_src=${ROOT_SRC:-/opt/monkey/src}
-    for f in deploy/monkey-staff-helper.sh deploy/monkey-backup.sh deploy/lib.sh tools/staff_apex.py; do
+    for f in deploy/monkey-staff-helper.sh deploy/monkey-backup.sh deploy/lib.sh tools/helper_queue.py; do
         [ -r "$root_dest/$f" ] || die "$root_dest/$f is missing: install root's copies first (sudo sh $root_dest/deploy/install-root.sh, or the first time docs/LIVE.md, \"Root's own copies\")"
     done
     for unit in $HELPER_UNITS; do

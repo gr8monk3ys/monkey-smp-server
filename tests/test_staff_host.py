@@ -2,20 +2,18 @@
 root-helper jobs (deploy/monkey-staff-helper.sh) and owner scripts (deploy/monkey-sftp.sh)."""
 # ruff: noqa: F811 (apex and helper are pytest fixtures imported from test_staff_apex)
 import hashlib
-import io
 import json
 import os
 import re
 import shutil
 import subprocess
-import sys
-import zipfile
 from pathlib import Path
 
+import helper_queue
 import pytest
-import staff_apex
 import staff_host
 import staff_panel
+from test_helper_queue import world_zip
 from test_staff_apex import (  # noqa: F401 (apex and helper are fixtures)
     RID,
     actions,
@@ -915,79 +913,11 @@ def test_a_reset_needs_reset_typed_and_never_logs_the_seed(apex):
     assert "world-reset same seed" in actions(apex)
 
 
-# ---------------------------------------------------------------- world zips
-
-
-def world_zip(entries, path=None, links=()):
-    raw = io.BytesIO() if path is None else path
-    with zipfile.ZipFile(raw, "w") as z:
-        for name, data in entries.items():
-            z.writestr(name, data)
-        for name in links:
-            info = zipfile.ZipInfo(name)
-            info.external_attr = (0o120777 << 16)
-            z.writestr(info, "/etc/passwd")
-    return raw.getvalue() if path is None else path
-
-
-@pytest.mark.parametrize("entries,links,words", [
-    ({"world/level.dat": "x", "../evil.sh": "x"}, (), ".."),
-    ({"world/level.dat": "x", "world/../../evil": "x"}, (), ".."),
-    ({"/etc/cron.d/x": "x", "level.dat": "x"}, (), "absolute"),
-    ({"C:/x": "x", "level.dat": "x"}, (), "absolute"),
-    ({"level.dat": "x"}, ("region",), "link"),
-    ({"a/level.dat": "x", "b/level.dat": "x"}, (), "more than one"),
-    ({"a/b/level.dat": "x"}, (), "exactly one"),
-    ({"readme.txt": "x"}, (), "exactly one"),
-])
-def test_a_bad_world_zip_is_refused(tmp_path, entries, links, words):
-    path = world_zip(entries, tmp_path / "w.zip", links)
-    with pytest.raises(staff_host.Problem, match=words):
-        staff_host.check_world_zip(path)
-
-
-def test_a_backslash_path_and_junk_are_refused(tmp_path):
-    path = tmp_path / "w.zip"
-    with zipfile.ZipFile(path, "w") as z:
-        z.writestr("level.dat", "x")
-        z.writestr(zipfile.ZipInfo("..\\evil"), "x")
-    # (zipfile on Windows reads the \ as a /, so there it is caught as a ..)
-    with pytest.raises(staff_host.Problem, match=r"absolute|\.\."):
-        staff_host.check_world_zip(path)
-    (tmp_path / "junk.zip").write_bytes(b"not a zip")
-    with pytest.raises(staff_host.Problem, match="not a zip"):
-        staff_host.check_world_zip(tmp_path / "junk.zip")
-
-
-def test_a_world_zip_unpacks_only_its_world_folder(tmp_path):
-    src = world_zip({"myworld/level.dat": "lvl", "myworld/region/r.0.0.mca": "mca", "myworld/session.lock": "x",
-                     "__MACOSX/._level.dat": "x"}, tmp_path / "w.zip")
-    assert staff_host.check_world_zip(src) == {"prefix": "myworld/", "files": 3, "size": 8}
-    dest = tmp_path / "dest"
-    dest.mkdir()
-    world = staff_host.unzip_world(src, dest)
-    found = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file())
-    assert found == ["world/level.dat", "world/region/r.0.0.mca"] and (world / "level.dat").read_text() == "lvl"
-    with pytest.raises(staff_host.Problem, match="empty folder"):
-        staff_host.unzip_world(src, dest)
-    # The command line the helper runs.
-    other = tmp_path / "other"
-    other.mkdir()
-    cli = [sys.executable, "-B", "-I", str(REPO.root / "tools" / "staff_host.py"), "unzip-world"]
-    assert subprocess.run([*cli, str(src), str(other)], capture_output=True).returncode == 0
-    assert (other / "world" / "level.dat").read_text() == "lvl"
-    bad = world_zip({"level.dat": "x", "../x": "x"}, tmp_path / "bad.zip")
-    third = tmp_path / "third"
-    third.mkdir()
-    done = subprocess.run([*cli, str(bad), str(third)], capture_output=True, text=True)
-    assert done.returncode == 1 and done.stderr.startswith("staff_host: ") and not list(third.iterdir())
-
-
 # ---------------------------------------------------------------- the world upload
 
 
 def test_a_world_upload_is_checked_kept_and_swapped_in_only_when_typed(apex, monkeypatch):
-    monkeypatch.setattr(staff_host, "SPARE", 0)
+    monkeypatch.setattr(helper_queue, "SPARE", 0)
     good = world_zip({"world/level.dat": "new", "world/region/r.mca": "m"})
     assert apex.call("POST", "/api/world-upload", good)[0] == 503       # no helper, nothing kept
     installed(apex)
@@ -1017,7 +947,7 @@ def test_a_world_upload_is_checked_kept_and_swapped_in_only_when_typed(apex, mon
 
 def test_only_the_owner_uploads_a_world_with_data_packs(apex, monkeypatch):
     # A data pack is game code (/api/datapack-upload is the owner's), so an admin's world upload can't carry one.
-    monkeypatch.setattr(staff_host, "SPARE", 0)
+    monkeypatch.setattr(helper_queue, "SPARE", 0)
     installed(apex)
     uploads = apex.staff / "uploads"
     for files in ({"world/level.dat": "x", "world/datapacks/evil.zip": "x"},
@@ -1034,7 +964,7 @@ def test_only_the_owner_uploads_a_world_with_data_packs(apex, monkeypatch):
 
 def test_a_world_upload_needs_room_on_the_disk(apex, monkeypatch):
     installed(apex)
-    monkeypatch.setattr(staff_host, "SPARE", 10 ** 18)
+    monkeypatch.setattr(helper_queue, "SPARE", 10 ** 18)
     code, body = apex.call("POST", "/api/world-upload", world_zip({"level.dat": "x"}))
     assert code == 507 and "disk" in body["error"]
 
@@ -1109,7 +1039,6 @@ def helper_extras(tmp_path, git_ok=True, deploy_ok=True):
     (bin_dir / "git").chmod(0o755)
     (repo / "deploy" / "monkey-deploy.sh").write_text(
         f'#!/bin/sh\necho "deploy.sh $*" >>"$FAKE_CALLS"\nexit {0 if deploy_ok else 1}\n', newline="\n")
-    shutil.copy(REPO.root / "tools" / "staff_host.py", repo / "tools" / "staff_host.py")
 
 
 def test_the_helper_deploys_a_checked_tag(helper, tmp_path):
@@ -1210,9 +1139,3 @@ def test_the_helper_refuses_an_upload_id_it_did_not_make(helper, tmp_path, value
     done = helper.run()
     assert done.results[RID]["state"] == "refused"
     assert not [c for c in done.calls if c.startswith(("docker", "python"))]
-
-
-def test_the_request_fields_are_the_helpers():
-    text = (DEPLOY / "monkey-staff-helper.sh").read_text()
-    for key in staff_apex.REQUEST_FIELDS:
-        assert re.search(rf"sed -n 's/\^{key}=", text), key

@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
+import helper_queue
 import pytest
 import staff_apex
 import staff_panel
@@ -228,7 +229,7 @@ def test_without_the_helper_the_page_says_so(apex):
 def test_a_request_holds_only_fixed_words(apex):
     installed(apex)
     code, done = apex.call("POST", "/api/backup-now", {})
-    assert code == 200 and staff_apex.REQUEST_ID.fullmatch(done["request"])
+    assert code == 200 and helper_queue.REQUEST_ID.fullmatch(done["request"])
     files = list(apex.x.requests.iterdir())
     assert [f.name for f in files] == [f"{done['request']}.req"]
     assert files[0].read_text() == "action=backup-now\nuser=diego\n"
@@ -237,6 +238,17 @@ def test_a_request_holds_only_fixed_words(apex):
     for _ in range(staff_apex.HELPER_PENDING_MAX - 1):
         assert apex.call("POST", "/api/snapshots", {})[0] == 200
     assert apex.call("POST", "/api/snapshots", {})[0] == 409
+
+
+def test_a_request_helper_queue_refuses_is_a_400_and_writes_nothing(apex):
+    installed(apex)
+    for args, fields, said in ((("restore", "abc;reboot"), {}, "A snapshot ID is 8 to 64 hex digits."),
+                               (("deploy",), {"tag": "v3.1"}, "The helper doesn't take that tag."),
+                               (("stop",), {}, "The helper doesn't take that stop.")):
+        with pytest.raises(staff_apex.sp.Refused) as e:
+            apex.x.request("diego", *args, **fields)
+        assert (e.value.code, e.value.message) == (400, said)
+    assert not list(apex.x.requests.iterdir())
 
 
 def write_result(b, rid, **data):
@@ -251,7 +263,7 @@ SNAPS = [{"id": "a" * 64, "time": "2026-11-05T10:00:00Z", "tags": ["world"], "su
 def test_the_helper_results_are_read_and_bad_ones_skipped(apex):
     installed(apex)
     write_result(apex, "20261106T100000Z-0000aaaa", action="list-snapshots", state="done", time="t",
-                 snapshots=staff_apex.reduce_snapshots(SNAPS))
+                 snapshots=helper_queue.reduce_snapshots(SNAPS))
     write_result(apex, "20261106T110000Z-0000bbbb", action="rm -rf", state="done")
     (apex.x.results / "nonsense.json").write_text(json.dumps({"action": "backup-now"}))
     (apex.x.results / "20261106T120000Z-0000cccc.json").write_text("not json")
@@ -265,7 +277,7 @@ def test_the_helper_results_are_read_and_bad_ones_skipped(apex):
 def test_a_restore_is_owners_only_and_needs_the_typed_short_id(apex):
     installed(apex)
     write_result(apex, "20261106T100000Z-0000aaaa", action="list-snapshots", state="done", time="t",
-                 snapshots=staff_apex.reduce_snapshots(SNAPS))
+                 snapshots=helper_queue.reduce_snapshots(SNAPS))
     snap = "a" * 64
     assert apex.call("POST", "/api/world-restore", {"snapshot": snap, "confirm": snap[:8]},
                      headers=as_role("admin"))[0] == 403
@@ -280,15 +292,6 @@ def test_a_restore_is_owners_only_and_needs_the_typed_short_id(apex):
     assert apex.call("POST", "/api/world-restore", {"snapshot": snap, "confirm": snap[:8]})[0] == 409
 
 
-def test_the_snapshot_reducer_cli_reads_restics_json():
-    done = subprocess.run([sys.executable, "-I", str(REPO.root / "tools" / "staff_apex.py"), "snapshots"],
-                          input=json.dumps(SNAPS), capture_output=True, text=True, check=True)
-    assert [r["short_id"] for r in json.loads(done.stdout)] == ["b" * 8, "a" * 8]
-    bad = subprocess.run([sys.executable, "-I", str(REPO.root / "tools" / "staff_apex.py"), "snapshots"],
-                         input="", capture_output=True, text=True)
-    assert bad.returncode == 1
-
-
 # ---------------------------------------------------------------- the helper script
 
 
@@ -298,8 +301,6 @@ def test_the_helper_script_is_plain_posix_sh_with_a_fixed_allow_list():
     text = raw.decode()
     assert text.startswith("#!/bin/sh\n") and "set -eu" in text
     assert "eval" not in text and '. "$req"' not in text and "source " not in text
-    actions_ = re.findall(r"^        ([a-z-]+)\) do_", text, re.M)
-    assert actions_ == list(staff_apex.HELPER_ACTIONS)
     for unit in ("monkey-staff-helper.path", "monkey-staff-helper.service"):
         unit_raw = (DEPLOY / unit).read_bytes()
         assert b"\r\n" not in unit_raw and unit_raw.isascii()
@@ -363,7 +364,7 @@ def helper(tmp_path):
     repo = tmp_path / "repo"
     (repo / "deploy").mkdir(parents=True)
     (repo / "tools").mkdir()
-    shutil.copy(REPO.root / "tools" / "staff_apex.py", repo / "tools" / "staff_apex.py")
+    shutil.copy(REPO.root / "tools" / "helper_queue.py", repo / "tools" / "helper_queue.py")   # root's copy
     (repo / "deploy" / "monkey-backup.sh").write_text(FAKE_BACKUP, newline="\n")
     live, staff_dir, results = tmp_path / "live", tmp_path / "staff", tmp_path / "results"
     (live / "server" / "world").mkdir(parents=True)
@@ -501,7 +502,7 @@ def install_helper(tmp_path):
     calls = tmp_path / "calls"
     for d in (dest / "deploy", dest / "tools", src / "deploy", units, staff, bin_dir):
         d.mkdir(parents=True)
-    for f in ("deploy/monkey-staff-helper.sh", "deploy/monkey-backup.sh", "deploy/lib.sh", "tools/staff_apex.py"):
+    for f in ("deploy/monkey-staff-helper.sh", "deploy/monkey-backup.sh", "deploy/lib.sh", "tools/helper_queue.py"):
         (dest / f).write_text("#\n", newline="\n")
     for u in ("monkey-staff-helper.path", "monkey-staff-helper.service"):
         (src / "deploy" / u).write_text(f"[Unit]\n# {u} v2\n", newline="\n")
@@ -546,11 +547,11 @@ def test_install_helper_refuses_without_root_or_root_copies(install_helper):
     assert code == 1 and "run as root" in out
     code, out, _ = h.run(HELPER_WATCHED="/srv/monkey/staff")
     assert code == 1 and "the helper watches /srv/monkey/staff/requests" in out
-    (h.dest / "tools" / "staff_apex.py").unlink()
+    (h.dest / "tools" / "helper_queue.py").unlink()
     code, out, calls = h.run()
-    assert code == 1 and "tools/staff_apex.py is missing: install root's copies first" in out
+    assert code == 1 and "tools/helper_queue.py is missing: install root's copies first" in out
     assert not any(h.units.iterdir()) and not any(c.startswith("systemctl") for c in calls)
-    (h.dest / "tools" / "staff_apex.py").write_text("#\n")
+    (h.dest / "tools" / "helper_queue.py").write_text("#\n")
     (h.src / "deploy" / "monkey-staff-helper.service").unlink()
     code, out, _ = h.run()
     assert code == 1 and "deploy/monkey-staff-helper.service is missing" in out and not any(h.units.iterdir())
@@ -966,6 +967,10 @@ def test_the_address_bans_are_listed(apex):
         {"ip": "8.8.8.8", "reason": "alts", "created": "2026-11-06"}, {"ip": "nonsense"}, "x"]))
     code, data = apex.call("GET", "/api/ip-bans")
     assert code == 200 and [b["ip"] for b in data["ips"]] == ["8.8.8.8"]
+    (apex.root / "banned-ips.json").write_text("[{broken")
+    assert apex.call("GET", "/api/ip-bans")[1]["ips"] is None          # can't be read: the page says so
+    (apex.root / "banned-ips.json").unlink()
+    assert apex.call("GET", "/api/ip-bans")[1]["ips"] == []
 
 
 # ---------------------------------------------------------------- the page

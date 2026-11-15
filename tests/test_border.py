@@ -68,9 +68,10 @@ def test_season_one_is_left_to_staff(tmp_path):
 
 def test_a_failed_set_is_not_recorded_so_the_next_hour_tries_again(tmp_path):
     world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
-    log, server = [], rcon.Recorder(fail=1)
+    log, server = [], rcon.Recorder(fail=2)      # the pack list, then the first set
     assert border.send(server, world, ACT_ONE, log.append) == 1
     assert server.sent == [] and "not sent after it: 4 command(s)" in log
+    assert any(line.startswith("can't tell whether monkey-boss is on") for line in log)   # so all was tried
     assert border.commands(world, ACT_ONE)[:2] == [SET_5500, SET_687]   # still due
 
 
@@ -85,13 +86,28 @@ def test_nothing_before_the_launch_the_act_or_in_a_locked_world(tmp_path):
     assert border.read_run(world, ACT_ONE).why == "no border acts for season 5"
 
 
+BOSS_ON = "There are 2 data pack(s) enabled: [vanilla (built-in)], [file/monkey-boss (world)]"
+
+
+def test_a_boss_pack_turned_off_still_grows_the_border_and_records_the_act(tmp_path):
+    """The act's boss call is left out (and logged) while staff have monkey-boss off: the run doesn't fail on an
+    unknown function, and the act is recorded, so it isn't sent again."""
+    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
+    sent = border.commands(world, ACT_ONE)
+    log, server = [], rcon.Recorder({"datapack list enabled": "There are 1 data pack(s) enabled: [vanilla (built-in)]"})
+    assert border.send(server, world, ACT_ONE, log.append) == 0
+    assert server.sent == ["datapack list enabled", *sent[:4]]          # no boss call
+    assert "skipped monkey:boss/act: the monkey-boss data pack is off (staff turned it off)" in log
+
+
 def test_an_act_grows_both_borders_and_says_so(tmp_path):
     world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
     sent = border.commands(world, ACT_ONE)
     assert sent[:2] == [SET_5500, SET_687] and sent[2].startswith('tellraw @a {"text":"The border breaks')
     assert sent[3] == "scoreboard players set #border_act ev.state 1" and sent[4].startswith("function monkey:boss/act")
-    server = rcon.Recorder()
-    assert border.send(server, world, ACT_ONE, log=lambda _: None) == 0 and server.sent == sent
+    server = rcon.Recorder({"datapack list enabled": BOSS_ON})
+    assert border.send(server, world, ACT_ONE, log=lambda _: None) == 0
+    assert server.sent == ["datapack list enabled", *sent]
     # Two acts due (the server was down for weeks): only the latest counts.
     assert border.commands(world, ACT_TWO)[:2] == [SET_5500.replace("5500", "6000"), SET_687.replace("687.5", "750")]
 

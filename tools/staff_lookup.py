@@ -45,6 +45,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from ledger import Busy, Ledger, NoIndex
+
+import saved_world
+
 sp = None   # tools/staff_panel.py (register)
 
 ENTRY = re.compile(r"[a-z0-9_.:-]{1,40}(?: [a-z0-9_.:-]{1,40}){0,2}")
@@ -96,7 +100,7 @@ _ID = re.compile(r"[A-Za-z0-9]{1,16}")
 _SLUG = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 HISTORY_ROWS = 200
-_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_UUID = saved_world.UUID
 
 
 def _json(path: Path):
@@ -223,19 +227,16 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
     if player and not sp.PLAYER.fullmatch(player):
         raise sp.Refused(400, "A player name is 3 to 16 letters, digits or _.")
     try:
-        ledger = staff_report.Ledger(panel.root / "world" / "ledger.sqlite")
+        ledger = Ledger(panel.root / "world" / "ledger.sqlite")
     except FileNotFoundError:
         raise sp.Refused(404, "Ledger's database isn't there (world/ledger.sqlite): is Ledger installed?") from None
     except sqlite3.Error:
         raise sp.Refused(503, "Ledger's database can't be opened right now: try again in a minute.") from None
     try:
-        if "actions_by_location" not in ledger.indexes:
-            raise sp.Refused(503, "Ledger's database has no location index, and reading the whole table would slow "
-                                  "the game: look it up in game with Ledger's own commands.")
         world_label = query.get("world") or ("Overworld" if "Overworld" in ledger.worlds.values()
                                              else next(iter(ledger.worlds.values()), "Overworld"))
-        world = next((i for i, name in ledger.worlds.items() if name == world_label), None)
-        if world is None:
+        world = ledger.world_id(world_label)
+        if world < 0:
             raise sp.Refused(400, f"world is one of: {', '.join(sorted(ledger.worlds.values()))}.")
         who = None
         if player:
@@ -244,13 +245,17 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
                 return {"rows": [], "more": False, "stopped": False, "note": f"Ledger has never seen {player}."}
         actions = KINDS[kind]
         wanted = None if actions is None else {ledger.act(a) for a in actions}
-        skip = ledger.sources.get("command", -1)
         now = now or dt.datetime.now(staff_report.calendar.PACIFIC).replace(tzinfo=None)
         since = staff_report.stamp(now - dt.timedelta(hours=hours))
-        rows, stopped = _lookup(ledger, x, y, z, radius, world, since, skip, wanted, who)
+        try:
+            rows, stopped = ledger.around(x, y, z, radius, world, since, wanted, who, LOOKUP_ROWS * 4, LOOKUP_SECONDS)
+        except Busy:
+            raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
+        except NoIndex:
+            raise sp.Refused(503, "Ledger's database has no location index, and reading the whole table would slow "
+                                  "the game: look it up in game with Ledger's own commands.") from None
     finally:
-        with contextlib.suppress(sqlite3.Error):
-            ledger.db.close()
+        ledger.close()
     rows.sort(key=lambda r: (r[0], r[-1]), reverse=True)     # newest first; id breaks ties
     more = len(rows) > LOOKUP_ROWS
     out = []
@@ -263,37 +268,6 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
                     "rolled_back": bool(back)})
     return {"rows": out, "more": more, "stopped": stopped, "zone": "Pacific",
             "box": {"x": x, "y": y, "z": z, "radius": radius, "world": world_label, "hours": hours}}
-
-
-def _lookup(ledger, x, y, z, radius, world, since, skip, wanted, who) -> tuple[list[tuple], bool]:
-    """Ledger's rows in the box, one indexed (x, y) column at a time, at most LOOKUP_ROWS + 1 of them and
-    LOOKUP_SECONDS of the database's time."""
-    deadline = time.monotonic() + LOOKUP_SECONDS
-    ledger.db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)
-    query = ("select time, action_id, x, y, z, object_id, old_object_id, player_id, source, rolled_back, id "
-             "from actions indexed by actions_by_location "
-             "where x = ? and y = ? and z between ? and ? and world_id = ? and time >= ?")
-    rows, stopped = [], False
-    try:
-        # From the asked block outward, so a cap or the time limit keeps the rows nearest to it.
-        columns = sorted(((cx, cy) for cx in range(x - radius, x + radius + 1)
-                          for cy in range(y - radius, y + radius + 1)),
-                         key=lambda c: max(abs(c[0] - x), abs(c[1] - y)))
-        for cx, cy in columns:
-            for row in ledger.db.execute(query, (cx, cy, z - radius, z + radius, world, since)):
-                if row[8] == skip or (wanted is not None and row[1] not in wanted) \
-                        or (who is not None and row[7] != who):
-                    continue
-                rows.append(row)
-            if len(rows) > LOOKUP_ROWS * 4 or time.monotonic() > deadline:
-                return rows, True
-    except sqlite3.OperationalError as e:
-        if "interrupt" not in str(e).lower():
-            raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
-        stopped = True
-    finally:
-        ledger.db.set_progress_handler(None, 0)
-    return rows, stopped
 
 
 # ---------------------------------------------------------------- mod updates (Modrinth)
@@ -444,25 +418,23 @@ def player_history(panel, name) -> dict:
     name = staff_desk.checked_player(name)
     desk = staff_desk.desk(panel)
     low = name.lower()
-    names = desk._names()
+    names = saved_world.names(panel.root)
     uuid = next((u for u, n in names.items() if n.lower() == low), None)
     shown = names.get(uuid, name) if uuid else name
 
-    def listed(file: str) -> dict | None:
-        rows = _json(panel.root / file)
-        if not isinstance(rows, list):
-            return None
-        for r in rows:
-            if isinstance(r, dict) and (str(r.get("name", "")).lower() == low or (uuid and r.get("uuid") == uuid)):
-                return r
-        return None
+    # A list that can't be read is named in "unreadable" (its field stays false, its ban None): the page says it
+    # can't tell rather than "not listed".
+    lists, unreadable = saved_world.player_lists(panel.root)
 
-    ban = listed("banned-players.json")
+    def listed(kind: str) -> dict | None:
+        return saved_world.list_entry(lists[kind], name, uuid)
+
+    ban = listed("banned-players")
     temp = (_json(panel.staff / "tempbans.json") or {})
     temp = temp.get("bans", temp) if isinstance(temp, dict) else {}
     temp = temp.get(low) if isinstance(temp, dict) else None
     word = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", re.I)
-    rows, cut = desk._action_rows()
+    rows, cut = desk.action_rows()
     changes = [{"time": r["time"], "user": r["user"], "action": r["action"], "target": r["target"]}
                for r in rows if word.search(r["target"])][-HISTORY_ROWS:][::-1]
     notes = desk.notes(name)["notes"]
@@ -470,10 +442,10 @@ def player_history(panel, name) -> dict:
     if uuid and _UUID.fullmatch(uuid):      # a name goes in a file path only when it is a real UUID
         with contextlib.suppress(OSError):
             seen = (panel.root / "world" / "players" / "data" / f"{uuid}.dat").stat().st_mtime
-        ticks = desk._play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
+        ticks = desk.play_time(panel.root / "world" / "players" / "stats" / f"{uuid}.json")
     return {"name": shown, "known": uuid is not None, "last_seen": seen,
             "hours": None if ticks is None else round(ticks / staff_desk.TICKS_PER_HOUR, 1),
-            "whitelisted": listed("whitelist.json") is not None, "op": listed("ops.json") is not None,
+            "whitelisted": listed("whitelist") is not None, "op": listed("ops") is not None, "unreadable": unreadable,
             "ban": {k: _text(ban.get(k), 200) for k in ("reason", "source", "created", "expires")} if ban else None,
             "tempban": {k: temp.get(k) for k in ("until", "by", "at", "reason")} if isinstance(temp, dict) else None,
             "notes": notes, "changes": changes, "cut": cut}

@@ -67,7 +67,7 @@ buttons point at the Discord with a "Coming soon" title.
 | `MODPACK_URL` | The player modpack. Until the Modrinth project is up, the site serves the release's own `.mrpack` from `public/pack/` (docs/MAINTAINING.md, "Releasing"), and validate.py checks it is the version the manifest pins |
 | `INSTALLER_URL` | The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same `.mrpack`, also in `public/pack/` |
 | `MAP_URL` | The live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone |
-| `STATUS_URL` | The server's status file (`tools/status.py`), served beside the live map with a short cache and an allow-origin header (docs/LIVE.md, "The website's status"). Empty: no status block |
+| `STATUS_URL` | The server's status file (`tools/status.py`), served beside the live map with a short cache and an allow-origin header (docs/upgrades/HISTORY.md, "The website's status"). Empty: no status block |
 | `STANDINGS_URL` | The server's weekly standings file (`standings.json`), served beside the live map with a short cache and an allow-origin header, like `STATUS_URL`. Until the server publishes it the page shows its empty state |
 | `CALENDAR_URL` | The season's calendar file: `/monkey-smp-season-1.ics` (in `public/`, checked by `site_links.py`), or a full address if it is kept elsewhere |
 | `LAUNCH_AT` | When the season opens: ISO 8601 with its offset (`2026-11-08T01:00:00Z` is Saturday 7 November 2026, 5 PM Pacific). The pages spell it out in Pacific and Eastern time; the countdown adds the visitor's own time, then says the season is live once it has passed (docs/LAUNCH.md). It must match `tools/season_calendar.py`'s launch |

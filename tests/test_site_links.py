@@ -373,3 +373,25 @@ def test_a_stale_rulebook_is_reported_or_replaced(tmp_path):
     assert site_links.rulebook_problems(repo, write=True) == []
     assert site_links.rulebook_problems(repo) == []
     assert "Secret" not in site_links.rulebook_copy(repo).read_text(encoding="utf-8")
+
+
+def test_every_old_pack_redirect_lands_on_the_current_file(tmp_path):
+    """Each release rewrites site/vercel.json's old-pack redirects by hand; one left behind 404s an old link."""
+    repo = fake_site(tmp_path)
+    site_links.main([], repo=repo)
+    links = site_links.links(repo)
+    pack, installer = site_links.local_file(links["MODPACK_URL"]), site_links.local_file(links["INSTALLER_URL"])
+    vercel = site_links.site(repo) / "vercel.json"
+
+    def redirects(*rules):
+        vercel.write_text(json.dumps({"redirects": [{"source": s, "destination": d, "permanent": False}
+                                                    for s, d in rules]}))
+        return site_links.redirect_problems(links, repo)
+
+    assert redirects(("/pack/Old-1.0.0.mrpack", f"/{pack}"), ("/pack/Old-1.0.0.zip", f"/{installer}"),
+                     ("/elsewhere", "/x")) == []
+    [stale] = redirects(("/pack/Old-1.0.0.mrpack", "/pack/MonkeySMP-Client-0.9.0.mrpack"))
+    assert "not the current .mrpack" in stale
+    [crossed] = redirects(("/pack/Old-1.0.0.zip", f"/{pack}"))           # an installer link sent to the pack
+    assert "not the current .zip" in crossed
+    assert site_links.problems(repo)                                     # and --check fails with it

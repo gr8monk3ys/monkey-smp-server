@@ -5,7 +5,7 @@
 # monkey-staff-helper.service, which runs this. docs/LIVE.md, "The staff page", "Backups from the page".
 #
 #   backup-now       systemctl start monkey-backup.service (the hourly backup, now)
-#   list-snapshots   restic snapshots --json --tag world, cut down by tools/staff_apex.py to id, time, tags and size
+#   list-snapshots   restic snapshots --json --tag world, cut down by tools/helper_queue.py to id, time, tags and size
 #   restore          puts one snapshot's world back: restores it beside the live world while the server runs, then
 #                    under the deploy lock warns players, stops the server, moves the live world to
 #                    LIVE_DIR/backups/before-restore-TIME/, moves the snapshot's world in and starts the server
@@ -14,12 +14,13 @@
 #   reset            under the deploy lock warns players, stops the server, moves the world folders to
 #                    LIVE_DIR/backups/before-reset-TIME/ with a copy of server.properties, sets a new level-seed if
 #                    the request has one, and starts the server, which makes a new world
-#   world-upload     unpacks STAFF_DIR/uploads/ID.zip beside the live world (tools/staff_host.py, as the server's
+#   world-upload     unpacks STAFF_DIR/uploads/ID.zip beside the live world (tools/helper_queue.py, as the server's
 #                    user, checks it all again), then swaps it in like a restore (backups/before-upload-TIME/)
 #
-# A request is read as data, never run: only `action=` with one of the words above, `snapshot=` with 8 to 64 hex
-# digits, `tag=` vX.Y.Z, `seed=` letters, digits and _ (and a leading -) and `upload=` an upload's id are taken from
-# it, anything else in it is ignored, and nothing from it reaches a shell or a log but those. A new seed never reaches
+# A request is read as data, never run (its rules are tools/helper_queue.py's, checked here again): only `action=` with
+# one of the words above, `snapshot=` with 8 to 64 hex digits, `tag=` vX.Y.Z, `seed=` letters, digits and _ (and a
+# leading -) and `upload=` an upload's id are taken from it, anything else in it is ignored, and nothing from it
+# reaches a shell or a log but those. A new seed never reaches
 # a log or a result: they say "seed changed". A request that isn't a plain file, or whose name isn't one the page
 # writes, is deleted unread. What happened goes to RESULTS/ID.json (root's folder: the page only reads it), in the
 # script's own words.
@@ -28,8 +29,9 @@
 #
 # Install with  sudo sh monkey-staff.sh --install-helper  (an owner's step: it adds a root service). The service runs
 # root's own copy in /opt/monkey/deploy (deploy/install-root.sh puts it there), and so does everything it runs as root:
-# monkey-backup.sh beside it and tools/staff_apex.py in /opt/monkey/tools. Root runs nothing the monkey user can write;
-# what it runs from the checkout (the deploy, staff_host.py) runs as the checkout's owner.
+# monkey-backup.sh beside it and tools/helper_queue.py in /opt/monkey/tools (the world upload runs that copy as the
+# server's user). Root runs nothing the monkey user can write; what it runs from the checkout (the deploy) runs as the
+# checkout's owner.
 # Reads REPO_DIR, LIVE_DIR, STAFF_DIR and LOCK_FILE from /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV); HELPER_RESULTS,
 # HELPER_LOCK_WAIT, HELPER_BACKUP and HELPER_TOOLS are for the tests.
 #
@@ -60,7 +62,7 @@ mkdir -p "$RESULTS"
 chmod 755 "$RESULTS"
 
 # "result ID ACTION STATE MESSAGE [SNAPSHOTS]": RESULTS/ID.json, written whole (a temp file, then mv). MESSAGE is this
-# script's own words, quotes, backslashes and control characters dropped; SNAPSHOTS is JSON from tools/staff_apex.py.
+# script's own words, quotes, backslashes and control characters dropped; SNAPSHOTS is JSON from tools/helper_queue.py.
 result() {
     r_msg=$(printf '%s' "$4" | tr -d '"\\\001-\037\177')
     r_tmp=$(mktemp "$RESULTS/.result.XXXXXX")
@@ -85,7 +87,7 @@ do_list() {
     l_out=$(mktemp)
     # The pipe's status is python's: a restic that failed leaves it no JSON, and it fails too.
     if timeout 600 sh "$BACKUP" --restic-read snapshots --json --tag world 2>/dev/null |
-        python3 -B -I "$ROOT_TOOLS/staff_apex.py" snapshots >"$l_out" 2>/dev/null; then
+        python3 -B -I "$ROOT_TOOLS/helper_queue.py" snapshots >"$l_out" 2>/dev/null; then
         log "listed the snapshots (asked by $user)"
         result "$1" list-snapshots done 'The snapshot list from R2.' "$(cat "$l_out")"
     else
@@ -340,9 +342,9 @@ do_upload() {
     stage=$(mktemp -d "$LIVE_DIR/.upload.XXXXXX") || { job_failed "$u_id" world-upload 'Could not make a folder beside the world.'; return 0; }
     chown "$owner:" "$stage"
     u_err=$(mktemp)
-    # As the server's user, not root: the zip is the page's file, and what it unpacks belongs to the server.
-    if ! runuser -u "$owner" -- python3 -B -I "$REPO_DIR/tools/staff_host.py" unzip-world "$zip" "$stage" 2>"$u_err"; then
-        u_why=$(tail -n 1 "$u_err" | sed 's/^staff_host: //' | cut -c1-200)
+    # Root's copy, as the server's user, not root: the zip is the page's file, and what it unpacks belongs to the server.
+    if ! runuser -u "$owner" -- python3 -B -I "$ROOT_TOOLS/helper_queue.py" unzip-world "$zip" "$stage" 2>"$u_err"; then
+        u_why=$(tail -n 1 "$u_err" | sed 's/^helper_queue: //' | cut -c1-200)
         rm -f "$u_err"
         job_failed "$u_id" world-upload "The upload was not swapped in: ${u_why:-it could not be unpacked}"
         return 0

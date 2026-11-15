@@ -228,3 +228,106 @@ def test_a_border_not_shaped_as_saved_is_a_value_error_naming_it(tmp_path, root)
     FakeWorld(tmp_path)._write(rel, nbt(root, gzipped=True))
     with pytest.raises(ValueError, match=names_file(tmp_path, rel)):
         saved_world.border(tmp_path)
+
+
+def test_names_are_one_rule_for_the_usercache(tmp_path):
+    """staff_report kept the uuid's case and standings didn't check the name: a name the Rule check looked up by the
+    stats file's lowercase uuid could go missing. Now every reader gets this."""
+    import json
+    (tmp_path / "usercache.json").write_text(json.dumps([
+        {"uuid": "ABCDEF01-0000-4000-8000-000000000001", "name": "Alpha"},     # uppercase: kept, lowercased
+        {"uuid": "00000002-0000-4000-8000-000000000002", "name": "Br@vo"},     # not a player's name
+        {"uuid": "not-a-uuid", "name": "Carol"},
+        {"name": "NoUuid"}, "junk"]))
+    assert saved_world.names(tmp_path) == {"abcdef01-0000-4000-8000-000000000001": "Alpha"}
+    (tmp_path / "usercache.json").write_text("{not json")
+    assert saved_world.names(tmp_path) == {} and saved_world.names(tmp_path / "missing") == {}
+
+
+@pytest.mark.parametrize(("stats", "ticks"), [
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": 72000}}}, 72000),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": -1}}}, None),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": True}}}, None),
+    ({"stats": {}}, None), ([], None),
+])
+def test_play_time_reads_a_stats_file(tmp_path, stats, ticks):
+    import json
+    path = tmp_path / "u.json"
+    path.write_text(json.dumps(stats))
+    assert saved_world.play_time(path) == ticks
+    assert saved_world.play_time(tmp_path / "missing.json") is None
+
+
+def test_an_unreadable_party_file_stops_standings_but_the_rule_check_skips_it(tmp_path):
+    world = FakeWorld(tmp_path).party("good", member("00000001-0000-4000-8000-000000000001", "Alpha"))
+    (world.path / saved_world.PARTIES / "bad.nbt").write_bytes(b"not nbt")
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)
+    found = saved_world.parties(world.path, lenient=True)
+    assert [p.id for p in found] == ["good"]
+
+
+def test_the_rule_check_keeps_every_member_it_can_read_and_reads_no_party_name(tmp_path, monkeypatch):
+    """One bad member entry used to drop the whole party for the Rule check, so its members became strangers; and
+    the party name (TOML, which needs Python 3.11) is never read when the caller doesn't show it."""
+    alpha, bravo = "00000001-0000-4000-8000-000000000001", "00000002-0000-4000-8000-000000000002"
+    world = FakeWorld(tmp_path).party("p", member(alpha, "Alpha"), [member(bravo, "Bravo"),
+                                                                     {"uuid": "bad", "username": "Carol"}])
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)                              # standings: stops, as it always has
+    monkeypatch.setattr(saved_world, "party_name", lambda *a: pytest.fail("read a party name"))
+    [party] = saved_world.parties(world.path, lenient=True, named=False)
+    assert [(m.uuid, m.username) for m in party.members] == [(alpha, "Alpha"), (bravo, "Bravo"), ("", "Carol")]
+    assert party.owner.username == "Alpha" and party.name == ""
+
+
+@pytest.mark.parametrize("config", ['playerConfig = "x"', "[playerConfig]\nparties = 1",
+                                    "[playerConfig.parties]\nname = 3"])
+def test_a_party_name_from_a_badly_shaped_config_is_none(tmp_path, config):
+    owner = "00000001-0000-4000-8000-000000000001"
+    path = tmp_path / saved_world.PLAYER_CONFIGS / f"{owner}.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text(config)
+    assert saved_world.party_name(tmp_path, owner) == ""
+
+
+# ---------------------------------------------------------------- the server's player lists
+
+
+def test_a_player_list_missing_is_empty_and_one_that_cant_be_read_is_none(tmp_path):
+    import json
+    assert saved_world.player_list(tmp_path, "whitelist") == []
+    for broken in ("[{not json", json.dumps({"name": "Alpha"})):
+        (tmp_path / "whitelist.json").write_text(broken)
+        assert saved_world.player_list(tmp_path, "whitelist") is None          # can't tell, never "not listed"
+    with pytest.raises(ValueError, match="not a player list"):
+        saved_world.player_list(tmp_path, "usercache")
+    (tmp_path / "ops.json").write_text(json.dumps([{"uuid": ALEX, "name": "Alex"}]))
+    lists, unreadable = saved_world.player_lists(tmp_path)
+    assert lists == {"whitelist": [], "ops": [{"uuid": ALEX, "name": "Alex"}], "banned-players": []}
+    assert unreadable == ["whitelist.json"]
+
+
+def test_a_player_list_keeps_entries_shaped_as_saved_and_matches_any_case(tmp_path):
+    import json
+    (tmp_path / "ops.json").write_text(json.dumps([
+        {"uuid": ALEX.upper(), "name": "Alex", "level": 4},     # an uppercase uuid: kept, lowercased
+        {"uuid": 7, "name": "Sam"},                             # a uuid that isn't text: ""
+        {"uuid": RIA, "name": None}, {"uuid": RIA}, "junk", 3]))
+    ops = saved_world.player_list(tmp_path, "ops")
+    assert ops == [{"uuid": ALEX, "name": "Alex", "level": 4}, {"uuid": "", "name": "Sam"}]
+    assert saved_world.list_entry(ops, "aLeX")["level"] == 4                        # no uuid known: by name
+    assert saved_world.list_entry(ops, "whoever", ALEX.upper())["name"] == "Alex"   # by uuid, any case
+    assert saved_world.list_entry(ops, "sam", SAM)["name"] == "Sam"                 # an entry with no uuid: by name
+    assert saved_world.list_entry(ops, "Nobody") is None and saved_world.list_entry(ops, "Ria", RIA) is None
+    (tmp_path / "banned-ips.json").write_text(json.dumps([{"ip": "8.8.8.8"}, {"ip": 8}, {"name": "x"}, "y"]))
+    assert saved_world.player_list(tmp_path, "banned-ips") == [{"ip": "8.8.8.8"}]
+
+
+def test_a_player_who_took_someones_old_name_is_not_on_their_lists(tmp_path):
+    """Matching by name or uuid marked the new holder of a name as banned, an operator or whitelisted."""
+    import json
+    (tmp_path / "banned-players.json").write_text(json.dumps([{"uuid": ALEX, "name": "Alex", "reason": "griefing"}]))
+    bans = saved_world.player_list(tmp_path, "banned-players")
+    assert saved_world.list_entry(bans, "Alex", RIA) is None                    # Ria is called Alex now: not banned
+    assert saved_world.list_entry(bans, "Ria", ALEX)["reason"] == "griefing"    # the banned one, renamed: still

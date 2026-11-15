@@ -30,9 +30,13 @@ The safety rules:
   when it is run: running one is an ordinary POST /api/command, with its own line in actions.log.
 - A temporary ban is the game's own ban, its reason starting TEMP_REASON and the time it ends. At that time (the
   scheduler's thread looks every 20 seconds: staff_panel.SCHEDULER_LOOKS) the page pardons the player, but only if
-  the ban in banned-players.json is still that one, word for word: a staff member who pardoned them, or banned them
-  again, decides. While the server is off it waits, sending nothing, and pardons once it is back. A player banned
-  already can't be banned for a time: the game would keep the first ban's words and end.
+  banned-players.json doesn't show a ban of theirs with other words: one changed by hand, or banned again for good,
+  is staff's and only forgotten. One the file doesn't show at all is pardoned anyway (harmless; the running server
+  may hold a ban the file lost). While the server is off it waits, sending nothing, and pardons once it is back. A
+  player banned already can't be banned for a time: the game would keep the first ban's words and end. While
+  banned-players.json can't be read, a temporary ban is refused and a due one waits, said once in the journal and
+  the record of changes (tempban-wait): fix the file, never move or delete it. Once the game takes a ban its row is
+  saved even if the file can't be read just then, so it is always lifted.
 - The file search walks server/ under the Files tab's own rules (no worlds, libraries, versions, map files or
   databases), at most SEARCH_FILES files and SEARCH_SECONDS seconds. A text search reads only plain-text config files
   under SEARCH_TEXT_MAX, never logs/ or crash-reports/, and it searches the text as the editor shows it, secrets
@@ -50,9 +54,12 @@ import json
 import os
 import re
 import secrets
+import sys
 import threading
 import time
 from pathlib import Path
+
+import saved_world
 
 sp = None   # tools/staff_panel.py (register)
 
@@ -67,6 +74,8 @@ ACTIVITY_PAGE = 100
 ACTIVITY_EXPORT = 5000              # the most rows in one .csv
 TICKS_PER_HOUR = 20 * 3600
 TEMP_REASON = "Banned until"        # the start of a temporary ban's reason, as players see it
+BAN_LIST_UNREADABLE = ("banned-players.json can't be read, so whether they are banned can't be told: fix it (never "
+                       "move or delete it: the running server keeps its bans) and try again.")
 TEMP_HOURS = (1, 24 * 30)
 SEARCH_FILES = 20000
 SEARCH_SECONDS = 5.0
@@ -74,7 +83,7 @@ SEARCH_SHOWN = 200
 SEARCH_TEXT_MAX = 1024 * 1024
 TEXT_SUFFIXES = {".toml", ".json", ".json5", ".properties", ".yml", ".yaml", ".txt", ".cfg", ".conf", ".ini", ".snbt",
                  ".mcmeta", ".md", ".csv", ".zs", ".js", ".mcfunction"}
-_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_UUID = saved_world.UUID
 _WORD = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _FORMULA = ("=", "+", "-", "@", "\t", "\r")
 
@@ -134,21 +143,7 @@ class Desk:
 
     # ------------------------------------------------ everyone who has joined
 
-    def _names(self) -> dict[str, str]:
-        """uuid -> name, from usercache.json: every player the server has looked up, so everyone who has joined."""
-        rows = _json(self.p.root / "usercache.json")
-        if not isinstance(rows, list):
-            return {}
-        return {r["uuid"].lower(): r["name"] for r in rows
-                if isinstance(r, dict) and isinstance(r.get("uuid"), str) and _UUID.fullmatch(r["uuid"].lower())
-                and isinstance(r.get("name"), str) and sp.PLAYER.fullmatch(r["name"])}
-
-    def _listed(self, file: str) -> set[str]:
-        rows = _json(self.p.root / file)
-        return {r["name"].lower() for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)} \
-            if isinstance(rows, list) else set()
-
-    def _play_time(self, path: Path) -> int | None:
+    def play_time(self, path: Path) -> int | None:
         """Ticks played, from the game's own stats file; read again only when the file has changed."""
         try:
             st = path.stat()
@@ -159,10 +154,7 @@ class Desk:
             kept = self._played.get(key)
         if kept and kept[0] == mark:
             return kept[1]
-        data = _json(path)
-        custom = (data.get("stats") or {}).get("minecraft:custom") if isinstance(data, dict) else None
-        ticks = custom.get("minecraft:play_time") if isinstance(custom, dict) else None
-        ticks = ticks if isinstance(ticks, int) and not isinstance(ticks, bool) and ticks >= 0 else None
+        ticks = saved_world.play_time(path)
         with self._cache:
             if len(self._played) > PLAYERS_MAX * 2:
                 self._played.clear()
@@ -170,7 +162,7 @@ class Desk:
         return ticks
 
     def known_players(self) -> dict:
-        names = self._names()
+        names = saved_world.names(self.p.root)
         players = self.p.root / "world" / "players"
         seen: dict[str, float] = {}
         with contextlib.suppress(OSError), os.scandir(players / "data") as it:
@@ -179,23 +171,28 @@ class Desk:
                 if d.name.endswith(".dat") and _UUID.fullmatch(uuid):
                     with contextlib.suppress(OSError):
                         seen[uuid] = d.stat().st_mtime
-        lists = {key: self._listed(file) for key, file in (("whitelisted", "whitelist.json"), ("op", "ops.json"),
-                                                            ("banned", "banned-players.json"))}
+        # Each list as the uuids on it and the names of its entries with no uuid (saved_world.list_entry's rule, as
+        # sets: a player who took someone's old name is not on that one's lists). One that can't be read is named in
+        # "unreadable" and its field stays false: the page says it can't tell rather than "not listed".
+        found, unreadable = saved_world.player_lists(self.p.root)
+        lists = {key: ({r["uuid"] for r in found[kind] if r["uuid"]},
+                       {r["name"].lower() for r in found[kind] if not r["uuid"]})
+                 for key, kind in (("whitelisted", "whitelist"), ("op", "ops"), ("banned", "banned-players"))}
         notes = self._load_notes()
         rows = []
         for uuid, name in names.items():
-            ticks = self._play_time(players / "stats" / f"{uuid}.json")
+            ticks = self.play_time(players / "stats" / f"{uuid}.json")
             row = {"name": name, "last_seen": seen.get(uuid),
                    "hours": None if ticks is None else round(ticks / TICKS_PER_HOUR, 1),
                    "notes": len(notes.get(uuid, [])) + len(notes.get(f"name:{name.lower()}", []))}
-            row.update({key: name.lower() in found for key, found in lists.items()})
+            row.update({key: uuid in uuids or name.lower() in by_name for key, (uuids, by_name) in lists.items()})
             rows.append(row)
         # Whoever was on last comes first; a name the server only looked up (never joined) has no time and goes last.
         rows.sort(key=lambda r: (r["last_seen"] is None, -(r["last_seen"] or 0), r["name"].lower()))
         # The game keeps the names of its 1000 most recent players only: those who joined before them have a file but
         # no name here, and are counted rather than left out without a word.
         return {"players": rows[:PLAYERS_MAX], "total": len(rows), "world": (players / "data").is_dir(),
-                "unnamed": len(set(seen) - set(names))}
+                "unnamed": len(set(seen) - set(names)), "unreadable": unreadable}
 
     # ------------------------------------------------ notes on a player
 
@@ -220,7 +217,7 @@ class Desk:
 
     def _key(self, name: str) -> str:
         """Where a player's notes are kept: under the UUID when the server knows the name, else under the name."""
-        for uuid, known in self._names().items():
+        for uuid, known in saved_world.names(self.p.root).items():
             if known.lower() == name.lower():
                 return uuid
         return f"name:{name.lower()}"
@@ -334,7 +331,7 @@ class Desk:
 
     # ------------------------------------------------ the record of changes, searched
 
-    def _action_rows(self) -> tuple[list[dict], bool]:
+    def action_rows(self) -> tuple[list[dict], bool]:
         """(every line of actions.log this reads, oldest first, each with its place in the file; whether the file is
         longer than what was read)."""
         try:
@@ -375,7 +372,7 @@ class Desk:
         before = query.get("before") or ""
         if before and not before.isdigit():
             raise sp.Refused(400, "before must be a whole number.")
-        rows, cut = self._action_rows()
+        rows, cut = self.action_rows()
         users, actions = sorted({r["user"] for r in rows}), sorted({r["action"] for r in rows})
         found = [r for r in rows if wanted(r) and (not before or r["at"] < int(before))]
         page = found[-ACTIVITY_PAGE:][::-1]
@@ -385,7 +382,7 @@ class Desk:
 
     def activity_export(self, query: dict) -> tuple[str, bytes, int]:
         wanted = self._wanted(query)
-        rows = [r for r in self._action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
+        rows = [r for r in self.action_rows()[0] if wanted(r)][-ACTIVITY_EXPORT:][::-1]
         out = io.StringIO()
         sheet = csv.writer(out, lineterminator="\r\n")
         sheet.writerow(["time (UTC)", "login", "action", "what"])
@@ -403,6 +400,7 @@ class TempBans:
         self.p = panel
         self._lock = threading.Lock()
         self.clock = time.time
+        self._waiting = False       # due bans wait on a ban list that can't be read, and that has been said
 
     @property
     def file(self) -> Path:
@@ -423,9 +421,10 @@ class TempBans:
         return rows
 
     def _game_ban(self, name: str) -> dict | None:
-        rows = _json(self.p.root / "banned-players.json")
-        return next((r for r in rows if isinstance(r, dict) and str(r.get("name", "")).lower() == name.lower()), None) \
-            if isinstance(rows, list) else None
+        rows = saved_world.player_list(self.p.root, "banned-players")
+        if rows is None:
+            raise sp.Refused(500, BAN_LIST_UNREADABLE)
+        return saved_world.list_entry(rows, name)
 
     @staticmethod
     def _until_words(until: float) -> str:
@@ -455,7 +454,11 @@ class TempBans:
             if self._game_ban(name):
                 raise sp.Refused(409, f"{name} is banned already. Lift or pardon that ban first, then ban them again.")
             done = self.p.command(user, {"command": f"ban {name} {reason}"})
-            if done.get("refused") or "Nothing changed" in str(done.get("output")) or not self._game_ban(name):
+            # Once the game took the ban, the row is saved, or nobody would ever lift it. Only a ban list that reads
+            # and plainly hasn't it says the game didn't ban them; one that can't be read now doesn't stop the save.
+            shown = saved_world.player_list(self.p.root, "banned-players")
+            if done.get("refused") or "Nothing changed" in str(done.get("output")) \
+                    or (shown is not None and saved_world.list_entry(shown, name) is None):
                 raise sp.Refused(502, "The server didn't ban them (is it running?): nothing was saved. "
                                       f"It said: {done.get('output') or 'nothing'}")
             rows[name.lower()] = {"name": name, "until": until, "by": user, "at": sp.stamp(), "reason": why,
@@ -465,23 +468,25 @@ class TempBans:
         return {"name": name, "until": until}
 
     def _lift(self, who: str, key: str, row: dict, rows: dict) -> str:
-        """Pardons the player if the game's ban is still this one, then forgets it. What happened, in words."""
+        """Pardons the player, then forgets the ban; only a ban changed by hand is forgotten without a pardon. What
+        happened, in words. A ban list that can't be read refuses (500): nothing is sent and the row stays."""
         ban = self._game_ban(row["name"])
-        # Only the very ban this page made: one changed by hand (new words, or banned again for good) is staff's.
-        said_now = str(ban.get("reason", "")) if ban is not None else None
-        if said_now is None:
-            same = False
+        # Only a ban the list shows with other words (changed by hand, or banned again for good) is staff's. One the
+        # list doesn't show is pardoned all the same: the game answers "Nothing changed" if there's none, and the
+        # running server may still hold one the file lost.
+        if ban is None:
+            same = True
         elif row.get("game_reason"):
-            same = said_now == row["game_reason"]
+            same = str(ban.get("reason", "")) == row["game_reason"]
         else:                                   # saved before the exact words were kept
-            same = said_now.startswith(TEMP_REASON)
+            same = str(ban.get("reason", "")).startswith(TEMP_REASON)
         if same:
             done = self.p.command(who, {"command": f"pardon {row['name']}"})
             if done.get("refused"):
                 raise sp.Refused(502, "The server didn't take the pardon: is it running?")
-            said = "pardoned"
+            said = "pardoned" if ban is not None else "pardoned (the ban was already lifted)"
         else:
-            said = "forgotten: the ban was already lifted or changed by hand"
+            said = "forgotten: the ban was changed by hand"
         del rows[key]
         _save_json(self.file, {"version": 1, "bans": rows})
         return said
@@ -508,6 +513,17 @@ class TempBans:
             # No command while the server is off: each would fail, and still be a line in actions.log and a post.
             if self.p.who_is_on() is None:
                 return []
+            # A ban list that can't be read: the due bans wait (whether one was changed by hand can't be told), and
+            # that is said once, in the journal and the record of changes, not every 20 seconds.
+            if saved_world.player_list(self.p.root, "banned-players") is None:
+                if not self._waiting:
+                    self._waiting = True
+                    due = sum(row["until"] <= now for row in rows.values())
+                    print(f"monkey-panel: {BAN_LIST_UNREADABLE}", file=sys.stderr, flush=True)
+                    self.p.record("temp-ban", "tempban-wait",
+                                  f"{due} due: banned-players.json can't be read, so they wait until it is fixed")
+                return []
+            self._waiting = False
             for key, row in list(rows.items()):
                 if row["until"] > now or not isinstance(row.get("name"), str):
                     continue
@@ -530,7 +546,7 @@ def search_files(panel, query: dict) -> dict:
     started, seen, found, cut = time.monotonic(), 0, [], False
     for folder, dirs, names in os.walk(root):
         rel = Path(os.path.relpath(folder, root)).parts if folder != root else ()
-        dirs[:] = sorted(d for d in dirs if panel._rules((*rel, d)) != "refused"
+        dirs[:] = sorted(d for d in dirs if panel.file_rule((*rel, d)) != "refused"
                          and not os.path.islink(os.path.join(folder, d)))
         for name in sorted(names):
             parts = (*rel, name)
@@ -538,7 +554,7 @@ def search_files(panel, query: dict) -> dict:
             if seen > SEARCH_FILES or time.monotonic() - started > SEARCH_SECONDS or len(found) >= SEARCH_SHOWN:
                 cut = True
                 break
-            rule = panel._rules(parts)
+            rule = panel.file_rule(parts)
             path = os.path.join(folder, name)
             if rule == "refused" or os.path.islink(path) or name.startswith(".staff-"):
                 continue

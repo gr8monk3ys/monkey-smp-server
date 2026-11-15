@@ -55,6 +55,7 @@ from season_calendar import LAUNCH_SECONDS
 
 RESOURCE_FORMAT = 88
 DATAPACK = "monkey-wardrobe"
+JOB_PACKS = (DATAPACK,)   # the data packs the day job needs on (deploy/lib.sh skips it while one is off)
 RESOURCEPACK = "Monkey SMP Wardrobe"
 
 # What each unlock score means, for the menu and the "locked" message: objective -> (singular, plural).
@@ -1010,7 +1011,7 @@ def main(argv=None) -> int:
         help="where a failing date's first try is kept, to give up after 6 hours "
              "(default: $STATE_DIRECTORY/pending; none: no limit)")
     args = ap.parse_args(argv)
-    return server.run_job(args, day_commands, lambda rcon, when: send_day(rcon, when, args.pending))
+    return server.run_job(args, day_commands, lambda rcon, when: send_day(rcon, when, args.pending), needs=JOB_PACKS)
 
 
 if __name__ == "__main__":

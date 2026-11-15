@@ -6,8 +6,8 @@
 
 The front page and the guide read it from https://map.monkeysmp.lscaturchio.xyz/status.json (site/config.json's
 STATUS_URL): Caddy serves the file next to the live map, with an allow-origin header for the site, so no new
-port opens (deploy/Caddyfile, docs/LIVE.md, "The website's status"). The file is public, so it holds counts and
-the published schedule only: never a player's name, an address or anything from the settings.
+port opens (deploy/Caddyfile, docs/upgrades/HISTORY.md, "The website's status"). The file is public, so it holds
+counts and the published schedule only: never a player's name, an address or anything from the settings.
 
     {"version": 1, "checked": "2026-11-15T02:00:00Z", "season": 1, "phase": "live", "opens": "2026-11-08T01:00:00Z",
      "online": true, "players": 3,
@@ -30,7 +30,6 @@ import argparse
 import datetime as dt
 import json
 import os
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -61,7 +60,6 @@ SCHEDULE: tuple[tuple[int, str, int | None], ...] = (
     (11, "The finale", None),
 )
 CLOSE = "Weekly standings close"
-_LIST = re.compile(r"There are (\d+) of a max")
 
 
 def iso(when: dt.datetime) -> str:
@@ -99,8 +97,8 @@ def phase(now: dt.datetime) -> str:
 def players(answer: str) -> int | None:
     """How many are online, from `list`'s answer ("There are 3 of a max of 30 players online: ..."). Only the
     count is read: the names after it never leave this function."""
-    m = _LIST.search(answer)
-    return int(m[1]) if m else None
+    who = server.online(answer)
+    return who["count"] if who else None
 
 
 def online_count(rcon) -> tuple[bool, int | None]:

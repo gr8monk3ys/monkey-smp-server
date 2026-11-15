@@ -23,8 +23,8 @@ def msys(path):
     return f"/{p[0].lower()}{p[2:]}" if re.match(r"[A-Za-z]:/", p) else p
 
 
-def root_files():
-    text = (DEPLOY / "lib.sh").read_text()
+def root_files(text=None):
+    text = text if text is not None else (DEPLOY / "lib.sh").read_text()
     files = re.search(r"^ROOT_FILES='([^']*)'", text, re.M).group(1).split()
     units = re.search(r"^ROOT_NEW_UNITS='([^']*)'", text, re.M).group(1).split()
     return files, units
@@ -47,10 +47,16 @@ def test_every_root_file_and_new_unit_is_in_the_repo_and_every_root_unit_runs_a_
                 assert path.startswith("/opt/monkey/"), (unit.name, line)
 
 
+def lists(files, units):
+    """A lib.sh's two lists, ROOT_FILES over two lines as in deploy/lib.sh."""
+    return f"ROOT_FILES='{' '.join(files[:2])}\n{' '.join(files[2:])}'\nROOT_NEW_UNITS='{' '.join(units)}'\n"
+
+
 @pytest.fixture
 def run(tmp_path):
-    """Root's clone (SRC) holds the root files and some units; DEST and UNITS start empty."""
-    files, _ = root_files()
+    """Root's clone (SRC) holds the root files (its lib.sh with the lists) and some units; DEST and UNITS start
+    empty."""
+    files, new_units = root_files()
     src, dest, units, bin_dir = (tmp_path / n for n in ("src", "dest", "units", "bin"))
     calls = tmp_path / "calls"
     for d in (src / ".git", dest, units, bin_dir):
@@ -58,6 +64,7 @@ def run(tmp_path):
     for f in files:
         (src / f).parent.mkdir(parents=True, exist_ok=True)
         (src / f).write_text(f"# {f} v2\n", newline="\n")
+    (src / "deploy" / "lib.sh").write_text("# deploy/lib.sh v2\n" + lists(files, new_units), newline="\n")
     for script in ("monkey-logs.sh", "monkey-alert.sh"):   # the deployed checkout (REPO_DIR is src here) has them
         (src / "deploy" / script).write_text("#\n", newline="\n")
     for u in ("monkey-backup.service", "monkey-backup.timer", "monkey-logs.timer", "monkey-other.service"):
@@ -83,13 +90,13 @@ def run(tmp_path):
         (bin_dir / name).write_text(f'#!/bin/sh\necho "{name} $*" >>"$FAKE_CALLS"\n{body}', newline="\n")
         (bin_dir / name).chmod(0o755)
 
-    def go(*args, **env):
+    def go(*args, script=SCRIPT, **env):
         environ = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "FAKE_CALLS": calls.as_posix(),
                    "ROOT_SRC": msys(src), "ROOT_DEST": msys(dest), "UNIT_DIR": msys(units),
                    "REPO_DIR": msys(src), "MONKEY_DEPLOY_ENV": msys(tmp_path / "none.env"), **env}
         if calls.exists():
             calls.unlink()
-        done = subprocess.run([DASH, SCRIPT.as_posix(), *args], env=environ, stdout=subprocess.PIPE,
+        done = subprocess.run([DASH, msys(script), *args], env=environ, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, text=True)
         out = [re.sub(r"^\S+ \S+ ", "", line) for line in done.stdout.splitlines()]
         made = calls.read_text().splitlines() if calls.exists() else []
@@ -105,7 +112,7 @@ def test_an_install_copies_the_root_files_the_changed_and_new_units_and_records_
     code, out, calls = run()
     assert code == 0, out
     for f in run.files:
-        assert (run.dest / f).read_text() == f"# {f} v2\n"
+        assert (run.dest / f).read_text() == (run.src / f).read_text()
     assert not list(run.dest.rglob("*.new"))
     # Changed (backup.service) and new from ROOT_NEW_UNITS (logs.timer); the same one and an uninstalled other: not.
     assert sorted(p.name for p in run.units.iterdir()) == ["monkey-backup.service", "monkey-backup.timer",
@@ -154,11 +161,51 @@ def test_install_refuses_without_root_a_strange_origin_a_writable_folder_or_a_mi
     assert not any(run.dest.rglob("*.*"))
 
 
-def test_an_old_release_without_the_root_files_installs_nothing(run):
-    (run.src / "tools" / "restore_drill.py").unlink()
+def test_a_release_without_the_lists_installs_nothing(run):
+    (run.src / "deploy" / "lib.sh").write_text("# deploy/lib.sh v1, before root's copies\n", newline="\n")
     code, out, _ = run()
-    assert code == 1 and "has no tools/restore_drill.py" in out[-1]
+    assert code == 1 and "v3.5.0 has no ROOT_FILES in deploy/lib.sh" in out[-1]
     assert not any(run.dest.rglob("*.*"))
+    (run.src / "deploy" / "lib.sh").write_text("ROOT_FILES='deploy/lib.sh ../etc/passwd'\n", newline="\n")
+    code, out, _ = run()
+    assert code == 1 and "lists '../etc/passwd'" in out[-1]
+    assert not any(run.dest.rglob("*.*"))
+
+
+def test_the_old_install_root_takes_the_new_releases_list_and_drops_what_it_no_longer_lists(run):
+    """Root's copies from the release before tools/helper_queue.py, its lib.sh listing tools/staff_apex.py instead:
+    one run of that install-root.sh installs the new file and removes the old one."""
+    old_lib = (DEPLOY / "lib.sh").read_text().replace("tools/helper_queue.py", "tools/staff_apex.py")
+    old_files, _ = root_files(old_lib)
+    assert "tools/staff_apex.py" in old_files and "tools/helper_queue.py" not in old_files
+    for f in old_files:
+        (run.dest / f).parent.mkdir(parents=True, exist_ok=True)
+        (run.dest / f).write_text(f"# {f} v1\n", newline="\n")
+    shutil.copy(SCRIPT, run.dest / "deploy" / "install-root.sh")
+    (run.dest / "deploy" / "lib.sh").write_text(old_lib, newline="\n")
+    (run.dest / "tools" / "notes.txt").symlink_to(run.dest / "INSTALLED")   # a link: left alone
+    code, out, _ = run(script=run.dest / "deploy" / "install-root.sh")
+    assert code == 0, out
+    for f in run.files:
+        assert (run.dest / f).read_text() == (run.src / f).read_text(), f
+    assert not (run.dest / "tools" / "staff_apex.py").exists()
+    assert (run.dest / "tools" / "notes.txt").is_symlink()
+    assert f"[install-root] removed {msys(run.dest)}/tools/staff_apex.py: v3.5.0 doesn't list it" in out
+
+
+def test_going_back_to_an_older_release_puts_back_its_files_and_keeps_a_copy_it_lacks(run):
+    run()
+    old = [f.replace("tools/helper_queue.py", "tools/staff_apex.py") for f in run.files] + ["tools/gone.py"]
+    _, units = root_files()
+    (run.src / "deploy" / "lib.sh").write_text("# deploy/lib.sh v1\n" + lists(old, units), newline="\n")
+    (run.src / "tools" / "staff_apex.py").write_text("# v1\n", newline="\n")
+    (run.dest / "tools" / "gone.py").write_text("# root's own\n", newline="\n")
+    code, out, _ = run("--tag=v3.4.0")
+    assert code == 0, out
+    assert (run.dest / "tools" / "staff_apex.py").read_text() == "# v1\n"
+    assert not (run.dest / "tools" / "helper_queue.py").exists()
+    assert "[install-root] WARNING: v3.4.0 has no tools/gone.py: root's copy of it is kept as it is" in out
+    assert (run.dest / "tools" / "gone.py").read_text() == "# root's own\n"
 
 
 def test_check_lists_what_differs_and_changes_nothing_for_any_user(run):
@@ -166,6 +213,10 @@ def test_check_lists_what_differs_and_changes_nothing_for_any_user(run):
     assert code == 0 and "differ from" in out[0]
     listed = [line.strip().split("] ", 1)[1].strip() for line in out[1:]]
     assert set(listed) == set(run.files) | {"monkey-logs.timer"}
+    (run.dest / "tools").mkdir()
+    (run.dest / "tools" / "staff_apex.py").write_text("# v1\n", newline="\n")
+    code, out, _ = run("--check", FAKE_UID="1000")
+    assert "[install-root]   tools/staff_apex.py (to remove)" in out and (run.dest / "tools" / "staff_apex.py").exists()
     assert all(c.split()[0] not in ("git", "install", "systemctl") for c in calls)
     run()
     code, out, _ = run("--check", FAKE_UID="1000")

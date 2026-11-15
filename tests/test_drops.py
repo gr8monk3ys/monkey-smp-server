@@ -436,7 +436,7 @@ def test_the_script_is_posix_sh_and_reads_no_secret():
     lib = (DEPLOY / "lib.sh").read_text()
     job = lib[lib.index("timed_job() {"):]
     # The webhooks only for a job that gave up (the day; drops never does).
-    gave_up = job[job.index("            4) ;;"):]
+    gave_up = job[job.index('            "$JOB_GAVE_UP") ;;'):]
     assert set(re.findall(r"\$\(setting (\w+)", job[:len(job) - len(gave_up)])) == {"REPO_DIR", "LIVE_DIR", "LOCK_FILE"}
     assert set(re.findall(r"\$\(setting (\w+)", gave_up)) == {"STAFF_WEBHOOK_URL", "DISCORD_WEBHOOK_URL"}
     assert 'set -- "$LIVE_DIR/server/world"' in job and 'python3 -B "$lib_tool" commands "$@"' in job

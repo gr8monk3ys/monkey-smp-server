@@ -5,7 +5,9 @@ tools/staff_host.py registers them with staff_panel (register()), so they get th
     PUT  /api/java {"memory_gb", "flags"}     writes server/monkey-launch.json (null memory: picked as before)     admin
     GET  /api/datapacks                       the world's data packs, on or off when the server runs              admin
     POST /api/datapack-upload?name=N&confirm=N  a data pack .zip, the raw body: checked, then into the world     owner
-    POST /api/datapack-toggle {"name", "enabled"}  datapack enable/disable "file/NAME" (the server must run)     admin
+    POST /api/datapack-toggle {"name", "enabled", "restart"?}  datapack enable/disable "file/NAME" (the server   admin
+                                              must run); a startup-only pack only with "restart": true, which then
+                                              restarts with the 5-minute warning (/api/power restart)
     POST /api/datapack-remove {"name", "confirm"}  into staff-removed/TIME/, never deleted                       admin
     POST /api/datapack-reload                 /reload: data packs (and their changes) load without a restart       admin
     POST /api/datapacks-save-off {"confirm": "ALL OFF"}  saves the enabled file/ packs, then turns them all off   admin
@@ -35,6 +37,7 @@ Stdlib only, Python 3.10 or newer.
 import base64
 import contextlib
 import datetime as dt
+import functools
 import hashlib
 import hmac
 import json
@@ -47,6 +50,8 @@ import tempfile
 import threading
 import zipfile
 from pathlib import Path
+
+import packs as pack_state
 
 sp = None   # tools/staff_panel.py (register)
 ax = None   # tools/staff_apex.py
@@ -82,6 +87,50 @@ SAVED_PACKS = "packs-saved.json"      # in STAFF_DIR: the packs troubleshooting 
 # A server answer to datapack enable/disable that means it did nothing (it answers these as plain text, not errors).
 PACK_REFUSED = ("unknown data pack", "not enabled", "already enabled", "unknown or incomplete", "incorrect argument")
 ALL_OFF_WORD = "ALL OFF"
+# A pack's data/NAMESPACE/KIND folders that /reload and `datapack enable` really load. Every other kind (dialog,
+# enchantment, worldgen and the game's other dynamic registries, and any kind a mod or a later game version adds) is
+# read only when the world loads: turned on live, the pack half-loads and its files that use that data fail. On
+# 2026-11-10 monkey-rules (dialog) was turned on that way, and no player could join until the next restart. So a pack
+# with any other kind is turned on or off only at a restart. An allowlist, so a kind this file doesn't know is safe.
+RELOADABLE = frozenset({"advancement", "function", "item_modifier", "loot_table", "predicate", "recipe", "structure",
+                        "tags"})
+
+
+def startup_kinds(paths) -> list[str]:
+    """The kinds outside RELOADABLE among a pack's file paths (data/NAMESPACE/KIND/...), sorted."""
+    kinds = set()
+    for path in paths:
+        parts = str(path).replace("\\", "/").split("/")
+        if len(parts) >= 4 and parts[0] == "data" and parts[2] and parts[2] not in RELOADABLE:
+            kinds.add(parts[2])
+    return sorted(kinds)
+
+
+@functools.lru_cache(maxsize=256)
+def _kinds_of(path: str, _stamp: tuple) -> tuple[str, ...]:
+    p = Path(path)
+    if p.is_dir():
+        data = p / "data"
+        return tuple(startup_kinds(f"data/{ns.name}/{kind.name}/x" for ns in data.iterdir() if ns.is_dir()
+                                   for kind in ns.iterdir() if kind.is_dir()) if data.is_dir() else [])
+    with zipfile.ZipFile(p) as z:
+        return tuple(startup_kinds(z.namelist()))
+
+
+def pack_startup_kinds(path: Path) -> list[str]:
+    """startup_kinds for a pack folder or .zip, kept while its size and time stay the same; [] when it can't be
+    read (an unreadable pack doesn't load at all)."""
+    try:
+        st = path.stat()
+        data = path / "data"
+        # A folder's own time doesn't change when a file deep inside does: data/'s and its namespaces' times do
+        # change when a kind folder is added or removed, which is all this reads.
+        stamp = (st.st_size, st.st_mtime_ns, *(sorted((d.name, d.stat().st_mtime_ns) for d in data.iterdir())
+                                                 if path.is_dir() and data.is_dir() else ()))
+        return list(_kinds_of(str(path), stamp))
+    except (OSError, zipfile.BadZipFile, ValueError):
+        return []
+
 
 ICON_MAX = 1 * MB
 ICON_SIZE = 64
@@ -98,23 +147,7 @@ def clean(value, most: int) -> str:
     return hs.clean(value, most)
 
 
-def pack_entry(name) -> bool:
-    """A name in the datapacks folder this page lists and names in a command (datapack enable "file/NAME"): it may
-    have spaces ("Enchant Disabler for DnT 5.3.0.zip"), but no quote, backslash or slash, no "..", no control
-    character, and it starts with a letter or digit."""
-    return (isinstance(name, str) and 0 < len(name) <= 128 and name.isprintable() and name[0].isalnum()
-            and not any(c in name for c in '"\\/') and ".." not in name)
-
-
-def enabled_in(said: str, names) -> list[str]:
-    """The NAMES (the datapacks folder's entries) that `datapack list enabled`'s answer shows on, in its order. Each
-    is found whole, as [file/NAME (world)] or [file/NAME], so a name with spaces is never cut at the first one."""
-    found = []
-    for name in names:
-        m = re.search(r"\[file/" + re.escape(name) + r"(?: \([^()\[\]]*\))?\]", said)
-        if m:
-            found.append((m.start(), name))
-    return [name for _, name in sorted(found)]
+pack_entry = pack_state.pack_entry
 
 
 def zip_problem(z: zipfile.ZipFile, files_max: int, total_max: int) -> str | None:
@@ -334,15 +367,21 @@ class More:
         except FileNotFoundError:
             return []
 
+    def _listing(self) -> str:
+        """The server's enabled list, asked now (staff see the live state) and kept for the timers' packs-on: one
+        `docker compose ps` for the container (none running is RconError), one command. RconError or
+        pack_state.Unreadable when it didn't answer with the list."""
+        box = self.p.docker.container()
+        if not box:
+            raise sp.server.RconError("the server isn't running")
+        return pack_state.listing(self.x.rcon, self.p.docker.folder, box, fresh=True)
+
     def _enabled(self, names) -> set[str] | None:
         """Which of NAMES the server has on, or None when it isn't running or didn't answer."""
-        if not self.x.running():
-            return None
         try:
-            said = self.x.rcon("datapack list enabled")
-        except sp.server.RconError:
+            return set(pack_state.on(self._listing(), names))
+        except (sp.server.RconError, pack_state.Unreadable):
             return None
-        return set(enabled_in(said, names))
 
     def datapacks(self) -> dict:
         try:
@@ -352,6 +391,7 @@ class More:
             entries = []
         release = self.release_packs()
         enabled = self._enabled([e.name for e in entries if pack_entry(e.name)])
+        later = self._at_restart()
         rows = []
         for e in entries[:PACKS_SHOWN]:
             if e.is_symlink():
@@ -373,7 +413,8 @@ class More:
             else:
                 continue
             rows.append({"name": e.name, "kind": kind, "size": size, "description": desc,
-                         "release": e.name in release, "enabled": None if enabled is None else e.name in enabled})
+                         "release": e.name in release, "enabled": None if enabled is None else e.name in enabled,
+                         "startup_only": pack_startup_kinds(Path(e.path)), "at_restart": later.get(e.name)})
         try:
             saved = self._saved()
             # How many saved packs are off right now (None: the server can't say), not just how many were saved.
@@ -423,16 +464,48 @@ class More:
             raise sp.Refused(404, f"{name} is not in the datapacks folder (any more): reload the list.")
         return path
 
+    def _forget(self) -> None:
+        """The packs on or off changed (or may have): the timers' kept list (tools/rcon.py packs-on) is dropped."""
+        pack_state.forget(self.p.docker.folder)
+
+    def _at_restart(self) -> dict:
+        """{pack name: "enable" | "disable"} staff asked for at the next restart (monkey-deploy.sh applies them)."""
+        return pack_state.at_restart(self.p.docker.folder)
+
+    def _set_at_restart(self, name: str, verb: str | None) -> None:
+        pack_state.set_at_restart(self.p.docker.folder, name, verb,
+                                  lambda path, data: self.p.write_file(path, data, None))
+
     def datapack_toggle(self, user: str, body: dict) -> dict:
-        name, enabled = body.get("name"), body.get("enabled")
-        if not isinstance(enabled, bool):
-            raise sp.Refused(400, "enabled must be true or false.")
-        self._pack(name)
+        name, enabled, restart = body.get("name"), body.get("enabled"), body.get("restart", False)
+        if not isinstance(enabled, bool) or not isinstance(restart, bool):
+            raise sp.Refused(400, "enabled and restart must be true or false.")
+        kinds = pack_startup_kinds(self._pack(name))
         if not self.x.running():
             raise sp.Refused(409, "The server isn't running: a data pack is turned on or off while it runs.")
-        said = self.x._said(f'datapack {"enable" if enabled else "disable"} "file/{name}"')
-        self.p.record(user, "datapack-enable" if enabled else "datapack-disable", name)
-        return {"name": name, "enabled": enabled, "said": said}
+        verb = "enable" if enabled else "disable"
+        if not kinds:
+            said = self.x.said(f'datapack {verb} "file/{name}"')
+            self._forget()
+            self.p.record(user, f"datapack-{verb}", name)
+            return {"name": name, "enabled": enabled, "said": said, "restarting": False}
+        if not restart:
+            raise sp.Refused(409, f"{name} has {', '.join(kinds)} data, which the game loads only at startup. "
+                                  "Turned on or off without a restart it half-loads, and players can fail to join. "
+                                  "Turn it on or off with a restart instead.")
+        # The pack is not touched now: the restart turns it on or off just before it stops the server (the world
+        # saves that), so it is never half-loaded while players are on. See monkey-deploy.sh, packs_at_restart.
+        with self._packs:
+            if self.p.busy():
+                raise sp.Refused(409, "A restart or another power action is under way: wait for it to finish.")
+            self._set_at_restart(name, verb)
+            try:
+                self.p.power_action(user, {"action": "restart"})
+            except Exception:
+                self._set_at_restart(name, None)
+                raise
+        self.p.record(user, f"datapack-{verb}-at-restart", f"{name} ({', '.join(kinds)} data)")
+        return {"name": name, "enabled": enabled, "said": "", "restarting": True}
 
     def datapack_remove(self, user: str, body: dict) -> dict:
         name, confirm = body.get("name"), body.get("confirm")
@@ -515,25 +588,29 @@ class More:
                 raise sp.Refused(409, f"A saved set is waiting already ({len(saved['packs'])} packs, by {saved['by']} "
                                       f"at {saved['at']}): turn it back on or clear it first.")
             try:
-                said = self.x.rcon("datapack list enabled")
-            except sp.server.RconError as e:
+                said = self._listing()
+            except (sp.server.RconError, pack_state.Unreadable) as e:
                 raise sp.Refused(502, f"The server did not list its packs: {sp.masked(str(e))[:200]}") from None
             names = self._entry_names()
-            packs = [f"file/{n}" for n in enabled_in(said, names)]
+            folder = self._packs_folder()
+            # A pack with data the game reads only at startup stays on: turning it off live half-unloads it.
+            kept_on = [n for n in pack_state.on(said, names) if pack_startup_kinds(folder / n)]
+            packs = [f"file/{n}" for n in pack_state.on(said, names) if n not in kept_on]
             if not packs:
                 raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
             self.p.staff.mkdir(parents=True, exist_ok=True)
             data = json.dumps({"by": user, "at": sp.stamp(), "packs": packs}, indent=1) + "\n"
-            self.p._write(self._saved_path(), data.encode("utf-8"), None)
+            self.p.write_file(self._saved_path(), data.encode("utf-8"), None)
             why = {}
             for pack in reversed(packs):        # the top one first
                 refused = self._switch(pack, False)
                 if refused:
                     why[pack] = refused
             off, failed = self._settle(packs, False, why, names)
+            self._forget()
         self.p.record(user, "datapacks-save-off", f"{len(off)} of {len(packs)} off"
                       + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
-        return {"saved": len(packs), "off": off, "failed": failed}
+        return {"saved": len(packs), "off": off, "failed": failed, "kept_on": kept_on}
 
     def packs_restore(self, user: str) -> dict:
         saved = self._saved()
@@ -542,15 +619,21 @@ class More:
         self._running_for_packs()
         with self._packs:
             names = self._entry_names()
-            here = [p for p in saved["packs"] if p[5:] in names]
+            folder = self._packs_folder()
+            # Never turned on live: turn such a pack on with its own toggle, which does it at a restart.
+            startup = {p for p in saved["packs"] if p[5:] in names and pack_startup_kinds(folder / p[5:])}
+            here = [p for p in saved["packs"] if p[5:] in names and p not in startup]
             why = {}
             for pack in here:           # in the old order: each one enabled goes on top, as it was
                 refused = self._switch(pack, True)
                 if refused:
                     why[pack] = refused
             on, refused = self._settle(here, True, why, names)
+            self._forget()
         reasons = {f["name"]: f["why"] for f in refused}
-        failed = [{"name": p[5:], "why": reasons.get(p[5:], "It is not in the datapacks folder any more.")}
+        restart_word = "Its data loads only at startup: turn it on with its own button, which restarts the server."
+        failed = [{"name": p[5:], "why": restart_word if p in startup else
+                   reasons.get(p[5:], "It is not in the datapacks folder any more.")}
                   for p in saved["packs"] if p[5:] not in on]
         self.p.record(user, "datapacks-restore", f"{len(on)} of {len(saved['packs'])} on"
                       + (f", failed: {', '.join(f['name'] for f in failed)}" if failed else ""))
@@ -572,7 +655,8 @@ class More:
     def datapack_reload(self, user: str) -> dict:
         if not self.x.running():
             raise sp.Refused(409, "The server isn't running: the packs load when it starts.")
-        said = self.x._said("reload")
+        said = self.x.said("reload")
+        self._forget()
         self.p.record(user, "datapack-reload")
         return {"said": said}
 

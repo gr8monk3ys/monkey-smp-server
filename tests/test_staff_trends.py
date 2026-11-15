@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 
+import ledger as ledger_module
 import pytest
 import staff_panel
 import staff_trends
@@ -233,9 +234,7 @@ def test_the_next_run_reads_only_the_new_rows(world):
 
 def test_the_ledger_read_goes_through_the_player_index_from_the_last_row(world):
     db = sqlite3.connect(world / "server" / "world" / "ledger.sqlite")
-    plan = " ".join(r[-1] for r in db.execute(
-        "explain query plan select id from actions indexed by actions_player_id where player_id = ? and id > ? "
-        "order by id limit ?", (1, 0, 10)))
+    plan = " ".join(r[-1] for r in db.execute(f"explain query plan {ledger_module.PLAYER_AFTER}", (1, 0, 10)))
     db.close()
     assert "actions_player_id (player_id=? AND rowid>?)" in plan and "TEMP B-TREE" not in plan
 
@@ -263,7 +262,7 @@ def test_without_the_player_index_the_hourly_gate_still_applies(world):
 
 
 def test_a_busy_ledger_keeps_what_was_counted(world, monkeypatch):
-    real = staff_trends.staff_report.Ledger
+    real = staff_trends.Ledger
 
     class Busy:
         """Ledger's database, locked by the game after the first query."""
@@ -284,7 +283,7 @@ def test_a_busy_ledger_keeps_what_was_counted(world, monkeypatch):
         led.db = Busy(led.db)
         return led
 
-    monkeypatch.setattr(staff_trends.staff_report, "Ledger", opened)
+    monkeypatch.setattr(staff_trends, "Ledger", opened)
     monkeypatch.setattr(staff_trends, "WORLD_CHUNK", 1)
     data = staff_trends.world(world, {}, NOW)
     assert not data["caught_up"] and data["rows"] == 1 and "busy" in data["note"]

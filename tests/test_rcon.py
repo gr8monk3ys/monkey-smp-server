@@ -2,6 +2,7 @@ import argparse
 import datetime as dt
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -197,3 +198,65 @@ def test_packs_on_gives_lib_sh_its_exit_code(capsys, server, code, said):
     packs = ["monkey-boss"] if code == 0 else ["monkey-boss", "monkey-sieges"]
     assert rcon.main(["packs-on", *packs, "--docker", "d"], server=lambda folder: server) == code
     assert capsys.readouterr().out == said
+
+
+def test_packs_on_keeps_the_list_for_the_same_container(tmp_path):
+    server = rcon.Recorder({"datapack": LISTED})
+    for _ in range(3):
+        assert rcon.main(["packs-on", "monkey-boss", "--docker", str(tmp_path)], server=lambda folder: server) == 0
+    assert server.sent == ["datapack list enabled"]
+
+
+def docker_answering(**out):
+    """rcon.Docker over a fake subprocess.run: (argv, timeout) of each call in `calls`, answers by docker verb."""
+    calls = []
+
+    def run(argv, **how):
+        calls.append((argv, how["timeout"]))
+        verb = "inspect" if argv[:2] == ["docker", "inspect"] else next(a for a in ("exec", "ps") if a in argv)
+        if verb == "ps" and "-q" in argv:
+            verb = "psq"
+        return SimpleNamespace(returncode=out.get(f"{verb}_rc", 0), stdout=out.get(verb, ""), stderr="")
+    return rcon.Docker(Path("/live/docker"), run=run), calls
+
+
+def test_the_adapter_sends_with_a_timeout_and_raw_keeps_a_refusal_for_the_console():
+    docker, calls = docker_answering(exec="Unknown or incomplete command, see below for error")
+    with pytest.raises(rcon.RconError):
+        docker("nope", timeout=20)
+    assert calls[-1][0][-5:] == ["-T", "monkey", "monkey", "rcon", "nope"] and calls[-1][1] == 20
+    assert docker.raw("nope").stdout.startswith("Unknown") and calls[-1][1] == rcon.TIMEOUT
+
+
+@pytest.mark.parametrize(("ps", "state"), [
+    ('{"State":"running","Status":"Up 3 hours (healthy)","Health":"healthy"}\n',
+     {"state": "running", "uptime": "3 hours", "health": "healthy"}),
+    ('[{"State":"exited","Status":"Exited (0) 2 minutes ago"}]', {"state": "exited", "uptime": None, "health": None}),
+    ("", {"state": "not created", "uptime": None, "health": None}),
+    ("not json", None),
+])
+def test_the_adapter_says_what_docker_says_about_the_container(ps, state):
+    docker, _ = docker_answering(ps=ps)
+    assert docker.state() == state
+
+
+def test_the_adapter_reads_when_the_container_started():
+    docker, calls = docker_answering(psq="0123456789abcdef\n", inspect="2026-11-06T09:30:00.123456789Z\n")
+    assert docker.started(timeout=20) == "2026-11-06T09:30:00Z" and all(t == 20 for _, t in calls)
+    assert docker_answering(psq="")[0].started() is None
+    assert docker_answering(psq="; rm -rf /\n")[0].started() is None      # never handed to docker inspect
+
+
+@pytest.mark.parametrize(("answer", "who"), [
+    ("There are 2 of a max of 30 players online: Alpha, Bravo", {"count": 2, "max": 30, "names": ["Alpha", "Bravo"]}),
+    ("There are 0 of a max of 30 players online:", {"count": 0, "max": 30, "names": []}),
+    ("Unknown or incomplete command", None), ("", None), (None, None),
+])
+def test_one_rule_reads_who_is_online(answer, who):
+    assert rcon.online(answer) == who
+
+
+def test_the_recorder_answers_the_same_interface():
+    up, down = rcon.Recorder(), rcon.Recorder(running=False)
+    assert up.state()["state"] == "running" and down.state()["state"] == "exited" and up.started() is None
+    assert up("list", timeout=5) == ""

@@ -1522,6 +1522,7 @@ Export-ModuleMember -Function @(
     'Add-Owner'
     'Invoke-Rcon'
     'Get-MemoryGB'
+    'Write-Note'
     'Get-LaunchArguments'
     'Read-LaunchSettings'
     'Get-ServerLayout'

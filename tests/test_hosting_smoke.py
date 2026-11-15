@@ -33,11 +33,11 @@ DATA_LINES = [
      "file/monkey-camera", True),
     (WARN + "Found validation problems in advancement monkey:firsts/dragon: ", True),
     (WARN + "Found loot table element validation problem in {minecraft:loot_table/monkey:drops/boss}: x", True),
-    # Known: More Villagers' advancements and its gilded_station recipe, and nothing else of that mod's.
+    # More Villagers' files that 26.2 can't read are patched now, so none of its errors is known any more.
     (ERROR + "Couldn't parse data file 'morevillagers:gilded_station' from 'morevillagers:recipe/gilded_station.json': "
-     "DataResult.Error['Map entry '#' : Failed to parse either']", False),
+     "DataResult.Error['Map entry '#' : Failed to parse either']", True),
     (ERROR + "Couldn't parse data file 'morevillagers:kill_villager' from "
-     "'morevillagers:advancement/kill_villager.json': DataResult.Error['x']", False),
+     "'morevillagers:advancement/kill_villager.json': DataResult.Error['x']", True),
     (ERROR + "Couldn't parse data file 'morevillagers:oceanography_table' from "
      "'morevillagers:recipe/oceanography_table.json': DataResult.Error['x']", True),
     (ERROR + "Couldn't parse data file 'morevillagers:gilded_station' from "

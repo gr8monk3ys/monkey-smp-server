@@ -21,24 +21,35 @@ over several commands) stops at its first failure too, in tools/standings.py's u
                                                  exit 0 when every data pack named is enabled, PACK_OFF when one
                                                  is off, 2 when it can't tell (server down, docker failed, an
                                                  answer it can't read). deploy/lib.sh's timed_job skips a job
-                                                 whose pack staff turned off (JOB_PACKS), instead of failing it
+                                                 whose pack staff turned off (JOB_PACKS), instead of failing it.
+                                                 It keeps the server's list in DIR/.packs-enabled.json for
+                                                 PACKS_CACHE_S, for the running container it came from: every
+                                                 listing makes the server re-read every pack and mod on its main
+                                                 thread. Staff's pack changes drop it. The rule, the copy and
+                                                 the restart queue are tools/packs.py's
 
 A timed job's tool (tools/challenges.py, drops.py, wardrobe.py; deploy/lib.sh's timed_job runs them) has the
-same two subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
-(changes nothing), and `send --docker DIR`, which sends them. send's exit code: 0 sent (or, for most jobs,
+same three subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
+(changes nothing), `send --docker DIR`, which sends them, and `packs-on --docker DIR`, which checks the data packs
+the tool declares it needs (its NEEDS, given to run_job) as `rcon.py packs-on` does; timed_job runs it before it
+takes the deploy lock, and skips the job when one is off. send's exit code: 0 sent (or, for most jobs,
 the server isn't running), 1 a command wasn't accepted, NOT_RUNNING the server isn't running and the job must
 run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
 import datetime as dt
+import json
 import re
 import subprocess
 import sys
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
+import packs
+
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart).
+# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart). deploy/lib.sh names
+# these three (JOB_NOT_RUNNING, ...): a test checks it has the same numbers.
 NOT_RUNNING = 3
 GAVE_UP = 4
 # `packs-on`: a data pack the job needs is off (staff turned it off; deploy/lib.sh's timed_job skips the job).
@@ -49,8 +60,21 @@ REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "In
            "RCON is turned off")
 
 
+TIMEOUT = 180       # seconds a command may take through `docker compose exec` (a reload, a big save)
+_LIST = re.compile(r"There are (\d+) of a max of (\d+) players online:?(.*)", re.S)
+_UP = re.compile(r"Up (.+?)(?: \(.*\))?$")
+
+
 class RconError(Exception):
     pass
+
+
+def online(answer: str) -> dict | None:
+    """`list`'s answer: {"count", "max", "names"}, None when it isn't that answer."""
+    m = _LIST.search(answer or "")
+    if not m:
+        return None
+    return {"count": int(m[1]), "max": int(m[2]), "names": [n.strip() for n in m[3].split(",") if n.strip()]}
 
 
 def checked(command: str, answer: str, code: int = 0, errors: str = "") -> str:
@@ -74,14 +98,59 @@ class Docker:
         except (OSError, subprocess.TimeoutExpired) as e:
             raise RconError(f"could not run docker compose ({type(e).__name__})") from None
 
-    def running(self) -> bool:
+    def container(self) -> str:
+        """The running server container's id, "" when it isn't running."""
         done = self.compose("ps", "-q", "--status", "running", "monkey", timeout=60)
         if done.returncode != 0:
             raise RconError(f"docker compose ps failed (exit {done.returncode}): {done.stderr.strip()[-300:]}")
-        return bool(done.stdout.strip())
+        return done.stdout.strip()
 
-    def __call__(self, command: str) -> str:
-        done = self.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=180)
+    def running(self) -> bool:
+        return bool(self.container())
+
+    def state(self) -> dict | None:
+        """What docker says about the server's container: {"state", "uptime", "health"}, None when docker failed.
+        `--all`, so a stopped container reads as stopped rather than as no container."""
+        try:
+            done = self.compose("ps", "--all", "--format", "json", "monkey", timeout=60)
+        except RconError:
+            return None
+        if done.returncode != 0:
+            return None
+        rows: list[dict] = []
+        try:
+            for line in done.stdout.splitlines():   # one object a line since compose 2.21, one array before it
+                row = json.loads(line)
+                rows += row if isinstance(row, list) else [row]
+        except ValueError:
+            return None
+        if not rows:
+            return {"state": "not created", "uptime": None, "health": None}
+        up = _UP.match(rows[0].get("Status", ""))
+        return {"state": rows[0].get("State", "unknown"), "uptime": up[1] if up else None,
+                "health": rows[0].get("Health") or None}
+
+    def started(self, timeout: int = 60) -> str | None:
+        """When the container started (UTC, to the second), None when docker didn't say."""
+        try:
+            done = self.compose("ps", "-q", "monkey", timeout=timeout)
+            box = done.stdout.strip().splitlines()[0] if done.returncode == 0 and done.stdout.strip() else ""
+            if not re.fullmatch(r"[0-9a-f]{12,64}", box):
+                return None
+            done = self.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", box], stdin=subprocess.DEVNULL,
+                            capture_output=True, text=True, timeout=timeout)
+        except (RconError, OSError, subprocess.TimeoutExpired):
+            return None
+        m = re.match(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)", done.stdout.strip()) if done.returncode == 0 else None
+        return f"{m[1]}Z" if m else None
+
+    def raw(self, command: str, timeout: int = TIMEOUT) -> subprocess.CompletedProcess:
+        """One command's whole result (stdout, stderr, returncode), not checked: the staff console shows a refusal
+        as the server's own words. RconError when docker couldn't be run."""
+        return self.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=timeout)
+
+    def __call__(self, command: str, timeout: int = TIMEOUT) -> str:
+        done = self.raw(command, timeout)
         return checked(command, done.stdout.strip(), done.returncode, done.stderr)
 
 
@@ -95,7 +164,27 @@ class Recorder:
     def running(self) -> bool:
         return self.up
 
-    def __call__(self, command: str) -> str:
+    def container(self) -> str:
+        return "box1" if self.up else ""
+
+    def state(self) -> dict | None:
+        return {"state": "running" if self.up else "exited", "uptime": None, "health": None}
+
+    def started(self, timeout: int = 60) -> str | None:
+        return None
+
+    def raw(self, command: str, timeout: int = TIMEOUT) -> subprocess.CompletedProcess:
+        """As Docker.raw: the answer unchecked (a refusal stays in stdout), returncode 0."""
+        if self.fail:
+            self.fail -= 1
+            raise RconError("the server is down")
+        answer = self.answers.get(command)
+        if answer is None:
+            answer = next((a for k, a in self.answers.items() if command.startswith(k)), "")
+        self.sent.append(command)
+        return subprocess.CompletedProcess([command], 0, answer, "")
+
+    def __call__(self, command: str, timeout: int = TIMEOUT) -> str:
         if self.fail:
             self.fail -= 1
             raise RconError("the server is down")
@@ -155,13 +244,23 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
     return 0 if send(rcon, commands, log, **how) else 1
 
 
-def packs_off(rcon, packs: Iterable[str]) -> list[str]:
-    """Which of the world data packs `packs` (folder names, e.g. monkey-wardrobe) are off, from `datapack list
-    enabled`. RconError when the answer isn't that list, so an answer it can't read never reads as "off"."""
-    answer = rcon("datapack list enabled")
-    if "enabled" not in answer:
-        raise RconError(f"datapack list enabled answered: {answer[-300:] or 'nothing'}")
-    return [p for p in packs if not re.search(rf"file/{re.escape(p)}(?![\w.-])", answer)]
+def packs_off(rcon, names: Iterable[str], folder: Path | None = None, fresh: bool = False) -> list[str]:
+    """Which of the world data packs NAMES (folder names, e.g. monkey-wardrobe) are off on the running server:
+    tools/packs.py's rule. With FOLDER (the docker folder) the kept copy is used (and refreshed), unless `fresh`:
+    then the server is asked and the copy refreshed. Without FOLDER the server is asked and nothing is kept: for a
+    decision that can't wait out a copy staff's `monkey rcon` didn't drop. RconError when the server isn't running
+    or its answer can't be read, so an answer it can't read never reads as "off"."""
+    names = list(names)
+    if not names:
+        return []
+    box = rcon.container() if folder is not None else ""
+    if folder is not None and not box:
+        raise RconError("server not running")
+    try:
+        said = packs.listing(rcon, folder, box, fresh=fresh) if folder is not None else rcon(packs.LIST)
+        return packs.off(said, names)
+    except packs.Unreadable as e:
+        raise RconError(str(e)) from None
 
 
 # ---------------------------------------------------------------- a timed job's command line
@@ -185,6 +284,8 @@ def job_subcommands(sub, send_about: str, world: bool = False, at: bool = True,
             p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
         if name == "send":
             p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+    p = sub.add_parser("packs-on", help="are the data packs this job needs on? (exit PACK_OFF when one is off)")
+    p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
 
 
 def job_time(args) -> dt.datetime:
@@ -192,9 +293,12 @@ def job_time(args) -> dt.datetime:
     return getattr(args, "at", None) or dt.datetime.now(UTC)
 
 
-def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int]) -> int:
-    """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none) or `send`
-    (send(the server, when)), for job_time(args)."""
+def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int],
+            needs: Iterable[str] = ()) -> int:
+    """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none), `send`
+    (send(the server, when)), for job_time(args), or `packs-on`: whether the data packs NEEDS are on."""
+    if args.command == "packs-on":
+        return packs_on(Docker(args.docker), list(needs), args.docker)
     when = job_time(args)
     if args.command == "send":
         return send(Docker(args.docker), when)
@@ -211,20 +315,31 @@ def main(argv=None, server=Docker) -> int:
     on = sub.add_parser("packs-on")
     on.add_argument("packs", nargs="+", help="world data pack folder names (monkey-wardrobe)")
     on.add_argument("--docker", type=Path, required=True, help="the release's docker folder")
+    on.add_argument("--fresh", action="store_true", help="ask the server, not the kept list (it keeps the answer)")
     args = ap.parse_args(argv)
     rcon = server(args.docker)
-    try:
-        if args.command == "running":
+    if args.command == "running":
+        try:
             return 0 if rcon.running() else 1
-        if not rcon.running():
-            print("server not running", file=sys.stderr)
+        except RconError as e:
+            print(e, file=sys.stderr)
             return 2
-        off = packs_off(rcon, args.packs)
+    return packs_on(rcon, args.packs, args.docker, fresh=args.fresh)
+
+
+def packs_on(rcon, names: list[str], folder: Path, fresh: bool = False) -> int:
+    """`packs-on`'s answer: prints which pack is off (or that all are on) and returns PACK_OFF, 0, or 2 when it
+    can't tell (the server isn't running, docker failed, an answer it can't read)."""
+    try:
+        off = packs_off(rcon, names, folder, fresh)
     except RconError as e:
         print(e, file=sys.stderr)
         return 2
-    print(f"data pack off: {' '.join(off)}" if off else f"data packs on: {' '.join(args.packs)}")
-    return PACK_OFF if off else 0
+    if off:
+        print(f"data pack off: {' '.join(off)}")
+        return PACK_OFF
+    print(f"data packs on: {' '.join(names)}" if names else "data packs on: none needed")
+    return 0
 
 
 if __name__ == "__main__":

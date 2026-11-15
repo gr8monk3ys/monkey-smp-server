@@ -225,7 +225,7 @@ Steps for releases that are live and done are in [docs/upgrades/HISTORY.md](upgr
 the new worlds of 2.8.0 and 3.0.0, and the timers for the challenges, drops, outposts, omens, sieges, news and the
 website's status. Move a step there once it is done on the VPS; when unsure, leave it here.
 
-### Ledger's history (the release with the charged-cube patch)
+### Ledger's history (3.5.0)
 
 Before this release, Sulfur Cube Expansion's charged cubes made Ledger write about 29 million rows a day of a
 button placed and broken every tick (docs/MAINTAINING.md, "Patches this pack carries"): `world/ledger.sqlite` was

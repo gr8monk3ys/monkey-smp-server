@@ -11,6 +11,16 @@
   then stopped on a note it couldn't print (`Write-Note` wasn't exported to `monkey.ps1`); the restore drill's 3 GB
   container hit it on 2026-11-14. A test now checks that every module function `monkey.ps1` calls is exported.
 
+### Added
+
+- **Health alerts compare the live server with what is meant** (`tools/staff_status.py`, `tools/staff_watch.py`, the
+  same 2-minute staff job and its 6-hour reminders; docs/LIVE.md, "The staff page"):
+  - a world data pack that is off while `site/live-packs.json` says "on" (or on while it says "off" or "returning"),
+    one line per pack, read from the enabled list the timed jobs already keep, never a listing of its own;
+  - a file in the world growing more than 2 GB a day (`world/ledger.sqlite` grew 8 GB a day to 57 GB unnoticed),
+    from one picture of the big files' sizes a day in `world-sizes.json` next to `staff.json`;
+  - the disk now alerts once it is over 80% used (it was 90%), and a message too long for Discord is split.
+
 ## [3.5.0] - 2026-11-14
 
 ### Added

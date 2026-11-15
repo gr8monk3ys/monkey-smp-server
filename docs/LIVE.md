@@ -812,15 +812,27 @@ has, in plain words with what to do, marked "Needs a look", "Worth a look" or "U
 the crash reports: the game out of memory, the disk full, the watchdog stopping a frozen game, an entity or block
 that crashes every tick, a mod missing a dependency, a mod's mixin failing, the port taken, a damaged chunk, a broken
 data pack, dropped connections (harmless). From the numbers: lag past the 50 ms limit for three readings in a row (6
-minutes), less than 10% of memory or disk free, over half the swap in use, the off-site backup failing. It is a guess
-from words in the log: check before acting on it. A line it doesn't know is left as it is.
+minutes), less than 10% of memory free, the disk over 80% used, over half the swap in use, the off-site backup
+failing, a file in the world growing more than 2 GB a day. From the data packs: one that is off while
+`site/live-packs.json` says "on", or on while it says "off" or "returning". The log and crash causes are a guess
+from words in the log: check before acting on them. A line it doesn't know is left as it is.
+
+The two "live against meant" checks were added after `world/ledger.sqlite` reached 57 GB unnoticed and 11 data packs
+stayed off after a test, both in the week before launch. The data packs come from the enabled list `rcon.py` keeps
+for the timed jobs (`packs-on`, at most one listing in 30 minutes, dropped when staff change a pack), never a listing
+of their own each reading; while the server is down, the last answer stands. The world is walked at most once an
+hour for files over 64 MB, and the first walk of each day is kept in `/srv/monkey/staff/world-sizes.json` (two days of
+them): growth is measured against the newest at least 12 hours old, so a file over 64 MB that starts growing shows within a day (a smaller one from the day after it passes 64 MB).
+To change what is meant, change the pack's line in `site/live-packs.json` (the site follows it too) and deploy.
 
 **Health alerts.** With `STAFF_WEBHOOK_URL` set in `/etc/monkey-deploy.env`, the same 2-minute job tells the staff
 channel (never the public one) what needs a look, as one message a reading:
 
-- a number (lag, memory, disk, the off-site backup) when it first shows, then "(still)" at most once in 6 hours while
-  it lasts, and "Cleared" once it has stayed back to normal for 10 minutes. After that it isn't raised again for an
-  hour, so a number hovering at its line doesn't post on every reading.
+- a number (lag, memory, disk, the off-site backup, a fast-growing file, a data pack not as meant) when it first
+  shows, then "(still)" at most once in 6 hours while it lasts, and "Cleared" once it has stayed back to normal for 10
+  minutes. After that it isn't raised again for an hour, so a number hovering at its line doesn't post on every
+  reading. Each data pack and each file is its own line, so another pack turned off is news even while the first is
+  still off. A message too long for Discord is split between lines.
 - a cause from the log (out of memory, a missing dependency, the port taken...) once while it is in the day's list,
   never "(still)". Errors that stop the server starting are kept for this; the dozen every start logs are only
   counted, as before.

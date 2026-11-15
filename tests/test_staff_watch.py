@@ -178,3 +178,57 @@ def test_a_broken_state_starts_afresh(state):
     lines, kept = w.alerts(state, [alert("disk")], [], NOW)
     assert len(lines) == 1 and kept["posted"] == {"disk": iso(NOW)}
     assert w.alerts({"posted": {}, "crash_seen": "junk"}, [], [{"when": iso(NOW), "text": "x"}], NOW)[0] != []
+
+
+@pytest.mark.parametrize("free, alerting", [(19, True), (21, False)])
+def test_the_disk_alerts_once_it_is_over_80_percent_used(free, alerting):
+    rows = w.advice(reading(host={"memory": {"total": 100, "available": 50}, "swap": {"total": 10, "free": 10},
+                                  "disk": {"total": 100, "free": free}}))
+    assert ("disk" in [r["id"] for r in rows]) is alerting
+
+
+def test_a_file_in_the_world_growing_fast_is_an_alert():
+    ledger = {"file": "world/ledger.sqlite", "size": 57 * w.GB, "per_day": 8 * w.GB}
+    rows = w.advice(reading(growth=[ledger, {"file": "world/region/r.0.0.mca", "size": 70 * 2 ** 20, "per_day": 5},
+                                    "junk", {"file": 5, "per_day": 9 * w.GB}]))
+    assert [(r["id"], r["level"], r["source"]) for r in rows] == [("growth:world/ledger.sqlite", "alert", "machine")]
+    assert rows[0]["title"] == "world/ledger.sqlite grows 8.0 GB a day" and rows[0]["from"] == "57.0 GB now"
+    assert w.advice(reading(growth=None)) == []
+
+
+def test_data_packs_that_are_not_as_the_site_says_are_alerts():
+    rows = w.advice(reading(packs={"read": "x", "off": ["monkey-drops", 5], "on": ["monkey-omens"]}))
+    assert sorted(r["id"] for r in rows) == ["pack-off:monkey-drops", "pack-on:monkey-omens"]
+    assert all(r["level"] == "alert" and r["source"] == "machine" for r in rows)
+    titles = {r["id"]: r["title"] for r in rows}
+    assert titles["pack-off:monkey-drops"] == "Data pack monkey-drops is off, but it is meant to be on"
+    assert titles["pack-on:monkey-omens"] == "Data pack monkey-omens is on, but it is meant to be off"
+    assert w.advice(reading(packs=None)) == w.advice(reading(packs={"off": "x"})) == []
+
+
+def drift(*off):
+    return w.advice(reading(packs={"off": list(off), "on": []}))
+
+
+def test_a_pack_left_off_is_posted_once_reminded_every_six_hours_and_cleared_once_on():
+    lines, state = w.alerts({}, drift("monkey-drops"), [], NOW)
+    assert len(lines) == 1 and "monkey-drops is off" in lines[0]
+    assert w.alerts(state, drift("monkey-drops"), [], NOW + 2 * MIN)[0] == []
+    # Another pack turned off is news of its own, and the first isn't said again with it.
+    lines, state = w.alerts(state, drift("monkey-drops", "monkey-lore"), [], NOW + 4 * MIN)
+    assert len(lines) == 1 and "monkey-lore is off" in lines[0]
+    lines, state = w.alerts(state, drift("monkey-drops", "monkey-lore"), [], NOW + w.QUIET)
+    assert len(lines) == 1 and "monkey-drops is off, but it is meant to be on (still)" in lines[0]
+    _, state = w.alerts(state, drift("monkey-lore"), [], NOW + w.QUIET + MIN)
+    lines, state = w.alerts(state, drift("monkey-lore"), [], NOW + w.QUIET + MIN + w.CLEAR_AFTER)
+    assert "monkey-lore is off, but it is meant to be on (still)" in lines[0]      # its own six hours are up
+    assert lines[1:] == ["Cleared: data pack monkey-drops is on, as meant."]
+
+
+@pytest.mark.parametrize("rid, said", [
+    ("pack-on:monkey-omens", "data pack monkey-omens is off, as meant"),
+    ("growth:world/ledger.sqlite", "world/ledger.sqlite no longer grows fast"),
+    ("disk", "the disk has room again"), ("pack-off:", "pack-off:"),
+])
+def test_what_cleared_says(rid, said):
+    assert w.cleared_text(rid) == said

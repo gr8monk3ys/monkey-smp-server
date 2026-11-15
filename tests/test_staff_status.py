@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from types import SimpleNamespace
 
+import packs
 import pytest
 import staff_status
 from staff_ui import SRC, only_text, source
@@ -574,7 +575,7 @@ def test_packs_not_as_the_site_says_are_read_from_the_shared_copy_of_the_list(bo
     for minutes in (2, 4, 6):                       # the timed jobs' copy: no listing of its own each reading
         drift(box, server, NOW + dt.timedelta(minutes=minutes), previous=box.out)
     assert asked.count("datapack list enabled") == 1
-    rcon.forget_packs(tmp_path / "docker")          # staff changed a pack: the next reading asks again
+    packs.forget(tmp_path / "docker")          # staff changed a pack: the next reading asks again
     drift(box, server, NOW + dt.timedelta(minutes=8), previous=box.out)
     assert asked.count("datapack list enabled") == 2
 

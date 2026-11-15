@@ -375,9 +375,10 @@ def meant_packs() -> dict[str, str]:
 
 def pack_drift(docker, online: bool, meant: dict[str, str], now: dt.datetime, old: dict) -> dict | None:
     """Which world data packs aren't as site/live-packs.json says: {"read", "off": [meant on, but off], "on": [meant
-    off or returning, but on]}. The enabled list is rcon.py's copy (enabled_list, kept PACKS_CACHE_S and shared with
-    the timed jobs), never a listing of its own each reading: each one makes the server re-read every pack on its main
-    thread. While the server can't be asked, the last answer carries over, so a stopped server doesn't read as fixed."""
+    off or returning, but on]}. The enabled list is tools/packs.py's kept copy (rcon.packs_off with the docker
+    folder, kept PACKS_CACHE_S and shared with the timed jobs), never a listing of its own each reading: each one
+    makes the server re-read every pack on its main thread. While the server can't be asked, the last answer carries
+    over, so a stopped server doesn't read as fixed."""
     kept = old.get("packs") if isinstance(old.get("packs"), dict) else None
     meant_on = sorted(p for p, state in meant.items() if state == "on")
     meant_off = sorted(p for p, state in meant.items() if state in ("off", "returning"))
@@ -386,11 +387,8 @@ def pack_drift(docker, online: bool, meant: dict[str, str], now: dt.datetime, ol
     if not online:
         return kept
     try:
-        box = docker.container()
-        if not box:
-            return kept
-        off = set(server.packs_off(docker, [*meant_on, *meant_off], server.enabled_list(docker, docker.folder, box)))
-    except server.RconError:
+        off = set(server.packs_off(docker, [*meant_on, *meant_off], docker.folder))
+    except server.RconError:        # not running, or an answer that isn't the list
         return kept
     return {"read": public.iso(now), "off": [p for p in meant_on if p in off],
             "on": [p for p in meant_off if p not in off]}

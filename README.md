@@ -104,7 +104,8 @@ rather keep the normal Minecraft Launcher unzip `MonkeySMP-Player-<version>.zip`
 (downloaded from Modrinth, each file hash-checked) and adds a **Monkey SMP** installation to the launcher. Windows
 warns about the `.bat`, because it isn't signed. Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
 
-Admins: [docs/ADMIN.md](docs/ADMIN.md).
+Admins: [docs/ADMIN.md](docs/ADMIN.md). The live server: [docs/LIVE.md](docs/LIVE.md), and when something breaks
+there, [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## How it works
 

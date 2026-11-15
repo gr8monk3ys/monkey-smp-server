@@ -2,7 +2,7 @@
 # Open Parties and Claims' exception lists in the live server's own openpartiesandclaims-server.toml, which a deploy
 # never overwrites. Sourced, never run: after `set -eu`, LOG_NAME and lib.sh, the script sets
 #
-#   WHAT       what its log lines call the step ("NPCs in claims"), also the docs/LIVE.md section
+#   WHAT       what its log lines call the step ("NPCs in claims"), also its section in docs/LIVE.md or docs/upgrades/HISTORY.md
 #   LOG_TO     its log file
 #   KEEP_AS    the suffix of the copy of the file kept before the change (before-npcs)
 #   KEY        the list's setting, e.g. forcedEntityProtectionExceptionList

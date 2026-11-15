@@ -98,12 +98,12 @@ def test_the_real_answers_from_the_server_parse():
     live = ("The game is running normallyTarget tick rate: 20.0 per second.\nAverage time per tick: 0.4ms "
             "(Target: 50.0ms)Percentiles: P50: 0.4ms P95: 0.7ms P99: 1.1ms. Sample: 100")
     assert staff_status.tick(live)["p99"] == 1.1
-    assert staff_status.players("There are 0 of a max of 30 players online: ") == {"count": 0, "max": 30, "names": []}
+    assert rcon.online("There are 0 of a max of 30 players online: ") == {"count": 0, "max": 30, "names": []}
 
 
 @pytest.mark.parametrize("answer", ["", "Unknown thing", "Average time per tick: fastms"])
 def test_an_answer_it_does_not_know_is_no_reading(answer):
-    assert staff_status.tick(answer) is None and staff_status.players(answer) is None
+    assert staff_status.tick(answer) is None and rcon.online(answer) is None
 
 
 @pytest.mark.parametrize(("ps", "state", "uptime"), [
@@ -113,7 +113,7 @@ def test_an_answer_it_does_not_know_is_no_reading(answer):
     (json.dumps({"State": "restarting", "Status": "Restarting (1) 3 seconds ago"}), "restarting", None),
 ])
 def test_what_docker_says_about_the_container(ps, state, uptime):
-    assert staff_status.container(docker(ps=ps)) == {"state": state, "uptime": uptime, "health": None}
+    assert docker(ps=ps).state() == {"state": state, "uptime": uptime, "health": None}
 
 
 def test_a_stopped_server_is_not_asked_and_leaves_a_gap(box):
@@ -136,7 +136,7 @@ def test_a_running_container_that_will_not_answer_is_not_online(box):
 def test_docker_failing_is_not_a_stopped_server(box):
     data = read(box, docker(ps="", ps_code=1))
     assert data["online"] is False and data["container"] is None
-    assert staff_status.container(docker(ps="not json")) is None
+    assert docker(ps="not json").state() is None
 
 
 def test_history_carries_over_keeps_a_day_and_holds_no_names(box):

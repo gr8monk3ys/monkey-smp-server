@@ -91,8 +91,6 @@ _TICK = re.compile(r"(?P<state>.*?)Target tick rate: (?P<target>[\d.]+) per seco
                    r"Average time per tick: (?P<avg>[\d.]+)ms.*?"
                    r"P50: (?P<p50>[\d.]+)ms P95: (?P<p95>[\d.]+)ms P99: (?P<p99>[\d.]+)ms\. "
                    r"Sample: (?P<sample>\d+)", re.S)
-_LIST = re.compile(r"There are (\d+) of a max of (\d+) players online:?(.*)", re.S)
-_UP = re.compile(r"Up (.+?)(?: \(.*\))?$")
 # Anchored to the whole line, so nothing a player says can pass for one: chat is always the text of an INFO line.
 _LOG_LINE = re.compile(rb"^\[\d\d:\d\d:\d\d\] \[([^\]\n]*)/(ERROR|FATAL|WARN|INFO)\](?: \[[^\]\n]*\])?: ([^\n]*)$",
                        re.M)
@@ -119,37 +117,6 @@ def tick(answer: str) -> dict | None:
     return {"state": m["state"].strip(), "target": target, "tps": round(min(target, 1000 / avg), 1) if avg else target,
             "avg": avg, "p50": float(m["p50"]), "p95": float(m["p95"]), "p99": float(m["p99"]),
             "sample": int(m["sample"])}
-
-
-def players(answer: str) -> dict | None:
-    """`list`'s answer: how many, the most there can be, and who."""
-    m = _LIST.search(answer)
-    if not m:
-        return None
-    return {"count": int(m[1]), "max": int(m[2]), "names": [n.strip() for n in m[3].split(",") if n.strip()]}
-
-
-def container(docker) -> dict | None:
-    """What docker says about the server's container, None when docker failed. `--all`, so a stopped container
-    reads as stopped rather than as no container."""
-    try:
-        done = docker.compose("ps", "--all", "--format", "json", "monkey", timeout=60)
-    except server.RconError:
-        return None
-    if done.returncode != 0:
-        return None
-    rows: list[dict] = []
-    try:
-        for line in done.stdout.splitlines():   # one object a line since compose 2.21, one array before it
-            row = json.loads(line)
-            rows += row if isinstance(row, list) else [row]
-    except ValueError:
-        return None
-    if not rows:
-        return {"state": "not created", "uptime": None, "health": None}
-    up = _UP.match(rows[0].get("Status", ""))
-    return {"state": rows[0].get("State", "unknown"), "uptime": up[1] if up else None,
-            "health": rows[0].get("Health") or None}
 
 
 def ask(docker, command: str) -> str:
@@ -393,10 +360,10 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     file before it posts, so a post is never sent again for want of the state that says it was."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
-    box = container(docker)
+    box = docker.state()
     up = box is not None and box["state"] == "running"
     ticking = tick(ask(docker, "tick query")) if up else None
-    who = players(ask(docker, "list")) if up else None
+    who = server.online(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
     machine = host(live, meminfo, proc_stat)
     reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,

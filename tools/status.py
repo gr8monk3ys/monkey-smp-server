@@ -30,7 +30,6 @@ import argparse
 import datetime as dt
 import json
 import os
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -61,7 +60,6 @@ SCHEDULE: tuple[tuple[int, str, int | None], ...] = (
     (11, "The finale", None),
 )
 CLOSE = "Weekly standings close"
-_LIST = re.compile(r"There are (\d+) of a max")
 
 
 def iso(when: dt.datetime) -> str:
@@ -99,8 +97,8 @@ def phase(now: dt.datetime) -> str:
 def players(answer: str) -> int | None:
     """How many are online, from `list`'s answer ("There are 3 of a max of 30 players online: ..."). Only the
     count is read: the names after it never leave this function."""
-    m = _LIST.search(answer)
-    return int(m[1]) if m else None
+    who = server.online(answer)
+    return who["count"] if who else None
 
 
 def online_count(rcon) -> tuple[bool, int | None]:

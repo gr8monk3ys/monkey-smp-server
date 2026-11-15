@@ -19,7 +19,7 @@ needs_dash = pytest.mark.skipif(not DASH, reason="needs dash")
 COMPOSE = "docker compose --project-directory /srv/live/docker -f /srv/live/docker/compose.yaml"
 RCON = f"{COMPOSE} exec -T monkey monkey rcon"
 # The 2.5.0 upgrade is a one-shot kept as it ran: its own wait_for_live and warn_players predate lib.sh's.
-OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live", "warn_players"}}
+OWN_COPIES = {"upgrade-2.5.0.sh": {"wait_for_live"}}
 
 
 def functions(text):

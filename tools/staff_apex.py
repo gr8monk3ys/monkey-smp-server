@@ -533,11 +533,10 @@ class Extras:
 
     def _rcon(self, command: str) -> str:
         """The server's answer to one command, RconError when it didn't take it."""
-        done = self.p.docker.compose("exec", "-T", "monkey", "monkey", "rcon", command, timeout=sp.COMMAND_TIMEOUT)
-        return sp.server.checked(command, done.stdout.strip(), done.returncode, done.stderr)
+        return self.p.docker(command, timeout=sp.COMMAND_TIMEOUT)
 
     def running(self) -> bool:
-        box = sp.staff_status.container(self.p.docker)
+        box = self.p.docker.state()
         return bool(box and box["state"] == "running")
 
     # ------------------------------------------------ settings

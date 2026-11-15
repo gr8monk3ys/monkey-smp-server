@@ -75,6 +75,17 @@
   and keeps the old file as `ledger.sqlite.before-prune`).
 - **Blaze Attack Animation's two warnings at every start and data pack reload stop.** Its `pack.mcmeta` declared
   `"pack_format": 107.1`, which 26.2 only reads as `min_format`/`max_format`; a patch declares it as 107 (any 107.x).
+
+- **A border act no longer fails while staff have the boss or finale pack off.** The act's `function monkey:boss/act`
+  (or the finale's start) is left out and logged ("skipped ... the monkey-boss data pack is off"), so the border
+  still grows, the act is recorded and no failure alert goes to staff; the finale's call stopped failing every hour on
+  its date with monkey-finale off.
+- **One rule for whether a data pack is on** (`tools/packs.py`). The timers, the staff page and
+  `install-standings.sh` each matched `datapack list enabled` their own way; the install script's matched
+  `monkey-drops` inside `monkey-drops-old`. The staff page now always asks the server and keeps that answer for the
+  timers, which then skip one more listing (each one re-reads every pack and mod on the server's main thread).
+- Each timed job's tool now declares the data packs it needs (`JOB_PACKS` in `tools/drops.py`, `omens.py`, ...),
+  checked with `TOOL packs-on` before the deploy lock; the six `deploy/monkey-*.sh` keep no copy of the list.
 - **More Villagers' gilded station recipe and its 9 advancements load again.** The pinned build (1.26.7.1, the
   newest for 26.2) ships them in the 26.1 format, so 26.2 dropped them on every start: the gilded station couldn't
   be crafted and none of those advancements existed. A patch (`monkey/patches/more-villagers-re-employed`)

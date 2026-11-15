@@ -199,6 +199,32 @@ def describe(command: str, answer: str) -> str:
     return f"{command}: {answer or 'ok'}"
 
 
+# The calls into another data pack, and that pack: one staff turned off is left out of the run, so the border still
+# grows and the act is recorded, instead of the run failing on an unknown function (and the finale's, every hour).
+PACK_CALLS = {f"function {boss.NS}:boss/act": boss.DATAPACK, f"function {finale.NS}:finale/start": finale.DATAPACK}
+
+
+def without_packs_off(rcon, commands: list[str], log=print) -> list[str]:
+    """COMMANDS without the PACK_CALLS whose data pack is off (each logged). When it can't tell, all are kept."""
+    def pack(command: str) -> str | None:
+        return next((p for call, p in PACK_CALLS.items() if command.startswith(call)), None)
+
+    needed = sorted({p for c in commands if (p := pack(c))})
+    if not needed:
+        return commands
+    try:
+        # Asked now, not from the timers' kept list: a boss left out is left out of its act for good, and staff may
+        # have just turned the pack on with `monkey rcon` (which doesn't drop that list). Once an hour, at most.
+        off = set(server.packs_off(rcon, needed))
+    except server.RconError as e:
+        log(f"can't tell whether {', '.join(needed)} is on ({e}): sending it all")
+        return commands
+    for c in commands:
+        if pack(c) in off:
+            log(f"skipped {c.split()[1]}: the {pack(c)} data pack is off (staff turned it off)")
+    return [c for c in commands if pack(c) not in off]
+
+
 def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
     """Sends the act, or writes the fitted maps and reloads BlueMap, or purges the maps reloaded last time. A
     server that isn't running is skipped (the next hour tries again); none of it is ever sent twice over."""
@@ -215,6 +241,7 @@ def send(rcon, world: Path, when: dt.datetime, log=print) -> int:
         if run.commands or run.maps or run.purges:
             log("server not running: nothing sent (the next hour tries again)")
         return 0
+    run.commands = without_packs_off(rcon, run.commands, log)
     # stop: a failed `worldborder set` must not let the record after it through, or the act never runs again.
     ok = server.send(rcon, run.commands, log, describe, stop=True) if run.commands else True
     if run.maps:

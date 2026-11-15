@@ -10,6 +10,7 @@ import zipfile
 import zlib
 from pathlib import Path
 
+import packs as pack_state
 import pytest
 import staff_host
 import staff_more
@@ -216,7 +217,7 @@ def test_a_pack_with_startup_only_data_is_only_toggled_with_a_restart(apex):
     # 2026-11-10: a dialog pack turned on without a restart left logins failing until the next restart.
     packs = world(apex)
     (packs / "rules.zip").write_bytes(DIALOG_PACK)
-    later = Path(apex.panel.docker.folder) / staff_more.AT_RESTART
+    later = Path(apex.panel.docker.folder) / pack_state.AT_RESTART
     code, data = apex.call("GET", "/api/datapacks")
     row = next(p for p in data["packs"] if p["name"] == "rules.zip")
     assert code == 200 and row["startup_only"] == ["dialog"] and row["at_restart"] is None
@@ -247,7 +248,7 @@ def test_a_restart_that_does_not_start_leaves_no_pack_change_waiting(apex, monke
 
     monkeypatch.setattr(apex.panel, "power_action", refuse)
     code, _ = apex.call("POST", "/api/datapack-toggle", {"name": "rules.zip", "enabled": True, "restart": True})
-    assert code == 409 and not (Path(apex.panel.docker.folder) / staff_more.AT_RESTART).exists()
+    assert code == 409 and not (Path(apex.panel.docker.folder) / pack_state.AT_RESTART).exists()
 
 
 def test_troubleshooting_leaves_startup_only_packs_on(apex):
@@ -400,14 +401,6 @@ def test_a_pack_name_with_spaces_is_read_whole(apex):
                                      ("a..b", False), ("", False), (None, False)])
 def test_which_folder_names_a_command_may_carry(name, ok):
     assert staff_more.pack_entry(name) is ok
-
-
-def test_enabled_in_finds_each_name_whole_in_the_listing_order():
-    said = ("There are 4 data pack(s) enabled: [vanilla (built-in)], "
-            "[file/Enchant Disabler for DnT 5.3.0.zip (world)], "
-            "[file/monkey-boss (world)], [file/a]")
-    names = ["monkey-boss", "a", "Enchant", "Enchant Disabler for DnT 5.3.0.zip", "a (1)"]
-    assert staff_more.enabled_in(said, names) == ["Enchant Disabler for DnT 5.3.0.zip", "monkey-boss", "a"]
 
 
 def test_restore_reports_a_pack_that_is_gone_or_refused(apex):

@@ -25,37 +25,34 @@ over several commands) stops at its first failure too, in tools/standings.py's u
                                                  It keeps the server's list in DIR/.packs-enabled.json for
                                                  PACKS_CACHE_S, for the running container it came from: every
                                                  listing makes the server re-read every pack and mod on its main
-                                                 thread. Staff's pack changes drop it (forget_packs)
+                                                 thread. Staff's pack changes drop it. The rule, the copy and
+                                                 the restart queue are tools/packs.py's
 
 A timed job's tool (tools/challenges.py, drops.py, wardrobe.py; deploy/lib.sh's timed_job runs them) has the
-same two subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
-(changes nothing), and `send --docker DIR`, which sends them. send's exit code: 0 sent (or, for most jobs,
+same three subcommands, from job_subcommands() and run_job(): `commands [--at TIME]`, what it would send now
+(changes nothing), `send --docker DIR`, which sends them, and `packs-on --docker DIR`, which checks the data packs
+the tool declares it needs (its NEEDS, given to run_job) as `rcon.py packs-on` does; timed_job runs it before it
+takes the deploy lock, and skips the job when one is off. send's exit code: 0 sent (or, for most jobs,
 the server isn't running), 1 a command wasn't accepted, NOT_RUNNING the server isn't running and the job must
 run (the day), GAVE_UP the job stopped trying (the day, after 6 hours of tries).
 """
 import argparse
-import contextlib
 import datetime as dt
-import json
-import os
 import re
 import subprocess
 import sys
-import time
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
+import packs
+
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
-# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart).
+# A timed job's `send` exit codes besides 0 and 1 (deploy/lib.sh's timed_job tells them apart). deploy/lib.sh names
+# these three (JOB_NOT_RUNNING, ...): a test checks it has the same numbers.
 NOT_RUNNING = 3
 GAVE_UP = 4
 # `packs-on`: a data pack the job needs is off (staff turned it off; deploy/lib.sh's timed_job skips the job).
 PACK_OFF = 5
-# packs-on's copy of `datapack list enabled` (in the docker folder) and how long it is used. The timers asked about
-# 28 times an hour, and each listing re-reads every pack and mod on the server's main thread (2026-11-11).
-PACKS_CACHE = ".packs-enabled.json"
-PACKS_CACHE_S = 1800
-PACKS_FORGOT = ".packs-forgot"     # when staff last changed a pack (forget_packs)
 # The server reads an RCON packet into a 1460-byte buffer, so a longer command arrives cut off.
 LIMIT = 1400
 REFUSED = ("<--[HERE]", "Unknown or incomplete command", "Unknown function", "Incorrect argument",
@@ -175,57 +172,23 @@ def send_if_running(rcon, commands: list[str], log: Callable[[str], None] = prin
     return 0 if send(rcon, commands, log, **how) else 1
 
 
-def packs_off(rcon, packs: Iterable[str], answer: str | None = None) -> list[str]:
-    """Which of the world data packs `packs` (folder names, e.g. monkey-wardrobe) are off, from `datapack list
-    enabled` (or `answer`, a copy of it). RconError when the answer isn't that list, so an answer it can't read
-    never reads as "off"."""
-    if answer is None:
-        answer = rcon("datapack list enabled")
-    if "enabled" not in answer:
-        raise RconError(f"datapack list enabled answered: {answer[-300:] or 'nothing'}")
-    return [p for p in packs if not re.search(rf"file/{re.escape(p)}(?![\w.-])", answer)]
-
-
-def _forgot_at(folder: Path) -> float:
+def packs_off(rcon, names: Iterable[str], folder: Path | None = None, fresh: bool = False) -> list[str]:
+    """Which of the world data packs NAMES (folder names, e.g. monkey-wardrobe) are off on the running server:
+    tools/packs.py's rule. With FOLDER (the docker folder) the kept copy is used (and refreshed), unless `fresh`:
+    then the server is asked and the copy refreshed. Without FOLDER the server is asked and nothing is kept: for a
+    decision that can't wait out a copy staff's `monkey rcon` didn't drop. RconError when the server isn't running
+    or its answer can't be read, so an answer it can't read never reads as "off"."""
+    names = list(names)
+    if not names:
+        return []
+    box = rcon.container() if folder is not None else ""
+    if folder is not None and not box:
+        raise RconError("server not running")
     try:
-        return float((Path(folder) / PACKS_FORGOT).read_text(encoding="ascii"))
-    except (OSError, ValueError):
-        return 0.0
-
-
-def enabled_list(rcon, folder: Path, box: str, now: Callable[[], float] = time.time) -> str:
-    """The server's answer to `datapack list enabled`: the copy in folder/PACKS_CACHE when it came from container
-    `box` under PACKS_CACHE_S ago and after the last forget_packs, else asked now and kept there (unless staff
-    changed a pack while it was being asked). A copy that can't be read or written is skipped."""
-    cache = Path(folder) / PACKS_CACHE
-    try:
-        kept = json.loads(cache.read_text(encoding="utf-8"))
-        at = float(kept.get("at", -1)) if isinstance(kept, dict) else -1.0
-        if (kept.get("box") == box and isinstance(kept.get("answer"), str) and 0 <= now() - at < PACKS_CACHE_S
-                and at > _forgot_at(folder)):
-            return kept["answer"]
-    except (OSError, ValueError, TypeError, AttributeError):
-        pass
-    asked = now()
-    answer = rcon("datapack list enabled")
-    if "enabled" in answer and _forgot_at(folder) < asked:
-        tmp = cache.with_name(f"{cache.name}.{os.getpid()}.tmp")
-        try:
-            tmp.write_text(json.dumps({"box": box, "at": asked, "answer": answer}), encoding="utf-8")
-            tmp.replace(cache)
-        except OSError:
-            with contextlib.suppress(OSError):
-                tmp.unlink()
-    return answer
-
-
-def forget_packs(folder: Path, now: Callable[[], float] = time.time) -> None:
-    """Drops packs-on's copy of the enabled list: staff turned a pack on or off, or reloaded. The time it was dropped
-    is kept too, so a timed job that asked the server just before can't put back a list from before the change."""
-    with contextlib.suppress(OSError):
-        (Path(folder) / PACKS_FORGOT).write_text(repr(now()), encoding="ascii")
-    with contextlib.suppress(OSError):
-        (Path(folder) / PACKS_CACHE).unlink()
+        said = packs.listing(rcon, folder, box, fresh=fresh) if folder is not None else rcon(packs.LIST)
+        return packs.off(said, names)
+    except packs.Unreadable as e:
+        raise RconError(str(e)) from None
 
 
 # ---------------------------------------------------------------- a timed job's command line
@@ -249,6 +212,8 @@ def job_subcommands(sub, send_about: str, world: bool = False, at: bool = True,
             p.add_argument("--at", type=parse_time, help="pretend it is this time (ISO 8601; UTC if no offset)")
         if name == "send":
             p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
+    p = sub.add_parser("packs-on", help="are the data packs this job needs on? (exit PACK_OFF when one is off)")
+    p.add_argument("--docker", type=Path, required=True, help="the release's docker folder (for RCON)")
 
 
 def job_time(args) -> dt.datetime:
@@ -256,9 +221,12 @@ def job_time(args) -> dt.datetime:
     return getattr(args, "at", None) or dt.datetime.now(UTC)
 
 
-def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int]) -> int:
-    """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none) or `send`
-    (send(the server, when)), for job_time(args)."""
+def run_job(args, commands: Callable[[dt.datetime], list[str]], send: Callable[[Docker, dt.datetime], int],
+            needs: Iterable[str] = ()) -> int:
+    """Runs job_subcommands' `commands` (prints them one per line, nothing when there are none), `send`
+    (send(the server, when)), for job_time(args), or `packs-on`: whether the data packs NEEDS are on."""
+    if args.command == "packs-on":
+        return packs_on(Docker(args.docker), list(needs), args.docker)
     when = job_time(args)
     if args.command == "send":
         return send(Docker(args.docker), when)
@@ -275,21 +243,31 @@ def main(argv=None, server=Docker) -> int:
     on = sub.add_parser("packs-on")
     on.add_argument("packs", nargs="+", help="world data pack folder names (monkey-wardrobe)")
     on.add_argument("--docker", type=Path, required=True, help="the release's docker folder")
+    on.add_argument("--fresh", action="store_true", help="ask the server, not the kept list (it keeps the answer)")
     args = ap.parse_args(argv)
     rcon = server(args.docker)
-    try:
-        if args.command == "running":
+    if args.command == "running":
+        try:
             return 0 if rcon.running() else 1
-        box = rcon.container()
-        if not box:
-            print("server not running", file=sys.stderr)
+        except RconError as e:
+            print(e, file=sys.stderr)
             return 2
-        off = packs_off(rcon, args.packs, enabled_list(rcon, args.docker, box))
+    return packs_on(rcon, args.packs, args.docker, fresh=args.fresh)
+
+
+def packs_on(rcon, names: list[str], folder: Path, fresh: bool = False) -> int:
+    """`packs-on`'s answer: prints which pack is off (or that all are on) and returns PACK_OFF, 0, or 2 when it
+    can't tell (the server isn't running, docker failed, an answer it can't read)."""
+    try:
+        off = packs_off(rcon, names, folder, fresh)
     except RconError as e:
         print(e, file=sys.stderr)
         return 2
-    print(f"data pack off: {' '.join(off)}" if off else f"data packs on: {' '.join(args.packs)}")
-    return PACK_OFF if off else 0
+    if off:
+        print(f"data pack off: {' '.join(off)}")
+        return PACK_OFF
+    print(f"data packs on: {' '.join(names)}" if names else "data packs on: none needed")
+    return 0
 
 
 if __name__ == "__main__":

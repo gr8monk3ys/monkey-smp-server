@@ -51,6 +51,8 @@ import threading
 import zipfile
 from pathlib import Path
 
+import packs as pack_state
+
 sp = None   # tools/staff_panel.py (register)
 ax = None   # tools/staff_apex.py
 hs = None   # tools/staff_host.py
@@ -92,8 +94,6 @@ ALL_OFF_WORD = "ALL OFF"
 # with any other kind is turned on or off only at a restart. An allowlist, so a kind this file doesn't know is safe.
 RELOADABLE = frozenset({"advancement", "function", "item_modifier", "loot_table", "predicate", "recipe", "structure",
                         "tags"})
-# In the live docker folder: "enable NAME" / "disable NAME" lines that monkey-deploy.sh applies at a restart.
-AT_RESTART = ".packs-at-restart"
 
 
 def startup_kinds(paths) -> list[str]:
@@ -147,23 +147,7 @@ def clean(value, most: int) -> str:
     return hs.clean(value, most)
 
 
-def pack_entry(name) -> bool:
-    """A name in the datapacks folder this page lists and names in a command (datapack enable "file/NAME"): it may
-    have spaces ("Enchant Disabler for DnT 5.3.0.zip"), but no quote, backslash or slash, no "..", no control
-    character, and it starts with a letter or digit."""
-    return (isinstance(name, str) and 0 < len(name) <= 128 and name.isprintable() and name[0].isalnum()
-            and not any(c in name for c in '"\\/') and ".." not in name)
-
-
-def enabled_in(said: str, names) -> list[str]:
-    """The NAMES (the datapacks folder's entries) that `datapack list enabled`'s answer shows on, in its order. Each
-    is found whole, as [file/NAME (world)] or [file/NAME], so a name with spaces is never cut at the first one."""
-    found = []
-    for name in names:
-        m = re.search(r"\[file/" + re.escape(name) + r"(?: \([^()\[\]]*\))?\]", said)
-        if m:
-            found.append((m.start(), name))
-    return [name for _, name in sorted(found)]
+pack_entry = pack_state.pack_entry
 
 
 def zip_problem(z: zipfile.ZipFile, files_max: int, total_max: int) -> str | None:
@@ -383,15 +367,21 @@ class More:
         except FileNotFoundError:
             return []
 
+    def _listing(self) -> str:
+        """The server's enabled list, asked now (staff see the live state) and kept for the timers' packs-on: one
+        `docker compose ps` for the container (none running is RconError), one command. RconError or
+        pack_state.Unreadable when it didn't answer with the list."""
+        box = self.p.docker.container()
+        if not box:
+            raise sp.server.RconError("the server isn't running")
+        return pack_state.listing(self.x.rcon, self.p.docker.folder, box, fresh=True)
+
     def _enabled(self, names) -> set[str] | None:
         """Which of NAMES the server has on, or None when it isn't running or didn't answer."""
-        if not self.x.running():
-            return None
         try:
-            said = self.x.rcon("datapack list enabled")
-        except sp.server.RconError:
+            return set(pack_state.on(self._listing(), names))
+        except (sp.server.RconError, pack_state.Unreadable):
             return None
-        return set(enabled_in(said, names))
 
     def datapacks(self) -> dict:
         try:
@@ -476,35 +466,14 @@ class More:
 
     def _forget(self) -> None:
         """The packs on or off changed (or may have): the timers' kept list (tools/rcon.py packs-on) is dropped."""
-        sp.server.forget_packs(self.p.docker.folder)
-
-    def _at_restart_path(self) -> Path:
-        return Path(self.p.docker.folder) / AT_RESTART
+        pack_state.forget(self.p.docker.folder)
 
     def _at_restart(self) -> dict:
         """{pack name: "enable" | "disable"} staff asked for at the next restart (monkey-deploy.sh applies them)."""
-        try:
-            lines = self._at_restart_path().read_text(encoding="utf-8").splitlines()
-        except (OSError, ValueError):
-            return {}
-        out = {}
-        for line in lines:
-            verb, _, name = line.partition(" ")
-            if verb in ("enable", "disable") and pack_entry(name):
-                out[name] = verb
-        return out
+        return pack_state.at_restart(self.p.docker.folder)
 
     def _set_at_restart(self, name: str, verb: str | None) -> None:
-        later = self._at_restart()
-        later.pop(name, None)
-        if verb:
-            later[name] = verb
-        path = self._at_restart_path()
-        if later:
-            lines = [f"{v} {n}" for n, v in later.items()]
-            self.p._write(path, ("\n".join(lines) + "\n").encode("utf-8"), None)
-        else:
-            path.unlink(missing_ok=True)
+        pack_state.set_at_restart(self.p.docker.folder, name, verb, lambda path, data: self.p._write(path, data, None))
 
     def datapack_toggle(self, user: str, body: dict) -> dict:
         name, enabled, restart = body.get("name"), body.get("enabled"), body.get("restart", False)
@@ -618,14 +587,14 @@ class More:
                 raise sp.Refused(409, f"A saved set is waiting already ({len(saved['packs'])} packs, by {saved['by']} "
                                       f"at {saved['at']}): turn it back on or clear it first.")
             try:
-                said = self.x.rcon("datapack list enabled")
-            except sp.server.RconError as e:
+                said = self._listing()
+            except (sp.server.RconError, pack_state.Unreadable) as e:
                 raise sp.Refused(502, f"The server did not list its packs: {sp.masked(str(e))[:200]}") from None
             names = self._entry_names()
             folder = self._packs_folder()
             # A pack with data the game reads only at startup stays on: turning it off live half-unloads it.
-            kept_on = [n for n in enabled_in(said, names) if pack_startup_kinds(folder / n)]
-            packs = [f"file/{n}" for n in enabled_in(said, names) if n not in kept_on]
+            kept_on = [n for n in pack_state.on(said, names) if pack_startup_kinds(folder / n)]
+            packs = [f"file/{n}" for n in pack_state.on(said, names) if n not in kept_on]
             if not packs:
                 raise sp.Refused(409, "No data pack of the world's own is on: there is nothing to turn off.")
             self.p.staff.mkdir(parents=True, exist_ok=True)

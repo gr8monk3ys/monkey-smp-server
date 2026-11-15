@@ -101,17 +101,25 @@ if [ ! -f "$WORLD/datapacks/$PACK/pack.mcmeta" ]; then
 elif ! running; then
     log 'data pack: in the world, but the server is not running, so whether it is on is unknown; start it and run this again'
     problems=$((problems + 1))
-elif ! enabled=$(rcon 'datapack list enabled'); then
-    log 'data pack: RCON did not answer; run this again once the server is up'
+elif ! python_ok 11; then
+    log 'data pack: python3 3.11 or newer is missing (step 1), so whether it is on is unknown; run this again once it is'
     problems=$((problems + 1))
 else
-    # Only a positive answer counts: an empty or error reply must not read as "on".
-    case "$enabled" in
-        *"file/$PACK"*)
+    # tools/packs.py's rule, through rcon.py packs-on: only the whole name counts, and an answer that isn't the
+    # enabled list never reads as "on". --fresh: staff may have just turned it on with `monkey rcon`, which doesn't
+    # drop the timers' kept list.
+    pack_rc=0
+    pack_said=$(python3 -B "$REPO_DIR/tools/rcon.py" packs-on "$PACK" --docker "$LIVE_DIR/docker" --fresh 2>&1) ||
+        pack_rc=$?
+    case $pack_rc in
+        0)
             log 'data pack: in the world and on'
             pack_ok=1 ;;
-        *)
+        "$JOB_PACK_OFF")
             log "data pack: in the world but not on; turn it on with: monkey rcon 'datapack enable \"file/$PACK\"'"
+            problems=$((problems + 1)) ;;
+        *)
+            log "data pack: RCON did not answer ($pack_said); run this again once the server is up"
             problems=$((problems + 1)) ;;
     esac
 fi

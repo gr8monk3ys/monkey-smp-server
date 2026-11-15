@@ -48,6 +48,10 @@ import season_calendar
 from datapacks import NS, lines, score_check, text
 from events import STATE
 
+# The challenges run in the wardrobe pack (wardrobe.DATAPACK: tools/wardrobe.py imports this module, so a test checks
+# the two agree). deploy/lib.sh skips the week job while it is off.
+JOB_PACKS = ("monkey-wardrobe",)
+
 FN = f"data/{NS}/function/challenges"
 LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules.py reads it)
 ADVANCEMENT = f"data/{NS}/advancement/challenges"
@@ -443,7 +447,7 @@ def main(argv=None) -> int:
         first = season_calendar.week_at(dt.datetime.now(server.UTC)) if args.first is None else args.first
         print(schedule(first, args.weeks))
         return 0
-    return server.run_job(args, commands, send)
+    return server.run_job(args, commands, send, needs=JOB_PACKS)
 
 
 if __name__ == "__main__":

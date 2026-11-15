@@ -24,8 +24,8 @@ The safety rules:
 - A jar must be a zip with a fabric.mod.json naming an id and not marked client-only, under MOD_MAX, with a plain
   name (no folders). A Modrinth file must come from cdn.modrinth.com and match the sha512 Modrinth's API gave.
 - A world zip must have one level.dat, at the top or one folder down, and no absolute path, no `..`, no link and no
-  encrypted entry; its unpacked size is capped and the disk must have room. The helper unpacks it again, as the
-  server's user, with unzip_world(), which checks it all again.
+  encrypted entry; its unpacked size is capped and the disk must have room (tools/helper_queue.py). The helper
+  unpacks it again, as the server's user, with helper_queue's unzip_world(), which checks it all again.
 - A pinned mod (one the release's manifest lists, with a slug) comes back at every start. Turned off or removed with
   "hold", or held with /api/mod-hold, its slug goes in server/.monkey-held.json and the start script leaves it out
   until someone allows it again, across release deploys too (a new version of the jar is still the same slug);
@@ -43,11 +43,8 @@ The safety rules:
 - The version, the reset and the upload run as root through deploy/monkey-staff-helper.sh, like a restore: the page
   only writes a request with checked words. A new seed goes in the request and nowhere else: never in a log.
 
-    python3 tools/staff_host.py unzip-world ZIP DEST   unpack a checked world zip into DEST/world (the helper)
-
-Stdlib only, Python 3.10 or newer.
+Stdlib only (plus tools/), Python 3.10 or newer.
 """
-import argparse
 import contextlib
 import datetime as dt
 import hashlib
@@ -67,6 +64,9 @@ import urllib.request
 import zipfile
 import zlib
 from pathlib import Path
+
+import helper_queue as hq
+import staff_more
 
 sp = None   # tools/staff_panel.py (register)
 ax = None   # tools/staff_apex.py (register)
@@ -108,17 +108,10 @@ WORLD_JOBS = ("restore", "deploy", "reset", "world-upload")
 STALE_JOB = dt.timedelta(hours=5)
 
 WORLD_UPLOAD_MAX = 8_000_000_000     # 8GB in deploy/Caddyfile.staff
-WORLD_TOTAL_MAX = 64 * GB       # unpacked
-WORLD_FILES_MAX = 500_000
-SPARE = 2 * GB                  # left free on the disk after an upload, and after unpacking it
 RESET_WORD = "RESET"
 UPLOAD_WORD = "REPLACE"
 SFTP_USER = re.compile(r"[a-z][a-z0-9_-]{0,30}")
 SFTP_HOST = re.compile(r"[A-Za-z0-9.:-]{1,253}")
-
-
-class Problem(Exception):
-    """A world zip this file won't unpack, in words for the page."""
 
 
 def clean(value, most: int) -> str:
@@ -128,87 +121,17 @@ def clean(value, most: int) -> str:
     return value if len(value) <= most else value[:most - 3] + "..."
 
 
-# ---------------------------------------------------------------- world zips (also run alone, by the helper)
-
-def check_world_zip(path) -> dict:
-    """What a world zip holds, or Problem: one level.dat at the top or one folder down, nothing outside where it
-    unpacks to, no links, nothing encrypted, and not too big unpacked."""
-    try:
-        z = zipfile.ZipFile(path)
-    except (OSError, zipfile.BadZipFile, ValueError) as e:
-        raise Problem("That is not a zip file this page can read.") from e
-    with z:
-        infos = z.infolist()
-        if not infos:
-            raise Problem("The zip is empty.")
-        if len(infos) > WORLD_FILES_MAX:
-            raise Problem(f"The zip has over {WORLD_FILES_MAX} entries: that is not one world.")
-        levels, total = [], 0
-        for i in infos:
-            name = i.filename
-            if "\\" in name or "\x00" in name or name.startswith("/") or re.match(r"[A-Za-z]:", name):
-                raise Problem("The zip has an entry with an absolute or Windows path: nothing was changed.")
-            parts = name.rstrip("/").split("/")
-            if any(p in ("", ".", "..") for p in parts):
-                raise Problem("The zip has an entry with .. or an empty folder name in its path: nothing was changed.")
-            if stat.S_ISLNK(i.external_attr >> 16):
-                raise Problem("The zip holds a link: worlds have none, so it is refused.")
-            if i.flag_bits & 0x1:
-                raise Problem("The zip is encrypted: zip the world folder again without a password.")
-            total += i.file_size
-            if not i.is_dir() and parts[-1] == "level.dat" and len(parts) <= 2:
-                levels.append(parts)
-        if total > WORLD_TOTAL_MAX:
-            raise Problem(f"The world would be over {WORLD_TOTAL_MAX // GB} GB unpacked.")
-        if len(levels) != 1:
-            raise Problem("The zip needs exactly one level.dat, at the top or inside one folder (world/level.dat)."
-                          if not levels else "The zip has more than one world (more than one level.dat).")
-        prefix = levels[0][0] + "/" if len(levels[0]) == 2 else ""
-        files = sum(1 for i in infos if not i.is_dir() and i.filename.startswith(prefix))
-        return {"prefix": prefix, "files": files, "size": total}
-
+# ---------------------------------------------------------------- world zips (checked by tools/helper_queue.py)
 
 DATAPACKS_ONLY_OWNER = ("The world has data packs in it (datapacks/), and only the owner adds those: take the "
                         "datapacks folder out of the zip, or ask the owner to upload it.")
 
 
 def has_datapacks(path, prefix: str) -> bool:
-    """Whether the world zip at `path` (its world folder `prefix`, from check_world_zip) has a file in datapacks/."""
+    """Whether the world zip at `path` (its world folder `prefix`, from hq.check_world_zip) has a file in datapacks/."""
     top = (prefix + "datapacks/").lower()
     with zipfile.ZipFile(path) as z:
         return any(not i.is_dir() and i.filename.lower().startswith(top) for i in z.infolist())
-
-
-def unzip_world(src, dest) -> Path:
-    """Unpacks a world zip into DEST/world (DEST an empty folder), checking it all again first. Returns that folder."""
-    dest = Path(dest)
-    if not dest.is_dir() or dest.is_symlink() or any(dest.iterdir()):
-        raise Problem("The folder to unpack into must be an empty folder.")
-    info = check_world_zip(src)
-    if shutil.disk_usage(dest).free < info["size"] + SPARE:
-        raise Problem(f"Not enough disk space to unpack the world ({info['size'] // MB} MB, and "
-                      f"{SPARE // GB} GB kept free).")
-    world = dest / "world"
-    world.mkdir()
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
-    with zipfile.ZipFile(src) as z:
-        for i in z.infolist():
-            if not i.filename.startswith(info["prefix"]):
-                continue                    # beside the world folder (a __MACOSX/ folder, a readme): left out
-            rel = i.filename[len(info["prefix"]):].rstrip("/")
-            if not rel or rel.split("/")[-1] == "session.lock":
-                continue
-            target = world.joinpath(*rel.split("/"))
-            if i.is_dir():
-                target.mkdir(parents=True, exist_ok=True)
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            fd = os.open(target, flags, 0o644)
-            with os.fdopen(fd, "wb") as out, z.open(i) as data:
-                shutil.copyfileobj(data, out, 1024 * 1024)   # zipfile stops at file_size and checks the CRC
-    if not (world / "level.dat").is_file():
-        raise Problem("The world has no level.dat after unpacking.")
-    return world
 
 
 # ---------------------------------------------------------------- release tags in a git checkout, read as files
@@ -899,11 +822,8 @@ class Host:
         for job in self.x.jobs():
             if job["action"] in WORLD_JOBS and job["state"] == "running" and not self._stale(job.get("time", "")):
                 raise sp.Refused(409, f"The helper is busy with a {job['action']} already: wait for it to finish.")
-        for rid in self.x.pending_requests():
-            with contextlib.suppress(OSError):
-                text = (self.x.requests / f"{rid}.req").read_text(encoding="ascii", errors="replace")
-                if any(f"action={a}\n" in text for a in WORLD_JOBS):
-                    raise sp.Refused(409, "A restore, version switch, reset or upload is waiting to start already.")
+        if set(hq.pending_actions(self.x.requests)) & set(WORLD_JOBS):
+            raise sp.Refused(409, "A restore, version switch, reset or upload is waiting to start already.")
 
     # ------------------------------------------------ versions
 
@@ -947,7 +867,7 @@ class Host:
         seed = seed.strip() if isinstance(seed, str) else seed
         if seed in (None, ""):
             fields = {}
-        elif isinstance(seed, str) and ax.REQUEST_FIELDS["seed"].fullmatch(seed):
+        elif isinstance(seed, str) and hq.REQUEST_FIELDS["seed"].fullmatch(seed):
             fields = {"seed": seed}
         else:
             raise sp.Refused(400, "A seed here is a number or a word: up to 64 letters, digits or _, and a - in "
@@ -966,7 +886,7 @@ class Host:
     def _waiting(self) -> list[Path]:
         try:
             return sorted(Path(e.path) for e in os.scandir(self.uploads)
-                          if e.name.endswith(".zip") and ax.REQUEST_ID.fullmatch(e.name[:-4])
+                          if e.name.endswith(".zip") and hq.REQUEST_ID.fullmatch(e.name[:-4])
                           and e.is_file(follow_symlinks=False))
         except OSError:
             return []
@@ -978,8 +898,8 @@ class Host:
         path = found[-1]
         st = path.stat()
         info = {}
-        with contextlib.suppress(Problem):
-            info = check_world_zip(path)
+        with contextlib.suppress(hq.Problem):
+            info = hq.check_world_zip(path)
         return {"upload": path.stem, "size": st.st_size, "time": st.st_mtime, "files": info.get("files"),
                 "unpacked": info.get("size"), "installed": self.x.installed()}
 
@@ -990,7 +910,7 @@ class Host:
         if body.length > WORLD_UPLOAD_MAX:
             raise sp.Refused(413, "A world upload is at most 8 GB.")
         self.uploads.mkdir(parents=True, exist_ok=True)
-        need = 2 * body.length + SPARE
+        need = 2 * body.length + hq.SPARE
         if shutil.disk_usage(self.uploads).free < need:
             raise sp.Refused(507, f"Not enough disk space: the zip and the world unpacked need about {need // GB + 1} "
                                   "GB free.")
@@ -1005,11 +925,11 @@ class Host:
                         f.write(chunk)
                     f.flush()
                     os.fsync(f.fileno())
-                info = check_world_zip(part)
+                info = hq.check_world_zip(part)
                 # A data pack is game code, which only the owner adds (/api/datapack-upload): never around that here.
                 if getattr(body, "role", None) != "owner" and has_datapacks(part, info["prefix"]):
-                    raise Problem(DATAPACKS_ONLY_OWNER)
-            except Problem as e:
+                    raise hq.Problem(DATAPACKS_ONLY_OWNER)
+            except hq.Problem as e:
                 part.unlink(missing_ok=True)
                 raise sp.Refused(400, str(e)) from None
             except BaseException:
@@ -1026,7 +946,7 @@ class Host:
 
     def world_upload_apply(self, user: str, body: dict) -> dict:
         uid = body.get("upload")
-        if not isinstance(uid, str) or not ax.REQUEST_ID.fullmatch(uid) or \
+        if not isinstance(uid, str) or not hq.REQUEST_ID.fullmatch(uid) or \
                 uid not in [p.stem for p in self._waiting()]:
             raise sp.Refused(400, "That upload isn't here (any more): upload the world again.")
         if body.get("confirm") != UPLOAD_WORD:
@@ -1119,24 +1039,4 @@ def register(module, apex) -> None:
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
     module.RAW.update(RAW)
-    import staff_more
     staff_more.register(module, apex, sys.modules[__name__])   # Java, data packs, the icon and modpacks
-
-
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="the staff page's world upload, unpacked for the root helper")
-    sub = ap.add_subparsers(dest="command", required=True)
-    unzip = sub.add_parser("unzip-world", help="check a world zip and unpack it into DEST/world")
-    unzip.add_argument("zip")
-    unzip.add_argument("dest")
-    args = ap.parse_args(argv)
-    try:
-        unzip_world(args.zip, args.dest)
-    except (Problem, OSError, zipfile.BadZipFile, ValueError) as e:
-        print(f"staff_host: {e if isinstance(e, Problem) else type(e).__name__}", file=sys.stderr)
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

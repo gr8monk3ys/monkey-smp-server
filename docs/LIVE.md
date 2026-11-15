@@ -211,6 +211,12 @@ sudo sh /opt/monkey/deploy/install-root.sh        # the newest release; --tag=vX
 
 `/opt/monkey/INSTALLED` holds the release and commit that are installed.
 
+Of `tools/`, the staff page's helper runs only `tools/helper_queue.py`: the snapshot list as root, and the world
+upload's unpacking as `monkey` (root's copy all the same). Older releases ran root's copy of
+`tools/staff_apex.py`, all of the page's hosting controls. Once `install-root.sh` has installed a release with
+`helper_queue.py`, nothing runs that old copy, and it can go: `sudo rm /opt/monkey/tools/staff_apex.py`. Until then
+the old helper still needs it.
+
 Not covered yet: `--install` of the timed jobs and of the staff page (`monkey-staff.sh --install`) still copy
 their units from `/srv/monkey/repo` when root runs them. Those units run as `monkey`, so a changed unit gives
 `monkey` little it didn't have, but read the diff before you run them.
@@ -857,8 +863,8 @@ sudo -u monkey git -C /srv/monkey/repo checkout FETCH_HEAD -- deploy/staff deplo
     deploy/monkey-staff.service deploy/monkey-staff.timer deploy/monkey-panel.service deploy/Caddyfile.staff \
     deploy/Caddyfile.staff-login deploy/monkey-staff-helper.path deploy/monkey-staff-helper.service \
     deploy/monkey-staff-helper.sh deploy/monkey-sftp.sh tools/staff_status.py tools/staff_panel.py tools/staff_auth.py \
-    tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py tools/staff_events.py \
-    tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
+    tools/helper_queue.py tools/staff_apex.py tools/staff_host.py tools/staff_more.py tools/staff_modcfg.py \
+    tools/staff_events.py tools/staff_desk.py tools/staff_spark.py tools/staff_watch.py tools/staff_lookup.py
 ```
 
 A path checkout adds and replaces files but deletes none, so the old page's files (`staff.js`, `panel.js` and the like,
@@ -1191,7 +1197,7 @@ The data packs box (admin, Mods tab) has a troubleshooting mode for "which pack 
 
 The root helper (`monkey-staff-helper.path` and `.service`, root) does the jobs the panel can't, as `monkey`: backups,
 restores, version switches, resets and world swaps. The panel writes a request file of fixed words and checked values
-into `/srv/monkey/staff/requests`. The helper reads only those values, and only six actions. One world or version job
+(`tools/helper_queue.py`) into `/srv/monkey/staff/requests`. The helper reads only those values, and only six actions. One world or version job
 runs at a time. Install it once (owner):
 
 ```sh

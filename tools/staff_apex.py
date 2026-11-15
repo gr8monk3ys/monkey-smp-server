@@ -23,7 +23,7 @@ The safety rules, as in staff_panel.py, are all here rather than in the page:
   through staff_panel's own file save (the history copy, the check that nobody else saved since, the action log).
 - Game rules: a name from GAMERULES and a value of its type, nothing else, so no other command can ride along.
 - Backups: the panel runs as monkey and can't read the backup keys, so it never runs restic. It writes a request file
-  (an action from HELPER_ACTIONS, a snapshot ID in hex, and REQUEST_FIELDS values) to STAFF_DIR/requests;
+  (tools/helper_queue.py: an action, a snapshot ID in hex, and checked values) to STAFF_DIR/requests;
   deploy/monkey-staff-helper.sh, as root, reads only those and writes what happened to RESULTS, a root-owned folder
   the panel only reads.
 - Schedules: a command runs through the console's own checks (no seed, no stop), a restart through the power path
@@ -36,19 +36,16 @@ The safety rules, as in staff_panel.py, are all here rather than in the page:
 - Bans by address: a real public IPv4 or IPv6 address, or a player name for an online player's address. A private,
   loopback or Docker address is refused: it could be everyone's (a proxy, Docker's own gateway).
 
-    python3 tools/staff_apex.py snapshots < restic.json   restic's snapshot list, cut down for the page (the helper)
-
 The mod manager, the version switch, the world reset and upload and the SFTP card are in tools/staff_host.py, which
 register() adds too.
 
-Stdlib only, Python 3.10 or newer. Imports nothing from tools/ at load: staff_panel hands itself over in register(),
-which imports staff_host only then (the helper runs this file alone, with python3 -I).
+Stdlib only (plus tools/), Python 3.10 or newer. staff_panel hands itself over in register().
 """
-import argparse
 import concurrent.futures
 import contextlib
 import datetime as dt
 import ipaddress
+import itertools
 import json
 import math
 import os
@@ -60,18 +57,14 @@ import time
 import zipfile
 from pathlib import Path
 
+import helper_queue as hq
+import staff_host
+
 sp = None   # tools/staff_panel.py, the module that serves these (register)
 
 HELPER_UNIT = Path("/etc/systemd/system/monkey-staff-helper.path")
 HELPER_RESULTS = Path("/var/lib/monkey-staff-helper/results")
-HELPER_ACTIONS = ("backup-now", "list-snapshots", "restore", "deploy", "reset", "world-upload")
 HELPER_PENDING_MAX = 5
-SNAPSHOT_ID = re.compile(r"[0-9a-f]{8,64}")
-REQUEST_ID = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{8}")
-# The other words a request may carry (staff_host.py checks them first; the helper checks them again).
-REQUEST_FIELDS = {"tag": re.compile(r"v\d{1,4}\.\d{1,4}\.\d{1,4}"), "seed": re.compile(r"-?[A-Za-z0-9_]{1,64}"),
-                  "upload": REQUEST_ID}
-RESULT_MAX = 2 * 1024 * 1024
 JOBS_SHOWN = 20
 
 GAMERULE_CACHE = 20             # seconds a reading of the game rules is reused
@@ -487,24 +480,6 @@ def mod_info(path: Path) -> dict:
             "description": text("description", 300), "environment": env if env in ("client", "server") else "both"}
 
 
-# ---------------------------------------------------------------- the helper's snapshot list (run by the helper)
-
-def reduce_snapshots(data) -> list[dict]:
-    """restic's `snapshots --json`, newest first, cut to what the page shows."""
-    rows = []
-    for s in data if isinstance(data, list) else []:
-        if not isinstance(s, dict) or not isinstance(s.get("id"), str) or not SNAPSHOT_ID.fullmatch(s["id"]):
-            continue
-        summary = s.get("summary") if isinstance(s.get("summary"), dict) else {}
-        size = summary.get("total_bytes_processed", s.get("size"))   # restic's, or a row cut down already
-        tags = [t for t in s.get("tags") or [] if isinstance(t, str) and re.fullmatch(r"[\w.-]{1,40}", t)]
-        when = s.get("time") if isinstance(s.get("time"), str) and re.fullmatch(r"[\dT:.+Z-]{10,40}", s["time"]) else ""
-        rows.append({"id": s["id"], "short_id": s["id"][:8], "time": when, "tags": tags,
-                     "size": size if isinstance(size, int) and not isinstance(size, bool) else None})
-    rows.sort(key=lambda r: r["time"], reverse=True)
-    return rows[:200]
-
-
 # ---------------------------------------------------------------- one panel's state
 
 class Extras:
@@ -656,64 +631,26 @@ class Extras:
         return self.unit.exists() and self.requests.is_dir()
 
     def pending_requests(self) -> list[str]:
-        try:
-            return sorted(e.name[:-4] for e in os.scandir(self.requests) if e.name.endswith(".req"))
-        except OSError:
-            return []
+        return hq.pending(self.requests)
 
     def request(self, user: str, action: str, snapshot: str = "", **fields: str) -> str:
-        """Writes one request for the helper and returns its id. The file has only fixed words and checked values."""
-        if action not in HELPER_ACTIONS:
-            raise ValueError(action)
-        for key, value in fields.items():
-            if key not in REQUEST_FIELDS or not isinstance(value, str) or not REQUEST_FIELDS[key].fullmatch(value):
-                raise ValueError(key)
+        """Writes one request for the helper (tools/helper_queue.py) and returns its id."""
+        hq.check_request(action, **fields)
         if not self.installed():
             raise sp.Refused(503, "The root helper isn't installed, so backups, restores, version switches and world "
                                   "resets or uploads can't be started from here. The owner installs it: "
                                   "sudo sh /srv/monkey/repo/deploy/monkey-staff.sh --install-helper")
-        if snapshot and not SNAPSHOT_ID.fullmatch(snapshot):
+        if snapshot and not hq.SNAPSHOT_ID.fullmatch(snapshot):
             raise sp.Refused(400, "A snapshot ID is 8 to 64 hex digits.")
         with self._helper:
             if len(self.pending_requests()) >= HELPER_PENDING_MAX:
                 raise sp.Refused(409, "The helper has requests waiting already: give it a minute.")
-            rid = f"{dt.datetime.now(sp.server.UTC):%Y%m%dT%H%M%SZ}-{secrets.token_hex(4)}"
-            lines = [f"action={action}", f"user={user if sp.USER.fullmatch(user) else 'unknown'}"]
-            if snapshot:
-                lines.append(f"snapshot={snapshot}")
-            lines += [f"{key}={fields[key]}" for key in sorted(fields)]
-            tmp = self.requests / f".tmp-{rid}"
-            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o640)
-            with os.fdopen(fd, "w", encoding="ascii", newline="\n") as f:
-                f.write("\n".join(lines) + "\n")
-            os.replace(tmp, self.requests / f"{rid}.req")
-        return rid
-
-    def _result(self, path: Path) -> dict | None:
-        try:
-            if path.is_symlink() or path.stat().st_size > RESULT_MAX:
-                return None
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return None
-        if not isinstance(data, dict) or data.get("action") not in (*HELPER_ACTIONS, "unknown"):
-            return None
-        return data
+            return hq.write_request(self.requests, action, user, snapshot, **fields)
 
     def jobs(self) -> list[dict]:
-        try:
-            names = sorted((e.name for e in os.scandir(self.results)
-                            if e.name.endswith(".json") and REQUEST_ID.fullmatch(e.name[:-5])), reverse=True)
-        except OSError:
-            names = []
-        rows = []
-        for name in names[:JOBS_SHOWN]:
-            data = self._result(self.results / name)
-            if data:
-                rows.append({"id": name[:-5], "action": data["action"], "state": str(data.get("state", ""))[:20],
-                             "time": str(data.get("time", ""))[:40],
-                             "message": sp.masked(str(data.get("message", "")))[:300]})
-        return rows
+        return [{"id": rid, "action": data["action"], "state": str(data.get("state", ""))[:20],
+                 "time": str(data.get("time", ""))[:40], "message": sp.masked(str(data.get("message", "")))[:300]}
+                for rid, data in itertools.islice(hq.results(self.results), JOBS_SHOWN)]
 
     def helper(self) -> dict:
         return {"installed": self.installed(), "jobs": self.jobs(), "pending": self.pending_requests()}
@@ -728,21 +665,15 @@ class Extras:
 
     def snapshots(self) -> dict:
         """The newest snapshot list the helper wrote."""
-        try:
-            names = sorted((e.name for e in os.scandir(self.results)
-                            if e.name.endswith(".json") and REQUEST_ID.fullmatch(e.name[:-5])), reverse=True)
-        except OSError:
-            names = []
-        for name in names:
-            data = self._result(self.results / name)
-            if data and data["action"] == "list-snapshots" and data.get("state") == "done":
-                rows = reduce_snapshots(data.get("snapshots"))
+        for _, data in hq.results(self.results):
+            if data["action"] == "list-snapshots" and data.get("state") == "done":
+                rows = hq.reduce_snapshots(data.get("snapshots"))
                 return {"time": str(data.get("time", ""))[:40], "snapshots": rows, "installed": self.installed()}
         return {"time": None, "snapshots": [], "installed": self.installed()}
 
     def world_restore(self, user: str, body: dict) -> dict:
         snapshot, confirm = body.get("snapshot"), body.get("confirm")
-        if not isinstance(snapshot, str) or not SNAPSHOT_ID.fullmatch(snapshot):
+        if not isinstance(snapshot, str) or not hq.SNAPSHOT_ID.fullmatch(snapshot):
             raise sp.Refused(400, "Pick a snapshot from the list.")
         known = [s["id"] for s in self.snapshots()["snapshots"]]
         if snapshot not in known:
@@ -753,11 +684,9 @@ class Extras:
             if job["action"] == "restore" and job["state"] == "running":
                 raise sp.Refused(409, "A restore is under way already.")
         with self._helper:
-            pending = list(self.pending_requests())
-        for rid in pending:
-            with contextlib.suppress(OSError):
-                if "action=restore" in (self.requests / f"{rid}.req").read_text(encoding="ascii", errors="replace"):
-                    raise sp.Refused(409, "A restore is waiting to start already.")
+            waiting = hq.pending_actions(self.requests)
+        if "restore" in waiting:
+            raise sp.Refused(409, "A restore is waiting to start already.")
         rid = self.request(user, "restore", snapshot)
         self.p.record(user, "world-restore", snapshot[:8])
         return {"request": rid}
@@ -1041,7 +970,6 @@ class Extras:
             for name in set(self._mods) - seen:
                 del self._mods[name]
         # Held mods and whether players need each one (staff_host, registered by now: register()).
-        import staff_host
         return staff_host.host(self.p).mod_notes({"mods": rows, "count": len(rows)})
 
     def pinned(self) -> set[str]:
@@ -1341,24 +1269,4 @@ def register(module) -> None:
     module.ROUTES.update(ROUTES)
     module.NEEDS.update(NEEDS)
     module.PATHS.update(path for _, path in ROUTES)
-    # Imported here, not at the top: the helper runs this file alone (python3 -I) for its snapshot list.
-    import staff_host
     staff_host.register(module, sys.modules[__name__])   # mods, versions, world reset and upload, SFTP
-
-
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="the staff page's backup helper's snapshot list")
-    sub = ap.add_subparsers(dest="command", required=True)
-    sub.add_parser("snapshots", help="restic snapshots --json on stdin, the page's list on stdout")
-    ap.parse_args(argv)
-    try:
-        data = json.loads(sys.stdin.read())
-    except ValueError:
-        print("staff_apex: restic's snapshot list is not JSON", file=sys.stderr)
-        return 1
-    json.dump(reduce_snapshots(data), sys.stdout)
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

@@ -1,2 +1,2 @@
-ceeaf873bb19ad18ed538023a5533263ef6595126981c6c96ac01181a9ed5eb8  MonkeySMP-Client-3.5.0.mrpack
-e9328fb9dae297603a53788cb93af18bd6a1af590d6fbdeb9a73e7b29f00d595  MonkeySMP-Player-3.5.0.zip
+cd8de636e5a124d11ff3977587831b9d4e311f60e822e6fdd1690a4873a4d382  MonkeySMP-Client-3.6.0.mrpack
+92c658f485bf97328455029e137c7b17da4d8c54817e02f77bbfcdd32d67d7c1  MonkeySMP-Player-3.6.0.zip

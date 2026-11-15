@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-11-15
+
 ### Fixed
 
 - **No Lunge's warning at every start and data pack reload stops.** Its `pack.mcmeta` named no `pack_format`

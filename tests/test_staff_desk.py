@@ -82,6 +82,16 @@ def test_everyone_who_has_joined_is_listed_last_seen_first(desk):
     assert bravo["last_seen"] == 1_800_005_000 and bravo["hours"] is None          # a stats file that can't be read
     assert bravo["whitelisted"] is True and bravo["op"] is False                   # whitelist.json says "bravo"
     assert carol["last_seen"] is None and carol["hours"] is None
+    assert data["unreadable"] == []
+
+
+def test_a_list_that_cant_be_read_is_named_not_shown_as_nobody_on_it(desk):
+    """A corrupt whitelist.json used to show everyone as not whitelisted, without a word."""
+    (desk.root / "whitelist.json").write_text("[{broken")
+    data = desk.call("GET", "/api/known-players", headers=MOD)[1]
+    assert data["unreadable"] == ["whitelist.json"]
+    alpha = next(p for p in data["players"] if p["name"] == "Alpha")
+    assert alpha["whitelisted"] is False and alpha["op"] is True                   # ops.json still reads
 
 
 def test_it_reads_names_times_and_play_time_and_nothing_else_of_the_world(desk):
@@ -115,7 +125,8 @@ def test_a_play_time_that_is_not_a_count_is_unknown(desk, ticks):
 
 def test_a_server_with_no_world_or_usercache_yet_lists_nobody(box):  # noqa: F811
     code, data = box.call("GET", "/api/known-players")
-    assert code == 200 and data == {"ok": True, "players": [], "total": 0, "world": False, "unnamed": 0}
+    assert code == 200 and data == {"ok": True, "players": [], "total": 0, "world": False, "unnamed": 0,
+                                    "unreadable": []}
     (box.root / "usercache.json").write_text("{broken")
     assert box.call("GET", "/api/known-players")[1]["players"] == []
 
@@ -493,7 +504,7 @@ def tempban_setup(desk):
 
     def fake(argv, **how):
         command = argv[-1] if "exec" in argv else ""
-        rows = json.loads(banned.read_text())
+        rows = json.loads(banned.read_text()) if command.startswith(("ban ", "pardon ")) else []
         if command.startswith("ban "):
             _, name, reason = command.split(" ", 2)
             rows.append({"uuid": "u", "name": name, "reason": reason})
@@ -637,6 +648,20 @@ def test_a_player_banned_already_is_not_banned_for_a_time(desk):
     code, data = desk.call("POST", "/api/tempban", {"name": "Zed", "hours": 5})     # the fixture bans Zed for good
     assert code == 409 and "banned already" in data["error"]
     assert not (desk.staff / "tempbans.json").exists()
+
+
+def test_a_ban_list_that_cant_be_read_stops_a_tempban_and_its_lifting_waits(desk):
+    """It used to read as "nobody is banned": a ban went ahead, and a due one was forgotten, its game ban kept."""
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    good = banned.read_text()
+    banned.write_text("[{broken")
+    code, data = desk.call("POST", "/api/tempban", {"name": "Carol", "hours": 1})
+    assert code == 500 and "banned-players.json can't be read" in data["error"]
+    clock[0] += 3601
+    assert tb.expire() == [] and "bravo" in json.loads((desk.staff / "tempbans.json").read_text())["bans"]
+    banned.write_text(good)
+    assert tb.expire() == ["Bravo"]
 
 
 def test_a_ban_with_other_words_is_not_lifted_even_if_it_starts_alike(desk):

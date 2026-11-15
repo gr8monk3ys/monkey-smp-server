@@ -44,8 +44,13 @@ export function PlayerHistory() {
       const facts: string[] = [];
       facts.push(h.known ? `Has joined. Last seen ${when(h.last_seen)}.` : "Has never joined (or joined before the server kept a record).");
       if (typeof h.hours === "number") facts.push(`Played ${h.hours} hours.`);
-      facts.push(h.whitelisted ? "On the whitelist." : "Not on the whitelist.");
-      if (h.op) facts.push("An operator.");
+      // A list the server folder has but that can't be read says so, never "not on it".
+      const unreadable: string[] = h.unreadable || [];
+      if (unreadable.includes("whitelist.json")) facts.push("whitelist.json can't be read, so whether they're on it can't be told.");
+      else facts.push(h.whitelisted ? "On the whitelist." : "Not on the whitelist.");
+      if (unreadable.includes("ops.json")) facts.push("ops.json can't be read.");
+      else if (h.op) facts.push("An operator.");
+      if (unreadable.includes("banned-players.json")) facts.push("banned-players.json can't be read, so a ban can't be shown.");
       setSummary(`${h.name}: ${facts.join(" ")}`);
       const rows: Line[] = [];
       if (h.ban) {

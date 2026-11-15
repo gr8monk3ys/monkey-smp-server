@@ -11,6 +11,8 @@
     saved_world.border(folder, saved_world.OVERWORLD)   # a dimension's border (None: none saved)
     saved_world.command_storage(folder, "monkey")       # `data ... storage monkey:<key>`: key -> compound (None)
     saved_world.advancements(folder, {"minecraft:end/kill_dragon"})   # player UUID -> advancement -> when done
+    saved_world.player_list(server_dir, "whitelist")    # whitelist.json ([]: missing; None: unreadable)
+    saved_world.on_list(server_dir, "ops", name)        # True / False / None (the list can't be read)
 
 The files, relative to the world folder:
   data/minecraft/scoreboard.dat                                 scores, display names and teams
@@ -222,6 +224,43 @@ def names(server_dir: Path) -> dict[str, str]:
     return {r["uuid"].lower(): r["name"] for r in rows
             if isinstance(r, dict) and isinstance(r.get("uuid"), str) and UUID.fullmatch(r["uuid"].lower())
             and isinstance(r.get("name"), str) and PLAYER_NAME.fullmatch(r["name"])}
+
+
+PLAYER_LISTS = ("whitelist", "ops", "banned-players", "banned-ips")   # <kind>.json in the server folder
+
+
+def player_list(server_dir: Path, kind: str) -> list[dict] | None:
+    """One of the server folder's player lists (PLAYER_LISTS), as the server saves it: its entries, [] when the
+    file is missing (nobody listed yet), None when it can't be read. Entries are kept as saved, except: a player
+    list's entry is kept only when its name is a string, with its uuid lowercased ("" when it has none or it isn't
+    text); a banned-ips entry only when its ip is a string."""
+    if kind not in PLAYER_LISTS:
+        raise ValueError(f"not a player list: {kind!r}")
+    try:
+        rows = json.loads((Path(server_dir) / f"{kind}.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rows, list):
+        return None
+    if kind == "banned-ips":
+        return [r for r in rows if isinstance(r, dict) and isinstance(r.get("ip"), str)]
+    return [{**r, "uuid": r["uuid"].lower() if isinstance(r.get("uuid"), str) else ""}
+            for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)]
+
+
+def list_entry(entries: list[dict], *who: str) -> dict | None:
+    """The first entry of a player list naming any of `who`: a name (any case) or a uuid."""
+    wanted = {w.lower() for w in who if w}
+    return next((r for r in entries if r["name"].lower() in wanted or r["uuid"] in wanted), None)
+
+
+def on_list(server_dir: Path, kind: str, *who: str) -> bool | None:
+    """Whether a player (by name or uuid; several to match any) is on one of the server's player lists. None when
+    the list can't be read: say so ("can't tell"), never "not listed"."""
+    entries = player_list(server_dir, kind)
+    return None if entries is None else list_entry(entries, *who) is not None
 
 
 def play_time(stats_file: Path) -> int | None:

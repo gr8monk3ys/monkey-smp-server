@@ -54,12 +54,20 @@ export default function KnownPlayers({ active }: { active: boolean }) {
       const data = await get("/api/known-players");
       setRows((data.players || []).filter((p: Known) => p && typeof p.name === "string"));
       const unnamed: number = data.unnamed || 0;
+      // A list that can't be read: its mark (whitelisted, operator, banned) is missing from everyone, so say why.
+      const unreadable: string[] = data.unreadable || [];
+      const lists = unreadable.length ? `${unreadable.join(", ")} can't be read, so nobody is marked from ${unreadable.length === 1 ? "it" : "them"}.` : "";
       setWarning(
-        data.world === false
-          ? "The world has no players folder yet: last seen and play time show once someone has joined."
-          : unnamed
-            ? `${unnamed} more ${unnamed === 1 ? "player has" : "players have"} joined but the server no longer keeps ${unnamed === 1 ? "their name" : "their names"} (it keeps its 1000 most recent), so ${unnamed === 1 ? "isn't" : "aren't"} listed.`
-            : "",
+        [
+          data.world === false
+            ? "The world has no players folder yet: last seen and play time show once someone has joined."
+            : unnamed
+              ? `${unnamed} more ${unnamed === 1 ? "player has" : "players have"} joined but the server no longer keeps ${unnamed === 1 ? "their name" : "their names"} (it keeps its 1000 most recent), so ${unnamed === 1 ? "isn't" : "aren't"} listed.`
+              : "",
+          lists,
+        ]
+          .filter(Boolean)
+          .join(" "),
       );
       m.setError("");
       setVersion((v) => v + 1);

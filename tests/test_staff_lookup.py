@@ -277,6 +277,16 @@ def test_a_players_history_brings_their_lists_ban_notes_and_changes_together(des
     assert [n["text"] for n in answer["notes"]] == ["warned for spam"]
     assert [c["action"] for c in answer["changes"]] == ["command", "player-note"]
     assert desk.call("GET", "/api/player-history?name=bad!", headers=MOD)[0] == 400
+    assert answer["unreadable"] == []
+
+
+def test_a_players_history_names_a_list_that_cant_be_read(desk):  # noqa: F811
+    """A broken list used to read as "not on it"; the page now says it can't tell."""
+    (desk.root / "whitelist.json").write_text("[{broken")
+    (desk.root / "banned-players.json").write_text(json.dumps({"not": "a list"}))
+    answer = desk.call("GET", "/api/player-history?name=alpha", headers=MOD)[1]
+    assert answer["unreadable"] == ["whitelist.json", "banned-players.json"]
+    assert answer["whitelisted"] is False and answer["op"] is True and answer["ban"] is None
 
 
 # ---------------------------------------------------------------- the page

@@ -967,6 +967,10 @@ def test_the_address_bans_are_listed(apex):
         {"ip": "8.8.8.8", "reason": "alts", "created": "2026-11-06"}, {"ip": "nonsense"}, "x"]))
     code, data = apex.call("GET", "/api/ip-bans")
     assert code == 200 and [b["ip"] for b in data["ips"]] == ["8.8.8.8"]
+    (apex.root / "banned-ips.json").write_text("[{broken")
+    assert apex.call("GET", "/api/ip-bans")[1]["ips"] is None          # can't be read: the page says so
+    (apex.root / "banned-ips.json").unlink()
+    assert apex.call("GET", "/api/ip-bans")[1]["ips"] == []
 
 
 # ---------------------------------------------------------------- the page

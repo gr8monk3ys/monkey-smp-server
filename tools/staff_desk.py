@@ -136,11 +136,6 @@ class Desk:
 
     # ------------------------------------------------ everyone who has joined
 
-    def _listed(self, file: str) -> set[str]:
-        rows = _json(self.p.root / file)
-        return {r["name"].lower() for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)} \
-            if isinstance(rows, list) else set()
-
     def play_time(self, path: Path) -> int | None:
         """Ticks played, from the game's own stats file; read again only when the file has changed."""
         try:
@@ -169,8 +164,14 @@ class Desk:
                 if d.name.endswith(".dat") and _UUID.fullmatch(uuid):
                     with contextlib.suppress(OSError):
                         seen[uuid] = d.stat().st_mtime
-        lists = {key: self._listed(file) for key, file in (("whitelisted", "whitelist.json"), ("op", "ops.json"),
-                                                            ("banned", "banned-players.json"))}
+        # Each list as the names and uuids on it. One that can't be read is named in "unreadable" and its field stays
+        # false: the page says it can't tell rather than "not listed".
+        lists, unreadable = {}, []
+        for key, kind in (("whitelisted", "whitelist"), ("op", "ops"), ("banned", "banned-players")):
+            entries = saved_world.player_list(self.p.root, kind)
+            if entries is None:
+                unreadable.append(f"{kind}.json")
+            lists[key] = {w for r in entries or [] for w in (r["name"].lower(), r["uuid"]) if w}
         notes = self._load_notes()
         rows = []
         for uuid, name in names.items():
@@ -178,14 +179,14 @@ class Desk:
             row = {"name": name, "last_seen": seen.get(uuid),
                    "hours": None if ticks is None else round(ticks / TICKS_PER_HOUR, 1),
                    "notes": len(notes.get(uuid, [])) + len(notes.get(f"name:{name.lower()}", []))}
-            row.update({key: name.lower() in found for key, found in lists.items()})
+            row.update({key: name.lower() in found or uuid in found for key, found in lists.items()})
             rows.append(row)
         # Whoever was on last comes first; a name the server only looked up (never joined) has no time and goes last.
         rows.sort(key=lambda r: (r["last_seen"] is None, -(r["last_seen"] or 0), r["name"].lower()))
         # The game keeps the names of its 1000 most recent players only: those who joined before them have a file but
         # no name here, and are counted rather than left out without a word.
         return {"players": rows[:PLAYERS_MAX], "total": len(rows), "world": (players / "data").is_dir(),
-                "unnamed": len(set(seen) - set(names))}
+                "unnamed": len(set(seen) - set(names)), "unreadable": unreadable}
 
     # ------------------------------------------------ notes on a player
 
@@ -413,9 +414,11 @@ class TempBans:
         return rows
 
     def _game_ban(self, name: str) -> dict | None:
-        rows = _json(self.p.root / "banned-players.json")
-        return next((r for r in rows if isinstance(r, dict) and str(r.get("name", "")).lower() == name.lower()), None) \
-            if isinstance(rows, list) else None
+        rows = saved_world.player_list(self.p.root, "banned-players")
+        if rows is None:
+            raise sp.Refused(500, "banned-players.json can't be read, so whether they are banned can't be told: "
+                                  "fix or move it and try again.")
+        return saved_world.list_entry(rows, name)
 
     @staticmethod
     def _until_words(until: float) -> str:

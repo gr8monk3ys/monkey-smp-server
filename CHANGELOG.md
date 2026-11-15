@@ -105,6 +105,11 @@
   config, so set the two lines in its `config/openpartiesandclaims-server.toml` by hand:
   `permissionSystem = "luck_perms"` and `primaryPartySystem = "default"` (done on the live server 11 November).
 
+  config, so set the two lines in its `config/openpartiesandclaims-server.toml` by hand.
+- **A corrupt whitelist no longer shows everyone as not whitelisted.** The staff page reads the server's
+  whitelist, ops and ban lists one way (`saved_world.player_list`): one that can't be read is said so, a temporary
+  ban waits rather than going ahead or forgetting a due one.
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

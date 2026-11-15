@@ -7,7 +7,10 @@ advice(data) reads one reading (staff.json's own shape) and gives a list of
   causes this kind of server has (a mod missing a dependency, the game running out of memory, a broken data pack...),
   so staff read what it probably is and what to do, not only the line. A line that matches nothing is left as it is.
 - from the numbers: lag that lasts (the last LAG_READINGS readings past the tick limit), memory or disk running out,
-  swap filling, the off-site backup failing.
+  swap filling, the off-site backup failing, a file in the world growing faster than GROWTH_PER_DAY (staff.json's
+  growth).
+- from the data packs: a world data pack that is off while site/live-packs.json says it runs, or on while it says it
+  doesn't (staff.json's packs). Each pack and each file is its own row, so a new one is news of its own.
 
 level is "alert" (worth a message to the staff channel), "warn" (worth a look) or "info" (usually harmless, said so
 nobody worries). "from" is the line or the number it came from, already masked by staff_status.plain(). "source" is
@@ -26,7 +29,9 @@ LAG_MS = 50.0                       # a tick's whole budget at 20 ticks a second
 LAG_READINGS = 3                    # readings in a row past it (6 minutes) before it counts as lasting
 MEMORY_LOW = 0.10                   # memory available, as a share of all of it
 SWAP_HIGH = 0.50                    # swap in use, as a share of all of it
-DISK_LOW = 0.10
+DISK_LOW = 0.20                     # disk free, as a share of all of it: under it, the disk is over 80% used
+GROWTH_PER_DAY = 2 * 1024 ** 3      # one file in the world growing faster than this (Ledger's was 8 GB a day)
+GB = 1024 ** 3
 QUIET = dt.timedelta(hours=6)
 CRASH_QUIET = dt.timedelta(minutes=30)
 CLEAR_AFTER = dt.timedelta(minutes=10)  # back to normal this long before "cleared"
@@ -35,6 +40,18 @@ UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may ha
 CLEARED = {"lag": "the server keeps up again", "memory": "the machine has memory to spare again",
            "swap": "swap use is back down", "disk": "the disk has room again",
            "backup": "the off-site backup works again"}
+
+
+def cleared_text(rid: str) -> str:
+    """What "Cleared:" says for a machine row: the fixed numbers, a data pack back as meant, a file that slowed."""
+    kind, _, what = rid.partition(":")
+    if kind == "pack-off" and what:
+        return f"data pack {what} is on, as meant"
+    if kind == "pack-on" and what:
+        return f"data pack {what} is off, as meant"
+    if kind == "growth" and what:
+        return f"{what} no longer grows fast"
+    return CLEARED.get(rid, rid)
 
 
 class Known:
@@ -168,6 +185,29 @@ def advice(data: dict) -> list[dict]:
                          "fix": "When it fills, the world stops saving. Old worlds kept in backups/ after a reset or "
                                 "an upload are the usual weight: ask the owner to clear some.",
                          "from": f"{room:.0%} of the disk free"}
+    for grows in data.get("growth") if isinstance(data.get("growth"), list) else []:
+        if not (isinstance(grows, dict) and isinstance(grows.get("file"), str)
+                and isinstance(grows.get("per_day"), int | float) and grows["per_day"] > GROWTH_PER_DAY):
+            continue
+        name, size = grows["file"], grows.get("size")
+        found[f"growth:{name}"] = {
+            "id": f"growth:{name}", "source": "machine", "level": "alert",
+            "title": f"{name} grows {grows['per_day'] / GB:.1f} GB a day",
+            "fix": "At that rate it fills the disk. Find what writes it before then (for world/ledger.sqlite: "
+                   "docs/LIVE.md, \"Ledger's history\").",
+            "from": f"{size / GB:.1f} GB now" if isinstance(size, int | float) else "its size now unknown"}
+    packs = data.get("packs") if isinstance(data.get("packs"), dict) else {}
+    for state, meant, fix in (
+            ("off", "on", "Its features don't run. Turn it on (Mods tab, Data packs), or set its line in "
+                          "site/live-packs.json to off if it should stay off."),
+            ("on", "off", "The site doesn't offer it while the list says so. Turn it off (Mods tab, Data packs), or "
+                          "set its line in site/live-packs.json to on.")):
+        for pack in packs.get(state) if isinstance(packs.get(state), list) else []:
+            if isinstance(pack, str):
+                found[f"pack-{state}:{pack}"] = {
+                    "id": f"pack-{state}:{pack}", "source": "machine", "level": "alert",
+                    "title": f"Data pack {pack} is {state}, but it is meant to be {meant}",
+                    "fix": fix, "from": f"site/live-packs.json says {'on' if meant == 'on' else 'not on'}"}
     backups = data.get("backups") if isinstance(data.get("backups"), dict) else {}
     if backups.get("offsite") == "failing":
         found["backup"] = {"id": "backup", "source": "machine", "level": "alert",
@@ -232,7 +272,7 @@ def alerts(state, rows: list[dict], crashes, now: dt.datetime) -> tuple[list[str
             continue
         since = _when(absent.setdefault(rid, stamp))
         if now - since >= CLEAR_AFTER:
-            lines.append(f"Cleared: {CLEARED.get(rid, rid)}.")
+            lines.append(f"Cleared: {cleared_text(rid)}.")
             del posted[rid], absent[rid]
             cleared[rid] = stamp
 

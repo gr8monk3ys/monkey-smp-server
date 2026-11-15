@@ -537,6 +537,115 @@ def test_write_replaces_the_file_whole_and_show_changes_nothing(box, monkeypatch
     assert [p.name for p in box.out.parent.glob(".status-*")] == []
 
 
+# ---------------------------------------------------------------- live state against what is meant
+
+LISTED = ("There are 3 data pack(s) enabled: [vanilla (built-in)], [file/monkey-boss (world)], "
+          "[file/monkey-omens (world)]")
+MEANT = {"monkey-boss": "on", "monkey-drops": "on", "monkey-omens": "returning", "monkey-lore": "off",
+         "monkey-clips": "unknown"}
+
+
+def packs_server(folder, answer=LISTED, ps=PS):
+    """The real adapter over a fake docker that counts the times it is asked for the enabled list."""
+    asked = []
+
+    def run(argv, **_):
+        if "ps" in argv:
+            return SimpleNamespace(returncode=0, stdout=ps if "--all" in argv else "box1\n", stderr="")
+        asked.append(argv[-1])
+        said = {"tick query": TICK, "list": LIST, "datapack list enabled": answer}.get(argv[-1])
+        return SimpleNamespace(returncode=0 if said else 1, stdout=said or "", stderr="" if said else "refused")
+    folder.mkdir(exist_ok=True)
+    return rcon.Docker(folder, run=run), asked
+
+
+def drift(box, server, now=NOW, previous=None, meant=MEANT):
+    return staff_status.status(box.live, now, server, previous=previous, meminfo=box.meminfo, settings=box.settings,
+                               failing=box.failing, meant=meant)[0]
+
+
+def test_packs_not_as_the_site_says_are_read_from_the_shared_copy_of_the_list(box, tmp_path):
+    server, asked = packs_server(tmp_path / "docker")
+    data = drift(box, server)
+    assert data["packs"] == {"read": "2026-11-15T02:00:00Z", "off": ["monkey-drops"], "on": ["monkey-omens"]}
+    assert sorted(r["id"] for r in data["advice"] if r["id"].startswith("pack-")) == [
+        "pack-off:monkey-drops", "pack-on:monkey-omens"]
+    box.out.write_text(json.dumps(data))
+    for minutes in (2, 4, 6):                       # the timed jobs' copy: no listing of its own each reading
+        drift(box, server, NOW + dt.timedelta(minutes=minutes), previous=box.out)
+    assert asked.count("datapack list enabled") == 1
+    rcon.forget_packs(tmp_path / "docker")          # staff changed a pack: the next reading asks again
+    drift(box, server, NOW + dt.timedelta(minutes=8), previous=box.out)
+    assert asked.count("datapack list enabled") == 2
+
+
+def test_a_server_that_cannot_be_asked_keeps_the_last_answer_rather_than_reading_as_fixed(box, tmp_path):
+    server, _ = packs_server(tmp_path / "docker")
+    box.out.write_text(json.dumps(drift(box, server)))
+    stopped, asked = packs_server(tmp_path / "docker2", ps=json.dumps({"State": "exited", "Status": "Exited (0)"}))
+    assert drift(box, stopped, previous=box.out)["packs"]["off"] == ["monkey-drops"] and asked == []
+    refusing, _ = packs_server(tmp_path / "docker3", answer="")
+    assert drift(box, refusing, previous=box.out)["packs"]["off"] == ["monkey-drops"]
+    assert drift(box, server, meant={})["packs"] is None
+
+
+def test_the_site_list_is_read_from_the_checkout():
+    meant = staff_status.meant_packs()
+    assert meant and set(meant.values()) <= {"on", "off", "returning", "unknown"}
+
+
+GB = 1024 ** 3
+
+
+def grow(path, size):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "ab") as f:
+        f.truncate(size)                            # sparse: no real gigabytes written
+
+
+def test_a_file_growing_fast_is_measured_against_the_days_picture(box, tmp_path):
+    world, sizes = box.live / "server" / "world", tmp_path / "world-sizes.json"
+    grow(world / "ledger.sqlite", 40 * GB)
+    grow(world / "region" / "r.0.0.mca", 8 * 1024 * 1024)       # small files aren't kept
+    grow(world / "big.dat", 1 * GB)
+    assert staff_status.growth(world, sizes, NOW, {}) == []       # nothing to measure against yet
+    kept = json.loads(sizes.read_text())
+    assert kept["days"]["2026-11-15"]["sizes"] == {"world/ledger.sqlite": 40 * GB, "world/big.dat": GB}
+    # Within the hour the world isn't walked again: the last answer carries over.
+    assert staff_status.growth(world, sizes, NOW + dt.timedelta(minutes=30), {"growth": ["kept"]}) == ["kept"]
+    grow(world / "ledger.sqlite", 44 * GB)
+    assert staff_status.growth(world, sizes, NOW + dt.timedelta(hours=6), {}) == []     # under SIZES_SPAN
+    later = NOW + dt.timedelta(hours=12)
+    assert staff_status.growth(world, sizes, later, {}) == [
+        {"file": "world/ledger.sqlite", "size": 44 * GB, "per_day": 8 * GB}]
+    # The next day has its own picture, and the oldest goes after SIZES_DAYS.
+    for day in range(1, 4):
+        staff_status.growth(world, sizes, NOW + dt.timedelta(days=day), {})
+    assert sorted(json.loads(sizes.read_text())["days"]) == ["2026-11-17", "2026-11-18"]
+
+
+def test_growth_reaches_the_advice_and_needs_a_place_to_keep_its_pictures(box, tmp_path):
+    world, sizes = box.live / "server" / "world", tmp_path / "world-sizes.json"
+    grow(world / "ledger.sqlite", 40 * GB)
+    staff_status.growth(world, sizes, NOW - dt.timedelta(days=1), {})
+    grow(world / "ledger.sqlite", 48 * GB)
+    data = staff_status.status(box.live, NOW, docker(), meminfo=box.meminfo, settings=box.settings,
+                               failing=box.failing, sizes=sizes, meant={})[0]
+    assert [r["id"] for r in data["advice"] if r["id"] != "disk"] == ["growth:world/ledger.sqlite"]  # this disk's own
+    assert read(box)["growth"] is None
+    sizes.write_text("not json")
+    assert staff_status.growth(world, sizes, NOW, {}) == []
+    assert staff_status.growth(tmp_path / "no-world", tmp_path / "other.json", NOW, {}) == []
+
+
+def test_a_reading_too_long_for_one_message_is_split_between_whole_lines():
+    lines = [f"line {i} " + "x" * 300 for i in range(11)]
+    sent = staff_status.messages(lines)
+    assert len(sent) == 2 and all(len(m) <= staff_status.POST for m in sent)
+    assert "\n".join(sent).split("\n") == lines
+    assert staff_status.messages([]) == [] and staff_status.messages(["y" * 5000]) == ["y" * staff_status.POST]
+
+
 @pytest.mark.parametrize("name", [*UNITS, "monkey-staff.sh", "Caddyfile.staff", "Caddyfile.staff-login"])
 def test_deploy_files_are_plain_ascii_with_lf(name):
     data = (DEPLOY / name).read_bytes()

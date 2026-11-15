@@ -49,6 +49,10 @@ one has the names of who is online and the machine's numbers, so it never goes n
 - advice is what the problems probably are, in plain words (tools/staff_watch.py), and alerts what it last told the
   staff channel. With STAFF_WEBHOOK_URL in the environment, `write` posts a problem worth it there when it first shows
   (then at most once in 6 hours while it lasts), says when a number is back to normal, and posts each new crash.
+- packs is how the world's data packs differ from site/live-packs.json, {"read", "off": [...], "on": [...]}
+  (pack_drift(); the last answer while the server can't be asked, null when the list can't be read), and growth how
+  fast each file in the world over 64 MB grows, [{"file", "size", "per_day"}] in bytes (growth(); `write` keeps a
+  picture of their sizes a day in world-sizes.json next to the file, and walks the world at most once an hour).
 
 It only reads: the release's version from the manifest (only that key: the manifest also holds the seed, which must
 never reach this file), the container's own `monkey rcon`, the log, and one line of each crash report (the rest of a
@@ -64,6 +68,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 import urllib.request
 from pathlib import Path
@@ -71,6 +76,7 @@ from pathlib import Path
 import staff_watch
 import status as public
 
+import live_packs
 import rcon as server
 
 VERSION = 2         # 2: a reading's sixth number is CPU in use; in 1 it was the load average, so it is dropped
@@ -86,6 +92,12 @@ ERRORS_KEPT = 30
 CRASHES_KEPT = 5
 TEXT_KEPT = 160
 LEFT_OUT = "A message that may hold something private was left out. It is in the server's log."
+SIZES = "world-sizes.json"      # next to staff.json: the big files in the world, one picture a day (growth())
+SIZES_EVERY = dt.timedelta(hours=1)     # the world is walked at most this often; readings between carry it over
+SIZES_SPAN = dt.timedelta(hours=12)     # growth is measured against a picture at least this old
+SIZES_DAYS = 2                          # pictures kept
+BIG = 64 * 1024 * 1024                  # only files at least this big are kept in a picture
+POST = 1900                             # the most one Discord message carries (2000 with room to spare)
 
 _TICK = re.compile(r"(?P<state>.*?)Target tick rate: (?P<target>[\d.]+) per second.*?"
                    r"Average time per tick: (?P<avg>[\d.]+)ms.*?"
@@ -352,12 +364,102 @@ def shares(machine: dict, before: dict | None = None) -> tuple[float | None, flo
     return used, cpu_busy(machine.get("cpu"), old)
 
 
+def meant_packs() -> dict[str, str]:
+    """site/live-packs.json in this checkout: each world data pack's state this season, {} when it can't be read."""
+    try:
+        packs = live_packs.load()
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+    return {k: v for k, v in packs.items() if isinstance(v, str)} if isinstance(packs, dict) else {}
+
+
+def pack_drift(docker, online: bool, meant: dict[str, str], now: dt.datetime, old: dict) -> dict | None:
+    """Which world data packs aren't as site/live-packs.json says: {"read", "off": [meant on, but off], "on": [meant
+    off or returning, but on]}. The enabled list is rcon.py's copy (enabled_list, kept PACKS_CACHE_S and shared with
+    the timed jobs), never a listing of its own each reading: each one makes the server re-read every pack on its main
+    thread. While the server can't be asked, the last answer carries over, so a stopped server doesn't read as fixed."""
+    kept = old.get("packs") if isinstance(old.get("packs"), dict) else None
+    meant_on = sorted(p for p, state in meant.items() if state == "on")
+    meant_off = sorted(p for p, state in meant.items() if state in ("off", "returning"))
+    if not meant_on and not meant_off:
+        return None
+    if not online:
+        return kept
+    try:
+        box = docker.container()
+        if not box:
+            return kept
+        off = set(server.packs_off(docker, [*meant_on, *meant_off], server.enabled_list(docker, docker.folder, box)))
+    except server.RconError:
+        return kept
+    return {"read": public.iso(now), "off": [p for p in meant_on if p in off],
+            "on": [p for p in meant_off if p not in off]}
+
+
+def world_sizes(world: Path) -> dict[str, int]:
+    """The files in the world folder at least BIG bytes, {"world/ledger.sqlite": bytes}. Links aren't followed."""
+    found = {}
+    for top, _, files in os.walk(world):
+        for name in files:
+            path = Path(top) / name
+            try:
+                st = path.lstat()
+            except OSError:
+                continue
+            if stat.S_ISREG(st.st_mode) and st.st_size >= BIG:
+                found[path.relative_to(world.parent).as_posix()] = st.st_size
+    return found
+
+
+def _picture(kept) -> bool:
+    return (isinstance(kept, dict) and isinstance(kept.get("at"), int | float) and isinstance(kept.get("sizes"), dict)
+            and all(isinstance(v, int) for v in kept["sizes"].values()))
+
+
+def growth(world: Path, sizes: Path | None, now: dt.datetime, old: dict) -> list[dict] | None:
+    """How fast each big file in the world grows: [{"file", "size", "per_day"}] in bytes, for the files that grew. The
+    world is walked at most once in SIZES_EVERY (readings between carry the answer over); the first walk of each UTC
+    day is kept in `sizes` (SIZES_DAYS of them), and growth is measured against the newest kept at least SIZES_SPAN
+    ago. None without a file to keep them in. A file under BIG a day ago is only measured from the next day."""
+    if sizes is None:
+        return None
+    kept = old.get("growth") if isinstance(old.get("growth"), list) else []
+    try:
+        state = json.loads(sizes.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        state = {}
+    state = state if isinstance(state, dict) else {}
+    stamp = now.timestamp()
+    scanned = state.get("scanned")
+    if isinstance(scanned, int | float) and 0 <= stamp - scanned < SIZES_EVERY.total_seconds():
+        return kept
+    if not world.is_dir():
+        return []
+    found = world_sizes(world)
+    days = state.get("days") if isinstance(state.get("days"), dict) else {}
+    days = {day: pic for day, pic in days.items() if _picture(pic) and pic["at"] <= stamp}
+    days.setdefault(now.astimezone(server.UTC).strftime("%Y-%m-%d"), {"at": int(stamp), "sizes": found})
+    days = dict(sorted(days.items())[-SIZES_DAYS:])
+    with contextlib.suppress(OSError):
+        public.write(sizes, {"scanned": int(stamp), "days": days})
+    base = max((pic for pic in days.values() if stamp - pic["at"] >= SIZES_SPAN.total_seconds()),
+               key=lambda pic: pic["at"], default=None)
+    if base is None:
+        return []
+    span = (stamp - base["at"]) / 86400
+    return [{"file": name, "size": size, "per_day": round((size - base["sizes"][name]) / span)}
+            for name, size in sorted(found.items()) if size > base["sizes"].get(name, size)]
+
+
 def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, meminfo: Path = MEMINFO,
            settings: Path = BACKUP_SETTINGS, failing: Path = BACKUP_FAILING, proc_stat: Path = PROC_STAT,
-           alerting: bool = False) -> tuple[dict, list[str]]:
+           alerting: bool = False, sizes: Path | None = None,
+           meant: dict[str, str] | None = None) -> tuple[dict, list[str]]:
     """(the status as of `now`, with the readings in the file `previous` carried over; the lines to post to the staff
     channel). With `alerting` off there are none and the alert state carries over as it was. The caller writes the
-    file before it posts, so a post is never sent again for want of the state that says it was."""
+    file before it posts, so a post is never sent again for want of the state that says it was. `sizes` is where the
+    world's file sizes are kept (growth(); none, no growth check) and `meant` each data pack's state this season
+    (site/live-packs.json when not given)."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
     box = docker.state()
@@ -374,6 +476,8 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
         "backups": {"local": last_backup(live), "offsite": offsite(settings, failing)},
         "problems": problems(live, now, old.get("problems")),
         "history": [*carried_over(old, now), reading],
+        "packs": pack_drift(docker, online, meant_packs() if meant is None else meant, now, old),
+        "growth": growth(live / "server" / "world", sizes, now, old),
     }
     data["advice"] = staff_watch.advice(data)
     data["alerts"] = old.get("alerts") if isinstance(old.get("alerts"), dict) else {}
@@ -383,9 +487,22 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     return data, lines
 
 
+def messages(lines: list[str]) -> list[str]:
+    """A reading's lines as Discord messages of at most POST characters each, whole lines in order (one longer than
+    that is cut). Eleven data packs off at once is more than one message holds."""
+    out: list[str] = []
+    for line in lines:
+        line = line[:POST]
+        if out and len(out[-1]) + 1 + len(line) <= POST:
+            out[-1] += "\n" + line
+        else:
+            out.append(line)
+    return out
+
+
 def post_webhook(url: str, line: str) -> None:
     """One line to the staff channel, mentioning nobody. A post that fails changes nothing: the page still shows it."""
-    body = json.dumps({"content": line[:1900], "allowed_mentions": {"parse": []}}).encode()
+    body = json.dumps({"content": line[:POST], "allowed_mentions": {"parse": []}}).encode()
     request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json",
                                                               "User-Agent": "monkey-staff"})
     with contextlib.suppress(OSError, ValueError):
@@ -411,17 +528,19 @@ def main(argv=None) -> int:
     # The staff channel only (deploy/monkey-staff.sh passes it in the environment, never on the command line), and
     # never the public webhook: these messages name what is wrong on the machine.
     hook = os.environ.get("STAFF_WEBHOOK_URL", "").strip()
-    data, lines = status(args.live, now, docker, previous=args.out, alerting=bool(hook))
+    data, lines = status(args.live, now, docker, previous=args.out, alerting=bool(hook),
+                         sizes=args.out.with_name(SIZES))
     try:
         public.write(args.out, data)
     except OSError:
         # Not written (a full disk, most likely), so the state that says what was posted isn't either, and the next
         # run would post the same again: post only in the first run of each hour, which needs no memory.
         if lines and now.minute < 2:
-            post_webhook(hook, "\n".join(lines))
+            for message in messages(lines):
+                post_webhook(hook, message)
         raise
-    if lines:
-        post_webhook(hook, "\n".join(lines))
+    for message in messages(lines):
+        post_webhook(hook, message)
     count = data["players"]["count"] if data["players"] else "no"
     print(f"{args.out}: {'online' if data['online'] else 'offline'}, {count} player count, "
           f"{len(data['history'])} readings")

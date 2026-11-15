@@ -187,7 +187,7 @@ main > section, footer { padding: 112px var(--gutter); }
 .counter .unit { font-size: 0.9rem; font-weight: 700; color: var(--sage); }
 /* Until the page's script starts, what the countdown will show holds its place (unseen), so the address and the
  * buttons below don't jump down when it appears: before the launch the blocks and the visitor's own time, after it
- * (.live) only the line saying the server is open. The Countdown component's inline script sets .live and drops
+ * (.live) only the line saying the server is open. The LaunchHold inline script sets .live and drops
  * .pending when nothing will appear; without JavaScript nothing is held. */
 @media (scripting: enabled) {
   .launch.pending:not(.live) .counter[hidden] { display: flex !important; visibility: hidden; }

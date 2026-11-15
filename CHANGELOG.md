@@ -7,6 +7,10 @@
 - **No Lunge's warning at every start and data pack reload stops.** Its `pack.mcmeta` named no `pack_format`
   beside its old `supported_formats`; a patch adds `"pack_format": 48`, as 26.2's warning asks.
 
+- **A server whose staff page memory setting is bigger than the machine starts again.** The start capped the heap and
+  then stopped on a note it couldn't print (`Write-Note` wasn't exported to `monkey.ps1`); the restore drill's 3 GB
+  container hit it on 2026-11-14. A test now checks that every module function `monkey.ps1` calls is exported.
+
 ## [3.5.0] - 2026-11-14
 
 ### Added

@@ -259,6 +259,43 @@ stopped, before 2.10.0 deploys. In this order, as root:
 Worlds kept outside `MonkeySMP-Server` (`/srv/monkey/seasons/...`) keep the old names until one is put back:
 run `migrate_names.py` on it first.
 
+### Ledger's history (the release with the charged-cube patch)
+
+Before this release, Sulfur Cube Expansion's charged cubes made Ledger write about 29 million rows a day of a
+button placed and broken every tick (docs/MAINTAINING.md, "Patches this pack carries"): `world/ledger.sqlite` was
+57 GB on 14 November 2026, growing about 8 GB a day, 99.9% of it those rows. The patch stops new ones; the old ones
+stay until this step takes them out. Do it once the release is live (before, the churn would only come back).
+
+First, as root, update root's own copies ("Root's own copies"): the off-site backup runs
+`/opt/monkey/deploy/monkey-backup.sh`, and only this release's copy leaves the prune's two files out of R2. Without
+it, every snapshot from then on carries the 57 GB file again.
+
+```sh
+sh /opt/monkey/deploy/install-root.sh --check && sh /opt/monkey/deploy/install-root.sh
+```
+
+Then, as `monkey`, two runs of the same command: one with the server running, one with it stopped (between :05
+and :55, so the hourly backup's save-off doesn't meet a stopped server).
+
+```sh
+python3 /srv/monkey/repo/tools/ledger_prune.py /srv/monkey/MonkeySMP-Server/server/world
+cd /srv/monkey/MonkeySMP-Server/docker && docker compose stop monkey
+python3 /srv/monkey/repo/tools/ledger_prune.py /srv/monkey/MonkeySMP-Server/server/world
+docker compose start monkey
+```
+
+The first run, with the server up, reads the whole old file once, read-only (116 seconds for 57 GB on the VPS, 14
+November), and copies every other row, with its id, into `ledger.sqlite.pruning`: 8.9 million of 281 million rows.
+The second, with the server stopped, adds only what Ledger wrote since and what it changed (a rollback, a purge),
+builds the indexes, swaps the new file in and keeps the old one as `ledger.sqlite.before-prune`. Which run it is
+comes from the world's lock, so the server is down only for the second (a few minutes: it reads the old file once
+more to catch rollbacks and purges since the copy, then builds the indexes); that run holds the lock until the swap, so
+a server started meanwhile (a deploy, the staff page) stops at "session.lock: already locked" instead of writing
+into the file being replaced. Both run in batches the server barely notices, and neither is needed again: a
+history without the churn is copied whole. Check `ledger search` and the staff page's
+"Who changed this block" in game, then delete `ledger.sqlite.before-prune`. The next off-site backup is small again;
+the snapshots from before keep the big file until the backup's own pruning drops them.
+
 ### The deploy timer that fires on start (the release after 3.3.0)
 
 The release changes `monkey-deploy.timer` so it checks 1 minute after it starts (`OnActiveSec`). The old unit, once
@@ -1624,8 +1661,8 @@ writes `/srv/monkey/staff/reports/2026-W46.json` (one file per week) and `report
 everyone's game stats, which the next week counts from. A week already written is skipped, so a missed or repeated
 run is safe. It reads only, never through RCON:
 
-- Ledger's database, opened read-only (`?mode=ro`), only the week's rows. Rows from the `command` source (Dynamic
-  Lights' light and air blocks, about 40 million a day) are left out.
+- Ledger's database, opened read-only (`?mode=ro`), only the week's rows. Rows from the `command` source (data packs'
+  blocks, mostly Sulfur Cube Expansion's buttons before its patch, about 29 million a day) are left out.
 - the game's stats (the week's change against last week's copy), the parties (Open Parties and Claims), the
   usercache, `level.dat` (the spawn) and the server's logs.
 

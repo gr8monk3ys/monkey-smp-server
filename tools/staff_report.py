@@ -22,7 +22,8 @@ What it reads, all read-only:
 - Ledger's world/ledger.sqlite, opened with mode=ro. Only the week's rows are asked for, and never by scanning the
   table (18 minutes on 7.8 GB): the players' own rows through Ledger's player_id index (a few hundred thousand a
   season), and portal blocks through the old_object_id index, each with the week's times. The time index alone is no
-  good here: Dynamic Lights writes about 40 million light/air rows a day (source "command"), which are left out.
+  good here: data packs' blocks (source "command", mostly Sulfur Cube Expansion's buttons before its patch, about
+  29 million rows a day) are left out.
 - world/players/stats/*.json. These count from the player's first join, so each write also keeps the counts as they
   are then (DIR/stats/WEEK.json); a week's numbers are the change from the newest earlier copy. With none, they are
   everything so far, and the report says so. The copy is taken when the job runs, a little after the week ends.

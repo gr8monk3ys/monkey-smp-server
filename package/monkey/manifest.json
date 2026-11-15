@@ -267,6 +267,10 @@
       "size": 435218,
       "hashes": {
         "sha512": "81a0e3e799794301ec04a4ccbed3199205d7a78355e5973672d50d779024b5c33650429c2a39a0832922e8167014c48efa9380a300bc6677ffdf4f09fddc375e"
+      },
+      "patch": {
+        "path": "patches/blaze-attack-animation",
+        "base_sha512": "81a0e3e799794301ec04a4ccbed3199205d7a78355e5973672d50d779024b5c33650429c2a39a0832922e8167014c48efa9380a300bc6677ffdf4f09fddc375e"
       }
     },
     {

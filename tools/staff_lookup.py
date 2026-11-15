@@ -424,11 +424,10 @@ def player_history(panel, name) -> dict:
 
     # A list that can't be read is named in "unreadable" (its field stays false, its ban None): the page says it
     # can't tell rather than "not listed".
-    lists = {kind: saved_world.player_list(panel.root, kind) for kind in ("whitelist", "ops", "banned-players")}
-    unreadable = [f"{kind}.json" for kind, entries in lists.items() if entries is None]
+    lists, unreadable = saved_world.player_lists(panel.root)
 
     def listed(kind: str) -> dict | None:
-        return saved_world.list_entry(lists[kind] or [], name, uuid or "")
+        return saved_world.list_entry(lists[kind], name, uuid)
 
     ban = listed("banned-players")
     temp = (_json(panel.staff / "tempbans.json") or {})

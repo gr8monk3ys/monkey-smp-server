@@ -1000,9 +1000,7 @@ class Extras:
     # ------------------------------------------------ bans by address
 
     def ip_bans(self) -> dict:
-        import saved_world  # here: the helper runs this file alone (see the top)
-
-        ips = saved_world.player_list(self.p.root, "banned-ips")
+        ips = sp.saved_world.player_list(self.p.root, "banned-ips")
         out = None
         if ips is not None:
             out = []

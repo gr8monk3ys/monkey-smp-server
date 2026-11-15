@@ -94,6 +94,16 @@ def test_a_list_that_cant_be_read_is_named_not_shown_as_nobody_on_it(desk):
     assert alpha["whitelisted"] is False and alpha["op"] is True                   # ops.json still reads
 
 
+def test_a_player_who_took_someones_old_name_is_not_marked_from_their_lists(desk):
+    """Carol was banned and opped as "Alpha"; the Alpha of today is someone else and is on neither list."""
+    (desk.root / "banned-players.json").write_text(json.dumps([{"uuid": CAROL, "name": "Alpha", "reason": "x"}]))
+    (desk.root / "ops.json").write_text(json.dumps([{"uuid": CAROL, "name": "Alpha", "level": 4}]))
+    rows = {p["name"]: p for p in desk.call("GET", "/api/known-players", headers=MOD)[1]["players"]}
+    assert rows["Alpha"]["banned"] is False and rows["Alpha"]["op"] is False
+    assert rows["Carol"]["banned"] is True and rows["Carol"]["op"] is True
+    assert rows["Alpha"]["whitelisted"] is True                         # an entry with no real uuid goes by name
+
+
 def test_it_reads_names_times_and_play_time_and_nothing_else_of_the_world(desk):
     (desk.root / "world" / "players" / "stats" / f"{ALPHA}.json").write_text(json.dumps(
         {"stats": {"minecraft:custom": {"minecraft:play_time": 72_000, "minecraft:deaths": 9}}, "seed": "s3cret"}))
@@ -504,7 +514,7 @@ def tempban_setup(desk):
 
     def fake(argv, **how):
         command = argv[-1] if "exec" in argv else ""
-        rows = json.loads(banned.read_text()) if command.startswith(("ban ", "pardon ")) else []
+        rows = json.loads(banned.read_text()) if command.startswith(("ban ", "pardon ")) and banned.exists() else []
         if command.startswith("ban "):
             _, name, reason = command.split(" ", 2)
             rows.append({"uuid": "u", "name": name, "reason": reason})
@@ -657,11 +667,61 @@ def test_a_ban_list_that_cant_be_read_stops_a_tempban_and_its_lifting_waits(desk
     good = banned.read_text()
     banned.write_text("[{broken")
     code, data = desk.call("POST", "/api/tempban", {"name": "Carol", "hours": 1})
-    assert code == 500 and "banned-players.json can't be read" in data["error"]
+    assert code == 500 and "banned-players.json can't be read" in data["error"] and "never move" in data["error"]
     clock[0] += 3601
     assert tb.expire() == [] and "bravo" in json.loads((desk.staff / "tempbans.json").read_text())["bans"]
     banned.write_text(good)
     assert tb.expire() == ["Bravo"]
+
+
+def test_a_due_ban_waiting_on_an_unreadable_ban_list_is_said_once(desk, capsys):
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    good = banned.read_text()
+    banned.write_text("[{broken")
+    clock[0] += 3601
+    for _ in range(4):
+        assert tb.expire() == []
+    assert actions(desk).count("tempban-wait") == 1 and "1 due: banned-players.json can't be read" in actions(desk)
+    assert "banned-players.json can't be read" in capsys.readouterr().err
+    banned.write_text(good)
+    assert tb.expire() == ["Bravo"]
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    banned.write_text("[{broken")
+    clock[0] += 3601
+    assert tb.expire() == [] and actions(desk).count("tempban-wait") == 2     # a new wait is said again
+
+
+def test_a_due_ban_the_list_no_longer_shows_is_pardoned_all_the_same(desk):
+    """The file moved away (or lost the ban) while the running server still holds it: forgetting it without a pardon
+    would ban the player for good."""
+    tb, clock, banned = tempban_setup(desk)
+    desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})
+    banned.unlink()
+    clock[0] += 3601
+    assert tb.expire() == ["Bravo"]
+    log = actions(desk)
+    assert "command pardon Bravo" in log and "tempban-end Bravo: pardoned (the ban was already lifted)" in log
+    assert desk.call("GET", "/api/tempbans")[1]["bans"] == []
+
+
+def test_a_ban_the_game_took_is_kept_even_if_the_list_cant_be_read_after(desk):
+    """The ban went through but banned-players.json couldn't be read back: no row meant nobody would ever lift it."""
+    tb, clock, banned = tempban_setup(desk)
+    banning = desk.panel.docker.run
+
+    def then_broken(argv, **how):
+        done = banning(argv, **how)
+        if argv[-1].startswith("ban "):
+            banned.write_text("[{broken")
+        return done
+    desk.panel.docker.run = then_broken
+    assert desk.call("POST", "/api/tempban", {"name": "Bravo", "hours": 1})[0] == 200
+    said = json.loads((desk.staff / "tempbans.json").read_text())["bans"]["bravo"]["game_reason"]
+    desk.panel.docker.run = banning
+    banned.write_text(json.dumps([{"uuid": "u", "name": "Bravo", "reason": said}]))
+    clock[0] += 3601
+    assert tb.expire() == ["Bravo"] and "tempban-end Bravo: pardoned" in actions(desk)
 
 
 def test_a_ban_with_other_words_is_not_lifted_even_if_it_starts_alike(desk):

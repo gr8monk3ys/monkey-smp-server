@@ -7,7 +7,7 @@ import json
 import pytest
 import staff_lookup
 import staff_panel
-from test_staff_desk import ALPHA, desk  # noqa: F401 (desk is the fixture: box with players who have joined)
+from test_staff_desk import ALPHA, CAROL, desk  # noqa: F401 (desk is the fixture: box with players who have joined)
 from test_staff_panel import actions, box  # noqa: F401
 from test_staff_report import ledger, place
 
@@ -287,6 +287,17 @@ def test_a_players_history_names_a_list_that_cant_be_read(desk):  # noqa: F811
     answer = desk.call("GET", "/api/player-history?name=alpha", headers=MOD)[1]
     assert answer["unreadable"] == ["whitelist.json", "banned-players.json"]
     assert answer["whitelisted"] is False and answer["op"] is True and answer["ban"] is None
+
+
+def test_a_players_history_goes_by_uuid_not_a_name_someone_had_before(desk):  # noqa: F811
+    """Carol was banned as "Alpha": the Alpha of today is someone else, and Carol's history shows her ban."""
+    (desk.root / "banned-players.json").write_text(json.dumps([{"uuid": CAROL, "name": "Alpha", "reason": "grief"}]))
+    assert desk.call("GET", "/api/player-history?name=alpha", headers=MOD)[1]["ban"] is None
+    assert desk.call("GET", "/api/player-history?name=carol", headers=MOD)[1]["ban"]["reason"] == "grief"
+    # Someone who never joined (no uuid known) goes by the name on the list.
+    assert desk.call("GET", "/api/player-history?name=Zed", headers=MOD)[1]["ban"] is None
+    (desk.root / "banned-players.json").write_text(json.dumps([{"uuid": CAROL, "name": "Zed", "reason": "alt"}]))
+    assert desk.call("GET", "/api/player-history?name=zed", headers=MOD)[1]["ban"]["reason"] == "alt"
 
 
 # ---------------------------------------------------------------- the page

@@ -160,6 +160,12 @@ level_time=$(python3 -B -I "$TOOLS/restore_drill.py" level-time "$scratch/server
 regions=$(find "$scratch/server/$world" -path '*/region/*.mca' -size +0 2>/dev/null | wc -l)
 [ "$regions" -gt 0 ] || fail "the restored world has no region files"
 log "the world on disk: level.dat reads (game time $level_time), $regions region files"
+# The staff page's memory setting (server/monkey-launch.json) is the live machine's: the copy gets the drill's own.
+launch="$scratch/server/monkey-launch.json"
+if [ -f "$launch" ]; then
+    sed -i "s/\"memory_gb\": *[0-9][0-9]*/\"memory_gb\": $MEMORY_GB/" "$launch"
+    log "the copy's memory setting: $MEMORY_GB GB (the drill's, not the live server's)"
+fi
 
 # ---------------------------------------------------------------- 4. what a snapshot leaves out
 

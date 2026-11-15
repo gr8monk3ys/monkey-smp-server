@@ -45,6 +45,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import ledger as ledger_db
+from ledger import Ledger
+
 sp = None   # tools/staff_panel.py (register)
 
 ENTRY = re.compile(r"[a-z0-9_.:-]{1,40}(?: [a-z0-9_.:-]{1,40}){0,2}")
@@ -223,7 +226,7 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
     if player and not sp.PLAYER.fullmatch(player):
         raise sp.Refused(400, "A player name is 3 to 16 letters, digits or _.")
     try:
-        ledger = staff_report.Ledger(panel.root / "world" / "ledger.sqlite")
+        ledger = Ledger(panel.root / "world" / "ledger.sqlite")
     except FileNotFoundError:
         raise sp.Refused(404, "Ledger's database isn't there (world/ledger.sqlite): is Ledger installed?") from None
     except sqlite3.Error:
@@ -244,13 +247,14 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
                 return {"rows": [], "more": False, "stopped": False, "note": f"Ledger has never seen {player}."}
         actions = KINDS[kind]
         wanted = None if actions is None else {ledger.act(a) for a in actions}
-        skip = ledger.sources.get("command", -1)
         now = now or dt.datetime.now(staff_report.calendar.PACIFIC).replace(tzinfo=None)
         since = staff_report.stamp(now - dt.timedelta(hours=hours))
-        rows, stopped = _lookup(ledger, x, y, z, radius, world, since, skip, wanted, who)
+        try:
+            rows, stopped = ledger.around(x, y, z, radius, world, since, wanted, who, LOOKUP_ROWS * 4, LOOKUP_SECONDS)
+        except ledger_db.Busy:
+            raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
     finally:
-        with contextlib.suppress(sqlite3.Error):
-            ledger.db.close()
+        ledger.close()
     rows.sort(key=lambda r: (r[0], r[-1]), reverse=True)     # newest first; id breaks ties
     more = len(rows) > LOOKUP_ROWS
     out = []
@@ -263,37 +267,6 @@ def block_history(panel, query: dict, now: dt.datetime | None = None) -> dict:
                     "rolled_back": bool(back)})
     return {"rows": out, "more": more, "stopped": stopped, "zone": "Pacific",
             "box": {"x": x, "y": y, "z": z, "radius": radius, "world": world_label, "hours": hours}}
-
-
-def _lookup(ledger, x, y, z, radius, world, since, skip, wanted, who) -> tuple[list[tuple], bool]:
-    """Ledger's rows in the box, one indexed (x, y) column at a time, at most LOOKUP_ROWS + 1 of them and
-    LOOKUP_SECONDS of the database's time."""
-    deadline = time.monotonic() + LOOKUP_SECONDS
-    ledger.db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)
-    query = ("select time, action_id, x, y, z, object_id, old_object_id, player_id, source, rolled_back, id "
-             "from actions indexed by actions_by_location "
-             "where x = ? and y = ? and z between ? and ? and world_id = ? and time >= ?")
-    rows, stopped = [], False
-    try:
-        # From the asked block outward, so a cap or the time limit keeps the rows nearest to it.
-        columns = sorted(((cx, cy) for cx in range(x - radius, x + radius + 1)
-                          for cy in range(y - radius, y + radius + 1)),
-                         key=lambda c: max(abs(c[0] - x), abs(c[1] - y)))
-        for cx, cy in columns:
-            for row in ledger.db.execute(query, (cx, cy, z - radius, z + radius, world, since)):
-                if row[8] == skip or (wanted is not None and row[1] not in wanted) \
-                        or (who is not None and row[7] != who):
-                    continue
-                rows.append(row)
-            if len(rows) > LOOKUP_ROWS * 4 or time.monotonic() > deadline:
-                return rows, True
-    except sqlite3.OperationalError as e:
-        if "interrupt" not in str(e).lower():
-            raise sp.Refused(503, "Ledger's database is busy: try again in a minute.") from None
-        stopped = True
-    finally:
-        ledger.db.set_progress_handler(None, 0)
-    return rows, stopped
 
 
 # ---------------------------------------------------------------- mod updates (Modrinth)

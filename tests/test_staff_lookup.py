@@ -196,11 +196,10 @@ def test_block_history_reads_the_asked_block_before_the_edges(box, monkeypatch):
     _db(box, [*(place(f"2026-11-10 10:00:{i:02d}", "Alpha", "dirt", 0, 64, 5) for i in range(12)),
               place("2026-11-10 09:00:00", "Bravo", "tnt", 4, 64, 5)])
     assert look(box, x=4, y=64, z=5, radius=4)["stopped"]
-    import staff_report
-    ledger = staff_report.Ledger(box.root / "world" / "ledger.sqlite")
-    rows, stopped = staff_lookup._lookup(ledger, 4, 64, 5, 4, ledger.world_id("Overworld"), "2026-11-01 00:00:00",
-                                         -1, None, None)
-    ledger.db.close()
+    ledger = staff_lookup.Ledger(box.root / "world" / "ledger.sqlite")
+    rows, stopped = ledger.around(4, 64, 5, 4, ledger.world_id("Overworld"), "2026-11-01 00:00:00", None, None,
+                                  most=8, seconds=3)
+    ledger.close()
     assert stopped and ledger.players[rows[0][7]] == "Bravo"   # the asked block's column was read first
 
 

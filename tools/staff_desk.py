@@ -54,6 +54,8 @@ import threading
 import time
 from pathlib import Path
 
+import saved_world
+
 sp = None   # tools/staff_panel.py (register)
 
 PLAYERS_MAX = 2000                  # the most players listed, the last seen first
@@ -74,7 +76,7 @@ SEARCH_SHOWN = 200
 SEARCH_TEXT_MAX = 1024 * 1024
 TEXT_SUFFIXES = {".toml", ".json", ".json5", ".properties", ".yml", ".yaml", ".txt", ".cfg", ".conf", ".ini", ".snbt",
                  ".mcmeta", ".md", ".csv", ".zs", ".js", ".mcfunction"}
-_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_UUID = saved_world.UUID
 _WORD = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _FORMULA = ("=", "+", "-", "@", "\t", "\r")
 
@@ -135,13 +137,8 @@ class Desk:
     # ------------------------------------------------ everyone who has joined
 
     def _names(self) -> dict[str, str]:
-        """uuid -> name, from usercache.json: every player the server has looked up, so everyone who has joined."""
-        rows = _json(self.p.root / "usercache.json")
-        if not isinstance(rows, list):
-            return {}
-        return {r["uuid"].lower(): r["name"] for r in rows
-                if isinstance(r, dict) and isinstance(r.get("uuid"), str) and _UUID.fullmatch(r["uuid"].lower())
-                and isinstance(r.get("name"), str) and sp.PLAYER.fullmatch(r["name"])}
+        """uuid -> name: everyone who has joined (saved_world.names)."""
+        return saved_world.names(self.p.root)
 
     def _listed(self, file: str) -> set[str]:
         rows = _json(self.p.root / file)
@@ -159,10 +156,7 @@ class Desk:
             kept = self._played.get(key)
         if kept and kept[0] == mark:
             return kept[1]
-        data = _json(path)
-        custom = (data.get("stats") or {}).get("minecraft:custom") if isinstance(data, dict) else None
-        ticks = custom.get("minecraft:play_time") if isinstance(custom, dict) else None
-        ticks = ticks if isinstance(ticks, int) and not isinstance(ticks, bool) and ticks >= 0 else None
+        ticks = saved_world.play_time(path)
         with self._cache:
             if len(self._played) > PLAYERS_MAX * 2:
                 self._played.clear()

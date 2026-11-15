@@ -228,3 +228,40 @@ def test_a_border_not_shaped_as_saved_is_a_value_error_naming_it(tmp_path, root)
     FakeWorld(tmp_path)._write(rel, nbt(root, gzipped=True))
     with pytest.raises(ValueError, match=names_file(tmp_path, rel)):
         saved_world.border(tmp_path)
+
+
+def test_names_are_one_rule_for_the_usercache(tmp_path):
+    """staff_report kept the uuid's case and standings didn't check the name: a name the Rule check looked up by the
+    stats file's lowercase uuid could go missing. Now every reader gets this."""
+    import json
+    (tmp_path / "usercache.json").write_text(json.dumps([
+        {"uuid": "ABCDEF01-0000-4000-8000-000000000001", "name": "Alpha"},     # uppercase: kept, lowercased
+        {"uuid": "00000002-0000-4000-8000-000000000002", "name": "Br@vo"},     # not a player's name
+        {"uuid": "not-a-uuid", "name": "Carol"},
+        {"name": "NoUuid"}, "junk"]))
+    assert saved_world.names(tmp_path) == {"abcdef01-0000-4000-8000-000000000001": "Alpha"}
+    (tmp_path / "usercache.json").write_text("{not json")
+    assert saved_world.names(tmp_path) == {} and saved_world.names(tmp_path / "missing") == {}
+
+
+@pytest.mark.parametrize(("stats", "ticks"), [
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": 72000}}}, 72000),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": -1}}}, None),
+    ({"stats": {"minecraft:custom": {"minecraft:play_time": True}}}, None),
+    ({"stats": {}}, None), ([], None),
+])
+def test_play_time_reads_a_stats_file(tmp_path, stats, ticks):
+    import json
+    path = tmp_path / "u.json"
+    path.write_text(json.dumps(stats))
+    assert saved_world.play_time(path) == ticks
+    assert saved_world.play_time(tmp_path / "missing.json") is None
+
+
+def test_an_unreadable_party_file_stops_standings_but_the_rule_check_skips_it(tmp_path):
+    world = FakeWorld(tmp_path).party("good", member("00000001-0000-4000-8000-000000000001", "Alpha"))
+    (world.path / saved_world.PARTIES / "bad.nbt").write_bytes(b"not nbt")
+    with pytest.raises(ValueError):
+        saved_world.parties(world.path)
+    found = saved_world.parties(world.path, skip_unreadable=True)
+    assert [p.id for p in found] == ["good"]

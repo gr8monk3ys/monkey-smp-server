@@ -33,6 +33,7 @@ only where a party name is read).
 """
 import datetime as dt
 import json
+import re
 import struct
 import uuid
 from collections.abc import Iterator
@@ -151,27 +152,67 @@ def faction_name(name: str, leader: str) -> str:
     return name or f"{leader}{UNNAMED_PARTY}"
 
 
-def parties(folder: Path) -> list[Party] | None:
+def parties(folder: Path, skip_unreadable: bool = False) -> list[Party] | None:
     """Every party saved, by file name; None when the world has no parties folder (no party made yet).
     A party file not shaped as Open Parties and Claims saves it (a member whose UUID isn't one, say) is a
-    ValueError naming it: standings has always stopped there rather than rank a faction without them."""
+    ValueError naming it: standings has always stopped there rather than rank a faction without them. With
+    skip_unreadable such a file (or one that can't be read) is left out instead: the Rule check reports on the rest."""
     where = folder / PARTIES
     if not where.is_dir():
         return None
     found = []
     for path in sorted(where.glob("*.nbt")):
-        data = nbt.read(path)
-        if not isinstance(data.get("owner"), dict):
-            found.append(Party(path.stem, None, [], ""))
-            continue
-        members: list[Member] = []
-        with _shaped(path):
-            for p in [data["owner"], *data.get("members", [])]:
-                u = uuid_text(p["uuid"])
-                if all(m.uuid != u for m in members):
-                    members.append(Member(u, p.get("username") or ""))
-        found.append(Party(path.stem, members[0], members, party_name(folder, members[0].uuid)))
+        try:
+            found.append(_party(folder, path))
+        except (OSError, ValueError):
+            if not skip_unreadable:
+                raise
     return found
+
+
+def _party(folder: Path, path: Path) -> Party:
+    data = nbt.read(path)
+    if not isinstance(data.get("owner"), dict):
+        return Party(path.stem, None, [], "")
+    members: list[Member] = []
+    with _shaped(path):
+        for p in [data["owner"], *data.get("members", [])]:
+            u = uuid_text(p["uuid"])
+            if all(m.uuid != u for m in members):
+                members.append(Member(u, p.get("username") or ""))
+    return Party(path.stem, members[0], members, party_name(folder, members[0].uuid))
+
+
+# ---------------------------------------------------------------- players
+
+PLAYER_NAME = re.compile(r"[A-Za-z0-9_]{3,16}")
+UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def names(server_dir: Path) -> dict[str, str]:
+    """uuid (lowercase, 8-4-4-4-12) -> name, from the server folder's usercache.json: every player the server has
+    looked up, so everyone who has joined. A row whose uuid or name isn't a player's is left out; {} when the file
+    can't be read."""
+    try:
+        rows = json.loads((Path(server_dir) / "usercache.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(rows, list):
+        return {}
+    return {r["uuid"].lower(): r["name"] for r in rows
+            if isinstance(r, dict) and isinstance(r.get("uuid"), str) and UUID.fullmatch(r["uuid"].lower())
+            and isinstance(r.get("name"), str) and PLAYER_NAME.fullmatch(r["name"])}
+
+
+def play_time(stats_file: Path) -> int | None:
+    """Ticks played, from a player's stats file (world/players/stats/UUID.json); None when it can't say."""
+    try:
+        data = json.loads(Path(stats_file).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    custom = (data.get("stats") or {}).get("minecraft:custom") if isinstance(data, dict) else None
+    ticks = custom.get("minecraft:play_time") if isinstance(custom, dict) else None
+    return ticks if isinstance(ticks, int) and not isinstance(ticks, bool) and ticks >= 0 else None
 
 
 def party_name(folder: Path, owner_uuid: str) -> str:

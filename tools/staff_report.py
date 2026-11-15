@@ -58,9 +58,11 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import status as public
+from ledger import Ledger
 
 import nbt
 import rcon as server
+import saved_world
 import season_calendar as calendar
 
 VERSION = 1
@@ -85,7 +87,6 @@ XRAY_STONE = 500            # mined at least this much stone to be compared
 XRAY_ORES = 10
 XRAY_TIMES = 3              # times the median rate
 XRAY_RATE = 15.0            # per 1,000 stone, when too few players mined to compare
-WORLD_NAMES = {"minecraft:overworld": "Overworld", "minecraft:the_nether": "Nether", "minecraft:the_end": "End"}
 NETHERITE = ("netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots")
 # The stats kept in a copy: (stat kind, item), each without its minecraft: prefix.
 STATS = [("used", "ender_pearl"), ("used", "enchanted_golden_apple"), ("used", "totem_of_undying"),
@@ -203,34 +204,17 @@ def row(what: str, time: str | None = None, world: str | None = None, pos=None) 
 # ---------------------------------------------------------------- what it reads
 
 
-def usercache(server_dir: Path) -> dict[str, str]:
-    """uuid -> name."""
-    try:
-        rows = json.loads((server_dir / "usercache.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return {r["uuid"]: r["name"] for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)
-            and isinstance(r.get("uuid"), str)}
-
-
 def parties(server_dir: Path) -> dict[str, list[str]] | None:
-    """Open Parties and Claims' parties: file name -> member names, owner first. None when there are none to read."""
-    folder = server_dir / "world" / "data" / "openpartiesandclaims" / "parties"
-    if not folder.is_dir():
+    """Open Parties and Claims' parties: file name -> member names, owner first (saved_world's reading, a party
+    file it can't read left out). None when there are none to read."""
+    found = saved_world.parties(server_dir / "world", skip_unreadable=True)
+    if found is None:
         return None
     out = {}
-    for path in sorted(folder.glob("*.nbt")):
-        try:
-            data = nbt.read(path)
-        except (OSError, ValueError):
-            continue
-        names = []
-        for member in [data.get("owner"), *(data.get("members") or [])]:
-            name = member.get("username") if isinstance(member, dict) else None
-            if isinstance(name, str) and name not in names:
-                names.append(name)
+    for party in found:
+        names = list(dict.fromkeys(m.username for m in party.members if m.username))
         if names:
-            out[path.stem] = names
+            out[party.id] = names
     return out
 
 
@@ -271,65 +255,6 @@ def baseline(reports: Path | None, week: str) -> tuple[str | None, dict]:
         if isinstance(data.get("players"), dict):
             return name, data["players"]
     return None, {}
-
-
-class Ledger:
-    """Ledger's database, read-only, and the names its numbers stand for."""
-
-    def __init__(self, path: Path):
-        if not path.is_file():
-            raise FileNotFoundError(path)
-        self.db = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
-        self.objects = {i: name.removeprefix("minecraft:")
-                        for i, name in self.db.execute("select id, identifier from ObjectIdentifiers")}
-        self.object_ids = {name: i for i, name in self.objects.items()}
-        self.actions = {name: i for i, name in self.db.execute("select id, action_identifier from ActionIdentifiers")}
-        self.sources = {name: i for i, name in self.db.execute('select id, "name" from sources')}
-        self.worlds = {i: WORLD_NAMES.get(name, name)
-                       for i, name in self.db.execute("select id, identifier from worlds")}
-        self.players = {}
-        self.first_join = {}
-        for i, name, first in self.db.execute("select id, player_name, first_join from players"):
-            self.players[i] = name
-            self.first_join[name] = first
-        self.indexes = {r[0] for r in self.db.execute("select name from sqlite_master where type='index'")}
-
-    def act(self, name: str) -> int:
-        return self.actions.get(name, -1)
-
-    def world_id(self, label: str) -> int:
-        return next((i for i, n in self.worlds.items() if n == label), -1)
-
-    def player_rows(self, start: str, end: str) -> list[tuple]:
-        """The week's rows done by a player, without Dynamic Lights' (source command)."""
-        hint = "indexed by actions_player_id" if "actions_player_id" in self.indexes else ""
-        query = (f"select time, action_id, x, y, z, world_id, object_id, old_object_id, player_id, extra_data "
-                 f"from actions {hint} where player_id >= 1 and time >= ? and time < ? and source != ?")
-        return self.db.execute(query, (start, end, self.sources.get("command", -1))).fetchall()
-
-    def portal_breaks(self, start: str, end: str) -> list[tuple]:
-        """Every portal block that went in the week, by a player or by itself (source gravity)."""
-        portal = self.object_ids.get("nether_portal")
-        if portal is None:
-            return []
-        hint = "indexed by actions_old_object_id" if "actions_old_object_id" in self.indexes else ""
-        return self.db.execute(
-            f"select time, x, y, z, world_id, player_id, source from actions {hint} "
-            "where old_object_id = ? and action_id = ? and time >= ? and time < ?",
-            (portal, self.act("block-break"), start, end)).fetchall()
-
-    def placer(self, x: int, y: int, z: int, world: int, before: str, cache: dict) -> tuple[str, str] | None:
-        """Who last placed the block at a spot before a time, and what it was (the container's owner)."""
-        key = (x, y, z, world)
-        if key not in cache:
-            cache[key] = self.db.execute(
-                "select time, player_id, object_id from actions where x = ? and y = ? and z = ? and world_id = ? "
-                "and action_id = ? and player_id >= 1 order by time", (*key, self.act("block-place"))).fetchall()
-        best = None
-        for t, p, o in cache[key]:
-            if t <= before:
-                best = (self.players.get(p, str(p)), self.objects.get(o, str(o)))
-        return best
 
 
 def log_files(logs: Path, start: dt.datetime, end: dt.datetime) -> list[tuple[Path, dt.date]]:
@@ -392,7 +317,7 @@ class Week:
         self.skipped: dict[str, str] = {}
         self.sources: dict = {}
         self.mining: list[dict] = []
-        self.names = usercache(self.server)
+        self.names = saved_world.names(self.server)
         self.parties = parties(self.server)
         self.party_of = {n.lower(): key for key, names in (self.parties or {}).items() for n in names}
 

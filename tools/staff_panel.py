@@ -463,7 +463,7 @@ class Panel:
 
     def power(self) -> dict:
         busy = self.busy()
-        box = staff_status.container(self.docker)
+        box = self.docker.state()
         state = box["state"] if box else None
         if busy and busy["action"] in ("restart", "restart-now"):
             shown, since = "restarting", busy["since"]
@@ -991,10 +991,10 @@ class Panel:
 
     def who_is_on(self) -> dict | None:
         """`list` over RCON as {"count", "max", "names"}; None when the server isn't running or doesn't say."""
-        box = staff_status.container(self.docker)
+        box = self.docker.state()
         if not (box and box["state"] == "running"):
             return None
-        return staff_status.players(staff_status.ask(self.docker, "list"))
+        return server.online(staff_status.ask(self.docker, "list"))
 
     def timers(self) -> dict:
         argv = ["systemctl", "list-timers", "--all", "--no-pager"]

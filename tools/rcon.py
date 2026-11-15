@@ -173,6 +173,17 @@ class Recorder:
     def started(self, timeout: int = 60) -> str | None:
         return None
 
+    def raw(self, command: str, timeout: int = TIMEOUT) -> subprocess.CompletedProcess:
+        """As Docker.raw: the answer unchecked (a refusal stays in stdout), returncode 0."""
+        if self.fail:
+            self.fail -= 1
+            raise RconError("the server is down")
+        answer = self.answers.get(command)
+        if answer is None:
+            answer = next((a for k, a in self.answers.items() if command.startswith(k)), "")
+        self.sent.append(command)
+        return subprocess.CompletedProcess([command], 0, answer, "")
+
     def __call__(self, command: str, timeout: int = TIMEOUT) -> str:
         if self.fail:
             self.fail -= 1

@@ -119,14 +119,6 @@ def tick(answer: str) -> dict | None:
             "sample": int(m["sample"])}
 
 
-players = server.online      # `list`'s answer (tools/rcon.py owns the rule)
-
-
-def container(docker) -> dict | None:
-    """What docker says about the server's container (the adapter's state())."""
-    return docker.state()
-
-
 def ask(docker, command: str) -> str:
     """The server's answer, "" when it didn't give one: a server still starting isn't an error here, it is the news."""
     try:
@@ -368,10 +360,10 @@ def status(live: Path, now: dt.datetime, docker, previous: Path | None = None, m
     file before it posts, so a post is never sent again for want of the state that says it was."""
     now = now.astimezone(server.UTC)
     old = earlier(previous)
-    box = container(docker)
+    box = docker.state()
     up = box is not None and box["state"] == "running"
     ticking = tick(ask(docker, "tick query")) if up else None
-    who = players(ask(docker, "list")) if up else None
+    who = server.online(ask(docker, "list")) if up else None
     online = ticking is not None or who is not None
     machine = host(live, meminfo, proc_stat)
     reading = [int(now.timestamp()), ticking["avg"] if ticking else None, ticking["p95"] if ticking else None,

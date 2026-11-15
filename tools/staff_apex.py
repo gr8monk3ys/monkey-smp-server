@@ -536,7 +536,7 @@ class Extras:
         return self.p.docker(command, timeout=sp.COMMAND_TIMEOUT)
 
     def running(self) -> bool:
-        box = sp.staff_status.container(self.p.docker)
+        box = self.p.docker.state()
         return bool(box and box["state"] == "running")
 
     # ------------------------------------------------ settings

@@ -1435,6 +1435,10 @@
       "size": 3357,
       "hashes": {
         "sha512": "e9cbdae3d399d8d5eaf61c89bee78c36f588b0d04a8d08031583c3f3d0825d1227399c67e512a6834578a98a20e84c73de6f7e5ab5c6e864838478aa52ea224a"
+      },
+      "patch": {
+        "path": "patches/no-lunge",
+        "base_sha512": "e9cbdae3d399d8d5eaf61c89bee78c36f588b0d04a8d08031583c3f3d0825d1227399c67e512a6834578a98a20e84c73de6f7e5ab5c6e864838478aa52ea224a"
       }
     },
     {

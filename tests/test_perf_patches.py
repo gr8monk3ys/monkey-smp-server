@@ -268,3 +268,9 @@ def test_blaze_attack_animation_declares_26_2s_data_format():
     meta = json.loads(patched("blaze-attack-animation", "pack.mcmeta"))["pack"]
     assert meta["min_format"] == meta["max_format"] == 107  # any 107.x, as tools/datapacks.py declares
     assert "pack_format" not in meta
+
+
+def test_no_lunge_names_its_pack_format_for_26_2():
+    """Its supported_formats [48, 81] without pack_format made 26.2 warn at every start and data pack reload."""
+    meta = json.loads(patched("no-lunge", "pack.mcmeta"))["pack"]
+    assert meta["pack_format"] == 48 and meta["min_format"] == 48 and meta["max_format"] == 107

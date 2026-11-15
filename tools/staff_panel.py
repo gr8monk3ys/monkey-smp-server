@@ -1075,7 +1075,8 @@ PATHS = {path for _, path in ROUTES}
 
 # Who may ask what. A role is X-Staff-Role from the login in front of the page, exactly one and a known one: a missing
 # role is refused, never taken as owner (a `Connection: X-Staff-Role` makes Caddy drop the copied one). The basic_auth
-# logins get owner from deploy/Caddyfile.staff. A request not listed needs admin.
+# logins get owner from deploy/Caddyfile.staff. Every request names its role in NEEDS: one left out stops the panel
+# at startup.
 ROLES = ("moderator", "admin", "owner")
 NEEDS = {
     ("GET", "/api/me"): "moderator",

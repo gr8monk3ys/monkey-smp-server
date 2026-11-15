@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-11-14
+
 ### Added
 
 - **Two-step login shows a QR code.** Turning it on in the staff page's account menu now shows a QR code for the

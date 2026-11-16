@@ -133,7 +133,7 @@ How:
 - **Exception:** a crash, a dupe or a security hole. Both owners agree, tag a patch release, and deploy it
   with `--now` at a quiet hour after a backup. Nothing else.
 - **Mon 9 Nov:** `systemctl enable --now monkey-deploy.timer`, as root. Tagging is open again. (Done: started
-  again on 8 November; it fires on start since #161.)
+  again on 8 November, #161.)
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new

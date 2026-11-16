@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { JsonLd } from "@/components/json-ld";
+import { StoreClicks } from "@/components/store-clicks";
 import { SITE_URL } from "@/lib/config";
 import { preloadFont } from "@/lib/fonts";
 import { OG_IMAGE, SITE_NAME, siteGraph } from "@/lib/seo";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <JsonLd data={siteGraph()} />
         {children}
         <Analytics />
+        <StoreClicks />
       </body>
     </html>
   );

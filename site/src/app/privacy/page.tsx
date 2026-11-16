@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="2026-11-09"
+    <LegalPage title="Privacy policy" updated="2026-11-15"
       lede="What we record when you visit this site, play on the server or buy a pass, why we record it, how long we
         keep it and how to see it or have it deleted.">
       <Privacy />

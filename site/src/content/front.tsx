@@ -71,7 +71,7 @@ export const pass = {
   usd: PASS_USD,
   price: `$${PASS_USD}`,
   per: "/ month",
-  alt: "or $8 for 2 months",
+  alt: "or $8 for 2 months, about the rest of Season I",
   needs: `Needs Minecraft Java Edition on a PC (Windows, macOS or Linux) with ${RAM_GB} GB of RAM. If the pack won't `
     + "run in your first 48 hours, you get your money back.",
   perks: [

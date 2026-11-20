@@ -35,12 +35,12 @@ are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server.
 
 ### Issue tracker
 
-Issues live in GitHub Issues for gr8monk3ys/monkey-smp-server (via `gh`). See `docs/agents/issue-tracker.md`.
+GitHub Issues on `gr8monk3ys/monkey-smp-server`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+The five canonical roles, label string equal to role name. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: root `GLOSSARY.md` + `docs/adr/` (created lazily). See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

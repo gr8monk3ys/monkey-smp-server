@@ -4,6 +4,8 @@
                                         it can't be opened) and reads the names its numbers stand for
     .player_rows(start, end)            the rows players made in a span (the Rule check)
     .portal_breaks(start, end)          the portal blocks that went in a span
+    .player_rows_after(player, after, most)
+                                        a player's next rows by id (the staff page's trends), a chunk at a time
     .placer(x, y, z, world, before, cache)
                                         who last placed a block before a time
     .around(x, y, z, radius, world, since, kinds, who, most, seconds)
@@ -20,6 +22,10 @@ import sqlite3
 import time
 from pathlib import Path
 
+# Through the player_id index from a row id on: SQLite walks (player_id, rowid) in order, with no sort (a test reads
+# its query plan).
+PLAYER_AFTER = ("select id, time, action_id, old_object_id, source from actions indexed by actions_player_id "
+                "where player_id = ? and id > ? order by id limit ?")
 WORLD_NAMES = {"minecraft:overworld": "Overworld", "minecraft:the_nether": "Nether", "minecraft:the_end": "End"}
 
 
@@ -64,6 +70,22 @@ class Ledger:
         query = (f"select time, action_id, x, y, z, world_id, object_id, old_object_id, player_id, extra_data "
                  f"from actions {hint} where player_id >= 1 and time >= ? and time < ? and source != ?")
         return self.db.execute(query, (start, end, self.sources.get("command", -1))).fetchall()
+
+    def player_rows_after(self, player: int, after: int, most: int) -> tuple[list[tuple], int, int]:
+        """A player's next MOST rows with an id above AFTER, in id order: (the ones the player made, not commands:
+        id, time, action, old object; the last id read, AFTER when none; how many were read, MOST when more may
+        follow). NoIndex without the player_id index, Busy when the database is locked; a query stopped by a progress
+        handler is sqlite3.OperationalError ("interrupted")."""
+        if "actions_player_id" not in self.indexes:
+            raise NoIndex("actions_player_id")
+        try:
+            rows = self.db.execute(PLAYER_AFTER, (player, after, most)).fetchall()
+        except sqlite3.OperationalError as e:
+            if "interrupt" in str(e).lower():
+                raise
+            raise Busy(str(e)) from None
+        skip = self.sources.get("command", -1)
+        return ([r[:4] for r in rows if r[4] != skip], rows[-1][0] if rows else after, len(rows))
 
     def portal_breaks(self, start: str, end: str) -> list[tuple]:
         """Every portal block that went in the week, by a player or by itself (source gravity)."""

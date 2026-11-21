@@ -190,15 +190,15 @@ def summary(results: list[Result]) -> str:
 
 
 # CI's boot jobs cost far more than these checks (Windows minutes count double), so a run boots only what its
-# change can break. A path that starts with one of these needs the Linux boots (native and Docker) ...
-SERVER_PATHS = ("package/", "tests/smoke.ps1", "tests/docker-smoke.sh", "tests/hosting-smoke.sh",
-                ".github/workflows/ci.yml")
-# ... and these also need the Windows boot (with PSScriptAnalyzer and the player installer's tests) and the
-# hosting bundle it makes. The build (build.py and the repo.py it imports) makes the zip every boot unzips.
-WINDOWS_PATHS = ("package/monkey/monkey.ps1", "package/monkey/Monkey.psm1", "package/monkey/manifest.json",
-                 "package/monkey/pwsh.lock", "package/docker/", "player/", "tools/build.py", "tools/repo.py",
-                 "tests/smoke.ps1", "tests/hosting-smoke.sh", "tests/Monkey.Tests.ps1", "tests/Player.Tests.ps1",
-                 "PSScriptAnalyzerSettings.psd1", ".github/workflows/ci.yml")
+# change can break. A path that starts with one of these needs every boot: the required ones (Windows, with
+# PSScriptAnalyzer and the player installer's tests, then the hosting bundle it makes) and the Linux ones. That is
+# all of package/ (data packs, mod patches and configs, the manifest, launchers, the Docker files), the build
+# (build.py and the repo.py it imports make the zip every boot unzips), and the boot tests themselves.
+WINDOWS_PATHS = ("package/", "player/", "tools/build.py", "tools/repo.py", "tests/smoke.ps1", "tests/hosting-smoke.sh",
+                 "tests/Monkey.Tests.ps1", "tests/Player.Tests.ps1", "PSScriptAnalyzerSettings.psd1",
+                 ".github/workflows/ci.yml")
+# ... and these need only the Linux boots.
+LINUX_PATHS = ("tests/docker-smoke.sh",)
 BOOT_LABEL = "boot"
 
 
@@ -213,9 +213,8 @@ def boots(event: str, ref: str, draft: bool, labels: list[str], changed: list[st
     if changed is None:
         linux = windows = True
     else:
-        windows = any(p.startswith(WINDOWS_PATHS) or p.startswith("package/") and p.endswith(".bat")
-                      for p in changed)
-        linux = windows or any(p.startswith(SERVER_PATHS) for p in changed)
+        windows = any(p.startswith(WINDOWS_PATHS) for p in changed)
+        linux = windows or any(p.startswith(LINUX_PATHS) for p in changed)
     return {"linux": linux, "windows": windows and event == "pull_request"}
 
 

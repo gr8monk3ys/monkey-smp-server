@@ -62,7 +62,7 @@ export const query = (params: Record<string, string | number | boolean | undefin
 
 /** A list out of an answer that is either the list or holds it under `key`. */
 export const listOf = <T = any>(data: any, key: string): T[] =>
-  Array.isArray(data?.[key]) ? data[key] : Array.isArray(data) ? data : [];
+  Array.isArray(data?.[key]) ? (data[key] as T[]) : Array.isArray(data) ? (data as T[]) : [];
 
 export const messageOf = (error: unknown) =>
   error instanceof Error ? error.message : error ? String(error) : "";

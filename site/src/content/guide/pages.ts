@@ -54,10 +54,10 @@ const everySection: { title: string; pages: GuidePage[] }[] = [
       },
       // One page per rank in commands.tsx's `roles`, by id; the titles live here. commands/[rank]/page.tsx fails
       // the build when the two lists differ.
-      ...[
-        ["players", "Players"], ["leaders", "Faction leaders"], ["supporters", "Supporters"],
-        ["moderators", "Moderators"], ["admins", "Admins"],
-      ].map(([id, title]) => ({
+      ...Object.entries({
+        players: "Players", leaders: "Faction leaders", supporters: "Supporters",
+        moderators: "Moderators", admins: "Admins",
+      }).map(([id, title]) => ({
         href: `/guide/commands/${id}`, title,
         description: `Every command ${title.toLowerCase()} can use on Monkey SMP, a Minecraft factions server, and what `
           + "each one does.",

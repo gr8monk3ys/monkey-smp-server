@@ -78,9 +78,9 @@ export function feedEntries(mdx: string): FeedEntry[] {
   const source = mdx.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
   const entries: FeedEntry[] = [];
   for (const match of source.matchAll(/<Entry\s([^>]*)>([\s\S]*?)<\/Entry>/g)) {
-    const attrs = Object.fromEntries([...match[1].matchAll(/(\w+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
+    const attrs = Object.fromEntries([...(match[1] ?? "").matchAll(/(\w+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
     if (!attrs.date || !attrs.title) continue;
-    entries.push({ date: attrs.date, title: attrs.title, id: entryId(attrs.date, attrs.title), html: bodyHtml(match[2]) });
+    entries.push({ date: attrs.date, title: attrs.title, id: entryId(attrs.date, attrs.title), html: bodyHtml(match[2] ?? "") });
   }
   return entries;
 }

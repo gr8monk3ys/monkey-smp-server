@@ -26,12 +26,12 @@ const SAMPLE = `{/* A comment with <Entry date="2000-01-01" title="Not real"> in
 test("only dated entries go in the feed, with an id from their date and title", () => {
   const entries = feedEntries(SAMPLE);
   assert.equal(entries.length, 1);
-  assert.equal(entries[0].id, "2026-11-10-drawers-and-copper");
+  assert.equal(entries[0]?.id, "2026-11-10-drawers-and-copper");
   assert.equal(entryId(undefined, "Not out yet"), "next-not-out-yet");
 });
 
 test("a body becomes one list, with code, keys, bold and links resolved", () => {
-  const html = feedEntries(SAMPLE)[0].html;
+  const html = feedEntries(SAMPLE)[0]?.html ?? "";
   assert.ok(html.startsWith("<ul><li>") && html.endsWith("</li></ul>"));
   assert.equal(html.match(/<li>/g)?.length, 3);
   assert.match(html, /<kbd>M<\/kbd> for the map, then <code>\/trigger wardrobe<\/code>/);

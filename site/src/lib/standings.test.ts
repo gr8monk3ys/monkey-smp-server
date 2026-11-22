@@ -46,7 +46,7 @@ test("equal points can rank apart: the tie-breaks are Cup points, then kills", (
 
 test("a null name becomes A faction", () => {
   const hidden = [{ rank: 1, name: null, points: 5 }];
-  assert.equal(parseStandings({ ...good(), factions: hidden })?.factions[0].name, "A faction");
+  assert.equal(parseStandings({ ...good(), factions: hidden })?.factions[0]?.name, "A faction");
   assert.equal(cleanName(null), HIDDEN);
 });
 

@@ -1,10 +1,11 @@
 // Run with `bun test`. The live-pack list (site/live-packs.json) and the "not running now" notes made from it.
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { fromAny } from "@total-typescript/shoehorn";
 import list from "@live-packs";
 import { NAMES, notRunning, offText, type Pack, running, sayList } from "./live";
 
-const packs = Object.keys(list.packs) as Pack[];
+const packs = fromAny<Pack[], string[]>(Object.keys(list.packs));
 
 test("only a pack that is on runs; off and unknown don't", () => {
   for (const pack of packs) assert.equal(running(pack), list.packs[pack] === "on");

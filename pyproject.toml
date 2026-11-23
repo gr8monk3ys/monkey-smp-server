@@ -22,3 +22,6 @@ pythonpath = ["tools"]
 # Keep only the temp folders of tests that failed, from the last run.
 tmp_path_retention_policy = "failed"
 tmp_path_retention_count = 1
+
+[dependency-groups]
+dev = ["ruff", "pytest"]

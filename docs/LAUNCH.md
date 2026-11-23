@@ -124,14 +124,16 @@ How:
 - **Stop the deploy timer as a backstop**, once the last release is live (check with
   `sh /srv/monkey/repo/deploy/monkey-deploy.sh --status` on Thursday 5 November after 5 AM):
   `systemctl disable --now monkey-deploy.timer`, as root (monkey has no sudo rights). An accidental tag then waits.
-  Stopping it without disabling it isn't enough: a reboot of the VPS would start it again.
+  Stopping it without disabling it isn't enough: a reboot of the VPS would start it again. (Done: stopped on
+  4 November, #161.)
 - **`DEPLOY_WINDOW` stays 04:00-05:00.** It can't express a date range, so it isn't the freeze, but it keeps
   any deploy far from the evening.
 - **What still runs:** the daily restart at 4:30 AM, the hourly off-site backup, the Monday update check.
   Leave them.
 - **Exception:** a crash, a dupe or a security hole. Both owners agree, tag a patch release, and deploy it
   with `--now` at a quiet hour after a backup. Nothing else.
-- **Mon 9 Nov:** `systemctl enable --now monkey-deploy.timer`, as root. Tagging is open again.
+- **Mon 9 Nov:** `systemctl enable --now monkey-deploy.timer`, as root. Tagging is open again. (Done: started
+  again on 8 November, #161.)
 
 Weekly faction standings and the bounty board, weekly challenges and the Founder skin all shipped in 2.6.0
 (item-priced shop chests too, but the owners shelved them on 26 October, so they aren't at launch). Anything new
@@ -151,13 +153,15 @@ below).
   `/srv/monkey/MonkeySMP-Server/docker`; `monkey rcon` is short for `docker compose exec monkey monkey rcon`).
   It should report no running task for the overworld or the Nether. If one is still running, let it finish:
   the load test refuses to run before it does.
-- [ ] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
+- [x] **By Sun 1 Nov: off-site backups.** Set up R2 as in docs/LIVE.md, "Set up the off-site copy (once)", and
   check `sh /opt/monkey/deploy/monkey-backup.sh --restic snapshots` lists hourly snapshots. The keys go
-  in the password manager and `/etc/monkey-backup.env` (root only), nowhere else.
+  in the password manager and `/etc/monkey-backup.env` (root only), nowhere else. (Done: the hourly off-site
+  copy was on by 6 November (#129), and the 14 November drill restored a good 4.2 GiB snapshot from it (#198).)
 - [ ] **Fri 6 Nov: verified with a restore.** Run the monthly restore drill (docs/LIVE.md, "Monthly restore
   drill") with the newest snapshot of the launch release, and see the world load. A backup nobody has
   restored isn't a backup yet. Without working off-site backups by launch day, copy a backup off the VPS by
-  hand that morning, and tell the other owner.
+  hand that morning, and tell the other owner. Not yet proved: the 6 November drill stopped at restic's lock
+  (ab13b7a) and the 14 November one at its region-file check, fixed in #198 and not run again since.
 - [ ] **By Sun 1 Nov: uptime alerts.** Uptime Kuma on the home PC (fleet repo, `services/uptime-kuma.md`)
   with the Minecraft ping and the map check from docs/LIVE.md, "Monitoring". Use the notification's Test
   button and check the message arrives in the staff channel.
@@ -334,7 +338,10 @@ PvP opening at 6) and **the first Saturday event**, Faction Raid I (Saturday 14 
 - [ ] The event post and a chat message before the start say the night is recorded for the server's clips,
   and that anyone who doesn't want to be in them can say so.
 - [ ] Afterwards, move the files from `D:\Videos\OBS\SMP` to `D:\DevData\monkey-smp-marketing\footage\real\`,
-  never into this repo, and note who asked to be left out.
+  never into this repo, and note who asked to be left out. Do the move on Windows: `D:` is the RAID, which Linux
+  mounts read-only at `/mnt/raid`, and `D:\Videos` and `D:\DevData` are reparse points Linux can't read. From
+  Linux, look in the real folders instead: `/mnt/raid/20 Creative/22 Video/OBS/` and
+  `/mnt/raid/50 Dev/51 DevData/`.
 
 ## After launch: day 1 and day 7
 

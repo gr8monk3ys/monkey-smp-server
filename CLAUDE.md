@@ -12,7 +12,7 @@ pins every download (Java per platform) and `package/monkey/pwsh.lock` the porta
 are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server. See `README.md` and
 `docs/MAINTAINING.md`.
 
-- Checks: `make check` (= `python tools/checks.py`; ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester 5, the site via bun); CI runs the same file.
+- Checks: `make check` (= `python tools/checks.py`) or `uv run python tools/checks.py` (uv installs ruff and pytest) (ruff, pytest, validate.py, datapacks.py --check, dash -n, Pester 5, the site via bun); CI runs the same file.
   Before a PR leaves draft: `/code-review`, fix its findings (docs/MAINTAINING.md, "Review"). No Actions minutes? `python tools/local_ci.py <PR>`
 - `package/monkey/*.ps1`/`*.psm1` must stay plain ASCII and run on both Windows PowerShell 5.1 and PowerShell 7
   on Linux/macOS (ADR-0003, ADR-0007): Windows-only calls go behind a platform check.

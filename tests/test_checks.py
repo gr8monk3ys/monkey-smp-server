@@ -108,7 +108,14 @@ def test_a_ready_pr_boots_what_its_change_can_break():
     def plan(*paths):
         return checks.boots("pull_request", "refs/pull/1/merge", False, [], list(paths))
     assert plan("tools/standings.py", "tests/test_standings.py", "docs/ADMIN.md") == {"linux": False, "windows": False}
-    assert plan("package/monkey/datapacks/monkey-drops/pack.mcmeta") == {"linux": True, "windows": False}
+    # the required boots (Windows, then the hosting bundle it makes) run for anything that ships: data packs,
+    # mod patches and configs, launchers, the Docker files
+    for shipped in ("package/monkey/datapacks/monkey-drops/pack.mcmeta", "package/monkey/patches/no-lunge/pack.mcmeta",
+                    "package/monkey/defaults/config/openpartiesandclaims-server.toml", "package/start.sh",
+                    "package/docker/Dockerfile", "package/monkey/manifest.json"):
+        assert plan(shipped) == {"linux": True, "windows": True}, shipped
+    # the Docker boot's own script needs only the Linux boots
+    assert plan("tests/docker-smoke.sh") == {"linux": True, "windows": False}
     assert plan("package/monkey/Monkey.psm1") == {"linux": True, "windows": True}
     assert plan("package/start.bat") == {"linux": True, "windows": True}
     assert plan("player/installer/PlayerInstall.psm1") == {"linux": True, "windows": True}
@@ -130,11 +137,11 @@ def test_the_plan_reads_what_changed_from_git(tmp_path):
         subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
     git("init", "-q")
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "base")
-    (tmp_path / "package").mkdir()
-    (tmp_path / "package" / "start.sh").write_text("#!/bin/sh\n")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "docker-smoke.sh").write_text("#!/bin/sh\n")
     git("add", ".")
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "change")
-    assert checks.changed_paths(tmp_path, "HEAD~1", "HEAD") == ["package/start.sh"]
+    assert checks.changed_paths(tmp_path, "HEAD~1", "HEAD") == ["tests/docker-smoke.sh"]
     assert checks.changed_paths(tmp_path, "0" * 40, "HEAD") is None
     assert checks.changed_paths(tmp_path, "no-such-commit", "HEAD") is None
     env = {"EVENT": "pull_request", "REF": "refs/pull/1/merge", "DRAFT": "false", "BASE": "HEAD~1", "HEAD": "HEAD"}

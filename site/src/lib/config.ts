@@ -47,7 +47,7 @@ export function target(key: LinkKey): { href: string; title?: string } {
 export function checksumsBeside(urls: string[]): string {
   const own = urls.find((url) => url && !url.startsWith("//") && !/^[a-z][a-z0-9+.-]*:/i.test(url));
   if (own === undefined) return "";
-  const folder = own.split(/[?#]/)[0].replace(/^\/+/, "").split("/").slice(0, -1);
+  const folder = (own.split(/[?#]/)[0] ?? "").replace(/^\/+/, "").split("/").slice(0, -1);
   return ["", ...folder, "SHA256SUMS.txt"].join("/");
 }
 
@@ -117,7 +117,7 @@ export function launchWords(when: Date = new Date(config.LAUNCH_AT)): Record<"da
 /** 'Sat 14 Nov, 6 PM Pacific': a moment as the status block says it (tools/status.py's schedule). */
 export function shortWhen(when: Date): string {
   const west = local(when, "America/Los_Angeles");
-  return `${DAYS[west.weekday].slice(0, 3)} ${west.day} ${MONTHS[west.month - 1].slice(0, 3)}, ${clock(west)} Pacific`;
+  return `${(DAYS[west.weekday] ?? "").slice(0, 3)} ${west.day} ${(MONTHS[west.month - 1] ?? "").slice(0, 3)}, ${clock(west)} Pacific`;
 }
 
 /** A launch template ('{date} at {pacific} ({eastern})') filled in. */
@@ -128,6 +128,6 @@ export function sayLaunch(template: string): string {
 
 /** '29 October 2026' from '2026-10-29'. */
 export function dayLabel(iso: string): string {
-  const [year, month, day] = iso.split("-").map(Number);
+  const [year = 0, month = 1, day = 0] = iso.split("-").map(Number);
   return `${day} ${MONTHS[month - 1]} ${year}`;
 }

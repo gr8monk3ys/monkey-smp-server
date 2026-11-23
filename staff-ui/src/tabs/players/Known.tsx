@@ -1,6 +1,6 @@
 // Everyone who has joined, with the staff's notes on each (the old desk.js).
 import { useEffect, useState } from "react";
-import { get, post, query } from "../../lib/api";
+import { get, messageOf, post, query } from "../../lib/api";
 import { useBus } from "../../lib/bus";
 import { plural, when } from "../../lib/format";
 import { useMessages, useOnShow } from "../../lib/hooks";
@@ -161,7 +161,7 @@ function Notes({ name, version, m, ask, reload }: {
           setProblem("");
         }
       })
-      .catch((e) => live && setProblem(e.message));
+      .catch((e: unknown) => live && setProblem(messageOf(e)));
     return () => {
       live = false;
     };

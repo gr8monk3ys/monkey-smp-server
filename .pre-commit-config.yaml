@@ -1,0 +1,16 @@
+# Fast subset of `make check`; the full run (boots aside) is `python tools/checks.py`.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: python tools/checks.py ruff
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: site-typecheck
+        name: site and staff-ui typecheck, lint, boundaries
+        entry: sh -c 'cd site && bun run typecheck && bun run lint && bun run depcruise && cd ../staff-ui && bun run typecheck && bun run lint'
+        language: system
+        pass_filenames: false
+        files: ^(site|staff-ui)/

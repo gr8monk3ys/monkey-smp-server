@@ -37,13 +37,15 @@ interface Pressed {
   at: number;   // when it was pressed (ms)
 }
 
+const isPressed = (v: unknown): v is Pressed => typeof v === "object" && v !== null && "at" in v && typeof v.at === "number";
+
 const current = (p: Pressed | null, now: number) => (p && typeof p.at === "number" && now - p.at < PRESSED_MS ? p : null);
 
 // sessionStorage can throw (storage off, a private window): then the page works without remembering.
 function pressedRead(): Pressed | null {
   try {
-    const kept = JSON.parse(sessionStorage.getItem(PRESSED_KEY) || "null");
-    return current(kept && typeof kept === "object" ? kept : null, Date.now());
+    const kept: unknown = JSON.parse(sessionStorage.getItem(PRESSED_KEY) || "null");
+    return current(isPressed(kept) ? kept : null, Date.now());
   } catch {
     return null;
   }

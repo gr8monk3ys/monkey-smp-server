@@ -21,7 +21,7 @@ export function Trailer() {
     };
     trailer.addEventListener("pause", paused);
     const watch = new IntersectionObserver((entries) => {
-      const on = entries[0].isIntersecting;
+      const on = entries[0]?.isIntersecting ?? false;
       if (on && trailer.paused && !userPaused) {
         trailer.play().catch(() => {});
       } else if (!on && !trailer.paused) {

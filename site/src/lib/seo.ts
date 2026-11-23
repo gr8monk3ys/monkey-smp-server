@@ -36,7 +36,7 @@ export function pacificIso(when: Date): string {
     timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit",
     minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZoneName: "longOffset",
   }).formatToParts(when).map((p) => [p.type, p.value]));
-  const offset = parts.timeZoneName === "GMT" ? "+00:00" : parts.timeZoneName.replace("GMT", "");
+  const offset = parts.timeZoneName === "GMT" ? "+00:00" : (parts.timeZoneName ?? "").replace("GMT", "");
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${offset}`;
 }
 

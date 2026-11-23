@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint . --max-warnings 0",
+    "depcruise": "cd .. && depcruise --config .dependency-cruiser.cjs site/src site/e2e staff-ui/src",
     "test": "bun test src",
     "test:a11y": "playwright test",
     "typecheck": "next typegen && tsc --noEmit"
@@ -33,6 +34,9 @@
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.65.0",
+    "@total-typescript/shoehorn": "^0.1.2",
+    "@total-typescript/ts-reset": "^0.6.1",
+    "dependency-cruiser": "^18.8.0",
     "eslint": "9.39.2",
     "eslint-config-next": "^16.3.0"
   }

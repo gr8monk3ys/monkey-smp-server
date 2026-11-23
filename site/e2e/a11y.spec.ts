@@ -10,7 +10,7 @@ import { SITE_URL } from "../src/lib/config";
 /** Every page the sitemap lists (tools/site_links.py --built checks it lists every built page), plus the 404. */
 function pages(): string[] {
   const sitemap = readFileSync(join(__dirname, "..", "out", "sitemap.xml"), "utf8");
-  const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(SITE_URL, "") || "/");
+  const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").replace(SITE_URL, "") || "/");
   return [...paths, "/no-such-page"];
 }
 

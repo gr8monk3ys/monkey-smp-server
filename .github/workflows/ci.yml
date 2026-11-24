@@ -55,6 +55,10 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
+      # Next.js in site/ runs on Node: the same major as engines.node in site/package.json (what Vercel builds on).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       # The site's and the staff page's checks (site/, staff-ui/) need bun; the version the lockfile was made with.
       - uses: oven-sh/setup-bun@v2.2.0
         with:

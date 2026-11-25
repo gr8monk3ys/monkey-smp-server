@@ -22,10 +22,13 @@ def body(name: str) -> str:
     return FILES[f"{FN}/{name}.mcfunction"]
 
 
-@pytest.mark.parametrize("act", border.acts(2), ids=lambda a: f"act{a.number}")
+BOSS_ACTS = [a for a in border.acts(2) if a.boss]
+
+
+@pytest.mark.parametrize("act", BOSS_ACTS, ids=lambda a: f"act{a.number}")
 @pytest.mark.parametrize("centre", [(0.0, 0.0), (137.5, -2210.5)])
 def test_the_spot_is_inside_the_new_edge_and_past_the_old_border(act, centre):
-    before = [a.size for a in border.acts(2) if a.number < act.number] or [5000]
+    before = [a.size for a in border.acts(2) if a.number < act.number] or [6000]
     x, z = boss.spot(2, act.number, *centre, act.size)
     reach = max(abs(x - centre[0]), abs(z - centre[1]))
     assert before[-1] / 2 < reach <= act.size / 2 - boss.INSET + 1
@@ -83,15 +86,23 @@ def test_the_packs_have_no_problems():
 
 
 def test_the_act_raises_the_boss_after_the_record(tmp_path):
-    world = make_server(tmp_path, 5000, 625, SEASON_TWO, LAUNCHED)
-    sent = border.commands(world, ACT_ONE)
-    assert sent[-2] == "scoreboard players set #border_act ev.state 1"
-    x, z = boss.spot(2, 1, *border_centre(world), 5500)
-    assert sent[-1] == f"function monkey:boss/act {{act:1,x:{x},z:{z},delay:{boss.RISE_SECONDS}}}"
+    world = make_server(tmp_path, 8000, 1000, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 1))
+    sent = border.commands(world, ACT_TWO)
+    assert sent[-2] == "scoreboard players set #border_act ev.state 2"
+    x, z = boss.spot(2, 2, *border_centre(world), 10000)
+    assert sent[-1] == f"function monkey:boss/act {{act:2,x:{x},z:{z},delay:{boss.RISE_SECONDS}}}"
     log = []
     server = rcon.Recorder({"function monkey:boss/act": "Function monkey:boss/act returned 10"})
-    assert border.send(server, world, ACT_ONE, log.append) == 0
+    assert border.send(server, world, ACT_TWO, log.append) == 0
     assert log[-1].endswith(": the boss is off (function monkey:boss/on)")
+
+
+def test_only_the_boss_acts_raise_one(tmp_path):
+    world = make_server(tmp_path, 6000, 750, SEASON_TWO, LAUNCHED)
+    assert not any("boss" in c for c in border.commands(world, ACT_ONE))
+    closing = border.acts(2)[-1]
+    world = make_server(tmp_path / "c", 10000, 1250, SEASON_TWO, LAUNCHED, ("ev.state", "#border_act", 2))
+    assert not any("boss" in c for c in border.commands(world, closing.at + dt.timedelta(minutes=1)))
 
 
 def test_no_boss_in_season_one(tmp_path):
@@ -134,6 +145,6 @@ def test_the_fight_is_a_staff_event_away_from_spawn():
     for name in ("act", "risen"):
         assert "A staff event" in body(name) and f"within {boss.EVENT_RADIUS} blocks of it" in body(name)
     # It rises 48 blocks inside an act's new edge: far past spawn's no-PvP zone (rules 22 and 26).
-    for act in border.acts(2):
+    for act in BOSS_ACTS:
         x, z = boss.spot(2, act.number, 0.0, 0.0, act.size)
         assert max(abs(x), abs(z)) - boss.EVENT_RADIUS > 64

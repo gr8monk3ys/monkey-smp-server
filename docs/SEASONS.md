@@ -914,13 +914,13 @@ Sunday 14 March 2027**, in week 5: from then 6 PM Pacific is 9 PM Eastern as bef
 | --- | --- | --- | --- |
 | 0 | Sat 6 Feb 2027, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 7 Feb, 6 PM. | Twinmoon for everyone who plays this season. The first Saturday of February, so no Town Hall: launch night takes its place. |
 | 1 | Sat 13 Feb | Faction Raid I | |
-| 2 | Sat 20 Feb | The border breaks: 5000 to 5500 (by itself at 6:01 PM, `monkey-border.timer`) | |
+| 2 | Sat 20 Feb | The border breaks: 6000 to 8000 (by itself at 6:01 PM, `monkey-border.timer`) | |
 | 3 | Sat 27 Feb | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
 | 4 | Sat 6 Mar | Arena Glory I | Town Hall (first Saturday). Netherite age announced. No Base of the Month: bases are under three weeks old on 25 February. |
-| 5 | Sat 13 Mar | Netherite age (rule 24 lifted), plus a small event from the catalog | Clocks go forward on Sunday 14 March |
+| 5 | Sat 13 Mar | The border breaks again: 8000 to 10000 (by itself at 6:01 PM), and the border boss rises. Netherite age (rule 24 lifted). | Clocks go forward on Sunday 14 March |
 | 6 | Sat 20 Mar | Faction Raid II | |
 | 7 | Sat 27 Mar | Build Battle II | Easter is Sunday 28 March |
-| 8 | Sat 3 Apr | The border breaks again: 5500 to 6000 (by itself at 6:01 PM) | Town Hall. Base of the Month (entries by 25 March). |
+| 8 | Sat 3 Apr | The border closes in: 10000 to 3000 over six days (by itself from 6:01 PM), ready for the finale | Town Hall. Base of the Month (entries by 25 March). |
 | 9 | Sat 10 Apr | Arena Glory II | Two weeks before the end: the end date again, the twist vote opens, Season III's date set |
 | 10 | Sat 17 Apr | Faction Raid III | The Cup standings set the finale's spawn order |
 | 11 | Sat 24 Apr | **The finale**. The world locks after it. | |
@@ -929,8 +929,10 @@ Sunday 14 March 2027**, in week 5: from then 6 PM Pacific is 9 PM Eastern as bef
 
 - **The end date to announce on day one:** Season II ends with the finale on Saturday 24 April 2027.
 - **No holiday falls in Season II.** Midwinter is before it and Midsummer (19 June 2027) after it.
-- **The border acts are the plan's weeks 2 and 8** (Season I moved its second to week 7 for Midwinter). Their
-  sizes and weeks are `ACTS` in `tools/border.py`; `python tools/border.py plan --season 2` prints the dates.
+- **The border acts are weeks 2, 5 and 8** (the relaunch plan, docs/relaunch/season-1.md, which counts the
+  launch weekend as week 1): it opens from 6000 to 8000 and then 10000, and closes in to 3000 over the week
+  before the finale. Their sizes and weeks are `ACTS` in `tools/border.py`; `python tools/border.py plan
+  --season 2` prints the dates.
 
 ### Season II checklist
 
@@ -982,8 +984,10 @@ the wardrobe resource pack, which needs a server resource pack to reach players 
 
 **During Season II**
 
-- The border breaks by itself on 20 February and 3 April at 6:01 PM Pacific (a 10-minute growth, announced in
+- The border breaks by itself on 20 February and 13 March at 6:01 PM Pacific (a 10-minute growth, announced in
   chat), and the live map follows within about two hours: fitted, reloaded, then purged and rendered again.
+  On 3 April at 6:01 PM it starts closing in to 3000 over six days (announced in chat); the map keeps showing
+  the 10000 world.
   The outposts move out to the new ring within the hour after it has grown. Watch it with
   `journalctl -u monkey-border --since today`. To hold an act back, stop the timer
   (`sudo systemctl stop monkey-border.timer`) and start it when the act should happen.
@@ -1008,7 +1012,7 @@ Turn both on after the launch (Season II checklist, step 9), before 20 February.
 
 ### The border boss
 
-On each border act (20 February and 3 April), a boss rises in the ring the act opened: **The Edgewalker**, a
+On the second border act (13 March, to 10000), a boss rises in the ring the act opened: **The Edgewalker**, a
 vanilla wither skeleton twice the size, with a diamond sword, helmet and chestplate (never dropped), armor 15,
 toughness 6, 14 damage a hit, little knockback, fire resistance, no fall damage, and a boss bar for players
 within 96 blocks. No mods: it is built from data pack commands (`tools/boss.py`, the `monkey-boss` pack).

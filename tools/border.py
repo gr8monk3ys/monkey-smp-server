@@ -1,32 +1,38 @@
-"""Border acts: grows the world border on the season's dates, then fits the live map to it.
+"""Border acts: grows and closes the world border on the season's dates, and fits the live map to it.
 
     python3 tools/border.py plan [--season N]                  each act of a season: its week, date and sizes
     python3 tools/border.py status WORLD [--at TIME]           the border, the acts and the map (the timer's --check)
     python3 tools/border.py commands WORLD [--at TIME]         the RCON commands for now (changes nothing)
     python3 tools/border.py send WORLD --docker DIR [--at TIME]   sends them (deploy/monkey-border.sh, hourly)
 
-docs/SEASONS.md, "The acts of a season": the border breaks twice a season, in the Saturday event slot (6 PM
-Pacific), from 5000 to 5500 and then to 6000, and the Nether's with it at 1:8 (on 26.2 each dimension has its
-own border; the monkey-rules pack sets the starting ones once per world). ACTS has each season's acts by week;
-the weeks' dates come from tools/season_calendar.py's SEASONS, so moving a season moves its acts.
+docs/relaunch/season-1.md, "The calendar": the relaunch season starts at 6000 (the monkey-rules pack sets the
+starting borders once per world), the border opens to 8000 and then to 10000, and in the season's last week it
+closes in to 3000 over six days, ready for the finale (tools/finale.py). Every act is in the Saturday event slot
+(6 PM Pacific), and the Nether's border moves with the Overworld's at 1:8 (each dimension has its own border).
+ACTS has each season's acts by week; the weeks' dates come from tools/season_calendar.py's SEASONS, so moving a
+season moves its acts. An act smaller than the one before it closes the border in; the others open it.
 
 What the timer does, from the saved world (the server saves every 5 minutes, so an hourly job sees its own work):
 - **The act.** Once an act's time has come and the world hasn't recorded it (#border_act ev.state, the last
-  act done; the world's own, so a new season's starts from none), it sends `worldborder set SIZE 12000` in each
-  dimension whose saved border is heading for less than the act's size (10 minutes to grow: on 26.2 the
-  time is in ticks, 20 a second), tells everyone
-  online, and records the act. Only the latest act that is due counts, and a border is never shrunk: one
-  already that size or bigger (grown by hand) is left alone, and a recorded act never runs again, so the
-  finale's shrink is safe. Nothing before the season's launch (#launched rw.day), in a locked world (the
-  off-season), or in a season ACTS has no acts for.
-- **The map.** While both borders are at the latest act's size, a map whose render-mask doesn't match its
-  border (tools/map_border.py) gets its config written and `bluemap reload`; the maps it changed are kept in
-  plugins/BlueMap/monkey-map-purge.txt, and the next run sends `bluemap purge MAP` for each (BlueMap answers a
-  reload before it has loaded, so the purge waits an hour). A purge BlueMap answers "still loading" stays
-  listed for the next run. So the map follows an act about two hours later, and is never fitted to the finale's
-  shrinking border (the land outside was open all season).
+  act done; the world's own, so a new season's starts from none), it sends `worldborder set SIZE TICKS` in each
+  dimension whose saved border still has to move to the act's size (the time is in ticks, 20 a second), tells
+  everyone online, and records the act. An act that opens the border grows it over 10 minutes, and only sets a
+  border heading for less than its size: one already that size or bigger (grown by hand) is left alone. An act
+  that closes it in shrinks it over six days, so players have time to move their things inside, and only sets
+  a border heading for more. Only the latest act that is due counts, and a recorded act never runs again, so
+  the finale's shrink is safe. The acts in BOSS_ACTS raise the border boss (tools/boss.py) in the ring they
+  opened. Nothing before the season's launch (#launched rw.day), in a locked world (the off-season), or in a
+  season ACTS has no acts for.
+- **The map.** Before the first act, while both borders stand still (the starting ones, around a new seed's
+  spawn), and after an act that opened the border, while both are at its size, a map whose render-mask doesn't
+  match its border (tools/map_border.py) gets its config written and `bluemap reload`; the maps it changed are
+  kept in plugins/BlueMap/monkey-map-purge.txt, and the next run sends `bluemap purge MAP` for each (BlueMap
+  answers a reload before it has loaded, so the purge waits an hour). A purge BlueMap answers "still loading"
+  stays listed for the next run. So the map follows an act about two hours later, and is never fitted to a
+  border closing in (the closing act's or the finale's): the land outside was open all season, and the map keeps
+  showing it.
 
-The timer is installed for Season II (docs/SEASONS.md, "Season II"). Season I has no acts here: staff grow its
+The timer is installed for the relaunch season (season 2 in the tools' count). Season I has no acts here: staff grow its
 border by hand (docs/LIVE.md), and a timer installed early must not repeat a hand act it reads from a save made
 before it (that would start the growth again and announce it twice). Stdlib only (plus tools/), Python 3.10 or
 newer.
@@ -48,13 +54,18 @@ import season_calendar
 from challenges import LAUNCHED
 from events import STATE
 
-# Each season's acts: (week, the Overworld border's new width). The Nether's is 1:8 of it.
-# Season I (weeks 2 and 7, by hand) is left out on purpose: the timer does nothing in a Season I world.
+# Each season's acts: (week, the Overworld border's new width). The Nether's is 1:8 of it. An act smaller than the
+# one before closes the border in. Season I (weeks 2 and 7, by hand) is left out on purpose: the timer does nothing
+# in a Season I world.
 ACTS = {
-    2: ((2, 5500), (8, 6000)),   # Season II, proposed: 20 February and 3 April 2027
+    # The relaunch season (docs/relaunch/season-1.md; its weeks 3, 6 and 9, as the tools count from week 0): opens
+    # from 6000 to 8000 on 20 February and to 10000 on 13 March 2027, and closes in to 3000 from 3 April.
+    2: ((2, 8000), (5, 10000), (8, 3000)),
 }
+BOSS_ACTS = {2: (2,)}         # the acts (by number) that raise the border boss: the Edgewalker comes with 10000
 NETHER_SCALE = 8
 GROW_SECONDS = 600
+SHRINK_SECONDS = 6 * 24 * 3600   # six days: from Saturday 6 PM to the next Friday, a day before the finale
 TICKS = 20                    # `worldborder set SIZE TIME` takes ticks on 26.2 (600 would grow it in 30 seconds)
 EVENT_TIME = dt.time(18, 0)   # the Saturday event slot, Pacific
 OVERWORLD, NETHER = saved_world.OVERWORLD, "minecraft:the_nether"
@@ -67,10 +78,16 @@ SEASON = "#season"          # in rw.day: which season the world is
 @dataclass(frozen=True)
 class Act:
     season: int
-    number: int    # 1, 2: the season's first and second border act
+    number: int    # 1, 2, ...: the season's acts in order
     week: int
     size: int      # the Overworld's new width; the Nether's is size / NETHER_SCALE
     at: dt.datetime
+    shrinks: bool = False   # smaller than the act before: it closes the border in
+    boss: bool = False      # it raises the border boss
+
+    @property
+    def seconds(self) -> int:
+        return SHRINK_SECONDS if self.shrinks else GROW_SECONDS
 
     @property
     def nether(self) -> float:
@@ -85,29 +102,46 @@ def acts(season: int) -> list[Act]:
     calendar = season_calendar.SEASONS.get(season)
     if calendar is None:
         return []
-    return [Act(season, i, week, size,
-                dt.datetime.combine(calendar.saturday(week), EVENT_TIME, season_calendar.PACIFIC))
-            for i, (week, size) in enumerate(ACTS.get(season, ()), 1)]
+    out, before = [], None
+    for i, (week, size) in enumerate(ACTS.get(season, ()), 1):
+        at = dt.datetime.combine(calendar.saturday(week), EVENT_TIME, season_calendar.PACIFIC)
+        out.append(Act(season, i, week, size, at, shrinks=before is not None and size < before,
+                       boss=i in BOSS_ACTS.get(season, ())))
+        before = size
+    return out
 
 
 def width(size: float) -> str:
     return f"{size:g}"
 
 
+def behind(act: Act, border: saved_world.SavedBorder, size: float) -> bool:
+    """The border still has to move for the act: heading for less than an opening act's size, or for more than a
+    closing act's. A border already past it (moved by hand) is left alone."""
+    return border.target > size if act.shrinks else border.target < size
+
+
 def act_commands(act: Act, borders: dict[str, saved_world.SavedBorder]) -> list[str]:
-    """An act not yet recorded: the `worldborder set`s it still needs (a border heading for less than its size),
-    the news when the Overworld's grows, and the record, so a failed set is tried again. After the record, the
-    act's border boss (tools/boss.py): the pack takes each act once and does nothing while its switch is off,
-    and a pack that refuses or isn't there can't hold the act back."""
-    out = [f"execute in {dim} run worldborder set {width(size)} {GROW_SECONDS * TICKS}"
-           for dim, size in act.sizes().items() if borders[dim].target < size]
+    """An act not yet recorded: the `worldborder set`s it still needs (each border behind it), the news when the
+    Overworld's moves, and the record, so a failed set is tried again. After the record, an act in BOSS_ACTS calls
+    its border boss (tools/boss.py): the pack takes each act once and does nothing while its switch is off, and a
+    pack that refuses or isn't there can't hold the act back."""
+    out = [f"execute in {dim} run worldborder set {width(size)} {act.seconds * TICKS}"
+           for dim, size in act.sizes().items() if behind(act, borders[dim], size)]
     if any(OVERWORLD in c for c in out):
-        news = (f"The border breaks: over the next {GROW_SECONDS // 60} minutes it grows to {act.size} blocks "
-                f"across, and the Nether's to {width(act.nether)}. New land to the edge.")
+        if act.shrinks:
+            news = (f"The closing has begun: over the next {act.seconds // 86400} days the border closes in to "
+                    f"{act.size} blocks across, and the Nether's to {width(act.nether)}. Bring what you want to "
+                    f"keep inside before the finale.")
+        else:
+            news = (f"The border breaks: over the next {act.seconds // 60} minutes it grows to {act.size} blocks "
+                    f"across, and the Nether's to {width(act.nether)}. New land to the edge.")
         out.append("tellraw @a " + json.dumps({"text": news, "color": "gold"}, separators=(",", ":")))
-    centre = borders[OVERWORLD]
-    return out + [f"scoreboard players set {DONE} {STATE} {act.number}",
-                  boss.act_command(act.season, act.number, centre.center_x, centre.center_z, act.size)]
+    out.append(f"scoreboard players set {DONE} {STATE} {act.number}")
+    if act.boss:
+        centre = borders[OVERWORLD]
+        out.append(boss.act_command(act.season, act.number, centre.center_x, centre.center_z, act.size))
+    return out
 
 
 def finale_due(season: int, scores: dict[str, dict[str, int]], when: dt.datetime) -> bool:
@@ -157,16 +191,23 @@ def read_run(world: Path, when: dt.datetime) -> Run:
         run.why = f"no border acts for season {run.season}"
         return run
     due = [a for a in season_acts if a.at <= when]
-    if not due:
-        run.why = "no border act yet"
-        return run
-    run.act = due[-1]
     for dim in (OVERWORLD, NETHER):
         found = saved_world.border(world, dim)
         if found is None:
-            run.why = f"no saved border for {dim} (a 26.2 world that has been saved?)"
+            run.borders = {}
+            run.why = ("no border act yet" if not due else
+                       f"no saved border for {dim} (a world that has been saved?)")
             return run
         run.borders[dim] = found
+    if not due:
+        # Before the first act: the starting borders, fitted once they stand still (a new seed's spawn).
+        still = all(found.target == found.size for found in run.borders.values())
+        if still and not run.purges:
+            fit_maps(run, server_dir)
+        if not run.maps and not run.purges:
+            run.why = "no border act yet"
+        return run
+    run.act = due[-1]
     if scores.get(STATE, {}).get(DONE, 0) < run.act.number:
         run.commands = act_commands(run.act, run.borders)
     elif finale_due(run.season, scores, when):
@@ -174,14 +215,19 @@ def read_run(world: Path, when: dt.datetime) -> Run:
         run.commands = [finale.start_command(centre.center_x, centre.center_z)]
         return run
     at_act = all(run.borders[dim].target == size for dim, size in run.act.sizes().items())
-    if not run.commands and at_act and not run.purges:
-        try:
-            run.maps = [fit for fit in map_border.fit_maps(server_dir) if fit.changed]
-        except ValueError as e:
-            run.warnings.append(f"map: {e}; the map isn't fitted")
+    if not run.commands and at_act and not run.act.shrinks and not run.purges:
+        fit_maps(run, server_dir)
     if not run.commands and not run.maps and not run.purges:
         run.why = f"act {run.act.number} is done" + ("" if at_act else " (the border has moved on since)")
     return run
+
+
+def fit_maps(run: Run, server_dir: Path) -> None:
+    """The maps whose mask doesn't match its border now, into RUN (a map that can't be read is a warning)."""
+    try:
+        run.maps = [fit for fit in map_border.fit_maps(server_dir) if fit.changed]
+    except ValueError as e:
+        run.warnings.append(f"map: {e}; the map isn't fitted")
 
 
 def commands(world: Path, when: dt.datetime) -> list[str]:
@@ -275,15 +321,17 @@ def status(world: Path, when: dt.datetime) -> int:
     print(f"season {run.season or '?'}; now {season_calendar.words(when)['date']}")
     for act in acts(run.season):
         state = "due" if act.at <= when else "to come"
+        how = "closes in to" if act.shrinks else "opens to"
         print(f"  act {act.number}, week {act.week}: {season_calendar.day_words(act.at.date())} 6 PM Pacific, "
-              f"{act.size} (Nether {width(act.nether)}): {state}")
+              f"{how} {act.size} (Nether {width(act.nether)}): {state}")
     at = finale.finale_at(run.season) if ACTS.get(run.season) else None
     if at is not None:
         print(f"  the finale: {season_calendar.day_words(at.date())} 6 PM Pacific, closing on the Overworld border's "
               f"centre: {'due' if at <= when else 'to come'} (its switch and start are the saved world's #on and "
               f"#started {finale.OBJ})")
     for dim, found in run.borders.items():
-        moving = f", growing to {width(found.target)}" if found.target != found.size else ""
+        way = "growing" if found.target > found.size else "closing in"
+        moving = f", {way} to {width(found.target)}" if found.target != found.size else ""
         print(f"  {dim}: {width(found.size)} wide{moving}, centred on {found.center_x:g}, {found.center_z:g}")
     for fit in run.maps:
         print(f"  map to fit: {map_border.report(fit)}")
@@ -299,8 +347,10 @@ def plan(season: int) -> str:
     out = []
     for act in acts(season):
         said = season_calendar.words(act.at)
+        how = f"closes in over {act.seconds // 86400} days to" if act.shrinks else "opens to"
         out.append(f"Season {season}, act {act.number} (week {act.week}): {said['date']}, {said['pacific']}: "
-                   f"{act.size} wide, the Nether {width(act.nether)}")
+                   f"{how} {act.size} wide, the Nether {width(act.nether)}"
+                   + (", and the border boss rises" if act.boss else ""))
     return "\n".join(out) or f"no border acts for season {season}"
 
 

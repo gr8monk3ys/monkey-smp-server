@@ -13,8 +13,8 @@ import season_calendar
 PACIFIC = season_calendar.PACIFIC
 FILES = finale.datapack_files()
 FN = "data/monkey/function/finale"
-FINALE = dt.datetime(2027, 4, 24, 18, 1, tzinfo=PACIFIC)     # Season II, week 11, a minute after its time
-ACTS_DONE = ("ev.state", "#border_act", 2)
+FINALE = finale.finale_at(2) + dt.timedelta(minutes=1)       # the relaunch season's finale, a minute after its time
+ACTS_DONE = ("ev.state", "#border_act", 3)     # the closing done too
 ON = ("fn", "#on", 1)
 
 
@@ -81,16 +81,16 @@ def test_presence_counts_faction_members_at_the_monument_in_the_last_hour():
 
 
 def test_the_timer_starts_it_once_with_the_switch_on(tmp_path):
-    world = make_server(tmp_path, 6000, 750, SEASON_TWO, LAUNCHED, ACTS_DONE, ON)
+    world = make_server(tmp_path, 3000, 375, SEASON_TWO, LAUNCHED, ACTS_DONE, ON)
     assert border.commands(world, FINALE)[0] == finale.start_command(*SPAWN)
     assert not any("finale" in c for c in border.commands(world, FINALE - dt.timedelta(minutes=2)))
     log = []
     server = rcon.Recorder({"function monkey:finale/start": "Function monkey:finale/start returned 1"})
     assert border.send(server, world, FINALE, log.append) == 0
     assert log[-1].endswith("the finale has started: the border closes in 10 minutes")
-    started = make_server(tmp_path / "s", 6000, 750, SEASON_TWO, LAUNCHED, ACTS_DONE, ON, ("fn", "#started", 1))
+    started = make_server(tmp_path / "s", 3000, 375, SEASON_TWO, LAUNCHED, ACTS_DONE, ON, ("fn", "#started", 1))
     assert not any("finale" in c for c in border.commands(started, FINALE))
-    off = make_server(tmp_path / "o", 6000, 750, SEASON_TWO, LAUNCHED, ACTS_DONE)
+    off = make_server(tmp_path / "o", 3000, 375, SEASON_TWO, LAUNCHED, ACTS_DONE)
     assert not any("finale" in c for c in border.commands(off, FINALE))
 
 

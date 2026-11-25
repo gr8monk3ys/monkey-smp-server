@@ -3,8 +3,10 @@
 LifeStealZ locks a player out at 0 hearts until someone revives them, and keeps no time of elimination, so this
 timed job (deploy/monkey-return.sh, every 10 minutes) does the waiting: it reads LifeStealZ's player data
 (plugins/LifeStealZ/userData.db, read-only), notes when it first saw each player at 0 hearts, and once WAIT has
-passed sends `lifestealz:revive <name>`, which brings them back with the config's reviveHearts (3). A Revive Beacon
-or a Revival Night that gets there first takes them off the list; a later elimination starts a new day.
+passed sends `lifestealz:revive <name>`, which brings them back with the config's reviveHearts (3). A player stays on
+the list until the database shows them back, so a revive the plugin turned down is sent again RETRY later (and the
+run fails, for OnFailure). A Revive Beacon or a Revival Night that gets there first takes them off the list; a later
+elimination starts a new day, also one between two runs, which LifeStealZ's revive count (hasbeenRevived) shows.
 
 It only runs inside the relaunch's season (tools/season_calendar.py's RELAUNCH), and stops at the finale's start
 (Saturday 10 April 2027, 6 PM Pacific), after which nobody comes back until the next season.
@@ -21,6 +23,7 @@ names another file. A missing database (no LifeStealZ yet, the modded season) me
 Stdlib only plus tools/rcon.py and tools/season_calendar.py, Python 3.10 or newer: it runs on the VPS from the checkout.
 """
 import argparse
+import contextlib
 import datetime as dt
 import json
 import sqlite3
@@ -33,6 +36,7 @@ import season_calendar
 UTC = dt.timezone.utc   # noqa: UP017 (datetime.UTC is 3.11+, and the VPS may have 3.10)
 
 WAIT = dt.timedelta(hours=24)
+RETRY = dt.timedelta(minutes=30)   # a revive sent that hasn't shown in the database is sent again after this
 MIN_HEARTS = 0                       # LifeStealZ's minHearts: at or below it a player is eliminated
 FINALE_AT = dt.datetime.combine(season_calendar.RELAUNCH_FINALE, dt.time(18, 0), season_calendar.PACIFIC)
 STATE_NAME = ".monkey-return.json"
@@ -52,13 +56,27 @@ def in_season(when: dt.datetime) -> bool:
     return season_calendar.RELAUNCH.launch <= when < FINALE_AT
 
 
-def eliminated(db: Path) -> dict[str, str]:
-    """The players at or below MIN_HEARTS, as {uuid: name}. Nothing when there is no database yet."""
+def eliminated(db: Path) -> dict[str, tuple[str, int | None]]:
+    """The players at or below MIN_HEARTS, as {uuid: (name, times revived)}; times revived is None where the table
+    has no hasbeenRevived column. Nothing when there is no database yet."""
     if not db.exists():
         return {}
-    with sqlite3.connect(f"{db.resolve().as_uri()}?mode=ro", uri=True, timeout=10) as conn:
-        rows = conn.execute("SELECT uuid, name FROM hearts WHERE maxhp <= ?", (MIN_HEARTS * 2.0,)).fetchall()
-    return {str(uuid): str(name) for uuid, name in rows}
+    uri = f"{db.resolve().as_uri()}?mode=ro"
+    with contextlib.closing(sqlite3.connect(uri, uri=True, timeout=10)) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(hearts)")}
+        revived = "hasbeenRevived" if "hasbeenRevived" in columns else "NULL"
+        rows = conn.execute(f"SELECT uuid, name, {revived} FROM hearts WHERE maxhp <= ?",
+                            (MIN_HEARTS * 2.0,)).fetchall()
+    return {str(uuid): (str(name), None if n is None else int(n)) for uuid, name, n in rows}
+
+
+def _when(value) -> dt.datetime | None:
+    """A kept time, or None for one that isn't a time with a zone (a hand edit gone wrong)."""
+    try:
+        when = dt.datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    return when if when.tzinfo else None
 
 
 def load(path: Path) -> dict[str, dict]:
@@ -67,7 +85,10 @@ def load(path: Path) -> dict[str, dict]:
         kept = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    return {k: v for k, v in kept.items() if isinstance(v, dict) and "since" in v} if isinstance(kept, dict) else {}
+    if not isinstance(kept, dict):
+        return {}
+    return {k: v for k, v in kept.items() if isinstance(v, dict) and _when(v.get("since"))
+            and ("tried" not in v or _when(v["tried"]))}
 
 
 def save(path: Path, kept: dict[str, dict]) -> None:
@@ -76,22 +97,35 @@ def save(path: Path, kept: dict[str, dict]) -> None:
     tmp.replace(path)
 
 
-def track(kept: dict[str, dict], out: dict[str, str], when: dt.datetime) -> dict[str, dict]:
+def track(kept: dict[str, dict], out: dict[str, tuple[str, int | None]], when: dt.datetime) -> dict[str, dict]:
     """The list after this run's look: players still out keep their time, new ones start now, players no
-    longer out (revived some other way) drop off."""
-    return {uuid: kept.get(uuid, {"name": name, "since": when.astimezone(UTC).isoformat()}) | {"name": name}
-            for uuid, name in out.items()}
+    longer out (revived) drop off, and a player revived and out again since the last look starts a new day."""
+    now = when.astimezone(UTC).isoformat()
+    after = {}
+    for uuid, (name, revived) in out.items():
+        entry = kept.get(uuid)
+        if entry is None or (revived is not None and entry.get("revived", revived) != revived):
+            entry = {"since": now}
+        after[uuid] = entry | {"name": name, "revived": revived}
+    return after
 
 
 def back_at(entry: dict) -> dt.datetime:
     return dt.datetime.fromisoformat(entry["since"]) + WAIT
 
 
+def retried(entry: dict) -> bool:
+    """Whether a revive was sent for this player already (who is still out)."""
+    return "tried" in entry
+
+
 def due(kept: dict[str, dict], when: dt.datetime) -> list[str]:
-    """The uuids whose day is up at `when`, oldest first; none outside the season."""
+    """The uuids whose day is up at `when`, oldest first, less any sent a revive within RETRY; none outside the
+    season."""
     if not in_season(when):
         return []
-    ready = [(back_at(e), uuid) for uuid, e in kept.items() if back_at(e) <= when]
+    ready = [(back_at(e), uuid) for uuid, e in kept.items() if back_at(e) <= when
+             and not (retried(e) and dt.datetime.fromisoformat(e["tried"]) + RETRY > when)]
     return [uuid for _, uuid in sorted(ready)]
 
 
@@ -137,9 +171,12 @@ def send(server, world: Path, when: dt.datetime, state: Path | None = None) -> i
             print("server not running: the revives wait for the next run")
         for uuid in ready if up else []:
             command = revive(kept[uuid]["name"])
+            if retried(kept[uuid]):
+                print(f"{kept[uuid]['name']} is still out after a revive: sending it again")
+                code = 1
             try:
                 print(f"{command}: {server(command) or 'ok'}")
-                kept.pop(uuid)
+                kept[uuid]["tried"] = when.astimezone(UTC).isoformat()   # off the list once the database shows it
             except rcon.RconError as e:
                 print(f"{command}: refused or failed: {e}")
                 code = 1

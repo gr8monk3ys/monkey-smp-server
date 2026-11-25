@@ -66,7 +66,41 @@ def test_a_player_comes_back_24_hours_after_first_seen_out(live):
     assert tr.commands(live, later) == ["lifestealz:revive Alex"]
     assert tr.send(server, live, later) == 0
     assert server.sent == ["lifestealz:revive Alex"]
+    assert tr.commands(live, later + dt.timedelta(minutes=10)) == []      # sent: not again within RETRY
+    hearts(live, Alex=6.0, Sam=20.0)                                     # the database shows them back
+    tr.send(server, live, later + dt.timedelta(minutes=10))
     assert json.loads(tr.state_file(live).read_text()) == {}
+
+
+def test_a_revive_the_plugin_turned_down_is_sent_again(live, capsys):
+    hearts(live, Alex=0.0)
+    server = rcon.Recorder({"lifestealz:revive": "Player not found"})
+    tr.send(server, live, MIDSEASON)
+    day = MIDSEASON + dt.timedelta(days=1)
+    assert tr.send(server, live, day) == 0 and ALEX in json.loads(tr.state_file(live).read_text())
+    assert tr.send(server, live, day + dt.timedelta(minutes=10)) == 0 and len(server.sent) == 1
+    assert tr.send(server, live, day + tr.RETRY) == 1                    # still out: again, and the run fails
+    assert server.sent == ["lifestealz:revive Alex"] * 2 and "still out after a revive" in capsys.readouterr().out
+
+
+def test_revived_and_out_again_between_two_runs_starts_a_new_day(live):
+    with sqlite3.connect(tr.database(live)) as conn:
+        conn.execute("ALTER TABLE hearts ADD COLUMN hasbeenRevived INTEGER NOT NULL DEFAULT 0")
+    hearts(live, Alex=0.0)
+    tr.send(rcon.Recorder(), live, MIDSEASON)
+    with sqlite3.connect(tr.database(live)) as conn:                     # a Revive Beacon, then a death
+        conn.execute("UPDATE hearts SET hasbeenRevived = 1")
+    tr.send(rcon.Recorder(), live, MIDSEASON + dt.timedelta(hours=23))
+    assert tr.commands(live, MIDSEASON + dt.timedelta(hours=24)) == []
+    assert tr.commands(live, MIDSEASON + dt.timedelta(hours=47)) == ["lifestealz:revive Alex"]
+
+
+def test_a_kept_time_that_isnt_a_time_with_a_zone_starts_the_day_again(live):
+    hearts(live, Alex=0.0)
+    tr.state_file(live).write_text(json.dumps({ALEX: {"name": "Alex", "since": "2027-02-20 18:00"}}))
+    assert tr.commands(live, MIDSEASON) == []                            # no crash: the entry is dropped
+    tr.send(rcon.Recorder(), live, MIDSEASON)                            # and the day starts now
+    assert tr.commands(live, MIDSEASON + dt.timedelta(days=1)) == ["lifestealz:revive Alex"]
 
 
 def test_commands_change_nothing(live):
@@ -104,7 +138,8 @@ def test_a_failed_revive_is_tried_again(live):
     flaky = rcon.Recorder(fail=1)
     assert tr.send(flaky, live, MIDSEASON + dt.timedelta(days=1)) == 1
     assert len(flaky.sent) == 1
-    assert len(json.loads(tr.state_file(live).read_text())) == 1
+    kept = json.loads(tr.state_file(live).read_text())
+    assert len(kept) == 2 and sum("tried" in e for e in kept.values()) == 1   # the failed one is due next run
 
 
 def test_nobody_comes_back_once_the_finale_starts(live):

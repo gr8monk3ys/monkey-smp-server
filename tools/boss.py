@@ -10,9 +10,9 @@ players near it, and everyone is told where it is. It is a vanilla wither skelet
 the armor, damage and health below (health scaled to the survival players online when it rises, between
 MIN_HEALTH and MAX_HEALTH). The first player to land the killing blow gets a Server First ("Slay a border boss",
 tools/firsts.py, Season II on), and every kill is announced with the killer (and their finale team, if they have one)
-and kept for the news post, the Sunday recap and the Hall of Banners. Nobody kills it within
+and kept for the news post and the Sunday recap. Nobody kills it within
 LIFE_SECONDS: it leaves, with a message. Its gear never drops. Nothing is sold and nothing it gives helps in a
-fight: a line in chat, a first and a banner in the hall.
+fight: a line in chat and a first.
 
 Where: the timer picks the spot from the border's centre and the act's new width (spot(), seeded by the season
 and the act, so a re-run picks the same one): INSET blocks inside the new edge, on a side and at an offset drawn

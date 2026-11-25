@@ -19,7 +19,7 @@ scoreboard players set #started fn 1
 scoreboard players set #phase fn 1
 scoreboard players set #t fn 0
 scoreboard players set #edge fn 0
-scoreboard players set #next fn 100
+execute unless score #next fn matches 100.. run scoreboard players set #next fn 100
 $data modify storage monkey:finale at set value {x:$(x),z:$(z),x0:$(x),z0:$(z),d:48,bx:$(cx),bz:$(cz)}
 $scoreboard players set #mx fn $(x)
 $scoreboard players set #mz fn $(z)

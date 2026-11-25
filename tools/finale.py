@@ -7,12 +7,11 @@
 What players see (docs/SEASONS.md, "The finale"): at the finale's time chat says the border starts closing in 10
 minutes, then in 1 minute, then now. From now it shrinks from wherever it is to FINAL_SIZE blocks across over
 SHRINK_SECONDS, while its centre moves from spawn to the monument (MONUMENT_OFFSET from spawn, outside spawn's
-no-PvP zone: docs/RULES.md, rules 22 and 26) a block a second each way. Then comes the last hour (HOLD_SECONDS),
-a staff event: the border holds, and every
-second each team gets a point for each of its members standing at the monument (within RADIUS blocks of it
-either way, any height, in survival, not in the event arena). 10 minutes and 1 minute before the close, chat says
-so; at the close the team with the most points holds the monument and is named the winner. A boss bar counts
-down to the close all along. Claims are never touched: land outside the border is only out of reach.
+no-PvP zone: docs/RULES.md, rules 22 and 26) a block a second each way. Then comes the last hour (HOLD_SECONDS), the
+border holds, and every second each team gets a point for each of its members standing at the monument (within
+RADIUS blocks of it either way, any height, in survival, not in the event arena). 10 minutes and 1 minute before the
+close, chat says so; at the close the team with the most points holds the monument and is named the winner. A boss
+bar counts down to the close all along. Claims are never touched: land outside the border is only out of reach.
 
 Never stranded: the shrink is slow (an edge moves at most about 2.2 blocks a second, under half walking pace), every
 player within EDGE_MARGIN blocks of the edge or past it is warned on screen every 5 seconds with the monument's
@@ -23,7 +22,9 @@ puts a player outside the Overworld's (the game keeps a portal's exit inside the
 
 Teams (docs/relaunch/season-1.md, "The finale"): staff give each member of a registered team (up to 4) the same
 number from 1 to SOLO_FROM - 1, `scoreboard players set <name> st.team N`. Anyone at the monument without one gets
-the next number from SOLO_FROM up the first time they count, so a solo player is a team of one.
+the next number from SOLO_FROM up the first time they count, so a solo player is a team of one. The numbers
+carry on from one start to the next, staff resets included, so a solo number from a test finale is never handed
+out again; past MAX_TEAMS no more are given, and a player without one doesn't score.
 
 The result is read from the scores: #f<N> fn is team N's points, and storage
 monkey:finale result {team, points, tie, week} the winner. A tie for the most points names no winner: staff
@@ -64,7 +65,7 @@ SEASON = "#season rw.day"
 LOCKED = "#season_locked"   # in events' ev.state
 TEAM = "st.team"            # a player's team number: registered teams below SOLO_FROM, solo players from it
 SOLO_FROM = 100             # the first number handed to a player at the monument with no team
-MAX_TEAMS = 399             # the close reads teams 1 to this
+MAX_TEAMS = 999             # the close reads teams 1 to this; no solo number goes past it
 
 WEEK = season_calendar.RELAUNCH_FINALE_WEEK   # the finale's week: Saturday 10 April 2027 in the relaunch
 START = dt.time(18, 0)      # the Saturday event slot, Pacific
@@ -260,7 +261,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players set #phase {OBJ} 1",
         f"scoreboard players set #t {OBJ} 0",
         f"scoreboard players set #edge {OBJ} 0",
-        f"scoreboard players set #next {OBJ} {SOLO_FROM}",
+        f"execute unless score #next {OBJ} matches {SOLO_FROM}.. run scoreboard players set #next {OBJ} {SOLO_FROM}",
         f"$data modify storage {STORE} at set value {{x:$(x),z:$(z),x0:$(x),z0:$(z),d:{2 * RADIUS},bx:$(cx),"
         f"bz:$(cz)}}",
         f"$scoreboard players set #mx {OBJ} $(x)",
@@ -333,12 +334,14 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/count.mcfunction"] = lines(
         f"execute unless score @s {TEAM} matches 1.. run function {NS}:finale/solo",
+        f"execute unless score @s {TEAM} matches 1.. run return 0",
         f"execute store result storage {STORE} n.n int 1 run scoreboard players get @s {TEAM}",
         f"function {NS}:finale/add with storage {STORE} n",
     )
     f[f"{FN}/add.mcfunction"] = lines(f"$scoreboard players add #f$(n) {OBJ} 1")
     f[f"{FN}/solo.mcfunction"] = lines(
-        "# A player with no registered team: a team of one, the next number from SOLO_FROM.",
+        "# A player with no registered team: a team of one, the next number from SOLO_FROM (none past MAX_TEAMS).",
+        f"execute unless score #next {OBJ} matches ..{MAX_TEAMS} run return 0",
         f"scoreboard players operation @s {TEAM} = #next {OBJ}",
         f"scoreboard players add #next {OBJ} 1",
     )
@@ -430,7 +433,14 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players set #tie {OBJ} 0",
     )
     f[f"{FN}/won.mcfunction"] = lines(
-        "$tellraw @a " + text("", {"text": "The finale: ", "color": "dark_red", "bold": True},
+        "# Named by its members online; with none online, by its number (`result` reads the roster).",
+        f"$execute unless entity @a[scores={{{TEAM}=$(team)}}] run tellraw @a " + text(
+            "", {"text": "The finale: ", "color": "dark_red", "bold": True},
+            {"text": "team $(team)", "color": "yellow", "bold": True},
+            gold(" held the monument and win the finale, with "), {"text": "$(points)", "color": "yellow"},
+            gold(" points.")),
+        f"$execute if entity @a[scores={{{TEAM}=$(team)}}] run tellraw @a " + text(
+            "", {"text": "The finale: ", "color": "dark_red", "bold": True},
                               {"selector": f"@a[scores={{{TEAM}=$(team)}}]", "color": "yellow", "bold": True},
                               gold(" held the monument and win the finale, with "),
                               {"text": "$(points)", "color": "yellow"}, gold(" points.")),
@@ -471,8 +481,10 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/reset.mcfunction"] = lines(
         "# Staff, test servers only: forget the finale, so it can start again. The border stays as it is.",
         f"execute store result storage {STORE} on int 1 run scoreboard players get #on {OBJ}",
+        f"execute store result storage {STORE} next int 1 run scoreboard players get #next {OBJ}",
         f"scoreboard players reset * {OBJ}",
         f"execute store result score #on {OBJ} run data get storage {STORE} on",
+        f"execute store result score #next {OBJ} run data get storage {STORE} next",
         f"scoreboard players set #started {OBJ} 0",
         f"scoreboard players set #phase {OBJ} 0",
         f"data remove storage {STORE} result",

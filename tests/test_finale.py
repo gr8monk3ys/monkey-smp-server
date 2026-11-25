@@ -80,7 +80,11 @@ def test_presence_counts_team_members_at_the_monument_in_the_last_hour():
 
 def test_a_player_without_a_team_is_a_team_of_one():
     solo, start, tick = body("solo"), body("start"), body("tick")
-    assert f"scoreboard players set #next fn {finale.SOLO_FROM}" in start
+    assert f"unless score #next fn matches {finale.SOLO_FROM}.. run scoreboard players set #next fn" in start
+    assert f"unless score #next fn matches ..{finale.MAX_TEAMS} run return 0" in solo
+    assert "next int 1 run scoreboard players get #next fn" in body("reset")   # numbers outlive a reset
+    assert "unless score @s st.team matches 1.. run return 0" in body("count")
+    assert "unless entity @a[scores={st.team=$(team)}]" in body("won") and "team $(team)" in body("won")
     assert "scoreboard players operation @s st.team = #next fn" in solo and "players add #next fn 1" in solo
     assert "@a[scores={st.team=$(team)}]" in body("won")
     assert body("add") == "$scoreboard players add #f$(n) fn 1\n"

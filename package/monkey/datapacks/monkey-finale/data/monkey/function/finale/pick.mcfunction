@@ -1,5 +1,5 @@
-# Teams 1 to 399, one a call: the most points wins; the same most, a tie.
+# Teams 1 to 999, one a call: the most points wins; the same most, a tie.
 execute store result storage monkey:finale n.n int 1 run scoreboard players get #n fn
 function monkey:finale/pick_one with storage monkey:finale n
 scoreboard players add #n fn 1
-execute if score #n fn matches ..399 run function monkey:finale/pick
+execute if score #n fn matches ..999 run function monkey:finale/pick

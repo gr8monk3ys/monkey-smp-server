@@ -5,7 +5,6 @@ import json
 import pytest
 from conftest import (
     fabric_launcher,
-    github_pin,
     make_zip,
     paper_build,
     paper_builds_url,
@@ -281,34 +280,3 @@ def test_snapshot_no_longer_captures_a_client(what, capsys):
     with pytest.raises(SystemExit):
         snapshot.main([what, "somewhere"])
     assert "invalid choice" in capsys.readouterr().err
-
-
-# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
-
-def test_snapshot_fabric_server_keeps_a_github_pin(fabric, fabric_repo):
-    """A jar that is not on Modrinth but is still exactly the manifest's GitHub pin keeps that pin."""
-    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
-    pin = github_pin(homemade)
-    old = fabric_repo.load_manifest()
-    old["mods"].append(pin)
-    fabric_repo.save_manifest(old)
-    fabric.expect_lookup(homemade)
-
-    m = fabric.snapshot(fabric_repo)
-
-    assert [e["slug"] for e in m["mods"]] == ["edited", "mod", "patina-and-chime", "same"]
-    assert m["mods"][2] == pin
-    assert validate.validate(m, fabric_repo) == []
-
-
-def test_snapshot_fabric_server_fails_on_a_jar_that_is_no_longer_its_github_pin(fabric, fabric_repo):
-    """A new build of the mod under the old name: the pin is moved by hand (pin_github.py), not guessed."""
-    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
-    old = fabric_repo.load_manifest()
-    old["mods"].append(github_pin(b"the release that was pinned"))
-    fabric_repo.save_manifest(old)
-    fabric.expect_lookup(homemade)
-    before = fabric_repo.manifest.read_bytes()
-    with pytest.raises(SystemExit, match="homemade-1.0.jar"):
-        fabric.snapshot(fabric_repo)
-    assert fabric_repo.manifest.read_bytes() == before

@@ -4,7 +4,7 @@ import shutil
 import zipfile
 
 import pytest
-from conftest import github_pin, make_zip, patched_entry
+from conftest import make_zip, patched_entry
 
 import build
 import defaults
@@ -282,37 +282,3 @@ def test_a_stale_generated_pack_fails_validation(monkeypatch, capsys):
     monkeypatch.setattr(validate.datapacks, "differences", lambda repo: ["package/monkey/datapacks/monkey-x/a"])
     assert validate.main([]) == 1
     assert "monkey-x/a is out of date (run python tools/datapacks.py)" in capsys.readouterr().out
-
-
-# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
-
-PIN_JAR = b"a mod of ours"
-
-
-def test_a_github_pin_is_valid_on_the_server(fabric_repo):
-    m = fabric_repo.load_manifest()
-    m["mods"] = sorted(m["mods"] + [github_pin(PIN_JAR)], key=lambda e: e["slug"])
-    assert validate.validate(m, fabric_repo) == []
-
-
-def test_a_github_pin_is_not_valid_on_a_paper_server(paper_repo):
-    m = paper_repo.load_manifest()
-    m["mods"] = [github_pin(PIN_JAR)]
-    assert validate.validate(m, paper_repo) == ["mods: a paper server can't use mods (1 listed)"]
-
-
-def test_verify_online_downloads_a_github_pin(capsys):
-    pin = github_pin(PIN_JAR)
-    m = copy.deepcopy(REPO.load_manifest())
-    http = RecordedHttp().add("GET", pin["url"], PIN_JAR)
-    for _, jre in entries.java_builds(m):
-        serve(http, jre, jre["file"].encode(), "sha256")
-    serve(http, m["server"], b"server", "sha256")
-    m["mods"] = [pin]
-    m["plugins"] = []
-    m["datapacks"] = []
-    assert validate.verify_online(m, Upstream(http)) == []
-    assert "ok  mod      homemade-1.0.jar" in capsys.readouterr().out
-    http.add("GET", pin["url"], PIN_JAR + b"!")
-    assert validate.verify_online(m, Upstream(http)) == [
-        "mod homemade-1.0.jar: download doesn't match the pinned size/hash"]

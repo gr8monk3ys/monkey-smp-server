@@ -19,7 +19,6 @@
 Hand-curated config defaults (package/monkey/defaults/) are not touched.
 """
 import argparse
-import copy
 import hashlib
 import re
 import shutil
@@ -184,18 +183,13 @@ def fabric_entry(upstream: Upstream, launcher: FabricLauncher) -> dict:
 
 # --- snapshot -----------------------------------------------------------------------------------
 
-def _match(paths: list[Path], originals: Path, found: dict, missing: list, new_patches: dict,
-           pins: dict | None = None) -> list[dict]:
+def _match(paths: list[Path], originals: Path, found: dict, missing: list, new_patches: dict) -> list[dict]:
     """Entries for files found on disk; a file not on Modrinth whose original (same name in
-    `originals`) is becomes that original plus a patch. A file that is still exactly one of `pins` (the manifest's
-    GitHub pins by file name, ADR-0009) keeps that pin. Unknown files are appended to `missing`."""
+    `originals`) is becomes that original plus a patch. Unknown files are appended to `missing`."""
     out = []
     for p in paths:
         orig = originals / p.name
-        pin = (pins or {}).get(p.name)
-        if pin and not found[p] and entries.matches(pin, p.read_bytes()):
-            out.append(copy.deepcopy(pin))
-        elif found[p]:
+        if found[p]:
             out.append(entries.from_disk(*found[p], disk_name=p.name))
         elif found.get(orig):
             base = entries.from_disk(*found[orig], disk_name=p.name)
@@ -235,12 +229,10 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
     missing = [p for p in plugin_paths if not found[p]]
     plugins = [entries.from_disk(*found[p], disk_name=p.name) for p in plugin_paths if found[p]]
     new_patches = {}
-    pins = {e["file"]: e for e in old.get("mods", []) if entries.is_github(e)}
-    mods = _match(mod_paths, mod_originals, found, missing, new_patches, pins)
+    mods = _match(mod_paths, mod_originals, found, missing, new_patches)
     datapacks = _match(pack_paths, pack_originals, found, missing, new_patches)
     if missing:
-        raise SystemExit("not on Modrinth (add them by hand or replace them; a GitHub pin is re-pinned by hand, "
-                         "ADR-0009):\n  "
+        raise SystemExit("not on Modrinth (add them by hand or replace them):\n  "
                          + "\n  ".join(str(p) for p in missing))
 
     server = fabric_entry(upstream, launcher) if launcher else paper_entry(upstream, server_dir, mc)

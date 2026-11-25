@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0010 (the relaunch has no GitHub pins)
 ---
 # Our own mods may be pinned from a GitHub release
 

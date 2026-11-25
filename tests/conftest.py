@@ -85,12 +85,6 @@ def patched_entry(manifest: dict) -> tuple[str, dict]:
     return next((k, e) for k in entries.PATCHABLE for e in entries.group(manifest, k) if "patch" in e)
 
 
-def github_pin(jar: bytes, file="homemade-1.0.jar", tag="v1.0") -> dict:
-    """A manifest entry pinning `jar` as an asset of a GitHub release of the first allowed repository (ADR-0009)."""
-    repo = entries.GITHUB_PINS[0]
-    return entries.github(repo.split("/")[1], repo, tag, tag.lstrip("v"), file, jar)
-
-
 def make_zip(files: dict[str, bytes | str]) -> bytes:
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w") as z:

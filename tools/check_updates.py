@@ -159,8 +159,6 @@ def find_updates(manifest: dict, upstream: Upstream, lock_text: str | None = Non
             updates.append(found)
     for kind in entries.GROUPS:
         for e in entries.group(manifest, kind):
-            if entries.is_github(e):
-                continue  # pinned by hand from a GitHub release (ADR-0009): Modrinth has nothing to compare it to
             if entries.is_geysermc(e):
                 found = geysermc_update(kind, e, upstream)
                 if found:

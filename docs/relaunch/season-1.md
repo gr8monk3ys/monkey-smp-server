@@ -73,8 +73,9 @@ That port, and the 24-hour return timer, are a follow-up PR for the tools; this 
 
 - **From week 4:** newbie protection rises from 3 to 8 hours. Staff set `Newbie Protection.Time` to `28800`
   in `PvPManager/config.yml` and run `/pvpmanager reload`.
-- **A starter kit on first join**, from week 4: iron armor and tools, 32 cooked beef, 32 torches and a bed.
-  From week 7, also diamond pickaxe and sword. (An EssentialsX first-join kit, set up by the platform.)
+- **A starter kit on first join**, from week 4: iron tools and sword, 24 cooked beef, 32 torches and a bed
+  (`tools/catchup.py`, in the rules pack). It ships off: staff run `function monkey:catchup/on` once, any time
+  before week 4.
 - **Hearts don't change**: a late joiner starts with 10 like everyone. Crafted Hearts and Revival Nights
   are the catch-up for hearts.
 - Claim blocks build up with play time as for everyone; staff don't hand them out.

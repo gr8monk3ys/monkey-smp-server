@@ -66,6 +66,16 @@ usual choice), staff can't see who broke what, and "griefing is rolled back" can
 - **Elimination while banned.** A ban doesn't touch hearts. An eliminated player who is also banned stays
   out until both are over.
 
+## Before launch
+
+In the new world, once, as an admin:
+
+1. Turn off the modded season's Netherite ban, which the relaunch doesn't have:
+   `datapack disable "file/monkey-no-netherite-armor"`. The world remembers it.
+2. Turn on the late joiners' kit: `function monkey:catchup/on` (it only gives the kit from week 4).
+3. At the launch time, run `function monkey:rules/launch`. The End stays closed until Dragon Night, when you
+   run `function monkey:rules/open_end`.
+
 ## Revival Night
 
 On the Saturdays in `season-1.md`, at the start of the event, an admin:

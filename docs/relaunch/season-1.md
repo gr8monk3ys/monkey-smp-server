@@ -5,8 +5,10 @@ then an off-week and Season 2 on **Saturday 17 April**. Every season after follo
 10 weeks. Times are Pacific; Saturday events start at **6 PM Pacific (9 PM Eastern)**. US clocks go
 forward on Sunday 14 March, which moves nothing in Pacific time.
 
-`tools/season_calendar.py` already has this launch time as `SEASON_II`, from the modded season's plan; the
-relaunch renames it Season 1 when the platform switches the tools over.
+`tools/season_calendar.py` has these dates as `RELAUNCH`, `RELAUNCH_FINALE` and `RELAUNCH_NEXT`. Its `SEASON`
+stays on the modded Season I, which the live server's timers read, until the release that switches the tools to
+Paper after that season's finale on 23 January 2027. The tool counts the launch weekend as week 0, so its week N
+is week N+1 in the table below.
 
 ## The calendar
 
@@ -18,14 +20,16 @@ relaunch renames it Season 1 when the platform switches the tools over.
 | 4 | 27 Feb | **Revival Night I** at 6 PM, then **Dragon Night**: the End opens at 7 PM. | Late-joiner catch-up turns on (below). |
 | 5 | 6 Mar | **Base of the Week**: staff tour and judge claimed bases. No PvP stakes. | |
 | 6 | 13 Mar | **The border opens** to 10,000, and **the Edgewalker** rises at the new edge. | Clocks go forward Sunday. |
-| 7 | 20 Mar | **Revival Night II**, then **King of the Hill II**. | Last revival by staff this season. |
+| 7 | 20 Mar | **Revival Night II**, then **King of the Hill II**. Season 2's date is announced, 4 weeks ahead. | Last revival by staff this season. |
 | 8 | 27 Mar | **Supply Drop**: a guarded chest at an announced spot, with Crafted Hearts inside. | Easter is Sunday 28 March. |
-| 9 | 3 Apr | **The closing.** The finale is announced, and over the week the border shrinks from 10,000 to 3,000. | Revive Beacons still work; staff revive no one. |
+| 9 | 3 Apr | **The closing.** The finale's details are posted, and over the week the border shrinks from 10,000 to 3,000. | Revive Beacons and the 24-hour return still work; staff revive no one. |
 | 10 | 10 Apr | **The finale** (below). The world locks after it. | |
-| | 11 to 16 Apr | **Off-week**: the world download, the Season 2 vote, a creative night. | |
+| | 11 to 16 Apr | **Off-week**: the world download goes up, the finale video goes out, the Season 2 vote, a creative night. | |
 | | 17 Apr | **Season 2 opens.** | |
 
-- **Say the end date on day one:** Season 1 ends with the finale on Saturday 10 April 2027.
+- **Say the end date on day one:** Season 1 ends with the finale on Saturday 10 April 2027. It's in the
+  launch announcement, the welcome message and the website from the start, so nobody is surprised by a reset
+  and creators can plan a story around it.
 - **Event rewards** are Crafted Hearts (they only work below 15, so they can't crown anyone) and
   cosmetics. Money prizes are the economy's call.
 - **King of the Hill:** a small capture area outside the safe zone; the player with the most time on it
@@ -35,10 +39,19 @@ relaunch renames it Season 1 when the platform switches the tools over.
 
 1. **6 PM:** staff announce it. The border starts shrinking from 3,000 to 256 around the finale monument,
    over 45 minutes. Players outside take border damage.
-2. **6:45 PM:** the last hour. The border holds at 256. Kills still move hearts; eliminated players stay out.
-3. **7:45 PM:** the player still alive inside the ring with the most hearts wins. If everyone left is on one
-   registered team, the team wins together.
+2. **6:45 PM:** the last hour. The border holds at 256. Every second, each team scores a point for each of its
+   members standing at the monument. Kills still move hearts; eliminated players stay out.
+3. **7:45 PM:** the team with the most points wins (a solo player is a team of one). A tie goes to the team
+   with the most hearts between its members still in, which staff check.
 4. The champion gets the season's champion title and cosmetic, which carry into Season 2.
+
+- **It's filmed.** A staff member records the finale in spectator mode from above the ring, and the brand
+  team cuts a recap video for the off-week. Players are told in the finale announcement that it's being filmed.
+- **Nobody comes back during it.** Revive Beacons and the 24-hour return stop at 6 PM; eliminated players stay
+  out until Season 2.
+- **The world download:** once the world is locked, staff publish it (spawn, the market and the finale ring,
+  with player bases as they stood) for anyone to explore. Nothing in it identifies players beyond their builds
+  and signs.
 
 ### Porting the finale and the boss to Paper
 
@@ -46,13 +59,15 @@ The modded season's finale and border boss (`tools/finale.py`, `tools/boss.py`) 
 still runs, but both score by faction (`st.faction`, the Open Parties and Claims party), and there are no
 factions on Paper. Before week 6 they need:
 
-- **Scoring per player**, with LifeStealZ hearts as the tiebreak, in place of per-faction scoring.
-- **Teams only for the finale:** players register a team of up to 4 by ticket, and staff add it as a vanilla
-  scoreboard team, which the finale reads. No team plugin.
+- **Scoring per team** in place of per faction: the finale already scores each faction's member-time at the
+  monument, so it keeps that, reading team numbers, with hearts as the tiebreak staff check. The boss's kill
+  announcement names the player, and their team if they have one.
+- **Teams only for the finale:** players register a team of up to 4 by ticket before week 9, and staff give
+  its members the same team number; everyone else is a team of one. No team plugin.
 - The border acts above in `ACTS` (`tools/border.py`): 8,000 in week 3 and 10,000 in week 6, with the
   week 9 shrink and the finale's 256. Vanilla `/worldborder` works on Paper over RCON as before.
 
-That's a follow-up for the tools; this PR only sets the plan.
+That port, and the 24-hour return timer, are a follow-up PR for the tools; this one sets the plan and the dates.
 
 ## Late joiners
 

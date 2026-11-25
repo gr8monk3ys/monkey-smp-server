@@ -42,14 +42,23 @@ lava isn't lost.
 
 ## Elimination and revives
 
-- At **0 hearts you're eliminated**: kicked, and blocked from joining until someone revives you.
+- At **0 hearts you're eliminated**: kicked, and blocked from joining for **24 hours**. Then you're back with
+  **3 hearts**, on your own, with no friend needed. A solo player is never out for good, and a day out still
+  makes the last heart matter.
 - **There is no spectating.** Spectator mode sees through walls, and an eliminated player watching bases
   would hand their friends every base's layout.
-- A friend can **place a Revive Beacon** and pick you. It takes 60 seconds, anyone can break the beacon to
-  stop it, and you come back with 3 hearts.
-- **Revival Nights:** staff revive everyone who is out (`/revive *`) on set Saturdays (`season-1.md`), so
-  players without friends on the server aren't out for good.
-- Claims of anyone away 30 days, eliminated or not, are removed and their base becomes raidable.
+- **Faster, with friends:** a friend can **place a Revive Beacon** and pick you. It takes 60 seconds, anyone can
+  break the beacon to stop it, and you come back with 3 hearts straight away.
+- **Revival Nights:** staff revive everyone who is out (`/revive *`) on set Saturdays (`season-1.md`), so the
+  wait ends early for everyone.
+- **The finale is the exception:** from its start (`season-1.md`), nobody comes back until the season ends.
+- A staff ban is separate: a revive doesn't lift it.
+- Claims of anyone away 30 days are removed and their base becomes raidable. An eliminated player is out a day
+  at most, so elimination never costs anyone their base.
+
+LifeStealZ has no timer of its own, so the 24-hour return is a small server timer (a follow-up to this PR): every
+10 minutes it reads LifeStealZ's player data, notes who is at 0 hearts and since when, and runs
+`/revive <player>` once 24 hours have passed. It stops at the finale.
 
 ## New players
 

@@ -53,7 +53,7 @@ means the same thing in game, on the site and in a ticket. How hearts, claims an
 
 17. **One account per person.** A second account, or playing on someone else's, needs staff approval.
     Alts used to dodge elimination, store hearts or carry heart items are banned with the main account.
-18. **Eliminated means out.** Don't come back on another account while you wait to be revived.
+18. **Eliminated means out.** Don't come back on another account during your 24 hours out or before a revive.
 19. **You are responsible for your account.** "My brother did it" doesn't undo a ban.
 
 ## Chat and community

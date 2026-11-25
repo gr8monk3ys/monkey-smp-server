@@ -373,6 +373,7 @@ def test_verify_online_downloads_every_java_build(capsys):
     m["server"] = {**m["server"]}
     serve(http, m["server"], b"server", "sha256")
     m["mods"] = []
+    m["plugins"] = []
     m["datapacks"] = []
     assert validate.verify_online(m, Upstream(http)) == []
     assert capsys.readouterr().out.count("ok  java ") == 5
@@ -456,6 +457,7 @@ def test_verify_online_downloads_a_github_pin(capsys):
         serve(http, jre, jre["file"].encode(), "sha256")
     serve(http, m["server"], b"server", "sha256")
     m["mods"] = [pin]
+    m["plugins"] = []
     m["datapacks"] = []
     assert validate.verify_online(m, Upstream(http)) == []
     assert "ok  mod      homemade-1.0.jar" in capsys.readouterr().out

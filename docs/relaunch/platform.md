@@ -35,6 +35,9 @@ can't end up with the same name.
 Three of our data packs still call Fabric content and need a change from the rules workstream before launch.
 `monkey-npcs` places Easy NPC characters, `monkey-events` syncs the Strength SMP arena, and
 `monkey-nights` mentions Open Parties and Claims in its grace-period text. The other 15 only use vanilla commands.
+All 18 are generated for Minecraft 26.2 (`tools/datapacks.py`: `MINECRAFT`, `DATA_FORMAT`, wardrobe's
+`RESOURCE_FORMAT` and the rules pack's treasure list). On 26.3 those need bumping and re-checking, and
+`tests/test_datapacks.py` fails until they are. On 26.2 they stay as they are.
 
 Removing the Fabric files (patches, Fabric mod configs, Fabric-only tests and tools, the client pack and the
 voice chat port) is a separate follow-up PR. This PR switches the manifest, so `validate.py` reports the unused
@@ -101,7 +104,7 @@ and the live server isn't touched until cutover.
 
 ## Open decisions (Lorenzo)
 
-- **Minecraft 26.3 or 26.2.** On 26.2 every plugin but EssentialsX has a release build (LPC, Tebex and UltraCosmetics included). On 26.3, five plugins are still waiting on a release: EssentialsX, EssentialsX Spawn, LPC, Tebex and UltraCosmetics. 26.4 is in snapshots, so 26.3 may be one behind by February, and ViaVersion lets newer clients join either way. Recommendation: stay on 26.3, re-run the pins in mid-January, and drop to 26.2 only if those five still aren't out.
+- **Minecraft 26.3 or 26.2.** On 26.2 every plugin but EssentialsX has a release build (LPC, Tebex and UltraCosmetics included), and our data packs already target it. On 26.3, five plugins are still waiting on a release: EssentialsX, EssentialsX Spawn, LPC, Tebex and UltraCosmetics. 26.4 is in snapshots, so 26.3 may be one behind by February, and ViaVersion lets newer clients join either way. Recommendation: stay on 26.3, re-run the pins in mid-January, and drop to 26.2 only if those five still aren't out.
 - **EssentialsX fallback.** It has no release for 26.2 or 26.3 yet (2.22.0 stops at 26.1.2), and the economy runs on it. If it isn't out by 15 Jan, the economy needs a different Vault provider. Neither TheNewEconomy nor CoinsEngine can be pinned.
 - **Whitelist off.** The relaunch is public, so `white-list=false`. Staff moderate with GrimAC, GriefPrevention and bans instead.
 - **New world seed** for Season 1.

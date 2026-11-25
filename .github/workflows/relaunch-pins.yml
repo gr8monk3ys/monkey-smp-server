@@ -35,14 +35,14 @@ jobs:
           import json, urllib.parse
           from upstream import LiveHttp, MODRINTH
           http = LiveHttp()
-          for q in ("lpc chat", "economyshopgui", "donut auction house", "theneweconomy", "coinsengine",
-                    "tebex", "ultracosmetics", "deluxetags", "essentialsx"):
-              for label, facets in (("26.3", [["project_type:plugin"], ["versions:26.3"]]),
-                                    ("any", [["project_type:plugin"]])):
-                  hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=4&index=relevance"
-                                       "&facets=" + urllib.parse.quote(json.dumps(facets)))
-                  print(f"search {q!r} [{label}]", [(h["slug"], h["downloads"], h.get("versions", [])[-2:])
-                                                    for h in hits["hits"]])
+          for slug in ("ultracosmetics", "tebex", "lpc-chat", "tne", "essentialsx", "auctionhousepro"):
+              vs = http.get_json(f"{MODRINTH}/project/{slug}/version")[:6]
+              print("versions", slug, [(v["version_number"], v["version_type"], v["game_versions"][-3:],
+                                         v["loaders"], v["date_published"][:10]) for v in vs])
+          for q in ("coins engine", "auction house", "economy vault provider"):
+              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=6&index=downloads"
+                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"], ["versions:26.3"]])))
+              print(f"search {q!r} [26.3]", [(h["slug"], h["downloads"]) for h in hits["hits"]])
           PY
       - name: Show the manifest
         run: cat package/monkey/manifest.json

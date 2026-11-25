@@ -33,7 +33,7 @@ STACK = (
     "geyser",                         # Bedrock players (Floodgate comes from GeyserMC, see GEYSERMC_STACK)
     "luckperms",                      # permissions and groups
     "essentialsx", "essentialsx-spawn",  # commands, homes, warps, kits and the Vault economy provider
-    "lpc",                            # chat format from LuckPerms prefixes and PlaceholderAPI (tags)
+    "lpc-chat",                       # chat format from LuckPerms prefixes and PlaceholderAPI (tags)
     "vaultunlocked",                  # the Vault API that economy, shop and store plugins talk to
     "grimac",                         # anti-cheat
     "chunky",                         # world pre-generation
@@ -43,7 +43,7 @@ STACK = (
     "viaversion", "viabackwards",     # Java clients a version ahead or behind the server
     "bluemap",                        # the web map (spawn only, no player or claim markers)
     "lifestealz", "pvpmanager",       # rules and seasons: hearts, combat tag, newbie protection
-    "economyshopgui", "donutauctionhouse",  # economy: shop and auction house
+    "economyshopgui",                 # economy: the shop (the auction house is still open: none on Modrinth fits)
     "tebex", "ultracosmetics", "deluxetags",  # store: checkout, cosmetics and the /tags picker
 )
 # Plugins pinned from GeyserMC's download API rather than Modrinth (entries.GEYSERMC_PINS, ADR-0010).

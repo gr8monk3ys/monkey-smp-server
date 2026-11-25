@@ -168,9 +168,9 @@ def test_the_launch_is_the_sites_launch_time():
 
 def test_the_relaunch_runs_ten_weeks_to_its_finale():
     assert season_calendar.RELAUNCH.launch.astimezone(PACIFIC) == pacific(2027, 2, 6, 17, 0)
-    assert season_calendar.RELAUNCH_FINALE == dt.date(2027, 4, 10)
+    assert dt.date(2027, 4, 10) == season_calendar.RELAUNCH_FINALE
     assert season_calendar.RELAUNCH_FINALE.weekday() == 5 == season_calendar.RELAUNCH_NEXT.weekday()
-    assert season_calendar.RELAUNCH_NEXT == dt.date(2027, 4, 17)
+    assert dt.date(2027, 4, 17) == season_calendar.RELAUNCH_NEXT
     assert season_calendar.SEASONS[2] is season_calendar.RELAUNCH
 
 

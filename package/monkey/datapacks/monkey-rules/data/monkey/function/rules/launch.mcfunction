@@ -1,6 +1,8 @@
 # Staff run this once, at launch. PvP and the Nether are open from the start; the End waits for
 # Dragon Night.
 scoreboard players set #end_open monkey.rules 0
+gamerule pvp true
+gamerule allow_entering_nether_using_portals true
 tellraw @a [{"text":"[Monkey SMP] ","color":"gold"},{"text":"Welcome to the new season! PvP and the Nether are open. The End opens on Dragon Night.","color":"yellow"}]
 # The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start
 # from zero, so test play before the launch doesn't count (tools/challenges.py). Only the first launch

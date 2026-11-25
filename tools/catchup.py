@@ -25,7 +25,7 @@ KIT_DONE = "ck.kit"        # 1 once the player has had the kit (in this world)
 WEEK = "#week rc.week"     # the season's week, from tools/challenges.py (-1 before the timer sends one)
 
 CATCHUP_ON = 0             # ships off (docs/SEASONS.md, "Switches")
-KIT_WEEK = 4               # first joins from this week of the season on: after week 3
+KIT_WEEK = 3               # first joins from the plan's week 4 on (the tools count the launch weekend as week 0)
 
 # (item, count): modest on purpose. A test fails if anything diamond, netherite or Strength gets in.
 KIT = (

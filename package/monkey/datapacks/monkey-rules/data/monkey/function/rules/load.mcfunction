@@ -2,6 +2,8 @@
 scoreboard objectives add monkey.rules dummy
 scoreboard objectives add monkey.welcome dummy
 function monkey:catchup/load
+# The modded season's launch hour is gone; its flag would hold off the omens' truce (tools/omens.py).
+scoreboard players reset #launching monkey.rules
 # The border, once per world: after that it is the staff's to grow.
 execute unless score #border monkey.rules matches 1 run function monkey:rules/border
 schedule function monkey:rules/second 20t replace

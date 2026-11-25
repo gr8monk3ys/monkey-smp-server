@@ -23,7 +23,8 @@ GriefPrevention, WorldGuard), not this pack.
       that across restarts and updates. (It stays in the repo while site/live-packs.json lists it.)
 
 New players' protection is PvPManager's newbie protection (3 hours, 8 from week 4), not this pack. There is no
-ban on Fire Aspect or Flame in the relaunch, so the pack no longer has one.
+ban on Fire Aspect or Flame in the relaunch, so the pack no longer has one. The relaunch starts a new world, so
+nothing cleans up the modded season's grace (its body-slot item and objectives): they never exist there.
 
 The installer copies both into the world on every install (Install-PackageDatapacks).
 """
@@ -116,6 +117,8 @@ def rules_files() -> dict[str, str]:
         f"scoreboard objectives add {OBJECTIVE} dummy",
         f"scoreboard objectives add {WELCOME} dummy",
         f"function {NS}:catchup/load",
+        "# The modded season's launch hour is gone; its flag would hold off the omens' truce (tools/omens.py).",
+        f"scoreboard players reset #launching {OBJECTIVE}",
         "# The border, once per world: after that it is the staff's to grow.",
         f"execute unless score #border {OBJECTIVE} matches 1 run function {NS}:rules/border",
         f"schedule function {NS}:rules/second 20t replace",
@@ -220,6 +223,8 @@ def rules_files() -> dict[str, str]:
         "# Staff run this once, at launch. PvP and the Nether are open from the start; the End waits for",
         "# Dragon Night.",
         f"scoreboard players set #end_open {OBJECTIVE} 0",
+        "gamerule pvp true",
+        "gamerule allow_entering_nether_using_portals true",
         announce("Welcome to the new season! PvP and the Nether are open. The End opens on Dragon Night.",
                  "yellow"),
         "# The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start",

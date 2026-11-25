@@ -25,7 +25,10 @@ def test_the_border_starts_at_6000_and_the_nethers_at_one_eighth():
 def test_the_launch_opens_pvp_and_the_nether_at_once_and_keeps_the_end_closed():
     data = rules.rules_files()
     launch = data["data/monkey/function/rules/launch.mcfunction"]
-    assert "gamerule" not in launch and "schedule" not in launch
+    assert "gamerule pvp true" in launch and "gamerule allow_entering_nether_using_portals true" in launch
+    assert "schedule" not in launch and "false" not in launch       # a test launch of old can't leave them shut
+    load = data["data/monkey/function/rules/load.mcfunction"]
+    assert f"scoreboard players reset #launching {rules.OBJECTIVE}" in load
     assert f"scoreboard players set #end_open {rules.OBJECTIVE} 0" in launch
     assert "data/monkey/function/rules/launch_over.mcfunction" not in data
     second = data["data/monkey/function/rules/second.mcfunction"]

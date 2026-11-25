@@ -18,7 +18,7 @@ def test_it_ships_off_and_only_late_first_joins_of_a_launched_season_get_it():
     assert "execute unless score #on ck matches 1 run return 0" in first
     assert "execute unless score #launched rw.day matches 1 run return 0" in first
     assert f"execute unless score #week rc.week matches {catchup.KIT_WEEK}.. run return 0" in first
-    assert catchup.KIT_WEEK == 4   # after week 3
+    assert catchup.KIT_WEEK == 3   # the season plan's week 4 (docs/relaunch/season-1.md)
     # Only rule 26's first join calls it: anyone seen in test play or pre-season is never a first join again.
     rules_first = fn("first_join", "rules")
     assert rules_first.index("run return 0") < rules_first.index("function monkey:catchup/first_join")

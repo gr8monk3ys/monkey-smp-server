@@ -39,6 +39,7 @@ STACK = (
     "chunky",                         # world pre-generation
     "worldedit", "worldguard",        # spawn and safe-zone regions
     "griefprevention",                # player land claims
+    "coreprotect",                    # block logging and rollback for griefing reports
     "placeholderapi",                 # placeholders for chat, tab, scoreboards and the store
     "viaversion", "viabackwards",     # Java clients a version ahead or behind the server
     "bluemap",                        # the web map (spawn only, no player or claim markers)

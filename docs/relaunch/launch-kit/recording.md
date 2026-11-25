@@ -72,8 +72,8 @@ and tell me. I'll cut a 45 s 16:9 trailer plus 30 s and 15 s vertical cut-downs.
 
 - Music: `marketing/music.py`, 100 BPM, a bar every 2.4 s. Cut on the downbeat. Trailer: 19 bars = 45.6 s with the
   impact (CTA) on the end card and the lift (crash, doubled hats) on shot 8's heart steal.
-- Text cards: the teaser's styles (Pixelify Sans in bone with an ink outline, gold plate for SEASON 1, heart red
-  only for hearts and PvP). Times, dates and ports in Atkinson Bold, because Pixelify's 5 and 2 read badly.
+- Text cards: the teaser's styles (Jersey 15 in bone with an ink outline, gold plate for SEASON 1, heart red
+  only for hearts and PvP). Times, dates and ports in Atkinson Bold, so they match the rest of the kit.
 - Opener and end card: reuse `teaser.py`'s heart snatch (first 2.4 s) and end card (last 4.8 s).
 - Slow motion: only shot 8, 50 % from the 60 fps source, for the heart transfer.
 - Vertical cut: crop 9:16 around the action, keep text inside x 60 to 940 and y 220 to 1500 (TikTok, Reels and

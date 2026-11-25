@@ -53,10 +53,12 @@ INK = rgb("#1a1f23")
 # --- Fonts (OFL; see README.md for the download) ---------------------------------------------------
 @cache
 def display(size):
-    """Pixelify Sans at weight 700."""
-    f = ImageFont.truetype(str(FONTS / "PixelifySans[wght].ttf"), size)
-    f.set_variation_by_axes([700])
-    return f
+    """Press Start 2P, scaled so a line sets about as wide as the old Pixelify Sans 700 at `size`.
+
+    Pixelify Sans was dropped because its B reads as a G, its C as an O and its Z as a 2; Jersey 15
+    was tried next, but its K reads as an H and its V as a U. Press Start 2P keeps every letter apart.
+    """
+    return ImageFont.truetype(str(FONTS / "PressStart2P-Regular.ttf"), round(size * 0.6))
 
 
 @cache
@@ -88,7 +90,7 @@ OBBBBO
 """
 
 S1_GLYPHS = {
-    "S": ["XXX", "X..", "XXX", "..X", "XXX"],
+    "S": [".XXX", "X...", ".XX.", "...X", "XXX."],  # rounded, so it can't read as a 5
     "1": ["XX", ".X", ".X", ".X", ".X"],
 }
 
@@ -138,9 +140,9 @@ def _stepped(d, x, y, w, h, cell, color):
 
 
 def s1_badge(d, x0, y0, cell, label="S1"):
-    """Stone tab, ink outline, ink pixel letters. 10 x 9 of its own cells."""
-    d.rectangle([x0, y0, x0 + 10 * cell - 1, y0 + 9 * cell - 1], fill=INK)
-    d.rectangle([x0 + cell, y0 + cell, x0 + 9 * cell - 1, y0 + 8 * cell - 1], fill=STONE)
+    """Stone tab, ink outline, ink pixel letters. 11 x 9 of its own cells."""
+    d.rectangle([x0, y0, x0 + 11 * cell - 1, y0 + 9 * cell - 1], fill=INK)
+    d.rectangle([x0 + cell, y0 + cell, x0 + 10 * cell - 1, y0 + 8 * cell - 1], fill=STONE)
     x = x0 + 2 * cell
     for ch in label:
         glyph = S1_GLYPHS[ch]
@@ -158,7 +160,9 @@ def wordmark(text, cell, fill=BONE2, top=BONE, extrude=LEAF1):
     """The pixel wordmark from logo.py: ink outline, one-cell green extrusion, lighter top half."""
     cells, width = logo.text_cells(text)
     cells = {(x + 1, y + 1) for x, y in cells}
-    depth = logo.grow(cells, [(0, 1)]) - cells
+    # Extrude one cell down, except where that would close a one-cell notch (the gap in K's arms),
+    # which made MONKEY read as MONHEY at banner sizes.
+    depth = {(x, y) for x, y in logo.grow(cells, [(0, 1)]) - cells if (x, y + 1) not in cells}
     shape = cells | depth
     ring = logo.grow(shape, logo.NEIGHBOURS) - shape
     im = Image.new("RGBA", ((width + 2) * cell, 10 * cell), (0, 0, 0, 0))

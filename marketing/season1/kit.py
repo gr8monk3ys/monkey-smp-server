@@ -48,7 +48,7 @@ def date_plate(d, cx, cy, text, font, fill=GOLD, fg=INK):
 
 
 def date_font(size):
-    # Pixelify's 5 reads as an S (DESIGN.md), so anything with a time or a port uses Atkinson Bold.
+    # Anything with a time or a port uses Atkinson Bold, whose digits can't be misread at a glance.
     return art.body(size)
 
 
@@ -57,9 +57,9 @@ def text_stack(d, cx, top, width, scale=1.0, tagline=True):
     y = top
     if tagline:
         for line, color in (("SURVIVE, TRADE,", BONE), ("STEAL HEARTS.", HEART)):
-            f = art.fit(art.display, "STEAL HEARTS.", width, int(96 * scale))
+            f = art.fit(art.display, "SURVIVE, TRADE,", width, int(96 * scale))  # the longer line
             art.outlined(d, (cx, y + f.size // 2), line, f, color)
-            y += int(f.size * 1.08)
+            y += int(f.size * 1.6)  # f.size is the cap height in Press Start 2P
         y += int(14 * scale)
     f = art.fit(date_font, DATE, int(width * 0.84), int(46 * scale))
     box = date_plate(d, cx, y + f.size // 2 + 6, DATE, f)
@@ -117,9 +117,9 @@ def announce(size):
     y += lock.height + int(H * 0.02)
     f = art.display(int(W * 0.075))
     art.outlined(d, (W // 2, y + f.size // 2), "MONKEY SEE,", f, BONE)
-    y += int(f.size * 1.1)
+    y += int(f.size * 1.6)
     art.outlined(d, (W // 2, y + f.size // 2), "MONKEY STEAL.", f, HEART)
-    y += int(f.size * 1.5)
+    y += int(f.size * 2.0)
     f = art.fit(date_font, DATE, int(W * 0.8), int(W * 0.05))
     box = date_plate(d, W // 2, y + f.size // 2, DATE, f)
     y = box[3] + int(H * 0.03)
@@ -134,7 +134,7 @@ def join(d, cx, top, width, size):
     """Stone address plaque: Java and Bedrock lines."""
     lines = [("JAVA", art.JAVA), ("BEDROCK", f"{art.BEDROCK}  port {art.BEDROCK_PORT}")]
     f = art.fit(art.body, lines[1][1], int(width * 0.72), size)
-    lab = art.display(int(f.size * 0.9))
+    lab = art.body(int(f.size * 0.8))
     lh = int(f.size * 1.7)
     box = (cx - width // 2, top, cx + width // 2, top + lh * 2 + f.size)
     art.plate(d, box, STONE, cut=max(3, f.size // 4))
@@ -164,12 +164,14 @@ def thumb_overlay(title="STEAL HEARTS", sub="SEASON 1", red=True):
         d.rectangle([0, x, edge, x + step - 1], fill=SHADE + (255,))
         d.rectangle([edge, x, edge + 10, x + step - 1], fill=INK + (255,))
     words = title.split()
-    f = art.display(150 if max(len(w) for w in words) <= 6 else 120)
+    nominal = 150 if max(len(w) for w in words) <= 6 else 120
     y = 120
     for i, w in enumerate(words):
         color = HEART if (red and i == len(words) - 1) else GOLD if i == len(words) - 1 else BONE
-        art.outlined(d, (36, y), w, art.fit(art.display, w, panel_w - 60, f.size), color, anchor="lm", width=8)
-        y += int(f.size * 0.95)
+        f = art.fit(art.display, w, panel_w - 60, nominal)
+        art.outlined(d, (36, y), w, f, color, anchor="lm", width=8)
+        y += int(f.size * 1.5)  # f.size is the cap height in Press Start 2P
+    y += 10
     sf = art.display(54)
     box = (36, y - 10, 36 + sf.getbbox(sub)[2] + 48, y + 66)
     art.plate(d, box, GOLD, cut=6)

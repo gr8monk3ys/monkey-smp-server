@@ -30,10 +30,18 @@ BAR = music.BAR
 TEASER_BARS = 10  # 24 s
 
 
+SAFE_W = 860  # widest a vertical line may run: x 70 to 930 around CX, clear of the app buttons
+
+
 # --- Layers ---------------------------------------------------------------------------------------
 @cache
-def words(text, size, color, font="display", outline=True):
-    f = art.display(size) if font == "display" else art.body(size)
+def words(text, size, color, font="display", outline=True, max_w=SAFE_W):
+    """A line of text as a layer, shrunk if needed so it never runs past the safe width."""
+    make = art.display if font == "display" else art.body
+    f = make(size)
+    while size > 12 and f.getbbox(text)[2] - f.getbbox(text)[0] > max_w:
+        size -= 2
+        f = make(size)
     pad = max(6, size // 8)
     bb = f.getbbox(text, stroke_width=pad // 2 if outline else 0)
     im = Image.new("RGBA", (bb[2] - bb[0] + 2 * pad, bb[3] - bb[1] + 2 * pad), (0, 0, 0, 0))
@@ -59,7 +67,7 @@ def gold_plate(text, size):
 def join_plaque(width):
     lines = [("JAVA", art.JAVA), ("BEDROCK", art.BEDROCK), ("PORT", art.BEDROCK_PORT)]
     f = art.fit(art.body, art.BEDROCK, int(width * 0.92), 56)
-    lab = art.display(int(f.size * 0.7))
+    lab = art.body(int(f.size * 0.55))  # small labels: Atkinson, which stays crisp at this size
     lh = int(f.size * 1.25)
     h = int(f.size * 0.8) + (lh + int(lab.size * 1.1)) * 2 + lh
     im = Image.new("RGBA", (width, h), (0, 0, 0, 0))
@@ -72,6 +80,7 @@ def join_plaque(width):
         y += int(lab.size * 1.1)
         d.text((x, y), value, font=f, fill=INK)
         y += lh
+    y += int(f.size * 0.3)  # breathing room: the port's tall digits sit beside a short label
     d.text((x, y), "BEDROCK PORT", font=lab, fill=INK)
     d.text(
         (x + lab.getbbox("BEDROCK PORT")[2] + int(f.size * 0.6), y + lab.size // 2),
@@ -79,7 +88,7 @@ def join_plaque(width):
         font=f,
         fill=INK,
         anchor="lm",
-    )  # Atkinson digits: Pixelify's 2 and 5 are ambiguous
+    )  # Atkinson digits: unambiguous at a glance
     return im
 
 

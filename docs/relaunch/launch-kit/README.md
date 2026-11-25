@@ -32,7 +32,7 @@ Needs Python 3.11+ with Pillow, numpy and scipy, and ffmpeg.
 
 ```sh
 mkdir -p marketing/season1/fonts && cd marketing/season1/fonts
-curl -L -o "PixelifySans[wght].ttf" "https://raw.githubusercontent.com/google/fonts/main/ofl/pixelifysans/PixelifySans%5Bwght%5D.ttf"
+curl -LO https://raw.githubusercontent.com/google/fonts/main/ofl/jersey15/Jersey15-Regular.ttf
 curl -LO https://raw.githubusercontent.com/google/fonts/main/ofl/atkinsonhyperlegible/AtkinsonHyperlegible-Bold.ttf
 curl -LO https://raw.githubusercontent.com/google/fonts/main/ofl/atkinsonhyperlegible/AtkinsonHyperlegible-Regular.ttf
 cd ../../..
@@ -47,7 +47,7 @@ Addresses and the handle come from environment variables, so a new domain is a r
 
 ## Credits and licences
 
-- **Fonts:** Pixelify Sans (Stefie Justprince) and Atkinson Hyperlegible (Braille Institute), both SIL Open Font
+- **Fonts:** Jersey 15 (Sarah Cadigan-Fried) and Atkinson Hyperlegible (Braille Institute), both SIL Open Font
   Licence 1.1, from google/fonts. Free for commercial use.
 - **Music:** synthesised from scratch by `marketing/music.py` (additive saws and synthesised drums, no samples), so
   there is nothing to license and no Content ID claim to fear. If you'd rather use a trending TikTok sound, add it in

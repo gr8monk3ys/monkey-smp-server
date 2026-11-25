@@ -43,6 +43,8 @@ STACK = (
     "placeholderapi",                 # placeholders for chat, tab, scoreboards and the store
     "viaversion", "viabackwards",     # Java clients a version ahead or behind the server
     "bluemap",                        # the web map (spawn only, no player or claim markers)
+    "chunkspawnerlimiter",            # caps animals and villagers per chunk, so breeding farms can't grow without end
+    "fancynpcs",                      # the spawn NPCs (the Guide and the Town Crier), replacing Easy NPC
     "lifestealz", "pvpmanager",       # rules and seasons: hearts, combat tag, newbie protection
     "economyshopgui", "donut-auction",  # economy: the shop and the auction house (DonutAuctionHouse, unlisted)
     "tebex", "ultracosmetics", "deluxetags",  # store: checkout, cosmetics and the /tags picker
@@ -52,7 +54,7 @@ GEYSERMC_STACK = ("floodgate",)
 # Fallbacks other workstreams may switch to, checked for the same Minecraft version and reported, never pinned:
 # the economy's money plugin if EssentialsX has no release by mid-January, and the auction house to switch to if
 # DonutAuctionHouse's Modrinth files go away.
-CANDIDATES = ("openeco", "zauctionhouse", "fancynpcs", "villageroptimizer", "antivillagerlag", "chunkspawnerlimiter")
+CANDIDATES = ("openeco", "zauctionhouse")
 
 
 def pin_paper(manifest: dict, mc: str, upstream: Upstream) -> dict:

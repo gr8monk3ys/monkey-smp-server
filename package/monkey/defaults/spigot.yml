@@ -14,6 +14,9 @@ world-settings:
       water: 8
       villagers: 16
       flying-monsters: 48
+      # Villagers outside that range don't tick at all, instead of ticking slowly: a trading hall or farm in
+      # front of a player still works, an abandoned one elsewhere costs nothing (what ServerCore did on Fabric).
+      tick-inactive-villagers: false
     entity-tracking-range:
       players: 64
       animals: 48

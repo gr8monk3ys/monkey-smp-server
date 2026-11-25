@@ -1,4 +1,4 @@
-# Defeat 15 fortress mobs: done for this week. One more toward the challenge skins (rw.challenges).
+# Defeat 15 fortress mobs: done for this week. One more challenge done in all seasons (rw.challenges).
 scoreboard players set @s rc.fortress.done 1
 scoreboard players add @s rw.challenges 1
 playsound minecraft:entity.player.levelup player @s ~ ~ ~ 0.6 1.2

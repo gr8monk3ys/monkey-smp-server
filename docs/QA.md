@@ -12,7 +12,7 @@ Commands for staff, in full: [ADMIN.md](ADMIN.md).
 
 Test on your own copy of the server, never on the live VPS world, and never before launch. Several of these
 steps happen only once per world. `function monkey:rules/launch` on the live world before 5 PM on launch day
-would open Founder's Circlet's window early and wipe the test play it's meant to wipe at the real launch, and
+would open the launch weekend's window early and wipe the test play it's meant to wipe at the real launch, and
 the real launch wouldn't open the window again. `challenges/sync` clears the week's progress, and
 `firsts/clear` reopens every Server First. On a test copy all of that is fine; that's what it's for.
 
@@ -55,7 +55,7 @@ docs/ADMIN.md, "Spawn NPCs" (never typed on our server yet: note any the plugin 
   look at you.
 - [ ] **As a plain player, inside spawn's region**, right-click each one: a dialog opens.
 - [ ] The Guide's buttons open the first week's steps (with "Talk to the Guide" ticked), this week's
-  challenges, the standings and the wardrobe; the links button opens the Monkey SMP links.
+  challenges, the standings and your progress; the links button opens the Monkey SMP links.
 - [ ] The Crier's dialog names this week's Saturday event.
 - [ ] Hitting them or shooting them does nothing.
 
@@ -81,8 +81,8 @@ On the test server only, as admin, run `function monkey:rules/launch`.
 
 - [ ] Chat announces the launch; the Nether and PvP are closed and open again an hour later. Nobody gets grace
   in that hour (rule 23).
-- [ ] `scoreboard players get #founder.open rw.day` says 1: Founder's Circlet's window is open.
-- [ ] After 10 minutes online, `/trigger wardrobe` shows Founder's Circlet unlocked.
+- [ ] `scoreboard players get #founder.open rw.day` says 1: the launch weekend's window is open.
+- [ ] After 10 minutes online, `scoreboard players get NAME rw.launch` says 1.
   (`scoreboard players get NAME rw.launchtime` counts the seconds.)
 - [ ] After the hour, an account joining for the first time gets 48 hours of grace; `/trigger end_grace` ends it
   early, and it says so.

@@ -8,7 +8,7 @@
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "Hi, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your wardrobe."
+      "contents": "Hi, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your progress."
     }
   ],
   "columns": 2,
@@ -54,7 +54,7 @@
       }
     },
     {
-      "label": "Your wardrobe",
+      "label": "Your progress",
       "width": 150,
       "action": {
         "type": "minecraft:run_command",

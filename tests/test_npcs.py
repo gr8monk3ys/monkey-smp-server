@@ -102,13 +102,13 @@ def test_every_dialog_a_button_shows_exists():
 def test_the_guide_keeps_its_buttons():
     labels = {b["label"]: b["action"] for b in DIALOGS["guide"]["actions"]}
     assert list(labels) == ["The short rules", "Find a faction", "Your first week", "This week's challenges",
-                            "Faction standings", "Your wardrobe"]
+                            "Faction standings", "Your progress"]
     assert labels["The short rules"] == npcs.show("monkey:npcs/guide/rules")
     assert labels["Find a faction"] == npcs.show("monkey:npcs/guide/factions")
     assert labels["Your first week"] == npcs.trigger("quest")
     assert labels["This week's challenges"] == npcs.trigger("challenges")
     assert labels["Faction standings"] == npcs.trigger("standings")
-    assert labels["Your wardrobe"] == npcs.trigger("wardrobe")
+    assert labels["Your progress"] == npcs.trigger("wardrobe")
     for page, link in (("guide/rules", "Discord and links"), ("guide/factions", "Open the Discord")):
         page_labels = {b["label"]: b["action"] for b in DIALOGS[page]["actions"]}
         assert page_labels == {link: npcs.show(npcs.LINKS_DIALOG), "Back": npcs.show("monkey:npcs/guide")}

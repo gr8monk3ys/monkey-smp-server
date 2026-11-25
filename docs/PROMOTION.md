@@ -45,7 +45,9 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 > Not an official Minecraft server. Not approved by or associated with Mojang or Microsoft.
 
 Advertise only what runs today. Weekly events, standings, drops and the wardrobe have been off with their data
-packs since 6 November; add them back here when they're on again. The Official Minecraft Server List removes
+packs since 6 November; add them back here when they're on again. The wardrobe's skins (the Founder skin
+included) are retired for the relaunch and won't come back: don't advertise them, and cut the "[needs the
+Founder skin]" lines from the drafts below. Cosmetics come from UltraCosmetics (docs/RETENTION.md). The Official Minecraft Server List removes
 servers whose description doesn't match the game. Keep the Mojang line and the email: the Usage Guidelines
 want the disclaimer on listings, not only on the site, and an email rather than a chat link as the contact.
 

@@ -1,102 +1,65 @@
-# Keeping players: the wardrobe, events and the numbers
+# Keeping players: the counters, events and the numbers
 
 Monkey SMP earns its keep from monthly passes, so the number that matters most is how many players
 come back. This page covers what rewards staying, the commands the store and staff run, and how to
 read retention from the server logs.
 
-## The wardrobe
+## Cosmetics: the wardrobe skins are retired
 
-`/trigger wardrobe` opens a clickable menu of skins for swords and helmets, on three pages: skins earned in
-game; pass and supporter skins; and this week's challenges with the challenge and founder skins (links at the
-bottom switch; `/trigger challenges` opens the third). A skin changes only how the
-item looks (its model, and on a helmet the worn look). Damage, armor, durability and enchantments
-never change, and `tests/test_wardrobe.py` fails the build if one ever does. This follows Mojang's
-rule that what players pay for must be cosmetic, and it keeps the server fair: the same pass price
-for everyone, no advantage for sale.
+Until the relaunch, `/trigger wardrobe` gave out cosmetic skins for swords and helmets (the Wayfarer, the
+Oathblades, Founder's Edge and Circlet, the holiday and season skins, the Pathfinder blade and the rest). Their
+models lived in the client pack's resource pack. The relaunch (Paper 26.3, Season 1 in February 2027) has
+players join with plain vanilla Java or Bedrock clients, with no client pack and no server resource pack, so a
+skinned item would show a missing model. The owners retired the skins: none can be unlocked or put on, and
+`tools/wardrobe.py` no longer writes any.
 
-Skins unlock by playing, by coming to events, by doing the weekly challenges, by staying, by bringing
-friends, or by supporting:
+Cosmetics now come from **UltraCosmetics**, a plugin in the store plan (gadgets, pets, particles;
+`docs/relaunch/plugin-stack.md`). It needs nothing on the player's side. What players pay for stays cosmetic
+only, as Mojang's rules require: the same pass price for everyone, no advantage for sale.
 
-![Every wardrobe skin: blades, helm icons and the helms as worn](img/wardrobe.png)
+## The counters
 
-| Skin | Kind | Unlocks at | Score |
-| --- | --- | --- | --- |
-| Wayfarer | blade | 3 days played | `rw.days 3` |
-| Laurel | helm | 7 days played | `rw.days 7` |
-| Emberfang | blade | 10 hours played | `rw.hours 10` |
-| Frostbite | blade | 15 days played | `rw.days 15` |
-| Starfall | blade | 30 days played | `rw.days 30` |
-| Verdant | blade | 1 friend invited | `rw.invites 1` |
-| Horned Helm | helm | 3 friends invited | `rw.invites 3` |
-| Rallier | blade | 3 events attended | `rw.events 3` |
-| Plumed Helm | helm | 10 events attended | `rw.events 10` |
-| Gravelight | blade | came to Hallowtide (late October) | `rw.hallowtide 1` |
-| Midwinter Cap | helm | came to Midwinter (late December) | `rw.midwinter 1` |
-| Solstice | blade | came to Midsummer (late June) | `rw.midsummer 1` |
-| Trailblazer | blade | 3 weekly challenges | `rw.challenges 3` |
-| Vanguard Helm | helm | 9 weekly challenges | `rw.challenges 9` |
-| Pinnacle | blade | 18 weekly challenges | `rw.challenges 18` |
-| Pathfinder | blade | finished the first-week quest | `rw.quest 1` |
-| Oathblade I | blade | 1 month of pass | `rw.months 1` |
-| Oathblade II | blade | 2 months of pass | `rw.months 2` |
-| Oathblade III | blade | 3 months of pass | `rw.months 3` |
-| Old Guard | blade | 6 months of pass | `rw.months 6` |
-| Wanderer's Hood | helm | 12 months of pass | `rw.months 12` |
-| Founder's Edge | blade | played in season 1 | `rw.founder 1` |
-| Founder's Circlet | helm | played 10 minutes on Season I's launch weekend | `rw.launch 1` |
-| Twinmoon | blade | played in Season II | `rw.s2 1` |
-| Champion's Helm | helm | in the season champion's faction | `rw.champion 1` |
-| Kindred Band | helm | a referral: a friend bought a pass with your code, or you with theirs | `rw.kin 1` |
-| Lantern | blade | Ember supporter | `rw.tier 1` |
-| Standard | blade | Banner supporter | `rw.tier 2` |
-| Regalia | blade | Crown supporter | `rw.tier 3` |
-| Crown | helm | Crown supporter | `rw.tier 3` |
+The monkey-wardrobe data pack still keeps every retention counter, because the store, staff, the events pack,
+the season carry-over and the tools set or read them. They unlock nothing in game any more:
+
+| Score | What it counts | Set by |
+| --- | --- | --- |
+| `rw.days` | days played (one per UTC day a player is online) | the pack, at their first login of the day |
+| `rw.hours` | hours played, this world and earlier ones | the pack (play time plus `rw.playbase`) |
+| `rw.months` | months of pass bought in total | the store |
+| `rw.tier` | supporter tier: 1 Ember, 2 Banner, 3 Crown, 0 when it lapses | the store |
+| `rw.invites` | friends invited who bought a pass | staff, Front Desk's `/referral` |
+| `rw.kin` | 1 for both players of a referral | Front Desk's `/referral` |
+| `rw.events` | events attended | the events pack (`docs/ADMIN.md`, "Attendance") |
+| `rw.hallowtide`, `rw.midwinter`, `rw.midsummer` | came to that holiday's event | staff, at the event |
+| `rw.challenges` | weekly challenges done, all seasons together | the challenges |
+| `rw.quest` | 1 once the first-week quest is done | the quest |
+| `rw.founder` | 1 for everyone who played while `#season` is 1 | the pack |
+| `rw.launch` | 1 for 10 minutes online on Season I's launch weekend | the pack (see "The launch weekend") |
+| `rw.s2` | 1 for everyone who played while `#season` is 2 | the pack |
+| `rw.champion` | 1 for the season champion's roster | staff, after the finale |
 
 Why these counters:
 
 - **Days played, not streaks.** A day counts when a player is online at any point that UTC day. Streaks
   punish a missed weekend and push people to log in out of guilt; a count only goes up.
-- **Tenure** (`rw.months`) rewards renewing the pass: the Oathblades, the Old Guard and the Wanderer's
-  Hood can't be bought, only kept. The ladder starts at month 1 and steps at 2 and 3, so a new buyer gets
-  something at each early renewal, when most passes lapse, instead of waiting six months. Steps add up:
-  a 2-month pass unlocks the first two at once.
-- **Events attended** (`rw.events`): Rallier at 3 and the Plumed Helm at 10. The events pack counts one
-  per event when staff run `attend` (`docs/ADMIN.md`, "Attendance").
-- **Holidays** (Gravelight, Midwinter Cap, Solstice) come only from being at that holiday's event
-  (`docs/SEASONS.md`, "Holidays"). They are never sold: no store command sets these scores, and
-  `tests/test_wardrobe.py` fails if one does. A skin missed this year comes back at next year's event.
-- **Weekly challenges** (`rw.challenges`): Trailblazer at 3 (one full week), the Vanguard Helm at 9 and
-  Pinnacle at 18 (six full weeks of a 12-week season, or more weeks with one or two done). The count
-  carries to the next season, so a player who missed some weeks keeps climbing. See "Weekly challenges"
-  below.
-- **Founder.** Everyone who plays while `#season` is 1 gets Founder's Edge for good. End season 1 when
-  the first wave is in (see below) so that the edge stays rare. If nobody does, the next season's carry
-  sets `#season` to 2 in the new world.
-- **Launch weekend.** Founder's Circlet is for being there at the start: 10 minutes online between the
-  launch (Saturday 7 November 2026, 5 PM Pacific) and the end of Sunday 8 November, Pacific. It is never
-  sold and never comes back. See "The launch weekend" below.
-- **Later seasons.** Each season after the first has its own blade, as Founder's Edge is Season I's:
-  Twinmoon for everyone who plays while `#season` is 2 (`SEASON_SKINS` in `tools/wardrobe.py`; the name is a
-  placeholder until the owners pick one). It is hidden from the menu's locked list until Season II, so
-  Season I's menu is unchanged, and it never comes back.
-- **Champion.** The Champion's Helm is for everyone in the season champion's faction when the finale
-  ended. Staff set `rw.champion` after the finale (`docs/SEASONS.md`, "Ending a season", step 4); it is
-  never sold, and like every `rw.*` score it carries into the next season. Its locked line also waits for
-  Season II.
+- **Tenure** (`rw.months`) is what renewing the pass builds; Season Wrapped and the numbers below read it,
+  and nobody's spending is shown to other players.
+- **Events, holidays, challenges, the quest and the launch weekend** are earned by showing up. No store
+  command sets these scores, and `tests/test_wardrobe.py` fails if one does.
+- **Founder.** Everyone who plays while `#season` is 1 is a founder for good. If nobody ends season 1, the
+  next season's carry sets `#season` to 2 in the new world.
 - **Invites** line up with the invite ladder on the site (1, 3 and 5 friends).
-- **Referrals.** The Kindred Band is for both players of a referral: a member's `/referral` code (Front Desk,
-  the Discord bot) on a new buyer's Tebex purchase. It also counts one `rw.invites` for the code's owner, so
-  referrals climb the invite ladder too. Never sold and no discount: the bot reads the code from the
-  purchase's webhook and gives the skin, nothing else. It has no locked line in the menu, so it shows only to
-  players who own it. Off until the owner turns it on (discord-server, `docs/TEBEX_WEBHOOK.md`, "Referrals").
-- **Supporter tiers** get the flashiest skins, because they pay for the server.
+- **Referrals.** A member's `/referral` code (Front Desk, the Discord bot) on a new buyer's Tebex purchase sets
+  `rw.kin` for both and counts one `rw.invites` for the code's owner. Never sold and no discount. Off until the
+  owner turns it on (discord-server, `docs/TEBEX_WEBHOOK.md`, "Referrals").
+
+`/trigger wardrobe` (any value, so old links still work) and `/trigger challenges` now open one menu: days and
+hours played, events attended and challenges done, this week's challenges, the weekly server goal, and the
+first-week quest's progress for a player taking it. The Guide's "Your progress" button opens it too.
 
 `monkey-day.timer` starts a new day at midnight UTC (`docs/LIVE.md`, step 7), one per UTC date even when it
 retries. Without it, nobody's day count moves.
-
-When the store, staff or an event raises a player's months, events or a holiday score, they get an
-"Unlocked ..." line in chat within a second, or at their next login if they were offline. Days played,
-weekly challenges and the launch weekend announce themselves the same way.
 
 All these scores live in the world, so a new season's world would start them at zero. The season-end
 runbook carries them over, hours played included, along with the supporter, title and champion teams
@@ -108,10 +71,11 @@ below, `champion_s1` and so on (`docs/SEASONS.md`, "The season champion").
 Three challenges a week, one of each kind: **solo** (mining, fishing, mobs, trading and the like),
 **faction** (an event, a village raid, Nether and trial-chamber fights, easier with friends but done by each
 player) and **explore** (loot chests and structures). Together they take about one to three hours of normal
-play. Players see them with `/trigger challenges` (or the third wardrobe page): each one with the player's
+play. Players see them with `/trigger challenges` (or `/trigger wardrobe`): each one with the player's
 progress, and a hover that says what counts. The first time a player is online in a new week, chat lists
 the three. Finishing one plays a sound and says so in chat, and every finished challenge adds one to
-`rw.challenges` for the skins above.
+`rw.challenges`, the count in all seasons. It used to unlock the challenge skins; since they were retired, a
+challenge gives nothing but the count.
 
 A new week starts every **Monday at 12 AM Pacific** (Sunday night, after the Saturday event). The
 challenges rotate in a fixed order from a pool in `tools/challenges.py`, so anyone can see what is coming:
@@ -141,8 +105,9 @@ and deploys keep it. Without the timer the week never turns over.
 
 ### The first week
 
-A player new this season gets a short quest: five steps that walk them from spawn out into the world, with
-the **Pathfinder** blade at the end (`tools/quest.py`). `/trigger quest`, or the Guide's "Your first week",
+A player new this season gets a short quest: five steps that walk them from spawn out into the world
+(`tools/quest.py`). Finishing it sets `rw.quest`; it used to give the Pathfinder blade, and since the skins were
+retired it gives nothing else. `/trigger quest`, or the Guide's "Your first week",
 shows the steps, each with a hover that says what counts:
 
 | Step | Done when | Counted by |
@@ -159,8 +124,8 @@ players taking part. A step once done stays done. The faction and claim steps ca
 Who gets it: a player first seen after the launch with no play carried from an earlier season
 (`rw.playbase`) and at most 3 days played. Everyone else is marked as not taking part and never hears of it,
 so veterans get no spam. Chat says so once when it starts, and once a day for their first 7 days played while
-it is unfinished. **[Hide]** stops the reminders (`/trigger quest` brings it back). The Pathfinder's locked
-line in the wardrobe shows only to players taking part.
+it is unfinished. **[Hide]** stops the reminders (`/trigger quest` brings it back). The menu
+(`/trigger wardrobe`) shows how many steps a player taking part has done.
 
 ### The weekly server goal
 
@@ -177,12 +142,13 @@ launch. Staff switches: `docs/SEASONS.md`, "Switches".
 
 ### The launch weekend
 
-Founder's Circlet is the one skin tied to a date. `function monkey:rules/launch` (rule 23, the launch hour)
+The launch weekend marks who was there at the start (`rw.launch`); it used to give Founder's Circlet, a helm
+skin, and now gives only the mark. `function monkey:rules/launch` (rule 23, the launch hour)
 opens the window, and it closes by itself at the end of Sunday, Pacific: 31 hours of game time from the
 Season I launch, kept to the wall clock by `monkey-week.timer` (game time stops while the server is empty). Every
 second a player is online while it is open counts, so players who join hours after the launch hour get it
-the same way; at 10 minutes in all it unlocks. Their seconds online (`rw.launchtime`) are not carried; the
-skin (`rw.launch`) is. It works in Season I only. Staff fallbacks are in `docs/ADMIN.md`, "Weekly
+the same way; at 10 minutes in all it is set. Their seconds online (`rw.launchtime`) are not carried; the
+mark (`rw.launch`) is. It works in Season I only. Staff fallbacks are in `docs/ADMIN.md`, "Weekly
 challenges".
 
 ## Commands for the store and staff
@@ -206,8 +172,6 @@ Run these over RCON (`docs/LIVE.md`, "Day to day"). A Tebex package runs the sam
 | A referral (Front Desk posts these in the mod channel, or sends them itself) | `scoreboard players set BUYER rw.kin 1`, `scoreboard players set NAME rw.kin 1`, `scoreboard players add NAME rw.invites 1` |
 | That purchase is refunded or charged back (only if staff decide to) | `scoreboard players remove NAME rw.invites 1`, `scoreboard players reset BUYER rw.kin` (the referrer keeps theirs) |
 | Season 1 ends (once) | `scoreboard players set #season rw.day 2` |
-
-Skins already applied stay on the item when a tier expires; the menu just stops offering locked ones.
 
 ### Name colors and titles
 
@@ -252,8 +216,7 @@ say in gameplay isn't cosmetic. Every pass holder votes on the season's twist (d
 ## What else keeps people playing
 
 - **The first hour.** Most players who leave do so on day one. Greet new names in chat and in
-  Discord, give them a faction to join, and point them at `/trigger wardrobe`, where Wayfarer is
-  3 days away.
+  Discord, give them a faction to join, and point them at `/trigger quest` and `/trigger challenges`.
 - **A weekly rhythm and seasons.** One event a week in a fixed slot, a big moment every two to three
   weeks, and 12-week seasons with a finale and a fresh world: see `docs/SEASONS.md`.
 - **Comebacks.** Reach out while a cancelled pass is still running, not after it has lapsed (below). A
@@ -357,4 +320,4 @@ for paying the server.
 | 10% | 10 | $43.30 | 3 |
 
 Cutting churn from 25% to 10% is worth as much as more than doubling the new players you find each
-month. That is why the wardrobe rewards days played and tenure, not purchases.
+month. That is why the counters reward days played and tenure, not purchases.

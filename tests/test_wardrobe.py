@@ -1,6 +1,5 @@
 import datetime as dt
 import json
-import struct
 from pathlib import Path
 
 import challenges as challenges_module
@@ -8,28 +7,15 @@ import rcon
 import wardrobe
 from repo import REPO
 
-
-def test_trigger_values_are_unique_and_clear_of_the_menu_values():
-    values = [v for v, _, _ in wardrobe.skins()]
-    assert len(values) == len(set(values))
-    assert min(values) > max(wardrobe.MENUS)
-    assert len({s["id"] for _, _, s in wardrobe.skins()}) == len(values)
+FN = "data/monkey/function/wardrobe"
 
 
-def test_tenure_rewards_the_first_three_months():
-    """A new buyer should unlock something at each of the first renewals, not wait half a year."""
-    months = {s["unlock"][1] for _, _, s in wardrobe.skins() if s["unlock"][0] == "rw.months"}
-    assert {1, 2, 3} <= months
-
-
-def test_event_and_holiday_skins_are_never_sold():
-    """Attendance, holiday, challenge and launch-weekend skins are earned by showing up. No store command may set
-    their scores."""
-    earned = {s["unlock"][0] for _, _, s in wardrobe.skins()} - wardrobe.SOLD
-    assert "rw.events" in earned and set(wardrobe.HOLIDAYS) <= earned
-    assert {"rw.challenges", "rw.launch"} <= earned
-    events = sorted(s["unlock"][1] for _, _, s in wardrobe.skins() if s["unlock"][0] == "rw.events")
-    assert events == [3, 10]
+def test_store_commands_never_set_an_earned_score():
+    """Attendance, holiday, challenge, quest and launch-weekend scores are earned by showing up. No store command
+    may set them: the store sets only the pass months and the supporter tier."""
+    earned = set(wardrobe.SCORES) - wardrobe.SOLD - {"rw.days", "rw.playbase", "rw.invites"}
+    assert {"rw.events", "rw.challenges", "rw.launch", "rw.quest", wardrobe.KIN, wardrobe.CHAMPION} <= earned
+    assert set(wardrobe.HOLIDAYS) <= earned
     store = [line for line in (REPO.root / "docs" / "RETENTION.md").read_text(encoding="utf-8").splitlines()
              if "{username}" in line]
     assert store
@@ -37,29 +23,53 @@ def test_event_and_holiday_skins_are_never_sold():
         assert not any(objective in line for objective in earned), line
 
 
-def test_every_unlock_score_exists_and_announces_itself():
+def test_every_retention_score_exists():
     data = wardrobe.datapack_files()
-    load = data["data/monkey/function/wardrobe/load.mcfunction"]
-    second = data["data/monkey/function/wardrobe/second.mcfunction"]
-    for _, _, s in wardrobe.skins():
-        objective, n = s["unlock"]
-        assert f"scoreboard objectives add {objective} " in load
-        if objective in wardrobe.NOTIFY:
-            notice = data[f"data/monkey/function/wardrobe/notice/{objective[3:]}.mcfunction"]
-            assert f"matches {n}.. unless score @s {objective}.seen matches {n}.. run tellraw" in notice
-            assert f"{objective}.seen" in load and f"function monkey:wardrobe/notice/{objective[3:]}" in second
+    load = data[f"{FN}/load.mcfunction"]
+    second = data[f"{FN}/second.mcfunction"]
+    for objective in [*wardrobe.SCORES, "rw.hours", "rw.play", "rw.launchtime"]:
+        assert f"scoreboard objectives add {objective} " in load, objective
+    for objective in wardrobe.SCORES:
+        assert f"scoreboard players add @a {objective} 0" in second, objective
 
 
 def test_hours_include_play_carried_from_earlier_worlds():
-    second = wardrobe.datapack_files()["data/monkey/function/wardrobe/second.mcfunction"].splitlines()
+    second = wardrobe.datapack_files()[f"{FN}/second.mcfunction"].splitlines()
     play = second.index("execute as @a run scoreboard players operation @s rw.hours = @s rw.play")
     assert second[play + 1] == "execute as @a run scoreboard players operation @s rw.hours += @s rw.playbase"
     assert second[play + 2] == "scoreboard players operation @a rw.hours /= #hour rw.const"
 
 
+def test_founders_and_later_seasons_are_marked_from_the_season_number():
+    second = wardrobe.datapack_files()[f"{FN}/second.mcfunction"]
+    assert "execute if score #season rw.day matches 1 run scoreboard players set @a rw.founder 1" in second
+    assert "execute if score #season rw.day matches 2 run scoreboard players set @a rw.s2 1" in second
+    for objective in (*wardrobe.SEASON_MARKS, wardrobe.CHAMPION, wardrobe.KIN):
+        assert objective not in wardrobe.SOLD
+
+
+def test_a_new_day_counts_a_day_played_and_says_nothing():
+    new_day = wardrobe.datapack_files()[f"{FN}/new_day.mcfunction"]
+    body = [line for line in new_day.splitlines() if not line.startswith("#")]
+    assert body == ["scoreboard players add @s rw.days 1", "scoreboard players operation @s rw.lastday = #today rw.day"]
+
+
+def test_the_skins_are_retired():
+    """The relaunch dropped the client resource pack the skins' models were in, so a skinned item would show a
+    missing model. Nothing in the pack may change how an item looks, and no skin or reset is left to call."""
+    data = wardrobe.datapack_files()
+    assert not [p for p in data if "/item_modifier/" in p or "/tags/item/" in p]
+    assert not [p for p in data if p.startswith((f"{FN}/skin/", f"{FN}/notice/", f"{FN}/reset"))]
+    assert not [p for p in data if p.startswith(f"{FN}/menu_support")]
+    for path, text in data.items():
+        assert "item_model" not in text and "asset_id" not in text and "item modify" not in text, path
+        assert ".seen" not in text or path.startswith("data/monkey/function/challenges/"), path
+    assert not hasattr(wardrobe, "resourcepack_files") and not hasattr(wardrobe, "skins")
+
+
 def chat_lines(data: dict, function: str) -> int:
-    """How many chat lines a function prints for one player: a tellraw is a line (plus one per newline in it), a
-    skin's owned/locked pair is one, and a function it calls counts what that prints."""
+    """How many chat lines a function prints for one player, at most: a tellraw is a line (plus one per newline in
+    it), the other half of an if/unless pair is not counted, and a function it calls counts what that prints."""
     shown = 0
     for line in data[f"data/monkey/function/{function}.mcfunction"].splitlines():
         if line.startswith("execute unless ") and " run tellraw @s " in line:
@@ -73,110 +83,28 @@ def chat_lines(data: dict, function: str) -> int:
     return shown
 
 
-def test_each_menu_page_fits_open_chat():
-    """Open chat shows 20 lines. Each page prints a header (two lines), the counts, one title per item kind, one
-    line per skin and two footer lines; the challenges page also prints one line per challenge that is on, and
-    the weekly server goal's line (counted by chat_lines: goal/line)."""
+def test_every_trigger_value_opens_the_one_menu_and_it_fits_open_chat():
+    """Open chat shows 20 lines. The menu prints a header (two lines), the counts, one line per challenge that is
+    on, the weekly server goal's line and the first-week quest's line (an over-count: both of its halves)."""
     data = wardrobe.datapack_files()
-    use = data["data/monkey/function/wardrobe/use.mcfunction"]
-    pages = {1: "menu", wardrobe.MENU_SUPPORT: "menu_support", wardrobe.MENU_CHALLENGES: "menu_challenges"}
-    assert set(pages) == set(wardrobe.MENUS)
-    for number, name in pages.items():
-        assert f"matches {number} run function monkey:wardrobe/{name}" in use
-        menu = data[f"data/monkey/function/wardrobe/{name}.mcfunction"]
-        on_page = [(kind, s) for _, kind, s in wardrobe.skins() if wardrobe.page(s["unlock"]) == number]
-        for _, s in on_page:
-            assert f'"text":"[{s["name"]}]"' in menu
-        challenges = len(challenges_module.KINDS) if number == wardrobe.MENU_CHALLENGES else 0
-        server_goal = 1 if number == wardrobe.MENU_CHALLENGES else 0
-        assert chat_lines(data, f"wardrobe/{name}") + challenges == (
-            2 + 1 + challenges + server_goal + len({kind for kind, _ in on_page}) + len(on_page) + 2)
-        assert chat_lines(data, f"wardrobe/{name}") + challenges <= 20, name
-        for other in set(pages) - {number}:   # every page links to the other two
-            assert f'"command":"/trigger wardrobe set {other}"' in menu.splitlines()[-1]
-    assert sum(1 for _ in wardrobe.skins()) == sum(
-        1 for _, _, s in wardrobe.skins() if wardrobe.page(s["unlock"]) in pages)
+    use = [line for line in data[f"{FN}/use.mcfunction"].splitlines() if not line.startswith("#")]
+    assert use == ["function monkey:wardrobe/menu", "scoreboard players set @s wardrobe 0",
+                   "scoreboard players enable @s wardrobe"]
+    menu = data[f"{FN}/menu.mcfunction"]
+    for called in ("challenges/lines", "goal/line", "quest/status"):
+        assert f"function monkey:{called}" in menu
+    challenges = len(challenges_module.KINDS)
+    assert chat_lines(data, "wardrobe/menu") + challenges <= 20
+    for o in wardrobe.COUNTED:
+        assert f'"objective":"{o}"' in menu
 
 
-def test_the_challenge_and_launch_skins_are_on_the_challenges_page():
+def test_the_challenges_trigger_opens_the_same_menu():
     data = wardrobe.datapack_files()
-    for _, _, s in wardrobe.skins():
-        if s["unlock"][0] in ("rw.challenges", "rw.launch"):
-            assert wardrobe.page(s["unlock"]) == wardrobe.MENU_CHALLENGES
-    assert "function monkey:challenges/lines" in data["data/monkey/function/wardrobe/menu_challenges.mcfunction"]
     assert "function monkey:wardrobe/menu_challenges" in data["data/monkey/function/challenges/use.mcfunction"]
+    assert "function monkey:wardrobe/menu" in data[f"{FN}/menu_challenges.mcfunction"].splitlines()
     assert "execute as @a[scores={challenges=1..}] run function monkey:challenges/use" in data[
-        "data/monkey/function/wardrobe/tick.mcfunction"]
-
-
-def test_the_challenge_ladder():
-    """Skins at 3, 9 and 18 challenges: one week of all three, then three weeks, then six (of a 12-week
-    season). rw.challenges carries over, so a later season adds to it."""
-    ladder = sorted((s["unlock"][1], kind) for _, kind, s in wardrobe.skins() if s["unlock"][0] == "rw.challenges")
-    assert ladder == [(3, "blade"), (9, "helm"), (18, "blade")]
-    assert "rw.challenges" in wardrobe.NOTIFY and "rw.challenges" in wardrobe.SCORES
-
-
-def test_the_launch_weekend_skin():
-    launch = [(kind, s) for _, kind, s in wardrobe.skins() if s["unlock"][0] == "rw.launch"]
-    assert [(kind, s["id"], s["unlock"][1]) for kind, s in launch] == [("helm", "founders_circlet", 1)]
-    assert "rw.launch" in wardrobe.NOTIFY
-    assert wardrobe.how_to_unlock(("rw.launch", 1)) == "Played on Season I's launch weekend"
-
-
-def test_the_docs_list_every_skin():
-    doc = (REPO.root / "docs" / "RETENTION.md").read_text(encoding="utf-8")
-    for _, kind, s in wardrobe.skins():
-        objective, n = s["unlock"]
-        assert f"| {s['name']} | {kind} |" in doc and f"`{objective} {n}`" in doc, s["name"]
-
-
-def test_every_skin_is_wired_end_to_end():
-    data = wardrobe.datapack_files()
-    res = wardrobe.resourcepack_files()
-    use = data["data/monkey/function/wardrobe/use.mcfunction"]
-    for value, kind, s in wardrobe.skins():
-        sid = s["id"]
-        assert f"matches {value} run function monkey:wardrobe/skin/{sid}" in use
-        assert f"monkey:wardrobe/{sid}" in data[f"data/monkey/function/wardrobe/skin/{sid}.mcfunction"]
-        assert f"data/monkey/item_modifier/wardrobe/{sid}.json" in data
-        assert f"assets/monkey/items/{sid}.json" in res
-        assert f"assets/monkey/models/item/{sid}.json" in res
-        assert png_size(res[f"assets/monkey/textures/item/{sid}.png"]) == (16, 16)
-        if kind == "helm":
-            assert f"assets/monkey/equipment/{sid}.json" in res
-            assert png_size(res[f"assets/monkey/textures/entity/equipment/humanoid/{sid}.png"]) == (64, 32)
-
-
-def test_skins_change_the_look_and_nothing_else():
-    """Mojang's usage guidelines: what supporters get must be cosmetic. A skin may only touch the model,
-    and on a helmet the worn look; never damage, armor, durability or enchantments."""
-    data = wardrobe.datapack_files()
-    modifiers = {path for path in data if "/item_modifier/" in path}
-    # Every skin, the new ones included, goes through this check: no skin may apply anything but a modifier.
-    assert {f"data/monkey/item_modifier/wardrobe/{s['id']}.json" for _, _, s in wardrobe.skins()} <= modifiers
-    for path, text in data.items():
-        if "/function/" in path:
-            used = commands(text)
-            assert not used & {"enchant", "attribute"} and "item replace" not in text, path
-        if path not in modifiers:
-            continue
-        modifier = json.loads(text)
-        assert modifier["function"] == "minecraft:set_components"
-        components = modifier["components"]
-        assert set(components) <= {"minecraft:item_model", "minecraft:equippable"}, path
-        if "minecraft:equippable" in components:
-            assert set(components["minecraft:equippable"]) == {"slot", "asset_id", "equip_sound"}
-            assert components["minecraft:equippable"]["slot"] == "head"
-
-
-def test_reset_covers_every_item_a_skin_can_go_on():
-    data = wardrobe.datapack_files()
-    blades = json.loads(data["data/monkey/tags/item/wardrobe_blades.json"])["values"]
-    helms = json.loads(data["data/monkey/tags/item/wardrobe_helms.json"])["values"]
-    for item in blades + helms:
-        name = item.split(":")[1]
-        assert f"data/monkey/item_modifier/wardrobe/reset/{name}.json" in data
+        f"{FN}/tick.mcfunction"]
 
 
 def commands(function: str) -> set[str]:
@@ -194,10 +122,9 @@ def commands(function: str) -> set[str]:
     return used - {"return"}
 
 
-def test_challenge_and_launch_rewards_are_scores_and_skins_only():
-    """What the weekly challenges and the launch weekend give is a score (and through it a skin): never an item,
-    an effect, experience or a stat. Their functions run only these commands, and their advancements reward only
-    a function."""
+def test_challenge_and_launch_rewards_are_scores_only():
+    """What the weekly challenges and the launch weekend give is a score: never an item, an effect, experience or a
+    stat. Their functions run only these commands, and their advancements reward only a function."""
     data = wardrobe.datapack_files()
     allowed = {"scoreboard", "tellraw", "playsound", "advancement", "function", "execute", "time"}
     found = [p for p in data
@@ -213,9 +140,11 @@ def test_challenge_and_launch_rewards_are_scores_and_skins_only():
         assert "display" not in advancement, path   # no toast, no chat line, nothing in the advancements screen
 
 
-def png_size(data: bytes) -> tuple[int, int]:
-    assert data[:8] == b"\x89PNG\r\n\x1a\n"
-    return struct.unpack(">II", data[16:24])
+def test_the_launch_weekend_names_no_skin():
+    data = wardrobe.datapack_files()
+    for name in ("open", "open_for", "close", "second"):
+        assert "Circlet" not in data[f"{FN}/founder/{name}.mcfunction"], name
+    assert "rw.launch 1" in data[f"{FN}/founder/second.mcfunction"]
 
 
 MIDNIGHT = dt.datetime(2026, 10, 28, tzinfo=rcon.UTC)
@@ -275,49 +204,3 @@ def test_the_day_keeps_its_first_try_in_systemds_state_directory(monkeypatch):
     assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given == [Path("/var/lib/monkey-day/pending")]
     monkeypatch.delenv("STATE_DIRECTORY")
     assert wardrobe.main(["send", "--docker", "/d"]) == 0 and given[-1] is None   # run by hand: no limit
-
-
-def test_season_skins_come_from_the_season_number_and_keep_every_trigger_value():
-    """Season II's blade is everyone's who plays while #season is 2, as Founder's Edge is Season I's. It and the
-    champion's helm were added at the end of their lists, so no Season I skin's trigger value moved."""
-    data = wardrobe.datapack_files()
-    second = data["data/monkey/function/wardrobe/second.mcfunction"]
-    assert "execute if score #season rw.day matches 2 run scoreboard players set @a rw.s2 1" in second
-    values = {s["id"]: value for value, _, s in wardrobe.skins()}
-    assert (values["pinnacle"], values["twinmoon"]) == (118, 119)
-    assert (values["founders_circlet"], values["champions_helm"]) == (208, 209)
-    for objective in (*wardrobe.SEASON_SKINS, wardrobe.CHAMPION):
-        assert objective not in wardrobe.SOLD and objective in wardrobe.NOTIFY
-        assert wardrobe.page((objective, 1)) == wardrobe.MENU_CHALLENGES
-    assert wardrobe.how_to_unlock(("rw.s2", 1)) == "Played during Season II"
-    assert wardrobe.earned_for((wardrobe.CHAMPION, 1)) == "winning the season"
-
-
-def test_later_season_skins_stay_out_of_season_ones_menu_until_owned():
-    """Season I's menu doesn't change: a skin with shown_from shows locked only from that season, and owned
-    whenever its score says so (the champion's helm is set in Season I's world, after the finale)."""
-    menu = wardrobe.datapack_files()["data/monkey/function/wardrobe/menu_challenges.mcfunction"].splitlines()
-    gated = [s for _, _, s in wardrobe.skins() if "shown_from" in s]
-    assert {s["id"] for s in gated} == {"twinmoon", "champions_helm"}
-    for s in gated:
-        objective, n = s["unlock"]
-        locked = [line for line in menu if line.startswith(f"execute unless score @s {objective} matches {n}.. ")]
-        owned = [line for line in menu if line.startswith(f"execute if score @s {objective} matches {n}.. run ")]
-        assert len(locked) == 1 and f" if score #season rw.day matches {s['shown_from']}.. run tellraw" in locked[0]
-        assert len(owned) == 1
-
-
-def test_the_kindred_band_is_a_referrals_and_shows_only_when_owned():
-    """Front Desk's /referral gives both players rw.kin 1 (and the referrer one rw.invites). The helm was added at
-    the end of HELMS, so no trigger value moved; it has no locked line, so nobody's menu changes until they own
-    it, and it announces itself to a player who is online when the bot or staff set it."""
-    values = {s["id"]: value for value, _, s in wardrobe.skins()}
-    assert values["kindred_band"] == 210 and max(values.values()) < 300
-    assert wardrobe.KIN not in wardrobe.SOLD and wardrobe.KIN in wardrobe.NOTIFY
-    assert wardrobe.page((wardrobe.KIN, 1)) == wardrobe.MENU_CHALLENGES
-    data = wardrobe.datapack_files()
-    menu = data["data/monkey/function/wardrobe/menu_challenges.mcfunction"].splitlines()
-    assert [line for line in menu if line.startswith("execute unless score @s rw.kin ")] == []
-    assert len([line for line in menu if line.startswith("execute if score @s rw.kin matches 1.. run tellraw")]) == 1
-    assert "scoreboard players add @a rw.kin 0" in data["data/monkey/function/wardrobe/second.mcfunction"]
-    assert "for a referral. " in data["data/monkey/function/wardrobe/notice/kin.mcfunction"]

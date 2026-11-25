@@ -13,9 +13,9 @@ all it does is in this pack, so a release that changes what they say or do needs
 
 The Guide's talk function counts the first-week quest's "Talk to the Guide" step (rq.guide, tools/quest.py) and
 opens its dialog. The dialog's buttons run what players already reach with /trigger (challenges, standings,
-wardrobe, quest), as the player, and open the pause menu's Monkey SMP links (tools/rules.py). The Crier picks
-this week's dialog by the player's `rc.seen`, which the challenges set to the week number (tools/challenges.py),
-so it changes on Monday with the challenges.
+wardrobe, which is now the progress menu, and quest), as the player, and open the pause menu's Monkey SMP links
+(tools/rules.py). The Crier picks this week's dialog by the player's `rc.seen`, which the challenges set to the
+week number (tools/challenges.py), so it changes on Monday with the challenges.
 """
 import datetime as dt
 import json
@@ -78,7 +78,7 @@ SIEGES = (f"Outpost sieges, {siege_hours()}: capture an outpost while one is on 
 
 # Dialog text: a blank line ("\n\n") starts a new paragraph, "\n" a new line in one.
 GUIDE_TEXT = ("Hi, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your "
-              "first week's steps, this week's challenges, the faction standings and your wardrobe.")
+              "first week's steps, this week's challenges, the faction standings and your progress.")
 # The short rules (package/monkey/defaults/codeofconduct/en_us.txt), cut to what a new player needs first.
 RULES_TEXT = "\n".join((
     "The short rules:",
@@ -135,7 +135,7 @@ def crier_text(week: int) -> str:
 # name -> (what the name tag says, its color, what it does). The name is FancyNpcs' NPC name too.
 NPCS = {
     "guide": ("Guide", "gold", "Greets new players: the short rules, factions, the first week's steps, challenges, "
-                               "standings and the wardrobe."),
+                               "standings and your progress."),
     "crier": ("Town Crier", "yellow", "Announces this week's Saturday event and the next one."),
 }
 CLICK = "RIGHT_CLICK"   # FancyNpcs' trigger for a right-click
@@ -218,7 +218,7 @@ def guide_dialogs() -> dict[str, dict]:
             button("Your first week", trigger("quest")),
             CHALLENGES_BUTTON,
             button("Faction standings", trigger("standings")),
-            button("Your wardrobe", trigger("wardrobe")),
+            button("Your progress", trigger("wardrobe")),
         ]),
         "guide/rules": dialog("guide", RULES_TEXT, [button("Discord and links", show(LINKS_DIALOG)), back]),
         "guide/factions": dialog("guide", FACTIONS_TEXT, [button("Open the Discord", show(LINKS_DIALOG)), back]),

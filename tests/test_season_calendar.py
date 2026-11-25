@@ -159,7 +159,7 @@ def test_the_launch_weekend_is_saturday_5_pm_to_the_end_of_sunday_pacific():
 
 def test_the_launch_is_the_sites_launch_time():
     # site/config.json's LAUNCH_AT (the countdown) is the website's copy of the launch: moving the calendar
-    # without it would open the Founder's Circlet window at another time than the site says.
+    # without it would open the launch weekend's window at another time than the site says.
     assert site_links.launch_time(site_links.links()["LAUNCH_AT"]) == season_calendar.LAUNCH
 
 

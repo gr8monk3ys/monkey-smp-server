@@ -22,6 +22,28 @@ are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server.
 - Domain terms: `GLOSSARY.md`. Decisions not to re-litigate: `docs/adr/`.
 - Never commit worlds, jars, datapacks or a live `server.properties` (it holds the RCON password).
 
+## How we work
+
+`.claude/settings.json` loads four plugins from the `lorenzos-claude-code`
+marketplace (gr8monk3ys/skills), in every clone and every cloud session. Use
+them every time, not only when one happens to trigger:
+
+- **Matt Pocock's skills** (`mattpocock-skills`) for the engineering process:
+  `grilling` before building something new, `tdd` for any behaviour change,
+  `diagnosing-bugs` for bugs, `code-review` before calling work done and `pr`
+  for the PR body. Prefer them over overlapping skills from other plugins.
+- **Impeccable** for any UI, layout, styling or on-screen copy: run
+  `/impeccable critique` or `/impeccable audit` on it before you're done.
+- **Ponytail** is always on: the simplest code that works, no unrequested
+  abstractions or dependencies. Run `ponytail-review` on the diff before
+  opening a PR and cut what the task didn't need.
+- **Tests:** `./scripts/verify` is the fast gate (`tools/checks.py` minus the
+  site's build and browser checks: ruff, pytest, validate, datapacks, `dash -n`,
+  Pester where PowerShell is installed, the staff page, then the site's lint,
+  typecheck, depcruise and unit tests). A hook runs it before a session can
+  finish and won't let it end while it fails. Still run `make check` before a
+  PR, as "Checks" says. Never skip, weaken or delete a test to get it green.
+
 ## Working agreements
 
 - Feature freeze for the rest of Season I: fixes, monitoring and simplification only. New gameplay packs and new

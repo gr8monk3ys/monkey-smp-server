@@ -1,3 +1,5 @@
 name: builder
+permissions:
+- weight.900
 parents:
 - default

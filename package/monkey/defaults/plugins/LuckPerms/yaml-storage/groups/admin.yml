@@ -1,5 +1,6 @@
 name: admin
 permissions:
+- weight.1000
 - '*'
 - invview.can_modify
 parents:

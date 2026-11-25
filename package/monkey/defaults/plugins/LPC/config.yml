@@ -1,0 +1,4 @@
+# Monkey SMP - first-run chat format, copied once by the installer. LPC fills in every key left out from its
+# own defaults. {prefix} and {suffix} are the player's LuckPerms prefix and suffix (ranks), and
+# %deluxetags_tag% is the tag picked with /tags (DeluxeTags, through PlaceholderAPI); it is empty without one.
+chat-format: "%deluxetags_tag%{prefix}{name}{suffix}&r: {message}"

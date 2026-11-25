@@ -5,7 +5,6 @@ from fake_world import FakeWorld
 from nbt_writer import nbt
 
 import map_border
-import rules
 from repo import REPO
 
 DEFAULT_MAPS = REPO.defaults / map_border.MAPS
@@ -24,9 +23,10 @@ def server(tmp_path, borders: dict, maps=DEFAULT_MAPS):
     return tmp_path
 
 
+SEASON_ONE_BORDER = 5000   # the modded Season I's starting border, which the shipped masks still fit
 SEASON_ONE = {
-    "minecraft:overworld": (*SPAWN, rules.BORDER),
-    "minecraft:the_nether": (*NETHER_CENTRE, rules.BORDER / 8),
+    "minecraft:overworld": (*SPAWN, SEASON_ONE_BORDER),
+    "minecraft:the_nether": (*NETHER_CENTRE, SEASON_ONE_BORDER / 8),
     "minecraft:the_end": (0.0, 0.0, map_border.NO_BORDER),
 }
 

@@ -363,7 +363,8 @@ def test_every_generated_pack_uses_26_2s_shapes():
     per criterion field and a "functions" list per loot entry. 26.3's shapes fail the whole pack's load (seen in a
     boot), and a bare object in a criterion field can parse as a predicate that matches anything."""
     old_keys = {"test", "loot_tables", "type_specific", "modifier"}
-    kinds = ("advancement", "loot_table", "predicate", "item_modifier", "enchantment")
+    # No generated pack defines an enchantment since the relaunch dropped PvP grace and the Fire Aspect ban.
+    kinds = ("advancement", "loot_table", "predicate", "item_modifier")
     not_a_type = re.compile(r"minecraft:(.*_of|inverted|entity_.*|value_check|int_value_check|survives_explosion"
                             r"|location_check|set_.*|copy_.*|fill_player_head)")
 

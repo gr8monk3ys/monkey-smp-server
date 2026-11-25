@@ -13,7 +13,7 @@
   "actions": [
     {
       "label": "Discord",
-      "tooltip": "Factions, events and tickets",
+      "tooltip": "Events, teams and tickets",
       "width": 140,
       "action": {
         "type": "minecraft:open_url",

@@ -25,6 +25,8 @@ install, so a config shipped there is the starting point and the live file is th
 | ViaVersion | `viaversion` | Java clients newer than the server can join | platform | 5.12.3 |
 | ViaBackwards | `viabackwards` | Java clients older than the server can join | platform | 5.12.3 |
 | BlueMap | `bluemap` | web map, fitted to the world border, no player markers | platform | 5.29 |
+| ChunkSpawnerLimiter | `chunkspawnerlimiter` | caps animals and villagers per chunk (breeding farms, villager lag) | platform | 5.1.0 |
+| FancyNpcs | `fancynpcs` | the spawn NPCs' bodies (the Guide, the Town Crier); their behaviour stays in `monkey-npcs` | platform | 2.12.1 |
 | LifeStealZ | `lifestealz` | hearts: lose one on death to a player, gain one on a kill | rules | 2.21.1 |
 | PvPManager | `pvpmanager` | combat tag, newbie protection, blocks /home and /tpa in combat | rules | 4.0.30 |
 | EconomyShopGUI | `economyshopgui` | the server shop | economy | 7.3.4 |
@@ -45,4 +47,7 @@ Not pinned yet, because nothing on Modrinth fits:
 - **Pinned from Modrinth only, or not at all.** The installer downloads every jar and checks its hash (ADR-0002), and `tools/entries.py` only lets a jar come from Modrinth's CDN. A plugin that is only on SpigotMC or a vendor site can't be installed that way. That ruled out HuskClaims (GriefPrevention instead) and the first fallback economy picks. Floodgate is the one exception: its Paper jar is published only on GeyserMC's own download API (ADR-0010).
 - **Geyser and the beta channel.** Every other plugin is pinned from Modrinth's `release` channel only. GeyserMC publishes every Geyser build as `beta`, including the ones it recommends, so `entries.PRERELEASE_OK` lets Geyser take beta builds.
 - **Chat.** EssentialsX Chat doesn't read PlaceholderAPI, so DeluxeTags' `%deluxetags_tag%` wouldn't show. LPC formats chat from LuckPerms prefixes and suffixes and reads PlaceholderAPI, with no injector plugin.
-- **Dropped from the Fabric server:** Simple Voice Chat (needs a client mod), Open Parties and Claims (GriefPrevention), Easy NPC, Ledger, ServerCore, Lithium and Krypton (Paper's own patches cover them), the Fabric Tebex build, and the Fabric-only content mods. `docs/relaunch/platform.md` has the whole map.
+- **Villager lag without Purpur.** The relaunch stays on Paper. Villagers are covered by Paper and Spigot settings (`docs/relaunch/platform.md`, "Performance") and ChunkSpawnerLimiter. VillagerOptimizer and AntiVillagerLag were checked and have no 26.3 release.
+- **NPCs.** FancyNpcs replaces Easy NPC. It has a 26.3 release on Modrinth. Only admins get `fancynpcs.*`, because an NPC's console command runs as the server.
+- **Cosmetics.** The old wardrobe skins are retired: their models reached players only through the client pack, and a server resource pack would need a converted pack for Bedrock and a download prompt at join. UltraCosmetics covers cosmetics for Season 1, with no resource pack.
+- **Dropped from the Fabric server:** Simple Voice Chat (needs a client mod), Open Parties and Claims (GriefPrevention), Ledger, ServerCore, Lithium and Krypton (Paper's own patches cover them), the Fabric Tebex build, and the Fabric-only content mods. `docs/relaunch/platform.md` has the whole map.

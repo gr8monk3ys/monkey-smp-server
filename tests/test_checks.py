@@ -110,7 +110,7 @@ def test_a_ready_pr_boots_what_its_change_can_break():
     assert plan("tools/standings.py", "tests/test_standings.py", "docs/ADMIN.md") == {"linux": False, "windows": False}
     # the required boots (Windows, then the hosting bundle it makes) run for anything that ships: data packs,
     # mod patches and configs, launchers, the Docker files
-    for shipped in ("package/monkey/datapacks/monkey-drops/pack.mcmeta", "package/monkey/patches/no-lunge/pack.mcmeta",
+    for shipped in ("package/monkey/datapacks/monkey-drops/pack.mcmeta", "package/monkey/defaults/spigot.yml",
                     "package/monkey/defaults/config/openpartiesandclaims-server.toml", "package/start.sh",
                     "package/docker/Dockerfile", "package/monkey/manifest.json"):
         assert plan(shipped) == {"linux": True, "windows": True}, shipped

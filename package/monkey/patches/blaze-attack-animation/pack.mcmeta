@@ -1,7 +1,0 @@
-{
-  "pack": {
-    "description": "Adds a new attack animation for blazes when shooting fireballs",
-    "min_format": 107,
-    "max_format": 107
-  }
-}

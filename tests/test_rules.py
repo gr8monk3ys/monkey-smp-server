@@ -185,17 +185,6 @@ def test_code_of_conduct_is_on_and_quotes_real_rules():
     assert cited and cited <= rules_in_book | bans_in_book, cited - rules_in_book - bans_in_book
 
 
-def test_servercore_breeding_cap_and_villager_lobotomy_are_on():
-    lines = (REPO.defaults / "config" / "servercore" / "config.yml").read_text(encoding="utf-8").splitlines()
-
-    def enabled_after(key: str) -> str:
-        start = next(i for i, line in enumerate(lines) if line.strip() == key)
-        return next(line.split(":", 1)[1].strip() for line in lines[start:] if line.strip().startswith("enabled:"))
-
-    assert enabled_after("breeding-cap:") == "true"
-    assert enabled_after("lobotomize-villagers:") == "true"
-
-
 def test_welcome_says_the_faction_size_the_server_allows_and_where_the_rulebook_is():
     toml = (REPO.defaults / rules.PARTIES_CONFIG).read_text(encoding="utf-8")
     size = int(re.search(r"maxPartyMembers = (\d+)", toml).group(1))

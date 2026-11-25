@@ -26,7 +26,7 @@ GriefPrevention (claims) and WorldGuard (spawn and market) are in the platform's
 - **`/withdrawheart`** turns hearts into Heart items, but only hearts above the starting 10. An alt that never
   won a fight has nothing to give, so alts can't be farmed.
 - **Combat logging** (leaving within 20 seconds of a hit) kills you and takes a heart. If the last hit came
-  in the 5 seconds before you left, the attacker gets a heart too.
+  in the 5 seconds before you left, it takes a second heart, which goes to the attacker.
 
 ## Heart items
 

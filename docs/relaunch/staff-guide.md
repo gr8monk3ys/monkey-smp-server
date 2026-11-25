@@ -82,8 +82,8 @@ On the Saturdays in `season-1.md`, at the start of the event, an admin:
 
 1. Announce it in game and on the Discord 30 minutes ahead.
 2. Run `/revive *` from the console. Everyone eliminated can join again with 3 hearts.
-3. Don't revive banned players; check the ban list first and re-eliminate any that were revived
-   (`/lifestealz eliminate <player>`).
+3. Banned players are revived too, and that's fine: a revive doesn't lift a ban, and a ban never costs
+   hearts, so they come back with 3 when the ban ends.
 
 ## Appeals
 

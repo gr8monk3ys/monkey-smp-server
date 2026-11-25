@@ -56,9 +56,11 @@ lava isn't lost.
 - Claims of anyone away 30 days are removed and their base becomes raidable. An eliminated player is out a day
   at most, so elimination never costs anyone their base.
 
-LifeStealZ has no timer of its own, so the 24-hour return is a small server timer (a follow-up to this PR): every
-10 minutes it reads LifeStealZ's player data, notes who is at 0 hearts and since when, and runs
-`/revive <player>` once 24 hours have passed. It stops at the finale.
+LifeStealZ has no timer of its own, so the 24-hour return is a server timer (`tools/timed_return.py`, run by
+`deploy/monkey-return.timer`): every 10 minutes it reads LifeStealZ's player data, notes who is at 0 hearts and
+since when, and runs `/lifestealz:revive <player>` once 24 hours have passed. It stops at the finale. Install it
+on the live server with `sudo sh /srv/monkey/repo/deploy/monkey-return.sh --install`; `--check` shows who is
+out and when each comes back.
 
 ## New players
 

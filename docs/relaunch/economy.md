@@ -40,6 +40,21 @@ DonutAuctionHouse is marked "Unlisted by staff" on Modrinth, so pin it from its 
 (github.com/MeherBenSalem/DonutAuction) rather than Modrinth; and if EconomyShopGUI has no 26.3 build by mid
 January, the price table still applies to any GUI shop, only the generator's output format would change.
 
+**If EssentialsX has no 26.3 release by about 15 Jan 2027**, the money moves to another VaultUnlocked provider,
+because a dev build shouldn't hold everyone's balance:
+
+1. **TheNewEconomy** first. It comes from the same author as VaultUnlocked, so it supports VaultUnlocked natively,
+   and it brings its own `/bal`, `/pay` and `/baltop`.
+2. **CoinsEngine** second. EconomyShopGUI supports it directly (`COINS_ENGINE`), and it registers with Vault for
+   the auction house.
+
+Neither one's 26.3 support has been checked yet, so the platform pin run should check both. Nothing else changes in
+this design. Season 1 starts every balance at $0, so there is nothing to migrate. Three things move with the switch:
+the EconomyShopGUI sections' `economy:` line (still `VAULTUNLOCKED` for TheNewEconomy, `COINS_ENGINE` for
+CoinsEngine), the EssentialsX settings below (starting balance, $0 minimum and the `/pay` minimum move to the new
+plugin's config), and `tools/economy.py supply`, which reads EssentialsX's userdata files and would need a reader for
+the new plugin's storage. EssentialsX itself can stay for homes and teleports, with its economy left unused.
+
 Considered and not picked: zAuctionHouse (free, but lists only up to 1.21.11), ShopGUIPlus (paid, $14.99, lists
 up to 1.21.x), QuickShop or ChestShop player shops (more lag and more grief surface for a first season; the auction
 house covers player selling).

@@ -13,27 +13,18 @@ forwarding needed.
 | Minecraft | Java Edition **26.2** |
 | Server | [Fabric](https://fabricmc.net) (loader pinned in the manifest) |
 | Server mods | 175: Open Parties and Claims, LuckPerms, Ledger, BlueMap, Simple Voice Chat, Dungeons and Taverns, Grand Capitals, Crazy Chambers, Sulfur Caves Plus, Naturalist, Strength SMP, ServerCore, ... |
-| Client pack | 181 mods and 22 resource packs (required to join) |
+| Joining | a plain Java client with no mods, or Bedrock through Geyser ([docs/PLAYERS.md](docs/PLAYERS.md)) |
 | Players | about 10 at full speed on a 2017 desktop CPU, 25 on a current fast one ([measured](docs/ADMIN.md#how-many-players)) |
 
 1.x releases were a Paper 26.1.2 server with Towns & Nations; see [ADR-0005](docs/adr/0005-fabric-with-the-full-mod-list.md).
 
 ## Downloads: who gets what
 
-Every [release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest) has three small files, and
-`SHA256SUMS.txt` with the SHA-256 of each ([docs/PLAYERS.md](docs/PLAYERS.md#check-a-download) says how to check
-a download).
-[docs/SHARING.md](docs/SHARING.md) has copy-paste messages to send with them.
-
-| File | For | |
-|---|---|---|
-| `MonkeySMP-Server-<version>.zip` | the **host** | run the server on Windows, macOS or Linux (or with Docker), or prepare it for an online host |
-| `MonkeySMP-Client-<version>.mrpack` | players using the Modrinth App or Prism Launcher: the recommended way, on every OS | open it with the Modrinth App, or import it into Prism Launcher (it's also inside the player zip, and it's the file `tools/modrinth.py` uploads) |
-| `MonkeySMP-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | double-click `Install for Minecraft Launcher.bat`, then pick "Monkey SMP" in the launcher |
-
-Most players don't need a file: the client pack is also the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
-on Modrinth, which installs in one click in the Modrinth App on every OS and updates itself
-([docs/MODRINTH.md](docs/MODRINTH.md); it goes up once Modrinth's review approves it).
+Every [release](https://github.com/gr8monk3ys/monkey-smp-server/releases/latest) has one file for the **host**,
+`MonkeySMP-Server-<version>.zip`, and `SHA256SUMS.txt` with its SHA-256. It runs the server on Windows, macOS or
+Linux (or with Docker), or prepares it for an online host. Players download nothing from here: they join with
+a plain Minecraft client, Java or Bedrock ([Play on it](#play-on-it)).
+[docs/SHARING.md](docs/SHARING.md) has copy-paste messages to send.
 
 ## Run it on your own computer (Windows, macOS, Linux)
 
@@ -95,14 +86,13 @@ The bundle is built from the official downloads on your own computer, so nothing
 
 ## Play on it
 
-Players need the mods (the server adds blocks, mobs and items). On **every OS** the easiest way is a launcher
-that installs packs: open `MonkeySMP-Client-<version>.mrpack` with the [Modrinth App](https://modrinth.com/app), or
-import it into [Prism Launcher](https://prismlauncher.org). Once Modrinth's review has approved the
-[Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp), both install it from there too. Windows players who'd
-rather keep the normal Minecraft Launcher unzip `MonkeySMP-Player-<version>.zip` and double-click
-**`Install for Minecraft Launcher.bat`**: it installs Fabric and every mod and resource pack into a separate folder
-(downloaded from Modrinth, each file hash-checked) and adds a **Monkey SMP** installation to the launcher. Windows
-warns about the `.bat`, because it isn't signed. Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
+Players need no mods, no modpack and no installer:
+
+- **Java Edition:** **Multiplayer > Add Server**, address `monkeysmp.lscaturchio.xyz`.
+- **Bedrock Edition** (phones, consoles, Windows): **Servers > Add Server**, address
+  `play.monkeysmp.lscaturchio.xyz`, port `19132`.
+
+Step by step: [docs/PLAYERS.md](docs/PLAYERS.md).
 
 Admins: [docs/ADMIN.md](docs/ADMIN.md). The live server: [docs/LIVE.md](docs/LIVE.md), and when something breaks
 there, [docs/RUNBOOK.md](docs/RUNBOOK.md).
@@ -125,14 +115,12 @@ package/                    <- exactly what goes in the release zip
     pwsh.lock               <- the portable PowerShell 7 builds monkey.sh may download, pinned the same way
     defaults/               <- first-run configs (server.properties, server icon, LuckPerms ranks, BlueMap)
     patches/                <- small fixes applied inside downloaded mods
-player/                     <- the player zip: Install for Minecraft Launcher.bat, READ ME.txt, installer
-client/                     <- source of the player modpack (.mrpack) + the pinned Fabric launcher profile
 tools/                      <- maintainer scripts (Python, stdlib only)
 tests/                      <- pytest + Pester unit tests, smoke tests (Windows, Linux, macOS, Docker)
 ```
 
 - **Nothing third-party is committed or re-uploaded.** The release zip is ~100 KB of scripts and configs;
-  jars are fetched from Adoptium, Fabric and Modrinth (PowerShell from Microsoft, and the owner's own mod from its GitHub release, [ADR-0009](docs/adr/0009-our-own-mods-may-be-pinned-from-a-github-release.md)) on the host's machine ([ADR-0002](docs/adr/0002-download-and-verify-instead-of-redistributing.md)).
+  jars are fetched from Adoptium, Fabric and Modrinth (PowerShell from Microsoft) on the host's machine ([ADR-0002](docs/adr/0002-download-and-verify-instead-of-redistributing.md)).
 - **Installs are idempotent.** `monkey.ps1 install` skips files that already match the manifest,
   replaces outdated ones, and removes mods that were dropped from the manifest. Config defaults are only
   copied when the file doesn't exist yet, so the host's edits are never overwritten.
@@ -147,8 +135,7 @@ tests/                      <- pytest + Pester unit tests, smoke tests (Windows,
 |---|---|---|
 | [CI](.github/workflows/ci.yml) | every push and PR | ruff + pytest + manifest validation; PSScriptAnalyzer + Pester; on **Windows**: build the release zip, unzip, export a hosting bundle, install, boot the server, check every mod loads, stop; on **Linux**: the same boot natively with `start.sh` (PowerShell bootstrap included), the release folder with `docker compose`, and the hosting bundle with `docker compose`, each checked to start and shut down cleanly |
 | [CI](.github/workflows/ci.yml) on **macOS** | releases and manual runs | boots the release natively on macOS (left out of pushes and PRs: macOS runners are slow and scarce) |
-| [Release](.github/workflows/release.yml) | tag `v*.*.*` | runs CI (including macOS) and Clean install, then publishes the server zip, player zip, client `.mrpack` and `SHA256SUMS.txt` as a GitHub release (Actions doesn't start in this private repo right now: [docs/MAINTAINING.md](docs/MAINTAINING.md#releasing-without-actions) does it by hand); `tools/modrinth.py` then puts the `.mrpack` on Modrinth |
-| [Clean install](.github/workflows/install.yml) | before every release, manual runs, and PRs that touch `client/`, `player/`, `tools/build.py` or the test | the players' two ways in, from nothing: the `.mrpack` installed into an empty folder as a launcher does (every file downloads and matches its hash), and on **Windows** the player zip's `.bat` run against an empty Minecraft Launcher folder, then every file it left checked |
+| [Release](.github/workflows/release.yml) | tag `v*.*.*` | runs CI (including macOS), then publishes the server zip and `SHA256SUMS.txt` as a GitHub release (Actions doesn't start in this private repo right now: [docs/MAINTAINING.md](docs/MAINTAINING.md#releasing-without-actions) does it by hand) |
 | [Check for updates](.github/workflows/updates.yml) | weekly | re-verifies every pinned download (and that each patch still fits) and opens/updates an issue listing newer Fabric/mod builds |
 
 ## Maintaining

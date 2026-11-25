@@ -625,8 +625,9 @@ don't move.
 - **Decorate in creative** (spawn rules, 22) the week before, and take it down the weekend after.
 - **In the off-season week** it runs anyway, in the locked world.
 
-A holiday skin needs the client pack it shipped in. A player on an older pack still gets the score; the
-skin is waiting in the wardrobe once they update.
+A holiday skin's model is in the wardrobe resource pack, which players don't get since the client pack went
+(docs/ADMIN.md, the wardrobe). The score and the wardrobe entry still work; the look waits on a server resource
+pack.
 
 ### Base of the Month
 
@@ -792,7 +793,7 @@ are the example; change the numbers.
    doesn't want one tells staff; keep their names, one a line, in
    `/srv/monkey/seasons/season-I-opt-out.txt` (create it empty if no one asks).
 2. Open the vote on next season's twist in Discord, and set the next start date.
-3. Pick the next seed: try a few in singleplayer with the modpack, then put the winner in
+3. Pick the next seed: try a few in singleplayer, then put the winner in
    `package/monkey/manifest.json` (`world.seed`) for the release that opens the season, so a fresh install
    matches the live world.
 
@@ -951,7 +952,7 @@ Season I's runbook ("Ending a season") does the switch; this is what is new for 
    table (The Hall of Banners) before the world is moved away.
 
 **The release that opens Season II** (Ending a season, step 9). It ships Twinmoon and the Champion's Helm in
-the client pack, so players update it.
+the wardrobe resource pack, which needs a server resource pack to reach players (docs/ADMIN.md, the wardrobe).
 
 5. Point the tools at Season II: in `tools/season_calendar.py`, set `SEASON = SEASON_II` (challenges, drops,
    omens, the standings and the Sunday recap then count Season II's weeks), and `LAUNCH_AT` in

@@ -94,18 +94,15 @@ On Windows, start with section 1. On a Mac or Linux, start with section 2.
        Without this, everything works except voice chat.
 
 
-5. WHAT FRIENDS INSTALL (everyone, including you)
--------------------------------------------------
-  Plain Minecraft can't join: the server adds new blocks, mobs and items, so every player
-  needs the mods. Send each player the file  MonkeySMP-Player-(version).zip  from the same
-  release as this server. Inside it:
-    - The .mrpack file is the easy way on any computer (Windows, Mac or Linux): they
-      open it with the Modrinth App or import it into Prism Launcher (both free).
-    - "Install for Minecraft Launcher.bat" is for Windows players who keep the normal
-      Minecraft Launcher (they then pick "Monkey SMP" next to the Play button).
-      Windows warns about it, because the file is not signed.
-    - "READ ME.txt" explains it step by step, in plain language.
-  Then they add your server address in Multiplayer > Add Server.
+5. WHAT FRIENDS NEED (everyone, including you)
+----------------------------------------------
+  Nothing to install: they join with Minecraft as it comes, with no mods.
+    - Java Edition (Windows, Mac or Linux): Multiplayer > Add Server, type your server
+      address, Done, Join Server.
+    - Bedrock Edition (phones, tablets, consoles, Windows): Play > Servers > Add Server,
+      your server address and port 19132. Over playit.gg, Bedrock needs one more tunnel:
+      type "UDP" (or "Custom UDP"), local address 127.0.0.1, local port 19132; they type
+      the address and port it gives you.
   Remember to add each player to the guest list (section 4).
 
 

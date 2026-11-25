@@ -13,9 +13,9 @@ web
 
 - **Newcomers first** (owner, 2026-10-26): Minecraft Java players who arrive from creator videos, TikTok and
   server lists (each source has its own join address, `docs/PROMOTION.md`), often on a phone, deciding whether
-  this server is worth $5 a month and an evening's install. Many are under 18 (the server and Discord are
+  this server is worth $5 a month and an evening. Many are under 18 (the server and Discord are
   all-ages; the FAQ asks them to check with a parent before buying).
-- **Members coming back**: players who already have a pass and need the server address, the current modpack,
+- **Members coming back**: players who already have a pass and need the server address,
   the rules, the live map or what changed in the last update, quickly and on any device.
 - Smaller audiences with their own pages: creators looking at creator-code terms (`creators.html`), and anyone
   taking the logo and banners from the press kit.
@@ -25,8 +25,8 @@ web
 Monkey SMP is a small, paid, whitelisted, modded Minecraft Java factions server (Fabric, Minecraft 26.2),
 hosted by Diego and Lorenzo Scaturchio for a crowd that plays evenings, Pacific time, up to 30 online. The site
 exists to turn a curious visitor into a player: explain what the server is, show the world, and take them
-through the three steps (get a pass, install the modpack, connect). For members it is the reference for the
-address, the pack, the rules and the changes. Success is a visitor who joins the Discord or gets a pass, then
+through the steps to join (copy the address and connect, from Java or Bedrock, with no mods). For members it is
+the reference for the address, the rules and the changes. Success is a visitor who joins the Discord or gets a pass, then
 connects without needing help.
 
 ## Positioning
@@ -52,8 +52,8 @@ connects without needing help.
   `address`, `copy`, `countdown`, `launch-label` and `trailer`.
 - While `STORE_URL` is empty, every buy button points at the Discord and the pages say passes are arranged
   there by hand; once the Tebex store opens the "open" copy shows instead.
-- The modpack (`.mrpack`; a launcher downloads about 380 MB with it) and the Windows installer zip are served from `site/public/pack/`,
-  versioned with each release. `site/src/content/changes.mdx` gets a players' entry with each release (tests check its shape).
+- Players need no download: Java joins `monkeysmp.lscaturchio.xyz` with a plain client, Bedrock joins
+  `play.monkeysmp.lscaturchio.xyz` port 19132 (docs/relaunch/platform.md). `site/src/content/changes.mdx` gets a players' entry with each release (tests check its shape).
 - Pages: `/` (the server), `/guide` (how it works: a sidebar of pages, from the first hour to commands by rank and the Discord), `/changes` (what changed), `/creators` (creator codes),
   in `site/src/app/`.
 
@@ -62,8 +62,8 @@ connects without needing help.
 - Prices on the page: Server Pass $5 a month or $8 for 2 months; supporter tiers Ember $3, Banner $7,
   Crown $15 a month; the invite ladder (1, 3, 5, 10 friends). Refund if the pack won't run in the first
   48 hours. Running cost about $50 a month, reported monthly in the Discord.
-- Needs Minecraft Java Edition on a computer (Windows, macOS or Linux) with 16 GB of RAM; no Bedrock, console
-  or mobile play.
+- Needs Minecraft, Java Edition (Windows, macOS or Linux) or Bedrock Edition (phones, tablets, consoles,
+  Windows), with no mods.
 - Mojang's rules: one price for access, no paid advantages; the footer disclaimer ("Not an official Minecraft
   product...") stays on every page.
 - Factual copy (rules, prices, requirements, the launch time) changes only with the owner; design work keeps it.
@@ -90,7 +90,7 @@ connects without needing help.
 ## Product Principles
 
 1. Show the world before explaining it: real screenshots and the trailer carry the pitch.
-2. The way in is always one step away: the address, the pass and the pack are reachable from the first screen.
+2. The way in is always one step away: the address and the pass are reachable from the first screen.
 3. Every claim is true and checkable; staged footage and unopened features are labelled as such.
 4. Fair is the selling point: one price, nothing that buys an edge, and the page says so plainly.
 5. Members' reference material stays scannable: rules, steps and changes read in seconds on a phone.

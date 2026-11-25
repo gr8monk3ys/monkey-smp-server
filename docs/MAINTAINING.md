@@ -6,20 +6,17 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 
 | Path | What | Edited by |
 |---|---|---|
-| `package/monkey/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply`, `tools/pin_github.py` |
+| `package/monkey/manifest.json` | pinned Java (one build per platform), server (Paper or Fabric), plugins or mods, datapacks | `tools/snapshot.py`, `tools/add.py`, `tools/check_updates.py --apply` |
 | `package/monkey/pwsh.lock` | the portable PowerShell 7 build per platform that `monkey.sh` downloads when `pwsh` is missing | by hand (see below) |
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/monkey/monkey.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/monkey/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/monkey/datapacks/monkey-*/`, `client/overrides/resourcepacks/Monkey SMP Wardrobe/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`, `clips.py`, `camera.py`) | `python tools/datapacks.py` |
+| `package/monkey/datapacks/monkey-*/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`, `clips.py`, `camera.py`) | `python tools/datapacks.py` |
 | `package/monkey/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
-| `client/` | the player modpack (`modrinth.index.json` + `overrides/`) | `tools/snapshot.py client` |
-| `client/fabric-profile.json` | Fabric meta's launcher profile for the client pack's Minecraft + loader | `tools/snapshot.py client` or `profile` |
-| `player/` | the player installer for the official Minecraft Launcher (shipped whole in the player zip) | by hand |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
 | `tests/fixtures/patch-golden/expected.json` | the patch rules' answers for one fixed zip and patch, checked by both the Python and the PowerShell tests | `tests/fixtures/patch-golden/record.py` |
 
-The command-line tools (`snapshot`, `check_updates`, `validate`, `build`, `modrinth`) are thin; the knowledge
+The command-line tools (`snapshot`, `check_updates`, `validate`, `build`) are thin; the knowledge
 lives in a few modules they share:
 
 | Module | Owns |
@@ -28,7 +25,6 @@ lives in a few modules they share:
 | `tools/patches.py` | making, storing, applying and checking patches |
 | `tools/upstream.py` | the Upstream catalog (Modrinth, PaperMC, Fabric meta, Adoptium) behind a swappable HTTP adapter |
 | `tools/defaults.py` | the `{{TOKEN}}` placeholders the installer fills into `defaults/server.properties` |
-| `tools/launcher_profile.py` | the Fabric launcher profile: its expected id, checks, and comparing profiles while ignoring their generation time |
 | `tools/repo.py` | where things live in the repo (tools take a `Repo`, so tests can use a temp copy) |
 | `deploy/lib.sh` | what every VPS script in `deploy/` shares, sourced right after `set -eu`: settings from the env file, the log, the server's container (`compose`, `running`, `rcon`), a restart's lifecycle (`players_online`, `warn_players`, `wait_for_live`, and `whole_number`, which stops a script on a WARN_MINUTES or BOOT_TIMEOUT that isn't one), Discord posts (`discord`, the one place that turns a message into a JSON string: quotes, backslashes, newlines, tabs, control characters), the deploy lock (`deploy_lock`), installing a timer's units, and the timed jobs' runner (`timed_job`: `monkey-week.sh`, `monkey-drops.sh`, `monkey-omens.sh`, `monkey-day.sh` and `monkey-sieges.sh` only say their tool, wording and arguments; a job that gave up posts a staff alert). `tests/test_deploy_lib.py` runs it under dash with fake `docker`, `flock`, `python3`, `curl` and `sleep` |
 | `tools/nbt.py` | reading the world's NBT files (level.dat, scoreboard.dat, world_border.dat, Open Parties and Claims' `*.nbt`): `nbt.read(path or bytes)` gives the root compound as plain Python values, gzipped or not. Only `tools/saved_world.py` reads through it; `tests/nbt_writer.py` writes NBT for the tests |
@@ -120,7 +116,6 @@ python tools/check_updates.py            # what's newer (same Minecraft version,
 python tools/check_updates.py --apply    # pin them
 python tools/add.py datapack <slug>...    # add new Modrinth projects at their newest stable build
 python tools/add.py mod <slug>...         # (Fabric) ...or mods; `plugin` on Paper
-python tools/pin_github.py patina-and-chime <tag> <jar>   # our own mod, from its GitHub release (below)
 python tools/validate.py --online        # download + hash-check everything
 ```
 
@@ -144,18 +139,13 @@ either needs checking against the other: its file is named for DnT 5.3.0 while D
 DnT's own packs for its tags to win, which it does on a new world. Its inventory strip does nothing while the Enchantment
 Disabler mod is installed (docs/RULES.md, B18).
 
-`python tools/build.py` writes three files to `dist/` (it fails if `player/` is missing):
+`python tools/build.py` writes the host's `MonkeySMP-Server-X.Y.Z.zip` to `dist/`: `package/` under
+`MonkeySMP-Server/` (the `.sh` and `.command` launchers marked executable). Players need nothing from a release:
+they join with a plain client, Java or Bedrock ([PLAYERS.md](PLAYERS.md)).
 
-| File | For | Contents |
-|---|---|---|
-| `MonkeySMP-Server-X.Y.Z.zip` | the host | `package/` under `MonkeySMP-Server/` (the `.sh` and `.command` launchers marked executable) |
-| `MonkeySMP-Client-X.Y.Z.mrpack` | players with Prism Launcher or the Modrinth App | `client/modrinth.index.json` + `client/overrides/` |
-| `MonkeySMP-Player-X.Y.Z.zip` | players with the official Minecraft Launcher | `player/` under `MonkeySMP-Player-X.Y.Z/`, plus that same `.mrpack` (byte-identical) and `installer/fabric-profile.json` (a copy of `client/fabric-profile.json`) |
-
-All three are reproducible (fixed timestamps, sorted entries) and contain no third-party files. The build also
-writes `dist/SHA256SUMS.txt`, the SHA-256 of each of the three (`tools/checksums.py`), in the form `sha256sum`
-writes, so `sha256sum -c SHA256SUMS.txt` checks a folder of downloads. The release attaches it; players are told how
-to use it in [PLAYERS.md](PLAYERS.md#check-a-download).
+The zip is reproducible (fixed timestamps, sorted entries) and contains no third-party files. The build also
+writes `dist/SHA256SUMS.txt`, the zip's SHA-256 (`tools/checksums.py`), in the form `sha256sum` writes, so
+`sha256sum -c SHA256SUMS.txt` checks a download. The release attaches it.
 
 Then boot it locally on spare ports (doesn't disturb a server already running on this machine):
 
@@ -220,35 +210,12 @@ repo, and the included minutes ran out in October 2026):
 | Checks, build | every push and PR | `tools/checks.py --strict` (ruff, pytest, `validate.py`, `datapacks.py --check`, `dash -n`, Pester on PowerShell 7, the site: bun install, lint, typecheck, unit tests, build, then every built page in Chrome with axe-core), pytest again on Python 3.11 (the oldest the tools support, Debian 12's), `build.py` |
 | Linux (native) | the PRs Windows boots, and ones that touch `tests/docker-smoke.sh`; pushes to `main` that touch any of those; tags; manual runs | unzip, boot with the `.sh` launchers (PowerShell bootstrap included), check every mod and datapack loads, stop |
 | Linux (Docker) | as Linux (native) | the release folder under `docker compose` from `package/docker/`: reaches "Done", shuts down cleanly |
-| Windows | PRs out of draft that touch anything in `package/` (data packs, mod patches and configs, the manifest, `pwsh.lock`, the launchers, `package/docker/`), `player/`, the build (`build.py`, `repo.py`) or the boot tests; tags; manual runs. Required, like the hosting bundle: a PR that changes what ships can't merge without both booting | PSScriptAnalyzer, Pester (with the player installer's), build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
+| Windows | PRs out of draft that touch anything in `package/` (data packs, mod patches and configs, the manifest, `pwsh.lock`, the launchers, `package/docker/`), the build (`build.py`, `repo.py`) or the boot tests; tags; manual runs. Required, like the hosting bundle: a PR that changes what ships can't merge without both booting | PSScriptAnalyzer, Pester, build, unzip, export a hosting bundle, boot with `tests/smoke.ps1`, check every mod loads, stop |
 | Hosting bundle (Docker) | when Windows runs | the Windows-made hosting bundle under its own `docker-compose.yml` (`tests/hosting-smoke.sh`) |
 | macOS | release tags and manual runs | native boot like Linux; start it with **Actions > CI > Run workflow** (or `gh workflow run ci.yml --ref <branch>`) before tagging if you touched the launchers, `monkey.sh`, `pwsh.lock` or Java |
 
 Draft PRs get the checks only. Label a PR `boot` to boot it everywhere (draft or not) from its next push on, or
 start a manual run to boot it now (adding a label doesn't start a run).
-
-The players' side has its own workflow, **Clean install** (`.github/workflows/install.yml`), which proves both
-ways in from nothing with the real downloads (`tools/clean_install.py`):
-
-| Job | Runs on | What |
-|---|---|---|
-| Launcher pack from clean | Linux | builds, then installs the `.mrpack` into an empty folder as the Modrinth App or Prism Launcher does: the pack must be a valid Modrinth pack, every file must download and match its size, SHA-1 and SHA-512, and the overrides are unpacked |
-| Windows installer from clean | Windows | builds, unzips the player zip, runs `Install for Minecraft Launcher.bat` as a double-click does against a launcher folder that holds nothing but a `launcher_profiles.json` (`APPDATA` points at a scratch folder), then checks what it left: exactly the pack's files with the right hashes, the overrides, the Fabric version, the `monkey-smp` profile, a backup of the launcher's file, and nothing else in that file changed |
-
-Each job downloads the whole pack (about 380 MB), so the workflow runs before every release (the Release workflow
-calls it and publishes nothing until it passes), by hand (**Actions > Clean install > Run workflow**, or
-`gh workflow run install.yml --ref <branch>`), and on a PR only when the PR touches the pack (`client/`), `player/`,
-`tools/build.py`, the tool or the workflow, so a dead download or a wrong hash shows on the PR, not at the tag. The unit tests (`tests/test_clean_install.py`) run the same checks on every push with a made-up pack and
-recorded downloads, and check that the pack the build makes is a valid one. To run the real thing yourself (each
-folder must be empty or not exist yet):
-
-```bash
-python tools/build.py
-python tools/clean_install.py launcher dist/MonkeySMP-Client-X.Y.Z.mrpack /tmp/clean-launcher
-python tools/clean_install.py installer dist/MonkeySMP-Player-X.Y.Z.zip C:/temp/clean-installer   # Windows only
-```
-
-Neither starts the game: that the pack loads and plays is a person's job ([QA.md](QA.md)).
 
 ## Capturing changes from a live server
 
@@ -258,8 +225,6 @@ manifest (stop the server first so nothing is mid-write):
 ```bash
 python tools/snapshot.py server C:/MCServer/factions     # Paper
 python tools/snapshot.py server C:/MCServer/smp          # Fabric
-python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
-python tools/snapshot.py profile     # re-pin only client/fabric-profile.json (see below)
 ```
 
 The snapshot tells the server type from the folder:
@@ -306,36 +271,6 @@ all `META-INF/MANIFEST.MF` (Java's `JarInputStream` only finds it as the first o
 and `validate.py` refuse one (`ORDER_SENSITIVE` in `tools/patches.py`). The patch id sorts paths ordinally, so it
 is the same on every platform.
 
-`snapshot.py client` also pins `client/fabric-profile.json`: Fabric meta's launcher profile for the
-client pack's Minecraft and loader versions (the `minecraft` and `fabric-loader` dependencies in
-`client/modrinth.index.json`), from
-`https://meta.fabricmc.net/v2/versions/loader/<minecraft>/<loader>/profile/json`. The player installer
-gives it to the official Minecraft Launcher as the `fabric-loader-<loader>-<minecraft>` version. After
-changing the loader in the client index by hand, run `python tools/snapshot.py profile` to re-pin just
-this file. Meta generates the profile on request and stamps it with the time (`time`, `releaseTime`);
-everything else is the same for the same versions, so the tools compare profiles ignoring those two
-keys, and a re-pin that only differs in them leaves the file alone. `validate.py` checks the profile's
-`id` and `inheritsFrom` match the client index, and that every library comes over https from Fabric's
-maven or Minecraft's/Maven Central with a sha1 or sha256 (except the loader itself, which meta lists
-without hashes); `--online` checks meta still serves the same profile.
-
-Each file in `client/modrinth.index.json` is `"client": "required"` or `"optional"`: an optional one gets a tick
-box in Prism and the Modrinth App, so a player on a slow computer can leave it out ("Low-end PC" in
-`docs/PLAYERS.md`). `tools/client_env.py` decides which (`OPTIONAL_MODS`, plus every resource
-pack); `snapshot.py client` writes it and `validate.py` checks the index still matches. A mod that isn't on the
-list is required, so a new mod is safe until someone sorts it. A mod belongs on the list only when the player
-can join without it: it isn't on the server, or it is client-only, or Modrinth calls its client half optional,
-and never when it adds blocks, items, entities or other registry entries (Fabric refuses a join that lacks
-them). `tests/test_client_env.py` checks the list against facts recorded from every jar
-(`tests/fixtures/client_mods.json`). When the client pack gains or loses a mod, those tests fail until you
-re-record the facts, then sort the new mod. An optional mod that leaves the pack moves from `OPTIONAL_MODS` to
-`RETIRED_OPTIONAL`, so the indexes of earlier releases under `tests/fixtures/manifests` still validate:
-
-```bash
-python -I tests/fixtures/record_client_mods.py            # downloads the mod jars (about 340 MB)
-python -I tests/fixtures/record_client_mods.py --jars DIR # or reads them from a folder first
-```
-
 Plugins, mods and datapacks keep the file name they have on the server. On `check_updates.py --apply`,
 plugins and mods take the new upstream file name, but datapacks keep theirs, because the world refers
 to datapacks by file name (the rule is written down once, in `tools/entries.py`).
@@ -362,45 +297,12 @@ so look at its Modrinth page when updating the pack, and when changing Minecraft
 
 None since 3.0.0: every mod in the manifest is listed for 26.2.
 
-## Our own mods, pinned from GitHub
+## Our own mods
 
-A mod the owners wrote may be pinned from a release of its own GitHub repository instead of Modrinth
-([ADR-0009](adr/0009-our-own-mods-may-be-pinned-from-a-github-release.md)). Today that is one mod, Patina & Chime
-(`gr8monk3ys/patina-and-chime`), which is waiting for Modrinth's moderation. The repositories are listed in
-`entries.GITHUB_PINS`; `validate.py` refuses a GitHub download from anywhere else, and refuses one in the players'
-pack that isn't exactly the server's pin.
-
-```bash
-python tools/pin_github.py patina-and-chime v0.2.0 patina-and-chime-0.2.0+26.2.jar
-python tools/validate.py --online
-```
-
-That downloads the jar from the release and writes its size and hashes in two places: the mod's entry in
-`package/monkey/manifest.json` (`github` and `tag` where a Modrinth entry has `project_id` and `version_id`) and
-the same file in `client/modrinth.index.json`, replacing the release pinned before. The mod adds blocks and
-items, so both sides need the same build: a release that moves this pin is a new players' pack, and players who
-haven't updated are refused with "registry entries that are unknown to this client".
-
-Nothing else moves the pin. `check_updates.py` and `add.py` skip it, and a snapshot keeps it only while the jar on
-the server is still the pinned file (a different jar under that name fails the snapshot: pin the new release
-first). `pack_sync.py` refuses the jar like any other that Modrinth doesn't know. So for each new release of the
-mod: publish it on GitHub, run the command above, then the smoke test and a test join.
-
-Patina & Chime on this server (0.2.0 tested 2026-11-09 on a scratch 3.3.0 server; the pinned 0.2.1 adds only the
-game rule below):
-
-- The shatter note (a note block on an amethyst block, tuned to its top note) breaks grown amethyst clusters
-  within 8 blocks. It breaks them with no player behind it, so Open Parties and Claims has nobody to refuse: a
-  note block outside a claim should reach clusters inside it. That follows from the mod's code; it was not tried
-  inside a real claim. 0.2.1 has a switch for it, the game rule `patinachime:shatter_note`, on by default. After
-  the release that brings the mod to the server, run `/gamerule patinachime:shatter_note false` once there; the
-  value is saved with the world. With the rule off the top note only plays (tried on a scratch server with a
-  0.2.1 build, a restart included).
-- Enchanting with amethyst shards is off wherever Easy Magic is installed, which is this server. Everything else
-  the mod adds works next to the pack.
-
-When Modrinth approves the mod, take the entry out of both files and pin it with `add.py mod patina-and-chime`,
-so that the update check sees it again.
+Since the relaunch every download comes from its own host (Modrinth, PaperMC, Adoptium, GeyserMC). The GitHub pins
+the Fabric server had for a mod the owners wrote ([ADR-0009](adr/0009-our-own-mods-may-be-pinned-from-a-github-release.md))
+went with the mods, so `entries.py` refuses an entry pinned from a GitHub release. A plugin of ours goes on Modrinth
+first, then in with `add.py plugin`.
 
 ## Mods left out on purpose
 
@@ -409,12 +311,12 @@ The shared mod folder has these; the pack doesn't. Check the reason still holds 
 | Mod | Why (measured 2026-10-11, 25 fake players, i7-8700K) |
 |---|---|
 | Improved Inventory Tabs | Not on Modrinth, so it can't be pinned (ADR-0002). |
-| Arrow In The Knee (`aitk`) | Says it runs on servers, but a mixin into a client class stops one from starting. Client pack only. |
+| Arrow In The Knee (`aitk`) | Says it runs on servers, but a mixin into a client class stops one from starting. |
 | PrickleMC, Crops Love Rain (NeoForge files) | The folder's `cropsloverain-3.2.1.jar` is the NeoForge build, and PrickleMC's NeoForge jar sits next to its Fabric one. The pack has the Fabric build of each. |
 | Vanilla Permissions (0.3.6+26.1.2) | Shipped in 2.5.0 and 2.6.0, then removed: measured 2026-10-26 (fake players on land, i7-8700K), 10 players took 1,081 ms per tick with it and 64 ms without, 18 players 986 ms and 142 ms. It checks each entity selector a player's command uses against the whole command tree (`CommandDispatcher.getPath`, from `ArgumentPermission.validate`), and the pack runs advancement functions as each player every tick. Its job, ranks granting vanilla commands, went to ops (docs/ADMIN.md, "What needs op"). Measure a newer version the same way before adding it back. |
 
-After a sync, launch the client pack and join a test server before releasing: CI boots the server but can't
-start a game client, and a mod on one side only shows up as "registry entries that are unknown to this client".
+After a change to the plugins, join a test server with a plain Java client and with Bedrock before releasing: CI
+boots the server but can't start a game client.
 
 ## Shelved mods
 
@@ -506,7 +408,7 @@ The unit tests never touch the network or the real checkout: tools take an `Upst
 a `Repo`, and tests pass a `RecordedHttp` adapter (replaying `tests/fixtures/upstream/*.json`, or
 responses built in the test) and a temporary copy of the repo. A request with no recorded response
 fails loudly. Sample manifests are frozen releases in `tests/fixtures/manifests/` (`paper-1.1.0`, the
-last Paper release, and `fabric-2.0.0`, each with its patches and a trimmed client index), so a new
+last Paper release, and `fabric-2.0.0`, each with its patches), so a new
 release never breaks the tests; only `test_real_repo_is_valid` checks what the repo pins today.
 If an upstream API changes shape, or a test needs a new request, re-record the
 fixtures from the live APIs (responses are trimmed to the fields the tools read):
@@ -538,50 +440,21 @@ players") came from this harness on an i7-8700K.
 
 ## Releasing
 
-0. If the staff page's Mods tab lists "Players' pack: waiting for a release", bring the owner's mod changes into
-   the repo first: `python tools/pack_sync.py --ssh HOST` (add `--dry-run` to only look, `--include-off` to also
-   take out mods that are only turned off, `--pr` for a draft pull request). It reads
-   `server/.monkey-pack-changes.json` over SSH, pins the server's exact Modrinth files in
-   `client/modrinth.index.json` and `package/monkey/manifest.json` (or drops them), runs `validate.py` and
-   re-records `tests/fixtures/client_mods.json` when the pack gained or lost a mod. A jar Modrinth doesn't know,
-   a split client/server jar or a patched mod is refused: do those by hand. Merge that pull request before the
-   steps below; the release then takes the pack to players (docs/LIVE.md, "The staff page").
 1. Bump `version` in `package/monkey/manifest.json` (semver: patch = plugin bumps, minor = new content,
-   major = new Minecraft version or a world reset), and `versionId` in `client/modrinth.index.json` to the same
-   version (`validate.py` fails until they match). If the pack's mods changed, run
-   `python tools/player_needs.py --write` for the download size the site and docs state.
-2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, mods, the client
-   pack, the wardrobe, events), date its entry at the top of `site/src/content/changes.mdx` too, in players' words
+   major = new Minecraft version or a world reset).
+2. Add a `## [x.y.z]` section to `CHANGELOG.md`. If players will notice anything (rules, plugins, the wardrobe,
+   events), date its entry at the top of `site/src/content/changes.mdx` too, in players' words
    (`docs/ADMIN.md`, "Telling players what changed").
-3. Put the new player files on the site, since the GitHub releases are private and players download the pack
-   from there: `python tools/build.py`, replace the files in `site/public/pack/` with
-   `dist/MonkeySMP-Client-X.Y.Z.mrpack` and `dist/MonkeySMP-Player-X.Y.Z.zip` and point `MODPACK_URL` and
-   `INSTALLER_URL` in `site/config.json` at them, then run `python tools/site_links.py`: it rewrites
-   `site/public/pack/SHA256SUMS.txt`, the list the front page links to so a player can check a download.
-   `validate.py` fails while the site serves another version's pack, or while that list is missing or doesn't match
-   the files beside it. The release workflow warns when a file on the site is not byte for byte the release's own.
-   (Once the pack has its Modrinth project, `MODPACK_URL` points there and this step goes.)
-   Between releases, when the live server gains a mod players need and no tag may go out yet, the site can serve a
-   rebuild of the same version: `python tools/build.py --site-build LABEL` names the files and the pack
-   `X.Y.Z-LABEL`. Never attach those to a release; the next release's pack replaces them, and its redirects in
-   `site/vercel.json` come out then too.
-4. Merge to `main`, then prove the players' install from clean before the tag exists, because the live server
-   takes a new tag in its next deploy window whether or not the release was published: run the **Clean install**
-   workflow on `main` (`gh workflow run install.yml --ref main`), or `tools/clean_install.py` yourself (above).
-   Then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. Put the client pack on Modrinth. The Release workflow's `modrinth` job does it when the repo secret
-   `MODRINTH_TOKEN` is set; otherwise run `python tools/modrinth.py` from a checkout of the tag, with the token in
-   `MODRINTH_TOKEN` ([MODRINTH.md](MODRINTH.md#publishing-a-version)). It uploads nothing when the release
-   left `client/` alone, and moves the server listing to the newest version.
+3. Merge to `main`, then tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. The live server takes a new tag in
+   its next deploy window whether or not the release was published.
 
-The release workflow re-runs CI (including macOS) and the Clean install workflow, refuses to publish if the tag and manifest version differ, and attaches
-`MonkeySMP-Server-X.Y.Z.zip`, `MonkeySMP-Client-X.Y.Z.mrpack`, `MonkeySMP-Player-X.Y.Z.zip` and `SHA256SUMS.txt`
-(it stops if that list doesn't cover the three files as built).
+The release workflow re-runs CI (including macOS), refuses to publish if the tag and manifest version differ, and
+attaches `MonkeySMP-Server-X.Y.Z.zip` and `SHA256SUMS.txt` (it stops if that list doesn't match the zip as built).
 
 ### Releasing without Actions
 
-GitHub Actions doesn't start in this private repo right now (billing), so the tag push in step 4 publishes
-nothing. Do the workflow's job by hand, after step 4, in a fresh worktree of the tag so nothing uncommitted
+GitHub Actions doesn't start in this private repo right now (billing), so the tag push in step 3 publishes
+nothing. Do the workflow's job by hand, after step 3, in a fresh worktree of the tag so nothing uncommitted
 gets in:
 
 ```bash
@@ -591,12 +464,8 @@ cd ../release-vX.Y.Z
 python tools/checks.py   # on Windows, Pester runs on Windows PowerShell 5.1 and on pwsh when it's installed
 GITHUB_REF_NAME=vX.Y.Z python tools/build.py --notes notes.md   # also writes dist/SHA256SUMS.txt
 python tools/checksums.py --check dist
-python tools/clean_install.py launcher dist/MonkeySMP-Client-X.Y.Z.mrpack ../clean-launcher
-python tools/clean_install.py installer dist/MonkeySMP-Player-X.Y.Z.zip ../clean-installer   # on Windows
 gh release create vX.Y.Z dist/* --title "Monkey SMP vX.Y.Z" --notes-file notes.md --verify-tag
-python tools/modrinth.py      # step 5, with MODRINTH_TOKEN set (MODRINTH.md)
 cd - && git worktree remove --force ../release-vX.Y.Z   # --force: notes.md is untracked
-rm -rf ../clean-launcher ../clean-installer             # two copies of the pack
 ```
 
 In PowerShell, set the tag with `$env:GITHUB_REF_NAME = 'vX.Y.Z'` before `python tools/build.py --notes notes.md`.
@@ -608,7 +477,7 @@ What this skips is CI's boot tests (the server started natively on Windows, Linu
 For a release that changes the manifest, the installer or the launchers, boot it first: unzip
 `dist/MonkeySMP-Server-X.Y.Z.zip` somewhere temporary and run `./tests/smoke.ps1 -Root <that folder>\MonkeySMP-Server -MemoryGB 4`.
 Do it right after pushing the tag: the live server deploys a new tag in its next deploy window (docs/LIVE.md)
-whether or not the release exists, and players need the new pack by then.
+whether or not the release exists.
 
 ## Changing Minecraft version
 

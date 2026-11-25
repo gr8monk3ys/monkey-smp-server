@@ -39,9 +39,10 @@ All 18 are generated for Minecraft 26.2 (`tools/datapacks.py`: `MINECRAFT`, `DAT
 `RESOURCE_FORMAT` and the rules pack's treasure list). On 26.3 those need bumping and re-checking, and
 `tests/test_datapacks.py` fails until they are. On 26.2 they stay as they are.
 
-Removing the Fabric files (patches, Fabric mod configs, Fabric-only tests and tools, the client pack and the
-voice chat port) is a separate follow-up PR. This PR switches the manifest, so `validate.py` reports the unused
-patches and the client pack until that PR lands. The two merge together.
+Removing the Fabric files (patches, Fabric mod configs, Fabric-only tests and tools, and the voice chat port) is a
+separate follow-up PR, and removing the client pack and the player installer is the PR after that. This PR
+switches the manifest, so `validate.py` reports the unused patches and the client pack until both land. The three
+merge together.
 
 ## Performance
 

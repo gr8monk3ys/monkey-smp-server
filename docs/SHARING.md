@@ -1,29 +1,19 @@
 # Sharing Monkey SMP
 
-Each release has three downloads. Send each person only what they need.
+Each release has one download, `MonkeySMP-Server-<version>.zip`, and it is for **the host** (one person): it
+runs the server on their Windows PC, Mac or Linux machine (or with Docker), or prepares it for an online host.
+It is tiny (under 1 MB). It doesn't contain the game files themselves: those are downloaded from their official
+websites the first time, and every file is checked before it is used.
 
-| File | Who gets it | What they do with it |
-|---|---|---|
-| `MonkeySMP-Server-<version>.zip` | **the host** (one person) | Runs the server on their Windows PC, Mac or Linux machine (or with Docker), or prepares it for an online host |
-| `MonkeySMP-Client-<version>.mrpack` | players using the Modrinth App or Prism Launcher: the recommended way, on any computer | Open it with the Modrinth App or import it into Prism Launcher (the player zip contains this file too) |
-| `MonkeySMP-Player-<version>.zip` | players on **Windows** who keep the normal Minecraft Launcher | Installs the game mods, then joins |
-
-Most players need no file at all: the client pack is the [Monkey SMP modpack](https://modrinth.com/modpack/monkeysmp)
-on Modrinth, which the Modrinth App installs and updates on any computer. Send them the link (once Modrinth has
-approved the page; see [MODRINTH.md](MODRINTH.md)).
-
-All three are tiny (under 1 MB). They don't contain the game files themselves: those are downloaded from
-their official websites the first time, and every file is checked before it is used.
-
-Always send the files from the **same release** (same version number) to everyone. A player on 2.0.0
-can't join a server on 2.1.0 if the mods changed.
+Players need no file at all. They join with Minecraft as it comes, Java or Bedrock, with no mods
+([PLAYERS.md](PLAYERS.md)).
 
 ## Message for the host
 
 Copy, fill in the blanks, and send with `MonkeySMP-Server-<version>.zip`:
 
 ```text
-Here's Monkey SMP server (Minecraft Java 26.2, modded factions/PvP).
+Here's Monkey SMP server (Minecraft 26.3 on Paper; Java and Bedrock players can join).
 
 To run it on your computer (Windows 10/11, a Mac or Linux, 12 GB+ RAM):
 1. Unzip it somewhere permanent, like Documents.
@@ -32,7 +22,7 @@ To run it on your computer (Windows 10/11, a Mac or Linux, 12 GB+ RAM):
    Mac or Linux: follow section 2 of "READ ME FIRST.txt" (on a Mac you double-click
    "Start Server.command"; on Linux you type  sh start.sh  in a terminal).
 3. Type YES for the Minecraft EULA, then your Minecraft username (you become the admin).
-4. The first start downloads ~500 MB and builds the world: give it 5-10 minutes,
+4. The first start downloads the server files and builds the world: give it 5-10 minutes,
    until the window says "Done". Keep that window open while people play.
 5. To let friends join from anywhere, follow section 4 of "READ ME FIRST.txt" (playit.gg, free).
 6. Add each friend with "Add Player.bat" (Mac or Linux:  sh add-player.sh THEIRNAME ).
@@ -40,49 +30,24 @@ To run it on your computer (Windows 10/11, a Mac or Linux, 12 GB+ RAM):
 Got a Linux server (VPS)? Run it there the same way, or with Docker (section 9 of the READ ME).
 For a Minecraft hosting company, use "Prepare for Hosting" instead (also section 9).
 
-You also need to play with the mods: use the player zip I'm sending everyone.
+To play yourself, just join with your normal Minecraft: no mods needed.
 ```
 
 ## Message for players
 
-Copy, fill in the server address, and send. Most players need nothing else:
+Copy, fill in the addresses, and send. For Monkey SMP's own server they are `monkeysmp.lscaturchio.xyz` (Java)
+and `play.monkeysmp.lscaturchio.xyz`, port `19132` (Bedrock):
 
 ```text
-Here's how to join Monkey SMP (Minecraft Java Edition, modded):
+Here's how to join Monkey SMP. No mods, no downloads: just Minecraft.
 
-1. Install the Modrinth App (free, Windows, Mac or Linux): https://modrinth.com/app
-   Sign in with the Microsoft account you play Minecraft with.
-2. Open https://modrinth.com/modpack/monkeysmp and press Install (or search "Monkey SMP"
-   in the app). It downloads the mods (~380 MB).
-3. In the instance's settings, Java and memory: give it 6 GB. Then press Play.
-   The first start is slow (a few minutes) - that's normal.
-4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
+Java Edition (PC, Mac, Linux):
+  Multiplayer > Add Server > Server Address: ____________________ > Done > Join Server.
 
-When the pack changes, the app offers the update: take it before you play.
-Tell me your exact Minecraft username so I can add you to the guest list.
-```
-
-Until Modrinth has approved the page, send `MonkeySMP-Client-<version>.mrpack` with it and change step 2 to
-"Double-click the .mrpack file (or in the app: + > Upload a modpack). The app asks you to confirm, because the
-pack isn't on Modrinth yet: choose Install anyway. It downloads the mods (~380 MB)", and the line about updates to
-"When the pack changes, I'll send the new file: install it the same way".
-
-For a Windows player who'd rather keep the normal Minecraft Launcher, send `MonkeySMP-Player-<version>.zip`
-with this instead:
-
-```text
-Here's how to join Monkey SMP (Minecraft Java Edition, modded):
-
-1. Make sure you have Minecraft Java Edition and the normal Minecraft Launcher
-   (minecraft.net). Start the launcher once, sign in, then close it.
-2. Unzip MonkeySMP-Player-<version>.zip and double-click "Install for Minecraft Launcher.bat".
-   Windows may say it "protected your PC", because the file isn't signed: click More info > Run anyway.
-   It downloads the mods (~380 MB) and adds "Monkey SMP" to your launcher. Takes a few minutes.
-3. Open the Minecraft Launcher, choose "Monkey SMP" next to the Play button, press Play.
-   The first start is slow (a few minutes) - that's normal.
-4. Multiplayer > Add Server > Server Address: ____________________ > Done > Join.
-
-Tell me your exact Minecraft username so I can add you to the guest list.
+Bedrock Edition (phone, tablet, console, Windows):
+  Play > Servers > Add Server
+  Server Address: ____________________   Port: 19132
+  Save, then join.
 ```
 
 ## When a new release comes out
@@ -90,7 +55,4 @@ Tell me your exact Minecraft username so I can add you to the guest list.
 - **Host:** stop the server, unzip the new server zip **over** the old folder, start it again.
   (Exception: going from 1.x to 2.x needs a new folder - it's a new world.) On a Mac, Finder won't
   unzip over a folder; [ADMIN.md](ADMIN.md#day-to-day) says what to do instead.
-- **Players:** Modrinth App players take the update the app offers (it appears once `tools/modrinth.py` has
-  published the release). Players on the normal launcher unzip the new player zip and double-click the
-  installer again: it updates the same "Monkey SMP" installation and keeps their settings, worlds and
-  screenshots. Players who imported a `.mrpack` import the new one.
+- **Players:** nothing to do. They keep joining with their normal Minecraft.

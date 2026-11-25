@@ -2,12 +2,13 @@
 
 Everything is named Monkey SMP / `monkey`: what players see and the code, folders, command, data pack namespace
 and download names alike (see `GLOSSARY.md`). Don't bring back the old name; only `tools/migrate_names.py` (old
-worlds and server folders) and the player installer's move of the old game folder still have to know it.
+worlds and server folders) still has to know it.
 
 Server package for a Fabric 26.2 factions server (1.x releases were Paper 26.1.2) that runs natively on
 Windows (`.bat`), Linux and macOS (`.sh` launchers + the `monkey/monkey.sh` PowerShell bootstrap) and in
 Docker (`package/docker/`), with one PowerShell installer (ADR-0007), plus a "Prepare for Hosting" bundle for
-panel hosts (ADR-0006). `package/` is exactly what ships in the release zip; `package/monkey/manifest.json`
+panel hosts (ADR-0006). Players join with a plain client, Java or Bedrock (through Geyser), with no mods, so there
+is no client pack or player installer. `package/` is exactly what ships in the release zip; `package/monkey/manifest.json`
 pins every download (Java per platform) and `package/monkey/pwsh.lock` the portable PowerShell 7; `tools/`
 are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server. See `README.md` and
 `docs/MAINTAINING.md`.
@@ -28,7 +29,7 @@ are maintainer scripts (Python stdlib); `tests/smoke.ps1` boots the real server.
   staff page features wait for Season II.
 - Keep a PR under about 800 changed lines, generated output (builds, fixtures, lock files) aside.
 - No two live releases within 48 hours unless the second fixes something broken live.
-- A release needs CI's boot tests green and the Clean install workflow passing (docs/MAINTAINING.md, "Releasing").
+- A release needs CI's boot tests green (docs/MAINTAINING.md, "Releasing").
 - When something breaks on the live server, start with `docs/RUNBOOK.md`.
 
 ## Agent skills

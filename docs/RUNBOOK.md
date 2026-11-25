@@ -95,8 +95,8 @@ A failure alert in the staff channel names the unit and the `journalctl` line to
   `sh /srv/monkey/repo/deploy/monkey-deploy.sh --tag=vX.Y.Z` with the last good tag deploys it now (it still warns
   players) and pins it; `--tag=` with the newest tag unpins once a fix is out. Only the files go back, not the world:
   never go back across a Minecraft version or a world reset. The world from before the update is the newest folder in
-  `../backups/`. If the release changed the players' pack, players who updated may need the old one again.
-- **Tell:** players (which pack to use); the staff channel; whoever tagged the release.
+  `../backups/`.
+- **Tell:** players; the staff channel; whoever tagged the release.
 
 ## Staff page down
 

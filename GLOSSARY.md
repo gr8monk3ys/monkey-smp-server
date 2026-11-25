@@ -2,7 +2,7 @@
 
 A Minecraft factions server packaged so that anyone can host it on Windows, macOS or Linux from a single download, and kept reproducible by pinning everything it runs.
 
-Formerly **The Realms**. Since 2.10.0 every name is Monkey SMP: the `monkey` command, the `monkey:` data pack namespace, the `MonkeySMP-*` download names and the `.monkey-smp` game folder. `tools/migrate_names.py` moves an old server folder and its world over; the player installer moves an old game folder.
+Formerly **The Realms**. Since 2.10.0 every name is Monkey SMP: the `monkey` command, the `monkey:` data pack namespace, the `MonkeySMP-*` download names and the `.monkey-smp` game folder. `tools/migrate_names.py` moves an old server folder and its world over.
 
 ## People
 
@@ -25,27 +25,19 @@ _Avoid_: role, group
 ## What ships
 
 **Release**:
-One numbered version of Monkey SMP, made of a server package, a player zip and a client pack built from the same manifest.
+One numbered version of Monkey SMP: a server package built from the manifest, and the checksum list that goes with it.
 _Avoid_: build, version (alone)
 
 **Server package**:
 The small download a host unzips and starts the server from; it holds instructions and configuration, never third-party files.
 _Avoid_: installer, bundle, modpack
 
-**Player zip**:
-The download every player gets: the client pack plus a one-click installer for the normal Minecraft Launcher and a plain-language guide.
-_Avoid_: client zip, installer (alone)
-
-**Client pack**:
-The mods and resource packs a player installs to join: the required files the server needs, plus optional files for the intended look and feel.
-_Avoid_: modpack (alone), client mods
-
-**Optional file**:
-A file of the client pack a player may leave out and still join (`"client": "optional"` in its index, from `tools/client_env.py`). Every other file is required.
-_Avoid_: client-only mod (some optional mods also run on the server)
+**Plain client**:
+Minecraft as it comes, Java or Bedrock, with no mods: all a player needs to join. Java joins `monkeysmp.lscaturchio.xyz`; Bedrock joins `play.monkeysmp.lscaturchio.xyz`, port 19132, through Geyser.
+_Avoid_: client pack, modpack, player zip, player installer (all gone with the relaunch, ADR-0010)
 
 **Server listing**:
-The server's entry in Modrinth's server discovery: its address and tags, and which version of the client pack (published on Modrinth as the Monkey SMP modpack) players get.
+The server's entry in Modrinth's server discovery: its address, tags and description.
 _Avoid_: server project, server page
 
 **Manifest**:
@@ -57,7 +49,7 @@ One downloadable file the server runs: the Java runtime, the server software, a 
 _Avoid_: dependency, asset
 
 **Mod**:
-An add-on the Fabric server loads from its mods folder; many also have to be installed by players.
+An add-on the Fabric server loaded from its mods folder; the relaunch on Paper has none.
 _Avoid_: plugin (that is the Paper kind), addon
 
 **Manifest entry**:
@@ -157,7 +149,7 @@ A player's page about their season on the site (`/wrapped/season-<n>/`), made af
 _Avoid_: recap (the weekly post), stats page, profile
 
 **Snapshot**:
-Capturing what a running server or player instance actually uses back into the manifest or client pack.
+Capturing what a running server actually uses back into the manifest.
 _Avoid_: export, import, scan
 
 **Spawn safe zone**:

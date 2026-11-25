@@ -13,7 +13,7 @@ const everySection: { title: string; pages: GuidePage[] }[] = [
       {
         href: "/guide", title: "Your first hour",
         description: `What happens when you join Monkey SMP: ${sayList(live([["the Guide at spawn", "monkey-npcs"],
-          ["48 hours of safety", "monkey-rules"], ["voice chat"], ["launch night"]]))}.`,
+          ["3 hours of protection"], ["voice chat"], ["launch night"]]))}.`,
       },
       {
         href: "/guide/factions", title: "Factions and land",

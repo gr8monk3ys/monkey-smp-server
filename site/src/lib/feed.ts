@@ -7,7 +7,7 @@ export type FeedEntry = { date: string; title: string; id: string; html: string 
 /** What /changes and its feed are called and say they are (one copy for the page's metadata and the feed). */
 export const CHANGES = {
   title: "What changed: Monkey SMP patch notes",
-  description: "Monkey SMP's patch notes: every change to the server's rules, mods, modpack and wardrobe that "
+  description: "Monkey SMP's patch notes: every change to the server and its rules that "
     + "players notice, newest first.",
   feed: "/changes/feed.xml",
 };

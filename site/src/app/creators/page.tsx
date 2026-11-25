@@ -6,9 +6,9 @@ import { terms } from "@/content/rules";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Creator codes for streamers and YouTubers · Monkey SMP",
-  description: "Stream or post videos from Monkey SMP, a Minecraft factions server, and earn a share of the passes "
-    + "your viewers buy. The terms for creator codes.",
+  title: "Media rank and creator codes for streamers and YouTubers · Monkey SMP",
+  description: "Stream or post videos from Monkey SMP, a free economy lifesteal SMP, and get a free Media rank. "
+    + "Regular creators get a code: 10% off for viewers and a share of the sale. The terms.",
   path: "/creators",
 });
 
@@ -20,10 +20,10 @@ export default function Creators() {
       <main id="main">
         <section className="hero">
           <h1>Make videos on Monkey SMP.</h1>
-          <p className="lede">If you stream or post videos from the server, you can have a creator code. Viewers who
-            enter it when they buy a pass pay the same as everyone else, and you get a share of what they paid. Small
-            channels are welcome: the server holds 30 players, so we&apos;d rather have a few creators who play here
-            than a big one who visits once.</p>
+          <p className="lede">Post a video or stream from the server that passes a set view count and you get a free
+            Media rank. Creators who play here regularly can also have a creator code: viewers get 10% off the
+            cosmetic store, and you get a share of what they paid. The thresholds are public, so you know where you
+            stand before you post.</p>
         </section>
 
         <section id="terms">
@@ -36,13 +36,13 @@ export default function Creators() {
         </section>
 
         <section id="apply">
-          <h2>Getting a code</h2>
-          <p className="note"><ConfigLink to="CONTACT_URL">Contact us</ConfigLink> or open a ticket in the Discord
-            with a link to your channel and the code you&apos;d like (your channel name works). We&apos;ll make it in the store and tell you when it works. To be paid, set up
-            a Tebex Wallet when Tebex asks you to.</p>
+          <h2>Getting the rank or a code</h2>
+          <p className="note">Open a ticket in the Discord, or <ConfigLink to="CONTACT_URL">contact us</ConfigLink>,
+            with a link to the video or stream. For a code, add the code you&apos;d like (your channel name works).
+            We&apos;ll set it up and tell you when it works. To be paid, set up a Tebex Wallet when Tebex asks you
+            to.</p>
           <Store when="soon">
-            <p className="note">The store isn&apos;t open yet, so no code pays out until it opens. Until then, passes
-              are arranged in the Discord.</p>
+            <p className="note">The store isn&apos;t open yet, so no code pays out until it opens.</p>
           </Store>
           <div className="cta">
             <ConfigLink to="DISCORD_INVITE" className="button">Join the Discord</ConfigLink>

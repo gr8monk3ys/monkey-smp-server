@@ -14,9 +14,40 @@ const PAINT: Record<string, string> = {
   L: "#b3dcbf", // sage
   w: "#9c6334", // wood, from the monkey
   W: "#7a4a26",
+  h: "#f05a4f", // heart red: hearts and PvP only (docs/relaunch/marketing/brand.md)
+  H: "#b8392f",
+  r: "#f8a39c",
 };
 
 const SPRITES = {
+  heart: [
+    "............",
+    ".oooo..oooo.",
+    "ohrhhooohhho",
+    "ohrrhhhhhhHo",
+    "ohrhhhhhhhHo",
+    "ohhhhhhhhhHo",
+    ".ohhhhhhhHo.",
+    "..ohhhhhHo..",
+    "...ohhhHo...",
+    "....ohHo....",
+    ".....oo.....",
+    "............",
+  ],
+  coin: [
+    "............",
+    "...oooooo...",
+    "..oggggggo..",
+    ".ogbgggggGo.",
+    ".ogbggoggGo.",
+    ".oggggoggGo.",
+    ".oggggoggGo.",
+    ".oggggoggGo.",
+    ".ogggggggGo.",
+    "..oGGGGGGo..",
+    "...oooooo...",
+    "............",
+  ],
   banner: [
     ".WWWWWWWWWW.",
     "..gggggggg..",

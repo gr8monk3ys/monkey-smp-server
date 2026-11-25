@@ -29,10 +29,10 @@ export const NAMES: Record<Pack, string> = {
   "monkey-npcs": "the spawn NPCs (the Guide, the Town Crier)",
   "monkey-omens": "omens",
   "monkey-outposts": "outposts",
-  "monkey-rules": "PvP grace for new players (with its welcome screen)",
+  "monkey-rules": "the welcome screen, the world border and the launch",
   "monkey-sieges": "outpost sieges",
   "monkey-standings": "the weekly standings (bounties, wars, pacts)",
-  "monkey-wardrobe": "the wardrobe (skins, challenges, the first-week quest)",
+  "monkey-wardrobe": "the progress menu (challenges, the first-week quest)",
 };
 
 /** The words of `parts` whose pack runs (a part with no pack always does), in the order given. */

@@ -4,29 +4,27 @@ import { Countdown, LaunchHold } from "@/components/countdown";
 import { Item } from "@/components/item";
 import { JsonLd } from "@/components/json-ld";
 import { ConfigLink, LaunchTime, Store } from "@/components/links";
-import { Live, OffNote } from "@/components/live";
 import { Place } from "@/components/place";
 import { ServerStatus } from "@/components/status";
 import { Plaque } from "@/components/plaque";
-import { Trailer } from "@/components/trailer";
-import { faq, features, GAME, ladder, PACK_MB, pass, RAM_GB, shots, tiers } from "@/content/front";
+import { BEDROCK_ADDRESS, BEDROCK_PORT, cosmetics, faq, features, GAME, SEASON_WEEKS, shots } from "@/content/front";
 import { rules } from "@/content/rules";
-import { builtPhase, checksumsUrl, config, launchStage, sayLaunch } from "@/lib/config";
+import { builtPhase, config, launchStage, sayLaunch } from "@/lib/config";
 import { preloadMono } from "@/lib/fonts";
 import { launchEvent, pageMetadata } from "@/lib/seo";
 
-// Written for what people search: a Minecraft factions server, a Fabric SMP, a paid-whitelist server, a season SMP.
+// Written for what people search: a free economy SMP, a lifesteal SMP, a Java and Bedrock server, a season SMP.
 export const metadata: Metadata = pageMetadata({
-  title: "Monkey SMP: a Minecraft factions SMP server on Fabric",
-  description: sayLaunch(`A paid-whitelist Fabric SMP for ${GAME}: factions of four, territory, PvP, new dungeons `
-    + `and magic. One pass, ${pass.price} a month, the same for everyone. `
-    + (builtPhase() === "live" ? "Season I is live." : "Season I opens {date}, {pacific}.")),
+  title: "Monkey SMP: a free economy lifesteal SMP for Java and Bedrock",
+  description: sayLaunch("A free survival economy SMP with lifesteal PvP and short seasons. Shop, auction house, "
+    + "steal hearts. Java and Bedrock, no mods. "
+    + (builtPhase() === "live" ? "Season 1 is live." : "Season 1 opens {date}, {pacific}.")),
   path: "/",
 });
 
 export default function Home() {
-  preloadMono(); // the address on the plaque and in the join steps
-  const event = launchEvent(pass);
+  preloadMono(); // the addresses on the plaques and in the join steps
+  const event = launchEvent();
   return (
     <>
       <Canopy here="home" />
@@ -35,43 +33,32 @@ export default function Home() {
       <main id="main">
         <section className="hero">
           <img className="monkey" src="/img/monkey.svg" alt="" width={224} height={224} />
-          <h1>Claim land.<br />Make allies.<br />Keep what you can hold.</h1>
-          <p className="lede">Monkey SMP is a modded factions server on {GAME} (Fabric) for a small crowd
-            that plays evenings, Pacific time. Factions of four, alliances, banner-marked territory, PvP outside your
-            walls, a remade Nether, new dungeons, mobs and magic.</p>
+          <h1>Survive.<br />Trade.<br /><span className="steal">Steal hearts.</span></h1>
+          <p className="lede">Monkey SMP is a free survival economy server with lifesteal PvP and short seasons. Get
+            rich at the shop and the auction house, take hearts outside the safe zones, and be standing when the
+            border closes in. Java and Bedrock, no mods.</p>
           <Countdown launchAt={config.LAUNCH_AT} stage={launchStage()}>
-            <LaunchTime template="{date}, {pacific} ({eastern})" />
+            Season 1: <LaunchTime template="{date}, {pacific} ({eastern})" />
           </Countdown>
           <div className="ways">
-            <Plaque address={config.ADDRESS} />
+            <Plaque address={config.ADDRESS} label="Java address" />
             <div className="cta">
-              <ConfigLink to="STORE_URL" className="button">Get a pass</ConfigLink>
-              <ConfigLink to="DISCORD_INVITE" className="button ghost">Join the Discord</ConfigLink>
+              <ConfigLink to="DISCORD_INVITE" className="button">Join the Discord</ConfigLink>
+              <a className="button ghost" href="#join">How to join</a>
             </div>
           </div>
           <ul className="facts">
-            <li>Minecraft Java on a PC</li>
-            <li>{pass.price} a month</li>
-            <li>Money back if it won&apos;t run</li>
+            <li>Free to play</li>
+            <li>Java and Bedrock</li>
+            <li>No mods needed</li>
           </ul>
-          <figure className="view">
-            <div className="shot">
-              <span className="where">Overworld</span>
-              <img src="/img/fortified-village-1600.webp"
-                srcSet="/img/fortified-village-800.webp 800w, /img/fortified-village-1600.webp 1600w"
-                sizes="(max-width: 1248px) calc(100vw - 32px), 1216px" width={1600} height={900} decoding="async"
-                alt="A walled village with a stone keep, built out over shallow water beside a sandy shore" />
-            </div>
-            <figcaption>A fortified village on the coast, shot on a test world before Season I.</figcaption>
-          </figure>
           {config.STATUS_URL && <ServerStatus url={config.STATUS_URL} mapUrl={config.MAP_URL}
             launchAt={config.LAUNCH_AT} builtPhase={builtPhase()} />}
-          <Trailer />
           <LaunchHold launchAt={config.LAUNCH_AT} />
         </section>
 
         <section id="world">
-          <h2>The world</h2>
+          <h2>How it plays</h2>
           <div className="features">
             {features.map((f) => (
               <article key={f.title}>
@@ -109,133 +96,76 @@ export default function Home() {
 
         <section id="join">
           <h2>How to join</h2>
+          <p className="note">Free, no whitelist, no mods. The server opens on{" "}
+            <LaunchTime template="{date} at {pacific}" />.</p>
           <Place as="ol" className="steps">
             <li>
-              <h3>Get a pass</h3>
-              <Store when="open">
-                <p><ConfigLink to="STORE_URL">Buy it</ConfigLink> with your Minecraft Java name. You&apos;re on the
-                  whitelist within a minute or two. <ConfigLink to="DISCORD_INVITE">The Discord</ConfigLink> is
-                  optional: join it whenever you like, and staff there can give you the member role and forum.</p>
-              </Store>
-              <Store when="soon">
-                <p>The store isn&apos;t open yet. Until it is, passes are arranged in{" "}
-                  <ConfigLink to="DISCORD_INVITE">the Discord</ConfigLink>: ask there with your Minecraft Java name,
-                  and staff add you to the whitelist by hand.</p>
-              </Store>
+              <h3>Java Edition</h3>
+              <p>On PC, Mac or Linux: Multiplayer, Add Server, then <code>{config.ADDRESS}</code>. No port needed.
+                The server runs {GAME}, and older versions can join too.</p>
             </li>
             <li>
-              <h3>Install the modpack</h3>
-              <p>The server adds blocks, mobs and items, so you need the pack (about {PACK_MB} MB). Pick the one for
-                your launcher.</p>
-              <dl className="paths">
-                <div>
-                  <dt>Modrinth App or Prism Launcher <span className="tag">recommended</span></dt>
-                  <dd>Get the pack and open the file with the Modrinth App, or in Prism Launcher choose Add
-                    Instance, then Import. The Modrinth App asks you to confirm, because the pack isn&apos;t on
-                    Modrinth yet: choose Install anyway. Then set the instance&apos;s memory to 6 GB.</dd>
-                  <dd><ConfigLink to="MODPACK_URL" className="button" download>Get the modpack</ConfigLink></dd>
-                </div>
-                <div>
-                  <dt>Minecraft Launcher on Windows</dt>
-                  <dd>Unzip the installer and double-click <code>Install for Minecraft Launcher.bat</code>. Windows
-                    may say it protected your PC, because the file isn&apos;t signed: click More info, then Run
-                    anyway.</dd>
-                  <dd><ConfigLink to="INSTALLER_URL" className="button ghost" download>Get the
-                    installer</ConfigLink></dd>
-                </div>
-              </dl>
-              {checksumsUrl && (
-                <p className="check">To check a download, compare its SHA-256 with{" "}
-                  <a href={checksumsUrl}>SHA256SUMS.txt</a>. On Windows, <code>Get-FileHash</code> in PowerShell
-                  prints it; on macOS, <code>shasum -a 256</code>; on Linux, <code>sha256sum</code>.</p>
-              )}
+              <h3>Bedrock Edition</h3>
+              <p>On phone, tablet or Windows: Play, Servers, Add Server. Server address{" "}
+                <code>{BEDROCK_ADDRESS}</code>, port <code>{BEDROCK_PORT}</code>. On Xbox, PlayStation and Switch you
+                can&apos;t add a server directly, so{" "}
+                <ConfigLink to="DISCORD_INVITE">ask in the Discord</ConfigLink> how to get in.</p>
             </li>
             <li>
-              <h3>Connect</h3>
-              <p>The game takes about 3 minutes to start and may show Not Responding near the end. Don&apos;t close
-                it. Then Multiplayer, Add Server, <code>{config.ADDRESS}</code>. No port needed. A computer with {RAM_GB} GB
-                of RAM and a mid-range graphics card runs it well; the installer sets the game&apos;s memory for
-                you.</p>
+              <h3>Say hi</h3>
+              <p><ConfigLink to="DISCORD_INVITE">The Discord</ConfigLink> is optional, but it&apos;s where events,
+                season dates and trades are announced first.</p>
             </li>
           </Place>
         </section>
 
-        <section id="pricing" className="crown">
-          <h2>Pricing</h2>
-          <p className="note">One price to play, the same for everyone. Supporter tiers are cosmetic only: nothing
-            that helps you fight, build faster or earn more.<Live pack="monkey-wardrobe"> Everyone earns wardrobe
-            skins for swords and helmets just by playing: days online, months on the pass, friends invited and the
-            weekly challenges (<code>/trigger wardrobe</code> in game). Founder&apos;s Circlet is only for playing on
-            Season I&apos;s launch weekend.</Live></p>
-          {/* The tiers and the friend rewards below name skins: this note, straight in the section, covers them. */}
-          <OffNote packs={["monkey-wardrobe"]}>Skins in the tiers and the friend rewards don&apos;t show in game
-            while it is off.</OffNote>
-
-          <Place className="plans">
-            <article className="panel">
-              <h3>{pass.name}</h3>
-              <p className="price">{pass.price} <span>{pass.per}</span></p>
-              <p className="alt">{pass.alt}</p>
-              <p className="needs">{pass.needs}</p>
-              <ul>
-                {pass.perks.map((perk) => <li key={perk}>{perk}</li>)}
-              </ul>
-              <Store when="soon">
-                <p className="small">Until the store opens, passes are arranged in the Discord and staff add you to
-                  the whitelist by hand.</p>
-              </Store>
-              <ConfigLink to="STORE_URL" className="button">Get a pass</ConfigLink>
-            </article>
-            <article className="panel support">
-              <h3>Supporter <span className="tag">optional</span></h3>
-              <table className="tiers">
-                <tbody>
-                  {tiers.map((t) => (
-                    <tr key={t.name}><th>{t.name} <span>{t.price}</span></th><td>{t.perks}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-              <ConfigLink to="STORE_URL" className="button ghost">Support the server</ConfigLink>
-            </article>
+        <section id="season" className="crown">
+          <h2>Seasons</h2>
+          <p className="note">Each season runs {SEASON_WEEKS} weeks on a fresh world. Everyone starts on the same day
+            with nothing.</p>
+          <Place as="ol" className="steps">
+            <li>
+              <h3>Launch day</h3>
+              <p>Season 1 opens <LaunchTime template="{date} at {pacific} ({eastern})" />, with a launch-only
+                cosmetic for everyone who plays that weekend.</p>
+            </li>
+            <li>
+              <h3>Mid-season</h3>
+              <p>Weekly events, the revival for players out of hearts, and the economy heating up.</p>
+            </li>
+            <li>
+              <h3>The finale</h3>
+              <p>The border shrinks, the boss rises, and the season ends in one last fight. Then the world resets and
+                the next season starts.</p>
+            </li>
           </Place>
+        </section>
 
-          <div className="extras">
-            <article>
-              <h3>Bring your friends</h3>
-              <Store when="open">
-                <p>When a friend buys a pass and names you at checkout, you earn supporter time:</p>
-              </Store>
-              <Store when="soon">
-                <p>When a friend gets a pass and names you to staff, you earn supporter time:</p>
-              </Store>
-              <ul className="ladder">
-                {ladder.map((step) => <li key={step.friends}><b>{step.friends}</b> {step.reward}</li>)}
-              </ul>
-              <p className="small">Your friends pay the same price as everyone else. Mojang&apos;s rules require one
-                price for access, so invites earn perks rather than discounts.</p>
-            </article>
-            <article>
-              <h3>Where the money goes</h3>
-              <p>The server costs about $50 a month to run: the machine, backups off-site, and the fallback tunnel.
-                Everything above that goes back into the server first: a reserve, faster hardware when it fills up,
-                and events. Each month we post what came in and what it paid for on{" "}
-                <a href="/changes">What changed</a> and in the Discord.</p>
-              <p className="small">Streaming or making videos on the server? Read the <a href="/creators">creator
-                code terms</a>.</p>
-            </article>
-          </div>
+        <section id="store">
+          <h2>The store</h2>
+          <p className="note">Our promise: the store sells cosmetics only, and always will. Nothing in it helps you
+            fight, earn, build or survive. No in-game money, hearts, gear, spawners, keys or queue skips, ever.
+            Everything in the game is earned in the game.</p>
+          <Place className="extras">
+            {cosmetics.map((c) => <article key={c.name}><h3>{c.name}</h3><p>{c.text}</p></article>)}
+          </Place>
+          <Store when="soon">
+            <p className="small">The store opens before Season 1. Prices and the full list come with it.</p>
+          </Store>
+          <p><ConfigLink to="STORE_URL" className="button ghost">Visit the store</ConfigLink></p>
+          <p className="small">Making videos on the server? Pass a view count and you get a free Media rank;
+            regular creators get a code with 10% off for viewers. <a href="/creators">The creator terms</a>.</p>
         </section>
 
         <section id="rules">
           <h2>Rules</h2>
-          <p className="note">Season I, hosted by Diego and Lorenzo Scaturchio. <a href="/guide/rules">The full
-            rulebook</a> has every numbered rule and ban; if a rule turns out unfun or unfair, it changes with player
-            feedback.</p>
+          <p className="note">The short version for Season 1. <a href="/guide/rules">The full rulebook</a> has every
+            rule; if a rule turns out unfun or unfair, it changes with player feedback.</p>
           <Place as="ol" className="rules">
             {rules.map((r) => <li key={r.title}><h3>{r.title}</h3><p>{r.text}</p></li>)}
           </Place>
-          <p className="small">Enforcement goes warning, temporary ban, permanent ban. Cheating, hate and doxxing can
-            skip straight to a ban. A ban doesn&apos;t refund time already paid for.</p>
+          <p className="small">Enforcement goes warning, temporary ban, permanent ban. Cheating, duping, hate and
+            doxxing can skip straight to a ban.</p>
         </section>
 
         <section id="faq">
@@ -256,10 +186,10 @@ export default function Home() {
             lists, your own Discord.</p>
           <Place className="kit">
             <figure>
-              <img className="plate" src="/kit/logo-1392w.png" width={348} height={64} loading="lazy"
+              <img className="plate" src="/kit/logo-1408w.png" width={352} height={64} loading="lazy"
                 alt="The Monkey SMP logo: a pixel-art monkey on a green tile beside the words MONKEY SMP" />
-              <figcaption>Logo, for dark backgrounds. <a href="/kit/logo-1392w.png" download>Wide</a> &middot;{" "}
-                <a href="/kit/logo-stacked-704w.png" download>Stacked</a> &middot;{" "}
+              <figcaption>Logo, for dark backgrounds. <a href="/kit/logo-1408w.png" download>Wide</a> &middot;{" "}
+                <a href="/kit/logo-stacked-720w.png" download>Stacked</a> &middot;{" "}
                 <a href="/kit/mark-512.png" download>Monkey only</a></figcaption>
             </figure>
             <figure>
@@ -279,17 +209,17 @@ export default function Home() {
 
         <section id="start" className="outro">
           <img className="monkey" src="/img/monkey.svg" alt="" width={160} height={160} loading="lazy" />
-          <h2>Come and play.</h2>
+          <h2>See you in the jungle.</h2>
           <ul className="facts">
-            <li>Minecraft Java on a PC</li>
-            <li>{pass.price} a month</li>
-            <li>Money back if it won&apos;t run</li>
+            <li>Free to play</li>
+            <li>Java and Bedrock</li>
+            <li>No mods needed</li>
           </ul>
           <div className="ways">
-            <Plaque address={config.ADDRESS} first={false} />
+            <Plaque address={config.ADDRESS} first={false} label="Java address" />
             <div className="cta">
-              <ConfigLink to="STORE_URL" className="button">Get a pass</ConfigLink>
-              <ConfigLink to="DISCORD_INVITE" className="button ghost">Join the Discord</ConfigLink>
+              <ConfigLink to="DISCORD_INVITE" className="button">Join the Discord</ConfigLink>
+              <a className="button ghost" href="#join">How to join</a>
             </div>
           </div>
         </section>

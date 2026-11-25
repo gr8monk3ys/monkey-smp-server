@@ -12,7 +12,7 @@ export default function WeekPage() {
     <GuidePage href="/guide/week" lede="The same rhythm every week of the season. Times are Pacific.">
       {/* In a div of its own, so the note lets only itself name what isn't running (tools/live_packs.py). */}
       <div>
-        <OffNote packs={["monkey-wardrobe", "monkey-drops", "monkey-omens", "monkey-events", "monkey-outposts",
+        <OffNote packs={["monkey-drops", "monkey-omens", "monkey-events", "monkey-outposts",
           "monkey-standings", "monkey-firsts", "monkey-finale", "monkey-npcs"]} />
       </div>
       <Place as="ol" className="week">

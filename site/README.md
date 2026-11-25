@@ -1,6 +1,6 @@
 # Monkey SMP site
 
-The public site at monkeysmp.lscaturchio.xyz: what the server is, how to join, pricing and the rules (`/`), the
+The public site at monkeysmp.lscaturchio.xyz: what the server is, how to join on Java and Bedrock, the seasons, the cosmetic store and the rules (`/`), the
 player guide (`/guide`), the player changelog (`/changes`), the creator code terms (`/creators`), the privacy policy (`/privacy`) and the terms of service (`/terms`).
 
 ## Stack
@@ -48,7 +48,7 @@ does. CI runs it all with the other checks.
 | Search and link previews | Each page's title, description and canonical address through `pageMetadata` in `src/lib/seo.ts`, which also holds the structured data (the site, Season I's launch as an event, the guide's breadcrumbs); `src/app/sitemap.ts`, `robots.ts` and `manifest.ts` build `/sitemap.xml`, `/robots.txt` and `/manifest.webmanifest`. A new page gets its own `pageMetadata` and a line in `sitemap.ts` (guide pages come from `pages.ts`); `tools/site_links.py --built` fails the build check when a built page is missing from `sitemap.xml` |
 | The page for a missing address | `src/app/not-found.tsx` (built as `out/404.html`) |
 | Add to calendar (a link on `/guide/week`) | `public/monkey-smp-season-1.ics`, made by `python tools/season_ics.py` (not edited by hand); `CALENDAR_URL` points at it |
-| Images, fonts, video, the press kit, the modpack | `public/` (served as they are: `public/img/og.jpg` is `/img/og.jpg`) |
+| Images, fonts, video, the press kit | `public/` (served as they are: `public/img/og.jpg` is `/img/og.jpg`) |
 | Season Wrapped | `public/wrapped/season-<n>/`, made by `tools/wrapped.py` (docs/SEASONS.md, "Ending a season"): build it again rather than edit it. Its pages load `public/wrapped/site.css`, a copy of `src/app/style.css` that `python tools/site_links.py` refreshes (validate.py fails while it is stale) |
 
 ## config.json
@@ -64,8 +64,8 @@ buttons point at the Discord with a "Coming soon" title.
 | `DISCORD_INVITE` | The Discord invite |
 | `CONTACT_URL` | How to reach staff without the Discord, for refunds, reports and appeals: a `mailto:` or a page |
 | `STORE_URL` | The Tebex webstore (passes and supporter tiers). Fill it in only once the store can take payments and run its commands on the server (docs/LIVE.md, "The store"). While it is empty, the pages say passes are arranged in the Discord; once it is set, they say what the store does |
-| `MODPACK_URL` | The player modpack. Until the Modrinth project is up, the site serves the release's own `.mrpack` from `public/pack/` (docs/MAINTAINING.md, "Releasing"), and validate.py checks it is the version the manifest pins |
-| `INSTALLER_URL` | The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same `.mrpack`, also in `public/pack/` |
+| `MODPACK_URL` | Empty: Season 1 runs on Paper and needs no client mods. Old `/pack/` links redirect to the join steps (`vercel.json`). Season I's modpack was a `.mrpack` in `public/pack/` |
+| `INSTALLER_URL` | Empty, like `MODPACK_URL`. Season I's was the player zip with the Minecraft Launcher installer |
 | `MAP_URL` | The live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone |
 | `STATUS_URL` | The server's status file (`tools/status.py`), served beside the live map with a short cache and an allow-origin header (docs/upgrades/HISTORY.md, "The website's status"). Empty: no status block |
 | `STANDINGS_URL` | The server's weekly standings file (`standings.json`), served beside the live map with a short cache and an allow-origin header, like `STATUS_URL`. Until the server publishes it the page shows its empty state |

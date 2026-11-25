@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of service" updated="2026-11-09"
+    <LegalPage title="Terms of service" updated="2026-11-25"
       lede="The agreement between you and Monkey SMP when you use this site, play on the server or buy a pass. The
         rulebook says how to play; this page covers the rest.">
       <Terms />

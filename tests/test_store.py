@@ -25,7 +25,7 @@ def test_everything_granted_is_cosmetic():
             if parts[3] == "permission":
                 assert parts[5].startswith(store.COSMETIC_NODES), cmd
             else:
-                assert parts[3] == "parent" and parts[5] in {r["id"] for r in store.RANKS}, cmd
+                assert parts[3] == "parent" and parts[5] in {r["id"] for r in store.RANKS} | {store.PASS_GROUP}, cmd
 
 
 @pytest.mark.parametrize("bad", ["essentials.fly", "essentials.sethome.multiple.vip", "ultracosmetics.gadgets.tsunami",
@@ -76,3 +76,8 @@ def test_the_pass_rewards_every_tier_and_sells_no_skips():
     assert sorted(store.PREMIUM_TRACK) == list(range(1, 31))
     names = [p["name"].lower() for p in store.packages()]
     assert not any(word in n.split() for n in names for word in ("tier", "tiers", "skip", "xp", "boost"))
+
+
+def test_the_pass_group_grants_only_the_premium_track():
+    lines = [c for c in store.luckperms_commands() if c.startswith(f"lp group {store.PASS_GROUP} ")]
+    assert lines == [f"lp group {store.PASS_GROUP} permission set {store.PASS_PERMISSION} true"]

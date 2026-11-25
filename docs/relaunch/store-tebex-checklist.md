@@ -13,16 +13,17 @@ package's exact price and commands are in [store-packages.md](store-packages.md)
     switch for Season I subscribers as store.md, "Season I buyers", describes.
 - [ ] Download the payments export (Payments, Export) and keep it: it is the list of Season I buyers for the Supporter
       tag and any refunds.
-- [ ] Decide the six open questions in store.md, "Decisions for Lorenzo". The steps below assume the answers in that
-      file's catalog; skip the lifetime packages if you sell monthly only.
+- [ ] Pick the pass plugin. Recommended: **BattlePass by ResistanceCore** (free, on Modrinth). Install it on the
+      beta server and check that its premium track opens with `battlepass.premium` and that its quests can give the XP
+      in store.md. Only if it falls short, buy EcoBattlepass ($15.99, BuiltByBit).
 
 ## 2. Season I wind-down
 
 - [ ] Before **23 Jan 2027**, stop new sales of the Server Pass and the 2-month pass (disable the packages).
 - [ ] Cancel renewals on active Server Pass subscriptions so none renews after 23 Jan (Payments or Subscriptions,
       cancel at the end of the period).
-- [ ] For anyone with paid days left after 23 Jan: refund those days in Tebex, or note them for free Ember days (your
-      choice in Decisions, 4).
+- [ ] For anyone with paid days left after 23 Jan: give those days plus 30 as free Ember on the new server, for
+      example `lp user <name> parent addtemp ember 45d accumulate` for 15 days left. No refunds needed.
 - [ ] Old Ember, Banner and Crown packages ($3/$7/$15): if you keep this webstore, **don't delete them**. Hide them
       from the store and change their commands to the new ones in store-packages.md (the same group names: `ember`,
       `banner`, `crown`), so existing subscribers keep their price. Delete nothing that has active subscriptions.
@@ -60,15 +61,15 @@ For each package in store-packages.md:
 
 ## 6. Season pass
 
-- [ ] Install the pass plugin you chose and set its premium track to check the permission `monkey.pass.s1.premium`.
+- [ ] Install the pass plugin (BattlePass, or the one you picked). Its premium permission is `battlepass.premium`,
+      which the `pass_s1` group has; with another plugin, change `PASS_PERMISSION` in `tools/store.py` and re-run it.
 - [ ] Enter the free and premium rewards from store-packages.md, "Season pass rewards", each as the command shown
       (with the plugin's player placeholder), and the XP sources: weekly challenge 100, day played 20, event attended
       50, 80 XP a tier.
 
 ## 7. Creator codes
 
-- [ ] Turn on **Creator codes**. Share 20% of the first payment, with **no customer discount** (unless you decided
-      otherwise).
+- [ ] Turn on **Creator codes**. Share 20% of the first payment, with **10% off** for the customer.
 - [ ] Each creator agrees to say on stream or in the video that they're paid (Mojang's rules require it).
 
 ## 8. Community goal
@@ -78,8 +79,8 @@ For each package in store-packages.md:
 
 ## 9. Store page
 
-- [ ] Home page text: "Everything here is cosmetic. Nothing you buy helps you fight, earn or build." Then the rank
-      table from store.md.
+- [ ] Home page text, at the top: "Nothing you can buy here gives you an advantage. Everything is cosmetic." Then
+      the rank table from store.md.
 - [ ] Footer: "NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." and a
       contact email (not a Discord link).
 - [ ] A line for Bedrock players ("Buy with your Bedrock name. Wardrobe skins are Java only for now.") and one for

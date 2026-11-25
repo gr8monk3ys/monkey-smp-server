@@ -3,7 +3,10 @@
 What Monkey SMP sells from the relaunch on Sat 6 Feb 2027, what it costs, why each item is allowed, and how players who
 paid in Season I are looked after. Everything sold is cosmetic: nothing bought changes combat, hearts, money, land,
 travel or queue position. That is Mojang's rule and the plan's ("Monkey SMP: growth and money plan"), and it is the one
-thing no comparable lifesteal store we could read does (see "Prices").
+thing no comparable lifesteal store we could read does (see "Prices"). The store page says it as a promise: **"Nothing
+you can buy here gives you an advantage. Everything is cosmetic."** The research write-up
+(`docs/relaunch/research-top-servers.md`, idea 1) found DonutSMP lost half its weekly players in June 2026 after an
+update players called pay-to-win.
 
 - The catalog lives in one table file, [`tools/store.py`](../../tools/store.py). It writes the UltraCosmetics and
   DeluxeTags configs and [store-packages.md](store-packages.md) (every Tebex package with its commands), and
@@ -27,7 +30,7 @@ thing no comparable lifesteal store we could read does (see "Prices").
 | Chat tag (12) | $1.49 each | Once, permanent |
 | Themed bundle: Frost, Inferno, Void, Ocean | $7.99 each | Once, permanent (2 to 5 items, a tag included) |
 | Community goal | (server-wide reward, nothing to buy) | Every $300 of sales in a month |
-| Creator codes | (no price) | Creator gets 20% of the first payment |
+| Creator codes | 10% off for the buyer | Creator gets 20% of the first payment |
 
 Today's prices are Ember $3, Banner $7, Crown $15 a month and the Server Pass $5 a month (`docs/LIVE.md`). The relaunch
 makes the server free to join, so the pass goes and the ranks carry more.
@@ -59,13 +62,19 @@ the existing `rw.tier` unlocks; they need the wardrobe ported to the new server 
   including Rainbow Wings at tier 29, and the "S1 Crowned" tag at 30). These pets and effects are sold nowhere else.
 - **Pass XP comes only from play**: 100 for a weekly challenge, 20 for each day played, 50 for an event attended; a
   tier every 80 XP. 2,400 XP finishes it: by my estimate about 9 weeks for a player who plays most days, does the
-  weekly challenge and comes to the weekly event, so a regular finishes inside an 8 to 10 week season. Nothing sells XP or tier skips, and PvP kills give none (so no one is
-  hunted for pass progress).
+  weekly challenge and comes to the weekly event, so a regular finishes inside an 8 to 10 week season. Nothing sells
+  XP or tier skips, and PvP kills give none (so no one is hunted for pass progress).
 - **Buying late is fine**: the premium track pays out the tiers already reached.
 - Rewards stay after the season. Next season gets a new pass with new rewards.
 
-The pass needs a plugin, which is Lorenzo's call (see "Decisions"). The store grants `monkey.pass.s1.premium`, which
-the plugin's premium track must check.
+**Plugin (recommended): BattlePass by ResistanceCore** on Modrinth. On 25 Nov its page showed it free to download (All
+Rights Reserved licence, so we use it but don't change or share it), Paper 1.21.x to 26.2 with Java 25, updated two
+months earlier, a free and a premium track, rewards that can be console commands, and the premium track gated by the
+permission `battlepass.premium`. Buying the pass puts the player in the LuckPerms group `pass_s1`, which has that
+permission, so next season only the group changes. Its page shows no command that adds XP (only one that sets it), so
+the XP table above goes into its own quests (`quests.yml`); check that in the beta. The paid alternative,
+EcoBattlepass ($15.99 on BuiltByBit, 26.1), isn't needed unless BattlePass falls short in the beta. It isn't on 26.3
+yet either, so it joins the platform's mid-January pin run.
 
 ### One-offs and bundles
 
@@ -77,12 +86,14 @@ sold one at a time: they come with ranks and the pass.
 
 Every $300 of store sales in a calendar month, everyone online gets a Goal Night (fireworks over spawn and a
 server-wide event) and everyone who joined that month gets the earned "Goal Getter" tag. Mojang allows exactly this:
-"you may offer all players server wide rewards if donation goals are met". The $300 level is Lorenzo's to set.
+"you may offer all players server wide rewards if donation goals are met".
 
 ### Creator codes
 
-Kept as ADR-0008 has them: the creator gets 20% of the first payment and the buyer gets no discount. Tebex pays the
-creator after its settlement period and charges the store 1% more on those sales. A creator must say on stream or in
+The creator gets 20% of the first payment and the buyer gets **10% off**. This changes ADR-0008's "no buyer
+discount" for the relaunch (Lorenzo's call, 25 Nov): a discount gives a new player a reason to use a creator's code
+on their first purchase, and Tebex's own data (in the research write-up) has codes roughly doubling the basket. Tebex
+pays the creator after its settlement period and charges the store 1% more on those sales. A creator must say on stream or in
 the video that they're paid, as Mojang's rules ask ("disclose their relationship with you and follow the guidelines
 published by the U.S. Federal Trade Commission").
 
@@ -146,8 +157,8 @@ Season I ends on 23 Jan 2027 and the plan stops pass renewals then.
 1. **Every Season I player** gets the permanent Founder tag (LuckPerms group `founder`) and keeps the Founder's Edge
    and Founder's Circlet skins (their `rw` scores carry over with the wardrobe).
 2. **Everyone who paid in Season I** (pass or rank) gets the Season I Supporter tag (group `s1_supporter`), never sold.
-3. **Server Pass subscribers:** turn off renewals in Tebex before 23 Jan. Anyone with paid days left past 23 Jan gets,
-   as Lorenzo chooses, either a refund of those days through Tebex or the same number of days of Ember plus 30 days free.
+3. **Server Pass subscribers:** turn off renewals in Tebex before 23 Jan. Anyone with paid days left past 23 Jan gets
+   those days as free Ember time plus 30 days more, not a refund (Lorenzo's call, 25 Nov): it keeps them playing.
    The pass itself isn't needed any more because the server is free.
 4. **Ember, Banner and Crown subscribers** (at $3, $7, $15): Tebex can't change the price of a subscription already
    sold. If the store stays the same webstore, their packages are kept hidden and re-pointed to the new commands, so
@@ -183,7 +194,7 @@ All go in `package/monkey/defaults/plugins/<name>/` and in the platform's plugin
 | UltraCosmetics | AGPL-3.0 | Pets, particle effects, death effects, arrow trails, `/uc menu` | Not yet; has 26.2 |
 | DeluxeTags | MIT | Chat tags and the `/tags` picker | Yes, pinned |
 | LPC (Modrinth `lpc-chat`) | MIT | Chat format with prefixes and colours (the platform's pick in place of EssentialsX Chat) | Not yet |
-| A season pass plugin | | The Monkey Pass | Lorenzo's decision |
+| BattlePass (ResistanceCore, Modrinth) | All Rights Reserved, free | The Monkey Pass | Not yet; has 26.2 |
 
 The platform re-runs the pins in mid-January and drops to 26.2 if these still lack 26.3 builds. Nothing here depends on
 26.3: the configs and commands are the same on 26.2. UltraCosmetics' config here holds only the settings Monkey SMP
@@ -191,9 +202,9 @@ changes; it fills in the rest from its own defaults on first start.
 
 ## For other workstreams
 
-- **Platform (LuckPerms and LPC):** `allow-invalid-usernames: true` in LuckPerms' config for Bedrock names; LPC's chat
-  format needs `%deluxetags_tag%` before the name (PlaceholderAPI on) and `allow-gradient-tags: true` for the gradient
-  tags; staff groups need a weight above 300 so their prefix wins.
+- **Platform (LuckPerms and LPC):** done in the platform PR (214): LuckPerms accepts Floodgate names, LPC's format
+  starts with `%deluxetags_tag%`, and staff weights are 900 and up, so paid ranks stay below 900. Check in the beta that
+  the gradient tags (Founder, S1 Crowned) show as gradients. BattlePass joins the pin run.
 - **Wardrobe port:** Tebex used to set `rw.tier`; the new rank packages only set LuckPerms groups. The wardrobe should
   read the rank from LuckPerms (or a rank change should set `rw.tier`) so the Lantern, Standard and Regalia skins keep
   working, and a lapsed monthly rank must not take away a lifetime rank's skin.
@@ -202,13 +213,20 @@ changes; it fills in the rest from its own defaults on first start.
 - **Season and events:** award `founder` and `s1_supporter` from the Season I records, run Goal Nights, and give the
   holiday cosmetics at their events.
 
-## Decisions for Lorenzo
+## Decided (25 Nov 2026)
 
-1. **Lifetime ranks:** sell them ($24.99 / $49.99 / $99.99) or monthly only. They bring money in early but less over a
-   long-lived server; most competitors sell one-time ranks.
-2. **Season pass plugin:** which to buy (for example BattlePass by advancedplugins, or EcoBattlepass at $15.99), or have
-   the pass built into the existing challenge and wardrobe system later.
-3. **Tebex store type:** if the current webstore isn't Offline/Geyser, make a new one so Bedrock players can pay.
-4. **Season I pass days left after 23 Jan:** refund them, or turn them into Ember days.
-5. **Creator codes:** keep "no buyer discount" (ADR-0008), or give buyers 10% off with a code (Mojang allows it).
-6. **Community goal:** $300 a month, or another level.
+Lorenzo said to go with each recommendation that makes people most willing to join:
+
+1. **Lifetime ranks** are sold beside the monthly ones ($24.99 / $49.99 / $99.99).
+2. **The ~$5 a month cosmetic subscription** the research recommends (idea 6, Donut+ at $5.49) is Ember at $4.99.
+3. **Season I days left after 23 Jan** become free Ember time, not refunds.
+4. **Creator codes** give buyers 10% off.
+5. **Community goal:** $300 a month.
+6. **The store page** promises that nothing sold gives an advantage.
+
+Two steps stay with Lorenzo because they need his accounts (both are in the checklist):
+
+- **The pass plugin:** install BattlePass (free) on the beta server and check it, or buy EcoBattlepass ($15.99) if it
+  falls short.
+- **The Tebex store type:** check it's Minecraft: Offline/Geyser, or make a new webstore of that type so Bedrock
+  players can pay.

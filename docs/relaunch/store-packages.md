@@ -25,8 +25,8 @@ Every command runs with **Require the player to be online** on, so LuckPerms kno
 
 | Package | Price | Charged | On purchase | On renewal | On expiry | On refund or chargeback |
 | --- | --- | --- | --- | --- | --- | --- |
-| Monkey Pass, Season 1 | $7.99 | One-time (the season's premium track; its rewards stay for good) | `lp user {username} permission set monkey.pass.s1.premium true` | - | - | `lp user {username} permission unset monkey.pass.s1.premium` |
-| Season 1 Starter (pass + 30 days of Ember) | $10.99 | One-time with Remove After 30 days | `lp user {username} permission set monkey.pass.s1.premium true`<br>`lp user {username} parent addtemp ember 32d accumulate` | - | `lp user {username} parent removetemp ember` | `lp user {username} permission unset monkey.pass.s1.premium`<br>`lp user {username} parent removetemp ember` |
+| Monkey Pass, Season 1 | $7.99 | One-time (the season's premium track; its rewards stay for good) | `lp user {username} parent add pass_s1` | - | - | `lp user {username} parent remove pass_s1` |
+| Season 1 Starter (pass + 30 days of Ember) | $10.99 | One-time with Remove After 30 days | `lp user {username} parent add pass_s1`<br>`lp user {username} parent addtemp ember 32d accumulate` | - | `lp user {username} parent removetemp ember` | `lp user {username} parent remove pass_s1`<br>`lp user {username} parent removetemp ember` |
 
 ### Bundles
 
@@ -104,7 +104,7 @@ Every command runs with **Require the player to be online** on, so LuckPerms kno
 
 ## Season pass rewards
 
-Premium track: `monkey.pass.s1.premium`. XP: 100 per weekly challenge done, 20 per day played, 50 per event attended; a tier every 80 XP. Each reward runs one command in the pass plugin.
+Premium track: the `pass_s1` group, which has `battlepass.premium`. XP: 100 per weekly challenge done, 20 per day played, 50 per event attended; a tier every 80 XP. Each reward runs one command in the pass plugin.
 
 | Tier | Free track | Premium track |
 | --- | --- | --- |
@@ -237,6 +237,8 @@ lp group crown permission set deluxetags.tag.silverback true
 lp group crown permission set deluxetags.tag.alpha true
 lp group crown permission set deluxetags.tag.legend true
 lp group crown permission set deluxetags.tag.royal true
+lp creategroup pass_s1
+lp group pass_s1 permission set battlepass.premium true
 lp group default permission set deluxetags.gui true
 lp creategroup founder
 lp group founder permission set deluxetags.tag.founder true

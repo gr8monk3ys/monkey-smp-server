@@ -24,7 +24,7 @@ from repo import REPO, Repo
 
 # Permission prefixes a package may grant. Anything else (homes, kits, fly, money, keys, /nick, /ec...) fails.
 COSMETIC_NODES = ("ultracosmetics.pets.", "ultracosmetics.particleeffects.", "ultracosmetics.deatheffects.",
-                  "ultracosmetics.projectileeffects.", "deluxetags.tag.", "lpc.chatcolor", "monkey.pass.")
+                  "ultracosmetics.projectileeffects.", "deluxetags.tag.", "lpc.chatcolor")
 # UltraCosmetics categories. Only these are on: the rest move players (gadgets, mounts, morphs), sit in an armor
 # slot with an armor bonus by default (hats, emotes, suits: UC's Attribute-Bonus gives +2 armor), or are a random box.
 UC_ON = {"Pets": "pets", "Particle-Effects": "particleeffects", "Death-Effects": "deatheffects",
@@ -124,7 +124,11 @@ BUNDLES = [
 SEASON = 1
 PASS_PRICE = 7.99
 STARTER_PRICE = 10.99   # the pass + 30 days of Ember ($12.98 apart)
-PASS_NODE = f"monkey.pass.s{SEASON}.premium"   # the pass plugin's premium track asks for this permission
+# The pass is a LuckPerms group per season, so next season only the group changes: drop battlepass.premium from
+# pass_s1 and give it to pass_s2. battlepass.premium is the premium permission of BattlePass (ResistanceCore, Modrinth),
+# the recommended plugin (store.md, "The Monkey Pass"); with another plugin, change PASS_PERMISSION.
+PASS_GROUP = f"pass_s{SEASON}"
+PASS_PERMISSION = "battlepass.premium"
 # Pass XP comes from play the server already counts (docs/RETENTION.md), never from money or PvP kills.
 PASS_XP = {"weekly challenge done": 100, "day played": 20, "event attended": 50}
 XP_PER_TIER = 80   # 2,400 XP for all 30 tiers (store.md, "The Monkey Pass")
@@ -200,7 +204,8 @@ def luckperms_commands() -> list[str]:
             out.append(f"lp group {g} parent add {parent}")
         out += [f"lp group {g} permission set {n} true" for n in rank_nodes(r)]
         parent = g
-    out += ["lp group default permission set deluxetags.gui true",
+    out += [f"lp creategroup {PASS_GROUP}", f"lp group {PASS_GROUP} permission set {PASS_PERMISSION} true",
+            "lp group default permission set deluxetags.gui true",
             # Earned, never sold: every Season I player, and everyone who paid in Season I (store.md, "Season I").
             "lp creategroup founder", "lp group founder permission set deluxetags.tag.founder true",
             "lp creategroup s1_supporter", "lp group s1_supporter permission set deluxetags.tag.s1_supporter true"]
@@ -237,14 +242,14 @@ def packages() -> list[dict]:
                         refund=[f"lp user {{username}} parent remove {high['id']}"]))
     out.append(dict(category="Season pass", name=f"Monkey Pass, Season {SEASON}", price=PASS_PRICE,
                     charge="One-time (the season's premium track; its rewards stay for good)",
-                    initial=[f"lp user {{username}} permission set {PASS_NODE} true"], renewal=[], expiry=[],
-                    refund=[f"lp user {{username}} permission unset {PASS_NODE}"]))
+                    initial=[f"lp user {{username}} parent add {PASS_GROUP}"], renewal=[], expiry=[],
+                    refund=[f"lp user {{username}} parent remove {PASS_GROUP}"]))
     out.append(dict(category="Season pass", name=f"Season {SEASON} Starter (pass + 30 days of Ember)",
                     price=STARTER_PRICE, charge="One-time with Remove After 30 days",
-                    initial=[f"lp user {{username}} permission set {PASS_NODE} true",
+                    initial=[f"lp user {{username}} parent add {PASS_GROUP}",
                              "lp user {username} parent addtemp ember 32d accumulate"], renewal=[],
                     expiry=["lp user {username} parent removetemp ember"],
-                    refund=[f"lp user {{username}} permission unset {PASS_NODE}",
+                    refund=[f"lp user {{username}} parent remove {PASS_GROUP}",
                             "lp user {username} parent removetemp ember"]))
     for b in BUNDLES:
         out.append(dict(category="Bundles", name=b["name"], price=BUNDLE_PRICE, charge="One-time",
@@ -316,7 +321,7 @@ def problems() -> list[str]:
                 granted.append(parts[5])
                 if not parts[5].startswith(COSMETIC_NODES):
                     found.append(f"{p['name']}: grants a non-cosmetic permission: {parts[5]}")
-            elif parts[3] == "parent" and parts[5] not in {r["id"] for r in RANKS}:
+            elif parts[3] == "parent" and parts[5] not in {r["id"] for r in RANKS} | {PASS_GROUP}:
                 found.append(f"{p['name']}: gives a group that isn't a cosmetic rank: {parts[5]}")
     for r in RANKS:
         granted += rank_nodes(r)
@@ -426,7 +431,8 @@ def packages_doc() -> str:
         lines.append(f"| {p['name']} | {money(p['price'])} | {p['charge']} | {cell(p['initial'])} | "
                      f"{cell(p['renewal'])} | {cell(p['expiry'])} | {cell(p['refund'])} |")
     lines += ["", "## Season pass rewards", "",
-              f"Premium track: `{PASS_NODE}`. XP: " + ", ".join(f"{v} per {k}" for k, v in PASS_XP.items()) +
+              f"Premium track: the `{PASS_GROUP}` group, which has `{PASS_PERMISSION}`. XP: "
+              + ", ".join(f"{v} per {k}" for k, v in PASS_XP.items()) +
               f"; a tier every {XP_PER_TIER} XP. Each reward runs one command in the pass plugin.", "",
               "| Tier | Free track | Premium track |", "| --- | --- | --- |"]
     for tier in range(1, 31):

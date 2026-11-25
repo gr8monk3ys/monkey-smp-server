@@ -31,7 +31,8 @@
   --bone: #f9f8f5;    /* headings and strong text, from the wordmark */
   --bone-2: #e2dcce;  /* body text */
   --sage: #b3dcbf;    /* secondary text, a pale leaf */
-  --gold: #e8b23a;    /* action, from "SMP" */
+  --gold: #e8b23a;    /* action and money, from "SMP" */
+  --heart: #f05a4f;   /* hearts and PvP only, never body text on green (docs/relaunch/marketing/brand.md) */
   --gold-hi: #f3cb6b;
   --ink: #1a1f23;     /* outlines; text on gold and stone */
   --ink-2: #2e3530;   /* secondary text on stone */
@@ -537,3 +538,14 @@ footer .small { margin: 0; }
   .counter i.drop, .dock { animation: none; }
   .button:active, button:active, .button.ghost:active { transform: none; }
 }
+
+/* Season 1: the heart red marks what lifesteal is about, and the guide says it still describes Season I. */
+.hero h1 .steal { color: var(--heart); }
+.notice {
+  margin: 0 0 32px;
+  padding: 14px 18px;
+  background: var(--stone);
+  color: var(--ink);
+  border-left: 6px solid var(--heart);
+}
+.notice a { color: var(--ink); }

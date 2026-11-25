@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Monkey SMP",
     short_name: "Monkey SMP",
-    description: "A modded Minecraft Java factions server: the address, the pack, the rules and the guide.",
+    description: "A free economy lifesteal SMP for Java and Bedrock: the addresses, the rules and the guide.",
     start_url: "/",
     display: "browser",
     background_color: "#133f2b",

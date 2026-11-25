@@ -2,12 +2,12 @@
   "ADDRESS": "monkeysmp.lscaturchio.xyz",
   "DISCORD_INVITE": "https://discord.gg/C25hy9Ca9W",
   "CONTACT_URL": "mailto:lorenzosca7@protonmail.ch",
-  "STORE_URL": "https://monkey-smp-store.tebex.store",
+  "STORE_URL": "",
   "MODPACK_URL": "pack/MonkeySMP-Client-3.6.0.mrpack",
   "INSTALLER_URL": "pack/MonkeySMP-Player-3.6.0.zip",
   "MAP_URL": "https://map.monkeysmp.lscaturchio.xyz",
   "STATUS_URL": "https://map.monkeysmp.lscaturchio.xyz/status.json",
   "STANDINGS_URL": "https://map.monkeysmp.lscaturchio.xyz/standings.json",
   "CALENDAR_URL": "/monkey-smp-season-1.ics",
-  "LAUNCH_AT": "2026-11-08T01:00:00Z"
+  "LAUNCH_AT": "2027-02-07T01:00:00Z"
 }

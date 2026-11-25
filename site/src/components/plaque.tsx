@@ -32,20 +32,22 @@ function useCopy(address: string, code: RefObject<HTMLElement | null>) {
 }
 
 /** The server address on its stone plaque, with Copy. A page can show it more than once, and an id must be
- * unique, so only the first one on a page (`first`) carries the ids. Nothing looks them up today. */
-export function Plaque({ address, first = true }: { address: string; first?: boolean }) {
+ * unique, so only the first one on a page (`first`) carries the ids. Nothing looks them up today. `label` names
+ * the edition when the page shows Java's and Bedrock's side by side. */
+export function Plaque({ address, first = true, label = "Server address" }:
+  { address: string; first?: boolean; label?: string }) {
   const code = useRef<HTMLElement>(null);
   const { said, copy } = useCopy(address, code);
   return (
     <div className="plaque">
-      <span>Server address</span>
+      <span>{label}</span>
       <code id={first ? "address" : undefined} ref={code}>{address}</code>
       <button type="button" id={first ? "copy" : undefined} onClick={copy}>{said}</button>
     </div>
   );
 }
 
-/** The dock: the address and the pass, in reach at the bottom of the screen once the page's own plaque has
+/** The dock: the address and the store, in reach at the bottom of the screen once the page's own plaque has
  * scrolled away (on a page without one, from the start), and gone again while the footer's is in view. The page
  * is built without it, so nothing depends on it. */
 export function Dock({ address, store }: { address: string; store: { href: string; title?: string } }) {
@@ -71,7 +73,7 @@ export function Dock({ address, store }: { address: string; store: { href: strin
         <code ref={code}>{address}</code>
         <span aria-live="polite">{said}</span>
       </button>
-      <a className="button" data-link="STORE_URL" href={store.href} title={store.title}>Get a pass</a>
+      <a className="button" data-link="STORE_URL" href={store.href} title={store.title}>Store</a>
     </aside>
   );
 }

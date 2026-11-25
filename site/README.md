@@ -1,6 +1,6 @@
 # Monkey SMP site
 
-The public site at monkeysmp.lscaturchio.xyz: what the server is, how to join, pricing and the rules (`/`), the
+The public site at monkeysmp.lscaturchio.xyz: what the server is, how to join on Java and Bedrock, the seasons, the cosmetic store and the rules (`/`), the
 player guide (`/guide`), the player changelog (`/changes`), the creator code terms (`/creators`), the privacy policy (`/privacy`) and the terms of service (`/terms`).
 
 ## Stack

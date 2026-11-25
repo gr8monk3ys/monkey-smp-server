@@ -22,7 +22,7 @@ export function Canopy({ here = "elsewhere" }: { here?: Here }) {
   const front = here === "home" ? "" : "/";
   const items: (NavItem & { at?: Here })[] = [
     { label: "Join", href: `${front}#join` },
-    { label: "Pricing", href: `${front}#pricing` },
+    { label: "Store", href: `${front}#store` },
     { label: "Rules", href: here === "home" ? "#rules" : "/guide/rules" },
     { label: "Guide", href: "/guide", at: "guide" },
     { label: "Map", to: "MAP_URL" },
@@ -45,7 +45,7 @@ export function Canopy({ here = "elsewhere" }: { here?: Here }) {
 
 /** The footer, the same on every page: the address again, then every link in three short lists by what you came
  * for (the newest Season Wrapped joins once there is one), and the line every Minecraft server owes Mojang. The
- * dock (the address and the pass at the bottom of the screen) lives here too, so every page has it. */
+ * dock (the address and the store at the bottom of the screen) lives here too, so every page has it. */
 export function Footer({ here = "elsewhere" }: { here?: Here }) {
   const front = here === "home" ? "" : "/";
   const wrapped = newestWrapped();
@@ -53,8 +53,8 @@ export function Footer({ here = "elsewhere" }: { here?: Here }) {
     {
       title: "Play",
       items: [
-        { label: "Get a pass", to: "STORE_URL" },
-        { label: "Install the modpack", href: `${front}#join` },
+        { label: "How to join", href: `${front}#join` },
+        { label: "Store", to: "STORE_URL" },
         { label: "Live map", to: "MAP_URL" },
         { label: "Questions", href: `${front}#faq` },
       ],

@@ -1,7 +1,7 @@
 // What search engines and link previews read from each page: its title, description, canonical address and
-// preview card, and the structured data (JSON-LD) that says what the site, the server and Season I's launch are.
+// preview card, and the structured data (JSON-LD) that says what the site, the server and Season 1's launch are.
 import type { Metadata } from "next";
-import { config, launchStage, launchWords, SITE_URL, storeOpen } from "@/lib/config";
+import { config, launchStage, launchWords, SITE_URL } from "@/lib/config";
 
 export const SITE_NAME = "Monkey SMP";
 
@@ -64,18 +64,18 @@ export function siteGraph() {
 /** How long the launch event lasts in the structured data: the first evening on the new world. */
 const LAUNCH_HOURS = 4;
 
-/** Season I's launch as an online event, at config.json's LAUNCH_AT, with the pass (src/content/front.tsx) as its
- * offer. A build from the launch on (or with no launch time) leaves the event out: it is no longer to come. */
-export function launchEvent(pass: { name: string; usd: number }, built: Date = new Date()) {
+/** Season 1's launch as an online event, at config.json's LAUNCH_AT. Joining is free, so its offer is free. A build
+ * from the launch on (or with no launch time) leaves the event out: it is no longer to come. */
+export function launchEvent(built: Date = new Date()) {
   if (launchStage(built) !== "soon") return null;
   const when = new Date(config.LAUNCH_AT);
   const words = launchWords(when);
   return {
     "@context": "https://schema.org",
     "@type": "Event",
-    name: "Monkey SMP Season I launch",
-    description: `Season I of Monkey SMP, a modded Minecraft Java factions server, opens ${words.date} at `
-      + `${words.pacific} (${words.eastern}), with everyone let in at once on a new world.`,
+    name: "Monkey SMP Season 1 launch",
+    description: `Season 1 of Monkey SMP, a free economy lifesteal SMP for Minecraft Java and Bedrock, opens `
+      + `${words.date} at ${words.pacific} (${words.eastern}), with everyone starting at once on a new world.`,
     startDate: pacificIso(when),
     endDate: pacificIso(new Date(when.getTime() + LAUNCH_HOURS * 3600_000)),
     eventStatus: "https://schema.org/EventScheduled",
@@ -83,11 +83,10 @@ export function launchEvent(pass: { name: string; usd: number }, built: Date = n
     location: { "@type": "VirtualLocation", url: siteUrl("/") },
     image: [siteUrl(OG_IMAGE.url)],
     organizer: { "@type": "Organization", "@id": ORG_ID, name: SITE_NAME, url: siteUrl("/") },
+    isAccessibleForFree: true,
     offers: {
-      "@type": "Offer", name: `${pass.name} (one month)`, price: pass.usd.toFixed(2), priceCurrency: "USD",
-      // Until the store opens, passes are arranged in the Discord: the offer is the pricing section, to order ahead.
-      url: config.STORE_URL || siteUrl("/#pricing"),
-      availability: storeOpen ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+      "@type": "Offer", name: "Free to play", price: "0.00", priceCurrency: "USD", url: siteUrl("/#join"),
+      availability: "https://schema.org/InStock",
     },
   };
 }

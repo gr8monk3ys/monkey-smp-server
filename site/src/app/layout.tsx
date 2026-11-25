@@ -14,7 +14,8 @@ export const metadata: Metadata = {
   // Every page sets its own title, description and canonical address (pageMetadata in src/lib/seo.ts); these are
   // what a page that forgets falls back to.
   title: SITE_NAME,
-  description: "A modded Minecraft Java factions server with a paid whitelist: factions, territory, PvP and seasons.",
+  description: "A free economy lifesteal SMP for Minecraft Java and Bedrock: a shop, an auction house, stolen hearts "
+    + "and short seasons.",
   applicationName: SITE_NAME,
   openGraph: { siteName: SITE_NAME, type: "website", locale: "en_US", images: [OG_IMAGE] },
   twitter: { card: "summary_large_image" },

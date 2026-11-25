@@ -16,9 +16,9 @@ export default function NotFound() {
       <main id="main">
         <section className="hero lost">
           <h1>Nothing here.</h1>
-          <p className="lede">This page doesn&apos;t exist, or it has moved. The server&apos;s address, the pass and
-            the modpack are on the front page, how things work is in the guide, and for anything else you
-            can <ConfigLink to="CONTACT_URL">contact us</ConfigLink>.</p>
+          <p className="lede">This page doesn&apos;t exist, or it has moved. How to join on Java and Bedrock is
+            on the front page, how things work is in the guide, and for anything else you can
+            <ConfigLink to="CONTACT_URL">contact us</ConfigLink>.</p>
           <div className="ways">
             <div className="cta">
               <a className="button" href="/">Go to the front page</a>

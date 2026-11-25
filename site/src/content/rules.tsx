@@ -1,72 +1,40 @@
 import type { ReactNode } from "react";
 import { LaunchTime } from "@/components/links";
-import { running } from "@/lib/live";
 
-// The front page's rules, one stone tablet each (#rules). The full rulebook is docs/RULES.md, pinned in the
-// Discord; this is its short form, so change both together.
+// The front page's rules, one stone tablet each (#rules). Season 1 placeholders: the short form of the rules the
+// relaunch plan sets out. The Season 1 rulebook (docs/RULES.md, being rewritten for the relaunch) replaces them, so
+// change both together.
 export type Tablet = { title: string; text: ReactNode };
 
 export const rules: Tablet[] = [
   {
-    title: "Season I launch",
-    text: <>Launch: <LaunchTime template="{date} at {pacific} ({eastern})" />, everyone let in at once. For the first
-      hour, PvP, the Nether and the End are closed; then PvP and only the Nether open, and the End opens when we
-      announce it. {running("monkey-no-netherite-armor")
-        ? <>No Netherite armor until we say so: the smithing table won&apos;t make it, and armor you find comes off
-          at your feet (Netherite tools and weapons are fine).</>
-        : "No Netherite armor until we say so (Netherite tools and weapons are fine)."} The world border is 5000 &times; 5000 around
-      spawn and grows as the server does.</>,
+    title: "Season 1 launch",
+    text: <>Launch: <LaunchTime template="{date} at {pacific} ({eastern})" />, everyone let in at once on a new
+      world. Everyone starts with nothing.</>,
   },
   {
-    title: "Factions and territory",
-    text: <>Factions of up to four, public, each with a banner. Alliances yes, confederations no. Your territory is
-      2 &times; 2 chunks a player, marked with your banner, or the inside of your base or walls at least 3 blocks
-      tall. Nobody griefs, robs or farms a territory; everything outside one is fair game. Every base needs one
-      feature visible from the surface.</>,
-  },
-  {
-    title: "Spawn is sacred",
-    text: "Nobody tampers with spawn or the admin building, and no TNT traps there.",
-  },
-  {
-    title: "Fight fair",
-    text: "You're in combat once someone hits you. No combat logging, no killing naked or AFK players, no "
-      + "restocking mid-fight, and no rejoining a team fight for 10 minutes after you die. Land elytra 50 blocks "
-      + "out, no elytra or lava in combat, no Happy Ghast PvP, and stay within about 30 blocks of shore.",
-  },
-  {
-    title: "Strength",
-    text: "Craft Strength only up to +3. Use Strength you're given right away unless you're at +5, and don't "
-      + "ender-chest it below +5. No Strength on arrows or on other players.",
-  },
-  {
-    title: "Banned",
-    text: "Enchanted maces, ender pearls and enchanted golden apples (crafting only), totems, crystal PvP, bed "
-      + "bombing, TNT minecarts, escape tunnels, and debuffs on others, except Slowness I, Weakness I, Poison I, "
-      + "Instant Harming I and Turtle Master from a bow or crossbow. Fire Aspect and Flame are switched off on "
-      + "the server.",
-  },
-  {
-    title: "No cheating",
-    text: "No hacked clients, x-ray of any kind (including the cushion glitch, F3+A and reloading shaders), "
-      + "duping, health indicators, CIT packs, or Replay Mod and Flashback for an edge. No exploits, no "
-      + "loopholes, no account sharing. Not sure? Ask an admin first.",
+    title: "Hearts and PvP",
+    text: "Outside spawn and claimed bases, PvP is on and a kill steals a heart. New players have 48 hours of PvP "
+      + "grace. No combat logging.",
   },
   {
     title: "Fair trades",
-    text: "Trade by hand, items for items: there's no money on the server. Give what you said you'd give: no "
-      + "lying about the item, the amount or the price, no changing a deal once it's agreed, no renamed fakes. "
-      + "Scammers give back what they took.",
+    text: "Give what you said you'd give. No lying about an item, an amount or a price, and no changing a deal once "
+      + "it's agreed. Scammers give back what they took.",
   },
   {
-    title: "Bedrock",
-    text: "A netherite pickaxe breaks bedrock. No holes into the void, no breaking the End's exit portal or "
-      + "gateways, and nothing on top of the Nether roof.",
+    title: "No cheating",
+    text: "No hacked clients, x-ray, duping or exploits, and no account sharing. Found a dupe or a bug? Report it to "
+      + "staff; using one gets you banned.",
+  },
+  {
+    title: "Real money stays out",
+    text: "No buying or selling items, money, hearts or accounts for real money. The store sells cosmetics only.",
   },
   {
     title: "Respect people",
-    text: "No slurs, hate, harassment or sharing anyone's personal information. Keep it all-ages, no stream "
-      + "sniping without permission, and no buying or selling anything for real money.",
+    text: "No slurs, hate, harassment or sharing anyone's personal information. Keep it all-ages, and no stream "
+      + "sniping without permission.",
   },
 ];
 

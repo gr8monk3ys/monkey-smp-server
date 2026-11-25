@@ -1,11 +1,11 @@
 import hashlib
 
 import pytest
+import relaunch
 from conftest import FABRIC_RELEASE, frozen_manifest, paper_build, paper_builds_url
 
 import check_updates
 import entries
-import relaunch
 from check_updates import LOADERS
 from upstream import MODRINTH, RecordedHttp, Upstream, json_query
 

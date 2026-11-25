@@ -21,7 +21,7 @@ Combat Log Punishments:
   # in the 5 seconds before, LifeStealZ also gives them one, so it can cost two.
   Commands On Combat Log:
     - 'lifestealz hearts remove {player} 1'
-    - 'announce &c{player} logged out in combat and lost a heart.'
+    - 'tellraw @a {"text":"{player} logged out in combat and was killed for it.","color":"red"}'
 
 PvP Toggle:
   Default PvP: true            # and nobody gets pvpmanager.command.pvp, so PvP can't be turned off

@@ -89,7 +89,8 @@ class Season:
 SEASON = Season(dt.datetime(2026, 11, 7, 17, 0, tzinfo=PACIFIC))   # Season I: Saturday 7 November, 5 PM
 # The relaunch's Season 1 (docs/relaunch/season-1.md), in the slot the modded Season II was proposed for: Saturday
 # 6 February 2027, 5 PM Pacific; the finale on Saturday 10 April (its week 9 here, where the launch weekend is week
-# 0); an off-week; the next season on Saturday 17 April. The website counts down to it already (site/config.json).
+# 0); an off-week; the next season on Saturday 17 April. The website's countdown (site/config.json) moves to it with
+# the relaunch's brand work, which may land before SEASON does.
 # SEASON stays on the modded Season I while that world is live: drops, challenges, the week, standings and the
 # status page read it every few minutes from the deployed release. The release that switches the tools to Paper,
 # after Season I's finale on 23 January 2027, points SEASON at RELAUNCH.

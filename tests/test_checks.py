@@ -118,7 +118,6 @@ def test_a_ready_pr_boots_what_its_change_can_break():
     assert plan("tests/docker-smoke.sh") == {"linux": True, "windows": False}
     assert plan("package/monkey/Monkey.psm1") == {"linux": True, "windows": True}
     assert plan("package/start.bat") == {"linux": True, "windows": True}
-    assert plan("player/installer/PlayerInstall.psm1") == {"linux": True, "windows": True}
     # the build makes the zip every boot unzips, Windows' included
     assert plan("tools/build.py") == {"linux": True, "windows": True}
     assert plan("tools/repo.py") == {"linux": True, "windows": True}

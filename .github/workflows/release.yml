@@ -12,13 +12,8 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
-  # Both of the players' ways in, from clean: every pack file downloads and matches, and the Windows installer
-  # leaves the right files in an empty launcher folder (tools/clean_install.py). No release without it.
-  install:
-    uses: ./.github/workflows/install.yml
-
   publish:
-    needs: [ci, install]
+    needs: [ci]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,40 +22,14 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      # The notes are the version's CHANGELOG.md section plus what each download is for; the build fails
+      # The notes are the version's CHANGELOG.md section plus what the download is for; the build fails
       # if the tag doesn't match the manifest version or the CHANGELOG has no section for it.
       - name: Build, and the release notes from CHANGELOG.md
         run: python tools/build.py --notes notes.md
-      # dist/SHA256SUMS.txt goes out with the three files: no release without it, or with a stale one.
+      # dist/SHA256SUMS.txt goes out with the server zip: no release without it, or with a stale one.
       - name: The checksum list covers every release file
         run: python tools/checksums.py --check dist
-      # Players download from the website (site/public/pack/). Only a warning: a rebuild is byte-identical on
-      # the same Python, but zlib may differ between Python builds, and a site-only build is a different file.
-      - name: Say when the website's files are not this release's
-        run: |
-          python tools/checksums.py --same site/public/pack dist || echo "::warning::A file in site/public/pack/ is not the one this release publishes (docs/MAINTAINING.md, Releasing, step 3)"
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --title "Monkey SMP $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
-
-  # Releasing step 5 (docs/MAINTAINING.md): the client pack on Modrinth, so players who install from there get
-  # what the server expects. Uploads nothing when the release left the pack alone. Needs the repo secret
-  # MODRINTH_TOKEN (docs/MODRINTH.md); without it the job only warns, and the weekly update check keeps asking.
-  modrinth:
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Publish the client pack on Modrinth
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: |
-          if [ -z "$MODRINTH_TOKEN" ]; then
-            echo "::warning::No MODRINTH_TOKEN secret, so Modrinth still has the previous pack: run python tools/modrinth.py from this tag (docs/MODRINTH.md)"
-            exit 0
-          fi
-          python tools/modrinth.py

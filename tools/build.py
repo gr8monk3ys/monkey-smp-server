@@ -2,40 +2,24 @@
 
   dist/MonkeySMP-Server-<version>.zip     unzip anywhere; double-click Start Server.bat (Windows) or
                                           Start Server.command (macOS), or run ./start.sh (Linux)
-  dist/MonkeySMP-Client-<version>.mrpack  import into Prism Launcher / Modrinth App to play
-  dist/MonkeySMP-Player-<version>.zip     for the official Minecraft Launcher: unzip, double-click
-                                          Install for Minecraft Launcher.bat
-  dist/SHA256SUMS.txt                     the SHA-256 of each of the three, so a download can be checked
+  dist/SHA256SUMS.txt                     the SHA-256 of the zip, so a download can be checked
                                           (tools/checksums.py)
 
-The player zip is everything in player/ (the installer) under MonkeySMP-Player-<version>/, plus the
-.mrpack (the same bytes as the standalone file) and installer/fabric-profile.json (a copy of
-client/fabric-profile.json, the Fabric launcher profile the installer adds to the launcher).
-
-None of the files contains third-party jars or datapacks: the server downloads them on first start
-and the launcher downloads the client mods, both from their official sources.
+The zip contains no third-party jars or datapacks: the server downloads them on first start, from their
+official sources. Players need nothing from a release: they join with a plain Minecraft client.
 
   python tools/build.py --notes notes.md  also writes the GitHub release's notes: the version's CHANGELOG.md
-                                          section and what each download is for
-  python tools/build.py --site-build ships
-                                          a site-only rebuild of the same version, for when the live server's
-                                          mods changed between tags: every file is named <version>-ships and the
-                                          pack's versionId is "<version>-ships", so a player (and staff) can
-                                          tell it from the release's pack. Never attach these to a release; copy
-                                          the client pack and player zip to site/public/pack/ (site_links.py
-                                          accepts <version>-<label> there)
+                                          section and what the download is for
 """
 import argparse
 import fnmatch
-import json
 import os
-import re
 import sys
 import zipfile
 from pathlib import Path
 
 import checksums
-from repo import REPO, load_json
+from repo import REPO
 
 TOP = "MonkeySMP-Server"
 # Fixed timestamp so the same inputs give byte-identical zips.
@@ -47,8 +31,6 @@ EXECUTABLE = (".sh", ".command")
 # then files by their path relative to package/ (fnmatch patterns).
 RUNTIME_DIRS = {"server", "java", "backups", "exports", "downloads", "pwsh"}
 RUNTIME_FILES = (".monkey-launch", "smoke-console.log*", "docker/.env")
-# A --site-build label: it ends up in file names and in URLs, so nothing that needs escaping.
-SITE_BUILD = re.compile(r"[a-z0-9]{1,20}")
 # The end of every GitHub release's notes, one markdown line per entry.
 DOWNLOADS = "\n".join([
     "### Downloads",
@@ -57,11 +39,8 @@ DOWNLOADS = "\n".join([
     "  - Hosting on a Mac, Linux or with Docker? Same zip: double-click `Start Server.command` (Mac), run "
     "`./start.sh` (Linux), or in the `docker` folder copy `.env.example` to `.env`, set `EULA=TRUE` and run "
     "`docker compose up -d`.",
-    "- **MonkeySMP-Client-*.mrpack** - for players. Import into Prism Launcher or the Modrinth App.",
-    "- **MonkeySMP-Player-*.zip** - for players who use the official Minecraft Launcher. Unzip, double-click "
-    "`Install for Minecraft Launcher.bat`, read `READ ME.txt`. (Using the Modrinth App or Prism Launcher "
-    "instead? Import the .mrpack.)",
-    "- **SHA256SUMS.txt** - the SHA-256 of each file above. To check a download, compare the file's own with its "
+    "- Players need nothing from here: they join with a plain Minecraft client, Java or Bedrock, and no mods.",
+    "- **SHA256SUMS.txt** - the SHA-256 of the zip above. To check a download, compare the file's own with its "
     "line: `Get-FileHash <file>` in PowerShell, `shasum -a 256 <file>` on macOS, `sha256sum <file>` on Linux.",
 ]) + "\n"
 
@@ -102,40 +81,6 @@ def build_server(version: str, repo=REPO, dist: Path | None = None) -> Path:
     return out
 
 
-def build_client(version: str, repo=REPO, dist: Path | None = None) -> Path:
-    index = load_json(repo.client / "modrinth.index.json")
-    index["versionId"] = version
-    out = Path(dist or repo.dist) / f"MonkeySMP-Client-{version}.mrpack"
-    with zipfile.ZipFile(out, "w") as z:
-        _add(z, "modrinth.index.json", json.dumps(index, indent=2, ensure_ascii=False).encode())
-        for path in _walk(repo.client / "overrides"):
-            _add(z, path.relative_to(repo.client).as_posix(), path.read_bytes())
-    return out
-
-
-def _require_player(repo) -> None:
-    if not repo.player.is_dir():
-        raise SystemExit(f"{repo.player} is missing: the player zip is built from the installer in player/")
-
-
-def build_player(version: str, mrpack: Path, repo=REPO, dist: Path | None = None) -> Path:
-    """The player zip; `mrpack` is the client pack build_client made for the same version."""
-    _require_player(repo)
-    if not repo.fabric_profile.is_file():
-        raise SystemExit(f"{repo.fabric_profile} is missing: pin it with `python tools/snapshot.py profile`")
-    top = f"MonkeySMP-Player-{version}"
-    files = {f"{top}/{path.relative_to(repo.player).as_posix()}": path.read_bytes() for path in _walk(repo.player)}
-    extra = {f"{top}/{mrpack.name}": mrpack.read_bytes(),
-             f"{top}/installer/fabric-profile.json": repo.fabric_profile.read_bytes()}
-    if clash := sorted(set(files) & set(extra)):
-        raise SystemExit(f"player/ must not contain {', '.join(n.split('/', 1)[1] for n in clash)}: the build adds it")
-    out = Path(dist or repo.dist) / f"{top}.zip"
-    with zipfile.ZipFile(out, "w") as z:
-        for name, data in sorted({**files, **extra}.items()):
-            _add(z, name, data)
-    return out
-
-
 def changelog_section(changelog: str, version: str) -> str:
     """The `## [version]` section of CHANGELOG.md, up to the next `## ` heading."""
     heading = f"## [{version}]"
@@ -154,7 +99,7 @@ def changelog_section(changelog: str, version: str) -> str:
 
 
 def release_notes(version: str, repo=REPO) -> str:
-    """The GitHub release's notes: the version's CHANGELOG section, then what each download is for."""
+    """The GitHub release's notes: the version's CHANGELOG section, then what the download is for."""
     return changelog_section((repo.root / "CHANGELOG.md").read_text(encoding="utf-8"), version) + "\n\n" + DOWNLOADS
 
 
@@ -162,30 +107,18 @@ def main(repo=REPO, dist: Path | None = None, argv=()):
     p = argparse.ArgumentParser(description="Build the release files into dist/.")
     p.add_argument("--notes", type=Path, metavar="FILE",
                    help="also write the GitHub release notes (CHANGELOG section + downloads) to FILE")
-    p.add_argument("--site-build", metavar="LABEL",
-                   help="a site-only rebuild of the manifest's version, named <version>-LABEL (never a release)")
     args = p.parse_args(argv)
     version = repo.load_manifest()["version"]
     tag = os.environ.get("GITHUB_REF_NAME", "")
     if tag.startswith("v") and tag[1:] != version:
         raise SystemExit(f"tag {tag} doesn't match manifest version {version}")
-    if args.site_build is not None:
-        if tag.startswith("v"):
-            raise SystemExit("--site-build is for the website between releases, not for a tagged release")
-        if not SITE_BUILD.fullmatch(args.site_build):
-            raise SystemExit(f"--site-build {args.site_build!r}: use lower-case letters and digits, like ships or r2")
-        if args.notes:
-            raise SystemExit("--site-build has no release notes: it is never a release")
-        version = f"{version}-{args.site_build}"
-    _require_player(repo)
     notes = release_notes(version, repo) if args.notes else None
     dist = Path(dist or repo.dist)
     dist.mkdir(parents=True, exist_ok=True)
-    mrpack = build_client(version, repo, dist)
-    built = (build_server(version, repo, dist), mrpack, build_player(version, mrpack, repo, dist))
+    built = (build_server(version, repo, dist),)
     for path in built:
         print(f"{path}  {path.stat().st_size / 1e6:.1f} MB")
-    # Only the three just built: dist/ may still hold another version's files.
+    # Only what was just built: dist/ may still hold another version's files.
     print(f"{checksums.write(dist, built)}  the SHA-256 of each file")
     if notes:
         args.notes.write_text(notes, encoding="utf-8", newline="\n")

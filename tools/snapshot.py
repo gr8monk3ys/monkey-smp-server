@@ -16,40 +16,24 @@
       <same name>, and the files that differ are stored as a patch under
       package/monkey/patches/<slug>/, pinned to that original's hash.
 
-  python tools/snapshot.py client "C:/Games/PrismLauncher/instances/Factions Client/minecraft"
-      Rewrites client/ (a Modrinth modpack source) from a Prism instance: mods, resource packs
-      and shader packs are linked by hash, and config/, shader settings and options.txt are
-      copied as overrides. Files that aren't on Modrinth are left out (not redistributed).
-      overrides/resourcepacks/ is the repo's own (tools/wardrobe.py) and is kept, and turned on in options.txt.
-      Also pins client/fabric-profile.json, Fabric meta's launcher profile for the pack's Minecraft
-      and loader versions (the player installer gives it to the official Minecraft Launcher).
-
-  python tools/snapshot.py profile
-      Re-pins only client/fabric-profile.json, for the versions client/modrinth.index.json names.
-
 Hand-curated config defaults (package/monkey/defaults/) are not touched.
 """
 import argparse
 import copy
 import hashlib
-import json
 import re
 import shutil
 import zipfile
 from pathlib import Path
 from typing import NamedTuple
 
-import client_env
 import defaults
 import entries
-import launcher_profile
 import patches
-import wardrobe
-from repo import REPO, load_json, save_json
+from repo import REPO, load_json
 from upstream import JAVA_PLATFORMS, LiveHttp, Upstream, fabric_server_jar_url
 
 JAVA_MAJOR = 25
-CLIENT_CONTENT = ("mods", "resourcepacks", "shaderpacks")
 
 
 class Found(NamedTuple):
@@ -292,112 +276,14 @@ def snapshot_server(server_dir, *, repo=REPO, upstream: Upstream | None = None, 
     return manifest
 
 
-def snapshot_client(instance, *, repo=REPO, upstream: Upstream | None = None) -> dict:
-    upstream = upstream or Upstream(LiveHttp())
-    instance = Path(instance)
-    index_path = repo.client / "modrinth.index.json"
-    old = load_json(index_path) if index_path.exists() else {}
-    paths = [p for d in CLIENT_CONTENT for p in files_in(instance / d, (".jar", ".zip"))]
-    found = identify(upstream, paths)
-    manifest = repo.load_manifest()
-    # The server's GitHub pins (ADR-0009) are not on Modrinth: their entries are kept while the jar is the same.
-    pins = {f["path"]: f for f in old.get("files", []) if entries.github_pin_of(f, manifest)}
-    files, skipped = [], []
-    for p in paths:
-        rel = p.relative_to(instance).as_posix()
-        if not found[p]:
-            pin = pins.get(rel)
-            if pin and hashlib.sha512(p.read_bytes()).hexdigest() == pin["hashes"]["sha512"]:
-                files.append(pin)
-            else:
-                skipped.append(rel)
-            continue
-        version, sha1, _ = found[p]
-        f = next(x for x in version["files"] if x["hashes"]["sha1"] == sha1)
-        files.append({"path": rel, "hashes": {"sha1": sha1, "sha512": f["hashes"]["sha512"]},
-                      "env": client_env.env({"path": rel, "downloads": [f["url"]]}),
-                      "downloads": [f["url"]], "fileSize": f["size"]})
-    loader = fabric_loader(instance) or old.get("dependencies", {}).get("fabric-loader")
-    if not loader:
-        raise SystemExit("can't tell the Fabric loader version (no mmc-pack.json next to the instance)")
-    index = {"formatVersion": 1, "game": "minecraft",
-             "versionId": manifest["version"], "name": old.get("name", "Monkey SMP - Client"),
-             "summary": old.get("summary", "Client pack for Monkey SMP factions server."),
-             "files": files,
-             "dependencies": {"minecraft": manifest["minecraft"], "fabric-loader": loader}}
-    profile = fetch_profile(upstream, manifest["minecraft"], loader)  # before writing anything
-
-    overrides = repo.client / "overrides"
-    overrides.mkdir(parents=True, exist_ok=True)
-    for old in overrides.iterdir():  # everything but resourcepacks/, which this repo generates
-        if old.name != "resourcepacks":
-            shutil.rmtree(old) if old.is_dir() else old.unlink()
-    if (instance / "config").is_dir():
-        shutil.copytree(instance / "config", overrides / "config", ignore=shutil.ignore_patterns("*.bak*", "*.old"))
-    (overrides / "shaderpacks").mkdir()
-    for f in files_in(instance / "shaderpacks", (".txt",)):
-        shutil.copy2(f, overrides / "shaderpacks" / f.name)
-    if (instance / "options.txt").is_file():
-        shutil.copy2(instance / "options.txt", overrides / "options.txt")
-        if (overrides / "resourcepacks" / wardrobe.RESOURCEPACK).is_dir():
-            wardrobe.enable_in_options(overrides / "options.txt")
-    save_json(index_path, index)
-    save_profile(repo, profile)
-    print(f"client: {len(files)} files linked from Modrinth")
-    if skipped:
-        print("left out (not on Modrinth):\n  " + "\n  ".join(skipped))
-    return index
-
-
-def fetch_profile(upstream: Upstream, mc: str, loader: str) -> dict:
-    profile = upstream.fabric_profile(mc, loader)
-    errors = launcher_profile.check(profile, mc, loader)
-    if errors:
-        raise SystemExit("Fabric meta's launcher profile doesn't look right:\n  " + "\n  ".join(errors))
-    return profile
-
-
-def save_profile(repo, profile: dict) -> None:
-    changed = launcher_profile.save(repo.fabric_profile, profile)
-    print(f"{repo.fabric_profile.relative_to(repo.root).as_posix()}: {profile['id']}"
-          f"{'' if changed else ' (unchanged)'}")
-
-
-def snapshot_profile(*, repo=REPO, upstream: Upstream | None = None) -> dict:
-    """Re-pin client/fabric-profile.json for the Minecraft and loader versions the client index names."""
-    upstream = upstream or Upstream(LiveHttp())
-    deps = load_json(repo.client / "modrinth.index.json")["dependencies"]
-    if not deps.get("fabric-loader"):
-        raise SystemExit("client/modrinth.index.json has no fabric-loader dependency")
-    profile = fetch_profile(upstream, deps["minecraft"], deps["fabric-loader"])
-    save_profile(repo, profile)
-    return profile
-
-
-def fabric_loader(instance: Path) -> str | None:
-    pack = instance.parent / "mmc-pack.json"
-    if pack.exists():
-        for c in json.loads(pack.read_text(encoding="utf-8"))["components"]:
-            if c["uid"] == "net.fabricmc.fabric-loader":
-                return c["version"]
-    return None
-
-
 def main(argv=None, repo=REPO, upstream=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=["server", "client", "profile"])
-    ap.add_argument("path", nargs="?", help="the server folder or Prism instance (not used by 'profile')")
+    ap.add_argument("what", choices=["server"])
+    ap.add_argument("path", help="the server folder")
     ap.add_argument("--update-java", action="store_true",
                     help="pin the newest Temurin JRE (for every platform) instead of keeping the current one")
     a = ap.parse_args(argv)
-    if a.what == "profile":
-        snapshot_profile(repo=repo, upstream=upstream)
-    elif not a.path:
-        ap.error(f"'{a.what}' needs a path")
-    elif a.what == "server":
-        snapshot_server(a.path, repo=repo, upstream=upstream, keep_java=not a.update_java)
-    else:
-        snapshot_client(a.path, repo=repo, upstream=upstream)
+    snapshot_server(a.path, repo=repo, upstream=upstream, keep_java=not a.update_java)
 
 
 if __name__ == "__main__":

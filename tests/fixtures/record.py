@@ -20,7 +20,6 @@ from upstream import JAVA_PLATFORMS, LiveHttp, RecordingHttp, Upstream, version_
 FOLDER = Path(__file__).resolve().parent / "upstream"
 MC = "26.1.2"
 MC_FABRIC = "26.3"  # Fabric meta: loader and installer lists (the launcher jar itself is built in tests)
-LOADER = "0.19.5"   # ...and the launcher profile for MC_FABRIC + this loader (the client pack's)
 # Projects with several stable releases for MC, so tests can pin an older one and see an update.
 PROJECTS = {
     "Vebnzrzj": "plugin",    # LuckPerms: the jar name changes with every version
@@ -40,7 +39,6 @@ def main():
     up.powershell_release_assets(lts)
     up.fabric_loaders(MC_FABRIC)
     up.fabric_installers()
-    up.fabric_profile(MC_FABRIC, LOADER)
     sha1s = []
     for project_id, kind in PROJECTS.items():
         newest = up.newest_release(project_id, MC, LOADERS[kind])

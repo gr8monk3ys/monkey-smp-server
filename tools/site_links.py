@@ -9,10 +9,10 @@ config.json is the one place the site's links, the server address and the launch
 site/README.md) reads it when it is built and writes every link and the launch time into its pages, so they
 work without JavaScript; this checks the same file from the Python side:
   - every key is there and is a string, and nothing else is (a misspelt key would otherwise go unnoticed);
+    MODPACK_URL and INSTALLER_URL may be left out: the client pack and the player installer went with the
+    relaunch (players join with a plain client), and nothing in the repo builds them any more;
   - LAUNCH_AT is an ISO 8601 time with its offset ("2026-11-08T01:00:00Z");
-  - when the modpack is served from the site itself (site/public/pack/), that file is there and is the pack of
-    the version the manifest pins (or a site-only rebuild of it, "<version>-<label>", tools/build.py
-    --site-build), since a player with another version's pack can't join;
+  - when MODPACK_URL names a file of the site's own (site/public/pack/), that file is there;
   - the pack and the installer, when the site serves them itself, have a SHA256SUMS.txt beside them that lists
     exactly the files in that folder, each with the hash it has now (tools/checksums.py): the front page tells
     players to check a download against it. Without --check, a missing or stale list is written again;
@@ -36,7 +36,6 @@ import datetime as dt
 import json
 import re
 import sys
-import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -46,8 +45,11 @@ import season_calendar
 from repo import REPO
 
 SOON = "Coming soon: ask in the Discord"
-KEYS = ("ADDRESS", "DISCORD_INVITE", "CONTACT_URL", "STORE_URL", "MODPACK_URL", "INSTALLER_URL", "MAP_URL",
-        "STATUS_URL", "STANDINGS_URL", "CALENDAR_URL", "LAUNCH_AT")
+KEYS = ("ADDRESS", "DISCORD_INVITE", "CONTACT_URL", "STORE_URL", "MAP_URL", "STATUS_URL", "STANDINGS_URL",
+        "CALENDAR_URL", "LAUNCH_AT")
+# Settings config.json may still have but needn't: the old client pack's and player installer's downloads.
+OPTIONAL = ("MODPACK_URL", "INSTALLER_URL")
+SETTINGS = KEYS + OPTIONAL
 # Every page the build must have. The guide's are site/src/content/guide/pages.ts, one file each (cleanUrls).
 GUIDE = ("guide", "guide/factions", "guide/rules", "guide/week", "guide/standings", "guide/commands", "guide/discord",
          *(f"guide/commands/{rank}" for rank in ("players", "leaders", "supporters", "moderators", "admins")))
@@ -107,9 +109,9 @@ def launch_words(when: dt.datetime) -> dict[str, str]:
 
 def config_problems(links: dict) -> list[str]:
     errors = [f"config.json: {key} is missing" for key in KEYS if key not in links]
-    errors += [f"config.json: {key} is not a setting the site has (the settings: {', '.join(KEYS)})"
-               for key in links if key not in KEYS]
-    errors += [f"config.json: {key} should be a string" for key in KEYS
+    errors += [f"config.json: {key} is not a setting the site has (the settings: {', '.join(SETTINGS)})"
+               for key in links if key not in SETTINGS]
+    errors += [f"config.json: {key} should be a string" for key in SETTINGS
                if key in links and not isinstance(links[key], str)]
     if isinstance(links.get("LAUNCH_AT"), str):
         try:
@@ -127,13 +129,6 @@ def pack_problems(links: dict[str, str], repo=REPO) -> list[str]:
     path = site(repo) / "public" / url.lstrip("/")
     if not path.is_file():
         return [f"site: MODPACK_URL is {url}, but site/public/{url.lstrip('/')} doesn't exist"]
-    served = json.loads(zipfile.ZipFile(path).read("modrinth.index.json"))["versionId"]
-    pinned = repo.load_manifest()["version"]
-    # A site-only rebuild of the pinned version (tools/build.py --site-build LABEL) is "<pinned>-LABEL".
-    if served != pinned and not re.fullmatch(re.escape(pinned) + r"-[a-z0-9]{1,20}", served):
-        return [f"site: site/public/{url.lstrip('/')} is the {served} client pack, but the manifest is {pinned}: "
-                f"copy MonkeySMP-Client-{pinned}.mrpack and MonkeySMP-Player-{pinned}.zip into site/public/pack/ "
-                "and point MODPACK_URL and INSTALLER_URL in site/config.json at them (docs/MAINTAINING.md, Releasing)"]
     return []
 
 
@@ -289,7 +284,7 @@ def page_problems(page: str, links: dict[str, str]) -> list[str]:
     errors = []
     for a in parsed.anchors:
         key = a["data-link"] or ""
-        if key not in links or key not in KEYS:
+        if key not in links or key not in SETTINGS:
             errors.append(f'data-link="{key}" is not set in config.json')
             continue
         href, title = target(links, key)

@@ -3,9 +3,11 @@
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
     python tools/wardrobe.py commands  the RCON command that starts a new day (deploy/monkey-day.sh sends it)
 
-It writes two folders, both generated (edit this file, not them):
-  package/monkey/datapacks/monkey-wardrobe/       the server side: /trigger wardrobe, unlock scores, the skins
-  client/overrides/resourcepacks/Monkey SMP Wardrobe/ the client side: models and pixel art
+It writes the server side, generated (edit this file, not it):
+  package/monkey/datapacks/monkey-wardrobe/       /trigger wardrobe, unlock scores, the skins
+The client side, the models and pixel art (resourcepack_files), went to players in the client pack until the
+relaunch removed it. Nothing writes or sends that resource pack now: players without it see the skins' models as
+missing until the server sends it as a server resource pack.
 
 A skin only changes how an item looks (`item_model`, and `equippable.asset_id` for helmets). Damage,
 durability, armor and enchantments stay exactly as they were, so nothing here is pay-to-win (Mojang's
@@ -56,7 +58,6 @@ from season_calendar import LAUNCH_SECONDS
 RESOURCE_FORMAT = 88
 DATAPACK = "monkey-wardrobe"
 JOB_PACKS = (DATAPACK,)   # the data packs the day job needs on (deploy/lib.sh skips it while one is off)
-RESOURCEPACK = "Monkey SMP Wardrobe"
 
 # What each unlock score means, for the menu and the "locked" message: objective -> (singular, plural).
 SCORES = {
@@ -926,33 +927,8 @@ def resourcepack_files() -> dict[str, bytes]:
 # ---------------------------------------------------------------- writing
 
 
-OPTION = f'"file/{RESOURCEPACK}"'
-
-
-def enable_in_options(options: Path) -> None:
-    """Turns the wardrobe resource pack on in a client options.txt (last, so it sits on top)."""
-    lines = options.read_text(encoding="utf-8").splitlines()
-    for i, line in enumerate(lines):
-        if line.startswith("resourcePacks:[") and OPTION not in line:
-            lines[i] = line[:-1] + ("," if line != "resourcePacks:[]" else "") + OPTION + "]"
-            break
-    else:
-        if not any(line.startswith("resourcePacks:") for line in lines):
-            lines.append(f'resourcePacks:["vanilla",{OPTION}]')
-    raw = options.read_bytes()
-    eol = b"\r\n" if b"\r\n" in raw else b"\n"
-    options.write_bytes(eol.join(line.encode("utf-8") for line in lines) + eol)
-
-
 def packs(repo: Repo) -> dict[Path, dict[str, str | bytes]]:
-    return {repo.monkey / "datapacks" / DATAPACK: datapack_files(),
-            repo.client / "overrides" / "resourcepacks" / RESOURCEPACK: resourcepack_files()}
-
-
-def after_write(repo: Repo) -> None:
-    options = repo.client / "overrides" / "options.txt"
-    if options.is_file():
-        enable_in_options(options)
+    return {repo.monkey / "datapacks" / DATAPACK: datapack_files()}
 
 
 # ---------------------------------------------------------------- the day (deploy/monkey-day.sh)

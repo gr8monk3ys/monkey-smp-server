@@ -4,7 +4,7 @@ import shutil
 import zipfile
 
 import pytest
-from conftest import PLAYER_FILES, fake_player, github_client_file, github_pin, make_zip, patched_entry
+from conftest import github_pin, make_zip, patched_entry
 
 import build
 import defaults
@@ -21,7 +21,6 @@ def test_real_repo_is_valid():
     manifest = REPO.load_manifest()
     assert validate.validate(manifest) == []
     assert validate.validate_package() == []
-    assert validate.validate_client(manifest) == []
     assert validate.main([]) == 0
     text = (REPO.defaults / "server.properties").read_text(encoding="utf-8")
     assert defaults.placeholders(text) == set(defaults.TOKENS)
@@ -124,113 +123,13 @@ def test_validate_package_requires_the_launchers(paper_repo):
     assert "package/Start Server.bat is missing" in validate.validate_package(paper_repo)
 
 
-# --- the player installer (checked once player/ exists) ---------------------------------------------
-
-def test_validate_package_checks_the_player_installer_only_once_it_exists(fabric_repo):
-    assert not fabric_repo.player.exists()
-    assert validate.validate_package(fabric_repo) == []
-    fake_player(fabric_repo)
-    assert validate.validate_package(fabric_repo) == []
-    assert validate.main([], repo=fabric_repo) == 0
-
-
-@pytest.mark.parametrize("missing", list(PLAYER_FILES))
-def test_validate_package_requires_the_player_files(fabric_repo, missing):
-    fake_player(fabric_repo, {k: v for k, v in PLAYER_FILES.items() if k != missing})
-    assert validate.validate_package(fabric_repo) == [f"player/{missing} is missing"]
-
-
-@pytest.mark.parametrize("name", ["installer/PlayerInstall.psm1", "installer/install-client.ps1",
-                                  "Install for Minecraft Launcher.bat", "installer/tools/Helper.bat"])
-def test_validate_package_requires_ascii_player_scripts(fabric_repo, name):
-    fake_player(fabric_repo, {**PLAYER_FILES, name: "Write-Host 'café'\r\n"})
-    errors = validate.validate_package(fabric_repo)
-    assert errors == [f"player/{name} {validate.ASCII_NOTE}"]
-
-
-@pytest.mark.parametrize("name", ["package/READ ME FIRST.txt", "player/READ ME.txt", "package/monkey/Monkey.psm1",
-                                  "CHANGELOG.md", "docs/ADMIN.md"])
+@pytest.mark.parametrize("name", ["package/READ ME FIRST.txt", "package/monkey/Monkey.psm1", "CHANGELOG.md",
+                                  "docs/ADMIN.md"])
 def test_validate_package_rejects_control_characters_in_texts(fabric_repo, name):
-    fake_player(fabric_repo)
     text = fabric_repo.root / name
     text.parent.mkdir(parents=True, exist_ok=True)
     text.write_bytes(b"open  server\\config\x0boicechat\x0boicechat-server.properties\r\n")
     assert validate.validate_package(fabric_repo) == [f"{name} {validate.CONTROL_NOTE}"]
-
-
-# --- the client's Fabric launcher profile ----------------------------------------------------------
-
-def edit_profile(repo, change):
-    profile = load_json(repo.fabric_profile)
-    change(profile)
-    save_json(repo.fabric_profile, profile)
-
-
-def libs(p):
-    return p["libraries"]
-
-
-@pytest.mark.parametrize("change, message", [
-    (lambda p: p.update(id="fabric-loader-0.19.4-26.3"), "id must be fabric-loader-0.19.5-26.3"),
-    (lambda p: p.update(inheritsFrom="26.2"), "inheritsFrom must be 26.3"),
-    (lambda p: p.pop("mainClass"), "missing mainClass"),
-    (lambda p: libs(p)[0].update(url="https://evil.example/maven/"), "not an allowed maven repository"),
-    (lambda p: libs(p)[0].update(url="http://maven.fabricmc.net/"), "not an allowed maven repository"),
-    (lambda p: [libs(p)[0].pop(k) for k in ("sha1", "sha256")], "org.ow2.asm:asm:9.10.1: needs a sha1 or sha256"),
-    (lambda p: libs(p)[0].update(sha1="ABC"), "sha1 must be 40 lowercase hex"),
-    (lambda p: libs(p).pop(), "must include net.fabricmc:fabric-loader:0.19.5"),
-    (lambda p: p.update(libraries=[]), "libraries must be a non-empty list"),
-])
-def test_validate_client_checks_the_launcher_profile(fabric_repo, change, message):
-    manifest = fabric_repo.load_manifest()
-    assert validate.validate_client(manifest, fabric_repo) == []
-    edit_profile(fabric_repo, change)
-    errors = validate.validate_client(manifest, fabric_repo)
-    assert any(message in e for e in errors), errors
-
-
-def test_validate_client_rejects_two_versions_of_one_mod(fabric_repo):
-    path = fabric_repo.client / "modrinth.index.json"
-    index = load_json(path)
-    mod = next(f for f in index["files"] if f["path"].startswith("mods/"))
-    older = copy.deepcopy(mod)
-    older["path"] = "mods/an-older-build.jar"
-    index["files"].append(older)
-    save_json(path, index)
-    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
-    both = " and ".join(sorted([mod["path"], older["path"]]))
-    assert errors == [f"client: {both} are the same Modrinth project (keep one version)"]
-
-
-def test_validate_client_matches_the_profile_to_the_client_index(fabric_repo):
-    index = load_json(fabric_repo.client / "modrinth.index.json")
-    index["dependencies"]["fabric-loader"] = "0.19.6"  # a loader bump without re-pinning the profile
-    save_json(fabric_repo.client / "modrinth.index.json", index)
-    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
-    assert any("id must be fabric-loader-0.19.6-26.3" in e for e in errors), errors
-
-
-def test_validate_client_requires_a_readable_profile(fabric_repo):
-    manifest = fabric_repo.load_manifest()
-    fabric_repo.fabric_profile.write_text("{not json", encoding="utf-8")
-    assert "not valid JSON" in validate.validate_client(manifest, fabric_repo)[0]
-    fabric_repo.fabric_profile.unlink()
-    assert validate.validate_client(manifest, fabric_repo) == [
-        "client/fabric-profile.json is missing (pin it with `python tools/snapshot.py profile`)"]
-
-
-def test_verify_profile_online(fabric_repo, recorded, capsys):
-    up = Upstream(recorded)
-    assert validate.verify_profile_online(up, fabric_repo) == []
-    assert "ok  profile  fabric-loader-0.19.5-26.3" in capsys.readouterr().out
-    # Meta stamps each generated profile with the time; that alone is not a difference.
-    later = "2027-01-01T00:00:00+0000"
-    edit_profile(fabric_repo, lambda p: p.update(time=later, releaseTime=later))
-    assert validate.verify_profile_online(up, fabric_repo) == []
-    edit_profile(fabric_repo, lambda p: libs(p)[0].update(sha1="0" * 40))
-    assert validate.verify_profile_online(up, fabric_repo) == [
-        "client/fabric-profile.json differs from what Fabric meta serves now "
-        "(re-pin it with `python tools/snapshot.py profile`)"]
 
 
 # --- online: downloads and patch fit, served by RecordedHttp ---------------------------------------
@@ -390,63 +289,16 @@ def test_a_stale_generated_pack_fails_validation(monkeypatch, capsys):
 PIN_JAR = b"a mod of ours"
 
 
-def pinned_repo(repo, client=True):
-    """`repo` with one GitHub pin in its manifest and (unless client=False) the same file in the players' pack."""
-    pin = github_pin(PIN_JAR)
-    m = repo.load_manifest()
-    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
-    repo.save_manifest(m)
-    path = repo.client / "modrinth.index.json"
-    index = load_json(path)
-    if client:
-        index["files"].append(github_client_file(pin, PIN_JAR))
-        save_json(path, index)
-    return path, index
-
-
-def test_a_github_pin_is_valid_on_the_server_and_in_the_pack(fabric_repo):
-    pinned_repo(fabric_repo)
+def test_a_github_pin_is_valid_on_the_server(fabric_repo):
     m = fabric_repo.load_manifest()
+    m["mods"] = sorted(m["mods"] + [github_pin(PIN_JAR)], key=lambda e: e["slug"])
     assert validate.validate(m, fabric_repo) == []
-    assert validate.validate_client(m, fabric_repo) == []
 
 
 def test_a_github_pin_is_not_valid_on_a_paper_server(paper_repo):
     m = paper_repo.load_manifest()
     m["mods"] = [github_pin(PIN_JAR)]
     assert validate.validate(m, paper_repo) == ["mods: a paper server can't use mods (1 listed)"]
-
-
-def test_a_github_pin_must_be_in_the_players_pack(fabric_repo):
-    pinned_repo(fabric_repo, client=False)
-    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == [
-        "client: mods/homemade-1.0.jar is missing (the server's GitHub pin patina-and-chime must be in the pack)"]
-
-
-@pytest.mark.parametrize("mutate", [
-    lambda f: f.update(fileSize=f["fileSize"] + 1),
-    lambda f: f["hashes"].update(sha512="0" * 128),
-    lambda f: f.update(downloads=[f["downloads"][0].replace("/v1.0/", "/v1.1/")]),
-    lambda f: f.update(downloads=f["downloads"] + ["https://example.com/homemade-1.0.jar"]),
-    lambda f: f.update(downloads=["https://github.com/someone/else/releases/download/v1.0/homemade-1.0.jar"]),
-])
-def test_the_pack_file_must_be_exactly_the_servers_github_pin(fabric_repo, mutate):
-    path, index = pinned_repo(fabric_repo)
-    mutate(index["files"][-1])
-    save_json(path, index)
-    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
-    assert ("client mods/homemade-1.0.jar: downloads must be Modrinth CDN URLs "
-            "(or be exactly a GitHub pin of the server manifest, ADR-0009)") in errors
-
-
-def test_a_github_download_the_server_does_not_pin_is_refused(fabric_repo):
-    """The pack can't carry a jar from GitHub on its own: only the server's pin, mirrored."""
-    path = fabric_repo.client / "modrinth.index.json"
-    index = load_json(path)
-    index["files"].append(github_client_file(github_pin(PIN_JAR), PIN_JAR))
-    save_json(path, index)
-    errors = validate.validate_client(fabric_repo.load_manifest(), fabric_repo)
-    assert len(errors) == 1 and "downloads must be Modrinth CDN URLs" in errors[0]
 
 
 def test_verify_online_downloads_a_github_pin(capsys):

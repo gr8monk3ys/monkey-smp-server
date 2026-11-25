@@ -28,36 +28,85 @@ changed weekly.
 
 ## Plugins
 
-| Job | Plugin | Why | Status for MC 26.3 |
+| Job | Plugin | Why | Status for MC 26.3 (platform pin run, 25 Nov) |
 |---|---|---|---|
-| Money and `/pay`, `/bal`, `/baltop` | EssentialsX Economy (in the platform stack) | Already in the stack; logs every change | Dev builds only for 26.3 (platform thread) |
-| Economy API | VaultUnlocked (in the platform stack) | What shop and auction plugins talk to | In the stack |
-| Server shop, `/sell`, `/sellall`, sell GUI | **EconomyShopGUI** (free) | Free, Bedrock forms through Floodgate, transaction log, supports VaultUnlocked | Changelog lists 26.1, 26.1.2 and 26.2 (Jun 2026); **26.3 not confirmed** |
-| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | Says Paper 1.20.1 to 26.3, tested on 26.1.2, 26.2, 26.3 |
+| Money and `/pay`, `/bal`, `/baltop` | EssentialsX Economy (in the platform stack) | Already in the stack for homes and teleports; logs every change | **No 26.3 release yet**; fallback below |
+| Economy API | VaultUnlocked (in the platform stack) | What shop and auction plugins talk to | Pinned, 2.20.3 |
+| Server shop, `/sell`, `/sellall`, sell GUI | **EconomyShopGUI** (free) | Free, Bedrock forms through Floodgate, transaction log, supports VaultUnlocked | Pinned, 7.3.4 |
+| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, per-item price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | **Can't be pinned as things stand**: see below |
 
-Both new plugins need adding to the platform's pinned list (docs/relaunch/plugin-stack.md). Two cautions:
-DonutAuctionHouse is marked "Unlisted by staff" on Modrinth, so pin it from its GitHub release
-(github.com/MeherBenSalem/DonutAuction) rather than Modrinth; and if EconomyShopGUI has no 26.3 build by mid
-January, the price table still applies to any GUI shop, only the generator's output format would change.
+### The auction house needs a decision
 
-**If EssentialsX has no 26.3 release by about 15 Jan 2027**, the money moves to another VaultUnlocked provider,
-because a dev build shouldn't hold everyone's balance:
+The installer only takes plugins from Modrinth's CDN, checked by hash (ADR-0002). The exceptions are Floodgate
+(ADR-0010) and the owners' own mods from GitHub (ADR-0009, mods only). DonutAuctionHouse is "Unlisted by staff" on
+Modrinth and published on GitHub (github.com/MeherBenSalem/DonutAuction), so the platform pin run left it out. Two
+ways on:
 
-1. **TheNewEconomy** first. It comes from the same author as VaultUnlocked, so it supports VaultUnlocked natively,
-   and it brings its own `/bal`, `/pay` and `/baltop`.
-2. **CoinsEngine** second. EconomyShopGUI supports it directly (`COINS_ENGINE`), and it registers with Vault for
-   the auction house.
+1. **Recommended: widen ADR-0009 to name DonutAuctionHouse's repository**, so its GitHub release is pinned by hash
+   like Patina & Chime. It's open source under Apache-2.0, and it does everything this design asks for. It's a
+   third-party plugin, not one of ours, so this changes the installer's rule: Lorenzo's call, with the platform
+   thread making the change.
+2. **zAuctionHouse's free Modrinth build** (`zauctionhouse`, lists 26.3, updated early Nov 2026). It covers the
+   basics: a percent tax, listing limits by permission, a global price floor, a blacklist, a trade log, expired-item
+   collection and shulker previews. It loses four things this design relies on:
+   - It has no bidding (on its roadmap, not built).
+   - It has no per-item price floors, only a global minimum, so diamonds could sell on the auction house below the
+     shop's $100.
+   - Its docs don't say where the tax money goes. If it isn't destroyed, the 5% stops being a sink.
+   - Its page calls the free build a demo: one version behind the paid one, and no support.
 
-Neither one's 26.3 support has been checked yet, so the platform pin run should check both. Nothing else changes in
-this design. Season 1 starts every balance at $0, so there is nothing to migrate. Three things move with the switch:
-the EconomyShopGUI sections' `economy:` line (still `VAULTUNLOCKED` for TheNewEconomy, `COINS_ENGINE` for
-CoinsEngine), the EssentialsX settings below (starting balance, $0 minimum and the `/pay` minimum move to the new
-plugin's config), and `tools/economy.py supply`, which reads EssentialsX's userdata files and would need a reader for
-the new plugin's storage. EssentialsX itself can stay for homes and teleports, with its economy left unused.
+   If this is the pick, the per-player limit is `permissions.auction` with only `zauctionhouse.max.5` given to the
+   default group, the tax is the `tax:` block under the Vault entry in `economies.yml` with `reductions` empty, and
+   no rank ever gets `zauctionhouse.tax.bypass` or a higher `zauctionhouse.max.*`. The config in this PR would be
+   rewritten for it.
 
-Considered and not picked: zAuctionHouse (free, but lists only up to 1.21.11), ShopGUIPlus (paid, $14.99, lists
-up to 1.21.x), QuickShop or ChestShop player shops (more lag and more grief surface for a first season; the auction
-house covers player selling).
+Also on Modrinth and not picked: NexusAuctionHouse (needs its own NexusCore library; its versions page stops at 26.2;
+no sales tax shown) and VIP Auctions (1.21.x only, all rights reserved).
+
+### Fallback economy provider
+
+**If EssentialsX has no 26.3 release by about 15 Jan 2027**, the money moves to **OpenEco** (`openeco` on Modrinth),
+because a dev build shouldn't hold everyone's balance. Why OpenEco:
+
+- It's on Modrinth, so the installer can pin it, and it lists Paper 26.3. It's free, Apache-2.0 and open source
+  (github.com/Alexteens24/OpenEco). Its latest release is 1.7.0, from October 2026.
+- It registers as both a VaultUnlocked (v2) and a classic Vault provider, so EconomyShopGUI keeps `VAULTUNLOCKED`
+  and the auction house finds it too. That's from its docs; **test it on the beta**.
+- It has what this design uses: `/bal`, `/pay`, `/baltop`, `/eco give|take|set|reset`, a `/pay` minimum, transaction
+  history, SQLite storage and PlaceholderAPI.
+
+The settings that move from EssentialsX (key names from OpenEco's docs; check the generated config on the beta):
+
+```yaml
+currencies:
+  default: openeco
+  definitions:
+    openeco:
+      starting-balance: 0
+      max-balance: 1000000000000
+      decimal-digits: 2
+      format: '$<amount>'      # check how this renders
+pay:
+  min-amount: 1
+  tax-percent: 0.0
+history:
+  retention-days: -1           # keep the whole season; dupe hunts read it
+```
+
+What else changes: nothing in the shop or the auction house. EssentialsX stays for homes and teleports, with its
+economy unused (EssentialsX uses another Vault provider when one is present, so its `command-costs` for `/tpa`
+and `/home` should still charge; check on the beta).
+OpenEco has no "reset everyone" command, so the season reset deletes its database file with the server stopped
+(`storage.sqlite.file`), which also clears last season's history. `tools/economy.py supply` reads EssentialsX's
+userdata files and would need a reader for OpenEco's SQLite file.
+
+Earlier picks dropped: TheNewEconomy stopped at 1.21.x in 2025, and CoinsEngine isn't on Modrinth. Also on Modrinth
+and listing 26.3, and not picked: VaultEconomy (all rights reserved, a release candidate, Vault only, and an
+all-in-one plugin with auctions, clans and teleports built in) and Horizons Economy (all rights reserved, Vault only,
+under 200 downloads, adds banknotes and interest).
+
+Considered and not picked for the shop: ShopGUIPlus (paid, $14.99), QuickShop or ChestShop player shops (more lag
+and more grief surface for a first season; the auction house covers player selling).
 
 ## Where money comes from
 
@@ -281,4 +330,8 @@ Read 25 Nov 2026. Prices and earn rates in this doc are my estimates unless a ro
   causes.
 - GeyserMC wiki, current limitations; BedrockMenus on Hangar.
 - EconomyShopGUI wiki (wiki.gpplugins.com) and changelog; DonutAuctionHouse's Modrinth page, docs and default
-  config; zAuctionHouse 4.0.0.4 on Modrinth; EssentialsX 2.22.0 release notes.
+  config; EssentialsX 2.22.0 release notes.
+- The platform thread's pin list, docs/relaunch/plugin-stack.md (draft PR #214), for what is pinned on 26.3.
+- OpenEco's Modrinth page, GitHub releases and docs (alexteens24.github.io/OpenEco); zAuctionHouse's Modrinth page
+  and docs (docs.groupez.dev/zauctionhouse); the Modrinth pages of NexusAuctionHouse, VIP Auctions, VaultEconomy and
+  Horizons Economy. Modrinth's version lists didn't load, so release channels are still to confirm in the pin run.

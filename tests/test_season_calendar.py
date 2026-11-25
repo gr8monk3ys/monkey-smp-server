@@ -159,7 +159,7 @@ def test_the_launch_weekend_is_saturday_5_pm_to_the_end_of_sunday_pacific():
 
 def test_the_launch_is_the_sites_launch_time():
     # site/config.json's LAUNCH_AT (the countdown) is the website's copy of the launch: moving the calendar
-    # without it would open the Founder's Circlet window at another time than the site says.
+    # without it would open the launch weekend's window at another time than the site says.
     assert site_links.launch_time(site_links.links()["LAUNCH_AT"]) == season_calendar.LAUNCH
 
 
@@ -185,20 +185,15 @@ def test_moving_the_launch_moves_the_whole_calendar(weeks):
     assert not moved.drop_night(moved.week_one - dt.timedelta(days=4)) and moved.drop_night(moved.week_one)
 
 
-def test_the_criers_launch_times_follow_the_launch(monkeypatch):
+def test_the_criers_launch_times_follow_the_relaunch(monkeypatch):
     assert npcs.crier_text(0).startswith(
-        "Season I opens Saturday 7 November at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP and the "
-        "Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is Sunday 8 November at 6 PM.")
-    later = season_calendar.Season(pacific(2026, 11, 14, 16, 30))
-    monkeypatch.setattr(season_calendar, "SEASON", later)
+        "Season 1 opens Saturday 6 February at 5 PM Pacific (8 PM Eastern). Spawn and the market open")
+    later = season_calendar.Season(pacific(2027, 2, 13, 16, 30))
+    monkeypatch.setitem(season_calendar.SEASONS, npcs.RELAUNCH, later)
     text = npcs.crier_text(0)
-    assert text.startswith("Season I opens Saturday 14 November at 4:30 PM Pacific (7:30 PM Eastern): the launch "
-                           "hour, then PvP and the Nether open at 5:30 PM. The Build Battle wheel spins at 4:30 PM, "
-                           "and judging is Sunday 15 November at 6 PM."), text
-    assert "Next week: Faction Raid I, Saturday 21 November." in text
-
-
-# ---------------------------------------------------------------- in words
+    assert text.startswith("Season 1 opens Saturday 13 February at 4:30 PM Pacific (7:30 PM Eastern)."), text
+    assert "Next week: King of the Hill I, Saturday 20 February." in text
+    assert "Season 1 ends with the finale on Saturday 17 April." in text
 
 
 def test_words_are_the_same_in_any_locale():

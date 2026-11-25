@@ -2,7 +2,7 @@
 
 How Monkey SMP stays worth logging into: a season with a start, a middle and an ending, one scheduled
 event every week, and a big moment every two to three weeks. `docs/RETENTION.md` covers the
-wardrobe and how to read the numbers; `docs/RULES.md` is the rulebook this plan works around.
+retention counters, cosmetics and how to read the numbers; `docs/RULES.md` is the rulebook this plan works around.
 
 ## What other servers do
 
@@ -50,18 +50,19 @@ Each season has:
   the off-season week from two or three options the owners pick (examples below).
 - **A fixed end date, announced on day one.** Nobody should pay for a month the world ends in without
   knowing it.
-- **A season skin.** A blade that anyone who plays in the season unlocks, like Founder's Edge in Season I.
-  Season skins never come back, so playing in a season is a keepsake.
+- **A season keepsake.** Other servers give everyone who plays a season something that never comes back. Here
+  that was a season skin in the wardrobe (Founder's Edge for Season I); the wardrobe skins are retired
+  (`docs/RETENTION.md`), so for now it is only a mark in the scoreboard (`rw.founder`, `rw.s2`), and any
+  keepsake cosmetic would come from UltraCosmetics.
 - **A champion.** The faction with the most Season Cup points (below) gets its banner hung in the Hall of
-  Banners at the next season's spawn, a champion helm in the wardrobe, its name held for it next season,
-  and a title for the whole roster ("The season champion", below).
+  Banners at the next season's spawn, its name held for it next season, and a title for the whole roster ("The season champion", below).
 - **Factions registered before launch.** Teams of up to four sign up in Discord before the server opens
   (one Open Parties and Claims party each, rule 29), so the first events have teams from day one.
   Solo players are matched into factions by staff. Each faction writes a one-paragraph charter when it
   signs up (below).
 
-What carries over between seasons: wardrobe unlocks, days and hours played, tenure, invites, events
-attended, holiday skins, weekly challenges done, the launch weekend's skin, supporter tiers and titles,
+What carries over between seasons: the retention scores (days and hours played, tenure, invites, events
+attended, holidays, weekly challenges done, the founder and launch-weekend marks), supporter tiers and titles,
 including the champion's (`tools/season.py carry`,
 "Ending a season" below). What resets: the world, items, Strength and territory. Factions can re-form.
 
@@ -89,7 +90,7 @@ The four pillar events (below) run in every season. The acts and the catalog fil
 
 | Week | Act or event | What happens |
 | --- | --- | --- |
-| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Founder's Edge for everyone, and Founder's Circlet for 10 minutes online before the end of Sunday (Pacific). Challenge week 0. |
+| 0, days 1 and 2 | **Launch weekend: Build Battle** | Rule 23's peaceful hour, then PvP and the Nether open. The wheel spins at launch and factions build until judging on the second night. Everyone who plays is a founder (`rw.founder`), and 10 minutes online before the end of Sunday (Pacific) is the launch-weekend mark (`rw.launch`). Challenge week 0. |
 | 1 | **Faction Raid I** | The first capture-the-flag night, once every faction has a base and a flag. |
 | 2 | **The border breaks** | The border grows from 5000 to 5500, with supply drops in the new ring. New land for late joiners. The live map widens with it (docs/ADMIN.md, "The live map"). |
 | 3 | **Dragon Night: Anarchy** | The End opens in the event slot, and for the next 90 minutes every rule is off except the griefing, cheating and conduct rules (below). |
@@ -224,8 +225,8 @@ Discord table still show that week with them; the website's file never held land
 
 Between events, three **weekly challenges** (one solo, one faction, one explore) give everyone something to
 do that week, about one to three hours of play. A new set starts every Monday at 12 AM Pacific, after
-the Saturday event, and each one done counts toward three wardrobe skins (`docs/RETENTION.md`, "Weekly
-challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
+the Saturday event, and each one done adds to the player's count of challenges done (`docs/RETENTION.md`,
+"Weekly challenges"). The faction challenge is sometimes "Come to an event", so the Saturday slot counts for it. The
 launch weekend is challenge week 0, and week 1 starts on Monday 9 November 2026. See what runs when with
 `python tools/challenges.py schedule`.
 
@@ -440,7 +441,7 @@ The territory rules (34, 37 and 39) protect bases, so a raid can't mean griefing
   and crossbow, axe, spear, and an unenchanted mace.
 - **Formats.** 1v1 single elimination (best of three) for individuals; 2v2 and the 4v4 faction bracket
   for teams.
-- **Prizes.** Individual champions get a title, an arena skin in the wardrobe and one event book (B18).
+- **Prizes.** Individual champions get a title and one event book (B18).
   Team winners get Cup points, and their banner hangs on the arena wall until the next Arena Glory.
 - **Event books carry lore** ("Monkey SMP event reward, Season I"). An anvil can rename a book but
   can't add lore, so only books with that line may be applied under B18. A book is never above the
@@ -507,11 +508,11 @@ the next season, because a prize that resets with the world is forgotten in a we
 
   It is a scoreboard team like the supporter titles in `docs/RETENTION.md` ("Name colors and titles"),
   and a player shows one team at a time. A champion who is also a supporter picks the title or the
-  supporter color; the supporter skins stay either way. The store's expiry command (`team leave`) also
+  supporter color. The store's expiry command (`team leave`) also
   drops the title, so put the player back with `team join champion_s1 NAME`.
-- **The helm.** Everyone on that roster gets the Champion's Helm, a gold helm with a laurel, in the
-  wardrobe (`rw.champion`, set with the title in "Ending a season", step 4). It carries into every later
-  season like every wardrobe score, and is never sold. Its locked line only shows in the menu from Season II.
+- **The mark.** Everyone on that roster gets `rw.champion` 1, set with the title in "Ending a season",
+  step 4. It carries into every later season like every retention score, and is never sold. It used to unlock
+  the Champion's Helm, a wardrobe skin, which is retired.
 - **The banner** hangs in the Hall of Banners at the next season's spawn (below).
 
 #### The Hall of Banners
@@ -607,27 +608,22 @@ Three dated events a year, whatever week of the season they fall in. A holiday i
 gets decorated for the week and that Saturday's event takes the holiday's theme, but the season's acts
 don't move.
 
-| Holiday | When | Next | Spawn | The event | Skin |
-| --- | --- | --- | --- | --- | --- |
-| Hallowtide | the last Saturday of October | 2026-10-31 | pumpkins, soul lanterns, cobwebs | boss night after dark, or a haunted maze | Gravelight (blade) |
-| Midwinter | the Saturday before December 25 | 2026-12-19 | snow, lights, a tree | snowball fight in the arena, then gifts at spawn | Midwinter Cap (helm) |
-| Midsummer | the Saturday nearest June 21 | 2027-06-19 | flowers, banners, a bonfire | boat race or treasure hunt | Solstice (blade) |
+| Holiday | When | Next | Spawn | The event |
+| --- | --- | --- | --- | --- |
+| Hallowtide | the last Saturday of October | 2026-10-31 | pumpkins, soul lanterns, cobwebs | boss night after dark, or a haunted maze |
+| Midwinter | the Saturday before December 25 | 2026-12-19 | snow, lights, a tree | snowball fight in the arena, then gifts at spawn |
+| Midsummer | the Saturday nearest June 21 | 2027-06-19 | flowers, banners, a bonfire | boat race or treasure hunt |
 
-- **The skin comes from being there.** Near the end of the event, a staff member standing with the crowd
-  runs `/scoreboard players set @a[distance=..48] rw.hallowtide 1` (`rw.midwinter`, `rw.midsummer`),
-  or `scoreboard players set NAME rw.hallowtide 1` one name at a time. Players see "Unlocked Gravelight"
-  in chat. Run `begin` and `attend` too (`docs/ADMIN.md`, "Attendance"), so it counts toward Rallier and
-  the Plumed Helm like any event.
+- **Who came is kept.** Near the end of the event, a staff member standing with the crowd runs
+  `/scoreboard players set @a[distance=..48] rw.hallowtide 1` (`rw.midwinter`, `rw.midsummer`), or
+  `scoreboard players set NAME rw.hallowtide 1` one name at a time. Run `begin` and `attend` too
+  (`docs/ADMIN.md`, "Attendance"), so it counts like any event. Each holiday used to give a wardrobe skin
+  (Gravelight, the Midwinter Cap, Solstice); the skins are retired, so the score is only a record of who came.
 - **Never sold.** No store package, supporter tier or favour sets a holiday score, and
-  `tests/test_wardrobe.py` fails if a store command in `docs/RETENTION.md` does. A skin missed this
-  year comes back at next year's event, so missing one costs a year's wait, not the skin.
-- **Announce it two weeks ahead** with `/gamenight`, like any event, and say which skin it brings.
+  `tests/test_wardrobe.py` fails if a store command in `docs/RETENTION.md` does.
+- **Announce it two weeks ahead** with `/gamenight`, like any event.
 - **Decorate in creative** (spawn rules, 22) the week before, and take it down the weekend after.
 - **In the off-season week** it runs anyway, in the locked world.
-
-A holiday skin's model is in the wardrobe resource pack, which players don't get since the client pack went
-(docs/ADMIN.md, the wardrobe). The score and the wardrobe entry still work; the look waits on a server resource
-pack.
 
 ### Base of the Month
 
@@ -716,7 +712,7 @@ A Strength server gets harder to join every week, so catching up has to be built
 - A 48-hour PvP grace period for a first join (rule 26), built into the `monkey-rules` data pack
   (`tools/rules.py`). Attacking a player ends it, and nobody gets it in the launch hour.
 - The first-week quest (`docs/RETENTION.md`, "The first week"): five steps for a player new this season,
-  from the Guide to a faction, land and an outpost, with a skin at the end.
+  from the Guide to a faction, land and an outpost.
 - The catch-up kit (below), for a first join from week 4 on.
 
 #### The catch-up kit
@@ -800,8 +796,8 @@ are the example; change the numbers.
 **After the finale (end of week 11)**
 
 4. Post the final Cup standings and crown the champion: its title team ("The season champion", above),
-   its Champion's Helm (`monkey rcon "scoreboard players set NAME rw.champion 1"` for each member; they see
-   "Unlocked Champion's Helm" in chat, or at their next login) and its banner for the Hall of Banners (read it
+   its champion mark (`monkey rcon "scoreboard players set NAME rw.champion 1"` for each member; the
+   Champion's Helm it used to unlock is retired) and its banner for the Hall of Banners (read it
    out now, while the world is still here, and fill in the Champions table above).
    Then the Pioneer title, for the most Server Firsts (a tie goes to whoever reached that number first):
    `python3 /srv/monkey/repo/tools/firsts.py champion /srv/monkey/MonkeySMP-Server/server/world --season 1`
@@ -833,7 +829,7 @@ are the example; change the numbers.
    `#monkey-smp` and on the changelog page.
 
 Then the Season Wrapped pages, a page per player about their season (hours, days, PvP kills, challenges,
-events, their faction's best weekly rank, Server Firsts and skins), from step 6's world:
+events, their faction's best weekly rank and Server Firsts), from step 6's world:
 
 ```sh
 python3 /srv/monkey/repo/tools/wrapped.py build /srv/monkey/seasons/season-I/world --season 1 \
@@ -858,13 +854,13 @@ renewals keep counting: the store's commands still reach the old world, and the 
 
 **Starting the next season**
 
-9. Release the update that opens the season (the new seed, the season's skin, the twist) and let it
+9. Release the update that opens the season (the new seed, the twist) and let it
    deploy. Then pause deploys for the switch: `sudo systemctl stop monkey-deploy.timer`.
 10. Stop the server: `docker compose stop`.
 11. Move the old world out: `mv ../server/world /srv/monkey/seasons/season-I/world-end`. This is the final
     state, off-season renewals included; the carry reads it.
 12. Set the new seed in the live `../server/server.properties` (`level-seed=...`). Nothing else changes.
-13. Carry the wardrobe over, before the first start:
+13. Carry the retention scores over, before the first start:
 
     ```sh
     python3 /srv/monkey/repo/tools/season.py carry /srv/monkey/seasons/season-I/world-end \
@@ -872,10 +868,10 @@ renewals keep counting: the store's commands still reach the old world, and the 
     ```
 
     It writes one small data pack, `monkey-carry`, into the new world folder. It holds every player's
-    wardrobe scores (days, months, invites, events, holidays, weekly challenges done, tier, founder and
+    retention scores (days, months, invites, events, holidays, weekly challenges done, tier, founder and
     the launch weekend), their hours played, and the
     supporter, title and champion teams. It runs by itself at the new world's first load, once, and sets
-    the season to 2, so no one gets Founder's Edge in the new world.
+    the season to 2, so no one new becomes a Season I founder in the new world.
 14. Start it: `docker compose up -d`. The world generates, the installer adds the Monkey SMP data packs, and
     the console says "Carried N players' wardrobe scores and K teams into season 2." Within the hour,
     `monkey-week.timer` tells the new world the challenge week (it keeps the rotation going; this week's
@@ -912,7 +908,7 @@ Sunday 14 March 2027**, in week 5: from then 6 PM Pacific is 9 PM Eastern as bef
 
 | Week | Saturday | The event | Also that week |
 | --- | --- | --- | --- |
-| 0 | Sat 6 Feb 2027, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 7 Feb, 6 PM. | Twinmoon for everyone who plays this season. The first Saturday of February, so no Town Hall: launch night takes its place. |
+| 0 | Sat 6 Feb 2027, 5 PM | Launch: the launch hour, then PvP and the Nether at 6 PM. The Build Battle wheel spins at 5 PM; judging Sunday 7 Feb, 6 PM. | Everyone who plays this season gets the Season II mark (`rw.s2`). The first Saturday of February, so no Town Hall: launch night takes its place. |
 | 1 | Sat 13 Feb | Faction Raid I | |
 | 2 | Sat 20 Feb | The border breaks: 6000 to 8000 (by itself at 6:01 PM, `monkey-border.timer`) | |
 | 3 | Sat 27 Feb | **Dragon Night**: the End opens, Anarchy for 90 minutes | |
@@ -942,33 +938,29 @@ Season I's runbook ("Ending a season") does the switch; this is what is new for 
 
 1. The owners confirm the date. If it moves, change `SEASON_II` in `tools/season_calendar.py` and this
    calendar, run `python tools/datapacks.py`, and `python tools/checks.py`: the border acts move with it.
-2. Name the season skin. Twinmoon (a silver-blue blade with two moons) is a placeholder: change its `name` and
-   colors in `BLADES` in `tools/wardrobe.py`, its row in `docs/RETENTION.md`, and run `python tools/datapacks.py`.
-   Never move it within `BLADES`: a skin's place is its trigger value.
-3. Pick the twist's options for the vote, and the seed (Ending a season, steps 2 and 3). A twist that changes
+2. Pick the twist's options for the vote, and the seed (Ending a season, steps 2 and 3). A twist that changes
    the border ("a smaller world") changes `ACTS` and `BORDER` in `tools/rules.py` too.
 
 **After Season I's finale (23 January)**
 
-4. Ending a season, steps 4 to 8, with the Champion's Helm and the banner (step 4). Fill in the Champions
+3. Ending a season, steps 4 to 8, with the champion mark and the banner (step 4). Fill in the Champions
    table (The Hall of Banners) before the world is moved away.
 
-**The release that opens Season II** (Ending a season, step 9). It ships Twinmoon and the Champion's Helm in
-the wardrobe resource pack, which needs a server resource pack to reach players (docs/ADMIN.md, the wardrobe).
+**The release that opens Season II** (Ending a season, step 9).
 
-5. Point the tools at Season II: in `tools/season_calendar.py`, set `SEASON = SEASON_II` (challenges, drops,
+4. Point the tools at Season II: in `tools/season_calendar.py`, set `SEASON = SEASON_II` (challenges, drops,
    omens, the standings and the Sunday recap then count Season II's weeks), and `LAUNCH_AT` in
    `site/config.json` to the same time (a test checks they agree).
-6. Update what still speaks of Season I's weeks: the Town Crier's events (`EVENTS` in `tools/npcs.py`) from the
+5. Update what still speaks of Season I's weeks: the Town Crier's events (`EVENTS` in `tools/npcs.py`) from the
    calendar above, the recap's and the Crier's "Season II is planned for ..." line (it becomes Season III's),
-   `tests/test_season_calendar.py`'s Season I checks, and the launch posts in `docs/LAUNCH.md`. Founder's Circlet
-   and Founder's Edge need nothing: they only work while `#season` is 1.
-7. Put the new seed in `package/monkey/manifest.json` (`world.seed`).
+   `tests/test_season_calendar.py`'s Season I checks, and the launch posts in `docs/LAUNCH.md`. The founder and
+   launch-weekend marks need nothing: they only work while `#season` is 1.
+6. Put the new seed in `package/monkey/manifest.json` (`world.seed`).
 
 **The switch** (Ending a season, steps 10 to 17, with `--season 2`)
 
-8. Build the Hall of Banners at the new spawn in creative before the launch, with Season I's banner.
-9. After the launch (step 17), turn on the border acts:
+7. Build the Hall of Banners at the new spawn in creative before the launch, with Season I's banner.
+8. After the launch (step 17), turn on the border acts:
 
    ```sh
    sh /srv/monkey/repo/deploy/monkey-border.sh --check      # the acts' dates, the borders, nothing due yet
@@ -978,9 +970,8 @@ the wardrobe resource pack, which needs a server resource pack to reach players 
    Then the switches (Switches, below), if the owners want the border boss and the finale:
    `monkey rcon "function monkey:boss/on"` and `monkey rcon "function monkey:finale/on"`.
 
-10. Check the season skin: once a player has logged in, `monkey rcon "scoreboard players get NAME rw.s2"` gives
-    1 and their wardrobe's challenges page (`/trigger wardrobe set 5`) shows Twinmoon. A champion's
-    `rw.champion` came over with the carry.
+9. Check the season mark: once a player has logged in, `monkey rcon "scoreboard players get NAME rw.s2"` gives
+   1. A champion's `rw.champion` came over with the carry.
 
 **During Season II**
 
@@ -992,9 +983,8 @@ the wardrobe resource pack, which needs a server resource pack to reach players 
   `journalctl -u monkey-border --since today`. To hold an act back, stop the timer
   (`sudo systemctl stop monkey-border.timer`) and start it when the act should happen.
 - The Sunday recap has the Player of the Week line from the first Sunday after the launch.
-- Before Season II ends, Season III's blade goes in `SEASON_SKINS` and at the end of `BLADES`
-  (`tools/wardrobe.py`), and Season III's acts in `ACTS` (`tools/border.py`) with its `Season` in
-  `SEASONS` (`tools/season_calendar.py`).
+- Before Season II ends, Season III's mark goes in `SEASON_MARKS` (`tools/wardrobe.py`), and Season III's acts
+  in `ACTS` (`tools/border.py`) with its `Season` in `SEASONS` (`tools/season_calendar.py`).
 
 ### Switches
 
@@ -1008,7 +998,7 @@ world (`#season rw.day` 1) the switches refuse and nothing runs. Check them with
 | The border boss | `function monkey:boss/on` | `function monkey:boss/off` | A boss rises on each border act (below). Off also sends away a boss that is up or waiting. |
 | The finale | `function monkey:finale/on` | `function monkey:finale/off` | The border timer starts the finale at its time (below). Off doesn't end one already running: `function monkey:finale/stop` does. |
 
-Turn both on after the launch (Season II checklist, step 9), before 20 February.
+Turn both on after the launch (Season II checklist, step 8), before 20 February.
 
 ### The border boss
 
@@ -1071,18 +1061,20 @@ once, with the switch on.
   (50 points, "The pillar events"); the season's champion is still the faction with the most Cup points.
   The pack doesn't set `rw.champion` itself: a pack only reaches players who are online, the roster is the
   faction numbers as of the last hourly board run, and the champion is decided by the Cup. After the close,
-  `python tools/finale.py result WORLD` prints the points, the winner's roster, and the title and helm commands
+  `python tools/finale.py result WORLD` prints the points, the winner's roster, and the title and mark commands
   for "Ending a season", step 4, to paste once the Cup is counted.
 
 ## What is built and what isn't
 
 Built:
-- The wardrobe and Founder's Edge.
+- The retention counters (`rw.*`, the `monkey-wardrobe` data pack) and the founder mark. The wardrobe's
+  cosmetic skins were built and are retired: the relaunch sends no resource pack, so cosmetics come from
+  UltraCosmetics (`docs/RETENTION.md`).
 - Weekly challenges (`tools/challenges.py`, in the `monkey-wardrobe` data pack): three a week from a pool
-  that rotates every Monday at 12 AM Pacific, `/trigger challenges`, and their skins at 3, 9 and 18
-  challenges done (Trailblazer, the Vanguard Helm, Pinnacle). `monkey-week.timer` sends the week.
-- Founder's Circlet, for 10 minutes online on Season I's launch weekend: opened by `rules/launch`, closed
-  at the end of Sunday, Pacific.
+  that rotates every Monday at 12 AM Pacific, `/trigger challenges`, and the count of challenges done
+  (`rw.challenges`). `monkey-week.timer` sends the week.
+- The launch-weekend mark (`rw.launch`), for 10 minutes online on Season I's launch weekend: opened by
+  `rules/launch`, closed at the end of Sunday, Pacific.
 - The season counter (`#season rw.day`).
 - `/gamenight` and the Town Hall in Front Desk.
 - `tools/retention.py`.
@@ -1099,12 +1091,11 @@ Built:
     carry.
   - Official flags: a faction's banner with a tag and a serial number, kept when placed and broken.
   - Event books (lore-tagged, vanilla max level, none for banned enchantments) and the `ev.cup` sidebar.
-  - The attendance counter (`rw.events`, once per event), and its skins at 3 and 10 events (Rallier, the
-    Plumed Helm).
+  - The attendance counter (`rw.events`, once per event).
   - The season lock (`function monkey:events/season/lock` and `unlock`).
-- The holiday skins (Gravelight, Midwinter Cap, Solstice) and the tenure ladder at 1, 2 and 3 months.
+- The holiday scores (`rw.hallowtide`, `rw.midwinter`, `rw.midsummer`) and the tenure count (`rw.months`).
 - The season-end runbook ("Ending a season") and `tools/season.py`: the world download, and carrying
-  the wardrobe, hours played and title teams into the next world.
+  the retention scores, hours played and title teams into the next world.
 - The player changelog page, `site/src/content/changes.mdx`.
 - The block wheel: `tools/block_wheel.py` draws from `tools/wheel_pool.txt` (every survival-obtainable
   block, built from the game's data reports) with a published seed, so anyone can check the draw.
@@ -1178,10 +1169,9 @@ Built:
   zombie, a bonus drop for the kill and Normal back at dawn; and a Hunted player killed, ending the hunt.
   Not yet with real players or on the VPS's timer.
 
-- Season skins after Season I: Twinmoon, Season II's blade (`SEASON_SKINS` in `tools/wardrobe.py`), for
-  everyone online while `#season` is 2, as Founder's Edge is for Season I. Its locked line is hidden until
-  Season II. The name is a placeholder (Season II checklist, step 2).
-- The Champion's Helm (`rw.champion`, set by staff after the finale) and the Hall of Banners' plan and record
+- Season marks after Season I: `rw.s2` (`SEASON_MARKS` in `tools/wardrobe.py`), for everyone online while
+  `#season` is 2, as `rw.founder` is for Season I.
+- The champion mark (`rw.champion`, set by staff after the finale) and the Hall of Banners' plan and record
   ("The Hall of Banners"; the build is by hand).
 - Border acts ("Season II"): `tools/border.py` and `deploy/monkey-border.sh` with its hourly timer grow the
   Overworld's and the Nether's (1:8) borders on the season's dates, once each, never shrinking one, then fit

@@ -14,9 +14,9 @@ Minecraft has no wall clock, so the week number comes from outside: `function mo
 {week:N}` starts week N unless it is already running. The week is a score, so restarts keep it.
 deploy/monkey-week.sh sends this script's `commands` every hour.
 
-Each challenge done adds 1 to rw.challenges, which unlocks wardrobe skins (tools/wardrobe.py) and carries to
-the next season like every rw.* score. This week's progress lives in rc.* scores: cleared every week, never
-carried.
+Each challenge done adds 1 to rw.challenges, a count kept in the wardrobe pack (tools/wardrobe.py) that carries
+to the next season like every rw.* score (it unlocked wardrobe skins until they were retired). This week's
+progress lives in rc.* scores: cleared every week, never carried.
 
 How progress is counted, so that it can't be farmed:
   blocks mined   the mined statistic minus the same block placed (`used`), so placing and breaking again
@@ -29,8 +29,8 @@ How progress is counted, so that it can't be farmed:
   events         the events pack's attendance: any event begun this week counts (ev.seen).
 Water- or vehicle-driven movement and player kills never count.
 
-The launch weekend (Founder's Circlet, tools/wardrobe.py) runs from Saturday 7 November 2026, 5 PM Pacific,
-to the end of Sunday 8 November, Pacific. `function monkey:rules/launch` opens it; on the server it then
+The launch weekend (the founder mark, rw.launch, tools/wardrobe.py) runs from Saturday 7 November 2026, 5 PM
+Pacific, to the end of Sunday 8 November, Pacific. `function monkey:rules/launch` opens it; on the server it then
 lasts season_calendar.LAUNCH_SECONDS of game time, which stops while the server is empty, so `commands` also sends the
 seconds left on the wall clock and the server ends it on time.
 
@@ -56,9 +56,9 @@ FN = f"data/{NS}/function/challenges"
 LAUNCHED = "#launched rw.day"   # set when the first launch is done (tools/rules.py reads it)
 ADVANCEMENT = f"data/{NS}/advancement/challenges"
 
-FOUNDER_MINUTES = 10   # online this long in the launch weekend earns Founder's Circlet
+FOUNDER_MINUTES = 10   # online this long in the launch weekend sets the founder mark (rw.launch)
 # What test play before Season I's launch may have earned; the first monkey:rules/launch clears it.
-TEST_PLAY = ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime")
+TEST_PLAY = ("rw.challenges", "rw.launch", "rw.launchtime")
 
 SOLO, FACTION, EXPLORE = "solo", "faction", "explore"
 KINDS = {SOLO: "Solo", FACTION: "Faction", EXPLORE: "Explore"}
@@ -298,7 +298,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/launch.mcfunction"] = lines(
         "# Run by monkey:rules/launch: this week's progress starts from zero. At Season I's first launch, what test",
-        "# play earned goes too: challenges done, and Founder's Circlet from a window staff opened to try it.",
+        "# play earned goes too: challenges done, and the founder mark from a window staff opened to try it.",
         "# #launched makes that once only, so a launch run again by mistake wipes nothing earned since; later",
         "# seasons keep the counts they carried.",
         f"function {NS}:challenges/restart",
@@ -335,7 +335,7 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:goal/line",
     )
     f[f"{FN}/use.mcfunction"] = lines(
-        "# Runs as a player who just used /trigger challenges: the wardrobe's challenges page.",
+        "# Runs as a player who just used /trigger challenges: the wardrobe's menu (its challenges page).",
         f"function {NS}:wardrobe/menu_challenges",
         "scoreboard players set @s challenges 0",
         "scoreboard players enable @s challenges",
@@ -360,7 +360,7 @@ def datapack_files() -> dict[str, str]:
                 score(f"rc.{kind}"), {"text": f"/{c['goal']}", "color": "gray"}),
         )
         f[f"{FN}/done/{cid}.mcfunction"] = lines(
-            f"# {c['name']}: done for this week. One more toward the challenge skins (rw.challenges).",
+            f"# {c['name']}: done for this week. One more challenge done in all seasons (rw.challenges).",
             f"scoreboard players set @s rc.{cid}.done 1",
             "scoreboard players add @s rw.challenges 1",
             "playsound minecraft:entity.player.levelup player @s ~ ~ ~ 0.6 1.2",

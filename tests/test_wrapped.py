@@ -112,37 +112,21 @@ def test_a_card_counts_this_season_only(tmp_path):
     assert cards["Kai"].best is None and cards["Kai"].faction == ""
 
 
-def test_skins_rarest_first_never_the_bought_ones(tmp_path):
-    world = season_files(tmp_path)
-    start = wrapped.read_start(tmp_path / "start.json")
-    cards = {c.name: c for c in wrapped.cards(wrapped.scores(world), firsts.holders(world), start, [])}
-    alex = cards["Alex"]
-    # Emberfang (10 hours) only Alex holds; Rallier (3 events) Alex and Kai, Wayfarer (3 days) Alex and Mod (a tie
-    # goes by name); Founder's Edge all three. The pass (rw.months) and tier skins (rw.tier) are left out.
-    assert [s.id for s in alex.skins][-3:] == ["rallier", "wayfarer", "founders_edge"]
-    assert {s.id for s in alex.skins} >= {"emberfang", "wayfarer", "frostbite", "laurel", "trailblazer", "vanguard"}
-    assert not {s.id for s in alex.skins} & {"oath_i", "oath_ii", "oath_iii", "lantern", "regalia", "crown"}
-    held = {s.id: s for s in alex.skins}
-    assert (held["founders_edge"].holders, held["rallier"].holders, held["emberfang"].holders) == (3, 2, 1)
-    # Founder's Edge was Mod's before the launch: not new for Mod, new for Alex.
-    assert held["founders_edge"].new and not next(s for s in cards["Mod"].skins if s.id == "founders_edge").new
-
-
-def test_build_writes_the_index_a_page_each_and_the_pictures(tmp_path):
+def test_build_writes_the_index_and_a_page_each(tmp_path):
     world = season_files(tmp_path)
     out = build(tmp_path, world)
     assert sorted(p.name for p in out.glob("*.html")) == ["alex.html", "index.html", "mod.html"]
-    assert (out / "wrapped.css").is_file() and (out / "skins" / "emberfang.png").read_bytes()[:4] == b"\x89PNG"
+    assert (out / "wrapped.css").is_file() and not (out / "skins").exists()   # the skins are retired
     alex = text(out / "alex.html")
     for words in ("84 hours played", "31 days on the server", "12 PvP kills", "9 weekly challenges done",
                   "4 events attended", "Herons. Best weekly rank: 2nd of 2 , week 4, with Red <Monkeys>",
                   "2 bounties claimed", "Enter the Nether the launch weekend, the season's 1st first",
-                  "Find an elytra week 3, the season's 3rd first", "Emberfang New this season only them",
-                  "Founder's Edge New this season 3 of 3", "7 November 2026 to 23 January 2027"):
+                  "Find an elytra week 3, the season's 3rd first", "7 November 2026 to 23 January 2027"):
         assert words in alex.replace("&#x27;", "'").replace("&lt;", "<").replace("&gt;", ">"), words
     page = (out / "alex.html").read_text(encoding="utf-8")
     assert "Red &lt;Monkeys&gt;" in page and "<Monkeys>" not in page        # a faction's name is escaped
     assert '<meta name="robots" content="noindex">' in page
+    assert "Wardrobe" not in page and "skin" not in page
     assert ('<meta property="og:description" content="Alex on Monkey SMP, Season I: 84 hours over 31 days, '
             '12 PvP kills, 2 Server Firsts, 9 weekly challenges.">') in page
     assert '<meta property="og:url" content="https://monkeysmp.lscaturchio.xyz/wrapped/season-1/alex.html">' in page

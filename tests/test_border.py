@@ -63,6 +63,16 @@ def test_the_closing_ends_before_the_finale():
     closing = border.acts(2)[-1]
     assert closing.shrinks and closing.at + dt.timedelta(seconds=border.SHRINK_SECONDS) < finale.finale_at(2)
     assert closing.size > finale.FINAL_SIZE
+    # The relaunch's finale is Saturday 10 April 2027 (docs/relaunch/season-1.md), whatever week finale.py counts.
+    relaunch_finale = dt.datetime(2027, 4, 10, 18, 0, tzinfo=season_calendar.PACIFIC)
+    assert closing.at + dt.timedelta(seconds=border.SHRINK_SECONDS) < relaunch_finale
+
+
+def test_only_the_last_act_closes_and_nothing_opens_the_border_after_it():
+    """The acts only open the border until the closing, so no act can undo the closing or the finale's shrink."""
+    acts = border.acts(2)
+    assert [a.size for a in acts] == [8000, 10000, 3000]
+    assert [a.shrinks for a in acts] == [False, False, True]
 
 
 def test_season_twos_acts_are_its_calendars_border_breaks():

@@ -8,7 +8,6 @@ import pytest
 
 import datapacks
 import diplomacy
-import npcs
 import outposts
 import season_calendar
 import sieges
@@ -146,11 +145,6 @@ def test_a_capture_in_an_open_window_earns_the_bonus_once_per_outpost_per_window
     assert "scoreboard objectives add op.sg dummy" in load and "scoreboard objectives add sg dummy" in load
     assert sieges.CAPTURE_BONUS_MINUTES == 60   # one standings point (outposts.POINTS_PER_HOUR), inside the cap
 
-
-def test_the_crier_names_the_siege_hours_and_how_to_check():
-    assert npcs.SIEGES.startswith("Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific")
-    assert "/trigger sieges" in npcs.SIEGES and "Claims stay protected" in npcs.SIEGES
-    assert npcs.SIEGES in npcs.crier_text(2) and npcs.SIEGES in npcs.CRIER_OTHER
 
 
 def test_the_check_waits_for_the_clock_and_the_launch_then_opens_closes_and_warns_in_order():

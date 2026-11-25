@@ -1,5 +1,8 @@
+import datetime as dt
 import json
 import re
+
+import border
 
 import challenges
 import datapacks
@@ -101,17 +104,23 @@ def test_every_dialog_a_button_shows_exists():
 
 def test_the_guide_keeps_its_buttons():
     labels = {b["label"]: b["action"] for b in DIALOGS["guide"]["actions"]}
-    assert list(labels) == ["The short rules", "Find a faction", "Your first week", "This week's challenges",
-                            "Faction standings", "Your wardrobe"]
+    assert list(labels) == ["The short rules", "Hearts and claims", "Your first week", "This week's challenges",
+                            "Your progress"]
     assert labels["The short rules"] == npcs.show("monkey:npcs/guide/rules")
-    assert labels["Find a faction"] == npcs.show("monkey:npcs/guide/factions")
+    assert labels["Hearts and claims"] == npcs.show("monkey:npcs/guide/hearts")
     assert labels["Your first week"] == npcs.trigger("quest")
     assert labels["This week's challenges"] == npcs.trigger("challenges")
-    assert labels["Faction standings"] == npcs.trigger("standings")
-    assert labels["Your wardrobe"] == npcs.trigger("wardrobe")
-    for page, link in (("guide/rules", "Discord and links"), ("guide/factions", "Open the Discord")):
+    assert labels["Your progress"] == npcs.trigger("wardrobe")
+    for page in ("guide/rules", "guide/hearts"):
         page_labels = {b["label"]: b["action"] for b in DIALOGS[page]["actions"]}
-        assert page_labels == {link: npcs.show(npcs.LINKS_DIALOG), "Back": npcs.show("monkey:npcs/guide")}
+        assert page_labels == {"Discord and links": npcs.show(npcs.LINKS_DIALOG),
+                               "Back": npcs.show("monkey:npcs/guide")}
+
+
+def test_the_npcs_speak_the_relaunch_not_the_modded_season():
+    """Season 1 on Paper has no factions, no PvP grace and no launch hour (docs/relaunch/rules.md)."""
+    for t in texts():
+        assert not re.search(r"faction|grace|launch hour|oparties|outpost|siege|Season I\b", t, re.I), t
 
 
 def test_buttons_run_triggers_every_player_has_and_the_data_packs_answer():
@@ -130,9 +139,9 @@ def test_buttons_run_triggers_every_player_has_and_the_data_packs_answer():
 def test_the_crier_shows_the_dialog_for_the_players_week():
     crier = body(talk_file("crier"))
     assert crier[1:-1] == [f"execute if score @s rc.seen matches {w} run return run dialog show @s "
-                           f"monkey:npcs/crier/week{w}" for w in range(npcs.LAST_WEEK + 1)]
+                           f"monkey:npcs/crier/week{w}" for w in range(npcs.CRIER_LAST_WEEK + 1)]
     assert crier[-1] == "dialog show @s monkey:npcs/crier/other"
-    for w in range(npcs.LAST_WEEK + 1):
+    for w in range(npcs.CRIER_LAST_WEEK + 1):
         d = DIALOGS[f"crier/week{w}"]
         assert "\n\n".join(m["contents"] for m in d["body"]) == npcs.crier_text(w)
         assert actions(d) == [npcs.trigger("challenges")]
@@ -141,12 +150,31 @@ def test_the_crier_shows_the_dialog_for_the_players_week():
     assert ("rc.seen", "dummy") in challenges.objectives()
 
 
-def test_crier_names_each_weeks_event():
-    for w in range(1, npcs.LAST_WEEK + 1):
+def test_crier_names_each_weeks_event_on_the_relaunch_calendar():
+    relaunch = season_calendar.SEASONS[npcs.RELAUNCH]
+    assert relaunch.saturday(0) == dt.date(2027, 2, 6)
+    assert relaunch.saturday(npcs.CRIER_LAST_WEEK) == dt.date(2027, 4, 10)   # the finale (season-1.md)
+    for w in range(1, npcs.CRIER_LAST_WEEK + 1):
         text = npcs.crier_text(w)
-        assert npcs.EVENTS[w] in text and npcs.day(season_calendar.saturday(w)) in text
-        if w < npcs.LAST_WEEK:
-            assert npcs.EVENTS[w + 1] in text
+        assert npcs.CRIER_EVENTS[w] in text and npcs.day(relaunch.saturday(w)) in text
+        if w < npcs.CRIER_LAST_WEEK:
+            assert npcs.CRIER_EVENTS[w + 1] in text
+    assert "Season 2 opens Saturday 17 April" in npcs.crier_text(npcs.CRIER_LAST_WEEK)
+    for text in (npcs.crier_text(0), npcs.CRIER_OTHER):
+        assert "Season 1 ends with the finale on Saturday 10 April." in text
+
+
+def test_the_criers_border_weeks_are_the_border_acts():
+    sizes = [int(n.replace(",", "")) for n in re.findall(r"\d+,\d{3}", " ".join(npcs.CRIER_EVENTS.values()))]
+    acts = border.acts(npcs.RELAUNCH)
+    said = {w: e for w, e in npcs.CRIER_EVENTS.items() if "border" in e}
+    assert list(said) == [a.week for a in acts]
+    for act in acts:
+        assert f"{act.size:,} blocks" in said[act.week]
+        assert ("closes in" in said[act.week]) == act.shrinks
+    # In order: from the launch border, each act's size, and the closing from the widest.
+    assert sizes == [npcs.START_BORDER, 8000, 10000, 10000, 3000]
+    assert f"{npcs.START_BORDER:,} blocks wide" in npcs.crier_text(0)
 
 
 def test_copy_is_plain_and_says_monkey_smp():
@@ -157,7 +185,7 @@ def test_copy_is_plain_and_says_monkey_smp():
         assert "<" not in t and "@initiator" not in t, t
     # Every Discord channel named is one the rulebook names.
     channels = set(re.findall(r"#[a-z-]+", " ".join(all_text)))
-    assert channels and channels <= set(re.findall(r"#[a-z-]+", (REPO.root / "docs/RULES.md").read_text()))
+    assert channels <= set(re.findall(r"#[a-z-]+", (REPO.root / "docs/RULES.md").read_text()))
 
 
 def test_dialogs_are_headed_with_the_npcs_name():

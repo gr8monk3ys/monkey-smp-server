@@ -37,8 +37,8 @@ can't end up with the same name.
 Three of our data packs still call Fabric content and need a change from the rules workstream before launch.
 `monkey-npcs` placed Easy NPC characters (now FancyNpcs, below), `monkey-events` syncs the Strength SMP arena, and
 `monkey-nights` mentions Open Parties and Claims in its grace-period text. The other 15 only use vanilla commands.
-All 18 are generated for Minecraft 26.2 (`tools/datapacks.py`: `MINECRAFT`, `DATA_FORMAT`, wardrobe's
-`RESOURCE_FORMAT` and the rules pack's treasure list). On 26.3 those need bumping and re-checking, and
+All 18 are generated for Minecraft 26.2 (`tools/datapacks.py`: `MINECRAFT`, `DATA_FORMAT`, and the rules
+pack's treasure list). On 26.3 those need bumping and re-checking, and
 `tests/test_datapacks.py` fails until they are. On 26.2 they stay as they are.
 
 Removing the Fabric files (patches, Fabric mod configs, Fabric-only tests and tools, and the voice chat port) is a

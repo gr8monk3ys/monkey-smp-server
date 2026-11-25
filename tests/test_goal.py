@@ -163,7 +163,8 @@ def test_the_celebration_is_fireworks_and_a_title_never_an_item():
 
 def test_the_line_shows_under_the_challenges():
     files = wardrobe.datapack_files()
-    assert "function monkey:goal/line" in files["data/monkey/function/wardrobe/menu_challenges.mcfunction"]
+    assert "function monkey:wardrobe/menu" in files["data/monkey/function/wardrobe/menu_challenges.mcfunction"]
+    assert "function monkey:goal/line" in files["data/monkey/function/wardrobe/menu.mcfunction"]
     assert "function monkey:goal/line" in files["data/monkey/function/challenges/greet.mcfunction"]
     line = body(fn("line"))
     assert line[0] == "execute unless score #on rg matches 1 run return 0"

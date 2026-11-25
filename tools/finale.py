@@ -24,7 +24,7 @@ puts a player outside the Overworld's (the game keeps a portal's exit inside the
 The result is read from the scores: #f<N> fn is faction N's points (tools/diplomacy.py's numbers), and storage
 monkey:finale result {faction, points, tie, week} the winner. A tie for the most points names no winner: staff
 decide (docs/SEASONS.md). The winner goes into the news post and the Sunday recap; `result` prints the roster and
-the commands that give it the champion's title and helm (rw.champion). The pack doesn't set rw.champion itself:
+the commands that give it the champion's title and mark (rw.champion). The pack doesn't set rw.champion itself:
 a pack can only reach players who are online, the roster is the faction numbers as of the last hourly board run,
 and the season's champion is the owners' call (docs/SEASONS.md, "The season champion").
 
@@ -168,7 +168,8 @@ def roster(world: Path, faction: int, scores: dict[str, dict[str, int]] | None =
 
 
 def champion_commands(names: list[str], season: int) -> list[str]:
-    """What staff run for the winning roster: the helm, and the title team (docs/SEASONS.md, "The season champion")."""
+    """What staff run for the winning roster: the champion mark (rw.champion), and the title team
+    (docs/SEASONS.md, "The season champion")."""
     team = f"champion_s{season}"
     out = [f"team add {team}", f"team modify {team} color gold",
            f'team modify {team} prefix "[S{season} Champion] "']

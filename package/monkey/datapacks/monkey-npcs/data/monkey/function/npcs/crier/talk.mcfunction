@@ -13,7 +13,4 @@ execute if score @s rc.seen matches 6 run return run dialog show @s monkey:npcs/
 execute if score @s rc.seen matches 7 run return run dialog show @s monkey:npcs/crier/week7
 execute if score @s rc.seen matches 8 run return run dialog show @s monkey:npcs/crier/week8
 execute if score @s rc.seen matches 9 run return run dialog show @s monkey:npcs/crier/week9
-execute if score @s rc.seen matches 10 run return run dialog show @s monkey:npcs/crier/week10
-execute if score @s rc.seen matches 11 run return run dialog show @s monkey:npcs/crier/week11
-execute if score @s rc.seen matches 12 run return run dialog show @s monkey:npcs/crier/week12
 dialog show @s monkey:npcs/crier/other

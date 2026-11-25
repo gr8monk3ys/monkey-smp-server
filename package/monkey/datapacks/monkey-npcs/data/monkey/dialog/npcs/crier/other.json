@@ -8,17 +8,12 @@
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "There's an event every Saturday at 6 PM Pacific (9 PM Eastern)."
+      "contents": "There's an event most Saturdays at 6 PM Pacific (9 PM Eastern). Season 1 ends with the finale on Saturday 10 April."
     },
     {
       "type": "minecraft:plain_message",
       "width": 300,
       "contents": "Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
-    },
-    {
-      "type": "minecraft:plain_message",
-      "width": 300,
-      "contents": "Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific: capture an outpost while one is on for a bonus hour held. Claims stay protected. /trigger sieges says if one is on."
     }
   ],
   "columns": 1,

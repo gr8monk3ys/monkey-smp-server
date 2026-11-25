@@ -1,4 +1,4 @@
-"""Ending a season: the world download for players, and carrying wardrobe progress into the next world.
+"""Ending a season: the world download for players, and carrying the retention scores into the next world.
 
     python tools/season.py download BACKUP/world --season I --modpack 2.5.0 [--out "Monkey SMP Season I.zip"]
     python tools/season.py carry OLD/world --into NEW/world --season 2
@@ -10,12 +10,11 @@ the world folder and never go in; inside it, the Ledger database (who did what, 
 config, scripts and session.lock stay out too.
 
 carry reads the old world's scoreboard and writes a small data pack into the new world, monkey-carry,
-that puts back every wardrobe score (rw.*: days, months, invites, tiers, founders, events, holidays,
-weekly challenges done, the launch weekend),
-the supporter, title and champion teams, and hours played (as rw.playbase, because the new world's
-play-time statistic starts at zero), and the hall of monuments (tools/monuments.py: Monument of the Month
-winners, for warps in the new world). It runs once, by itself, when the new world first loads; see
-docs/SEASONS.md, "Ending a season".
+that puts back every retention score (rw.*, kept by the wardrobe pack: days, months, invites, tiers,
+founders, events, holidays, weekly challenges done, the launch weekend), the supporter, title and champion
+teams, and hours played (as rw.playbase, because the new world's play-time statistic starts at zero), and the
+hall of monuments (tools/monuments.py: Monument of the Month winners, for warps in the new world). It runs
+once, by itself, when the new world first loads; see docs/SEASONS.md, "Ending a season".
 
 Stdlib only.
 """
@@ -38,8 +37,8 @@ KEEP = ["level.dat", "dimensions", "data", "players", "datapacks"]
 DROP = ["session.lock", "data/mezz_config", f"datapacks/{CARRY}"]
 # Scores that are not carried: worked out again (rw.hours), the play-time statistic (rw.play, carried as
 # rw.playbase), constants (rw.const), the day counter, set on its own (rw.day), and the seconds played in
-# Season I's launch weekend (rw.launchtime; rw.launch, the skin, carries). The weekly challenges' rc.* scores
-# are this week's only and never carried; the challenges done (rw.challenges) are.
+# Season I's launch weekend (rw.launchtime; rw.launch, the founder mark, carries). The weekly challenges' rc.*
+# scores are this week's only and never carried; the challenges done (rw.challenges) are.
 NOT_CARRIED = {"rw.play", "rw.hours", "rw.const", "rw.day", "rw.playbase", "rw.launchtime"}
 TEAMS = ("tier_", "title_", "champion")   # the teams docs/RETENTION.md and docs/SEASONS.md set up
 

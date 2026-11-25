@@ -50,8 +50,9 @@ STACK = (
 # Plugins pinned from GeyserMC's download API rather than Modrinth (entries.GEYSERMC_PINS, ADR-0010).
 GEYSERMC_STACK = ("floodgate",)
 # Fallbacks other workstreams may switch to, checked for the same Minecraft version and reported, never pinned:
-# the economy's money plugin if EssentialsX has no release by mid-January, and an auction house on Modrinth.
-CANDIDATES = ("openeco", "zauctionhouse")
+# the economy's money plugin if EssentialsX has no release by mid-January, and the two auction houses
+# (DonutAuctionHouse is unlisted on Modrinth but may still serve files).
+CANDIDATES = ("openeco", "zauctionhouse", "donut-auction")
 
 
 def pin_paper(manifest: dict, mc: str, upstream: Upstream) -> dict:

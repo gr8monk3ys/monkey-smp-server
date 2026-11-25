@@ -44,13 +44,14 @@ STACK = (
     "viaversion", "viabackwards",     # Java clients a version ahead or behind the server
     "bluemap",                        # the web map (spawn only, no player or claim markers)
     "lifestealz", "pvpmanager",       # rules and seasons: hearts, combat tag, newbie protection
-    "economyshopgui",                 # economy: the shop (the auction house is still open: none on Modrinth fits)
+    "economyshopgui", "donut-auction",  # economy: the shop and the auction house (DonutAuctionHouse, unlisted)
     "tebex", "ultracosmetics", "deluxetags",  # store: checkout, cosmetics and the /tags picker
 )
 # Plugins pinned from GeyserMC's download API rather than Modrinth (entries.GEYSERMC_PINS, ADR-0010).
 GEYSERMC_STACK = ("floodgate",)
 # Fallbacks other workstreams may switch to, checked for the same Minecraft version and reported, never pinned:
-# the economy's money plugin if EssentialsX has no release by mid-January, and an auction house on Modrinth.
+# the economy's money plugin if EssentialsX has no release by mid-January, and the auction house to switch to if
+# DonutAuctionHouse's Modrinth files go away.
 CANDIDATES = ("openeco", "zauctionhouse")
 
 

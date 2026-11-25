@@ -28,20 +28,21 @@ install, so a config shipped there is the starting point and the live file is th
 | LifeStealZ | `lifestealz` | hearts: lose one on death to a player, gain one on a kill | rules | 2.21.1 |
 | PvPManager | `pvpmanager` | combat tag, newbie protection, blocks /home and /tpa in combat | rules | 4.0.30 |
 | EconomyShopGUI | `economyshopgui` | the server shop | economy | 7.3.4 |
+| DonutAuctionHouse | `donut-auction` | the auction house (listing fee, price limits, bidding) | economy | 2.0.1 (unlisted on Modrinth, see below) |
 | Tebex | `tebex` | store checkout; its secret is set on the server with `tebex secret`, never in the repo | store | **26.2 only** (2.4.6) |
 | UltraCosmetics | `ultracosmetics` | cosmetics (gadgets, pets, particles) | store | **26.3 only as a dev build** (3.17-DEV-b1) |
 | DeluxeTags | `deluxetags` | `/tags` picker for chat tags | store | 1.10.0 |
 
 Not pinned yet, because nothing on Modrinth fits:
 
-- **Auction house.** DonutAuctionHouse isn't on Modrinth. Lorenzo decides between allowing it as a hash-pinned GitHub download (a change to the installer's source rule) and zAuctionHouse (`zauctionhouse`), which is on Modrinth.
+- **Auction house fallback.** DonutAuctionHouse's Modrinth project is unlisted, though its files are still served (ADR-0010). If they go away, zAuctionHouse (`zauctionhouse`) is the fallback, with a rewritten auction config and no bidding or price floors.
 - **Fallback economy provider** if EssentialsX has no release by 15 Jan: OpenEco (`openeco`), the economy workstream's pick.
 
 `tools/relaunch.py` checks OpenEco and zAuctionHouse for the same Minecraft version on every run (`CANDIDATES`) and lists them under "Candidates" in its report, without pinning them.
 
 ## Why these, and not others
 
-- **Pinned from Modrinth only, or not at all.** The installer downloads every jar and checks its hash (ADR-0002), and `tools/entries.py` only lets a jar come from Modrinth's CDN. A plugin that is only on SpigotMC or a vendor site can't be installed that way. That ruled out HuskClaims (GriefPrevention instead) and the original auction house and fallback economy picks. Floodgate is the one exception: its Paper jar is published only on GeyserMC's own download API (ADR-0010).
+- **Pinned from Modrinth only, or not at all.** The installer downloads every jar and checks its hash (ADR-0002), and `tools/entries.py` only lets a jar come from Modrinth's CDN. A plugin that is only on SpigotMC or a vendor site can't be installed that way. That ruled out HuskClaims (GriefPrevention instead) and the first fallback economy picks. Floodgate is the one exception: its Paper jar is published only on GeyserMC's own download API (ADR-0010).
 - **Geyser and the beta channel.** Every other plugin is pinned from Modrinth's `release` channel only. GeyserMC publishes every Geyser build as `beta`, including the ones it recommends, so `entries.PRERELEASE_OK` lets Geyser take beta builds.
 - **Chat.** EssentialsX Chat doesn't read PlaceholderAPI, so DeluxeTags' `%deluxetags_tag%` wouldn't show. LPC formats chat from LuckPerms prefixes and suffixes and reads PlaceholderAPI, with no injector plugin.
 - **Dropped from the Fabric server:** Simple Voice Chat (needs a client mod), Open Parties and Claims (GriefPrevention), Easy NPC, Ledger, ServerCore, Lithium and Krypton (Paper's own patches cover them), the Fabric Tebex build, and the Fabric-only content mods. `docs/relaunch/platform.md` has the whole map.

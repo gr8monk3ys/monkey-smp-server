@@ -100,6 +100,18 @@
       }
     },
     {
+      "slug": "donut-auction",
+      "project_id": "8XgyeSRH",
+      "version": "2.0.1",
+      "version_id": "VrxxAobl",
+      "file": "DonutAuctionHouse-2.0.1.jar",
+      "url": "https://cdn.modrinth.com/data/8XgyeSRH/versions/VrxxAobl/DonutAuctionHouse-2.0.1.jar",
+      "size": 5274548,
+      "hashes": {
+        "sha512": "2f69aa44051f6ad6a6d1321aea03d1c7c3ad9e345f6e2b994ff626eb1ad8e7d8908c237016c1c5a8b639d16446a744a9972868ab0a9d5261357959d8005d2914"
+      }
+    },
+    {
       "slug": "economyshopgui",
       "project_id": "khsXZqla",
       "version": "7.3.4",

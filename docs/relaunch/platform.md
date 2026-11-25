@@ -110,7 +110,7 @@ Lorenzo took every recommendation on 25 Nov 2026:
 
 - **Minecraft 26.3.** Re-run the pins in mid-January (`relaunch-pins.yml`), and drop to 26.2 only if EssentialsX, EssentialsX Spawn, LPC, CoreProtect, Tebex and UltraCosmetics still have no 26.3 release. On 26.2 (pin run of 25 Nov, Paper build 135) everything but EssentialsX and EssentialsX Spawn has one, and our data packs already target it.
 - **EssentialsX fallback:** OpenEco, if EssentialsX has no release by 15 Jan. It has a release for both 26.3 and 26.2 (1.6.1).
-- **Auction house:** DonutAuctionHouse, pinned from GitHub by hash (ADR-0010), once the economy workstream confirms its repository and release.
+- **Auction house:** DonutAuctionHouse 2.0.1, pinned from its unlisted Modrinth project like any other plugin (ADR-0010).
 - **Whitelist off.** The relaunch is public, so `white-list=false`. Staff moderate with GrimAC, GriefPrevention and bans instead.
 - **New world seed** for Season 1.
 - **Off-server backups and a restore drill before the beta** (cutover step 2).

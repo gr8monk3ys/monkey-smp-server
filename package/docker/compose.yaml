@@ -13,7 +13,7 @@
 #   docker compose attach monkey                           the console (leave with Ctrl+P, Ctrl+Q)
 #
 # The image is only Debian plus a few tools, built here. Everything else (PowerShell, Java,
-# Fabric, the mods, the world) is downloaded into and kept in this release folder, the same as
+# Paper, the plugins, the world) is downloaded into and kept in this release folder, the same as
 # when the server runs without Docker, so the two can take turns on the same world.
 # It starts again after a reboot or a crash until you stop it. Typing "stop" in the console
 # restarts it; use docker compose stop to stop it.
@@ -37,6 +37,8 @@ services:
     ports:
       # Change the numbers on the left in .env, never the right ones (they are the server's own).
       - "${GAME_PORT:-25565}:25565/tcp"     # the game
+      - "${BEDROCK_PORT:-19132}:19132/udp"  # Bedrock players (Geyser)
+      - "${BEDROCK_PORT:-19132}:19132/tcp"  # Bedrock over NetherNet (Geyser)
       - "${VOICE_PORT:-24454}:24454/udp"    # Simple Voice Chat
       - "${MAP_PORT:-8100}:8100/tcp"        # BlueMap web map
       # RCON (25575) is deliberately not published: use "docker compose exec monkey monkey rcon".

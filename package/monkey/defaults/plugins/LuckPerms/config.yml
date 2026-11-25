@@ -1,0 +1,5 @@
+# Monkey SMP - first-run LuckPerms settings, copied once by the installer. LuckPerms uses its own default for
+# every key left out. Groups live as YAML next to this file (yaml-storage/groups), so they can ship in the repo.
+server: global
+storage-method: yaml
+use-server-uuid-cache: false

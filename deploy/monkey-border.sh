@@ -14,7 +14,7 @@
 #
 # Installed for Season II (docs/SEASONS.md, "Season II"). Reads only REPO_DIR, LIVE_DIR and LOCK_FILE from
 # /etc/monkey-deploy.env (or MONKEY_DEPLOY_ENV), and the saved world's scores and borders; writes only the map
-# configs in the server's config/bluemap. Needs python3 3.10 or newer (deploy/upgrade-2.5.0.sh installs it).
+# configs in the server's plugins/BlueMap. Needs python3 3.10 or newer (deploy/upgrade-2.5.0.sh installs it).
 #
 # Plain POSIX sh, LF line endings, plain ASCII.
 set -eu

@@ -21,7 +21,7 @@ What the timer does, from the saved world (the server saves every 5 minutes, so 
   off-season), or in a season ACTS has no acts for.
 - **The map.** While both borders are at the latest act's size, a map whose render-mask doesn't match its
   border (tools/map_border.py) gets its config written and `bluemap reload`; the maps it changed are kept in
-  config/bluemap/monkey-map-purge.txt, and the next run sends `bluemap purge MAP` for each (BlueMap answers a
+  plugins/BlueMap/monkey-map-purge.txt, and the next run sends `bluemap purge MAP` for each (BlueMap answers a
   reload before it has loaded, so the purge waits an hour). A purge BlueMap answers "still loading" stays
   listed for the next run. So the map follows an act about two hours later, and is never fitted to the finale's
   shrinking border (the land outside was open all season).
@@ -58,7 +58,7 @@ GROW_SECONDS = 600
 TICKS = 20                    # `worldborder set SIZE TIME` takes ticks on 26.2 (600 would grow it in 30 seconds)
 EVENT_TIME = dt.time(18, 0)   # the Saturday event slot, Pacific
 OVERWORLD, NETHER = saved_world.OVERWORLD, "minecraft:the_nether"
-PURGE = Path("config") / "bluemap" / "monkey-map-purge.txt"
+PURGE = Path("plugins") / "BlueMap" / "monkey-map-purge.txt"
 LOCKED = "#season_locked"   # in ev.state: the season lock (monkey:events/season/lock)
 DONE = "#border_act"        # in ev.state: the last border act done in this world
 SEASON = "#season"          # in rw.day: which season the world is

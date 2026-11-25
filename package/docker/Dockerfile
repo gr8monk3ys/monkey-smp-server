@@ -1,7 +1,7 @@
 # Monkey SMP on Docker: a small Debian base that runs the release folder's own installer.
 #
 # The image holds no Minecraft, mod or Java files (docs/adr/0002): compose.yaml mounts the whole
-# release folder at /monkey, and monkey/monkey.sh downloads PowerShell, Java, Fabric and the mods
+# release folder at /monkey, and monkey/monkey.sh downloads PowerShell, Java, Paper and the plugins
 # into that folder on the first start, checking every hash, exactly as a native start does. So a
 # Docker run and a native run of the same folder share one world, one Java and one install.
 FROM debian:12-slim
@@ -33,8 +33,8 @@ RUN chmod 0755 /usr/local/bin/monkey-entrypoint \
     && ln -s monkey-entrypoint /usr/local/bin/monkey
 
 WORKDIR /monkey
-# 25565 game, 24454/udp Simple Voice Chat, 8100 BlueMap. RCON (25575) stays inside the container.
-EXPOSE 25565/tcp 24454/udp 8100/tcp
+# 25565 game, 19132 Bedrock (Geyser), 24454/udp Simple Voice Chat, 8100 BlueMap. RCON (25575) stays inside the container.
+EXPOSE 25565/tcp 19132/udp 19132/tcp 24454/udp 8100/tcp
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["tini", "--", "monkey-entrypoint"]
 CMD ["server"]

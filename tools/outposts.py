@@ -36,7 +36,7 @@ the same epoch counts what was added since, so a staff penalty (minutes taken of
 never raises them.
 
 The live map: each run also keeps a marker set ("Outposts", one marker per outpost, no holders: those change
-too often to reload BlueMap for) in the Overworld map's config/bluemap/maps/*.conf, and sends `bluemap reload`
+too often to reload BlueMap for) in the Overworld map's plugins/BlueMap/maps/*.conf, and sends `bluemap reload`
 only after it wrote a changed one. It reads the outposts from the saved world, so a new spot shows on the map
 the hour after. A config it can't write is warned about and left alone, with no reload.
 

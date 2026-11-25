@@ -1,0 +1,60 @@
+# Monkey SMP - first-run Paper world settings, copied once by the installer. Paper adds every key left out here
+# with its own default on first boot. Why each value: docs/relaunch/platform.md, "Performance".
+anticheat:
+  anti-xray:
+    # Ores are money on an economy server, so hide them from x-ray clients. Engine 2 sends fake ores around
+    # real ones; it costs a little CPU and bandwidth and is the mode Paper recommends against modern x-ray.
+    enabled: true
+    engine-mode: 2
+    max-block-height: 64
+    update-radius: 2
+    lava-obscures: false
+    use-permission: false
+chunks:
+  # Stop lag machines and dupes that stack thousands of throwables in one chunk.
+  entity-per-chunk-save-limit:
+    arrow: 16
+    ender_pearl: 8
+    experience_orb: 16
+    fireball: 8
+    small_fireball: 8
+    snowball: 8
+  delay-chunk-unloads-by: 10s
+  prevent-moving-into-unloaded-chunks: true
+collisions:
+  max-entity-collisions: 2
+entities:
+  armor-stands:
+    do-collision-entity-lookups: false
+    tick: false
+  spawning:
+    per-player-mob-spawns: true
+    alt-item-despawn-rate:
+      enabled: true
+      items:
+        cobblestone: 300
+        netherrack: 300
+        cobbled_deepslate: 300
+        dirt: 300
+        sand: 300
+        gravel: 300
+environment:
+  optimize-explosions: true
+  treasure-maps:
+    find-already-discovered:
+      loot-tables: true
+      villager-trade: true
+fixes:
+  disable-unloaded-chunk-enderpearl-exploit: true
+misc:
+  redstone-implementation: ALTERNATE_CURRENT
+  update-pathfinding-on-block-update: false
+tick-rates:
+  grass-spread: 4
+  mob-spawner: 2
+  behavior:
+    villager:
+      validatenearbypoi: 60
+  sensor:
+    villager:
+      secondarypoisensor: 80

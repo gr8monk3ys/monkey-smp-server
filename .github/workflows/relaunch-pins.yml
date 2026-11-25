@@ -35,15 +35,17 @@ jobs:
           import json, urllib.parse
           from upstream import LiveHttp, MODRINTH
           http = LiveHttp()
-          for q in ("floodgate", "essentialsx", "huskclaims", "essentialsx chat", "essentialsx spawn"):
-              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=4"
-                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"]])))
-              print("search", q, [(h["slug"], h["project_id"]) for h in hits["hits"]])
-          for slug in ("floodgate", "essentialsx", "essentialsx-spawn"):
-              vs = http.get_json(f"{MODRINTH}/project/{slug}/version")[:4]
-              for v in vs:
-                  print(slug, v["version_number"], v["version_type"], v["loaders"], v["game_versions"][-4:],
-                        v["date_published"][:10])
+          for q in ("griefprevention", "claims", "land claim protection"):
+              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=6&index=downloads"
+                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"], ["versions:26.3"]])))
+              print("search", q, [(h["slug"], h["downloads"]) for h in hits["hits"]])
+          for url in ("https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest",
+                      "https://hangar.papermc.io/api/v1/projects/HuskClaims/versions?limit=2",
+                      "https://hangar.papermc.io/api/v1/projects/EssentialsX/versions?limit=2"):
+              try:
+                  print(url, json.dumps(http.get_json(url))[:900])
+              except Exception as err:
+                  print(url, "failed:", err)
           PY
       - name: Show the manifest
         run: cat package/monkey/manifest.json

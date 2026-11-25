@@ -1,0 +1,90 @@
+# Monkey SMP: LifeStealZ items. LifeStealZ doesn't fill in missing items, so this file is complete.
+# docs/relaunch/lifesteal.md explains the two hearts and the revive beacon.
+
+# The heart you win in a kill or take out with /withdrawheart. Can't be crafted.
+heart:
+  name: "&cHeart"
+  lore:
+    - "&7Right-click to gain a heart"
+  material: "NETHER_STAR"
+  enchanted: false
+  customModelId: 0
+  customItemType: "heart"
+  customHeartValue: 1
+  minHearts: 0
+  maxHearts: -1          # usable up to the server's 20
+  requirePermission: false
+  craftable: false
+  invulnerable: true     # survives lava and explosions, so a kill's heart isn't lost by accident
+  despawnable: false
+  whitelistedWorlds: []
+  sound:
+    enabled: true
+    sound: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.0
+
+# The crafted heart: works only while you have fewer than 15, so crafting can win back losses but the
+# top of the board is only reached by PvP.
+craftedheart:
+  name: "&6Crafted Heart"
+  lore:
+    - "&7Right-click to gain a heart"
+    - "&7Only works below 15 hearts"
+  material: "NETHER_STAR"
+  enchanted: true
+  customModelId: 0
+  customItemType: "heart"
+  customHeartValue: 1
+  minHearts: 0
+  maxHearts: 15
+  requirePermission: false
+  craftable: true
+  recipes:
+    1:
+      rowOne: ["DIAMOND_BLOCK", "GOLD_BLOCK", "DIAMOND_BLOCK"]
+      rowTwo: ["GOLD_BLOCK", "TOTEM_OF_UNDYING", "GOLD_BLOCK"]
+      rowThree: ["DIAMOND_BLOCK", "NETHERITE_INGOT", "DIAMOND_BLOCK"]
+  invulnerable: true
+  despawnable: false
+  whitelistedWorlds: []
+  sound:
+    enabled: true
+    sound: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.0
+
+# Brings an eliminated player back with 3 hearts. Takes 3 real hearts, so a friend gives up what the
+# revived player gets back.
+revive:
+  name: "&cRevive Beacon"
+  lore:
+    - "&7Place it to revive an eliminated player"
+  material: "BEACON"
+  enchanted: true
+  customModelId: 0
+  customItemType: "revivebeacon"
+  reviveTime: 60
+  allowBreakingBeaconWhileReviving: true
+  decoyMaterial: "RED_STAINED_GLASS"
+  showEnchantParticles: true
+  showLaser: true
+  innerLaserMaterial: "RED_GLAZED_TERRACOTTA"
+  outerLaserMaterial: "RED_STAINED_GLASS"
+  showParticleRing: true
+  particleColor: "RED"
+  requirePermission: false
+  craftable: true
+  recipes:
+    1:
+      rowOne: ["DIAMOND_BLOCK", "heart", "DIAMOND_BLOCK"]
+      rowTwo: ["heart", "BEACON", "heart"]
+      rowThree: ["DIAMOND_BLOCK", "OBSIDIAN", "DIAMOND_BLOCK"]
+  invulnerable: true
+  despawnable: false
+  whitelistedWorlds: []
+  sound:
+    enabled: false
+    sound: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.0

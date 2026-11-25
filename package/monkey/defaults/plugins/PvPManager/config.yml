@@ -1,0 +1,77 @@
+# Monkey SMP: PvPManager (combat tag, combat logging, newbie protection, safe-zone edges), Season 1 of the
+# relaunch. Why: docs/relaunch/lifesteal.md. Only the settings we change are here; PvPManager fills in the
+# rest from its own defaults. Keep "Config Version": without it PvPManager resets this file.
+
+General Settings:
+  World Exclusions: []
+
+Combat Tag:
+  Time: 20
+  Actions Blocked:
+    Teleport: true             # no /spawn, /home or /tpa out of a fight
+    Commands:
+      Enabled: true
+      Whitelist: true
+      Command List: ['tell', 'msg', 'r', 'w', 'pvptag', 'combattag', 'tag']
+
+Combat Log Punishments:
+  Kill on Logout:
+    Enabled: true
+  # Runs before the kill. Logging out in a fight always costs a heart; if the attacker's last hit landed
+  # in the 5 seconds before, LifeStealZ also gives them one, so it can cost two.
+  Commands On Combat Log:
+    - 'lifestealz hearts remove {player} 1'
+    - 'tellraw @a {"text":"{player} logged out in combat and was killed for it.","color":"red"}'
+
+PvP Toggle:
+  Default PvP: true            # and nobody gets pvpmanager.command.pvp, so PvP can't be turned off
+  Commands PvP On: []
+  Commands PvP Off: []
+  WorldGuard Overrides: true
+
+Anti Border Hopping:           # a tagged player can't hide in spawn or the market
+  Vulnerable:
+    Enabled: true
+    Renew Combat Tag: true
+  Push Back:
+    Enabled: true
+
+Newbie Protection:
+  Enabled: true
+  Time: 10800                  # 3 hours of play time; staff raise it to 8 hours from week 4 (season-1.md)
+  Allow Player Disable: true   # /newbie disable ends it early
+  Protect From Everything: false
+  Command Blacklist: []
+
+Item Cooldowns:                # seconds; both lists are complete, since PvPManager won't merge them
+  Combat:
+    ENDER_PEARL: 10
+    WIND_CHARGE: 2
+    TRIDENT: 5
+    GOLDEN_APPLE: 15
+    ENCHANTED_GOLDEN_APPLE: 60
+  Global:
+    TRIDENT: 2
+    GOLDEN_APPLE: 5
+    ENCHANTED_GOLDEN_APPLE: 60
+
+Player Kills:
+  Commands On Kill:
+    Cooldown: -1
+    Commands: []
+  Commands On Respawn: []
+  WorldGuard Exclusions: []
+  Anti Kill Abuse:             # killing the same player a 4th time within 30 minutes kicks the killer
+    Enabled: true
+    Max Kills: 3
+    Time Limit: 1800
+    Warn Before: true
+    Commands on Abuse:
+      - 'kick {player} Killing the same player over and over (rule 14). Staff have been told.'
+    Respawn Protection: 10
+
+Other Settings:
+  Player Drop Mode: ALWAYS
+
+Config Version: 210
+Database Version: 1

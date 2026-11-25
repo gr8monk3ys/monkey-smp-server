@@ -1,0 +1,37 @@
+# Monkey SMP: GriefPrevention (player land claims), Season 1 of the relaunch. Why: docs/relaunch/lifesteal.md.
+# GriefPrevention keeps its files in plugins/GriefPreventionData/, not plugins/GriefPrevention/. Only the
+# settings we change are here; GriefPrevention writes the rest back with their defaults when it loads.
+#
+# The design: claims stop griefing and theft, not fights. PvP works inside claims, and anything outside a
+# claim can be raided, TNT included. Combat tagging and combat logging are PvPManager's job, so
+# GriefPrevention's own versions are off.
+
+GriefPrevention:
+  Claims:
+    InitialBlocks: 2000                # about a 45 x 45 base on day one
+    Claim Blocks Accrued Per Hour:
+      Default: 150
+    Max Accrued Claim Blocks:
+      Default: 40000
+    Expiration:
+      ChestClaimDays: 7                # the automatic claim around a first chest, if never extended
+      AllClaims:
+        DaysInactive: 30               # claims of players gone 30 days are removed and become raidable.
+        ExceptWhenOwnerHasTotalClaimBlocks: 1000000   # An eliminated player can't log in, so this counts
+        ExceptWhenOwnerHasBonusClaimBlocks: 1000000   # their time out too. No exemptions for big claimers.
+  PvP:
+    ProtectPlayersInLandClaims:
+      PlayerOwnedClaims: false         # PvP works inside player claims
+      AdministrativeClaims: true
+      AdministrativeSubdivisions: true
+    ProtectFreshSpawns: false          # PvPManager's newbie protection does this
+    PunishLogout: false                # PvPManager does this, and takes a heart
+    CombatTimeoutSeconds: 20           # matches PvPManager's tag: no chests in a claim while tagged
+    BlockedSlashCommands: ""           # PvPManager blocks commands in combat
+  ProtectItemsDroppedOnDeath:
+    PvPWorlds: false                   # a kill's loot can be picked up by anyone, like vanilla
+  BlockLandClaimExplosions: true       # TNT and creepers can't break a claim...
+  BlockSurfaceCreeperExplosions: false # ...but outside claims explosions work as in vanilla
+  BlockSurfaceOtherExplosions: false
+  Spam:
+    BanOffenders: false                # staff decide bans (docs/relaunch/rules.md), not the spam filter

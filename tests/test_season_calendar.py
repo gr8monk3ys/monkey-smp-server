@@ -159,8 +159,19 @@ def test_the_launch_weekend_is_saturday_5_pm_to_the_end_of_sunday_pacific():
 
 def test_the_launch_is_the_sites_launch_time():
     # site/config.json's LAUNCH_AT (the countdown) is the website's copy of the launch: moving the calendar
-    # without it would open the Founder's Circlet window at another time than the site says.
-    assert site_links.launch_time(site_links.links()["LAUNCH_AT"]) == season_calendar.LAUNCH
+    # without it would open the Founder's Circlet window at another time than the site says. While the modded
+    # Season I is live the site may already count down to the relaunch (docs/relaunch/season-1.md), so either
+    # launch is the site's; any other time is a calendar or a site that moved alone.
+    site = site_links.launch_time(site_links.links()["LAUNCH_AT"])
+    assert site in (season_calendar.LAUNCH, season_calendar.RELAUNCH.launch)
+
+
+def test_the_relaunch_runs_ten_weeks_to_its_finale():
+    assert season_calendar.RELAUNCH.launch.astimezone(PACIFIC) == pacific(2027, 2, 6, 17, 0)
+    assert dt.date(2027, 4, 10) == season_calendar.RELAUNCH_FINALE
+    assert season_calendar.RELAUNCH_FINALE.weekday() == 5 == season_calendar.RELAUNCH_NEXT.weekday()
+    assert dt.date(2027, 4, 17) == season_calendar.RELAUNCH_NEXT
+    assert season_calendar.SEASONS[2] is season_calendar.RELAUNCH
 
 
 @pytest.mark.parametrize("weeks", [-1, 1, 3])

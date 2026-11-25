@@ -1,0 +1,54 @@
+# Monkey SMP: LifeStealZ (lifesteal), Season 1 of the relaunch. Why each value is what it is:
+# docs/relaunch/lifesteal.md. Only the settings we change are here; LifeStealZ fills in the rest
+# from its own defaults when it loads.
+
+checkForUpdates: false   # the platform pins versions
+
+startHearts: 10
+maxHearts: 20
+reviveHearts: 3          # a revived player comes back with 3, not 1, so they aren't eliminated again at once
+heartsPerKill: 1
+heartsPerNaturalDeath: 1 # unused: natural deaths cost nothing (looseHeartsToNature below)
+minHearts: 0
+
+heartItem:               # what drops or comes out of /withdrawheart. The crafted heart is separate (items.yml).
+  default: "heart"
+  withdraw: "heart"
+  kill: "heart"
+  naturalDeath: "heart"
+  heartGainCooldown: "heart"
+  maxHearts: "heart"
+
+dropHeartsPlayer: false  # a kill moves the heart straight to the killer
+dropHeartsIfMax: true    # a killer already at 20 gets it as an item instead
+looseHeartsToNature: false  # mobs, lava, falls and the void cost no hearts (fairer on Bedrock and phones)
+looseHeartsToPlayer: true
+announceElimination: true
+
+allowDyingFromWithdraw: false
+minWithdrawHearts: 10    # only hearts above the starting 10 can be withdrawn, so alts can't be mined for hearts
+heartCooldown: 0
+maxRevives: -1
+
+preventTotems: false     # totems stay vanilla
+preventCrystalPVP: true  # end crystals, respawn anchors and bed explosions don't hurt players:
+preventRespawnAnchors: true  # Bedrock players can't place them as fast, and they skip the fight
+preventBeds: true
+
+disablePlayerBanOnElimination: false  # at 0 hearts you're locked out until revived (no spectating)
+heartRewardOnElimination: true
+
+gracePeriod:
+  enabled: false         # new players are protected by PvPManager's newbie protection instead
+
+heartGainCooldown:       # one heart per 10 minutes from kills; extra kills in that time give nothing
+  enabled: true
+  cooldown: 600000
+  dropOnCooldown: false
+  preventPickup: true
+
+antiAlt:                 # kills between two accounts on the same IP move no hearts, and staff are told
+  enabled: true
+  logAttempt: true
+  preventKill: true
+  sendMessage: true

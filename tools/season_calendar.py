@@ -3,7 +3,9 @@
     import season_calendar
     season_calendar.PACIFIC           # the server's time zone (America/Los_Angeles); now() is the time there
     season_calendar.LAUNCH            # Season I opens: Saturday 7 November 2026, 5 PM Pacific
-    season_calendar.SEASONS[n]        # season n's Season (1, and 2 as proposed); SEASON is the one being played
+    season_calendar.SEASONS[n]        # season n's Season (1, and 2 the relaunch); SEASON is the one being played
+    season_calendar.RELAUNCH          # the relaunch's Season 1: Saturday 6 February 2027, 5 PM Pacific
+    season_calendar.RELAUNCH_FINALE   # its finale, Saturday 10 April 2027; RELAUNCH_NEXT the next season, 17 April
     season_calendar.WEEK_ONE          # the Monday after the launch: week 1 starts there at 12 AM Pacific
     season_calendar.LAUNCH_END        # the launch weekend ends as week 1 starts
     season_calendar.week_at(when)     # the week a moment falls in: 0 (the launch weekend), then 1, 2, ...
@@ -85,9 +87,18 @@ class Season:
 
 
 SEASON = Season(dt.datetime(2026, 11, 7, 17, 0, tzinfo=PACIFIC))   # Season I: Saturday 7 November, 5 PM
-# Season II, proposed (docs/SEASONS.md, "Season II"): the owners confirm the date by 9 January. Only the border acts
-# (tools/border.py) read it before then; the release that opens Season II points SEASON at it.
-SEASON_II = Season(dt.datetime(2027, 2, 6, 17, 0, tzinfo=PACIFIC))   # Saturday 6 February 2027, 5 PM
+# The relaunch's Season 1 (docs/relaunch/season-1.md), in the slot the modded Season II was proposed for: Saturday
+# 6 February 2027, 5 PM Pacific; the finale on Saturday 10 April (its week 9 here, where the launch weekend is week
+# 0); an off-week; the next season on Saturday 17 April. The website's countdown (site/config.json) moves to it with
+# the relaunch's brand work, which may land before SEASON does.
+# SEASON stays on the modded Season I while that world is live: drops, challenges, the week, standings and the
+# status page read it every few minutes from the deployed release. The release that switches the tools to Paper,
+# after Season I's finale on 23 January 2027, points SEASON at RELAUNCH.
+RELAUNCH = Season(dt.datetime(2027, 2, 6, 17, 0, tzinfo=PACIFIC))   # Saturday 6 February 2027, 5 PM
+RELAUNCH_FINALE_WEEK = 9
+RELAUNCH_FINALE = RELAUNCH.saturday(RELAUNCH_FINALE_WEEK)          # Saturday 10 April 2027
+RELAUNCH_NEXT = RELAUNCH_FINALE + dt.timedelta(weeks=1)            # Saturday 17 April 2027, after the off-week
+SEASON_II = RELAUNCH   # the border acts (tools/border.py) read it as season 2
 SEASON_TWO = SEASON_II.launch_day
 SEASONS = {1: SEASON, 2: SEASON_II}   # by the world's season number (#season rw.day)
 

@@ -64,8 +64,8 @@ buttons point at the Discord with a "Coming soon" title.
 | `DISCORD_INVITE` | The Discord invite |
 | `CONTACT_URL` | How to reach staff without the Discord, for refunds, reports and appeals: a `mailto:` or a page |
 | `STORE_URL` | The Tebex webstore (passes and supporter tiers). Fill it in only once the store can take payments and run its commands on the server (docs/LIVE.md, "The store"). While it is empty, the pages say passes are arranged in the Discord; once it is set, they say what the store does |
-| `MODPACK_URL` | The player modpack. Until the Modrinth project is up, the site serves the release's own `.mrpack` from `public/pack/` (docs/MAINTAINING.md, "Releasing"), and validate.py checks it is the version the manifest pins |
-| `INSTALLER_URL` | The player zip: the installer for the regular Minecraft Launcher on Windows, plus the same `.mrpack`, also in `public/pack/` |
+| `MODPACK_URL` | Empty: Season 1 runs on Paper and needs no client mods. Old `/pack/` links redirect to the join steps (`vercel.json`). Season I's modpack was a `.mrpack` in `public/pack/` |
+| `INSTALLER_URL` | Empty, like `MODPACK_URL`. Season I's was the player zip with the Minecraft Launcher installer |
 | `MAP_URL` | The live map (BlueMap behind Caddy on the VPS, docs/LIVE.md), open to everyone |
 | `STATUS_URL` | The server's status file (`tools/status.py`), served beside the live map with a short cache and an allow-origin header (docs/upgrades/HISTORY.md, "The website's status"). Empty: no status block |
 | `STANDINGS_URL` | The server's weekly standings file (`standings.json`), served beside the live map with a short cache and an allow-origin header, like `STATUS_URL`. Until the server publishes it the page shows its empty state |

@@ -398,26 +398,22 @@ def spectacles(week: Week) -> list[str] | None:
         return []
     import boss
     import finale
-
-    import diplomacy
     ended = [o for o in boss.outcomes(week.folder) if o.week == week.number and o.state in ("slain", "left")]
     won = finale.result(week.folder, week.world.scores)
     won = won if won and won.week == week.number else None
     if not ended and not won:
         return []
-    names = diplomacy.names(week.folder)
     out = []
     for o in ended:
         if o.state == "left":
             out.append(f"**Border boss:** {boss.NAME} left; nobody slew it.")
         else:
-            of = f" of {md(names.get(o.faction, f'faction {o.faction}'))}" if o.faction else ""
-            out.append(f"**Border boss:** {md(o.player or 'a player')}{of} slew {boss.NAME}.")
+            out.append(f"**Border boss:** {md(o.player or 'a player')} slew {boss.NAME}.")
     if won and won.tie:
         out.append(f"**The finale:** a tie for the monument on {won.points} points; staff name the winner.")
-    elif won and won.faction:
-        out.append(f"**The finale:** {md(names.get(won.faction, f'faction {won.faction}'))} held the monument "
-                   f"and won, with {won.points} points.")
+    elif won and won.team:
+        team = md(finale.team_words(week.folder, won.team, week.world.scores))
+        out.append(f"**The finale:** {team} held the monument and won, with {won.points} points.")
     elif won:
         out.append("**The finale:** nobody held the monument.")
     return out

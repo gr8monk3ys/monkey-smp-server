@@ -1,0 +1,11 @@
+# Runs monkey-return.service every 10 minutes, 50 seconds past (clear of the drops at 30). A missed run is just
+# the next one: the list keeps each player's time, so a return is late by the gap and never skipped.
+[Unit]
+Description=Monkey SMP: the 24-hour return from elimination, every 10 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/10:50
+Persistent=false
+
+[Install]
+WantedBy=timers.target

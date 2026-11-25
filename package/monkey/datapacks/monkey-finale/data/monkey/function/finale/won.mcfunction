@@ -1,2 +1,4 @@
-$tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"nbt":"names.f$(faction)","storage":"monkey:factions","interpret":true,"color":"yellow","bold":true},{"text":" held the monument and win the finale, with ","color":"gold"},{"text":"$(points)","color":"yellow"},{"text":" points.","color":"gold"}]
+# Named by its members online; with none online, by its number (`result` reads the roster).
+$execute unless entity @a[scores={st.team=$(team)}] run tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"text":"team $(team)","color":"yellow","bold":true},{"text":" held the monument and win the finale, with ","color":"gold"},{"text":"$(points)","color":"yellow"},{"text":" points.","color":"gold"}]
+$execute if entity @a[scores={st.team=$(team)}] run tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"selector":"@a[scores={st.team=$(team)}]","color":"yellow","bold":true},{"text":" held the monument and win the finale, with ","color":"gold"},{"text":"$(points)","color":"yellow"},{"text":" points.","color":"gold"}]
 title @a title {"text":"The monument is held","color":"gold","bold":true}

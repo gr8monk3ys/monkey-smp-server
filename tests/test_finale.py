@@ -5,7 +5,6 @@ import finale
 from fake_world import FakeWorld
 from test_border import LAUNCHED, SEASON_TWO, SPAWN, make_server
 
-import diplomacy
 import rcon
 import recap
 import season_calendar
@@ -13,7 +12,7 @@ import season_calendar
 PACIFIC = season_calendar.PACIFIC
 FILES = finale.datapack_files()
 FN = "data/monkey/function/finale"
-FINALE = dt.datetime(2027, 4, 24, 18, 1, tzinfo=PACIFIC)     # Season II, week 11, a minute after its time
+FINALE = dt.datetime(2027, 4, 10, 18, 1, tzinfo=PACIFIC)     # the relaunch's week 9, a minute after its time
 ACTS_DONE = ("ev.state", "#border_act", 2)
 ON = ("fn", "#on", 1)
 
@@ -22,9 +21,10 @@ def body(name: str) -> str:
     return FILES[f"{FN}/{name}.mcfunction"]
 
 
-def test_the_finale_is_season_twos_week_eleven():
-    assert finale.finale_at(2) == dt.datetime(2027, 4, 24, 18, 0, tzinfo=PACIFIC)
-    assert finale.MAX_FACTIONS == diplomacy.MAX_FACTIONS
+def test_the_finale_is_the_relaunchs_last_saturday():
+    assert finale.finale_at(2) == dt.datetime(2027, 4, 10, 18, 0, tzinfo=PACIFIC)
+    assert finale.finale_at(2).date() == season_calendar.RELAUNCH_FINALE
+    assert finale.MAX_TEAMS >= finale.SOLO_FROM
     stages = [what for _, what in finale.stages(finale.finale_at(2))]
     assert stages[0].startswith("warning: the border closes in 10 minutes") and stages[-1].startswith("the close")
     assert finale.CLOSE_AT - finale.HOLD_AT == 3600     # presence counts over the last hour
@@ -69,11 +69,24 @@ def test_off_by_default_and_never_in_season_one():
     assert "matches 2.. run return run tellraw" in body("on")
 
 
-def test_presence_counts_faction_members_at_the_monument_in_the_last_hour():
+def test_presence_counts_team_members_at_the_monument_in_the_last_hour():
     tick, sample = body("tick"), body("sample")
     assert "execute if score #phase fn matches 3 run function monkey:finale/sample" in tick
-    assert "gamemode=survival" in sample and "scores={st.faction=1..}" in sample and "tag=!ev.arena" not in "" \
-        and "dx=$(d)" in sample
+    assert "gamemode=survival" in sample and "st.faction" not in sample and "dx=$(d)" in sample
+    assert "scoreboard objectives add st.team dummy" in body("load")
+    count = body("count")
+    assert count.index("unless score @s st.team matches 1.. run function monkey:finale/solo") < count.index("n.n")
+
+
+def test_a_player_without_a_team_is_a_team_of_one():
+    solo, start, tick = body("solo"), body("start"), body("tick")
+    assert f"unless score #next fn matches {finale.SOLO_FROM}.. run scoreboard players set #next fn" in start
+    assert f"unless score #next fn matches ..{finale.MAX_TEAMS} run return 0" in solo
+    assert "next int 1 run scoreboard players get #next fn" in body("reset")   # numbers outlive a reset
+    assert "unless score @s st.team matches 1.. run return 0" in body("count")
+    assert "unless entity @a[scores={st.team=$(team)}]" in body("won") and "team $(team)" in body("won")
+    assert "scoreboard players operation @s st.team = #next fn" in solo and "players add #next fn 1" in solo
+    assert "@a[scores={st.team=$(team)}]" in body("won")
     assert body("add") == "$scoreboard players add #f$(n) fn 1\n"
     pick = body("pick_one")
     assert "= #best fn run return run scoreboard players set #tie fn 1" in pick
@@ -102,25 +115,25 @@ def test_no_finale_in_season_one(tmp_path):
 
 def result_world(tmp_path, result, *scores):
     return FakeWorld(tmp_path / "world").scores(SEASON_TWO, LAUNCHED, *scores).storage("monkey", {
-        "finale": {"result": result},
-        "factions": {"names": {"f3": {"text": "Red Monkeys"}, "f5": {"text": "Blue Jays"}}}}).path
+        "finale": {"result": result}}).path
 
 
 def test_the_result_roster_and_staff_commands(tmp_path, capsys):
-    world = result_world(tmp_path, {"faction": 3, "points": 4200, "tie": 0, "week": 11},
-                         ("fn", "#f3", 4200), ("fn", "#f5", 900), ("st.faction", "Steve", 3),
-                         ("st.faction", "alex", 3), ("st.faction", "Bob", 5))
+    world = result_world(tmp_path, {"team": 3, "points": 4200, "tie": 0, "week": 9},
+                         ("fn", "#f3", 4200), ("fn", "#f105", 900), ("st.team", "Steve", 3),
+                         ("st.team", "alex", 3), ("st.team", "Bob", 105))
     got = finale.result(world)
-    assert (got.faction, got.points, got.tie, got.week, got.points_by) == (3, 4200, False, 11, {3: 4200, 5: 900})
+    assert (got.team, got.points, got.tie, got.week, got.points_by) == (3, 4200, False, 9, {3: 4200, 105: 900})
     assert finale.roster(world, 3) == ["alex", "Steve"]
+    assert finale.team_words(world, 3) == "alex and Steve" and finale.team_words(world, 7) == "team 7"
     assert finale.main(["result", str(world)]) == 0
     out = capsys.readouterr().out
-    assert "Red Monkeys held the monument with 4200 points." in out
+    assert "Team 3 held the monument with 4200 points." in out and "team 105 (Bob): 900 points" in out
     assert "  scoreboard players set Steve rw.champion 1" in out and "  team join champion_s2 alex" in out
 
 
 def test_a_tie_names_nobody(tmp_path, capsys):
-    world = result_world(tmp_path, {"faction": 0, "points": 50, "tie": 1, "week": 11}, ("fn", "#f3", 50),
+    world = result_world(tmp_path, {"team": 0, "points": 50, "tie": 1, "week": 9}, ("fn", "#f3", 50),
                          ("fn", "#f5", 50))
     assert finale.result(world).tie
     finale.main(["result", str(world)])
@@ -128,15 +141,15 @@ def test_a_tie_names_nobody(tmp_path, capsys):
 
 
 def test_the_recap_names_the_winner_in_its_week(tmp_path, monkeypatch):
-    monkeypatch.setattr(recap.Week, "number", property(lambda self: 11))
-    world = result_world(tmp_path, {"faction": 3, "points": 4200, "tie": 0, "week": 11}, ("fn", "#f3", 4200))
+    monkeypatch.setattr(recap.Week, "number", property(lambda self: 9))
+    world = result_world(tmp_path, {"team": 3, "points": 4200, "tie": 0, "week": 9}, ("fn", "#f3", 4200))
 
     class World:
-        scores = {"rw.day": {"#season": 2}, "fn": {"#f3": 4200}}
-    week = recap.Week([], World(), {"start": "2027-04-19T00:00:00-07:00"}, None,
-                      dt.datetime(2027, 4, 25, 19, 0, tzinfo=PACIFIC), folder=world)
-    assert recap.spectacles(week) == ["**The finale:** Red Monkeys held the monument and won, with 4200 points."]
-    monkeypatch.setattr(recap.Week, "number", property(lambda self: 10))
+        scores = {"rw.day": {"#season": 2}, "fn": {"#f3": 4200}, "st.team": {"Steve": 3, "alex": 3}}
+    week = recap.Week([], World(), {"start": "2027-04-05T00:00:00-07:00"}, None,
+                      dt.datetime(2027, 4, 11, 19, 0, tzinfo=PACIFIC), folder=world)
+    assert recap.spectacles(week) == ["**The finale:** alex and Steve held the monument and won, with 4200 points."]
+    monkeypatch.setattr(recap.Week, "number", property(lambda self: 8))
     assert recap.spectacles(week) == []
     week.world.scores = {"rw.day": {"#season": 1}}
     assert recap.spectacles(week) == []
@@ -170,7 +183,7 @@ def test_the_border_moves_to_the_monument_slower_than_a_walk():
     assert "= #bx fn" in body("box")                                        # to the monument
 
 
-def test_the_hold_is_announced_as_a_staff_event():
+def test_the_hold_is_announced_without_the_old_faction_rules():
     for name in ("start", "hold"):
-        assert "staff event" in body(name) and "rule 41" in body(name)
+        assert "monument" in body(name) and "rule 41" not in body(name) and "faction" not in body(name)
     assert "claim" not in "".join(FILES.values()).lower()     # never touches claims (rules 37, 39, 42)

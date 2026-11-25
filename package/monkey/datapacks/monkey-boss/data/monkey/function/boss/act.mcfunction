@@ -14,5 +14,5 @@ $scoreboard players set #wait bs $(delay)
 scoreboard players set #state bs 1
 # The spot's chunk stays loaded until the boss ends, so it can rise there and leave on time.
 $execute in minecraft:overworld run forceload add $(x) $(z)
-$tellraw @a ["",{"text":"Something stirs past the old edge. ","color":"dark_red","bold":true},{"text":"When the border has grown, The Edgewalker rises near ","color":"gold"},{"text":"$(x), $(z)","color":"yellow"},{"text":". The first to slay it takes a Server First for their faction. A staff event: within 96 blocks of it anyone can fight anyone (rule 41).","color":"gold"}]
+$tellraw @a ["",{"text":"Something stirs past the old edge. ","color":"dark_red","bold":true},{"text":"When the border has grown, The Edgewalker rises near ","color":"gold"},{"text":"$(x), $(z)","color":"yellow"},{"text":". The first to slay it takes a Server First. Hearts are at stake around it, as everywhere outside the safe zones.","color":"gold"}]
 return 1

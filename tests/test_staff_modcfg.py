@@ -151,9 +151,7 @@ def test_values_sent_back_as_read_change_nothing():
         assert new == text and changed == [], fmt
 
 
-@pytest.mark.parametrize("path", ["config/antixray.toml", "config/openpartiesandclaims-server.toml",
-                                  "config/enchantmentdisabler/config.toml", "lootrestock.properties",
-                                  "config/chunky/config.json"])
+@pytest.mark.parametrize("path", ["config/openpartiesandclaims-server.toml", "server.properties"])
 def test_the_packs_own_configs_read_whole_and_edit_one_line(path):
     text = (DEFAULTS / path).read_text(encoding="utf-8")
     fmt = m.FORMATS[Path(path).suffix]

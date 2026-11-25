@@ -52,7 +52,7 @@ GEYSERMC_STACK = ("floodgate",)
 # Fallbacks other workstreams may switch to, checked for the same Minecraft version and reported, never pinned:
 # the economy's money plugin if EssentialsX has no release by mid-January, and the auction house to switch to if
 # DonutAuctionHouse's Modrinth files go away.
-CANDIDATES = ("openeco", "zauctionhouse")
+CANDIDATES = ("openeco", "zauctionhouse", "fancynpcs", "villageroptimizer", "antivillagerlag", "chunkspawnerlimiter")
 
 
 def pin_paper(manifest: dict, mc: str, upstream: Upstream) -> dict:

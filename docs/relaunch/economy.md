@@ -44,10 +44,10 @@ changes seen as pay-to-win):
 
 | Job | Plugin | Why | Status for MC 26.3 (platform pin run, 25 Nov) |
 |---|---|---|---|
-| Money and `/pay`, `/bal`, `/baltop` | EssentialsX Economy (in the platform stack) | Already in the stack for homes and teleports; logs every change | **No 26.3 release yet**; fallback below |
+| Money and `/pay`, `/bal`, `/baltop` | EssentialsX Economy (in the platform stack) | Already in the stack for homes and teleports; logs every change | **No 26.3 release yet**; fallback OpenEco below |
 | Economy API | VaultUnlocked (in the platform stack) | What shop and auction plugins talk to | Pinned, 2.20.3 |
 | Server shop, `/sell`, `/sellall`, sell GUI | **EconomyShopGUI** (free) | Free, Bedrock forms through Floodgate, transaction log, supports VaultUnlocked | Pinned, 7.3.4 |
-| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, per-item price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | Needs 2.0.1 or newer; where the platform pins it from is below |
+| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, per-item price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | Pinned, 2.0.1 from Modrinth (unlisted project; below) |
 
 ### Pinning the auction house
 
@@ -56,29 +56,16 @@ changes seen as pay-to-win):
 listing limits that were never read. 2.0.1 fixed an item dupe when listing. The config here matches 2.0.x's own
 default key for key.
 
-Where the jar comes from is the open part. The installer only takes plugins from Modrinth's CDN, checked by hash
-(ADR-0002), with named exceptions for Floodgate (ADR-0010) and the owners' own mods from GitHub (ADR-0009):
+**Pinned from Modrinth**: 2.0.1, project `donut-auction` (`8XgyeSRH`), version `VrxxAobl`, release build for Paper
+26.3, hash-checked like every other plugin (platform thread, draft PR #214). The project is "Unlisted by staff" but
+its files are still served. Two things to know:
 
-- **GitHub has no jars.** The repository (github.com/MeherBenSalem/DonutAuction, Apache-2.0) publishes no release
-  files, and its tags stop at v1.5.2.
-- **Modrinth** (project `8XgyeSRH`, slug `donut-auction`) is "Unlisted by staff" but still downloadable from
-  cdn.modrinth.com. The newest version readable there is 1.5.0 (27 Aug 2026), too old. The repository says new
-  versions go to CurseForge only from 24 Nov 2026, so 2.0.0 and 2.0.1, published before that, may be on Modrinth
-  too; that's unconfirmed.
-- **CurseForge** has 2.0.1 (`DonutAuctionHouse-2.0.1.jar`, file 9420770, 3 Nov 2026, release, lists 26.3) and will
-  get every later fix.
-
-So, in order:
-
-1. **If Modrinth's API serves 2.0.1 for project `8XgyeSRH`**, pin it like any other plugin. No rule changes, but the
-   pin can't move past 2.0.1 there.
-2. **Otherwise, a named exception for this one project on CurseForge**, written like ADR-0010: a new ADR, the
-   project in its own list, its file's exact download URL, and the size and sha512 pinned as usual. This one also
-   keeps getting fixes.
-3. If neither can be done before the beta, zAuctionHouse's free Modrinth build. It has no bidding and no per-item
-   price floors, its docs don't say where the tax money goes, and its page calls the free build a demo.
-
-The platform thread makes the pin. Hashes come from its pin run, since this workstream can't download the jar.
+- **No updates there after 2.0.1.** Since 24 Nov 2026 the plugin's author publishes new versions to CurseForge only
+  (github.com/MeherBenSalem/DonutAuction, which has no release files of its own). A later fix we need would mean a
+  named CurseForge exception in the installer, written like ADR-0010.
+- **If the Modrinth files go away**, the fallback is zAuctionHouse's free Modrinth build, with this config rewritten.
+  It has no bidding and no per-item price floors, its docs don't say where the tax money goes, and its page calls
+  the free build a demo. The platform's pin run checks it on every run without pinning it.
 
 Considered and not picked: NexusAuctionHouse (needs its own NexusCore library; its versions page stops at 26.2;
 no sales tax shown) and VIP Auctions (1.21.x only, all rights reserved).

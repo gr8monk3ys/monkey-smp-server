@@ -143,8 +143,9 @@ export default function Home() {
 
         <section id="store">
           <h2>The store</h2>
-          <p className="note">Cosmetic only. Nothing in the store helps you fight, earn, build or survive, and you
-            can&apos;t buy in-game money or hearts. Everything in the game is earned in the game.</p>
+          <p className="note">Our promise: the store sells cosmetics only, and always will. Nothing in it helps you
+            fight, earn, build or survive. No in-game money, hearts, gear, spawners, keys or queue skips, ever.
+            Everything in the game is earned in the game.</p>
           <Place className="extras">
             {cosmetics.map((c) => <article key={c.name}><h3>{c.name}</h3><p>{c.text}</p></article>)}
           </Place>
@@ -152,8 +153,8 @@ export default function Home() {
             <p className="small">The store opens before Season 1. Prices and the full list come with it.</p>
           </Store>
           <p><ConfigLink to="STORE_URL" className="button ghost">Visit the store</ConfigLink></p>
-          <p className="small">Streaming or making videos on the server? Read the <a href="/creators">creator code
-            terms</a>.</p>
+          <p className="small">Making videos on the server? Pass a view count and you get a free Media rank;
+            regular creators get a code with 10% off for viewers. <a href="/creators">The creator terms</a>.</p>
         </section>
 
         <section id="rules">

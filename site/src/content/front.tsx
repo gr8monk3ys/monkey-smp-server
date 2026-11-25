@@ -77,8 +77,8 @@ export const cosmetics: { name: string; text: string }[] = [
 export const faq: { q: string; a: ReactNode }[] = [
   {
     q: "Is it really free?",
-    a: "Yes. Joining and playing cost nothing. The store only sells cosmetics: nothing in it helps you fight, earn, "
-      + "build or survive, and you can't buy in-game money.",
+    a: "Yes. Joining and playing cost nothing. The store only sells cosmetics, and that's a promise: nothing in it "
+      + "helps you fight, earn, build or survive, and you can't buy in-game money, hearts or gear.",
   },
   {
     q: "Can I play on Bedrock, console or phone?",

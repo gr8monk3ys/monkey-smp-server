@@ -38,33 +38,37 @@ export const rules: Tablet[] = [
   },
 ];
 
-// The creator-code terms (creators page, #terms): what you earn leads across the top, the rest pair up.
+// The creator terms (creators page, #terms): the Media rank leads across the top, the rest pair up.
 export const terms: Tablet[] = [
   {
-    title: "What you earn",
-    text: "20% of every 2-month pass bought with your code: $1.60 of the $8. Tebex, our store, pays it into "
-      + "your Tebex Wallet and holds each payment for 30 working days first, in case of refunds and chargebacks.",
+    title: "The Media rank, free",
+    text: "Post a video or stream from Monkey SMP that passes one of the thresholds below and you get the Media rank "
+      + "for 90 days: a Media tag in game and in the Discord, plus a supporter rank's cosmetics. Post another that "
+      + "passes and the 90 days start again. It's cosmetic, like everything else here.",
   },
   {
-    title: "Codes are for the 2-month pass",
-    text: "Tebex pays a code's share only on the first payment of a subscription, and the first payment of a "
-      + "monthly pass is $5. So send people to the 2-month pass, where your share is worth having.",
+    title: "The thresholds",
+    text: "2,500 views on a YouTube video in its first 30 days, 25,000 views on a Short, TikTok or Reel, or an "
+      + "average of 15 live viewers on a stream. It has to show the current season, with the server address on "
+      + "screen or in the title or description.",
   },
   {
-    title: "No discount for buyers",
-    text: "Mojang's rules for paid servers say access costs the same for everyone, so a code takes nothing off "
-      + "the price. It only tells us who sent the buyer.",
+    title: "Creator codes",
+    text: "Creators who make videos here regularly can also have a code. Buyers who enter it get 10% off, and you "
+      + "get 20% of what they paid. Tebex, our store, pays it into your Tebex Wallet after holding each payment for "
+      + "its settlement period, in case of refunds and chargebacks.",
   },
   {
     title: "Say that you're paid",
-    text: "Whenever you show or mention your code, say that you earn from it: #ad in the title or post, or \"I "
-      + "get a share of passes bought with my code\" said out loud, and the platform's own paid-promotion label "
-      + "where there is one. The FTC requires it in the US, and Mojang's rules for servers ask for it too.",
+    text: "Whenever you show or mention your code, or post once you hold the Media rank, say that you get something "
+      + "from the server: #ad in the title or post, or \"I have a code and a free rank on this server\" said out "
+      + "loud, and the platform's own paid-promotion label where there is one. The FTC requires it in the US, and "
+      + "Mojang's rules for servers ask for it too.",
   },
   {
     title: "Describe the server as it is",
-    text: "A pass buys access, supporter tiers buy looks, and nothing buys an advantage. Don't promise items, "
-      + "ranks, slots or anything else the server doesn't sell.",
+    text: "Monkey SMP is free to play, and the store sells cosmetics only: nothing in it helps anyone fight, earn or "
+      + "survive. Don't promise items, money, hearts or anything else the server doesn't sell.",
   },
   {
     title: "The rules still apply",
@@ -73,7 +77,7 @@ export const terms: Tablet[] = [
   },
   {
     title: "Either side can stop",
-    text: "You can drop your code, and we can switch it off, at any time. A code is switched off at once for "
-      + "breaking these terms. Shares already earned are paid out as Tebex pays them.",
+    text: "You can drop your code, and we can switch it or the rank off, at any time. Both are switched off at once "
+      + "for breaking these terms. Shares already earned are paid out as Tebex pays them.",
   },
 ];

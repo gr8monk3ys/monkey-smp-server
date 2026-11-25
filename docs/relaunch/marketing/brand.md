@@ -91,13 +91,15 @@ letters). Refresh, don't replace:
 Who makes it: a change to `marketing/logo.py` and a re-run of `marketing/build.py`, which writes every PNG and the
 banners. That folder isn't part of this pass, so it is a follow-up.
 
-## Before launch, only Lorenzo can decide
+## Before launch, only Lorenzo can do
 
-- **The handle.** `@monkeysmp` everywhere if it's free on TikTok, YouTube, Instagram and X, otherwise one variant
-  used everywhere. Check each before announcing.
-- **A short domain.** The site and the Java address use `monkeysmp.lscaturchio.xyz`. A short domain of its own reads
-  better on a trailer end card and in a TikTok caption. It costs money, so it's your call; everything here works with
-  the current name too.
-- **The Bedrock address.** Bedrock can't follow the SRV record Java uses, so Bedrock players need a name that points
-  straight at the server, plus port 19132. The site shows `play.monkeysmp.lscaturchio.xyz` and port `19132`; the
-  platform work confirms both.
+Both need your accounts or money, so they're yours. My recommendation for each:
+
+- **The handle: `@monkeysmp`**, the same on TikTok, YouTube, Instagram and X. If any one is taken, use
+  `@playmonkeysmp` on all four rather than mixing, so a viewer who finds one finds the rest. Claim them before the
+  first teaser.
+- **A short domain: buy one.** `monkeysmp.lscaturchio.xyz` is hard to say in a video and long on an end card, and
+  the Java address is what a viewer has to type. A `.net` or `.com` usually costs around $10 to $20 a year; `.gg`
+  costs more. Check `monkeysmp.net`, then `monkeysmp.com`, then `playmonkeysmp.com`. With one, the site and Java
+  address move to it, with the old names kept pointing at the server; every draft here works with the current
+  name until then.

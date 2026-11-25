@@ -1,7 +1,11 @@
 # Creator outreach template
 
-Draft for Lorenzo to send himself. The plan: book 3 to 6 small creators (about 5k to 100k subscribers) for Season 1's
-launch week, each with a creator code. Nothing has been sent.
+Draft for Lorenzo to send himself. Nothing has been sent.
+
+The plan: book 3 to 5 mid-size creators (about 50,000 to 500,000 subscribers, or a steady 50+ live viewers) for Season
+1's launch week, each with a creator code, rather than many small ones. On Tebex the top 1.6% of creators bring about
+three quarters of code sales (docs/relaunch/research-top-servers.md, #212). Small creators aren't left out: anyone
+whose video passes the public thresholds gets the free Media rank (`/creators`), the way DonutSMP grew.
 
 Mojang's usage guidelines require creators to disclose the relationship and follow the FTC's guidance, so every
 deal says so in writing. Fill the [brackets]; amounts and terms are yours to set.
@@ -16,9 +20,9 @@ Subject: **Play launch week of a new lifesteal SMP? Season 1, 6 Feb**
 > free economy lifesteal SMP for Java and Bedrock: a shop and auction house, hearts stolen outside the safe zones, and
 > 8 to 10 week seasons that end in a border-shrink finale.
 >
-> I'd love you to play launch week. You'd get a creator code that pays you [share] of store sales from people who
-> use it, and [fee or other terms, if any]. Everything in the store is cosmetic, so your viewers never have to pay
-> to keep up.
+> I'd love you to play launch week. You'd get a creator code that gives your viewers 10% off and pays you 20% of
+> what they spend[, plus fee or other terms, if any]. Everything in the store is cosmetic, so your viewers never
+> have to pay to keep up.
 >
 > If you're in, any video or stream needs to say it's sponsored or that you have a code with us, which Mojang and
 > the FTC both require. The terms are at https://monkeysmp.lscaturchio.xyz/creators.
@@ -39,12 +43,14 @@ Subject: **Play launch week of a new lifesteal SMP? Season 1, 6 Feb**
 
 - The plain addresses to share. The server no longer counts joins by address, so who a creator sent shows up in
   their creator code's sales and in the Discord's "Where did you hear about us?" answers.
-- Their creator code in the store, once the store is open.
+- Their creator code in the store, once the store is open: 10% off for buyers, 20% of what they paid to the creator.
+- The Media rank for 90 days, renewed by each video or stream that passes the thresholds.
 - The Creator role and `#creator-hub` in the Discord, with event dates ahead of time.
 - A written note of the deal, including the disclosure line.
 
 ## Before sending
 
-- The creator code terms at `/creators` still describe Season I's pass codes. They need rewriting for the cosmetic
-  store before a creator reads them.
-- Decide the share and any fee. Neither is set anywhere yet.
+- The store's Tebex settings match `/creators`: codes give 10% off, and the share is 20% (the store work's checklist
+  still says no discount; change that box when the store goes up).
+- Decide any flat fee per creator. None is set; for a first season, the share and the Media rank are usually enough
+  for mid-size creators, and a fee is worth it only for one you especially want.

@@ -52,7 +52,7 @@ channel list appears.
 **VOICE**
 - `Lounge`, `Squad 1`, `Squad 2`, `AFK`
 
-**CREATORS** (only @Creator)
+**CREATORS** (only @Creator and @Media)
 - `#creator-hub`: event dates ahead of time, creator code questions.
 
 **STAFF** (only staff)
@@ -67,6 +67,7 @@ channel list appears.
 | Moderator | moderators | sage |
 | Helper | trusted players who answer #help | sage |
 | Creator | creators with a code | heart red |
+| Media | holders of the free Media rank (90 days, `/creators`) | heart red |
 | Founder | everyone who played Season I | gold, shown separately |
 | Ember / Banner / Crown | supporter ranks, given by the store | the store's colours |
 | Java / Bedrock / Console | from onboarding | none |

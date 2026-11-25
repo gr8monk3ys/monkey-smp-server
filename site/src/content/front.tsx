@@ -9,7 +9,7 @@ import { ConfigLink } from "@/components/links";
 export const GAME = "Minecraft Java 26.3";
 
 /** The address Bedrock players type. Bedrock can't follow the SRV record Java uses (config.json's ADDRESS), so it
- * needs the A record that SRV points at, and Geyser's port. Placeholder until the Paper server is live. */
+ * needs the A record that SRV points at, and Geyser's port. */
 export const BEDROCK_ADDRESS = "play.monkeysmp.lscaturchio.xyz";
 export const BEDROCK_PORT = 19132;
 

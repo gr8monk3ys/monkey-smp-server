@@ -14,8 +14,11 @@ channel list appears.
    unlocks the matching join channel. Console gets the console how-to.
 3. **Question 2: "What are you here for?"** (pick any) PvP and hearts / Trading and the economy / Building /
    Making videos. Each gives a ping role for that kind of news.
-4. **Default channels**: #start-here, #announcements, #general, #trading.
-5. **Server guide welcome**: "Welcome to the jungle. Mind your hearts." with three to-dos: read #start-here, join the
+4. **Question 3: "Where did you hear about us?"** (optional) TikTok / YouTube / A creator / A server list / A friend.
+   Each gives a hidden role, so the member list shows which channels bring people in now that the server no
+   longer counts joins by address.
+5. **Default channels**: #start-here, #announcements, #general, #trading.
+6. **Server guide welcome**: "Welcome to the jungle. Mind your hearts." with three to-dos: read #start-here, join the
    server, say hi in #general.
 
 ## Channels

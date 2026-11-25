@@ -9,8 +9,8 @@ and I haven't checked each one, so there are three lengths below; trim to fit.
 | Field | Value |
 | --- | --- |
 | Name | Monkey SMP |
-| Java address | the list's join address from docs/PROMOTION.md (`list.monkeysmp.lscaturchio.xyz` for the toplists, `find.monkeysmp.lscaturchio.xyz` for the Official list) |
-| Bedrock address | `play.monkeysmp.lscaturchio.xyz`, port `19132` (to be confirmed by the platform work; Bedrock can't use the per-list join addresses, which rely on SRV records) |
+| Java address | `monkeysmp.lscaturchio.xyz`, the same address everywhere (the Paper server no longer counts joins by address, so per-list addresses would add nothing) |
+| Bedrock address | `play.monkeysmp.lscaturchio.xyz`, port `19132` (Bedrock can't follow the SRV record behind the Java address) |
 | Version | Java 26.3 (older Java versions join through ViaVersion), Bedrock latest |
 | Region | US West (Pacific evenings) |
 | Website | https://monkeysmp.lscaturchio.xyz |
@@ -88,5 +88,5 @@ Voting needs NuVotifier on the server (the platform work), and a vote reward tha
 ## Before the listings go up
 
 - The new server icon and banner (brand.md, "Logo brief").
-- The Bedrock address and port confirmed on the live Paper server.
+- The Bedrock port open on the live Paper server (it opens at cutover).
 - The 6 Feb launch time confirmed: I used 5 PM Pacific, the same hour as Season I.

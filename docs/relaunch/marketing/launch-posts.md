@@ -62,8 +62,8 @@ Post 4, launch night clip (from the first evening):
 > On-screen text: "first heart stolen on Monkey SMP Season 1 💀"
 > Caption: It's live. Free, Java + Bedrock. #minecraft #lifesteal
 
-Keep the address in the bio and a pinned comment rather than in every caption; use the TikTok join address
-(`tt.monkeysmp.lscaturchio.xyz`) there so joins can be counted (docs/PROMOTION.md).
+Keep the address in the bio and a pinned comment rather than in every caption. The server no longer counts joins
+by address, so the Discord's "Where did you hear about us?" question (discord.md) is how TikTok's share shows up.
 
 ## 5. YouTube
 

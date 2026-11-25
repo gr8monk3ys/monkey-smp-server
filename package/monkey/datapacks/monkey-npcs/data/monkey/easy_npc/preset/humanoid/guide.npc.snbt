@@ -3,7 +3,7 @@
     author:"Monkey SMP",
     category:"Monkey SMP",
     created:1L,
-    description:"Greets new players: the short rules, factions, challenges, standings and the wardrobe.",
+    description:"Greets new players: the short rules, factions, challenges, standings and your progress.",
     entityTypeId:"easy_npc:humanoid",
     modified:1L,
     name:"Guide",
@@ -116,7 +116,7 @@
                 }
               ],
               Label:"default_wardrobe",
-              Name:"Your wardrobe"
+              Name:"Your progress"
             }
           ],
           Label:"default",
@@ -124,7 +124,7 @@
           Priority:10,
           Texts:[
             {
-              Text:"Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your wardrobe."
+              Text:"Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your progress."
             }
           ]
         },

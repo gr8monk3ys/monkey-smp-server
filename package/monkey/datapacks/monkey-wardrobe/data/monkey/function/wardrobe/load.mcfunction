@@ -22,17 +22,6 @@ scoreboard objectives add rw.midsummer dummy
 scoreboard objectives add rw.s2 dummy
 scoreboard objectives add rw.champion dummy
 scoreboard objectives add rw.kin dummy
-scoreboard objectives add rw.months.seen dummy
-scoreboard objectives add rw.events.seen dummy
-scoreboard objectives add rw.hallowtide.seen dummy
-scoreboard objectives add rw.midwinter.seen dummy
-scoreboard objectives add rw.midsummer.seen dummy
-scoreboard objectives add rw.challenges.seen dummy
-scoreboard objectives add rw.launch.seen dummy
-scoreboard objectives add rw.s2.seen dummy
-scoreboard objectives add rw.champion.seen dummy
-scoreboard objectives add rw.quest.seen dummy
-scoreboard objectives add rw.kin.seen dummy
 scoreboard players set #hour rw.const 72000
 scoreboard players set #second rw.const 20
 scoreboard players add #today rw.day 0

@@ -65,7 +65,7 @@ A small set of file replacements applied inside one downloaded mod or datapack, 
 _Avoid_: fix, override, mod
 
 **Generated pack**:
-A data pack (or the wardrobe's resource pack) written by `tools/datapacks.py` from the tables in a `tools/` generator; edit the generator, never the pack.
+A data pack written by `tools/datapacks.py` from the tables in a `tools/` generator; edit the generator, never the pack.
 _Avoid_: hand-written pack, build output
 
 **Defaults**:
@@ -145,7 +145,7 @@ A single plain line in the public Discord channel when something notable happens
 _Avoid_: announcement (the in-game one), feed, notification, the advancement log
 
 **Season Wrapped**:
-A player's page about their season on the site (`/wrapped/season-<n>/`), made after the finale by `tools/wrapped.py`: hours and days played, PvP kills, challenges, events, their faction's best weekly rank, their Server Firsts and skins. Counted from the launch, so test play doesn't show. A player can opt out.
+A player's page about their season on the site (`/wrapped/season-<n>/`), made after the finale by `tools/wrapped.py`: hours and days played, PvP kills, challenges, events, their faction's best weekly rank and their Server Firsts. Counted from the launch, so test play doesn't show. A player can opt out.
 _Avoid_: recap (the weekly post), stats page, profile
 
 **Snapshot**:

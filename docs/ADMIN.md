@@ -319,9 +319,9 @@ per world: see the admin notes at the end of `docs/RULES.md`.
 
 Two Easy NPC characters stand at spawn for whoever joins when no staff are on. The **Guide** (gold name) greets
 anyone who comes within 8 blocks with a speech bubble. Right-clicked, it offers the short rules, how to find a
-faction (`#smp-forum`), and buttons that open this week's challenges, the faction standings and the wardrobe
-(what `/trigger challenges`, `standings` and `wardrobe` do). The rules and faction pages have a button for the
-Monkey SMP links, the Discord first. The **Town Crier** (yellow) calls out every 5 minutes. Right-clicked, it
+faction (`#smp-forum`), and buttons that open this week's challenges, the faction standings and the
+player's progress (what `/trigger challenges`, `standings` and `wardrobe` do). The rules and faction pages
+have a button for the Monkey SMP links, the Discord first. The **Town Crier** (yellow) calls out every 5 minutes. Right-clicked, it
 shows this week's Saturday event and next week's, picked by the challenges' week number, so it turns over on
 Monday with them. Their text is in `tools/npcs.py`, which writes the `monkey-npcs` data pack.
 
@@ -630,13 +630,14 @@ default. `/function monkey:sieges/help` lists these:
 
 **Attendance.** `/function monkey:events/begin {name:"Faction Raid"}` starts an event; then
 `/execute as <player> run function monkey:events/attend` for everyone who came (joining the arena counts
-on its own). Each player counts once per event, in the `rw.events` score. Rallier unlocks at 3 events and
-the Plumed Helm at 10 (`docs/RETENTION.md`). An event begun this week also counts for the weekly challenge
-"Come to an event" when it is on, so always start events with `begin`. On the launch weekend, begin the
+on its own). Each player counts once per event, in the `rw.events` score (`docs/RETENTION.md`, "The
+counters"; it unlocks nothing since the wardrobe skins were retired). An event begun this week also counts
+for the weekly challenge "Come to an event" when it is on, so always start events with `begin`. On the launch weekend, begin the
 Build Battle after `rules/launch`: the launch starts challenge progress from zero.
 
 **Holidays.** At Hallowtide, Midwinter and Midsummer (`docs/SEASONS.md`, "Holidays"), stand with the
-crowd near the end and give everyone there the holiday's skin, as well as running `attend`:
+crowd near the end and mark everyone there for the holiday, as well as running `attend` (the holiday skins
+are retired: the score is a record of who came):
 
 ```
 /scoreboard players set @a[distance=..48] rw.hallowtide 1     # or rw.midwinter, rw.midsummer
@@ -653,7 +654,7 @@ These are never sold or granted outside the event.
 ```
 
 `tools/season.py download` zips the final backup's world for players, and `tools/season.py carry` puts
-the wardrobe scores, hours played and title teams into the next season's world.
+the retention scores (`rw.*`), hours played and title teams into the next season's world.
 
 `tools/wrapped.py start` keeps where everyone's counts stand right after `rules/launch` (`save-all flush`
 first), and `tools/wrapped.py build` makes the season's Season Wrapped pages from the final world after the
@@ -718,10 +719,10 @@ then over RCON `function monkey:nights/stop`, `datapack disable "file/monkey-nig
 
 ## Weekly challenges
 
-Three challenges a week, from the pool in `tools/challenges.py`, with skins at 3, 9 and 18 done (players'
-side: `docs/RETENTION.md`, "Weekly challenges"). They live in the `monkey-wardrobe` data pack. A new week
-starts every Monday at 12 AM Pacific; week 1 is the week of Monday 9 November 2026, and the launch
-weekend before it is week 0. The dates are `tools/season_calendar.py`'s, shared with the drops and the Crier.
+Three challenges a week, from the pool in `tools/challenges.py`, each one done counted in `rw.challenges`
+(players' side: `docs/RETENTION.md`, "Weekly challenges"; the skins at 3, 9 and 18 done are retired). They
+live in the `monkey-wardrobe` data pack. A new week starts every Monday at 12 AM Pacific; week 1 is the week
+of Monday 9 November 2026, and the launch weekend before it is week 0. The dates are `tools/season_calendar.py`'s, shared with the drops and the Crier.
 
 What runs when, on the maintainer's computer or the VPS:
 
@@ -765,12 +766,11 @@ counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statisti
   Touch), so keep `mine` rewards small and look at anyone who finishes one in minutes.
 
 Then `python tools/datapacks.py` (it writes the challenges into the wardrobe pack), run the checks, and
-release. The skins' models are in the wardrobe resource pack (`tools/wardrobe.py`), which no longer reaches
-players since the client pack went: until the server sends it as a server resource pack, a skinned item shows
-the missing-model placeholder.
+release. The wardrobe pack no longer has skins: they needed a resource pack, which the relaunch doesn't send, so
+they were retired. Cosmetics come from UltraCosmetics (`docs/RETENTION.md`).
 
-**The launch weekend (Founder's Circlet).** `function monkey:rules/launch` opens it, and it closes by itself
-at the end of Sunday 8 November, Pacific (31 hours of game time, kept to the wall clock by
+**The launch weekend (the founder mark, `rw.launch`).** `function monkey:rules/launch` opens it, and it
+closes by itself at the end of Sunday 8 November, Pacific (31 hours of game time, kept to the wall clock by
 `monkey-week.timer`). It works in Season I only. If something goes wrong:
 
 ```
@@ -778,13 +778,13 @@ function monkey:wardrobe/founder/open               # open it as the launch does
 function monkey:wardrobe/founder/open_for {hours:6} # open it, or keep it open, for 6 hours of game time from now
 function monkey:wardrobe/founder/close              # close it now
 scoreboard players get #founder.open rw.day         # 1 while it is open
-scoreboard players get NAME rw.launchtime           # seconds NAME was online while it was open (600 unlocks)
+scoreboard players get NAME rw.launchtime           # seconds NAME was online while it was open (600 sets it)
 ```
 
 `open_for` is manual: the wall clock no longer moves its end, so close it yourself at the end of Sunday if
 it runs past. Game time stops while the server is empty, so a manual window can last longer than its hours.
-Founder's Circlet is never sold. Setting `rw.launch` by hand is only for making good an outage during the
-window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
+The mark is never sold (it used to give Founder's Circlet, a retired skin). Setting `rw.launch` by hand is
+only for making good an outage during the window. The first `rules/launch` in Season I clears what test play earned (challenges done, `rw.launch` and
 `rw.launchtime` from a window opened to try it) and sets `#launched rw.day`, so running it again later
 clears nothing and doesn't open the window again (use `founder/open` above if it has to).
 
@@ -804,9 +804,8 @@ python tools/goal.py schedule                       # which goal runs in which w
 ```
 
 The Guide's "Talk to the Guide" step and its "Your first week" button come with its preset: after a release
-that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above). The
-Pathfinder blade's model is in the wardrobe resource pack, which players don't get at the moment (see the
-wardrobe above).
+that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above).
+Finishing the quest sets `rw.quest` and nothing else: its Pathfinder blade was a wardrobe skin, retired with the rest.
 
 **Editing the goal pool.** `POOL` in `tools/goal.py`, as the challenges' pool: an `id` (it names the goal's
 scores, so don't rename the one that is on), a `name` (at most 24 characters), a `target` for about 20 to 30
@@ -1305,7 +1304,7 @@ too, in the same words: downtime and new times, event news, season dates and eac
 goes live when its pull request merges and Vercel has built it, so during an outage say it in the Discord and in game
 first.
 
-What goes in: rule changes (and the rule's number), plugins added or removed, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),
+What goes in: rule changes (and the rule's number), plugins added or removed, new cosmetics, config that changes play (the border, Netherite age, disabled enchantments),
 and season dates. What stays out: server internals, fixes nobody could see, and anything that helps a
 cheater. Write it for players: what changed, from when, and anything they have to do.
 

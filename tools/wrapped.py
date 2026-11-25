@@ -6,30 +6,30 @@
         is never replaced without --force (which keeps it as START.json.bak)
     python tools/wrapped.py build WORLD --season 1 --standings DIR --start START.json --out site/public/wrapped/season-1
         [--opt-out FILE] [--launch 2027-02-20T17:00-08:00]
-        after the finale: one page per player, an index, and the skins' pictures. Season I's launch is
+        after the finale: one page per player and an index. Season I's launch is
         tools/season_calendar.py's; a later season gives its own with --launch (its weeks and dates count from it)
 
 What players see (docs/SEASONS.md, "Ending a season"): monkeysmp.lscaturchio.xyz/wrapped/season-1/ lists everyone
 who played, and each player's page has their hours and days played, PvP kills, weekly challenges done and
-events attended this season, their faction's best weekly rank, their Server Firsts, and the wardrobe skins they
-hold, rarest first (how many of the season's players hold each, and which are new this season). A shared link
-shows a preview card in Discord with the player's own line ("84 hours over 31 days, 12 PvP kills...").
+events attended this season, their faction's best weekly rank and their Server Firsts (the wardrobe skins they
+held were listed too, until the skins were retired). A shared link shows a preview card in Discord with the
+player's own line ("84 hours over 31 days, 12 PvP kills...").
 
 Where it comes from, all read, nothing changed:
   WORLD/data/minecraft/scoreboard.dat        rw.play (play time, ticks), rw.days, rw.events, rw.challenges,
-                                              st.kills (PvP kills outside the arena) and every skin's unlock score
+                                              st.kills (PvP kills outside the arena)
   WORLD/data/monkey/command_storage.dat      the Server Firsts (tools/firsts.py's holders())
   DIR/weeks/*.json                           the weekly standings' closed weeks (tools/standings.py close): each
                                               faction's rank and members that week
   START.json                                 the same scores at the launch, from `start`
 A season's count is the end's minus the launch's (a score below where it started was reset, so all of it is
 new). Without START.json Season I counts from zero (staff test play before the launch then counts) and a later
-season can't be made, since its carried totals would read as one season's. Skins from the pass and supporter
-tiers are left out: the page is about play, and nobody's spending is shown.
+season can't be made, since its carried totals would read as one season's. Nothing from the store is shown:
+the page is about play, and nobody's spending.
 
 Players who don't want a page are named in FILE (one name a line, # for a comment): no page, not on the
-index, and their name is withheld where a Server First is listed; their play still counts in the totals and
-in how rare a skin is. Pages are marked noindex, so search engines leave them out; a link still works.
+index, and their name is withheld where a Server First is listed; their play still counts in the totals.
+Pages are marked noindex, so search engines leave them out; a link still works.
 The pages use the site's own stylesheet (site/public/wrapped/site.css, a copy of src/app/style.css that
 tools/site_links.py keeps in step) and fonts from two folders up, so --out is site/public/wrapped/season-<n>
 (served at /wrapped/season-<n>/; the site's build copies public/ as it is). The pages are made in a folder
@@ -54,7 +54,6 @@ import firsts
 import saved_world
 import season_calendar
 import site_links
-import wardrobe
 from challenges import LAUNCHED
 from firsts import First
 from standings import BOUNTY, KILLS, folded, gained
@@ -184,15 +183,6 @@ class Rank:
     faction: str
 
 
-@dataclass(frozen=True)
-class Skin:
-    id: str
-    name: str
-    kind: str        # blade or helm
-    holders: int     # the season's players who hold it
-    new: bool        # unlocked this season (False when the start is unknown)
-
-
 @dataclass
 class Card:
     name: str
@@ -206,7 +196,6 @@ class Card:
     faction: str = ""                       # the last faction the standings had them in
     best: Rank | None = None
     firsts: list[First] = field(default_factory=list)
-    skins: list[Skin] = field(default_factory=list)
 
     @property
     def hours(self) -> str:
@@ -240,24 +229,6 @@ def faction_ranks(name: str, weeks: list[dict]) -> tuple[str, Rank | None]:
     return last, best
 
 
-def skins_held(names: list[str], end: dict, begin: dict | None) -> dict[str, list[Skin]]:
-    """Each player's skins, rarest first: those their end scores unlock, not the pass's or supporter tiers'."""
-    def holds(board, name, unlock):
-        objective, n = unlock
-        return board.get(objective, {}).get(name, 0) >= n
-    out: dict[str, list[Skin]] = {n: [] for n in names}
-    for _, kind, s in wardrobe.skins():
-        if s["unlock"][0] in wardrobe.SOLD:
-            continue
-        have = [n for n in names if holds(end, n, s["unlock"])]
-        for n in have:
-            out[n].append(Skin(s["id"], s["name"], kind, len(have),
-                               begin is not None and not holds(begin, n, s["unlock"])))
-    for held in out.values():
-        held.sort(key=lambda k: (k.holders, k.name.casefold()))
-    return out
-
-
 def cards(end: dict[str, dict[str, int]], claimed: list[First], start: Start | None, weeks: list[dict]) -> list[Card]:
     """A card for everyone who played at least MIN_TICKS this season, by name: `end` is the final world's
     scores, `claimed` its firsts (firsts.holders)."""
@@ -272,11 +243,10 @@ def cards(end: dict[str, dict[str, int]], claimed: list[First], start: Start | N
         return gained(end.get(objective, {}).get(name, 0), begin.get(objective, {}).get(name, 0))
     names = sorted((n for n in end.get(PLAY, {}) if not n.startswith("#") and this_season(PLAY, n) >= MIN_TICKS),
                    key=str.casefold)
-    held = skins_held(names, end, start.scores if start else None)
     out = []
     for n in names:
         card = Card(n, slug(n), this_season(PLAY, n), this_season(DAYS, n), this_season(KILLS, n),
-                    this_season(CHALLENGES, n), this_season(EVENTS, n), this_season(BOUNTY, n), skins=held[n])
+                    this_season(CHALLENGES, n), this_season(EVENTS, n), this_season(BOUNTY, n))
         card.faction, card.best = faction_ranks(n, weeks)
         card.firsts = [f for f in claimed if f.player.casefold() == n.casefold()]
         out.append(card)
@@ -420,19 +390,6 @@ def card_page(c: Card, n: int, season: season_calendar.Season, players: int, lin
         out.append('      <p class="note">None this season.</p>\n')
     out.append("    </section>\n")
 
-    out.append('    <section id="skins">\n      <h2>Wardrobe</h2>\n')
-    if c.skins:
-        out.append('      <p class="note">Rarest first: how many of the season\'s '
-                   f'{players} players hold each.</p>\n      <ul class="skins">')
-        for s in c.skins:
-            tag = ' <span class="tag">New this season</span>' if s.new else ""
-            rarity = "only them" if s.holders == 1 else f"{s.holders} of {players}"
-            out.append(f'\n        <li><img src="skins/{s.id}.png" alt="" width="64" height="64"> '
-                       f'<b>{esc(s.name)}</b>{tag} <span class="held">{rarity}</span></li>')
-        out.append("\n      </ul>\n")
-    else:
-        out.append('      <p class="note">No skins yet.</p>\n')
-    out.append("    </section>\n")
     out.append(foot(links, made))
     return "".join(out)
 
@@ -442,7 +399,7 @@ def index_page(shown: list[Card], everyone: list[Card], claimed: list[First], hi
     name = season_name(n)
     ticks = sum(c.ticks for c in everyone)
     out = [head(f"Season {name} Wrapped - Monkey SMP",
-                f"Monkey SMP's Season {name}, player by player: hours, kills, Server Firsts and wardrobe skins.",
+                f"Monkey SMP's Season {name}, player by player: hours, kills and Server Firsts.",
                 f"{SITE}/wrapped/season-{n}/")]
     out.append(f"""    <section class="top">
       <p class="kicker">Season {name} Wrapped</p>
@@ -502,15 +459,6 @@ CSS = """/* Season Wrapped (generated by tools/wrapped.py): the site's style.css
 .rows li:last-child { border-bottom: 2px solid var(--leaf-2); }
 .rows b { font: 700 1.2rem/1.2 var(--display); color: var(--bone); }
 .rows span { color: var(--sage); }
-.skins { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); max-width: 64rem; }
-.skins li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 14px; align-items: center;
-  padding: 12px 14px; background: var(--leaf-2) padding-box; border: 6px solid transparent;
-  border-image: var(--frame-leaf) 6 fill / 6px; }
-.skins img { grid-row: span 2; image-rendering: pixelated; }
-.skins b { font: 700 1.2rem/1.2 var(--display); color: var(--bone); }
-.skins .tag { margin: 0; justify-self: start; grid-column: 2; }
-.skins .held { grid-column: 2; color: var(--sage); font-size: 0.95rem; }
 .players { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px 24px;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
 .players li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0;
@@ -526,16 +474,8 @@ CSS = """/* Season Wrapped (generated by tools/wrapped.py): the site's style.css
 """
 
 
-def skin_png(skin_id: str) -> bytes:
-    for _, kind, s in wardrobe.skins():
-        if s["id"] == skin_id:
-            art = wardrobe.blade_pixels(s) if kind == "blade" else wardrobe.icon_pixels(s)
-            return wardrobe.png(art, wardrobe.palette(s["pal"]))
-    raise KeyError(skin_id)
-
-
 def check_earlier_run(out: Path) -> None:
-    """`out` must be missing, empty, or what an earlier run wrote (its pages, the style, the skins' pictures): the
+    """`out` must be missing, empty, or what an earlier run wrote (its pages and the style): the
     build replaces the whole folder, so one holding anything else is refused and a wrong --out loses nothing."""
     if not out.exists():
         return
@@ -543,10 +483,8 @@ def check_earlier_run(out: Path) -> None:
         raise SystemExit(f"{out} is a file: give a folder (site/public/wrapped/season-<n>)")
     pages = [p for p in out.glob("*.html")
              if f'content="{GENERATOR}"' in p.read_text(encoding="utf-8", errors="replace")]
-    pictures = sorted((out / "skins").glob("*.png")) if (out / "skins").is_dir() else []
-    ours = {*pages, *pictures, out / "wrapped.css", out / "skins"}
-    found = [*out.iterdir(), *((out / "skins").iterdir() if (out / "skins").is_dir() else [])]
-    others = [p for p in found if p not in ours]
+    ours = {*pages, out / "wrapped.css"}
+    others = [p for p in out.iterdir() if p not in ours]
     if others:
         raise SystemExit(f"{out} holds {others[0].name}, which this tool didn't write: give an empty folder or the "
                          "one an earlier run wrote (site/public/wrapped/season-<n>)")
@@ -650,8 +588,6 @@ def build(world: Path, n: int, state: Path, start_file: Path | None, out: Path, 
                                                               today)}
     for c in shown:
         files[f"{c.slug}.html"] = card_page(c, n, season, len(everyone), links, today)
-    for skin_id in sorted({s.id for c in shown for s in c.skins}):
-        files[f"skins/{skin_id}.png"] = skin_png(skin_id)
     replace_folder(out, files)
     left = sorted(hidden - {c.name.casefold() for c in everyone})
     print(f"wrote {out}: an index and {plural(len(shown), 'page')} ({len(everyone) - len(shown)} opted out) "

@@ -1,4 +1,4 @@
-"""The first-week quest: five steps a new player can follow in their first days, and a wardrobe skin at the end.
+"""The first-week quest: five steps a new player can follow in their first days.
 
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
 
@@ -7,7 +7,8 @@ at most ENROLL_DAYS days played, gets the quest (docs/RETENTION.md, "The first w
 and once a day after that (their first second online in a wardrobe day) while it is unfinished, for their
 first REMIND_DAYS days played, with how many steps are done. `/trigger quest` (or the Guide's "Your first week")
 shows the steps with a tick or the player's progress and a hover that says what counts. Each step done says so
-in chat; all of them unlock the Pathfinder blade (rw.quest, tools/wardrobe.py). Anyone can hide it from the
+in chat; all of them finish the quest (rw.quest, which tools/wardrobe.py keeps). It used to unlock the Pathfinder
+blade, a wardrobe skin; the skins are retired, so it gives nothing now but the mark. Anyone can hide it from the
 menu ([Hide]) and bring it back the same way. Veterans never see it: they are marked not taking part the first
 second they are seen after the launch, and the menu tells them so.
 
@@ -24,11 +25,11 @@ A step, once done, stays done: leaving a faction or giving up land later takes n
 The switch: `#on rq` (1 on, 0 off; QUEST_ON is what a new world starts with). While it is off nobody new is
 signed up, no step is checked, nothing is said, and /trigger quest says it is off; turned on again, everyone
 carries on where they were. Pre-season and test play never count: nothing runs before the launch
-(#launched rw.day), and the first launch of a world clears every rq.* score and the skin from test play
+(#launched rw.day), and the first launch of a world clears every rq.* score and rw.quest from test play
 (quest/launch, from monkey:challenges/launch), as it clears the challenges.
 
 It lives in the monkey-wardrobe data pack, as the challenges do: wardrobe's second calls quest/second, its tick
-answers the trigger. Stdlib only.
+answers the trigger, and its menu shows quest/status. Stdlib only.
 """
 import json
 
@@ -42,13 +43,12 @@ OBJ = "rq"                 # #on: the switch; #n: scratch
 STATE = "rq.state"         # per player: unset until seen after the launch; then NOT_IN, ON, DONE or HIDDEN
 NOT_IN, ON, DONE, HIDDEN = 0, 1, 2, 3
 REMINDED = "rq.day"        # the wardrobe day (#today rw.day) the player was last reminded on
-REWARD = "rw.quest"        # 1: the quest is done (the Pathfinder blade); carried into later seasons like every rw.*
+REWARD = "rw.quest"        # 1: the quest is done; carried into later seasons like every rw.*
 QUEST_ON = 1               # the switch in a new world (docs/SEASONS.md, "Switches")
 ENROLL_DAYS = 3            # at most this many days played when first seen after the launch: new to the server
 REMIND_DAYS = 7            # the daily line stops after this many days played
 # /trigger quest values: 1 the menu, 2 hide it, 3 bring it back. Add new ones at the end.
 MENU, HIDE, SHOW = 1, 2, 3
-WARDROBE_PAGE = 1          # the wardrobe page the Pathfinder blade is on (wardrobe.page(); a test checks)
 
 # ---------------------------------------------------------------- the steps: edit here
 #
@@ -146,8 +146,8 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players operation @s {REMINDED} = #today rw.day",
         f"function {NS}:quest/count",
         "tellraw @s " + text("", {"text": "Your first week: ", "color": "gold"},
-                             {"text": f"{len(STEPS)} steps to find your feet, and the Pathfinder blade at the "
-                                      "end. ", "color": "yellow"}, OPEN, " ", HIDE_LINK),
+                             {"text": f"{len(STEPS)} steps to find your feet. ", "color": "yellow"}, OPEN, " ",
+                             HIDE_LINK),
     )
     remind = ["# Once a wardrobe day, at this player's first second online that day, for their first "
               f"{REMIND_DAYS} days",
@@ -195,7 +195,7 @@ def datapack_files() -> dict[str, str]:
         f"advancement revoke @s only {NS}:quest/home",
     )
     f[f"{FN}/finish.mcfunction"] = lines(
-        "# Every step done: the quest is over, and the Pathfinder blade is theirs (the wardrobe announces it).",
+        "# Every step done: the quest is over (rw.quest marks it).",
         f"scoreboard players set @s {STATE} {DONE}",
         f"scoreboard players set @s {REWARD} 1",
         "playsound minecraft:ui.toast.challenge_complete player @s ~ ~ ~ 0.8 1",
@@ -220,7 +220,7 @@ def datapack_files() -> dict[str, str]:
     menu = [
         "# The quest's menu. Only a player taking part (or who hid it, or finished it) sees the steps.",
         "tellraw @s " + text("", {"text": "\nYour first week", "color": "gold", "bold": True},
-                             {"text": "  five steps, and a skin at the end", "color": "gray"}),
+                             {"text": "  five steps to find your feet", "color": "gray"}),
         f"execute unless score #on {OBJ} matches 1 run return run tellraw @s " + text(
             {"text": " The first-week quest is off for now.", "color": "gray"}),
         f"execute unless {launched} run return run tellraw @s " + text(
@@ -230,23 +230,31 @@ def datapack_files() -> dict[str, str]:
         f"function {NS}:quest/count",
         *(f"function {NS}:quest/line/{s['id']}" for s in STEPS),
         f"execute if score @s {STATE} matches {DONE} run return run tellraw @s " + text(
-            " ", {"text": "Done: the Pathfinder blade is in your wardrobe. ", "color": "green"},
-            {"text": "[Wardrobe]", "color": "aqua", "click_event": {
-                "action": "run_command", "command": f"/trigger wardrobe set {WARDROBE_PAGE}"}}),
+            " ", {"text": "Done: every step, in your first days.", "color": "green"}),
         f"execute if score @s {STATE} matches {HIDDEN} run return run tellraw @s " + text(
             " ", {"text": "Hidden: no reminders. ", "color": "gray"}, SHOW_LINK),
-        "tellraw @s " + text(" ", {"text": "Reward: the Pathfinder blade. ", "color": "gray"}, DONE_COUNT,
+        "tellraw @s " + text(" ", DONE_COUNT,
                              {"text": f"/{len(STEPS)} done  ", "color": "gray"}, HIDE_LINK),
     ]
     f[f"{FN}/menu.mcfunction"] = lines(*menu)
+    f[f"{FN}/status.mcfunction"] = lines(
+        "# One line for the wardrobe's menu (/trigger wardrobe, /trigger challenges): how far a player taking the",
+        "# quest is, or that they finished it. Nothing for anyone else, or while the quest is off.",
+        f"execute unless score #on {OBJ} matches 1 run return 0",
+        f"execute if score @s {STATE} matches {DONE} run return run tellraw @s " + text(
+            {"text": "First week: ", "color": "gold"}, {"text": "done", "color": "green"}),
+        f"execute unless score @s {STATE} matches {ON} run return 0",
+        f"function {NS}:quest/count",
+        "tellraw @s " + text({"text": "First week: ", "color": "gold"}, DONE_COUNT,
+                             {"text": f"/{len(STEPS)} steps done ", "color": "gray"}, OPEN),
+    )
     f[f"{FN}/launch.mcfunction"] = lines(
         "# Run by monkey:challenges/launch, before it sets #launched. At a world's first launch, everything test play",
-        "# did goes: who was signed up, every step, the skin. A launch run again later clears nothing.",
+        "# did goes: who was signed up, every step, the quest done. A launch run again later clears nothing.",
         f"execute if {launched} run return 0",
         *(f"scoreboard players reset * {o}" for o, crit in objectives() if crit == "dummy" and o != OBJ),
-        "# The skin only in Season I: a later season's world carries what players earned before.",
+        "# The quest done only in Season I: a later season's world carries what players earned before.",
         f"execute if score #season rw.day matches 1 run scoreboard players reset * {REWARD}",
-        f"execute if score #season rw.day matches 1 run scoreboard players reset * {REWARD}.seen",
         f"advancement revoke @a only {NS}:quest/home",
     )
     f[f"{FN}/on.mcfunction"] = lines(

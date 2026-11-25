@@ -237,7 +237,7 @@ def test_a_new_week_clears_every_challenge_score_and_nothing_else():
         assert f"rc.{c['id']}.done" in cleared
         assert {o for o, _, _ in challenges.counters(c)} <= cleared
     assert {"rc.days", "rc.lastday", *(f"rc.{k}" for k in challenges.KINDS)} <= cleared
-    assert not any(o.startswith("rw.") for o in cleared)   # the challenges done, and the skins, stay
+    assert not any(o.startswith("rw.") for o in cleared)   # the challenges done stay
     # Events from the restart on count for the event challenge.
     assert "scoreboard players operation #firstevent rc.week = #event ev.state" in restart
     assert "scoreboard players add #firstevent rc.week 1" in restart
@@ -253,16 +253,16 @@ def test_the_launch_clears_test_play():
     assert "function monkey:challenges/launch" in launch
     clear = datapack(f"{FN}/launch.mcfunction").splitlines()
     assert "function monkey:challenges/restart" in clear
-    # Challenges done and Founder's Circlet earned before Season I's launch were test play, however many weeks
-    # the timer counted before it. A later season's launch keeps the carried count, and a launch run again by
-    # mistake wipes nothing: #launched is set after the first.
-    for objective in ("rw.challenges", "rw.challenges.seen", "rw.launch", "rw.launch.seen", "rw.launchtime"):
+    # Challenges done and the launch-weekend founder mark earned before Season I's launch were test play,
+    # however many weeks the timer counted before it. A later season's launch keeps the carried count, and a
+    # launch run again by mistake wipes nothing: #launched is set after the first.
+    for objective in ("rw.challenges", "rw.launch", "rw.launchtime"):
         assert ("execute if score #season rw.day matches 1 unless score #launched rw.day matches 1 run "
                 f"scoreboard players reset * {objective}") in clear
     assert not [line for line in clear if "reset * rw." in line and "#season rw.day matches 1 " not in line]
     assert clear[-1] == "scoreboard players set #launched rw.day 1"
     # rules/launch opens the window first, so the reset clears only the minutes from before it. It reads the same
-    # score before it opens Founder's Circlet's window, so only the first launch opens it.
+    # score before it opens the launch weekend's window, so only the first launch opens it.
     opening = "execute unless score #launched rw.day matches 1 run function monkey:wardrobe/founder/open"
     assert launch.index(opening) < launch.index("function monkey:challenges/launch")
 
@@ -392,7 +392,8 @@ def test_every_generated_pack_uses_26_2s_shapes():
                     assert isinstance(value, list), f"{file}: {field} is not a list"
         for pool in document.get("pools", []) if kind == "loot_table" else ():
             assert "condition" not in pool, file
-    assert all(seen.values()), seen
+    # No pack writes item modifiers since the wardrobe skins were retired: any that come back are walked too.
+    assert all(n for kind, n in seen.items() if kind != "item_modifier"), seen
 
 
 def test_events_count_only_from_this_week():
@@ -434,7 +435,7 @@ def test_the_trigger_is_enabled_and_opens_the_page():
     second = datapack(f"{FN}/second.mcfunction").splitlines()
     assert "scoreboard players enable @a challenges" in second
     use = datapack(f"{FN}/use.mcfunction").splitlines()
-    assert use == ["# Runs as a player who just used /trigger challenges: the wardrobe's challenges page.",
+    assert use == ["# Runs as a player who just used /trigger challenges: the wardrobe's menu (its challenges page).",
                    "function monkey:wardrobe/menu_challenges", "scoreboard players set @s challenges 0",
                    "scoreboard players enable @s challenges"]
 

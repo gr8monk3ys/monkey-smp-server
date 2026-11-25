@@ -1,5 +1,5 @@
 # Once a second: let everyone use the trigger, count days and hours, mark founders, keep the launch
-# weekend's window and the weekly challenges going, announce unlocks.
+# weekend's window, the weekly challenges, the first-week quest and the server goal going.
 scoreboard players enable @a wardrobe
 scoreboard players add @a rw.days 0
 scoreboard players add @a rw.months 0
@@ -27,15 +27,4 @@ function monkey:wardrobe/founder/second
 function monkey:challenges/second
 function monkey:quest/second
 function monkey:goal/second
-execute as @a unless score @s rw.months.seen = @s rw.months run function monkey:wardrobe/notice/months
-execute as @a unless score @s rw.events.seen = @s rw.events run function monkey:wardrobe/notice/events
-execute as @a unless score @s rw.hallowtide.seen = @s rw.hallowtide run function monkey:wardrobe/notice/hallowtide
-execute as @a unless score @s rw.midwinter.seen = @s rw.midwinter run function monkey:wardrobe/notice/midwinter
-execute as @a unless score @s rw.midsummer.seen = @s rw.midsummer run function monkey:wardrobe/notice/midsummer
-execute as @a unless score @s rw.challenges.seen = @s rw.challenges run function monkey:wardrobe/notice/challenges
-execute as @a unless score @s rw.launch.seen = @s rw.launch run function monkey:wardrobe/notice/launch
-execute as @a unless score @s rw.s2.seen = @s rw.s2 run function monkey:wardrobe/notice/s2
-execute as @a unless score @s rw.champion.seen = @s rw.champion run function monkey:wardrobe/notice/champion
-execute as @a unless score @s rw.quest.seen = @s rw.quest run function monkey:wardrobe/notice/quest
-execute as @a unless score @s rw.kin.seen = @s rw.kin run function monkey:wardrobe/notice/kin
 schedule function monkey:wardrobe/second 20t replace

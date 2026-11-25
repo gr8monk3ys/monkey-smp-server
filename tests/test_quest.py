@@ -122,7 +122,7 @@ def test_reminders_are_once_a_day_and_stop():
     assert remind[1] == f"execute unless score @s rw.days matches ..{quest.REMIND_DAYS} run return 0"
 
 
-def test_a_step_done_stays_done_and_the_last_gives_the_skin():
+def test_a_step_done_stays_done_and_the_last_finishes_the_quest():
     check = fn("check")
     for s in quest.STEPS:
         objective, n = s["score"]
@@ -178,18 +178,20 @@ def test_the_switch():
     assert "function monkey:quest/off" in seasons and "function monkey:quest/on" in seasons
 
 
-# ---------------------------------------------------------------- the skin
+# ---------------------------------------------------------------- the menu's line
 
 
-def test_pathfinder_is_added_at_the_end_so_no_trigger_value_moves():
-    values = {s["id"]: value for value, _, s in wardrobe.skins()}
-    assert values["twinmoon"] == wardrobe.FIRST_BLADE + 18 and values["pathfinder"] == wardrobe.FIRST_BLADE + 19
-    assert wardrobe.BLADES[-1]["unlock"] == (quest.REWARD, 1)
-    assert wardrobe.page(wardrobe.BLADES[-1]["unlock"]) == quest.WARDROBE_PAGE
-    assert quest.REWARD in wardrobe.NOTIFY
+def test_the_wardrobe_menu_shows_how_far_a_player_is():
+    status = body(fn("status"))
+    assert status[0] == "execute unless score #on rq matches 1 run return 0"
+    assert status[1].startswith(f"execute if score @s rq.state matches {quest.DONE} run return run tellraw @s ")
+    assert status[2] == f"execute unless score @s rq.state matches {quest.ON} run return 0"
+    assert "function monkey:quest/status" in pack()["data/monkey/function/wardrobe/menu.mcfunction"]
 
 
-def test_veterans_never_see_pathfinder_locked():
-    menu = pack()["data/monkey/function/wardrobe/menu.mcfunction"]
-    locked = [x for x in menu.splitlines() if x.startswith("execute unless") and '"text":"Pathfinder"' in x]
-    assert len(locked) == 1 and f" if score @s rq.state matches {quest.ON}.. run tellraw" in locked[0]
+def test_the_quest_promises_no_skin():
+    """The Pathfinder blade was the quest's reward until the wardrobe skins were retired: nothing may promise it."""
+    for path, text in pack().items():
+        if path.startswith("data/monkey/function/quest/"):
+            said = " ".join(body(text))
+            assert "Pathfinder" not in said and "skin" not in said and "trigger wardrobe" not in said, path

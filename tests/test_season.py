@@ -63,10 +63,10 @@ def test_every_wardrobe_score_is_carried():
     """A wardrobe score left out of the carry would quietly reset every player's progress next season."""
     load = wardrobe.datapack_files()["data/monkey/function/wardrobe/load.mcfunction"]
     created = {line.split()[3] for line in load.splitlines() if line.startswith("scoreboard objectives add rw.")}
-    assert created - season.NOT_CARRIED >= {"rw.days", "rw.months", "rw.events", "rw.midwinter", "rw.events.seen"}
+    assert created - season.NOT_CARRIED >= {"rw.days", "rw.months", "rw.events", "rw.midwinter", "rw.kin"}
     assert season.NOT_CARRIED - created <= set()   # nothing named here that the wardrobe doesn't make
-    unlocks = {s["unlock"][0] for _, _, s in wardrobe.skins()}
-    assert not unlocks & season.NOT_CARRIED - {"rw.hours"}   # hours come back through rw.playbase
+    # Every per-player score is carried; rw.playbase is written from the old world's play time instead.
+    assert not set(wardrobe.SCORES) & season.NOT_CARRIED - {"rw.playbase"}
 
 
 def test_download_keeps_the_world_and_leaves_out_private_files(tmp_path):

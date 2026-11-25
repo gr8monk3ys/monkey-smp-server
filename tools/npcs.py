@@ -10,10 +10,10 @@ The NPCs are Easy NPC entities (the easy-npc mods in the manifest). Nothing here
 once per world with `/function monkey:npcs/guide/here` (docs/ADMIN.md, "Spawn NPCs"). Each has a fixed UUID,
 so placing it again replaces it with the preset's current version instead of adding a second one.
 
-The Guide's buttons open what players already reach with /trigger (challenges, standings, wardrobe) by
-setting the trigger score, and the pause menu's Monkey SMP links (tools/rules.py) with `dialog show`. The
-Crier picks this week's text by the player's `rc.seen`, which the challenges set to the week number
-(tools/challenges.py), so it changes on Monday with the challenges.
+The Guide's buttons open what players already reach with /trigger (challenges, standings, and wardrobe: the
+progress menu) by setting the trigger score, and the pause menu's Monkey SMP links (tools/rules.py) with
+`dialog show`. The Crier picks this week's text by the player's `rc.seen`, which the challenges set to the week
+number (tools/challenges.py), so it changes on Monday with the challenges.
 """
 import datetime as dt
 import re
@@ -95,7 +95,7 @@ SIEGES = (f"Outpost sieges, {siege_hours()}: capture an outpost while one is on 
 
 GUIDE_HELLO = "Welcome to Monkey SMP! Right-click me if you're new here."
 GUIDE_TEXT = ("Hi @initiator, welcome to Monkey SMP! I can go over the short rules, help you find a faction, "
-              "or open your first week's steps, this week's challenges, the faction standings and your wardrobe.")
+              "or open your first week's steps, this week's challenges, the faction standings and your progress.")
 # The short rules (package/monkey/defaults/codeofconduct/en_us.txt), cut to what a new player needs first.
 RULES_TEXT = "<br>".join((
     "The short rules:",
@@ -217,7 +217,7 @@ def guide() -> dict:
                 button("quest", "Your first week", close(), GUIDE_STEP, trigger("quest")),
                 button(*CHALLENGES_BUTTON),
                 button("standings", "Faction standings", close(), trigger("standings")),
-                button("wardrobe", "Your wardrobe", close(), trigger("wardrobe")),
+                button("wardrobe", "Your progress", close(), trigger("wardrobe")),
             ], 10),
             dialog("rules", "The short rules", RULES_TEXT, [
                 button("links", "Discord and links", close(), links()), back], -1),
@@ -240,7 +240,7 @@ def crier() -> dict:
 # name -> (what the name tag says, its color, the humanoid skin, what it does, the preset's behaviour)
 NPCS = {
     "guide": ("Guide", "gold", "NOOR", "Greets new players: the short rules, factions, challenges, standings and "
-                                       "the wardrobe.", guide),
+                                       "your progress.", guide),
     "crier": ("Town Crier", "yellow", "PROFESSOR_01", "Announces this week's Saturday event and the next one.",
               crier),
 }

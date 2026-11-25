@@ -1,4 +1,4 @@
-# Every step done: the quest is over, and the Pathfinder blade is theirs (the wardrobe announces it).
+# Every step done: the quest is over (rw.quest marks it).
 scoreboard players set @s rq.state 2
 scoreboard players set @s rw.quest 1
 playsound minecraft:ui.toast.challenge_complete player @s ~ ~ ~ 0.8 1

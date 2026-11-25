@@ -1,7 +1,7 @@
 name: Relaunch pins
 
 # Pins the relaunch's Paper build and plugins (tools/relaunch.py) on a runner with internet, because the pins need
-# Modrinth and PaperMC. It only reads: the new manifest.json and the report are uploaded as an artifact for a
+# Modrinth and PaperMC. It only reads: the report and the new manifest.json are printed to the log for a
 # maintainer to check and commit. Delete this workflow once the relaunch branch is merged.
 on:
   push:
@@ -28,14 +28,22 @@ jobs:
       - name: Pin Paper and the plugin stack
         shell: bash
         run: python tools/relaunch.py --mc "${{ inputs.mc || '26.3' }}" --skip-missing --report pins.md
-      - name: Check every pinned download
-        continue-on-error: true
+      - name: Look up what couldn't be pinned
         shell: bash
-        run: python tools/validate.py --online 2>&1 | tee validate.txt
-      - uses: actions/upload-artifact@v7
-        with:
-          name: relaunch-pins
-          path: |
-            package/monkey/manifest.json
-            pins.md
-            validate.txt
+        run: |
+          cd tools && python - <<'PY'
+          import json, urllib.parse
+          from upstream import LiveHttp, MODRINTH
+          http = LiveHttp()
+          for q in ("floodgate", "essentialsx", "huskclaims", "essentialsx chat", "essentialsx spawn"):
+              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=4"
+                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"]])))
+              print("search", q, [(h["slug"], h["project_id"]) for h in hits["hits"]])
+          for slug in ("floodgate", "essentialsx", "essentialsx-spawn"):
+              vs = http.get_json(f"{MODRINTH}/project/{slug}/version")[:4]
+              for v in vs:
+                  print(slug, v["version_number"], v["version_type"], v["loaders"], v["game_versions"][-4:],
+                        v["date_published"][:10])
+          PY
+      - name: Show the manifest
+        run: cat package/monkey/manifest.json

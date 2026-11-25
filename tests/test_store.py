@@ -81,3 +81,14 @@ def test_the_pass_rewards_every_tier_and_sells_no_skips():
 def test_the_pass_group_grants_only_the_premium_track():
     lines = [c for c in store.luckperms_commands() if c.startswith(f"lp group {store.PASS_GROUP} ")]
     assert lines == [f"lp group {store.PASS_GROUP} permission set {store.PASS_PERMISSION} true"]
+
+
+def test_nothing_sold_or_given_is_broken_on_bedrock(monkeypatch):
+    """Every cosmetic works for Bedrock players through Geyser; the ones that don't are never handed out."""
+    have = store.assigned()
+    for category, names in store.NOT_ON_BEDROCK.items():
+        assert not any((category, n) in have for n in names), names
+    ranks = copy.deepcopy(store.RANKS)
+    ranks[-1]["cosmetics"]["Projectile-Effects"].append("MagicCrit")
+    monkeypatch.setattr(store, "RANKS", ranks)
+    assert any("not on Bedrock" in p for p in store.problems())

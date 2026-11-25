@@ -125,7 +125,7 @@ Premium track: the `pass_s1` group, which has `battlepass.premium`. XP: 100 per 
 | 15 | tag: S1 Survivor | Pet: Evoker |
 | 16 | - | tag: Apex |
 | 17 | - | Projectile Effect: SquidInk |
-| 18 | Pet: Tadpole | Pet: Illusioner |
+| 18 | Pet: Tadpole | Pet: Vindicator |
 | 19 | - | tag: Untouchable |
 | 20 | - | Particle Effect: BloodHelix |
 | 21 | Projectile Effect: Cloud | Pet: Zoglin |
@@ -226,7 +226,7 @@ lp group crown permission set ultracosmetics.projectileeffects.witch true
 lp group crown permission set ultracosmetics.projectileeffects.emerald true
 lp group crown permission set ultracosmetics.projectileeffects.lava true
 lp group crown permission set ultracosmetics.projectileeffects.slime true
-lp group crown permission set ultracosmetics.projectileeffects.magiccrit true
+lp group crown permission set ultracosmetics.projectileeffects.waxoff true
 lp group crown permission set ultracosmetics.projectileeffects.portal true
 lp group crown permission set ultracosmetics.projectileeffects.dragonbreath true
 lp group crown permission set ultracosmetics.projectileeffects.soulfireflame true

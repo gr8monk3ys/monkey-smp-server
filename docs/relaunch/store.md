@@ -55,11 +55,11 @@ can't be hit or block anything, particles, a trail on arrows, an effect where yo
 | Death effects | none | Puff of Smoke, Flames, Firework (3) | + Lightning, Dragon Breath (5) |
 | Arrow trails | Rainbow, Love (2) | + 5 (7) | + 15 (22) |
 | Chat tags | 3 | + 5 (8) | + 4 (12) |
-| Wardrobe skin | Lantern blade | Standard blade | Regalia blade + Crown helm |
 | Other | Discord role | Discord role | Names one landmark each season (ADR-0008) |
 
-The full lists are in `RANKS` in `tools/store.py` and in [store-packages.md](store-packages.md). The wardrobe skins are
-the existing `rw.tier` unlocks; they need the wardrobe ported to the new server (see "For other workstreams").
+The full lists are in `RANKS` in `tools/store.py` and in [store-packages.md](store-packages.md). UltraCosmetics and
+DeluxeTags are the only cosmetics in Season 1: the old wardrobe skins are retired and the server sends no resource
+pack, so nothing here needs one.
 
 ### The Monkey Pass
 
@@ -147,10 +147,19 @@ of thumb stays: if a player who didn't pay would feel worse off in a fight or on
   replaced (the checklist checks). Commands use `{username}`, never `{uuid}`.
 - **Names:** Floodgate puts a prefix (`.` by default) before Bedrock names. LuckPerms refuses such names unless its
   config has `allow-invalid-usernames: true` (the platform workstream owns that file).
-- **What they see:** prefixes, tags and pets work. Bedrock shows the nearest of the 16 classic colours for the hex
-  colours and gradients. Particles mostly come through Geyser; a few shapes may look thinner. The wardrobe skins use the
-  Java resource pack, so until Geyser mappings exist they show as the plain item on Bedrock: the store page says
-  "Wardrobe skins are Java only for now".
+- **What they see:** every cosmetic sold or given works on Bedrock, so nothing is Java-only. Checked against Geyser's
+  own mappings (read 25 Nov 2026):
+  - **Pets:** every pet is a mob Bedrock has. Geyser shows an Illusioner as an Evoker, so the Illusioner was taken off
+    the pass (tier 18 is now a Vindicator).
+  - **Particles, trails and death effects:** every particle they use has a Bedrock match, except Magic Crit's, which
+    needs Geyser's optional resource pack. Crown gets Wax Off in its place. Effects drawn with coloured dust (Angel
+    Wings, Rainbow Wings, Magical Rods, Blood Helix and the Rainbow, Redstone and Redstone Helix trails) keep their
+    colours on Bedrock, but Bedrock's dust drifts down, so their shapes look softer.
+  - **Chat:** prefixes, tags and chat colour work. Bedrock shows the nearest of the 16 classic colours for hex colours,
+    so the gradient tags (Founder, S1 Crowned) show as a few solid colours.
+  - **Menus:** `/uc menu` and `/tags` are chest menus, which Geyser shows as Bedrock chests.
+
+  `NOT_ON_BEDROCK` in `tools/store.py` lists the two that don't work, and the tests stop anything from giving them.
 - **Consoles** (Xbox, PlayStation, Switch) can't add a server without a workaround, so console players can buy but may
   not be able to play. The store page shouldn't promise console support.
 - **Young players:** many Bedrock players are under 18. Tebex's checkout handles consent and refunds; the store page
@@ -160,8 +169,7 @@ of thumb stays: if a player who didn't pay would feel worse off in a fight or on
 
 Season I ends on 23 Jan 2027 and the plan stops pass renewals then.
 
-1. **Every Season I player** gets the permanent Founder tag (LuckPerms group `founder`) and keeps the Founder's Edge
-   and Founder's Circlet skins (their `rw` scores carry over with the wardrobe).
+1. **Every Season I player** gets the permanent Founder tag (LuckPerms group `founder`).
 2. **Everyone who paid in Season I** (pass or rank) gets the Season I Supporter tag (group `s1_supporter`), never sold.
 3. **Server Pass subscribers:** turn off renewals in Tebex before 23 Jan. Anyone with paid days left past 23 Jan gets
    those days as free Ember time plus 30 days more, not a refund (Lorenzo's call, 25 Nov): it keeps them playing.
@@ -211,11 +219,8 @@ changes; it fills in the rest from its own defaults on first start.
 - **Platform (LuckPerms and LPC):** done in the platform PR (214): LuckPerms accepts Floodgate names, LPC's format
   starts with `%deluxetags_tag%`, and staff weights are 900 and up, so paid ranks stay below 900. Check in the beta that
   the gradient tags (Founder, S1 Crowned) show as gradients. BattlePass joins the pin run.
-- **Wardrobe port:** Tebex used to set `rw.tier`; the new rank packages only set LuckPerms groups. The wardrobe should
-  read the rank from LuckPerms (or a rank change should set `rw.tier`) so the Lantern, Standard and Regalia skins keep
-  working, and a lapsed monthly rank must not take away a lifetime rank's skin.
-- **Website:** show the catalog and prices before anyone joins, the Mojang notice, an email contact, "Wardrobe skins are
-  Java only for now", and a line for parents.
+- **Website:** show the catalog and prices before anyone joins, the Mojang notice, an email contact, that every cosmetic
+  works on Java and Bedrock, and a line for parents.
 - **Season and events:** award `founder` and `s1_supporter` from the Season I records, run Goal Nights, and give the
   holiday cosmetics at their events.
 

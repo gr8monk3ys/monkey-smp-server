@@ -15,7 +15,8 @@ package's exact price and commands are in [store-packages.md](store-packages.md)
       tag and any refunds.
 - [ ] Pick the pass plugin. Recommended: **BattlePass by ResistanceCore** (free, on Modrinth). Install it on the
       beta server and check that its premium track opens with `battlepass.premium` and that its quests can give the XP
-      in store.md. Only if it falls short, buy EcoBattlepass ($15.99, BuiltByBit).
+      in store.md. Only if it falls short, buy EcoBattlepass ($15.99, BuiltByBit). While you're on the beta, join from
+      Bedrock once and try Angel Wings and a pet with `/uc menu`, to see the cosmetics as Bedrock players will.
 
 ## 2. Season I wind-down
 
@@ -83,7 +84,7 @@ For each package in store-packages.md:
       advantage, in-game money is never sold, and no rank or package makes money in game. Then the rank table.
 - [ ] Footer: "NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." and a
       contact email (not a Discord link).
-- [ ] A line for Bedrock players ("Buy with your Bedrock name. Wardrobe skins are Java only for now.") and one for
+- [ ] A line for Bedrock players ("Buy with your Bedrock name. Every cosmetic works on Java and Bedrock.") and one for
       parents ("Under 18? Ask a parent before you buy.").
 - [ ] Make sure every price is visible without signing in, so players see it before they join.
 

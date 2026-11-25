@@ -68,6 +68,10 @@ CAPE_LIKE = {"Particle-Effects": ["SuperHero", "SuperVillain"]}
 HOLIDAY = {"Pets": ["Pumpling", "EasterBunny", "ChristmasElf"],
            "Particle-Effects": ["SantaHat", "CrushedCandyCane", "SpringFootprints"],
            "Projectile-Effects": ["Christmas"]}
+# Cosmetics that don't show properly on Bedrock through Geyser, so no one is given them: everything sold or given
+# works for Java and Bedrock players alike. Geyser shows an Illusioner as an Evoker (Bedrock has no Illusioner), and
+# MagicCrit's enchanted_hit particle needs Geyser's optional resource pack, which Monkey SMP doesn't send.
+NOT_ON_BEDROCK = {"Pets": ["Illusioner"], "Projectile-Effects": ["MagicCrit"]}
 
 # ---------------------------------------------------------------- ranks
 
@@ -92,7 +96,7 @@ RANKS = [
                                          "MagicalRods", "AngelWings"],
                     "Death-Effects": ["Lightning", "DragonBreath"],
                     "Projectile-Effects": ["RedstoneHelix", "FlameHelix", "Spark", "Redstone", "Witch", "Emerald",
-                                           "Lava", "Slime", "MagicCrit", "Portal", "DragonBreath", "SoulFireFlame",
+                                           "Lava", "Slime", "WaxOff", "Portal", "DragonBreath", "SoulFireFlame",
                                            "Snowflake", "GlowSquidInk", "WaxOn"]},
          tags=["silverback", "alpha", "legend", "royal"]),
 ]
@@ -142,7 +146,7 @@ PREMIUM_TRACK = {
     8: ("Projectile-Effects", "SoulFireHelix"), 9: ("Pets", "Vex"), 10: ("tag", "monkey_business"),
     11: ("Projectile-Effects", "CursedHelix"), 12: ("Pets", "Hoglin"), 13: ("tag", "jungle_king"),
     14: ("Particle-Effects", "VolcanicHalo"), 15: ("Pets", "Evoker"), 16: ("tag", "apex"),
-    17: ("Projectile-Effects", "SquidInk"), 18: ("Pets", "Illusioner"), 19: ("tag", "untouchable"),
+    17: ("Projectile-Effects", "SquidInk"), 18: ("Pets", "Vindicator"), 19: ("tag", "untouchable"),
     20: ("Particle-Effects", "BloodHelix"), 21: ("Pets", "Zoglin"), 22: ("tag", "chaos"),
     23: ("Projectile-Effects", "Scrape"), 24: ("Pets", "Witch"), 25: ("tag", "showstopper"),
     26: ("Projectile-Effects", "GlowSquid"), 27: ("Pets", "WitherSkeleton"), 28: ("tag", "unstoppable"),
@@ -299,7 +303,7 @@ def assigned() -> set[tuple[str, str]]:
 def problems() -> list[str]:
     found = []
     named = assigned() | {(c, n) for b in BUNDLES for c, ns in b["items"].items() for n in ns}
-    named |= {(c, n) for c, ns in CAPE_LIKE.items() for n in ns}
+    named |= {(c, n) for table in (CAPE_LIKE, NOT_ON_BEDROCK) for c, ns in table.items() for n in ns}
     found += [f"{c} {n} isn't an UltraCosmetics cosmetic" for c, n in sorted(named) if n not in UC_KNOWN.get(c, [])]
     sold_tags = {t for r in RANKS for t in r["tags"]} | set(SHOP_TAGS) | {t for b in BUNDLES for t in b["tags"]}
     pass_tags = {n for c, n in [*FREE_TRACK.values(), *PREMIUM_TRACK.values()] if c == "tag"}
@@ -309,7 +313,7 @@ def problems() -> list[str]:
     for t in EARNED_TAGS:
         if t in sold_tags | pass_tags:
             found.append(f"tag {t} is earned only, but something sells or awards it")
-    never = {(c, n) for table in (CAPE_LIKE, HOLIDAY) for c, names in table.items() for n in names}
+    never = {(c, n) for table in (CAPE_LIKE, HOLIDAY, NOT_ON_BEDROCK) for c, names in table.items() for n in names}
     never |= {("tag", t) for t in EARNED_TAGS}
     granted = []
     for p in packages():
@@ -332,7 +336,7 @@ def problems() -> list[str]:
         granted.append(node(c, n))
     never_nodes = {node(c, n) for c, n in never}
     for n in sorted(set(granted) & never_nodes):
-        found.append(f"{n} is never sold (cape-like, holiday or earned), but something grants it")
+        found.append(f"{n} is never sold (cape-like, holiday, earned or not on Bedrock), but something grants it")
     pools = [("rank", c, n) for r in RANKS for c, ns in r["cosmetics"].items() for n in ns]
     pools += [("shop", c, n) for c, ns in SHOP.items() for n in ns]
     pools += [("pass", c, n) for c, n in [*FREE_TRACK.values(), *PREMIUM_TRACK.values()] if c != "tag"]
@@ -385,6 +389,8 @@ def ultracosmetics_config() -> str:
             why = f"{' and '.join(cape)} (cape-shaped, Mojang's cape rule), and {why}"
         elif section == "Pets":
             why += " (big pets that block the view, and mobs that look like a raid)"
+        if NOT_ON_BEDROCK.get(section):
+            why += f"; {' and '.join(NOT_ON_BEDROCK[section])} also because Bedrock players can't see it properly"
         lines.append(f"# Off: {why}.")
         lines.append(f"{section}:")
         for n in off:

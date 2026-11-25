@@ -37,7 +37,7 @@ Cosmetics-Affect-Entities: false
 # No menu item in the hotbar: a PvP server's hotbar is for fighting. Players open it with /uc menu.
 Menu-Item:
   Enabled: false
-# Off: every one that no rank, one-off, pass tier or holiday gives (big pets that block the view, and mobs that look like a raid).
+# Off: every one that no rank, one-off, pass tier or holiday gives (big pets that block the view, and mobs that look like a raid); Illusioner also because Bedrock players can't see it properly.
 Pets:
   IronGolem:
     Enabled: false
@@ -61,7 +61,7 @@ Pets:
     Enabled: false
   Drowned:
     Enabled: false
-  Vindicator:
+  Illusioner:
     Enabled: false
   SkeletonHorse:
     Enabled: false
@@ -79,9 +79,9 @@ Particle-Effects:
     Enabled: false
 # Off: every one that no rank, one-off, pass tier or holiday gives.
 Death-Effects:
-# Off: every one that no rank, one-off, pass tier or holiday gives.
+# Off: every one that no rank, one-off, pass tier or holiday gives; MagicCrit also because Bedrock players can't see it properly.
 Projectile-Effects:
-  Explosion:
+  MagicCrit:
     Enabled: false
-  WaxOff:
+  Explosion:
     Enabled: false

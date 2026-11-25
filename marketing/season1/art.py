@@ -156,13 +156,24 @@ def s1_badge(d, x0, y0, cell, label="S1"):
         x += (len(glyph[0]) + 1) * cell
 
 
+# The brand's redrawn K (relaunch/brand-site, "Logo: redraw K so it doesn't read as H at small sizes"):
+# seven wide like M, so its notch stays open at small sizes. Drop this once that branch is merged.
+logo.GLYPHS["K"] = """
+XX...XX
+XX..XX.
+XX.XX..
+XXXX...
+XX.XX..
+XX..XX.
+XX...XX
+"""
+
+
 def wordmark(text, cell, fill=BONE2, top=BONE, extrude=LEAF1):
     """The pixel wordmark from logo.py: ink outline, one-cell green extrusion, lighter top half."""
     cells, width = logo.text_cells(text)
     cells = {(x + 1, y + 1) for x, y in cells}
-    # Extrude one cell down, except where that would close a one-cell notch (the gap in K's arms),
-    # which made MONKEY read as MONHEY at banner sizes.
-    depth = {(x, y) for x, y in logo.grow(cells, [(0, 1)]) - cells if (x, y + 1) not in cells}
+    depth = logo.grow(cells, [(0, 1)]) - cells
     shape = cells | depth
     ring = logo.grow(shape, logo.NEIGHBOURS) - shape
     im = Image.new("RGBA", ((width + 2) * cell, 10 * cell), (0, 0, 0, 0))

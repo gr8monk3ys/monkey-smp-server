@@ -123,3 +123,15 @@ def test_check_updates_follows_floodgate_builds():
     http2 = RecordedHttp()
     http2.add("GET", f"{entries.GEYSERMC}/floodgate/versions/latest/builds/latest", _geysermc_build(141, b"a"))
     assert check_updates.geysermc_update("plugin", old, Upstream(http2)) is None
+
+
+def test_candidates_are_reported_but_never_pinned():
+    http = RecordedHttp()
+    _serve(http, {"openeco": [_version("openeco", "1.0", "release", "2026-11-01T00:00:00Z")],
+                  "zauctionhouse": [_version("zauctionhouse", "4.0-dev", "beta", "2026-11-01T00:00:00Z")]})
+    rows = relaunch.check_candidates(MC, ["openeco", "zauctionhouse"], Upstream(http))
+    assert rows[0] == {"slug": "openeco", "version": "1.0", "channel": "release"}
+    assert "release build" in rows[1]["problem"]
+    text = relaunch.report({"minecraft": MC, "server": {"build": 262}, "plugins": []}, [], rows)
+    assert "## Candidates (checked, not pinned)" in text and "| openeco | 1.0 | release |" in text
+    assert "**no build:**" in text

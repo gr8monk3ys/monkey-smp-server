@@ -6,6 +6,7 @@
     .modrinth_projects(ids)                        {project id: project}
     .modrinth_versions(project_id, mc, loaders)    every version of a project for a Minecraft version
     .newest_release(project_id, mc, loaders)       newest stable ("release") version, or None
+    .newest(project_id, mc, loaders, channels)     newest version on any of those channels, or None
     .paper_builds(mc)                              every Paper build for a Minecraft version
     .newest_stable_paper_build(mc)                 the highest STABLE build id, or None
     .fabric_loaders(mc)                            every Fabric loader for a Minecraft version
@@ -106,8 +107,12 @@ class Upstream:
         return self.http.get_json(f"{MODRINTH}/project/{project_id}/version?{query}")
 
     def newest_release(self, project_id: str, mc: str, loaders) -> dict | None:
-        releases = [v for v in self.modrinth_versions(project_id, mc, loaders) if v["version_type"] == "release"]
-        return max(releases, key=lambda v: v["date_published"]) if releases else None
+        return self.newest(project_id, mc, loaders, ("release",))
+
+    def newest(self, project_id: str, mc: str, loaders, channels) -> dict | None:
+        """The newest version on one of `channels` ("release", "beta", "alpha"), or None."""
+        found = [v for v in self.modrinth_versions(project_id, mc, loaders) if v["version_type"] in channels]
+        return max(found, key=lambda v: v["date_published"]) if found else None
 
     def paper_builds(self, mc: str) -> list[dict]:
         return self.http.get_json(f"{PAPER}/versions/{mc}/builds")

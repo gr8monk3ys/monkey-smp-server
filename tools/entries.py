@@ -62,6 +62,15 @@ ALLOWED_HOSTS = ("https://cdn.modrinth.com/", "https://fill-data.papermc.io/", "
 # mods only. Adding one is a decision, not a routine edit.
 GITHUB_PINS = ("gr8monk3ys/patina-and-chime",)
 MODRINTH_KEYS = ("project_id", "version_id")
+# Modrinth channels a project may be pinned from (add.py, check_updates.py, relaunch.py). Every project takes only
+# "release", except these: GeyserMC publishes every Geyser and Floodgate build as "beta", including the ones it
+# recommends, so a release-only rule could never pin them. Adding one is a decision, not a routine edit.
+PRERELEASE_OK = {"geyser": ("release", "beta"), "floodgate": ("release", "beta")}
+
+
+def channels(slug: str) -> tuple[str, ...]:
+    """The Modrinth version types (`version_type`) a project may be pinned from."""
+    return PRERELEASE_OK.get(slug, ("release",))
 
 
 def group(manifest: dict, kind: str) -> list[dict]:

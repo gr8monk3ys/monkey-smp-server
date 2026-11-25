@@ -41,7 +41,7 @@ class Update:
     note: str = ""
 
 
-def newer_release(versions: list[dict], entry: dict) -> dict | None:
+def newer_release(versions: list[dict], entry: dict, channels=("release",)) -> dict | None:
     """The newest stable release that is really newer than the pinned artifact, or None.
 
     Judged by file and date, not version id: Modrinth sometimes lists the same file again under a
@@ -55,7 +55,7 @@ def newer_release(versions: list[dict], entry: dict) -> dict | None:
 
     pinned = [v for v in versions if v["id"] == entry["version_id"] or has_pinned_file(v)]
     since = max((v["date_published"] for v in pinned), default="")
-    newer = [v for v in versions if v["version_type"] == "release" and v["date_published"] > since
+    newer = [v for v in versions if v["version_type"] in channels and v["date_published"] > since
              and not has_pinned_file(v)]
     return max(newer, key=lambda v: v["date_published"]) if newer else None
 
@@ -151,7 +151,8 @@ def find_updates(manifest: dict, upstream: Upstream, lock_text: str | None = Non
         for e in entries.group(manifest, kind):
             if entries.is_github(e):
                 continue  # pinned by hand from a GitHub release (ADR-0009): Modrinth has nothing to compare it to
-            v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e)
+            v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e,
+                              entries.channels(e["slug"]))
             if not v:
                 continue
             if "patch" in e:

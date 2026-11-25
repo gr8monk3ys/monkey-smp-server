@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Fast gate that Claude Code runs before a session can finish: `tools/checks.py`
+# without the site's `next build` and browser (axe) checks, which it runs as its
+# own steps below. The full check before a PR is still `make check`; CI adds boots.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+uv run --frozen python tools/checks.py ruff pytest validate datapacks sh pester staff-ui
+
+cd site
+bun install --frozen-lockfile
+bun run lint
+bun run typecheck
+bun run depcruise
+bun run test

@@ -3,3 +3,6 @@
 server: global
 storage-method: yaml
 use-server-uuid-cache: false
+# Floodgate names Bedrock players with a "." prefix, which Java names can't have; without this LuckPerms
+# refuses them and Bedrock players get no group.
+allow-invalid-usernames: true

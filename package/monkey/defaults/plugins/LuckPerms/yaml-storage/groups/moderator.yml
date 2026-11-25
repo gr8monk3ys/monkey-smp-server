@@ -1,5 +1,6 @@
 name: moderator
 permissions:
+- weight.950
 - banhammer.punish.ban
 - banhammer.punish.kick
 - banhammer.punish.mute

@@ -31,7 +31,7 @@ def scaled_cell(target_w, grid_w):
 
 def avatar(size):
     im = art.canopy((size, size), cell=max(8, size // 25), seed=3, depth=0.22).convert("RGBA")
-    cell = scaled_cell(int(size * 0.62), 24)
+    cell = scaled_cell(int(size * 0.62), 26)
     m = art.mark(cell)
     im.alpha_composite(m, ((size - m.width) // 2 + cell // 2, (size - m.height) // 2))
     return im

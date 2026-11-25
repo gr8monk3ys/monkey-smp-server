@@ -113,8 +113,10 @@ FACE_RGB = {k: rgb(v) for k, v in logo.FACE_COLORS.items()}
 
 
 def mark(cell, heart=True, badge=True, tile=True):
-    """The monkey on a green tile, holding a stolen heart, with an S1 tab. Grid is 24 x 22 cells."""
-    W, H = 24, 22
+    """The monkey on a green tile, holding a stolen heart, with an S1 tab. Grid is 26 x 22 cells.
+
+    The heart, the paw and the tab sit beside the face, never on it, so no face pixel is covered."""
+    W, H = 26, 22
     im = Image.new("RGBA", (W * cell, H * cell), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     if tile:  # green tile with two-step corners and an ink edge
@@ -124,10 +126,10 @@ def mark(cell, heart=True, badge=True, tile=True):
     draw_cells(d, _grid(logo.FACE), FACE_RGB, 1 * cell, 3 * cell, cell)
     if heart:
         paw = {"O": FACE_RGB["O"], "B": FACE_RGB["B"], "H": FACE_RGB["H"]}
-        draw_cells(d, _grid(PAW_GRID), paw, 15 * cell, 17 * cell, cell)
-        draw_cells(d, _grid(HEART_GRID), HEART_COLORS, 14 * cell, 10 * cell, cell)
+        draw_cells(d, _grid(PAW_GRID), paw, 18 * cell, 17 * cell, cell)
+        draw_cells(d, _grid(HEART_GRID), HEART_COLORS, 17 * cell, 10 * cell, cell)
     if badge:
-        s1_badge(d, 14 * cell, 0, max(1, cell * 2 // 3))
+        s1_badge(d, 16 * cell, 0, max(1, cell * 2 // 3))
     return im
 
 
@@ -215,8 +217,9 @@ def wide_lockup(cell):
 
 
 def heart_icon(cell):
-    im = Image.new("RGBA", (7 * cell, 7 * cell), (0, 0, 0, 0))
-    draw_cells(ImageDraw.Draw(im), _grid(HEART_GRID), HEART_COLORS, 0, 0, cell)
+    grid = _grid(HEART_GRID)  # sized from the grid, so no edge of the heart is cut off
+    im = Image.new("RGBA", (len(grid[0]) * cell, len(grid) * cell), (0, 0, 0, 0))
+    draw_cells(ImageDraw.Draw(im), grid, HEART_COLORS, 0, 0, cell)
     return im
 
 

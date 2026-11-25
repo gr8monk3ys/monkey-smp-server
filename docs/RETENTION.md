@@ -147,7 +147,7 @@ shows the steps, each with a hover that says what counts:
 
 | Step | Done when | Counted by |
 | --- | --- | --- |
-| Talk to the Guide at spawn | they right-click the Guide | the Guide sets `rq.guide` (an Easy NPC action) |
+| Talk to the Guide at spawn | they right-click the Guide | the Guide's talk function sets `rq.guide` (tools/npcs.py) |
 | Set your spawn at a bed | they use a bed (there is no /home: a bed is home) | an advancement on vanilla's `any_block_use` |
 | Join or start a faction | they are in an Open Parties and Claims party | `st.faction`, from the hourly standings run |
 | Claim a chunk | they hold claimed land | `st.claimed`, from the same hourly run |

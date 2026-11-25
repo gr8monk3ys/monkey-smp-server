@@ -11,7 +11,7 @@ Tools are plain Python 3.11+ with no dependencies (tests use `pytest`, lint uses
 | `package/*.bat`, `package/*.sh`, `package/Start Server.command`, `package/monkey/monkey.sh` | the host's launchers: `.bat` for Windows, POSIX `sh` for macOS/Linux | by hand |
 | `package/docker/` | the Docker setup (`Dockerfile`, `compose.yaml`) | by hand |
 | `package/monkey/defaults/` | first-run configs, copied only if missing | by hand |
-| `package/monkey/datapacks/monkey-*/`, `defaults/config/easy_npc/security.cfg` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`, `clips.py`, `camera.py`) | `python tools/datapacks.py` |
+| `package/monkey/datapacks/monkey-*/` | the generated packs (edit the tables in `tools/events.py`, `wardrobe.py`, `challenges.py`, `npcs.py`, `rules.py`, `standings.py`, `diplomacy.py`, `drops.py`, `firsts.py`, `outposts.py`, `omens.py`, `sieges.py`, `clips.py`, `camera.py`) | `python tools/datapacks.py` |
 | `package/monkey/patches/<slug>/` | files replaced inside a downloaded mod jar or datapack | `tools/snapshot.py` |
 | `tests/fixtures/upstream/` | API responses the unit tests replay | `tests/fixtures/record.py` |
 | `tests/fixtures/patch-golden/expected.json` | the patch rules' answers for one fixed zip and patch, checked by both the Python and the PowerShell tests | `tests/fixtures/patch-golden/record.py` |

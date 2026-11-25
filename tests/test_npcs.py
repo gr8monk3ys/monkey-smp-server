@@ -1,84 +1,142 @@
 import json
 import re
-import tomllib
 
 import challenges
 import datapacks
 import npcs
 import rules
 import season_calendar
-import standings
 from repo import REPO
 
 FILES = npcs.datapack_files()
-PRESETS = {name: npcs.preset(name) for name in npcs.NPCS}
+DIALOGS = npcs.dialogs()
+ADMIN = (REPO.root / "docs/ADMIN.md").read_text(encoding="utf-8")
+GROUPS = REPO.defaults / "plugins/LuckPerms/yaml-storage/groups"
 
 
-def walk(value):
-    """Every dict inside a preset."""
-    if isinstance(value, dict):
-        yield value
-        for v in value.values():
-            yield from walk(v)
-    elif isinstance(value, list):
-        for v in value:
-            yield from walk(v)
+def body(path: str) -> list[str]:
+    """A function's commands, comments left out."""
+    return [line for line in FILES[path].splitlines() if not line.startswith("#")]
 
 
-def actions(name: str) -> list[dict]:
-    return [a for d in walk(PRESETS[name]) for a in d.get("Actions", [])]
+def talk_file(name: str) -> str:
+    return f"{npcs.FN}/{name}/talk.mcfunction"
 
 
-def test_easy_npc_is_pinned_at_the_tested_version():
-    mods = {m["slug"]: m for m in REPO.load_manifest()["mods"]}
-    for slug in ("easy-npc", "easy-npc-core", "easy-npc-config-ui"):
-        assert mods[slug]["version"].endswith(npcs.EASY_NPC), slug
-        assert f"-{datapacks.MINECRAFT}-" in mods[slug]["file"], slug
+def actions(d: dict) -> list[dict]:
+    return [b["action"] for b in d["actions"]]
 
 
-def test_every_named_dialog_exists_and_labels_fit():
-    for name, preset in PRESETS.items():
-        dialogs = preset["data"]["DialogData"]["DialogDataSet"]
-        labels = [d["Label"] for d in dialogs]
-        assert len(labels) == len(set(labels)), name
-        buttons = [b["Label"] for d in dialogs for b in d["Buttons"]]
-        assert len(buttons) == len(set(buttons)), name
-        # Easy NPC cuts dialog and button labels at 32 characters.
-        assert all(len(label) <= 32 for label in labels + buttons), name
-        for a in actions(name):
-            if a["Type"] == "OPEN_NAMED_DIALOG":
-                assert a["Cmd"] in labels, f"{name}: no dialog {a['Cmd']}"
-        # Exactly one dialog opens on a right-click whatever the player's scores: a fallback with no conditions.
-        assert any(d["Priority"] >= 0 and "Conditions" not in d for d in dialogs), name
+def texts() -> list[str]:
+    return [m["contents"] for d in DIALOGS.values() for m in d["body"]]
 
 
-def test_buttons_set_triggers_the_data_packs_answer():
-    tick = (REPO.monkey / "datapacks/monkey-wardrobe/data/monkey/function/wardrobe/tick.mcfunction").read_text()
-    answered = set(re.findall(r"scores=\{(\w+)=1\.\.\}", tick))
-    answered |= set(re.findall(r"scores=\{(\w+)=1\.\.\}", "".join(standings.datapack_files().values())))
-    used = {a["Cmd"].split(":")[1] for name in PRESETS for a in actions(name) if a["Type"] == "SCOREBOARD"}
-    used -= {npcs.GUIDE_STEP["Cmd"].split(":")[1]}   # the first-week quest's step, not a trigger
+def test_the_pack_is_two_talk_functions_and_their_dialogs():
+    assert set(FILES) == {"pack.mcmeta", *(talk_file(n) for n in npcs.NPCS),
+                          *(f"{npcs.DIALOGS}/{p}.json" for p in DIALOGS)}
+    for path, d in DIALOGS.items():
+        assert json.loads(FILES[f"{npcs.DIALOGS}/{path}.json"]) == d
+    # Calls, objectives read and JSON, checked across every pack (rq.guide and rc.seen are other packs').
+    assert not [e for e in datapacks.problems(datapacks.all_files()) if e.startswith(f"{npcs.DATAPACK}/")]
+
+
+def test_nothing_of_easy_npc_is_left():
+    assert not any(re.search(r"easy.?npc|preset", text, re.I) for text in [*FILES, *FILES.values()])
+    assert not (REPO.defaults / "config" / "easy_npc").exists()
+    assert not (REPO.root / "deploy" / "npc-claims.sh").exists()
+
+
+def test_the_staff_commands_make_each_npc_run_its_talk_function_from_the_console():
+    for name, (title, color, _about) in npcs.NPCS.items():
+        cmds = npcs.staff_commands(name)
+        assert cmds[0] == f"/npc create {name}"
+        assert f"/npc displayname {name} <{color}>{title}</{color}>" in cmds
+        assert f"/npc turn_to_player {name} true" in cmds
+        action = [c for c in cmds if c.startswith(f"/npc action {name} ")]
+        # One right-click action, run as the console with the clicking player's name put in for {player}.
+        assert action == [f"/npc action {name} RIGHT_CLICK add console_command "
+                          f"execute as {{player}} run function monkey:npcs/{name}/talk"]
+        assert f"data/monkey/function/npcs/{name}/talk.mcfunction" in FILES
+        # The names FancyNpcs takes: A-Z a-z 0-9 _ - /
+        assert re.fullmatch(r"[A-Za-z0-9_/-]+", name)
+
+
+def test_admin_md_gives_the_same_staff_commands_and_the_permission_warning():
+    section = ADMIN.split("## Spawn NPCs", 1)[1].split("\n## ", 1)[0]
+    for name in npcs.NPCS:
+        for cmd in npcs.staff_commands(name):
+            assert cmd in section, cmd
+    assert "fancynpcs.*" in section and "console" in section
+    assert "Easy NPC" not in ADMIN
+
+
+def test_only_admins_get_fancynpcs_permissions():
+    # An NPC's console command runs as the server: whoever may add one may run anything.
+    for group in GROUPS.glob("*.yml"):
+        text = group.read_text(encoding="utf-8")
+        if group.stem == "admin":
+            assert "- '*'" in text
+            continue
+        assert "fancynpcs" not in text.lower() and "'*'" not in text, group.name
+
+
+def test_talking_to_the_guide_counts_the_quest_step_and_opens_its_dialog():
+    guide = body(talk_file("guide"))
+    # Run by hand from the console (no player), it says how to run it instead of failing on @s.
+    assert guide[0].startswith("execute unless entity @s[type=minecraft:player] run return run say ")
+    assert guide[1:] == ["scoreboard players set @s rq.guide 1", "dialog show @s monkey:npcs/guide"]
+
+
+def test_every_dialog_a_button_shows_exists():
+    known = {npcs.dialog_id(p) for p in DIALOGS} | {npcs.LINKS_DIALOG}
+    assert f"data/{npcs.NS}/dialog/links.json" in rules.rules_files()
+    shown = {a["dialog"] for d in DIALOGS.values() for a in actions(d) if a["type"] == "minecraft:show_dialog"}
+    assert npcs.LINKS_DIALOG in shown
+    assert shown <= known, shown - known
+    for d in DIALOGS.values():
+        assert {a["type"] for a in actions(d)} <= {"minecraft:show_dialog", "minecraft:run_command"}
+        labels = [b["label"] for b in d["actions"]]
+        assert len(labels) == len(set(labels))
+
+
+def test_the_guide_keeps_its_buttons():
+    labels = {b["label"]: b["action"] for b in DIALOGS["guide"]["actions"]}
+    assert list(labels) == ["The short rules", "Find a faction", "Your first week", "This week's challenges",
+                            "Faction standings", "Your wardrobe"]
+    assert labels["The short rules"] == npcs.show("monkey:npcs/guide/rules")
+    assert labels["Find a faction"] == npcs.show("monkey:npcs/guide/factions")
+    assert labels["Your first week"] == npcs.trigger("quest")
+    assert labels["This week's challenges"] == npcs.trigger("challenges")
+    assert labels["Faction standings"] == npcs.trigger("standings")
+    assert labels["Your wardrobe"] == npcs.trigger("wardrobe")
+    for page, link in (("guide/rules", "Discord and links"), ("guide/factions", "Open the Discord")):
+        page_labels = {b["label"]: b["action"] for b in DIALOGS[page]["actions"]}
+        assert page_labels == {link: npcs.show(npcs.LINKS_DIALOG), "Back": npcs.show("monkey:npcs/guide")}
+
+
+def test_buttons_run_triggers_every_player_has_and_the_data_packs_answer():
+    packs = "".join(datapacks.all_files().values())
+    answered = set(re.findall(r"scores=\{(\w+)=1\.\.\}", packs))
+    enabled = set(re.findall(r"scoreboard players enable @a (\w+)", packs))
+    commands = [a["command"] for d in DIALOGS.values() for a in actions(d) if a["type"] == "minecraft:run_command"]
+    assert all(re.fullmatch(r"/trigger \w+", c) for c in commands), commands
+    used = {c.removeprefix("/trigger ") for c in commands}
     assert used == set(npcs.TRIGGERS)
     assert used <= answered, used - answered
-    triggers = {o for o, crit in challenges.objectives() if crit == "trigger"}
-    assert "challenges" in triggers
+    # The player runs /trigger themselves, so it has to be enabled for them (the packs enable it every second).
+    assert used <= enabled, used - enabled
 
 
-def test_the_links_button_opens_the_pause_menu_dialog():
-    assert f"data/{npcs.NS}/dialog/links.json" in rules.rules_files()
-    commands = [a for name in PRESETS for a in actions(name) if a["Type"] == "COMMAND"]
-    assert commands
-    for a in commands:
-        assert a["Cmd"] == f"/dialog show @initiator {npcs.LINKS_DIALOG}"
-        assert a["PermLevel"] == 2 and "ExecAsUser" not in a   # run by the NPC: players can't use /dialog
-
-
-def test_crier_has_a_dialog_for_every_week_of_the_season():
-    dialogs = PRESETS["crier"]["data"]["DialogData"]["DialogDataSet"]
-    weeks = {d["Conditions"][0]["Value"]: d for d in dialogs if "Conditions" in d}
-    assert sorted(weeks) == list(range(npcs.LAST_WEEK + 1))
-    for w, d in weeks.items():
-        assert d["Conditions"] == [{"Name": "rc.seen", "Operation": "EQUALS", "Type": "SCOREBOARD", "Value": w}]
+def test_the_crier_shows_the_dialog_for_the_players_week():
+    crier = body(talk_file("crier"))
+    assert crier[1:-1] == [f"execute if score @s rc.seen matches {w} run return run dialog show @s "
+                           f"monkey:npcs/crier/week{w}" for w in range(npcs.LAST_WEEK + 1)]
+    assert crier[-1] == "dialog show @s monkey:npcs/crier/other"
+    for w in range(npcs.LAST_WEEK + 1):
+        d = DIALOGS[f"crier/week{w}"]
+        assert "\n\n".join(m["contents"] for m in d["body"]) == npcs.crier_text(w)
+        assert actions(d) == [npcs.trigger("challenges")]
+    assert "\n\n".join(m["contents"] for m in DIALOGS["crier/other"]["body"]) == npcs.CRIER_OTHER
     # rc.seen is the week number the challenges keep for every online player.
     assert ("rc.seen", "dummy") in challenges.objectives()
 
@@ -92,99 +150,18 @@ def test_crier_names_each_weeks_event():
 
 
 def test_copy_is_plain_and_says_monkey_smp():
-    texts = [d["Text"] for name in PRESETS for d in walk(PRESETS[name]) if "Text" in d]
-    texts += [t for name in PRESETS for d in walk(PRESETS[name]) for t in d.get("Texts", []) if isinstance(t, str)]
-    assert any("Monkey SMP" in t for t in texts)
-    for t in texts:
-        # Easy NPC reads <tags> as formatting: only line breaks are used.
-        assert set(re.findall(r"<(/?\w+)>", t)) <= {"br"}, t
+    all_text = texts()
+    assert any("Monkey SMP" in t for t in all_text)
+    for t in all_text:
+        # Plain strings: no tags such as <br>, and no @initiator.
+        assert "<" not in t and "@initiator" not in t, t
     # Every Discord channel named is one the rulebook names.
-    channels = set(re.findall(r"#[a-z-]+", " ".join(texts)))
+    channels = set(re.findall(r"#[a-z-]+", " ".join(all_text)))
     assert channels and channels <= set(re.findall(r"#[a-z-]+", (REPO.root / "docs/RULES.md").read_text()))
 
 
-def test_speech_bubbles_only():
-    for name in PRESETS:
-        for d in walk(PRESETS[name]):
-            if d.get("Type") == "MESSAGE":
-                assert d["Msg"]["T"] == 4 and len(d["Msg"]["Texts"]) <= 6   # no chat spam at spawn
-
-
-def test_npcs_are_protected_and_kept():
-    for name, preset in PRESETS.items():
-        data = preset["data"]
-        assert data["Invulnerable"] == 1 and data["PersistenceRequired"] == 1, name
-        assert "Owner" not in json.dumps(data), name
-        assert "access" not in preset["PresetMetadata"], name   # INTERNAL presets can't be imported by command
-
-
-def test_players_can_talk_to_npcs_in_any_claim_with_an_empty_hand():
-    # Spawn is a server claim: without this Open Parties and Claims answers a right-click on the Guide or the
-    # Town Crier with "You are not allowed to interact with this entity in this chunk (easy_npc:humanoid)".
-    toml = tomllib.loads((REPO.defaults / "config" / "openpartiesandclaims-server.toml").read_text(encoding="utf-8"))
-    forced = toml["serverConfig"]["claims"]["protection"]["forcedEntityProtectionExceptionList"]
-    # The mod's own default stays; "hand$" keeps items (a name tag, a lead) off the NPCs; no "break$"/"anything$".
-    # Named ids, not "easy_npc:*": the mod documents ids and tags only.
-    assert forced == ["minecraft:minecart", "hand$easy_npc:humanoid", "hand$easy_npc:humanoid_slim"]
-    for name in npcs.NPCS:
-        assert f'hand${PRESETS[name]["data"]["id"]}' in forced, name
-
-
-def test_uuids_are_fixed_and_distinct():
-    ids = {npcs.npc_uuid(name) for name in npcs.NPCS}
-    assert len(ids) == len(npcs.NPCS)
-    for name in npcs.NPCS:
-        for fn in ("place", "remove"):
-            assert npcs.npc_uuid(name) in FILES[f"{npcs.FN}/{name}/{fn}.mcfunction"], (name, fn)
-
-
-def test_placing_replaces_the_npc_and_turns_the_entity():
-    for name in npcs.NPCS:
-        npc = npcs.npc_uuid(name)
-        place = [line for line in FILES[f"{npcs.FN}/{name}/place.mcfunction"].splitlines() if not line.startswith("#")]
-        # Removed first, so a second placement leaves one NPC with nothing (an owner, an edit) left over.
-        assert place[0] == f"easy_npc delete {npc}"
-        assert place[1] == f"$easy_npc preset import data {npcs.preset_id(name)} $(x) $(y) $(z) {npc}"
-        # The vanilla rotate turns the entity; Easy NPC's turns only the model, on top of where it looks.
-        assert place[2] == f"$rotate {npc} $(yaw) 0"
-        # Random Mob Sizes (in the pack since 2.8.0) skips mobs tagged global.ignore; untagged, the NPCs would
-        # come out anywhere from 0.75 to 1.25 times their size.
-        assert place[3] == f"tag {npc} add global.ignore"
-        assert len(place) == 4
-
-
-def test_here_places_through_a_marker_so_the_npc_has_no_owner():
-    spot = FILES[f"{npcs.FN}/spot.mcfunction"]
-    assert "$function monkey:npcs/$(name)/place with storage" in spot and "kill @s[type=minecraft:marker]" in spot
-    for name in npcs.NPCS:
-        here = FILES[f"{npcs.FN}/{name}/here.mcfunction"]
-        assert f'place.name set value "{name}"' in here
-        assert "summon minecraft:marker run function monkey:npcs/spot with storage" in here
-        assert f"npcs/{name}/place with" not in here   # run as the admin, the import would make them its owner
-
-
-def test_preset_ids_point_at_the_preset_files():
-    for name in npcs.NPCS:
-        ns, path = npcs.preset_id(name).split(":", 1)
-        assert f"data/{ns}/{path}" in FILES
-
-
-def test_every_npc_has_the_functions_its_macro_calls_name():
-    # datapacks.problems() only knows $(name) is some function; the names are npcs.NPCS.
-    for path, body in FILES.items():
-        for called in re.findall(rf"function {npcs.NS}:([\w/]*\$\(name\)[\w/]*)", body):
-            for name in npcs.NPCS:
-                assert f"data/{npcs.NS}/function/{called.replace('$(name)', name)}.mcfunction" in FILES, path
-
-
-def test_security_defaults_need_an_admin_for_every_feature():
-    cfg = npcs.security_cfg()
-    values = dict(line.split("=", 1) for line in cfg.splitlines() if "=" in line and not line.startswith("#"))
-    assert {k for k in values if k.startswith("feature.")} == {f"feature.{f}" for f in npcs.FEATURES}
-    assert all(values[f"feature.{f}"] == "ADMIN" for f in npcs.FEATURES)
-    assert values["creativePlayerCommandLevel"] == "ALL"
-
-
-def test_snbt_escapes_quotes_and_backslashes():
-    assert npcs.snbt({"a b": 'say "hi" \\o/'}) == '{\n  "a b":"say \\"hi\\" \\\\o/"\n}'
-    assert npcs.snbt([npcs.Byte(1), npcs.Long(2), 3]) == "[1b,2L,3]"
+def test_dialogs_are_headed_with_the_npcs_name():
+    for path, d in DIALOGS.items():
+        title, color, _about = npcs.NPCS[path.split("/")[0]]
+        assert d["title"] == {"text": title, "color": color}
+        assert d["type"] == "minecraft:multi_action" and "exit_action" in d

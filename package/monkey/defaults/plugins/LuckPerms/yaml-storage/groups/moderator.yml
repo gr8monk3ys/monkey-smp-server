@@ -1,32 +1,55 @@
 name: moderator
 permissions:
 - weight.950
-- banhammer.punish.ban
-- banhammer.punish.kick
-- banhammer.punish.mute
-- banhammer.punish.tempban
-- banhammer.punish.tempmute
-- banhammer.punish.tempwarn
-- banhammer.punish.warn
-- banhammer.unpunish.pardon
-- banhammer.unpunish.unban
-- banhammer.unpunish.unmute
-- banhammer.unpunish.unwarn
-- banhammer.commands.list
-- invview.can_modify:
-    value: false
-- invview.command.echest
-- invview.command.inv
-- invview.command.root
-- ledger.commands.inspect
-- ledger.commands.player
-- ledger.commands.preview
-- ledger.commands.rollback
-- ledger.commands.root
-- ledger.commands.search
-- ledger.commands.status
-- ledger.commands.tp
-- vanish.command.vanish
-- vanish.feature.view
+# Punishments (EssentialsX), following the ladder in docs/relaunch/rules.md
+- essentials.kick
+- essentials.kick.notify
+- essentials.mute
+- essentials.mute.offline
+- essentials.mute.notify
+- essentials.tempban
+- essentials.tempban.offline
+- essentials.ban
+- essentials.ban.offline
+- essentials.ban.notify
+- essentials.banip
+- essentials.banip.notify
+- essentials.unban
+- essentials.unbanip
+# Investigating: vanish, look (not change) inventories, check alts
+- essentials.vanish
+- essentials.vanish.see
+- essentials.invsee
+- essentials.enderchest.others
+- essentials.seen
+- essentials.seen.alts
+- essentials.seen.ip
+- essentials.seen.ipsearch
+- essentials.whois
+- essentials.whois.ip
+- essentials.tp
+- essentials.tpo
+# Cheat alerts (Grim)
+- grim.alerts
+# Claims (GriefPrevention): look inside and list them, not delete or give blocks
+- griefprevention.ignoreclaims
+- griefprevention.claimslistother
+- griefprevention.seeinactivity
+- griefprevention.seeclaimsize
+- griefprevention.visualizenearbyclaims
+# Hearts and combat: read only
+- lifestealz.viewhearts
+- pvpmanager.command.pvpinfo
+- pvpmanager.command.pvpinfo.others
+- pvpmanager.command.pvplist
+# Lag checks (spark)
+- spark.tps
+- spark.ping
+- spark.healthreport
+# Block log, once a block logger is added (CoreProtect's nodes)
+- coreprotect.inspect
+- coreprotect.lookup
+- coreprotect.rollback
+- coreprotect.restore
 parents:
 - default

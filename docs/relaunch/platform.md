@@ -20,20 +20,22 @@ can't end up with the same name.
 
 | Fabric server | Relaunch | Why |
 |---|---|---|
-| Fabric loader and about 175 mods | Paper and 22 plugins | Bedrock and vanilla clients can't run the content mods, and the brief is "no client mods" |
+| Fabric loader and about 175 mods | Paper and 26 plugins | Bedrock and vanilla clients can't run the content mods, and the brief is "no client mods" |
 | Open Parties and Claims | GriefPrevention | claims on a plugin, and HuskClaims can't be pinned |
 | LuckPerms (Fabric) | LuckPerms (Paper) | same groups: `defaults/plugins/LuckPerms/yaml-storage/groups` |
 | BlueMap (Fabric) | BlueMap (Paper) | same maps, now in `defaults/plugins/BlueMap`; `map_border.py`, `border.py` and `outposts.py` follow the new folder |
 | Chunky (Fabric) | Chunky (Paper) | same command |
-| Lithium, Krypton, ServerCore, the anti-xray mod | Paper's own patches and settings | see Performance |
+| Lithium, Krypton, ServerCore, the anti-xray mod | Paper's own patches and settings, plus ChunkSpawnerLimiter | see Performance; Paper rather than Purpur, so every plugin runs on the platform it's built for |
 | Simple Voice Chat | dropped | needs a client mod |
-| Easy NPC, Ledger, Tebex (Fabric), content and worldgen mods | dropped | Fabric only; Tebex comes back as the Paper plugin |
+| Easy NPC | FancyNpcs | the Guide and the Town Crier keep their behaviour in `monkey-npcs`; staff create the NPC bodies with FancyNpcs |
+| Wardrobe skins (`monkey-wardrobe`) | retired | their models came with the client pack; UltraCosmetics covers cosmetics, and the menu keeps challenges, goals and quests |
+| Ledger, Tebex (Fabric), content and worldgen mods | dropped | Fabric only; Tebex comes back as the Paper plugin |
 | The 13 patched mod and data packs (`package/monkey/patches`) | dropped | they patched Fabric mods and the Fabric data pack |
 | Client pack (`client/`) and player installer (`player/`) | not needed | players join with a plain client |
 | Our own data packs (`package/monkey/datapacks`) | kept | vanilla data packs run on Paper unchanged |
 
 Three of our data packs still call Fabric content and need a change from the rules workstream before launch.
-`monkey-npcs` places Easy NPC characters, `monkey-events` syncs the Strength SMP arena, and
+`monkey-npcs` placed Easy NPC characters (now FancyNpcs, below), `monkey-events` syncs the Strength SMP arena, and
 `monkey-nights` mentions Open Parties and Claims in its grace-period text. The other 15 only use vanilla commands.
 All 18 are generated for Minecraft 26.2 (`tools/datapacks.py`: `MINECRAFT`, `DATA_FORMAT`, wardrobe's
 `RESOURCE_FORMAT` and the rules pack's treasure list). On 26.3 those need bumping and re-checking, and
@@ -63,6 +65,10 @@ lighter, but a public server needs headroom for 40 to 60 players. These are the 
   - Cobblestone, dirt and similar junk items despawn after 15 seconds.
 - **Anti-xray, engine mode 2.** Ores are money on an economy server. Mode 2 hides real ores among fake ones up to Y 64. It costs a little CPU and bandwidth, and Paper recommends it against current x-ray clients.
 - **spigot.yml:** shorter entity activation ranges (animals 16, monsters 24), wider item and XP merging.
+- **Villagers** (ServerCore's job on the Fabric server):
+  - `spigot.yml` stops villagers outside the 16-block activation range from ticking at all (`tick-inactive-villagers: false`). A trading hall or farm next to a player works as normal; an abandoned one costs nothing.
+  - `paper-world-defaults.yml` runs villagers' job-site and bed searches less often. Villagers notice a new workstation a few seconds later; trading and breeding are unchanged.
+  - **ChunkSpawnerLimiter** caps animals and villagers per chunk, so a breeding farm can't grow without end. It ships with its own defaults; set the caps after the load test. VillagerOptimizer and AntiVillagerLag have no 26.3 release.
 - **bukkit.yml:** per-player spawn caps a little under vanilla (monsters 50, animals 10), monster spawn attempts every 2 ticks.
 - **paper-global.yml:** chunk sending limits sized for a pre-generated world, and at most 3 joins per tick so a rush at launch doesn't stall the server.
 - **Pre-generate before launch.** Run `chunky radius <border>` on the new world after the boot test, so players never wait for chunk generation.

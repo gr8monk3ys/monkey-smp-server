@@ -1,0 +1,44 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {
+    "text": "Guide",
+    "color": "gold"
+  },
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "The short rules:\n- No combat logging, and no teaming in other factions' fights.\n- A faction holds at most 4 players. No insiding.\n- Nobody griefs a territory without permission.\n- Your first 48 hours come with PvP grace. Attacking a player ends it.\n- Spawn is a no-PvP zone, and nobody touches it.\n- No hacked clients, x-ray, dupes or exploits. Respect people."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "The full rulebook is on the website: monkeysmp.lscaturchio.xyz/guide/rules"
+    }
+  ],
+  "columns": 2,
+  "actions": [
+    {
+      "label": "Discord and links",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:links"
+      }
+    },
+    {
+      "label": "Back",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:npcs/guide"
+      }
+    }
+  ],
+  "exit_action": {
+    "label": {
+      "translate": "gui.done"
+    },
+    "width": 150
+  }
+}

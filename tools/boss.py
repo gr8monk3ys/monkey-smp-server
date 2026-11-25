@@ -1,4 +1,4 @@
-"""The border boss: on each Season II border act, a boss rises in the newly opened ring, for the factions to hunt.
+"""The border boss: on the border acts in border.BOSS_ACTS, a boss rises in the newly opened ring, for players to hunt.
 
     python tools/datapacks.py                 regenerates the monkey-boss data pack (with the others)
     python tools/boss.py spot --season 2      where each act's boss rises (the timer works it out the same way)
@@ -449,7 +449,7 @@ def main(argv=None) -> int:
     w.add_argument("world", type=Path)
     args = ap.parse_args(argv)
     if args.command == "spot":
-        for act in border.acts(args.season):
+        for act in (a for a in border.acts(args.season) if a.boss):
             x, z = spot(args.season, act.number, *args.center, act.size)
             print(f"act {act.number} ({act.size} wide): near {x}, {z}")
         return 0

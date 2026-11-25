@@ -1,5 +1,14 @@
 name: builder
 permissions:
 - weight.900
+# For building spawn, the market and event areas. Give it only while someone is building them, and
+# make the group a member of those regions: /rg addmember spawn g:builder (and market).
+- worldedit.*
+- essentials.gamemode
+- essentials.gamemode.creative
+- essentials.gamemode.survival
+- essentials.fly
+- essentials.tp
+- essentials.tppos
 parents:
 - default

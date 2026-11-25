@@ -157,8 +157,8 @@ The protected area around the world spawn where players can't fight or blow thin
 _Avoid_: spawn protection (Minecraft uses that for something else)
 
 **Spawn NPC**:
-The Guide or the Town Crier: an Easy NPC character at spawn that answers new players when no staff are on.
-Staff place each one once per world from the `monkey-npcs` data pack.
+The Guide or the Town Crier: a FancyNpcs character at spawn that answers new players when no staff are on.
+Staff make each one once with FancyNpcs' commands; what it says and does is in the `monkey-npcs` data pack.
 _Avoid_: bot, villager
 
 **Sunday recap**:

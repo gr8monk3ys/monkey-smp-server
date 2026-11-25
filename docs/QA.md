@@ -48,16 +48,15 @@ one, in the server window (they work in game too, with a `/`, as an op).
 
 These work on a fresh world before anyone runs the launch.
 
-**The spawn NPCs.** As admin, stand at spawn and run `/function monkey:npcs/guide/here`, then a few blocks
-away `/function monkey:npcs/crier/here`.
+**The spawn NPCs.** As admin, make the Guide and the Town Crier with the FancyNpcs commands in
+docs/ADMIN.md, "Spawn NPCs" (never typed on our server yet: note any the plugin refuses).
 
-- [ ] The Guide (gold name) and the Town Crier (yellow) appear where you stood, facing your way, normal size.
-- [ ] Walking within 8 blocks of the Guide shows a speech bubble; the Crier calls out every 5 minutes.
-- [ ] **As a plain player, with an empty hand**, right-click each one: a dialog opens, not "You are not
-  allowed to interact with this entity". **(never tried in game: the main fix in 2.9.1)**
-- [ ] The Guide's buttons open this week's challenges, the standings and the wardrobe; the links button opens
-  the Monkey SMP links.
-- [ ] With something in your hand (a name tag, a lead), the click is refused.
+- [ ] The Guide (gold name) and the Town Crier (yellow) appear where you stood, facing your way, and turn to
+  look at you.
+- [ ] **As a plain player, inside spawn's region**, right-click each one: a dialog opens.
+- [ ] The Guide's buttons open the first week's steps (with "Talk to the Guide" ticked), this week's
+  challenges, the standings and the wardrobe; the links button opens the Monkey SMP links.
+- [ ] The Crier's dialog names this week's Saturday event.
 - [ ] Hitting them or shooting them does nothing.
 
 **WorldEdit.** **(never tried in game)**

@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +12,7 @@ from repo import REPO
 DEPLOY = REPO.root / "deploy"
 LIB = DEPLOY / "lib.sh"
 SOURCE = '. "$(dirname -- "$0")/lib.sh"'
-# claims-exception.sh is sourced too, by npc-claims.sh and shops-claims.sh after lib.sh.
+# claims-exception.sh is sourced too, by shops-claims.sh after lib.sh.
 CLAIMS = DEPLOY / "claims-exception.sh"
 SCRIPTS = sorted(p for p in DEPLOY.glob("*.sh") if p not in (LIB, CLAIMS))
 DASH = shutil.which("dash")
@@ -376,60 +377,69 @@ def test_a_setting_that_is_not_a_whole_number_stops_before_anything_happens(sh, 
 
 
 @needs_dash
-@pytest.mark.parametrize("script", ["monkey-deploy.sh", "monkey-loadtest.sh", "shops-claims.sh", "npc-claims.sh"])
+@pytest.mark.parametrize("script", ["monkey-deploy.sh", "monkey-loadtest.sh", "shops-claims.sh"])
 def test_the_restarting_scripts_check_their_minutes_before_they_do_anything(sh, tmp_path, script):
     code, out, calls = sh(f'sh "{(DEPLOY / script).as_posix()}"', WARN_MINUTES="5m", FAKE_ID="0",
-                          MONKEY_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix(),
-                          NPCS_LOG=(tmp_path / "npcs.log").as_posix())
+                          MONKEY_DEPLOY_ENV="/nonexistent", SHOPS_LOG=(tmp_path / "shops.log").as_posix())
     assert code == 1 and out[-1].endswith("ERROR: WARN_MINUTES must be a whole number of minutes, not '5m'")
     assert not [c for c in calls if c.split()[0] in ("docker", "flock", "curl", "sleep")]
 
 
-def test_npc_claims_adds_the_easy_npc_entry_once_and_keeps_the_old_file(sh, tmp_path):
+def two_entry_step(tmp_path) -> tuple[Path, dict]:
+    """A one-off "X in claims" step with two entries, as claims-exception.sh is meant to be sourced (shops-claims.sh
+    has one), and a live folder with the mod's jar and the env to run it against."""
     live = tmp_path / "live"
     (live / "docker").mkdir(parents=True)
     (live / "docker" / "compose.yaml").write_text("")
     (live / "server" / "mods").mkdir(parents=True)
-    (live / "server" / "mods" / "easy_npc-fabric-26.3-7.17.1.jar").write_text("")
-    toml = live / "server" / "config" / "openpartiesandclaims-server.toml"
-    toml.parent.mkdir()
+    (live / "server" / "mods" / "example-mod-1.0.jar").write_text("")
+    (live / "server" / "config").mkdir()
+    script = tmp_path / "two-claims.sh"
+    script.write_text(
+        "set -eu\nLOG_NAME=two-claims\n"
+        f'. "{LIB.as_posix()}"\n'
+        "WHAT='two in claims'\n"
+        'LOG_TO=${TWO_LOG}\n'
+        "KEEP_AS=before-two\nKEY=forcedEntityProtectionExceptionList\n"
+        "ENTRIES='hand$example:one hand$example:two'\n"
+        "MOD='Example'\nJARS='example-*.jar'\nNOT_YET='a release with the example is live'\n"
+        f'. "{CLAIMS.as_posix()}"\n', newline="\n")
+    env = {"FAKE_ID": "0", "MONKEY_DEPLOY_ENV": "/nonexistent", "TWO_LOG": (tmp_path / "two.log").as_posix(),
+           "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
+    return script, env
+
+
+def test_claims_exception_adds_the_entries_once_and_keeps_the_old_file(sh, tmp_path):
+    script, env = two_entry_step(tmp_path)
+    toml = tmp_path / "live" / "server" / "config" / "openpartiesandclaims-server.toml"
     before = '[serverConfig]\n\t\t\tforcedEntityProtectionExceptionList = ["minecraft:minecart"]\n\t\t\tother = 1\n'
     toml.write_text(before, newline="\n")
-    script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
-    env = {"FAKE_ID": "0", "MONKEY_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
-           "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
-    code, out, calls = sh(f"{script} --check", **env)
+    run = f'cd "{tmp_path.as_posix()}"; sh "{script.as_posix()}"'
+    code, out, calls = sh(f"{run} --check", **env)
     assert code == 0 and out[-1].endswith("nothing was changed") and toml.read_text() == before
     assert not [c for c in calls if c.startswith(("docker compose stop", "flock"))]
     # The server isn't running (the fake docker lists nothing), so the file changes and it stays stopped.
-    code, out, _ = sh(f"{script} --now", **env)
+    code, out, _ = sh(f"{run} --now", **env)
     assert code == 0, out
     assert toml.read_text() == before.replace(
-        '"minecraft:minecart"]', '"minecraft:minecart", "hand$easy_npc:humanoid", "hand$easy_npc:humanoid_slim"]')
-    assert (toml.parent / "openpartiesandclaims-server.toml.before-npcs").read_text() == before
-    code, out, _ = sh(script, **env)
-    assert code == 0 and any("NPCs in claims: already set" in line for line in out)
+        '"minecraft:minecart"]', '"minecraft:minecart", "hand$example:one", "hand$example:two"]')
+    assert (toml.parent / "openpartiesandclaims-server.toml.before-two").read_text() == before
+    code, out, _ = sh(run, **env)
+    assert code == 0 and any("two in claims: already set" in line for line in out)
 
 
-def test_npc_claims_counts_only_the_exact_entries_as_done(sh, tmp_path):
+def test_claims_exception_counts_only_the_exact_entries_as_done(sh, tmp_path):
     """Another prefix, or one of the two ids, doesn't make it done: it adds what is missing."""
-    live = tmp_path / "live"
-    (live / "docker").mkdir(parents=True)
-    (live / "docker" / "compose.yaml").write_text("")
-    (live / "server" / "mods").mkdir(parents=True)
-    (live / "server" / "mods" / "easy_npc-fabric-26.3-7.17.1.jar").write_text("")
-    toml = live / "server" / "config" / "openpartiesandclaims-server.toml"
-    toml.parent.mkdir()
-    before = '\tforcedEntityProtectionExceptionList = ["break$easy_npc:humanoid", "hand$easy_npc:humanoid"]\n'
+    script, env = two_entry_step(tmp_path)
+    toml = tmp_path / "live" / "server" / "config" / "openpartiesandclaims-server.toml"
+    before = '\tforcedEntityProtectionExceptionList = ["break$example:two", "hand$example:one"]\n'
     toml.write_text(before, newline="\n")
-    env = {"FAKE_ID": "0", "MONKEY_DEPLOY_ENV": "/nonexistent", "NPCS_LOG": (tmp_path / "npcs.log").as_posix(),
-           "LIVE_DIR": "live"}   # relative to tmp_path: the shell's spelling of a Windows path isn't C:/...
-    script = f'cd "{tmp_path.as_posix()}"; sh "{(DEPLOY / "npc-claims.sh").as_posix()}"'
-    code, out, _ = sh(f"{script} --check", **env)
-    assert code == 0 and any("NPCs in claims: to do" in line for line in out)
-    code, out, _ = sh(f"{script} --now", **env)
+    run = f'cd "{tmp_path.as_posix()}"; sh "{script.as_posix()}"'
+    code, out, _ = sh(f"{run} --check", **env)
+    assert code == 0 and any("two in claims: to do" in line for line in out)
+    code, out, _ = sh(f"{run} --now", **env)
     assert code == 0, out
-    assert toml.read_text() == before.replace('humanoid"]', 'humanoid", "hand$easy_npc:humanoid_slim"]')
+    assert toml.read_text() == before.replace('one"]', 'one", "hand$example:two"]')
 
 
 def test_wait_for_live_asks_every_15_seconds_until_boot_timeout(sh):

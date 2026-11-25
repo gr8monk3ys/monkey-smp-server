@@ -2,7 +2,28 @@ name: admin
 permissions:
 - weight.1000
 - '*'
-- invview.can_modify
+# '*' would also give the exemptions below. Admins who play on their own account play by the same rules
+# (docs/relaunch/staff-guide.md), so these are turned back off.
+- lifestealz.bypass:
+    value: false
+- pvpmanager.command.pvp:
+    value: false
+- pvpmanager.exempt.blockcommands:
+    value: false
+- pvpmanager.exempt.combatlog:
+    value: false
+- pvpmanager.exempt.combattag:
+    value: false
+- pvpmanager.exempt.disableactions:
+    value: false
+- pvpmanager.exempt.killabuse:
+    value: false
+- pvpmanager.exempt.respawnprotection:
+    value: false
+- grim.exempt:
+    value: false
+- essentials.vanish.pvp:
+    value: false
 parents:
 - builder
 - moderator

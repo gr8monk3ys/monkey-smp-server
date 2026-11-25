@@ -20,7 +20,7 @@ How a month goes (docs/SEASONS.md, "Monument of the Month"; staff commands in do
 The hall: storage monkey:monuments hall, a list of {n, season, week, month, theme, faction:{text:...}, f, x, y, z,
 dim}, n numbering it from 1 for good. tools/season.py carry copies it into the next season's world, where
 `function monkey:monuments/warp {n:N}` takes a player to monument N: staff give it to players through a
-spawn NPC's button (docs/ADMIN.md, "Monument of the Month"). The pack never teleports a player on its own.
+spawn NPC's right-click action (docs/ADMIN.md, "Monument of the Month"). The pack never teleports a player on its own.
 
 The switch: #on mn (MONUMENTS_ON, off). Off, /trigger monument does nothing and nobody can enter; staff can still
 open, close and name winners, and the hall and warps work. Stdlib only, Python 3.10 or newer (runs on the VPS).

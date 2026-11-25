@@ -52,9 +52,13 @@ misc:
 tick-rates:
   grass-spread: 4
   mob-spawner: 2
+  # Villagers' slowest brain parts, run less often: checking their job site and bed, and looking for job sites and
+  # beds nearby. Trading and breeding are unchanged; villagers just notice a new workstation a few seconds later.
   behavior:
     villager:
       validatenearbypoi: 60
+      acquirepoi: 120
   sensor:
     villager:
       secondarypoisensor: 80
+      nearestbedsensor: 80

@@ -43,6 +43,8 @@ STACK = (
     "placeholderapi",                 # placeholders for chat, tab, scoreboards and the store
     "viaversion", "viabackwards",     # Java clients a version ahead or behind the server
     "bluemap",                        # the web map (spawn only, no player or claim markers)
+    "chunkspawnerlimiter",            # caps animals and villagers per chunk, so breeding farms can't grow without end
+    "fancynpcs",                      # the spawn NPCs (the Guide and the Town Crier), replacing Easy NPC
     "lifestealz", "pvpmanager",       # rules and seasons: hearts, combat tag, newbie protection
     "economyshopgui", "donut-auction",  # economy: the shop and the auction house (DonutAuctionHouse, unlisted)
     "tebex", "ultracosmetics", "deluxetags",  # store: checkout, cosmetics and the /tags picker

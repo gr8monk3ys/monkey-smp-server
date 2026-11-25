@@ -76,6 +76,18 @@
       }
     },
     {
+      "slug": "chunkspawnerlimiter",
+      "project_id": "FYNIkXwH",
+      "version": "5.1.0",
+      "version_id": "PSooKqRm",
+      "file": "ChunkSpawnerLimiter-5.1.0.jar",
+      "url": "https://cdn.modrinth.com/data/FYNIkXwH/versions/PSooKqRm/ChunkSpawnerLimiter-5.1.0.jar",
+      "size": 181273,
+      "hashes": {
+        "sha512": "cd9b81bfd73585c83099dd1075c2c43462158c69e36f1b2027f374b80d81fbbe618828834ef9e247cbc40260d7722d6aaf9dacf1183d79631420fce867dcbfb6"
+      }
+    },
+    {
       "slug": "chunky",
       "project_id": "fALzjamp",
       "version": "1.5.66",
@@ -121,6 +133,18 @@
       "size": 1897109,
       "hashes": {
         "sha512": "5c09b6a9f03b6fcfb1682af329722fb1f3f3503ff1cd7efb8dc9dbc21e0113fbb11d419d79300a3b61a37409a27c9f4fe898ed37527934a349d488a7e06bb0f0"
+      }
+    },
+    {
+      "slug": "fancynpcs",
+      "project_id": "EeyAn23L",
+      "version": "2.12.1",
+      "version_id": "LigxTtVw",
+      "file": "FancyNpcs-2.12.1.jar",
+      "url": "https://cdn.modrinth.com/data/EeyAn23L/versions/LigxTtVw/FancyNpcs-2.12.1.jar",
+      "size": 6754124,
+      "hashes": {
+        "sha512": "a370600889f7c08058fc0a7ead3549382efa6e17d3f95f7224822921e3899260d51ad6fe0fb3fe36fa4f61903698de27d1e4ce9804e9ee716733b55f5251ea07"
       }
     },
     {

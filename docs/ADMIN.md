@@ -317,51 +317,71 @@ per world: see the admin notes at the end of `docs/RULES.md`.
 
 ## Spawn NPCs
 
-Two Easy NPC characters stand at spawn for whoever joins when no staff are on. The **Guide** (gold name) greets
-anyone who comes within 8 blocks with a speech bubble. Right-clicked, it offers the short rules, how to find a
-faction (`#smp-forum`), and buttons that open this week's challenges, the faction standings and the wardrobe
-(what `/trigger challenges`, `standings` and `wardrobe` do). The rules and faction pages have a button for the
-Monkey SMP links, the Discord first. The **Town Crier** (yellow) calls out every 5 minutes. Right-clicked, it
-shows this week's Saturday event and next week's, picked by the challenges' week number, so it turns over on
-Monday with them. Their text is in `tools/npcs.py`, which writes the `monkey-npcs` data pack.
+Two characters stand at spawn for whoever joins when no staff are on. The **Guide** (gold name) is for new
+players. Right-clicked, it offers the short rules, how to find a faction (`#smp-forum`), and buttons that open
+the first week's steps, this week's challenges, the faction standings and the wardrobe (what `/trigger quest`,
+`challenges`, `standings` and `wardrobe` do). The rules and faction pages have a button for the Monkey SMP
+links, the Discord first. Talking to it counts the first-week quest's "Talk to the Guide" step. The **Town
+Crier** (yellow), right-clicked, shows this week's Saturday event and next week's, picked by the challenges'
+week number, so it turns over on Monday with them.
 
-Place them once per world. In game, as an op, stand where each one goes, facing the way it should face:
+They are split in two:
+
+- **The body** is a FancyNpcs NPC (the `fancynpcs` plugin). Staff make each one once, with the commands below.
+  FancyNpcs keeps its NPCs in its own plugin folder under `server/plugins`, not in the world.
+- **What it does** is in the `monkey-npcs` data pack, written by `tools/npcs.py`: the NPC's one right-click
+  action runs `monkey:npcs/guide/talk` (or `crier/talk`) as the player who clicked, which shows a vanilla
+  dialog. A release that changes their text or buttons needs nothing from staff.
+
+**Making them.** In game, as an admin, stand where each one goes, facing the way it should face, and type:
 
 ```
-/function monkey:npcs/guide/here
-/function monkey:npcs/crier/here
+/npc create guide
+/npc displayname guide <gold>Guide</gold>
+/npc skin guide <skin>
+/npc turn_to_player guide true
+/npc action guide RIGHT_CLICK add console_command execute as {player} run function monkey:npcs/guide/talk
 ```
 
-It stands in the middle of your block. From the console or RCON (on the live VPS,
-`docker compose exec monkey monkey rcon "..."`), give the spot instead. Someone has to be near it so its chunk
-is loaded; otherwise nothing appears and the log says "Error importing preset".
+```
+/npc create crier
+/npc displayname crier <yellow>Town Crier</yellow>
+/npc skin crier <skin>
+/npc turn_to_player crier true
+/npc action crier RIGHT_CLICK add console_command execute as {player} run function monkey:npcs/crier/talk
+```
+
+`<skin>` is a Minecraft account's name or the URL of a skin image; leave the line out to keep the default.
+FancyNpcs puts the clicking player's name in for `{player}`.
+
+**Check them in game before the launch.** These follow FancyNpcs' documentation (its `/npc` commands page and
+action system page), but nobody has typed them on our server yet. Tab completion shows the exact words FancyNpcs
+takes. Then, as a plain player, right-click each one: the Guide's dialog opens (and its "Your first week"
+button shows the quest with "Talk to the Guide" ticked), and the Crier's shows this week's event.
+`/npc action guide RIGHT_CLICK list` shows the action as stored.
+
+Other commands you may need (`/npc help` lists them all):
 
 ```
-function monkey:npcs/guide/place {x:0.5,y:72,z:3.5,yaw:180}   # y: the block it stands on + 1; yaw: 0 south, 90 west, 180 north, 270 east
-function monkey:npcs/crier/remove                              # near it
+/npc move_here guide            # move it to where you stand
+/npc remove crier               # delete it
+/npc list                       # every NPC
+/npc info guide                 # one NPC's settings and where it stands
 ```
 
-- **Placing again** moves it and resets it to this release's version: each has a fixed UUID, so there is only
-  ever one. Do it after a release that changes their text, for example when an event moves (the changelog says
-  so). If the old spot is far away and nobody is near it, run `remove` there first, or the old one can stay.
-- **Talking to them in a claim.** Spawn is a server claim, and Open Parties and Claims protects entities in a
-  claim too. `forcedEntityProtectionExceptionList` in `server\config\openpartiesandclaims-server.toml` holds
-  `"hand$easy_npc:humanoid"` and `"hand$easy_npc:humanoid_slim"` (named ids: the mod documents ids and tags, not
-  wildcards): anyone may right-click an Easy NPC in any claim with an empty hand. With an item in the
-  hand the click is refused (the mod says to try an empty hand), so nobody can put a name tag or a lead on
-  one. The entry applies after a restart. A server installed before it shipped keeps its old file: add the
-  entry with the server stopped, or on the live VPS run `deploy/npc-claims.sh` (`docs/LIVE.md`, "NPCs in
-  claims"). Without it only ops can talk to them.
-- **Who can change them.** They have no owner. Easy NPC lets ops, and anyone in creative mode, edit, move or
-  delete any NPC. No rank can switch to creative by itself, so that is ops plus anyone an op has put in creative
-  (a builder at work, say); moderators and players can't. That creative override is built into Easy NPC and no
-  setting removes it. `server\config\easy_npc\security.cfg` (copied on first start) puts every editor feature
-  that matters behind an op: someone in creative can still change an NPC's look or delete it, but can't give it
-  commands, scores, dialogs or trades.
-- **Nobody can hurt them**: hits in survival or creative and arrows do nothing, and players can't push them.
-  `/kill` still removes them, like any entity.
-- **Cost**: none measurable. On a test server with a player standing next to them, the median tick was 3.3 ms
-  with no NPCs and 3.3 ms with these two; 50 of them added 0.4 ms (spark, one-minute figures).
+From the console you can try what a click does without an NPC: `execute as NAME run function
+monkey:npcs/crier/talk` shows that player the Crier's dialog.
+
+- **Only admins get FancyNpcs' permissions** (`fancynpcs.*`). An NPC's `console_command` action runs as the
+  server console, so whoever can add one can run any command. Admins have them through `'*'` in the LuckPerms
+  `admin` group; never give `fancynpcs.*`, or any `fancynpcs.command.npc.action` permission (above all
+  `fancynpcs.command.npc.action.add.console_command`), to moderators, builders or players. A test checks the
+  shipped groups.
+- **Talking to them anywhere.** FancyNpcs draws its NPCs for each player instead of putting an entity in the
+  world, so claims and regions (GriefPrevention, WorldGuard) shouldn't stop a right-click, and nobody can hit,
+  push, name-tag or `/kill` one. Check it as a plain player at spawn with the rest.
+- **A new world.** FancyNpcs keeps each NPC's world and spot. After a new season's world replaces the old one,
+  check they stand where they should and `/npc move_here` them if not.
 
 ## Mod settings (since 2.8.0)
 
@@ -803,9 +823,8 @@ scoreboard players get #total rg                    # this week's goal total so 
 python tools/goal.py schedule                       # which goal runs in which week
 ```
 
-The Guide's "Talk to the Guide" step and its "Your first week" button come with its preset: after a release
-that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above). The
-Pathfinder blade's model is in the wardrobe resource pack, which players don't get at the moment (see the
+The Guide's "Talk to the Guide" step and its "Your first week" button are in the `monkey-npcs` data pack, so a
+release that changes them needs nothing from staff ("Spawn NPCs" above). The Pathfinder blade's model is in the wardrobe resource pack, which players don't get at the moment (see the
 wardrobe above).
 
 **Editing the goal pool.** `POOL` in `tools/goal.py`, as the challenges' pool: an `id` (it names the goal's
@@ -1128,9 +1147,9 @@ The month, by hand:
    start the vote.
 3. After 48 hours, count the stars (a tie goes to the owners) and run `win {faction:N}` with the faction number
    from the post. The Sunday recap names it that week.
-4. Next season: `tools/season.py carry` copies the hall. Give each monument a warp at spawn: an Easy NPC button
-   with a COMMAND action, permission level 2, `/execute as @initiator run function monkey:monuments/warp {n:N}`
-   (as the Guide's Discord button does, docs/ADMIN.md "Spawn NPCs").
+4. Next season: `tools/season.py carry` copies the hall. Give each monument a warp at spawn: a FancyNpcs NPC
+   with a right-click `console_command` action, `execute as {player} run function monkey:monuments/warp {n:N}`
+   (made like the Guide, docs/ADMIN.md "Spawn NPCs").
 
 Undoing a wrong winner: `data remove storage monkey:monuments hall[{n:N}]` (only the last one, so the numbers stay
 in order), then `data remove storage monkey:monuments contest.won` and run `win` again.

@@ -5,7 +5,6 @@ from fake_world import FakeWorld
 from nbt_writer import nbt
 
 import map_border
-import rules
 from repo import REPO
 
 DEFAULT_MAPS = REPO.defaults / map_border.MAPS
@@ -24,9 +23,11 @@ def server(tmp_path, borders: dict, maps=DEFAULT_MAPS):
     return tmp_path
 
 
-SEASON_ONE = {
-    "minecraft:overworld": (*SPAWN, rules.BORDER),
-    "minecraft:the_nether": (*NETHER_CENTRE, rules.BORDER / 8),
+# The relaunch season's starting border (docs/relaunch/season-1.md; the rules pack's BORDER sets it in the world).
+START_BORDER = 6000
+START = {
+    "minecraft:overworld": (*SPAWN, START_BORDER),
+    "minecraft:the_nether": (*NETHER_CENTRE, START_BORDER / 8),
     "minecraft:the_end": (0.0, 0.0, map_border.NO_BORDER),
 }
 
@@ -35,12 +36,13 @@ def masks(server_dir):
     return {fit.id: fit.border.mask() if fit.border else None for fit in map_border.fit_maps(server_dir)}
 
 
-def test_the_shipped_masks_are_season_ones_starting_border(tmp_path):
-    # The defaults are fitted to Rule 25's 5000 border (and the Nether's 625) around the pinned spawn.
-    assert map_border.main([str(server(tmp_path, SEASON_ONE)), "--check"]) == 0
+def test_the_shipped_masks_are_the_relaunchs_starting_border(tmp_path):
+    # The defaults are fitted to the 6000 starting border (and the Nether's 750) around the pinned spawn. A new
+    # seed's spawn is fitted by the border timer before the first act (tools/border.py).
+    assert map_border.main([str(server(tmp_path, START)), "--check"]) == 0
     assert masks(tmp_path) == {
-        "world": {"min-x": -2580, "max-x": 2419, "min-z": -2084, "max-z": 2915},
-        "world_the_nether": {"min-x": -322, "max-x": 302, "min-z": -260, "max-z": 364},
+        "world": {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415},
+        "world_the_nether": {"min-x": -385, "max-x": 365, "min-z": -323, "max-z": 427},
         "world_the_end": None,
     }
 
@@ -66,7 +68,7 @@ def test_the_nether_map_cuts_everything_from_y_90_up():
 
 
 def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, capsys):
-    grown = {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5500.0), "minecraft:the_nether": (*NETHER_CENTRE, 687.5)}
+    grown = {**START, "minecraft:overworld": (*SPAWN, 8000.0), "minecraft:the_nether": (*NETHER_CENTRE, 1000.0)}
     server(tmp_path, grown)
     end_before = (tmp_path / map_border.MAPS / "world_the_end.conf").read_bytes()
 
@@ -75,7 +77,7 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
     out = capsys.readouterr().out
     assert "bluemap reload" in out and "bluemap purge world\n" in out and "bluemap purge world_the_nether" in out
     assert "purge world_the_end" not in out
-    assert masks(tmp_path)["world"] == {"min-x": -2830, "max-x": 2669, "min-z": -2334, "max-z": 3165}
+    assert masks(tmp_path)["world"] == {"min-x": -4080, "max-x": 3919, "min-z": -3584, "max-z": 4415}
     nether = (tmp_path / map_border.MAPS / "world_the_nether.conf").read_text(encoding="utf-8")
     assert "subtract: true\n    min-y: 90\n  }" in nether
     assert nether.count(map_border.MARK) == 1
@@ -84,13 +86,13 @@ def test_a_border_act_widens_the_masks_and_keeps_the_nether_ceiling(tmp_path, ca
 
 
 def test_a_growing_border_counts_at_its_final_size(tmp_path):
-    server(tmp_path, {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5200.0, 6000.0)})
-    assert masks(tmp_path)["world"] == {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415}
+    server(tmp_path, {**START, "minecraft:overworld": (*SPAWN, 6500.0, 8000.0)})
+    assert masks(tmp_path)["world"] == {"min-x": -4080, "max-x": 3919, "min-z": -3584, "max-z": 4415}
     # A shrinking one at its target too (tools/drops.py takes the smaller of the two instead).
-    server(tmp_path / "b", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 6000.0, 5000.0)})
-    assert masks(tmp_path / "b")["world"] == {"min-x": -2580, "max-x": 2419, "min-z": -2084, "max-z": 2915}
+    server(tmp_path / "b", {**START, "minecraft:overworld": (*SPAWN, 8000.0, 6000.0)})
+    assert masks(tmp_path / "b")["world"] == {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415}
     # Heading past the vanilla maximum: no border, the map left as it is.
-    server(tmp_path / "c", {**SEASON_ONE, "minecraft:overworld": (*SPAWN, 5000.0, map_border.NO_BORDER)})
+    server(tmp_path / "c", {**START, "minecraft:overworld": (*SPAWN, 6000.0, map_border.NO_BORDER)})
     assert masks(tmp_path / "c")["world"] is None
 
 
@@ -138,14 +140,14 @@ def test_a_hand_made_first_layer_is_left_for_a_person(tmp_path, capsys):
 
 @pytest.mark.parametrize("dimension", ["minecraft:overworld", "minecraft:the_nether"])
 def test_a_world_never_saved_is_an_error_not_an_empty_mask(tmp_path, capsys, dimension):
-    borders = {k: v for k, v in SEASON_ONE.items() if k != dimension}
+    borders = {k: v for k, v in START.items() if k != dimension}
     assert map_border.main([str(server(tmp_path, borders))]) == 2
     assert "no border saved" in capsys.readouterr().err
 
 
 def test_a_border_file_not_shaped_as_saved_is_an_error_naming_it(tmp_path, capsys):
     # A world_border.dat with no "data" (or no size) is exit 2 with the file named, not a KeyError traceback.
-    srv = server(tmp_path, SEASON_ONE)
+    srv = server(tmp_path, START)
     path = srv / "world/dimensions/minecraft/the_nether/data/minecraft/world_border.dat"
     path.write_bytes(nbt({"DataVersion": 5023}, gzipped=True))
     assert map_border.main([str(srv)]) == 2

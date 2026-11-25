@@ -13,7 +13,7 @@ second they are seen after the launch, and the menu tells them so.
 
 How each step is counted: each one reads a score something else on the server already keeps, never a poll of
 its own (STEPS, "score"):
-  guide    rq.guide, which the Guide's right-click sets (an Easy NPC scoreboard action, tools/npcs.py)
+  guide    rq.guide, which the Guide's right-click sets (its talk function, tools/npcs.py)
   home     a hidden advancement on vanilla's any_block_use trigger for a bed, which fires only while the step
            is open for that player (tools/challenges.py's visit advancements do the same)
   faction  st.faction: tools/diplomacy.py's faction number, written in game by the hourly standings run

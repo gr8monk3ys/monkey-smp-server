@@ -49,6 +49,9 @@ STACK = (
 )
 # Plugins pinned from GeyserMC's download API rather than Modrinth (entries.GEYSERMC_PINS, ADR-0010).
 GEYSERMC_STACK = ("floodgate",)
+# Fallbacks other workstreams may switch to, checked for the same Minecraft version and reported, never pinned:
+# the economy's money plugin if EssentialsX has no release by mid-January, and an auction house on Modrinth.
+CANDIDATES = ("openeco", "zauctionhouse")
 
 
 def pin_paper(manifest: dict, mc: str, upstream: Upstream) -> dict:
@@ -102,15 +105,26 @@ def pin_geysermc(manifest: dict, projects, upstream: Upstream) -> tuple[dict, li
     return {**manifest, "plugins": sorted(plugins, key=lambda e: e["slug"])}, rows
 
 
-def report(manifest: dict, rows: list[dict]) -> str:
-    s = manifest["server"]
-    lines = [f"# Relaunch pins: Paper {manifest['minecraft']} build {s['build']}", "",
-             "| Plugin | Pinned | Channel | Needs (not pinned) |", "|---|---|---|---|"]
+def check_candidates(mc: str, slugs, upstream: Upstream) -> list[dict]:
+    """One report row per candidate, as pin_stack would give it, without adding anything to the manifest."""
+    return pin_stack({"minecraft": mc, "plugins": []}, slugs, upstream)[1]
+
+
+def _table(rows: list[dict], problem: str) -> list[str]:
+    lines = ["| Plugin | Version | Channel | Needs (not pinned) |", "|---|---|---|---|"]
     for r in rows:
         if "problem" in r:
-            lines.append(f"| {r['slug']} | **not pinned:** {r['problem']} | | |")
+            lines.append(f"| {r['slug']} | **{problem}:** {r['problem']} | | |")
         else:
             lines.append(f"| {r['slug']} | {r['version']} | {r['channel']} | {', '.join(r.get('needs', []))} |")
+    return lines
+
+
+def report(manifest: dict, rows: list[dict], candidates: list[dict] = ()) -> str:
+    s = manifest["server"]
+    lines = [f"# Relaunch pins: Paper {manifest['minecraft']} build {s['build']}", "", *_table(rows, "not pinned")]
+    if candidates:
+        lines += ["", "## Candidates (checked, not pinned)", "", *_table(list(candidates), "no build")]
     return "\n".join(lines) + "\n"
 
 
@@ -124,7 +138,7 @@ def main(argv=None, repo=REPO, upstream=None):
     manifest, rows = pin_stack(pin_paper(repo.load_manifest(), a.mc, upstream), STACK, upstream)
     manifest, geyser_rows = pin_geysermc(manifest, GEYSERMC_STACK, upstream)
     rows += geyser_rows
-    text = report(manifest, rows)
+    text = report(manifest, rows, check_candidates(a.mc, CANDIDATES, upstream))
     print(text)
     if a.report:
         with open(a.report, "w", encoding="utf-8") as f:

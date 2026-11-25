@@ -34,8 +34,10 @@ install, so a config shipped there is the starting point and the live file is th
 
 Not pinned yet, because nothing on Modrinth fits:
 
-- **Auction house.** DonutAuctionHouse isn't on Modrinth. Candidates that list 26.3 are zAuctionHouse (`zauctionhouse`), AuctionHouse+ (`auctionhouseplus`) and Nexus Auction House (`nexusauctionhouse`). The economy workstream picks one.
-- **Fallback economy provider** if EssentialsX has no 26.3 release by 15 Jan. TheNewEconomy (`tne`) stopped at 1.21.x in 2025, and CoinsEngine isn't on Modrinth, so neither can be pinned. The economy workstream needs another candidate.
+- **Auction house.** DonutAuctionHouse isn't on Modrinth. Lorenzo decides between allowing it as a hash-pinned GitHub download (a change to the installer's source rule) and zAuctionHouse (`zauctionhouse`), which is on Modrinth.
+- **Fallback economy provider** if EssentialsX has no release by 15 Jan: OpenEco (`openeco`), the economy workstream's pick.
+
+`tools/relaunch.py` checks OpenEco and zAuctionHouse for the same Minecraft version on every run (`CANDIDATES`) and lists them under "Candidates" in its report, without pinning them.
 
 ## Why these, and not others
 

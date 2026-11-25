@@ -154,6 +154,6 @@ def test_a_border_file_not_shaped_as_saved_is_an_error_naming_it(tmp_path, capsy
 
 def test_the_map_pauses_its_renderer_while_players_are_on():
     """On the VPS's two threads the renderer took more CPU than the game thread (docs/ADMIN.md, "The live map")."""
-    plugin = (REPO.defaults / "config/bluemap/plugin.conf").read_text(encoding="utf-8")
+    plugin = (REPO.defaults / "plugins/BlueMap/plugin.conf").read_text(encoding="utf-8")
     settings = [line for line in plugin.splitlines() if line.startswith("player-render-limit:")]
     assert settings == ["player-render-limit: 3"]

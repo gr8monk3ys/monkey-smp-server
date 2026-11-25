@@ -1,5 +1,7 @@
 """Add Modrinth projects to the manifest, pinned to their newest stable build for our Minecraft version.
 
+(Stable means Modrinth's "release" channel, except for the few projects in entries.PRERELEASE_OK.)
+
   python tools/add.py datapack player-corpses dragonkind-evolved
   python tools/add.py plugin chunky          (Paper servers)
   python tools/add.py mod lithium            (Fabric servers)
@@ -34,7 +36,7 @@ def add(manifest: dict, kind: str, slugs: list[str], upstream: Upstream) -> tupl
         p = projects[slug]
         if slug in have or p["id"] in have:
             continue
-        v = upstream.newest_release(p["id"], manifest["minecraft"], LOADERS[kind])
+        v = upstream.newest(p["id"], manifest["minecraft"], LOADERS[kind], entries.channels(slug))
         if not v:
             problems.append(f"{slug}: no stable {kind} release for Minecraft {manifest['minecraft']}")
             continue

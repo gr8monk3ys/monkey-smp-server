@@ -1,0 +1,9 @@
+# Monkey SMP - first-run Paper global settings, copied once by the installer. Paper adds every key left out here
+# with its own default on first boot. Why each value: docs/relaunch/platform.md, "Performance".
+chunk-loading-basic:
+  # The world inside the border is pre-generated (Chunky), so sending chunks is the cost, not generating them.
+  player-max-chunk-send-rate: 75.0
+  player-max-chunk-load-rate: 100.0
+  player-max-chunk-generate-rate: 20.0
+misc:
+  max-joins-per-tick: 3

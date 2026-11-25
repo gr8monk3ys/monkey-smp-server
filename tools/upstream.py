@@ -6,6 +6,7 @@
     .modrinth_projects(ids)                        {project id: project}
     .modrinth_versions(project_id, mc, loaders)    every version of a project for a Minecraft version
     .newest_release(project_id, mc, loaders)       newest stable ("release") version, or None
+    .newest(project_id, mc, loaders, channels)     newest version on any of those channels, or None
     .paper_builds(mc)                              every Paper build for a Minecraft version
     .newest_stable_paper_build(mc)                 the highest STABLE build id, or None
     .fabric_loaders(mc)                            every Fabric loader for a Minecraft version
@@ -17,6 +18,7 @@
     .adoptium_release_jre(release, platform)       one Temurin JRE release on one platform (to re-check pins)
     .powershell_lts_tags()                         the PowerShell release tags that are LTS ("v7.6.6", ...)
     .powershell_release_assets(tag)                {file name: {"url", "size", "sha256"}} of one release
+    .geysermc_latest_build(project)                GeyserMC's newest build of a project (download API JSON)
     .download(url)                                 the bytes at a URL
 
 Platforms are the installer's ids (JAVA_PLATFORMS): windows-x64, linux-x64, linux-aarch64, mac-x64 and
@@ -42,6 +44,7 @@ ADOPTIUM = "https://api.adoptium.net/v3"
 POWERSHELL_METADATA = "https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json"
 POWERSHELL_RELEASES = "https://api.github.com/repos/PowerShell/PowerShell/releases"
 FABRIC_META = "https://meta.fabricmc.net/v2"
+GEYSERMC = "https://download.geysermc.org/v2/projects"
 USER_AGENT = "gr8monk3ys/monkey-smp-server (github.com/gr8monk3ys/monkey-smp-server)"
 
 
@@ -106,8 +109,12 @@ class Upstream:
         return self.http.get_json(f"{MODRINTH}/project/{project_id}/version?{query}")
 
     def newest_release(self, project_id: str, mc: str, loaders) -> dict | None:
-        releases = [v for v in self.modrinth_versions(project_id, mc, loaders) if v["version_type"] == "release"]
-        return max(releases, key=lambda v: v["date_published"]) if releases else None
+        return self.newest(project_id, mc, loaders, ("release",))
+
+    def newest(self, project_id: str, mc: str, loaders, channels) -> dict | None:
+        """The newest version on one of `channels` ("release", "beta", "alpha"), or None."""
+        found = [v for v in self.modrinth_versions(project_id, mc, loaders) if v["version_type"] in channels]
+        return max(found, key=lambda v: v["date_published"]) if found else None
 
     def paper_builds(self, mc: str) -> list[dict]:
         return self.http.get_json(f"{PAPER}/versions/{mc}/builds")
@@ -169,6 +176,9 @@ class Upstream:
             if digest.startswith("sha256:"):
                 out[a["name"]] = {"url": a["browser_download_url"], "size": a["size"], "sha256": digest[7:]}
         return out
+
+    def geysermc_latest_build(self, project: str) -> dict:
+        return self.http.get_json(f"{GEYSERMC}/{project}/versions/latest/builds/latest")
 
     def download(self, url: str) -> bytes:
         return self.http.get_bytes(url)

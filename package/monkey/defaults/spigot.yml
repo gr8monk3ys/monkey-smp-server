@@ -1,0 +1,26 @@
+# Monkey SMP - first-run Spigot settings, copied once by the installer. The server adds every key left out here
+# with its own default on first boot. Why each value: docs/relaunch/platform.md, "Performance".
+settings:
+  save-user-cache-on-stop-only: true
+world-settings:
+  default:
+    # Entities further than this from every player tick less often. Lower than the defaults, still wide enough
+    # that farms in front of a player work normally.
+    entity-activation-range:
+      animals: 16
+      monsters: 24
+      raiders: 48
+      misc: 8
+      water: 8
+      villagers: 16
+      flying-monsters: 48
+    entity-tracking-range:
+      players: 64
+      animals: 48
+      monsters: 48
+      misc: 32
+      display: 128
+      other: 64
+    merge-radius:
+      item: 2.5
+      exp: 3.0

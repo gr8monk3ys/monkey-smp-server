@@ -1,0 +1,13 @@
+# Monkey SMP - first-run Bukkit settings, copied once by the installer. The server adds every key left out here
+# with its own default on first boot. Why each value: docs/relaunch/platform.md, "Performance".
+# Paper counts mobs per player (paper-world-defaults.yml), so these are per-player caps, a little under vanilla.
+spawn-limits:
+  monsters: 50
+  animals: 10
+  water-animals: 5
+  water-ambient: 10
+  water-underground-creature: 5
+  axolotls: 5
+  ambient: 5
+ticks-per:
+  monster-spawns: 2

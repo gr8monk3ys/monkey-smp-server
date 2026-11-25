@@ -9,7 +9,7 @@ dimension keeps its own, in world/dimensions/minecraft/<dimension>/data/minecraf
 `save-all` first when it changed in the last few minutes. A border that is still growing counts at its
 final size. A dimension without a border (the End) keeps its map as it is.
 
-The mask is the first layer of `render-mask` in each config/bluemap/maps/<map>.conf; later layers (the
+The mask is the first layer of `render-mask` in each plugins/BlueMap/maps/<map>.conf; later layers (the
 Nether's ceiling) are kept. BlueMap only sees the change after `bluemap reload`, and `bluemap purge <map>`
 then deletes the map's tiles and renders it again inside the new mask; the tool prints both.
 Stdlib only (plus tools/saved_world.py and tools/nbt.py), so it runs on the VPS as it is (docs/LIVE.md).
@@ -23,7 +23,7 @@ from pathlib import Path
 
 import saved_world
 
-MAPS = Path("config") / "bluemap" / "maps"
+MAPS = Path("plugins") / "BlueMap" / "maps"
 NO_BORDER = 59_999_968  # the vanilla maximum: the dimension has no border to speak of
 MARK = "# Monkey SMP: the world border. tools/map_border.py keeps this layer in step with it."
 _SETTING = re.compile(r'^([a-z-]+):\s*"?([^"\n]*)"?\s*$', re.M)

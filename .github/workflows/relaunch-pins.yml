@@ -1,0 +1,32 @@
+name: Relaunch pins
+
+# Pins the relaunch's Paper build and plugins (tools/relaunch.py) on a runner with internet, because the pins need
+# Modrinth, PaperMC and GeyserMC. It only reads: the report and the new manifest.json are printed to the log for a
+# maintainer to check and commit. Delete this workflow once the relaunch branch is merged.
+on:
+  push:
+    branches: [relaunch/platform]
+    paths: [tools/relaunch.py, tools/entries.py, .github/workflows/relaunch-pins.yml]
+  workflow_dispatch:
+    inputs:
+      mc:
+        description: Minecraft version to pin
+        default: "26.3"
+
+permissions:
+  contents: read
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Pin Paper and the plugin stack
+        shell: bash
+        run: python tools/relaunch.py --mc "${{ inputs.mc || '26.3' }}" --skip-missing --report pins.md
+      - name: Show the manifest
+        run: cat package/monkey/manifest.json

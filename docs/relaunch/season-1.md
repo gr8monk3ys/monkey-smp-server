@@ -37,13 +37,14 @@ is week N+1 in the table below.
 
 ## The finale
 
-1. **6 PM:** staff announce it. The border starts shrinking from 3,000 to 256 around the finale monument,
-   over 45 minutes. Players outside take border damage.
-2. **6:45 PM:** the last hour. The border holds at 256. Every second, each team scores a point for each of its
-   members standing at the monument. Kills still move hearts; eliminated players stay out.
-3. **7:45 PM:** the team with the most points wins (a solo player is a team of one). A tie goes to the team
+1. **6 PM:** chat warns that the border closes in 10 minutes.
+2. **6:10 PM:** the border shrinks from 3,000 to 256 around the finale monument, over 40 minutes. Players
+   outside take border damage.
+3. **6:50 PM:** the last hour. The border holds at 256. Every second, each team scores a point for each of its
+   members within 24 blocks of the monument. Kills still move hearts; eliminated players stay out.
+4. **7:50 PM:** the team with the most points wins (a solo player is a team of one). A tie goes to the team
    with the most hearts between its members still in, which staff check.
-4. The champion gets the season's champion title and cosmetic, which carry into Season 2.
+5. The champion gets the season's champion title and cosmetic, which carry into Season 2.
 
 - **It's filmed.** A staff member records the finale in spectator mode from above the ring, and the brand
   team cuts a recap video for the off-week. Players are told in the finale announcement that it's being filmed.
@@ -53,21 +54,22 @@ is week N+1 in the table below.
   with player bases as they stood) for anyone to explore. Nothing in it identifies players beyond their builds
   and signs.
 
-### Porting the finale and the boss to Paper
+### Teams, the finale and the boss on Paper
 
-The modded season's finale and border boss (`tools/finale.py`, `tools/boss.py`) are datapacks, which Paper
-still runs, but both score by faction (`st.faction`, the Open Parties and Claims party), and there are no
-factions on Paper. Before week 6 they need:
+The finale and the border boss (`tools/finale.py`, `tools/boss.py`) are datapacks, which Paper still runs. They
+score by team, the scoreboard `st.team`, not by the modded season's factions:
 
-- **Scoring per team** in place of per faction: the finale already scores each faction's member-time at the
-  monument, so it keeps that, reading team numbers, with hearts as the tiebreak staff check. The boss's kill
-  announcement names the player, and their team if they have one.
-- **Teams only for the finale:** players register a team of up to 4 by ticket before week 9, and staff give
-  its members the same team number; everyone else is a team of one. No team plugin.
-- The border acts above in `ACTS` (`tools/border.py`): 8,000 in week 3 and 10,000 in week 6, with the
-  week 9 shrink and the finale's 256. Vanilla `/worldborder` works on Paper over RCON as before.
+- **Registering a team:** players register a team of up to 4 by ticket before week 9. Staff give each member
+  the same number below 100, `scoreboard players set <name> st.team <n>`, and note it on the ticket. No team
+  plugin.
+- **Everyone else is a team of one:** the first time a player without a number counts at the monument, the
+  finale gives them the next number from 100 up.
+- **The boss's kill** is announced with the player and, if they have a team number, their team's members.
+- `python3 tools/finale.py result WORLD` reads the winner and each team's members after the close.
 
-That port, and the 24-hour return timer, are a follow-up PR for the tools; this one sets the plan and the dates.
+Still to do before week 3, in `tools/border.py` (which the platform PR also changes): its `ACTS` at 8,000 in
+week 3 and 10,000 in week 6, and a step for the week 9 shrink to 3,000, since acts only ever grow the border.
+Vanilla `/worldborder` works on Paper over RCON as before.
 
 ## Late joiners
 

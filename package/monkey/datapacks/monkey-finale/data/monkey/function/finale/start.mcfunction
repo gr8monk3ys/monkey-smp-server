@@ -19,6 +19,7 @@ scoreboard players set #started fn 1
 scoreboard players set #phase fn 1
 scoreboard players set #t fn 0
 scoreboard players set #edge fn 0
+scoreboard players set #next fn 100
 $data modify storage monkey:finale at set value {x:$(x),z:$(z),x0:$(x),z0:$(z),d:48,bx:$(cx),bz:$(cz)}
 $scoreboard players set #mx fn $(x)
 $scoreboard players set #mz fn $(z)
@@ -31,5 +32,5 @@ execute store result storage monkey:finale at.z0 int 1 run scoreboard players re
 bossbar set monkey:finale players @a
 bossbar set monkey:finale visible true
 execute store result bossbar monkey:finale value run scoreboard players get #t fn
-$tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"text":"in 10 minutes the border starts closing on the monument at ","color":"gold"},{"text":"$(x), $(z)","color":"yellow"},{"text":", down to 256 blocks across over 40 minutes. Then the last hour, a staff event: the faction with the most member-time at the monument (within 24 blocks) holds it and wins. Within 64 blocks of it anyone can fight anyone (rule 41). Spawn stays safe.","color":"gold"}]
+$tellraw @a ["",{"text":"The finale: ","color":"dark_red","bold":true},{"text":"in 10 minutes the border starts closing on the monument at ","color":"gold"},{"text":"$(x), $(z)","color":"yellow"},{"text":", down to 256 blocks across over 40 minutes. Then the last hour: the team with the most member-time at the monument (within 24 blocks) holds it and wins. On your own, you're a team of one. Spawn stays safe.","color":"gold"}]
 return 1

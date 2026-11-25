@@ -1,0 +1,1 @@
+$tellraw @a ["",{"selector":"@s","color":"yellow"},{"text":" slew The Edgewalker! ","color":"gold","bold":true},{"text":"Their team: ","color":"gold"},{"selector":"@a[scores={st.team=$(team)}]","color":"yellow"},{"text":".","color":"gold"}]

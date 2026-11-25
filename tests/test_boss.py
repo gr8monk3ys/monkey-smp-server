@@ -108,18 +108,16 @@ def border_centre(world):
 
 def test_outcomes_news_and_status(tmp_path):
     world = FakeWorld(tmp_path / "world").scores(SEASON_TWO, LAUNCHED).storage("monkey", {
-        "boss": {"acts": {"a1": {"state": "slain", "x": 10, "z": 2000, "hp": 500, "name": "Steve", "faction": 3,
+        "boss": {"acts": {"a1": {"state": "slain", "x": 10, "z": 2000, "hp": 500, "name": "Steve", "team": 3,
                                  "week": 2},
-                          "a2": {"state": "risen", "x": -2950, "z": 4, "hp": 300, "week": 8}}},
-        "factions": {"names": {"f3": {"text": "Red Monkeys"}}}}).path
+                          "a2": {"state": "risen", "x": -2950, "z": 4, "hp": 300, "week": 8}}}}).path
     found = boss.outcomes(world)
-    assert [(o.act, o.state, o.player, o.faction, o.week) for o in found] == [
+    assert [(o.act, o.state, o.player, o.team, o.week) for o in found] == [
         (1, "slain", "Steve", 3, 2), (2, "risen", "", 0, 8)]
-    assert boss.describe(found[0], {3: "Red Monkeys"}) == \
-        "Act 1: The Edgewalker was slain by Steve (Red Monkeys), near 10, 2000."
+    assert boss.describe(found[0]) == "Act 1: The Edgewalker was slain by Steve (team 3), near 10, 2000."
     items = news.event_items(world, news.read_saved(world))
     assert [(i.key, i.text) for i in items] == [
-        ("event:boss1:end", "Steve of Red Monkeys slew The Edgewalker."),
+        ("event:boss1:end", "Steve slew The Edgewalker."),
         ("event:boss2:rose", "The Edgewalker has risen near -2950, 4, past the old border. The first to slay it "
                              "takes a Server First.")]
 
@@ -129,10 +127,10 @@ def test_no_news_in_a_world_without_a_boss(tmp_path):
     assert news.event_items(world, news.read_saved(world)) == []
 
 
-def test_the_fight_is_a_staff_event_away_from_spawn():
-    # Rule 41: at staff events anyone can fight anyone in the event area; say so where players read it.
+def test_the_fight_is_away_from_spawn_and_names_teams_not_factions():
     for name in ("act", "risen"):
-        assert "A staff event" in body(name) and f"within {boss.EVENT_RADIUS} blocks of it" in body(name)
+        assert "rule 41" not in body(name) and "faction" not in body(name)
+    assert "@a[scores={st.team=$(team)}]" in body("slain_team") and "st.team" in body("slain")
     # It rises 48 blocks inside an act's new edge: far past spawn's no-PvP zone (rules 22 and 26).
     for act in border.acts(2):
         x, z = boss.spot(2, act.number, 0.0, 0.0, act.size)

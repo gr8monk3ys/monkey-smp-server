@@ -1,4 +1,4 @@
-"""The finale: on the season's last Saturday the border closes on the monument, and the faction holding it wins.
+"""The finale: on the season's last Saturday the border closes on the monument, and the team holding it wins.
 
     python tools/datapacks.py                     regenerates the monkey-finale data pack (with the others)
     python tools/finale.py plan [--season N] [--world WORLD]   the stages, and the monument for this world
@@ -8,10 +8,10 @@ What players see (docs/SEASONS.md, "The finale"): at the finale's time chat says
 minutes, then in 1 minute, then now. From now it shrinks from wherever it is to FINAL_SIZE blocks across over
 SHRINK_SECONDS, while its centre moves from spawn to the monument (MONUMENT_OFFSET from spawn, outside spawn's
 no-PvP zone: docs/RULES.md, rules 22 and 26) a block a second each way. Then comes the last hour (HOLD_SECONDS),
-a staff event (rule 41: anyone can fight anyone within EVENT_RADIUS of the monument): the border holds, and every
-second each faction gets a point for each of its members standing at the monument (within RADIUS blocks of it
+a staff event: the border holds, and every
+second each team gets a point for each of its members standing at the monument (within RADIUS blocks of it
 either way, any height, in survival, not in the event arena). 10 minutes and 1 minute before the close, chat says
-so; at the close the faction with the most points holds the monument and is named the winner. A boss bar counts
+so; at the close the team with the most points holds the monument and is named the winner. A boss bar counts
 down to the close all along. Claims are never touched: land outside the border is only out of reach.
 
 Never stranded: the shrink is slow (an edge moves at most about 2.2 blocks a second, under half walking pace), every
@@ -21,11 +21,15 @@ to a safe spot inside it. The border never goes below FINAL_SIZE, which is never
 already that small is left alone. Only the Overworld's border moves: the Nether's stays, and a portal never
 puts a player outside the Overworld's (the game keeps a portal's exit inside the border).
 
-The result is read from the scores: #f<N> fn is faction N's points (tools/diplomacy.py's numbers), and storage
-monkey:finale result {faction, points, tie, week} the winner. A tie for the most points names no winner: staff
+Teams (docs/relaunch/season-1.md, "The finale"): staff give each member of a registered team (up to 4) the same
+number from 1 to SOLO_FROM - 1, `scoreboard players set <name> st.team N`. Anyone at the monument without one gets
+the next number from SOLO_FROM up the first time they count, so a solo player is a team of one.
+
+The result is read from the scores: #f<N> fn is team N's points, and storage
+monkey:finale result {team, points, tie, week} the winner. A tie for the most points names no winner: staff
 decide (docs/SEASONS.md). The winner goes into the news post and the Sunday recap; `result` prints the roster and
 the commands that give it the champion's title and helm (rw.champion). The pack doesn't set rw.champion itself:
-a pack can only reach players who are online, the roster is the faction numbers as of the last hourly board run,
+a pack can only reach players who are online, the roster is the team numbers in the saved scoreboard,
 and the season's champion is the owners' call (docs/SEASONS.md, "The season champion").
 
 When: the border timer (tools/border.py) sends `function monkey:finale/start {x:X,z:Z,cx:CX,cz:CZ}` (the
@@ -35,7 +39,7 @@ shows the switch on (`function monkey:finale/on`, docs/SEASONS.md "Switches"; of
 once a world, from Season II (`#season rw.day` 2 or more), after the launch and before the lock. In Season I
 nothing here runs.
 
-Stdlib only plus tools/saved_world.py and tools/diplomacy.py, Python 3.10 or newer.
+Stdlib only plus tools/saved_world.py, Python 3.10 or newer.
 """
 import argparse
 import datetime as dt
@@ -58,10 +62,11 @@ BAR = f"{NS}:finale"
 OBJ = "fn"                  # #on, #started, #phase, #t, #f<N> (points), #best, #win, #tie, and scratch
 SEASON = "#season rw.day"
 LOCKED = "#season_locked"   # in events' ev.state
-FACTION = "st.faction"      # tools/diplomacy.py's faction number
-MAX_FACTIONS = 99           # diplomacy.MAX_FACTIONS (a test checks they agree)
+TEAM = "st.team"            # a player's team number: registered teams below SOLO_FROM, solo players from it
+SOLO_FROM = 100             # the first number handed to a player at the monument with no team
+MAX_TEAMS = 399             # the close reads teams 1 to this
 
-WEEK = 11                   # the finale's week (docs/SEASONS.md, "The acts of a season")
+WEEK = season_calendar.RELAUNCH_FINALE_WEEK   # the finale's week: Saturday 10 April 2027 in the relaunch
 START = dt.time(18, 0)      # the Saturday event slot, Pacific
 WARN_SECONDS = 600          # from the start to the shrink: the 10-minute and 1-minute warnings, then now
 SHRINK_SECONDS = 2400       # the shrink
@@ -78,7 +83,7 @@ TICKS = 20                  # `worldborder set SIZE TIME` takes ticks on 26.2
 # area (EVENT_RADIUS) stay clear of it (a test checks). Staff build the monument there before the finale.
 MONUMENT_OFFSET = (192, 0)
 SPAWN_ZONE = 64             # 7 x 7 chunks around spawn reach at most 63 blocks from it
-EVENT_RADIUS = 64           # the hold's event area (rule 41): this many blocks from the monument either way
+EVENT_RADIUS = 64           # the hold's event area: this many blocks from the monument either way
 STEER = 1                   # blocks a second the border's centre moves toward the monument, each way
 
 SHRINK_AT = WARN_SECONDS
@@ -125,7 +130,7 @@ def stages(start: dt.datetime) -> list[tuple[dt.datetime, str]]:
             (at(HOLD_AT), f"the border holds at {FINAL_SIZE}: the last hour, presence at the monument counts"),
             (at(CLOSE_AT - 600), "10 minutes to the close"),
             (at(CLOSE_AT - 60), "1 minute to the close"),
-            (at(CLOSE_AT), "the close: the faction with the most points holds the monument")]
+            (at(CLOSE_AT), "the close: the team with the most points holds the monument")]
 
 
 # ---------------------------------------------------------------- the saved world
@@ -133,11 +138,11 @@ def stages(start: dt.datetime) -> list[tuple[dt.datetime, str]]:
 
 @dataclass(frozen=True)
 class Result:
-    faction: int        # the winner's number, 0 when nobody stood there
+    team: int           # the winner's number, 0 when nobody stood there
     points: int         # its member-seconds at the monument in the last hour
     tie: bool           # the most points were shared: no winner named
     week: int | None    # the challenge week it closed in
-    points_by: dict[int, int]   # every faction's points, from the scores
+    points_by: dict[int, int]   # every team's points, from the scores
 
 
 def result(world: Path, scores: dict[str, dict[str, int]] | None = None) -> Result | None:
@@ -155,16 +160,24 @@ def result(world: Path, scores: dict[str, dict[str, int]] | None = None) -> Resu
         v = rec.get(field)
         return v if isinstance(v, int) else default
     week = num("week", -1)
-    return Result(num("faction"), num("points"), num("tie") == 1, week if week >= 0 else None, by)
+    return Result(num("team"), num("points"), num("tie") == 1, week if week >= 0 else None, by)
 
 
-def roster(world: Path, faction: int, scores: dict[str, dict[str, int]] | None = None) -> list[str]:
-    """The players whose faction number is `faction` (st.faction, as of the last board run), by name."""
+def roster(world: Path, team: int, scores: dict[str, dict[str, int]] | None = None) -> list[str]:
+    """The players whose team number is `team` (st.team), by name."""
     if scores is None:
         board = saved_world.scoreboard(world)
         scores = board.scores if board else {}
-    return sorted((p for p, n in scores.get(FACTION, {}).items() if n == faction and not p.startswith("#")),
+    return sorted((p for p, n in scores.get(TEAM, {}).items() if n == team and not p.startswith("#")),
                   key=str.casefold)
+
+
+def team_words(world: Path, team: int, scores: dict[str, dict[str, int]] | None = None) -> str:
+    """A team in plain words, for the news and the recap: its members ("Alex, Sam and Ria"), else "team N"."""
+    names = roster(world, team, scores)
+    if not names:
+        return f"team {team}"
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
 
 
 def champion_commands(names: list[str], season: int) -> list[str]:
@@ -209,6 +222,7 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/load.mcfunction"] = lines(
         "# Generated by tools/finale.py. Scores and storage are kept across restarts; the switch starts off.",
         f"scoreboard objectives add {OBJ} dummy",
+        f"scoreboard objectives add {TEAM} dummy",
         f"scoreboard players add #on {OBJ} 0",
         f"scoreboard players add #started {OBJ} 0",
         f"scoreboard players add #phase {OBJ} 0",
@@ -246,6 +260,7 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players set #phase {OBJ} 1",
         f"scoreboard players set #t {OBJ} 0",
         f"scoreboard players set #edge {OBJ} 0",
+        f"scoreboard players set #next {OBJ} {SOLO_FROM}",
         f"$data modify storage {STORE} at set value {{x:$(x),z:$(z),x0:$(x),z0:$(z),d:{2 * RADIUS},bx:$(cx),"
         f"bz:$(cz)}}",
         f"$scoreboard players set #mx {OBJ} $(x)",
@@ -261,9 +276,8 @@ def datapack_files() -> dict[str, str]:
         f"execute store result bossbar {BAR} value run scoreboard players get #t {OBJ}",
         "$" + say_all(gold("in 10 minutes the border starts closing on the monument at "), MONUMENT,
                 gold(f", down to {FINAL_SIZE} blocks across over {SHRINK_SECONDS // 60} minutes. Then the last "
-                     f"hour, a staff event: the faction with the most member-time at the monument (within {RADIUS} "
-                     f"blocks) holds it and wins. Within {EVENT_RADIUS} blocks of it anyone can fight anyone "
-                     "(rule 41). Spawn stays safe.")),
+                     f"hour: the team with the most member-time at the monument (within {RADIUS} blocks) holds "
+                     "it and wins. On your own, you're a team of one. Spawn stays safe.")),
         "return 1",
     )
     f[f"{FN}/tick.mcfunction"] = lines(
@@ -308,21 +322,26 @@ def datapack_files() -> dict[str, str]:
     f[f"{FN}/center.mcfunction"] = lines(f"$execute {OVERWORLD} run worldborder center $(bx) $(bz)")
     f[f"{FN}/hold.mcfunction"] = lines(
         f"scoreboard players set #phase {OBJ} 3",
-        say_all(gold(f"the border has closed. The last hour starts now: every second, each faction scores a "
+        say_all(gold(f"the border has closed. The last hour starts now: every second, each team scores a "
                      f"point for each member within {RADIUS} blocks of the monument at "), *MONUMENT_SAVED,
-                gold(f". A staff event: within {EVENT_RADIUS} blocks of the monument anyone can fight anyone "
-                     "(rule 41) until the close.")),
+                gold(". Hold it until the close.")),
     )
     f[f"{FN}/sample.mcfunction"] = lines(
-        "# Macro at {x0, z0, d}: each faction member at the monument (survival, not in the arena) scores a point.",
+        "# Macro at {x0, z0, d}: each player at the monument (survival, not in the arena) scores for their team.",
         f"$execute {OVERWORLD} as @a[x=$(x0),y=-64,z=$(z0),dx=$(d),dy=384,dz=$(d),gamemode=survival,"
-        f"tag=!{ARENA_TAG},scores={{{FACTION}=1..}}] run function {NS}:finale/count",
+        f"tag=!{ARENA_TAG}] run function {NS}:finale/count",
     )
     f[f"{FN}/count.mcfunction"] = lines(
-        f"execute store result storage {STORE} n.n int 1 run scoreboard players get @s {FACTION}",
+        f"execute unless score @s {TEAM} matches 1.. run function {NS}:finale/solo",
+        f"execute store result storage {STORE} n.n int 1 run scoreboard players get @s {TEAM}",
         f"function {NS}:finale/add with storage {STORE} n",
     )
     f[f"{FN}/add.mcfunction"] = lines(f"$scoreboard players add #f$(n) {OBJ} 1")
+    f[f"{FN}/solo.mcfunction"] = lines(
+        "# A player with no registered team: a team of one, the next number from SOLO_FROM.",
+        f"scoreboard players operation @s {TEAM} = #next {OBJ}",
+        f"scoreboard players add #next {OBJ} 1",
+    )
 
     # ------------------------------------------------ the edge: warn, and move inside anyone it passed
     f[f"{FN}/edge.mcfunction"] = lines(
@@ -383,8 +402,8 @@ def datapack_files() -> dict[str, str]:
         f"scoreboard players set #n {OBJ} 1",
         f"function {NS}:finale/pick",
         f"execute if score #tie {OBJ} matches 1 run scoreboard players set #win {OBJ} 0",
-        f"data modify storage {STORE} result set value {{faction:0,points:0,tie:0,week:-1}}",
-        f"execute store result storage {STORE} result.faction int 1 run scoreboard players get #win {OBJ}",
+        f"data modify storage {STORE} result set value {{team:0,points:0,tie:0,week:-1}}",
+        f"execute store result storage {STORE} result.team int 1 run scoreboard players get #win {OBJ}",
         f"execute store result storage {STORE} result.points int 1 run scoreboard players get #best {OBJ}",
         f"execute store result storage {STORE} result.tie int 1 run scoreboard players get #tie {OBJ}",
         f"execute store result storage {STORE} result.week int 1 run scoreboard players get #week rc.week",
@@ -396,11 +415,11 @@ def datapack_files() -> dict[str, str]:
         "execute as @a at @s run playsound minecraft:ui.toast.challenge_complete master @s ~ ~ ~ 1 0.6",
     )
     f[f"{FN}/pick.mcfunction"] = lines(
-        f"# Factions 1 to {MAX_FACTIONS}, one a call: the most points wins; the same most, a tie.",
+        f"# Teams 1 to {MAX_TEAMS}, one a call: the most points wins; the same most, a tie.",
         f"execute store result storage {STORE} n.n int 1 run scoreboard players get #n {OBJ}",
         f"function {NS}:finale/pick_one with storage {STORE} n",
         f"scoreboard players add #n {OBJ} 1",
-        f"execute if score #n {OBJ} matches ..{MAX_FACTIONS} run function {NS}:finale/pick",
+        f"execute if score #n {OBJ} matches ..{MAX_TEAMS} run function {NS}:finale/pick",
     )
     f[f"{FN}/pick_one.mcfunction"] = lines(
         f"$execute unless score #f$(n) {OBJ} matches 1.. run return 0",
@@ -412,8 +431,7 @@ def datapack_files() -> dict[str, str]:
     )
     f[f"{FN}/won.mcfunction"] = lines(
         "$tellraw @a " + text("", {"text": "The finale: ", "color": "dark_red", "bold": True},
-                              {"nbt": "names.f$(faction)", "storage": f"{NS}:factions", "interpret": True,
-                               "color": "yellow", "bold": True},
+                              {"selector": f"@a[scores={{{TEAM}=$(team)}}]", "color": "yellow", "bold": True},
                               gold(" held the monument and win the finale, with "),
                               {"text": "$(points)", "color": "yellow"}, gold(" points.")),
         "title @a title " + text({"text": "The monument is held", "color": "gold", "bold": True}),
@@ -471,26 +489,24 @@ def packs(repo: Repo) -> dict[Path, dict[str, str]]:
 
 
 def show_result(world: Path) -> int:
-    import diplomacy
     board = saved_world.scoreboard(world)
     scores = board.scores if board else {}
     found = result(world, scores)
     if found is None:
         print("The finale hasn't closed in this world.")
         return 1
-    names = diplomacy.names(world)
     for n, points in sorted(found.points_by.items(), key=lambda kv: -kv[1])[:10]:
-        print(f"  {names.get(n, f'faction {n}')}: {points} points")
+        print(f"  team {n} ({', '.join(roster(world, n, scores)) or 'nobody listed'}): {points} points")
     if found.tie:
         print(f"A tie on {found.points} points: no winner named. Staff decide (docs/SEASONS.md, \"The finale\").")
         return 0
-    if not found.faction:
+    if not found.team:
         print("Nobody held the monument.")
         return 0
     season = scores.get("rw.day", {}).get("#season", 0)
-    members = roster(world, found.faction, scores)
-    print(f"{names.get(found.faction, f'faction {found.faction}')} held the monument with {found.points} points.")
-    print(f"Roster (faction {found.faction} as of the last board run): {', '.join(members) or 'nobody listed'}")
+    members = roster(world, found.team, scores)
+    print(f"Team {found.team} held the monument with {found.points} points.")
+    print(f"Roster (st.team {found.team}): {', '.join(members) or 'nobody listed'}")
     print("To crown them champion (docs/SEASONS.md, \"Ending a season\", step 4), run each over RCON:")
     for c in champion_commands(members, season):
         print(f"  {c}")

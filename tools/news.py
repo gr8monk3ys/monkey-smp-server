@@ -252,10 +252,8 @@ def event_items(world: Path, saved: Saved) -> list[Item]:
     won = finale.result(world, saved.scores)
     if not outcomes and not won:
         return []
-    names = diplomacy.names(world)
-
-    def faction(n: int) -> str:
-        return md(names.get(n, f"faction {n}"))
+    def team(n: int) -> str:
+        return md(finale.team_words(world, n, saved.scores))
     items = []
     for o in outcomes:
         if o.act < 1:
@@ -264,13 +262,13 @@ def event_items(world: Path, saved: Saved) -> list[Item]:
             items.append(Item(f"{EVENT}:boss{o.act}:rose", EVENT, f"{boss.NAME} has risen near {o.x}, {o.z}, past "
                               "the old border. The first to slay it takes a Server First.", order=o.act))
         elif o.state == "slain":
-            by = md(o.player or "A player") + (f" of {faction(o.faction)}" if o.faction else "")
+            by = md(o.player or "A player")
             items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{by} slew {boss.NAME}.", order=o.act))
         elif o.state == "left":
             items.append(Item(f"{EVENT}:boss{o.act}:end", EVENT, f"{boss.NAME} left: nobody slew it this time.",
                               order=o.act))
-    if won and won.faction and not won.tie:
-        items.append(Item(f"{EVENT}:finale", EVENT, f"The finale: {faction(won.faction)} held the monument and "
+    if won and won.team and not won.tie:
+        items.append(Item(f"{EVENT}:finale", EVENT, f"The finale: {team(won.team)} held the monument and "
                           f"won, with {won.points} points.", order=99))
     return items
 

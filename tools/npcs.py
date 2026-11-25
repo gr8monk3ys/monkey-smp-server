@@ -128,12 +128,16 @@ def day(d: dt.date) -> str:
     return season_calendar.day_words(d)
 
 
+# Season I's launch hour, which the modded rules pack ran (the relaunch's rules pack has none).
+SEASON_I_LAUNCH_HOUR = dt.timedelta(hours=1)
+
+
 def crier_text(week: int) -> str:
     season = season_calendar.SEASON
     if week == 0:
         opens = season_calendar.words(season.launch)
         local = season.launch.astimezone(season_calendar.PACIFIC)
-        pvp = local + dt.timedelta(seconds=rules.LAUNCH_SECONDS)
+        pvp = local + SEASON_I_LAUNCH_HOUR
         # Judging is the second night at the event hour (docs/SEASONS.md), not a time worked out from the launch.
         this = (f"Season I opens {day(season.saturday(0))} at {opens['pacific']} ({opens['eastern']}): the launch "
                 f"hour, then PvP and the Nether open at {season_calendar.clock(pvp)}. The Build Battle wheel spins "

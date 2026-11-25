@@ -1,29 +1,30 @@
-"""Builds the data packs that make the server enforce the Season I rules players shouldn't have to police.
+"""Builds the data pack that makes the server enforce the relaunch's rules players shouldn't have to police.
 
     python tools/datapacks.py          regenerate it with every other generated pack (--check: only compare)
 
-It writes two folders, both generated (edit this file, not them). Rule numbers are docs/RULES.md's.
+It writes two folders, both generated (edit this file, not them). The rules are docs/relaunch/rules.md's; how hearts,
+safe zones and claims work is docs/relaunch/lifesteal.md, and those are plugins (LifeStealZ, PvPManager,
+GriefPrevention, WorldGuard), not this pack.
 
   package/monkey/datapacks/monkey-rules/
-      Rule 25: a 5000 x 5000 world border centred on spawn (and the Nether's at 1:8), set once.
-      Rule 23: the launch hour. `function monkey:rules/launch` closes PvP and the Nether for an hour,
-               then opens both; the End stays closed until `function monkey:rules/open_end`.
-      Rule 26: a first join gets 48 hours of PvP grace: other players can't hurt them. Attacking a player
-               ends it, and so does `/trigger end_grace`. Nobody gets it during the launch hour.
-      Catch-up: a first join late in the season gets a starter kit and grace held open for hours of play
-               (tools/catchup.py; off until staff turn it on).
-      Ban B9:  Fire Aspect and Flame are disabled. They're out of the enchanting table, loot and trades,
-               and any copy that still turns up (a mod's chest or a mob's gear) does nothing and can't be
-               put on an item.
-      Onboarding: a welcome notice a few seconds after the first join (its one button: the factions that
-               are recruiting, on the Discord), and a Monkey SMP button in the pause menu with the
-               Discord, map, rules and store links.
+      The border: 6000 x 6000 centred on spawn (and the Nether's at 1:8), set once. Staff grow it by the
+               season plan (docs/relaunch/season-1.md).
+      The End: closed until Dragon Night, when staff run `function monkey:rules/open_end`.
+      The launch: `function monkey:rules/launch` welcomes the season and starts its week-one tracking (the
+               founder window, Server Firsts and challenges). PvP and the Nether are open from the start.
+      Catch-up: a first join late in the season gets a starter kit (tools/catchup.py; off until staff turn it on).
+      Onboarding: a welcome notice a few seconds after the first join (its one button: the Discord), and a
+               Monkey SMP button in the pause menu with the Discord, map, rules and store links.
 
   package/monkey/datapacks/monkey-no-netherite-armor/
-      Rule 24: no Netherite armor. The smithing table won't make it, and armor found in loot is taken off
-               (it drops at the player's feet, nothing is lost). Netherite tools and weapons are fine.
-      The owners lift the rule with `datapack disable "file/monkey-no-netherite-armor"`; the world
-      remembers that across restarts and updates.
+      The modded Season I's rule 24: no Netherite armor. The smithing table won't make it, and armor found in
+      loot is taken off (it drops at the player's feet, nothing is lost). The relaunch has no such rule, so staff
+      turn it off in the new world with `datapack disable "file/monkey-no-netherite-armor"`; the world remembers
+      that across restarts and updates. (It stays in the repo while site/live-packs.json lists it.)
+
+New players' protection is PvPManager's newbie protection (3 hours, 8 from week 4), not this pack. There is no
+ban on Fire Aspect or Flame in the relaunch, so the pack no longer has one. The relaunch starts a new world, so
+nothing cleans up the modded season's grace (its body-slot item and objectives): they never exist there.
 
 The installer copies both into the world on every install (Install-PackageDatapacks).
 """
@@ -35,44 +36,27 @@ import catchup
 
 from challenges import LAUNCHED
 from datapacks import NS, function_tag, lines, mcmeta
-from events import ARENA_TAG
 from repo import REPO, Repo
 
 RULES_PACK = "monkey-rules"
 NETHERITE_PACK = "monkey-no-netherite-armor"
 
-BORDER = 5000          # rule 25: the border's full width in blocks, centred on spawn
-LAUNCH_SECONDS = 3600  # rule 23: how long PvP and the Nether stay closed after launch
+BORDER = 6000          # the starting border's full width in blocks, centred on spawn
+TEAM_SIZE = 4          # the most players a finale team can have (docs/relaunch/season-1.md, "The finale")
 OBJECTIVE = "monkey.rules"
-# Rule 24's pack stamps the game time here every second while it is on, so other packs can tell it is
+# The no-Netherite-armor pack stamps the game time here every second while it is on, so other packs can tell it is
 # (tools/firsts.py: full Netherite counts only once it is off). Disabling a pack runs nothing, so a stamp it is.
 NETHERITE_BEAT = "#netherite_rule"
 
-# Rule 26. Grace is a custom enchantment whose only effect is immunity to damage a player causes (melee,
-# arrows, their TNT), on an item in the player's body slot: players have no screen for that slot, and
-# Minecraft checks every slot's enchantments for immunity. The item comes back after a death until the
-# grace runs out.
-GRACE_HOURS = 48
-GRACE_TICKS = GRACE_HOURS * 72_000  # game time, which stops while the server is empty
-GRACE = "monkey.grace"               # each player's grace end, in game time
-END_GRACE = "end_grace"              # the trigger players end their own grace with
 WELCOME = "monkey.welcome"           # seconds until the welcome shows (a first join is still loading)
 WELCOME_DELAY = 3
-JOINED = "monkey.joined"             # tag: seen before, so no welcome and no grace
-GRACE_ITEM = "*[custom_data~{monkey_grace:{}}]"
-# A player's body slot only takes an item that is equippable there. Only the pack puts it on: a stray copy
-# can't be put on by hand, by a dispenser or on a horse.
-GRACE_STACK = ('minecraft:paper[custom_data={monkey_grace:{}},enchantments={"monkey:pvp_grace":1},'
-               'equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"},'
-               'item_name="PvP grace"]')
-# The player-death-corpses mod copies a dead player's equipment, body slot included, onto this mannequin.
-CORPSE = "type=minecraft:mannequin,tag=player_corpses.corpse"
+JOINED = "monkey.joined"             # tag: seen before, so no welcome
 
 # The welcome and the pause menu's links. The Discord invite and the map are site/config.json's.
 DISCORD = "https://discord.gg/C25hy9Ca9W"
 SITE = "https://monkeysmp.lscaturchio.xyz"
 MAP = "https://map.monkeysmp.lscaturchio.xyz"
-LINKS = (("Discord", DISCORD, "Factions, events and tickets"),
+LINKS = (("Discord", DISCORD, "Events, teams and tickets"),
          ("Live map", MAP, "The world as it is, in your browser"),
          ("Rules", f"{SITE}/guide/rules", "The full rulebook on the website"),
          ("Store", f"{SITE}/#pricing", "The Server Pass and supporter tiers"))
@@ -91,25 +75,6 @@ def faction_size(repo=REPO) -> int:
 def say_number(n: int) -> str:
     return NUMBER_WORDS[n] if 0 <= n < len(NUMBER_WORDS) else str(n)
 
-
-BANNED_ENCHANTMENTS = ("minecraft:fire_aspect", "minecraft:flame")
-# Vanilla 26.2's #minecraft:non_treasure. The enchanting table, random loot, villager trades and mob
-# gear all draw from it, so the pack replaces it with this list minus the banned ones. No mod in the pack
-# adds to it; one that does would lose its addition (see the RULES.md admin notes).
-VANILLA_NON_TREASURE = (
-    "protection", "fire_protection", "feather_falling", "blast_protection", "projectile_protection",
-    "respiration", "aqua_affinity", "thorns", "depth_strider", "sharpness", "smite", "bane_of_arthropods",
-    "knockback", "fire_aspect", "looting", "sweeping_edge", "efficiency", "silk_touch", "unbreaking", "fortune",
-    "power", "punch", "flame", "infinity", "luck_of_the_sea", "lure", "loyalty", "impaling", "riptide",
-    "channeling", "multishot", "quick_charge", "piercing", "density", "breach", "lunge",
-)
-# Vanilla's definitions with the effects taken out and nothing allowed to carry them.
-DISABLED = {
-    "fire_aspect": {"anvil_cost": 4, "max_cost": {"base": 60, "per_level_above_first": 20}, "max_level": 2,
-                    "min_cost": {"base": 10, "per_level_above_first": 20}, "weight": 2},
-    "flame": {"anvil_cost": 4, "max_cost": {"base": 50, "per_level_above_first": 0}, "max_level": 1,
-              "min_cost": {"base": 20, "per_level_above_first": 0}, "weight": 2},
-}
 
 ARMOR_SLOTS = ("head", "chest", "legs", "feet")
 NETHERITE_ARMOR = ("netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots")
@@ -144,18 +109,17 @@ def pack_meta(description: str) -> str:
 def rules_files() -> dict[str, str]:
     fn = f"data/{NS}/function/rules"
     f: dict[str, str] = {
-        "pack.mcmeta": pack_meta("Monkey SMP Season I rules: border, launch hour, PvP grace, no Fire Aspect "
-                                 "or Flame, welcome and links"),
+        "pack.mcmeta": pack_meta("Monkey SMP rules: border, the End until Dragon Night, welcome and links"),
         "data/minecraft/tags/function/load.json": function_tag(f"{NS}:rules/load"),
     }
     f[f"{fn}/load.mcfunction"] = lines(
         "# Generated by tools/rules.py. Runs on every start and /reload.",
         f"scoreboard objectives add {OBJECTIVE} dummy",
-        f"scoreboard objectives add {GRACE} dummy",
         f"scoreboard objectives add {WELCOME} dummy",
-        f"scoreboard objectives add {END_GRACE} trigger",
         f"function {NS}:catchup/load",
-        "# Rule 25, once per world: after that the border is the admins' to grow.",
+        "# The modded season's launch hour is gone; its flag would hold off the omens' truce (tools/omens.py).",
+        f"scoreboard players reset #launching {OBJECTIVE}",
+        "# The border, once per world: after that it is the staff's to grow.",
         f"execute unless score #border {OBJECTIVE} matches 1 run function {NS}:rules/border",
         f"schedule function {NS}:rules/second 20t replace",
     )
@@ -180,86 +144,30 @@ def rules_files() -> dict[str, str]:
         "$execute in minecraft:the_nether run worldborder center $(x) $(z)",
     )
     f[f"{fn}/second.mcfunction"] = lines(
-        "# Once a second. The End is closed until an admin runs monkey:rules/open_end (rule 23).",
+        "# Once a second. The End is closed until staff run monkey:rules/open_end on Dragon Night.",
         f"execute unless score #end_open {OBJECTIVE} matches 1 in minecraft:the_end as @a[distance=0..] "
         f"run function {NS}:rules/leave_end",
         "# The welcome, a few seconds after a first join so the loading screen doesn't swallow it.",
         f"execute as @a[scores={{{WELCOME}=1}}] run function {NS}:rules/welcome",
         f"scoreboard players remove @a[scores={{{WELCOME}=2..}}] {WELCOME} 1",
         f"execute as @a[tag=!{JOINED}] run function {NS}:rules/first_join",
-        "# Rule 26.",
-        f"execute store result score #now {OBJECTIVE} run time query gametime",
-        "# The catch-up bubble (tools/catchup.py) keeps its players' grace on, so it goes before the expiry check.",
-        f"execute if entity @a[scores={{{catchup.BUBBLE}=1..}},limit=1] run function {NS}:catchup/second",
-        f"execute as @a[scores={{{END_GRACE}=1..}}] run function {NS}:rules/grace_end",
-        f"execute as @a if score @s {GRACE} <= #now {OBJECTIVE} run function {NS}:rules/grace_end",
-        "# The item goes with the grace (the launch and an admin's grace_end take both), it's off in the arena,",
-        "# and it comes back after a death. A copy anywhere else (looted from a corpse) is taken away; clear takes",
-        "# the body slot's too, so it only runs on someone who has one.",
-        *(f"execute as @a if items entity @s {slot} {GRACE_ITEM} run clear @s {GRACE_ITEM}"
-          for slot in ("container.*", "weapon.offhand", "player.cursor", "player.crafting.*")),
-        f"execute as @a if items entity @s armor.body {GRACE_ITEM} unless score @s {GRACE} > #now {OBJECTIVE} "
-        "run item replace entity @s armor.body with minecraft:air",
-        f"execute as @a[tag={ARENA_TAG}] if items entity @s armor.body {GRACE_ITEM} "
-        "run item replace entity @s armor.body with minecraft:air",
-        f"execute as @a[tag=!{ARENA_TAG}] if score @s {GRACE} > #now {OBJECTIVE} unless items entity @s armor.body * "
-        f"run item replace entity @s armor.body with {GRACE_STACK}",
-        f"execute as @e[{CORPSE}] if items entity @s armor.body {GRACE_ITEM} "
-        "run item replace entity @s armor.body with minecraft:air",
         f"schedule function {NS}:rules/second 20t replace",
     )
     f[f"{fn}/first_join.mcfunction"] = lines(
         "# Runs as a player the server hasn't seen before.",
         f"tag @s add {JOINED}",
-        "# Someone who played here before this pack tagged anyone gets neither the welcome nor grace.",
+        "# Someone who played here before this pack tagged anyone gets neither the welcome nor the kit.",
         f"execute if predicate {NS}:rules/returning run return 0",
         f"scoreboard players set @s {WELCOME} {WELCOME_DELAY}",
-        "# Rule 26: not in the launch hour, when the whole server starts together.",
-        f"execute unless score #launching {OBJECTIVE} matches 1 run function {NS}:rules/grace_start",
         f"function {NS}:catchup/first_join",
     )
     f[f"{fn}/welcome.mcfunction"] = lines(
         f"scoreboard players reset @s {WELCOME}",
         f"dialog show @s {NS}:welcome",
+        "# A late first join's kit came while they were loading; say so now (tools/catchup.py).",
+        f"execute if score @s {catchup.KIT_DONE} matches 1 run function {NS}:catchup/note",
     )
-    f[f"{fn}/grace_start.mcfunction"] = lines(
-        f"# Rule 26. Runs as the player; an admin can run it as one: execute as <player> run function "
-        f"{NS}:rules/grace_start",
-        f"execute store result score @s {GRACE} run time query gametime",
-        f"scoreboard players add @s {GRACE} {GRACE_TICKS}",
-        f"scoreboard players enable @s {END_GRACE}",
-        "tellraw @s " + text(
-            {"text": f"You have {GRACE_HOURS} hours of PvP grace: other players can't hurt you. ", "color": "green"},
-            {"text": "Attacking a player ends it, and so does ", "color": "gray"},
-            {"text": f"/trigger {END_GRACE}", "color": "aqua",
-             "click_event": {"action": "suggest_command", "command": f"/trigger {END_GRACE}"}},
-            {"text": ". Hours count while the server is running.", "color": "gray"}),
-    )
-    f[f"{fn}/grace_end.mcfunction"] = lines(
-        f"# Rule 26. Runs as the player: when the grace runs out, they attack a player or /trigger {END_GRACE}.",
-        f"# An admin can end one: execute as <player> run function {NS}:rules/grace_end",
-        f"scoreboard players reset @s {GRACE}",
-        f"scoreboard players reset @s {END_GRACE}",
-        "# A catch-up bubble ends with it (tools/catchup.py).",
-        f"scoreboard players reset @s {catchup.BUBBLE}",
-        f"execute if items entity @s armor.body {GRACE_ITEM} run item replace entity @s armor.body with minecraft:air",
-        "tellraw @s " + text({"text": "Your PvP grace is over: other players can hurt you now.", "color": "red"}),
-    )
-    f[f"{fn}/grace_attack.mcfunction"] = lines(
-        "# A player with grace hurt a player (advancement monkey:rules/grace_attack). Fights in the event",
-        "# arena don't count.",
-        f"advancement revoke @s only {NS}:rules/grace_attack",
-        f"execute unless entity @s[tag={ARENA_TAG}] run function {NS}:rules/grace_end",
-    )
-    # 26.2 conditions name their kind with "condition" and entity predicates are components
-    # ("minecraft:entity_type"); 26.3's "type" key fails the whole datapack load.
-    f[f"data/{NS}/advancement/rules/grace_attack.json"] = js({
-        "criteria": {"hurt_a_player": {"trigger": "minecraft:player_hurt_entity", "conditions": {
-            "player": [{"condition": "minecraft:entity_scores", "entity": "this", "scores": {GRACE: {"min": 1}}}],
-            "entity": [{"condition": "minecraft:entity_properties", "entity": "this",
-                        "predicate": {"minecraft:entity_type": "minecraft:player"}}]}}},
-        "rewards": {"function": f"{NS}:rules/grace_attack"},
-    })
+
     # A player the server has seen before has left the game at least once, or (after a crash, which may not
     # count the leave) played for over a minute. Minecraft's own statistics go back before this pack.
     def stat_at_least(stat: str, least: int) -> dict:
@@ -269,19 +177,6 @@ def rules_files() -> dict[str, str]:
 
     f[f"data/{NS}/predicate/rules/returning.json"] = js({"condition": "minecraft:any_of", "terms": [
         stat_at_least("leave_game", 1), stat_at_least("play_time", 60 * 20)]})
-    f[f"data/{NS}/enchantment/pvp_grace.json"] = js({
-        "description": "PvP grace",
-        "effects": {
-            "minecraft:damage_immunity": [{"effect": {}, "requirements": {
-                "condition": "minecraft:damage_source_properties",
-                "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}}],
-            "minecraft:prevent_equipment_drop": {},
-        },
-        "slots": ["body"],
-        "supported_items": [],
-        "anvil_cost": 0, "max_cost": {"base": 0, "per_level_above_first": 0}, "max_level": 1,
-        "min_cost": {"base": 0, "per_level_above_first": 0}, "weight": 1,
-    })
 
     # The welcome notice and the pause menu's links (dialogs, Minecraft 1.21.6 and later).
     f[f"data/{NS}/dialog/welcome.json"] = js({
@@ -289,18 +184,21 @@ def rules_files() -> dict[str, str]:
         "title": {"text": "Welcome to Monkey SMP", "color": "gold"},
         "body": [
             {"type": "minecraft:plain_message", "width": 300, "contents": (
-                f"A factions SMP: team up in a faction of up to {say_number(faction_size())} players, claim land, "
-                "and raid or defend it. You agreed to the short rules on the way in; the full rulebook is on the "
-                "website, under Rules in the pause menu.")},
+                "A lifesteal SMP: kill a player and you take one of their hearts. Mobs, falls and lava cost you "
+                "nothing. At 0 hearts you're out for 24 hours, then back with 3.")},
             {"type": "minecraft:plain_message", "width": 300, "contents": (
-                "Factions need members, and most start small. The recruiting posts in #smp-forum say who's "
-                "looking.")},
+                "Claim your base with a golden shovel to keep it safe from griefing and theft; fights can still "
+                "happen there. Spawn and the market are safe zones, and you have a few hours of protection "
+                "to settle in.")},
+            {"type": "minecraft:plain_message", "width": 300, "contents": (
+                f"The season ends in a finale for teams of up to {say_number(TEAM_SIZE)}. You agreed to the "
+                "short rules on the way in; the full rulebook is on the website.")},
             {"type": "minecraft:plain_message", "width": 300, "contents": [
                 {"text": "Links to the Discord, the map, the rules and the store are in the pause menu, under "},
                 {"text": "Monkey SMP", "color": "gold"}, {"text": "."}]},
         ],
-        "action": {"label": "Join a faction: see who's recruiting", "width": 240,
-                   "tooltip": "Opens the Monkey SMP Discord",
+        "action": {"label": "Join the Discord", "width": 240,
+                   "tooltip": "Events, teams and tickets: opens the Monkey SMP Discord",
                    "action": {"type": "minecraft:open_url", "url": DISCORD}},
     })
     f[f"data/{NS}/dialog/links.json"] = js({
@@ -317,23 +215,17 @@ def rules_files() -> dict[str, str]:
     f[f"{fn}/leave_end.mcfunction"] = lines(
         "# Runs as a player in the End while it's closed; the position is still the world spawn's x and z.",
         "execute in minecraft:overworld positioned over motion_blocking_no_leaves run tp @s ~ ~ ~",
-        "tellraw @s " + text({"text": "The End is closed for now. ", "color": "red"},
-                             {"text": "The owners will announce when it opens.", "color": "gray"}),
+        "tellraw @s " + text({"text": "The End is closed until Dragon Night. ", "color": "red"},
+                             {"text": "Staff will announce it.", "color": "gray"}),
     )
-    f.update(catchup.datapack_files(GRACE, END_GRACE, ARENA_TAG))
-    minutes = LAUNCH_SECONDS // 60
+    f.update(catchup.datapack_files())
     f[f"{fn}/launch.mcfunction"] = lines(
-        f"# Rule 23. An admin runs this once, at launch: PvP and the Nether close for {minutes} minutes.",
-        "gamerule pvp false",
-        "gamerule allow_entering_nether_using_portals false",
+        "# Staff run this once, at launch. PvP and the Nether are open from the start; the End waits for",
+        "# Dragon Night.",
         f"scoreboard players set #end_open {OBJECTIVE} 0",
-        "# Rule 26: the season starts with nobody on grace (a test player's is gone), and nobody who first",
-        "# joins in the launch hour gets one.",
-        f"scoreboard players reset * {GRACE}",
-        f"scoreboard players reset * {END_GRACE}",
-        f"scoreboard players set #launching {OBJECTIVE} 1",
-        f"schedule function {NS}:rules/launch_over {LAUNCH_SECONDS}s replace",
-        announce(f"Welcome to Season I! PvP, the Nether and the End are closed for the first {minutes} minutes.",
+        "gamerule pvp true",
+        "gamerule allow_entering_nether_using_portals true",
+        announce("Welcome to the new season! PvP and the Nether are open. The End opens on Dragon Night.",
                  "yellow"),
         "# The launch weekend opens for Founder's Circlet (tools/wardrobe.py), and this week's challenges start",
         "# from zero, so test play before the launch doesn't count (tools/challenges.py). Only the first launch",
@@ -345,13 +237,6 @@ def rules_files() -> dict[str, str]:
         f"function {NS}:firsts/launch",
         f"function {NS}:challenges/launch",
     )
-    f[f"{fn}/launch_over.mcfunction"] = lines(
-        "# The launch hour is up: PvP and only the Nether open (rule 23).",
-        "gamerule pvp true",
-        "gamerule allow_entering_nether_using_portals true",
-        f"scoreboard players set #launching {OBJECTIVE} 0",
-        announce("The first hour is up: PvP and the Nether are open. The End stays closed for now.", "red"),
-    )
     f[f"{fn}/open_end.mcfunction"] = lines(
         f"scoreboard players set #end_open {OBJECTIVE} 1",
         announce("The End is open.", "light_purple"),
@@ -360,20 +245,6 @@ def rules_files() -> dict[str, str]:
         f"scoreboard players set #end_open {OBJECTIVE} 0",
         announce("The End is closed.", "light_purple"),
     )
-
-    # Ban B9.
-    allowed = [f"minecraft:{e}" for e in VANILLA_NON_TREASURE if f"minecraft:{e}" not in BANNED_ENCHANTMENTS]
-    f["data/minecraft/tags/enchantment/non_treasure.json"] = js({"replace": True, "values": allowed})
-    # Fire Aspect's cooked drops come from this tag, not from its effects.
-    f["data/minecraft/tags/enchantment/smelts_loot.json"] = js({"replace": True, "values": []})
-    for name, numbers in DISABLED.items():
-        f[f"data/minecraft/enchantment/{name}.json"] = js({
-            "description": [{"translate": f"enchantment.minecraft.{name}"}, " (disabled)"],
-            "effects": {},
-            "slots": ["mainhand"],
-            "supported_items": [],
-            **numbers,
-        })
     return f
 
 

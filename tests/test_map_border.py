@@ -36,11 +36,12 @@ def masks(server_dir):
 
 
 def test_the_shipped_masks_are_season_ones_starting_border(tmp_path):
-    # The defaults are fitted to Rule 25's 5000 border (and the Nether's 625) around the pinned spawn.
+    # The defaults are fitted to the relaunch's starting border (rules.BORDER, 6000; the Nether's 750) around the
+    # pinned spawn.
     assert map_border.main([str(server(tmp_path, SEASON_ONE)), "--check"]) == 0
     assert masks(tmp_path) == {
-        "world": {"min-x": -2580, "max-x": 2419, "min-z": -2084, "max-z": 2915},
-        "world_the_nether": {"min-x": -322, "max-x": 302, "min-z": -260, "max-z": 364},
+        "world": {"min-x": -3080, "max-x": 2919, "min-z": -2584, "max-z": 3415},
+        "world_the_nether": {"min-x": -385, "max-x": 365, "min-z": -323, "max-z": 427},
         "world_the_end": None,
     }
 

@@ -5,19 +5,6 @@ import rules
 from repo import REPO
 
 
-def test_fire_aspect_and_flame_are_out_of_every_source():
-    data = rules.rules_files()
-    tag = json.loads(data["data/minecraft/tags/enchantment/non_treasure.json"])
-    assert tag["replace"] is True
-    assert not set(rules.BANNED_ENCHANTMENTS) & set(tag["values"])
-    # Everything else vanilla had is still there.
-    assert len(tag["values"]) == len(rules.VANILLA_NON_TREASURE) - len(rules.BANNED_ENCHANTMENTS)
-    for name in ("fire_aspect", "flame"):
-        enchantment = json.loads(data[f"data/minecraft/enchantment/{name}.json"])
-        assert enchantment["effects"] == {}
-        assert enchantment["supported_items"] == []
-
-
 def test_the_border_is_set_once_and_centred_on_spawn():
     data = rules.rules_files()
     load = data["data/monkey/function/rules/load.mcfunction"]
@@ -28,14 +15,32 @@ def test_the_border_is_set_once_and_centred_on_spawn():
     assert f"scoreboard players set #border {rules.OBJECTIVE} 1" in border
 
 
-def test_launch_closes_pvp_and_the_nether_then_opens_them_but_not_the_end():
+def test_the_border_starts_at_6000_and_the_nethers_at_one_eighth():
+    data = rules.rules_files()
+    assert rules.BORDER == 6000
+    nether = data["data/monkey/function/rules/nether_border.mcfunction"]
+    assert "execute in minecraft:the_nether run worldborder set 750.0" in nether
+
+
+def test_the_launch_opens_pvp_and_the_nether_at_once_and_keeps_the_end_closed():
     data = rules.rules_files()
     launch = data["data/monkey/function/rules/launch.mcfunction"]
-    over = data["data/monkey/function/rules/launch_over.mcfunction"]
-    assert "gamerule pvp false" in launch and "gamerule allow_entering_nether_using_portals false" in launch
-    assert f"schedule function monkey:rules/launch_over {rules.LAUNCH_SECONDS}s replace" in launch
-    assert "gamerule pvp true" in over and "gamerule allow_entering_nether_using_portals true" in over
-    assert "end_open" not in over
+    assert "gamerule pvp true" in launch and "gamerule allow_entering_nether_using_portals true" in launch
+    assert "schedule" not in launch and "false" not in launch       # a test launch of old can't leave them shut
+    load = data["data/monkey/function/rules/load.mcfunction"]
+    assert f"scoreboard players reset #launching {rules.OBJECTIVE}" in load
+    assert f"scoreboard players set #end_open {rules.OBJECTIVE} 0" in launch
+    assert "data/monkey/function/rules/launch_over.mcfunction" not in data
+    second = data["data/monkey/function/rules/second.mcfunction"]
+    assert f"unless score #end_open {rules.OBJECTIVE} matches 1 in minecraft:the_end" in second
+    assert "Dragon Night" in data["data/monkey/function/rules/leave_end.mcfunction"]
+
+
+def test_the_relaunch_drops_grace_and_the_item_bans():
+    data = rules.rules_files()
+    every = "".join(data.values())
+    assert "grace" not in every.lower() and "fire_aspect" not in every and "netherite" not in every.lower()
+    assert not [p for p in data if "enchantment" in p or "advancement" in p]
 
 
 def test_only_netherite_armor_recipes_are_removed():
@@ -64,63 +69,6 @@ def test_claim_limit_is_two_by_two_chunks_per_member():
     assert "partyOwnedClaims" not in text
 
 
-def test_grace_is_immunity_to_players_only_from_the_body_slot():
-    data = rules.rules_files()
-    grace = json.loads(data["data/monkey/enchantment/pvp_grace.json"])
-    assert grace["slots"] == ["body"] and grace["supported_items"] == []
-    assert set(grace["effects"]) == {"minecraft:damage_immunity", "minecraft:prevent_equipment_drop"}
-    (immunity,) = grace["effects"]["minecraft:damage_immunity"]
-    # 26.2 condition format: "condition", and component entity predicates (vanilla's protection.json)
-    assert immunity["requirements"] == {"condition": "minecraft:damage_source_properties",
-                                        "predicate": {"source_entity": {"minecraft:entity_type": "minecraft:player"}}}
-    assert '"monkey:pvp_grace":1' in rules.GRACE_STACK and "monkey_grace" in rules.GRACE_STACK
-    # a player's body slot refuses anything not equippable there; only the pack may put it on, and only on players
-    assert ('equippable={slot:"body",swappable:false,dispensable:false,allowed_entities:"minecraft:player"}'
-            in rules.GRACE_STACK)
-    # stray copies leave every inventory before the graced get theirs back; clear also empties the body slot,
-    # so it runs only on players holding a copy somewhere else
-    second = data["data/monkey/function/rules/second.mcfunction"].splitlines()
-    clears = [i for i, line in enumerate(second) if f"run clear @s {rules.GRACE_ITEM}" in line]
-    assert len(clears) == 4 and not any(line.startswith("clear @a") for line in second)
-    assert "if items entity @s armor.body" not in "".join(second[i] for i in clears)
-    assert max(clears) < next(i for i, line in enumerate(second) if f"with {rules.GRACE_STACK}" in line)
-
-
-def test_grace_lasts_48_hours_and_ends_on_attack_or_trigger():
-    data = rules.rules_files()
-    fn = "data/monkey/function/rules/"
-    start, end, second = (data[f"{fn}{n}.mcfunction"] for n in ("grace_start", "grace_end", "second"))
-    assert rules.GRACE_TICKS == 48 * 60 * 60 * 20
-    assert f"scoreboard players add @s {rules.GRACE} {rules.GRACE_TICKS}" in start
-    assert f"scoreboard players enable @s {rules.END_GRACE}" in start
-    assert f"scoreboard players reset @s {rules.GRACE}" in end and "armor.body with minecraft:air" in end
-    assert f"if score @s {rules.GRACE} <= #now" in second
-    assert f"@a[scores={{{rules.END_GRACE}=1..}}] run function monkey:rules/grace_end" in second
-    attack = json.loads(data["data/monkey/advancement/rules/grace_attack.json"])
-    criterion = attack["criteria"]["hurt_a_player"]
-    assert criterion["trigger"] == "minecraft:player_hurt_entity"
-    assert criterion["conditions"]["entity"][0]["predicate"] == {"minecraft:entity_type": "minecraft:player"}
-    assert criterion["conditions"]["player"][0]["condition"] == "minecraft:entity_scores"
-    assert attack["rewards"]["function"] == "monkey:rules/grace_attack"
-    forfeit = data[f"{fn}grace_attack.mcfunction"]
-    assert "advancement revoke @s only monkey:rules/grace_attack" in forfeit
-    # fights in the event arena don't end it, and the item is off there
-    assert f"unless entity @s[tag={rules.ARENA_TAG}] run function monkey:rules/grace_end" in forfeit
-    assert f"as @a[tag=!{rules.ARENA_TAG}] if score @s {rules.GRACE} > #now" in second
-    assert f"as @a[tag={rules.ARENA_TAG}] if items entity @s armor.body {rules.GRACE_ITEM}" in second
-
-
-def test_no_grace_from_the_launch_hour():
-    data = rules.rules_files()
-    fn = "data/monkey/function/rules/"
-    launch, over, first = (data[f"{fn}{n}.mcfunction"] for n in ("launch", "launch_over", "first_join"))
-    assert f"scoreboard players reset * {rules.GRACE}" in launch
-    assert f"scoreboard players set #launching {rules.OBJECTIVE} 1" in launch
-    assert f"scoreboard players set #launching {rules.OBJECTIVE} 0" in over
-    assert f"unless score #launching {rules.OBJECTIVE} matches 1 run function monkey:rules/grace_start" in first
-    assert f"tag @s add {rules.JOINED}" in first
-
-
 OPEN_FOUNDER = "execute unless score #launched rw.day matches 1 run function monkey:wardrobe/founder/open"
 
 
@@ -134,13 +82,13 @@ def test_the_launch_opens_the_launch_weekend_and_restarts_the_weekly_challenges(
     assert not [line for line in launch if line.endswith("founder/open") and line != OPEN_FOUNDER]
 
 
-def test_players_from_before_the_pack_get_no_welcome_or_grace():
+def test_players_from_before_the_pack_get_no_welcome_or_kit():
     # Nobody has the tag when the pack first reaches a running server; the game's own statistics tell who's new.
     data = rules.rules_files()
     first = data["data/monkey/function/rules/first_join.mcfunction"].splitlines()
     tag, returning = first.index(f"tag @s add {rules.JOINED}"), first.index(
         "execute if predicate monkey:rules/returning run return 0")
-    assert tag < returning < min(i for i, line in enumerate(first) if rules.WELCOME in line or "grace_start" in line)
+    assert tag < returning < min(i for i, line in enumerate(first) if rules.WELCOME in line or "catchup" in line)
     predicate = json.loads(data["data/monkey/predicate/rules/returning.json"])
     assert predicate["condition"] == "minecraft:any_of"
     stats = {t["predicate"]["minecraft:type_specific/player"]["stats"][0]["stat"] for t in predicate["terms"]}
@@ -196,11 +144,9 @@ def test_servercore_breeding_cap_and_villager_lobotomy_are_on():
     assert enabled_after("lobotomize-villagers:") == "true"
 
 
-def test_welcome_says_the_faction_size_the_server_allows_and_where_the_rulebook_is():
-    toml = (REPO.defaults / rules.PARTIES_CONFIG).read_text(encoding="utf-8")
-    size = int(re.search(r"maxPartyMembers = (\d+)", toml).group(1))
-    assert rules.faction_size() == size
+def test_welcome_explains_lifesteal_the_team_size_and_where_the_rulebook_is():
     welcome = json.loads(rules.rules_files()["data/monkey/dialog/welcome.json"])
-    text = welcome["body"][0]["contents"]
-    assert f"up to {rules.say_number(size)} players" in text and "Rules in the pause menu" in text
+    text = " ".join(b["contents"] for b in welcome["body"] if isinstance(b["contents"], str))
+    assert "lifesteal" in text and "24 hours" in text and "golden shovel" in text and "faction" not in text
+    assert f"teams of up to {rules.say_number(rules.TEAM_SIZE)}" in text and "rulebook is on the website" in text
     assert ("Rules", f"{rules.SITE}/guide/rules") in [(label, url) for label, url, _ in rules.LINKS]

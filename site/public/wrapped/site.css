@@ -400,7 +400,7 @@ details p { margin: -4px 0 20px; max-width: var(--measure); }
 .kit { display: grid; gap: 40px; margin-top: 40px; justify-items: start; }
 .kit img { display: block; max-width: 100%; height: auto; image-rendering: pixelated; }
 .kit .plate {
-  box-sizing: content-box; width: 348px; max-width: calc(100% - 56px); padding: 22px 16px;
+  box-sizing: content-box; width: 352px; max-width: calc(100% - 56px); padding: 22px 16px;
   background: var(--ink) padding-box; border: 6px solid transparent; border-image: var(--frame-ink) 6 fill / 6px;
 }
 .kit .wide { width: 640px; image-rendering: auto; }

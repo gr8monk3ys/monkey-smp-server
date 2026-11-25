@@ -13,7 +13,7 @@ this folder, so a change is an edit and a re-run, not a redraw.
 | `logo/logo.svg` | Horizontal lockup: mark + MONKEY SMP. |
 | `logo/logo-stacked.svg` | Stacked lockup, for square-ish spaces. |
 | `logo/wordmark.svg` | MONKEY SMP alone. |
-| `logo/png/` | `mark-512/256/128/64.png`, `logo-696w/1392w.png`, `logo-stacked-704w.png` (transparent). |
+| `logo/png/` | `mark-512/256/128/64.png`, `logo-704w/1408w.png`, `logo-stacked-720w.png` (transparent). |
 | `server-icon.png` | 64 x 64 Minecraft server-list icon. Copy it next to `server.properties` on the live server. |
 | `banners/` | The two small banners: `server-list-468x60.png` and `discord-banner-960x540.png`. |
 | `build.py` | Renders `logo/png`, `server-icon.png`, every banner and `site/public/img/og.jpg`. |

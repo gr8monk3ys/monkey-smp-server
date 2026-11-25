@@ -77,14 +77,16 @@ XX..XX
 XX..XX
 XX..XX
 """,
+    # K is seven wide, like M, so the arms meet the stem in a single step and leave a wide notch on
+    # the right. At six wide the gaps were one cell, which blur shut below about 64 px and read as H.
     "K": """
-XX..XX
-XX.XX.
-XXXX..
-XXX...
-XXXX..
-XX.XX.
-XX..XX
+XX...XX
+XX..XX.
+XX.XX..
+XXXX...
+XX.XX..
+XX..XX.
+XX...XX
 """,
     "E": """
 XXXXXX

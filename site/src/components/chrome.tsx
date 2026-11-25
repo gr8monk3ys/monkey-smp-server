@@ -33,7 +33,7 @@ export function Canopy({ here = "elsewhere" }: { here?: Here }) {
       <a className="skip" href="#main">Skip to content</a>
       <header className="canopy">
         <a className="brand" href={here === "home" ? "#" : "/"}>
-          <img src="/kit/logo-1392w.png" alt="Monkey SMP" width={261} height={48} />
+          <img src="/kit/logo-1408w.png" alt="Monkey SMP" width={264} height={48} />
         </a>
         <nav aria-label="Site">
           {items.map((item) => <NavLink key={item.label} item={item} current={item.at === here} />)}
@@ -84,7 +84,7 @@ export function Footer({ here = "elsewhere" }: { here?: Here }) {
         <div className="foot">
           <div className="foot-home">
             <a className="brand" href={here === "home" ? "#" : "/"}>
-              <img src="/kit/logo-1392w.png" alt="Monkey SMP" width={261} height={48} loading="lazy" />
+              <img src="/kit/logo-1408w.png" alt="Monkey SMP" width={264} height={48} loading="lazy" />
             </a>
             <Plaque address={config.ADDRESS} first={false} />
           </div>

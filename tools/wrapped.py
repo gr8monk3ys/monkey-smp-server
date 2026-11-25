@@ -329,7 +329,7 @@ def head(title: str, description: str, url: str) -> str:
 <body class="wrapped">
   <a class="skip" href="#main">Skip to content</a>
   <header class="canopy">
-    <a class="brand" href="{ROOT}"><img src="{ROOT}kit/logo-1392w.png" alt="Monkey SMP" width="261" height="48"></a>
+    <a class="brand" href="{ROOT}"><img src="{ROOT}kit/logo-1408w.png" alt="Monkey SMP" width="264" height="48"></a>
     <nav aria-label="Site">
       <a href="./">Everyone</a>
       <a href="{ROOT}#rules">Rules</a>

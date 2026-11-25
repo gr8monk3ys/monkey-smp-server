@@ -186,10 +186,10 @@ export default function Home() {
             lists, your own Discord.</p>
           <Place className="kit">
             <figure>
-              <img className="plate" src="/kit/logo-1392w.png" width={348} height={64} loading="lazy"
+              <img className="plate" src="/kit/logo-1408w.png" width={352} height={64} loading="lazy"
                 alt="The Monkey SMP logo: a pixel-art monkey on a green tile beside the words MONKEY SMP" />
-              <figcaption>Logo, for dark backgrounds. <a href="/kit/logo-1392w.png" download>Wide</a> &middot;{" "}
-                <a href="/kit/logo-stacked-704w.png" download>Stacked</a> &middot;{" "}
+              <figcaption>Logo, for dark backgrounds. <a href="/kit/logo-1408w.png" download>Wide</a> &middot;{" "}
+                <a href="/kit/logo-stacked-720w.png" download>Stacked</a> &middot;{" "}
                 <a href="/kit/mark-512.png" download>Monkey only</a></figcaption>
             </figure>
             <figure>

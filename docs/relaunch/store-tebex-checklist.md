@@ -79,8 +79,8 @@ For each package in store-packages.md:
 
 ## 9. Store page
 
-- [ ] Home page text, at the top: "Nothing you can buy here gives you an advantage. Everything is cosmetic." Then
-      the rank table from store.md.
+- [ ] Home page text, at the top: the promise in store.md (first section), word for word: nothing bought gives an
+      advantage, in-game money is never sold, and no rank or package makes money in game. Then the rank table.
 - [ ] Footer: "NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." and a
       contact email (not a Discord link).
 - [ ] A line for Bedrock players ("Buy with your Bedrock name. Wardrobe skins are Java only for now.") and one for

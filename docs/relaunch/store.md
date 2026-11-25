@@ -3,8 +3,14 @@
 What Monkey SMP sells from the relaunch on Sat 6 Feb 2027, what it costs, why each item is allowed, and how players who
 paid in Season I are looked after. Everything sold is cosmetic: nothing bought changes combat, hearts, money, land,
 travel or queue position. That is Mojang's rule and the plan's ("Monkey SMP: growth and money plan"), and it is the one
-thing no comparable lifesteal store we could read does (see "Prices"). The store page says it as a promise: **"Nothing
-you can buy here gives you an advantage. Everything is cosmetic."** The research write-up
+thing no comparable lifesteal store we could read does (see "Prices"). The store page says it as a promise, in the
+same words as the economy's "Promises to players" (`docs/relaunch/economy.md`):
+
+> **Nothing you can buy here gives you an advantage. Everything is cosmetic.** In-game money is never sold, not as
+> dollars, a second currency or part of a bundle, for the whole season. No rank or package makes money in game: no
+> sell multipliers, cheaper auction tax, extra listings or fee exemptions.
+
+The research write-up
 (`docs/relaunch/research-top-servers.md`, idea 1) found DonutSMP lost half its weekly players in June 2026 after an
 update players called pay-to-win.
 

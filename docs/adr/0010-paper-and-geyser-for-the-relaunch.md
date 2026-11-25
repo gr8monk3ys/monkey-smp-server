@@ -20,13 +20,14 @@ its Paper build is published only on GeyserMC's download API. A plugin listed in
 GeyserMC's sha256 checked against the download when it's pinned. `check_updates.py` follows its newest build.
 Adding a project to that list is a change to this decision.
 
-## DonutAuctionHouse from GitHub
+## DonutAuctionHouse stays on Modrinth
 
-The economy's auction house, DonutAuctionHouse, isn't on Modrinth either. Lorenzo chose it over zAuctionHouse on
-25 Nov 2026, so it may be pinned from GitHub the way ADR-0009 pins our own mods: one named repository, exactly one
-release asset's URL, and that file's sha512 recorded when it's pinned and checked on every install. Until its
-repository and release are confirmed, it isn't in the manifest and `entries.GITHUB_PINS` lists only mods; adding
-it there for plugins is the change this section allows, and no other.
+The economy's auction house, DonutAuctionHouse (Lorenzo's choice over zAuctionHouse, 25 Nov 2026), needs no
+exception. Its Modrinth project (`donut-auction`) is unlisted, so Modrinth's search doesn't show it, but its files
+are still served, and 2.0.1 is a release build for Paper 26.3, so it's pinned like any other plugin. Its GitHub
+repository publishes no release files, and newer builds go to CurseForge only. If the Modrinth files go away, the
+installer fails on the download rather than installing something else; the fallback is zAuctionHouse, which
+`relaunch.py` keeps checking (`CANDIDATES`). A CurseForge pin would be a new decision.
 
 Geyser itself stays on Modrinth, but GeyserMC publishes every build there as `beta`, so `entries.PRERELEASE_OK`
 lets Geyser take beta builds. Every other plugin is pinned from `release` builds only.

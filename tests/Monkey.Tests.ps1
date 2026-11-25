@@ -1545,7 +1545,8 @@ Describe 'Real manifest contract' {
         $l.Type | Should -BeIn @('paper', 'fabric')
     }
 
-    It 'patched <Entry.file> pins its patch to the upstream file' -ForEach $realPatched {
+    # The relaunch pins no patched mod or data pack, so this list can be empty.
+    It 'patched <Entry.file> pins its patch to the upstream file' -ForEach $realPatched -AllowNullOrEmptyForEach {
         $Entry.patch | Should -Not -BeOfType [string]
         $Entry.patch.base_sha512 | Should -Be $Entry.hashes.sha512
         Join-Native $RepoRoot ('package/monkey/' + $Entry.patch.path) | Should -Exist

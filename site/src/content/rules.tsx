@@ -14,8 +14,8 @@ export const rules: Tablet[] = [
   },
   {
     title: "Hearts and PvP",
-    text: "Outside spawn and claimed bases, PvP is on and a kill steals a heart. New players have 48 hours of PvP "
-      + "grace. No combat logging.",
+    text: "Outside spawn and claimed bases, PvP is on and a kill steals a heart. New players get 3 hours of "
+      + "protection, counted in play time. No combat logging.",
   },
   {
     title: "Fair trades",

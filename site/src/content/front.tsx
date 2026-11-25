@@ -34,10 +34,10 @@ export const features: { item: ItemName; fig?: string; title: string; text: Reac
   },
   {
     item: "banner",
-    fig: "48 h",
-    title: "Safe zones and a grace period",
-    text: <>Spawn and your claimed base are safe. New players get 48 hours of PvP grace to find their feet before
-      anyone can take a heart.</>,
+    fig: "3 h",
+    title: "Safe zones and new-player protection",
+    text: <>Spawn and your claimed base are safe. New players get 3 hours of protection, counted in play time, to find
+      their feet before anyone can take a heart.</>,
   },
   {
     item: "clock",

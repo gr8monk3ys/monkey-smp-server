@@ -16,9 +16,7 @@ export const ranks: { name: string; id?: string; does: string }[] = [
   },
   {
     name: "Supporter", id: "supporters",
-    does: running("monkey-wardrobe")
-      ? "Ember, Banner or Crown: a name color, a title and skins. No commands of their own."
-      : "Ember, Banner or Crown: a name color and a title. No commands of their own.",
+    does: "Ember, Banner or Crown: a name color and a title. No commands of their own.",
   },
   { name: "Builder", does: "A player staff trust with build jobs. An admin switches them to creative for a job and back after." },
   { name: "Moderator", id: "moderators", does: "Warns, mutes, kicks and bans; watches quietly; checks and undoes griefing." },
@@ -45,7 +43,7 @@ export const roles: Role[] = [
         cmds: [
           {
             code: "/trigger wardrobe", pack: "monkey-wardrobe",
-            does: "Your skins: the ones you've unlocked, and how to unlock the rest.",
+            does: "Your progress: your counts, this week's challenges and the first-week quest.",
           },
           {
             code: "/trigger challenges", pack: "monkey-wardrobe",
@@ -61,10 +59,7 @@ export const roles: Role[] = [
             does: "The four outposts: where, who holds them, and your faction's hours.",
           },
           { code: "/trigger firsts", pack: "monkey-firsts", does: "The season's Server Firsts and who holds each." },
-          {
-            code: "/trigger end_grace", pack: "monkey-rules",
-            does: "Ends your 48 hours of safety now. There's no getting it back.",
-          },
+          { code: "/newbie disable", does: "Ends your 3 hours of new-player protection now. There's no getting it back." },
         ],
       },
       {
@@ -119,12 +114,8 @@ export const roles: Role[] = [
   },
   {
     id: "supporters",
-    intro: running("monkey-wardrobe")
-      ? <>Nothing to type. Your name color shows by itself, and your skins appear in <code>/trigger wardrobe</code>{" "}
-        with an &quot;Unlocked&quot; line in chat. Banner and Crown supporters tell staff the title they want, and staff
-        set it.</>
-      : "Nothing to type. Your name color shows by itself. Banner and Crown supporters tell staff the title they "
-        + "want, and staff set it.",
+    intro: "Nothing to type. Your name color shows by itself. Banner and Crown supporters tell staff the title they "
+      + "want, and staff set it.",
     groups: [],
   },
   {

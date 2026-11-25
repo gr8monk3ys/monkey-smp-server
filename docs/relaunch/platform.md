@@ -94,6 +94,8 @@ and the live server isn't touched until cutover.
 
 1. After 23 Jan: merge this PR and the Fabric removal PR together, then tag a release.
 2. Back up the Season I world and keep it (the archive copy, not the live server).
+   - Off-server backups keep running for the new world: `monkey-backup.timer` already sends the whole server folder (world, nether, end and every plugin's data, such as balances, claims, hearts, ranks and auction listings) to the R2 bucket every hour, without jars or BlueMap tiles (docs/LIVE.md, "Backups off the machine").
+   - Before the beta, run the restore drill (`monkey-restore-drill.service`) on the new server and time it. Then check by hand that the restored copy still has a test player's balance, claim, hearts, rank and an auction listing, because the drill only checks the world and that the server boots. Run it again before the season finale.
 3. On the host (Lorenzo):
    - Open 19132 UDP and TCP in the VPS firewall.
    - Set `BEDROCK_PORT` if it isn't 19132, and set `MEMORY_GB`.
@@ -102,11 +104,18 @@ and the live server isn't touched until cutover.
 5. Pre-generate with Chunky and run the load test.
 6. Open the doors on 6 Feb.
 
-## Open decisions (Lorenzo)
+## Decisions
 
-- **Minecraft 26.3 or 26.2.** On 26.2 every plugin but EssentialsX has a release build (LPC, Tebex and UltraCosmetics included), and our data packs already target it. On 26.3, five plugins are still waiting on a release: EssentialsX, EssentialsX Spawn, LPC, Tebex and UltraCosmetics. 26.4 is in snapshots, so 26.3 may be one behind by February, and ViaVersion lets newer clients join either way. Recommendation: stay on 26.3, re-run the pins in mid-January, and drop to 26.2 only if those five still aren't out.
-- **EssentialsX fallback.** It has no release for 26.2 or 26.3 yet (2.22.0 stops at 26.1.2), and the economy runs on it. If it isn't out by 15 Jan, the economy needs a different Vault provider. Neither TheNewEconomy nor CoinsEngine can be pinned.
+Lorenzo took every recommendation on 25 Nov 2026:
+
+- **Minecraft 26.3.** Re-run the pins in mid-January (`relaunch-pins.yml`), and drop to 26.2 only if EssentialsX, EssentialsX Spawn, LPC, CoreProtect, Tebex and UltraCosmetics still have no 26.3 release. On 26.2 (pin run of 25 Nov, Paper build 135) everything but EssentialsX and EssentialsX Spawn has one, and our data packs already target it.
+- **EssentialsX fallback:** OpenEco, if EssentialsX has no release by 15 Jan. It has a release for both 26.3 and 26.2 (1.6.1).
+- **Auction house:** DonutAuctionHouse, pinned from GitHub by hash (ADR-0010), once the economy workstream confirms its repository and release.
 - **Whitelist off.** The relaunch is public, so `white-list=false`. Staff moderate with GrimAC, GriefPrevention and bans instead.
 - **New world seed** for Season 1.
-- **Hosting spend:** a 4-thread VPS instead of today's 2-thread plan, and whether to move providers.
-- **Firewall:** opening 19132 on the VPS is a host change only Lorenzo makes.
+- **Off-server backups and a restore drill before the beta** (cutover step 2).
+
+Still Lorenzo's to do, because each changes or costs money on his host:
+
+- **Hosting:** a 4-thread VPS instead of today's 2-thread plan, and whether to move providers.
+- **Firewall:** open 19132 UDP and TCP on the VPS.

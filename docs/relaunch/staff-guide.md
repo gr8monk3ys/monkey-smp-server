@@ -26,6 +26,11 @@ rules win, and the guide gets fixed.
 
 ## Tools
 
+Moderators (LuckPerms group `moderator`) have everything below except the rows marked admin; admins have
+all of it. Neither group gets a heart bypass, combat-tag or anti-cheat exemption, or the PvP toggle.
+Builders (`builder`) get WorldEdit, creative and fly for building spawn, the market and event areas, and
+only while they're building them.
+
 | Need | Command |
 | --- | --- |
 | Warn | A chat message naming the rule, then a line in the punishment log |
@@ -36,11 +41,11 @@ rules win, and the guide gets fixed.
 | Who's flagged for cheats | Grim's alerts (staff see them in chat) |
 | Who's in combat | `/pvpinfo <player>` |
 | A player's hearts | `/lifestealz hearts get <player>` |
-| Fix hearts | `/lifestealz hearts add|remove|set <player> <n>` (log why) |
-| Revive | `/revive <player>`, or `/revive *` on Revival Night |
+| Fix hearts (admin) | `/lifestealz hearts add|remove|set <player> <n>` (log why) |
+| Revive (admin) | `/revive <player>`, or `/revive *` on Revival Night |
 | Look inside claims | `/ignoreclaims` (toggle it off when you're done) |
-| A player's claims | `/claimslist <player>`, `/deleteclaim` while standing in one |
-| Server lag | `/spark profiler` and `/spark tps` |
+| A player's claims | `/claimslist <player>`; `/deleteclaim` while standing in one (admin) |
+| Server lag | `/spark tps` and `/spark healthreport`; `/spark profiler` (admin) |
 
 **Rollbacks need a block log.** The stack has no block logger yet. Until one is added (CoreProtect is the
 usual choice), staff can't see who broke what, and "griefing is rolled back" can only mean restoring by hand.
@@ -63,7 +68,7 @@ usual choice), staff can't see who broke what, and "griefing is rolled back" can
 
 ## Revival Night
 
-On the Saturdays in `season-1.md`, at the start of the event:
+On the Saturdays in `season-1.md`, at the start of the event, an admin:
 
 1. Announce it in game and on the Discord 30 minutes ahead.
 2. Run `/revive *` from the console. Everyone eliminated can join again with 3 hearts.

@@ -26,6 +26,20 @@ changed weekly.
 - **Everything resets each season**: balances, listings and shop history. Titles and cosmetics carry over.
 - **Watch the money supply weekly**; the table at the end says what to do when it moves.
 
+## Promises to players
+
+These go on the store page and the rules page as promises, not just settings
+(docs/relaunch/research-top-servers.md, PR #212: DonutSMP lost over half its players in a week of June 2026 after
+changes seen as pay-to-win):
+
+- **Money is never sold for real money.** No dollars, no second currency and no bundles that include either, in the
+  store, through Tebex or anywhere else, for the whole season.
+- **Nothing sold makes money in game.** No sell multipliers, cheaper auction tax, extra listings or fee exemptions
+  for any rank.
+- **No AFK earning.** No money for time online or for standing in an AFK area; money comes from things done.
+- **The money supply is public.** The weekly total and median from `tools/economy.py supply` go in an
+  announcement, so players can see the economy isn't being printed.
+
 ## Plugins
 
 | Job | Plugin | Why | Status for MC 26.3 (platform pin run, 25 Nov) |
@@ -33,34 +47,40 @@ changed weekly.
 | Money and `/pay`, `/bal`, `/baltop` | EssentialsX Economy (in the platform stack) | Already in the stack for homes and teleports; logs every change | **No 26.3 release yet**; fallback below |
 | Economy API | VaultUnlocked (in the platform stack) | What shop and auction plugins talk to | Pinned, 2.20.3 |
 | Server shop, `/sell`, `/sellall`, sell GUI | **EconomyShopGUI** (free) | Free, Bedrock forms through Floodgate, transaction log, supports VaultUnlocked | Pinned, 7.3.4 |
-| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, per-item price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | **Can't be pinned as things stand**: see below |
+| Auction house `/ah` | **DonutAuctionHouse** ("Donut Auction", free, Apache-2.0) | DonutSMP-style; sales tax, listing fee, per-player limits, per-item price floors, blacklist, bidding with anti-snipe, shulker previews, daily trade log | Needs 2.0.1 or newer; where the platform pins it from is below |
 
-### The auction house needs a decision
+### Pinning the auction house
 
-The installer only takes plugins from Modrinth's CDN, checked by hash (ADR-0002). The exceptions are Floodgate
-(ADR-0010) and the owners' own mods from GitHub (ADR-0009, mods only). DonutAuctionHouse is "Unlisted by staff" on
-Modrinth and published on GitHub (github.com/MeherBenSalem/DonutAuction), so the platform pin run left it out. Two
-ways on:
+**Decided 25 Nov 2026: DonutAuctionHouse stays** (Lorenzo: go with the recommended option). It needs **version
+2.0.1 or newer**. 2.0.0 added the listing fee, per-item price limits and the tax settings this config uses, and fixed
+listing limits that were never read. 2.0.1 fixed an item dupe when listing. The config here matches 2.0.x's own
+default key for key.
 
-1. **Recommended: widen ADR-0009 to name DonutAuctionHouse's repository**, so its GitHub release is pinned by hash
-   like Patina & Chime. It's open source under Apache-2.0, and it does everything this design asks for. It's a
-   third-party plugin, not one of ours, so this changes the installer's rule: Lorenzo's call, with the platform
-   thread making the change.
-2. **zAuctionHouse's free Modrinth build** (`zauctionhouse`, lists 26.3, updated early Nov 2026). It covers the
-   basics: a percent tax, listing limits by permission, a global price floor, a blacklist, a trade log, expired-item
-   collection and shulker previews. It loses four things this design relies on:
-   - It has no bidding (on its roadmap, not built).
-   - It has no per-item price floors, only a global minimum, so diamonds could sell on the auction house below the
-     shop's $100.
-   - Its docs don't say where the tax money goes. If it isn't destroyed, the 5% stops being a sink.
-   - Its page calls the free build a demo: one version behind the paid one, and no support.
+Where the jar comes from is the open part. The installer only takes plugins from Modrinth's CDN, checked by hash
+(ADR-0002), with named exceptions for Floodgate (ADR-0010) and the owners' own mods from GitHub (ADR-0009):
 
-   If this is the pick, the per-player limit is `permissions.auction` with only `zauctionhouse.max.5` given to the
-   default group, the tax is the `tax:` block under the Vault entry in `economies.yml` with `reductions` empty, and
-   no rank ever gets `zauctionhouse.tax.bypass` or a higher `zauctionhouse.max.*`. The config in this PR would be
-   rewritten for it.
+- **GitHub has no jars.** The repository (github.com/MeherBenSalem/DonutAuction, Apache-2.0) publishes no release
+  files, and its tags stop at v1.5.2.
+- **Modrinth** (project `8XgyeSRH`, slug `donut-auction`) is "Unlisted by staff" but still downloadable from
+  cdn.modrinth.com. The newest version readable there is 1.5.0 (27 Aug 2026), too old. The repository says new
+  versions go to CurseForge only from 24 Nov 2026, so 2.0.0 and 2.0.1, published before that, may be on Modrinth
+  too; that's unconfirmed.
+- **CurseForge** has 2.0.1 (`DonutAuctionHouse-2.0.1.jar`, file 9420770, 3 Nov 2026, release, lists 26.3) and will
+  get every later fix.
 
-Also on Modrinth and not picked: NexusAuctionHouse (needs its own NexusCore library; its versions page stops at 26.2;
+So, in order:
+
+1. **If Modrinth's API serves 2.0.1 for project `8XgyeSRH`**, pin it like any other plugin. No rule changes, but the
+   pin can't move past 2.0.1 there.
+2. **Otherwise, a named exception for this one project on CurseForge**, written like ADR-0010: a new ADR, the
+   project in its own list, its file's exact download URL, and the size and sha512 pinned as usual. This one also
+   keeps getting fixes.
+3. If neither can be done before the beta, zAuctionHouse's free Modrinth build. It has no bidding and no per-item
+   price floors, its docs don't say where the tax money goes, and its page calls the free build a demo.
+
+The platform thread makes the pin. Hashes come from its pin run, since this workstream can't download the jar.
+
+Considered and not picked: NexusAuctionHouse (needs its own NexusCore library; its versions page stops at 26.2;
 no sales tax shown) and VIP Auctions (1.21.x only, all rights reserved).
 
 ### Fallback economy provider

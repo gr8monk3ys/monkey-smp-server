@@ -1,15 +1,15 @@
-# The body of the one-off "X in claims" steps (deploy/npc-claims.sh, deploy/shops-claims.sh): adds entries to one of
+# The body of the one-off "X in claims" steps (deploy/shops-claims.sh): adds entries to one of
 # Open Parties and Claims' exception lists in the live server's own openpartiesandclaims-server.toml, which a deploy
 # never overwrites. Sourced, never run: after `set -eu`, LOG_NAME and lib.sh, the script sets
 #
-#   WHAT       what its log lines call the step ("NPCs in claims"), also its section in docs/LIVE.md or docs/upgrades/HISTORY.md
+#   WHAT       what its log lines call the step ("shops in claims"), also its section in docs/LIVE.md or docs/upgrades/HISTORY.md
 #   LOG_TO     its log file
-#   KEEP_AS    the suffix of the copy of the file kept before the change (before-npcs)
-#   KEY        the list's setting, e.g. forcedEntityProtectionExceptionList
+#   KEEP_AS    the suffix of the copy of the file kept before the change (before-shops)
+#   KEY        the list's setting, e.g. forcedBlockProtectionExceptionList
 #   ENTRIES    the entries, as in defaults/config/openpartiesandclaims-server.toml, separated by spaces (no
 #              spaces, quotes or wildcards in one)
 #   MOD, JARS  the mod the entries are for, and a glob of its jar in server/mods
-#   NOT_YET    when to run it, for when the jar isn't there yet ("a release with the spawn NPCs is live")
+#   NOT_YET    when to run it, for when the jar isn't there yet ("the release with shops is live")
 #
 # then sources this. When the list holds every entry it does nothing, so running it again is safe. Otherwise,
 # under the deploy lock, with a warning in chat if players are online, it stops the server (the mod reads the

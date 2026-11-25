@@ -1,0 +1,71 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {
+    "text": "Guide",
+    "color": "gold"
+  },
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Hi, welcome to Monkey SMP! I can go over the short rules, help you find a faction, or open your first week's steps, this week's challenges, the faction standings and your wardrobe."
+    }
+  ],
+  "columns": 2,
+  "actions": [
+    {
+      "label": "The short rules",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:npcs/guide/rules"
+      }
+    },
+    {
+      "label": "Find a faction",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:npcs/guide/factions"
+      }
+    },
+    {
+      "label": "Your first week",
+      "width": 150,
+      "action": {
+        "type": "minecraft:run_command",
+        "command": "/trigger quest"
+      }
+    },
+    {
+      "label": "This week's challenges",
+      "width": 150,
+      "action": {
+        "type": "minecraft:run_command",
+        "command": "/trigger challenges"
+      }
+    },
+    {
+      "label": "Faction standings",
+      "width": 150,
+      "action": {
+        "type": "minecraft:run_command",
+        "command": "/trigger standings"
+      }
+    },
+    {
+      "label": "Your wardrobe",
+      "width": 150,
+      "action": {
+        "type": "minecraft:run_command",
+        "command": "/trigger wardrobe"
+      }
+    }
+  ],
+  "exit_action": {
+    "label": {
+      "translate": "gui.done"
+    },
+    "width": 150
+  }
+}

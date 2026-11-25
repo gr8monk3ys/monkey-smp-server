@@ -60,12 +60,12 @@ def test_the_shared_steps_come_from_the_packs_that_keep_them():
 
 
 def test_the_guide_sets_its_step_and_opens_the_quest():
-    guide = npcs.guide()
-    assert npcs.GUIDE_STEP in guide["events"]["ON_INTERACTION"]
-    assert guide["events"]["ON_INTERACTION"][-1] == {"Type": "OPEN_DEFAULT_DIALOG"}
-    assert npcs.GUIDE_STEP["Cmd"] == "set:rq.guide:1"
-    buttons = {b["Name"]: b for d in guide["dialogs"] for b in d["Buttons"]}
-    assert npcs.trigger("quest") in buttons["Your first week"]["Actions"]
+    talk = npcs.datapack_files()[f"{npcs.FN}/guide/talk.mcfunction"]
+    assert npcs.GUIDE_STEP == "rq.guide" and "scoreboard players set @s rq.guide 1\n" in talk
+    assert any(s["id"] == "guide" and s["score"] == (npcs.GUIDE_STEP, 1) for s in quest.STEPS)
+    buttons = {b["label"]: b["action"] for b in npcs.dialogs()["guide"]["actions"]}
+    assert buttons["Your first week"] == npcs.trigger("quest") == {"type": "minecraft:run_command",
+                                                                  "command": "/trigger quest"}
 
 
 def test_the_bed_step_is_an_advancement_open_only_while_the_step_is():

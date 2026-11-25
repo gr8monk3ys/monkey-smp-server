@@ -698,7 +698,7 @@ is a warp. Base of the Month (above) shows off a home; this is a build made to b
 - **The winner** is announced in game (a title on screen and a chat line) and in that Sunday's recap, and goes
   in the **hall of monuments**: storage `monkey:monuments hall` in the world, numbered from 1 for good.
   `tools/season.py carry` copies the hall into the next season's world ("Ending a season"), where staff give
-  each monument a warp at spawn (`function monkey:monuments/warp {n:N}` on a spawn NPC's button). The pack never
+  each monument a warp at spawn (`function monkey:monuments/warp {n:N}` in a FancyNpcs NPC's right-click action). The pack never
   teleports anyone on its own.
 - **No Cup points**, as for Base of the Month.
 

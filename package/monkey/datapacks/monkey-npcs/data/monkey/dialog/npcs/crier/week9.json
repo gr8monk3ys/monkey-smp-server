@@ -1,0 +1,46 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {
+    "text": "Town Crier",
+    "color": "yellow"
+  },
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "This week: Arena Glory II, Saturday 9 January, 6 PM Pacific (9 PM Eastern)."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Next week: Faction Raid III, Saturday 16 January."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific: capture an outpost while one is on for a bonus hour held. Claims stay protected. /trigger sieges says if one is on."
+    }
+  ],
+  "columns": 1,
+  "actions": [
+    {
+      "label": "This week's challenges",
+      "width": 150,
+      "action": {
+        "type": "minecraft:run_command",
+        "command": "/trigger challenges"
+      }
+    }
+  ],
+  "exit_action": {
+    "label": {
+      "translate": "gui.done"
+    },
+    "width": 150
+  }
+}

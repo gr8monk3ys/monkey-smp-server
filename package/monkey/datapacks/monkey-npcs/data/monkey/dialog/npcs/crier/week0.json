@@ -8,22 +8,22 @@
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "Season I opens Saturday 7 November at 5 PM Pacific (8 PM Eastern): the launch hour, then PvP and the Nether open at 6 PM. The Build Battle wheel spins at 5 PM, and judging is Sunday 8 November at 6 PM."
+      "contents": "Season 1 opens Saturday 6 February at 5 PM Pacific (8 PM Eastern). Spawn and the market open, the border is 6,000 blocks wide, and the End stays closed until Dragon Night. Everyone starts with 10 hearts and 3 hours of newbie protection."
     },
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "Next week: Faction Raid I, Saturday 14 November."
+      "contents": "Season 1 ends with the finale on Saturday 10 April."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Next week: King of the Hill I, Saturday 13 February."
     },
     {
       "type": "minecraft:plain_message",
       "width": 300,
       "contents": "Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
-    },
-    {
-      "type": "minecraft:plain_message",
-      "width": 300,
-      "contents": "Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific: capture an outpost while one is on for a bonus hour held. Claims stay protected. /trigger sieges says if one is on."
     }
   ],
   "columns": 1,

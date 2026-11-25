@@ -8,22 +8,17 @@
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "This week: Dragon Night: the End opens, then 90 minutes of Anarchy, Saturday 28 November, 6 PM Pacific (9 PM Eastern)."
+      "contents": "This week: Revival Night I, then Dragon Night (the End opens at 7 PM), Saturday 27 February, 6 PM Pacific (9 PM Eastern)."
     },
     {
       "type": "minecraft:plain_message",
       "width": 300,
-      "contents": "Next week: Faction Raid II, Saturday 5 December."
+      "contents": "Next week: Base of the Week, where staff tour and judge claimed bases, Saturday 6 March."
     },
     {
       "type": "minecraft:plain_message",
       "width": 300,
       "contents": "Every event is in the Discord's events list: press Interested there for a reminder. New challenges every Monday."
-    },
-    {
-      "type": "minecraft:plain_message",
-      "width": 300,
-      "contents": "Outpost sieges, Wednesday 7 to 9 PM and Sunday 3 to 5 PM Pacific: capture an outpost while one is on for a bonus hour held. Claims stay protected. /trigger sieges says if one is on."
     }
   ],
   "columns": 1,

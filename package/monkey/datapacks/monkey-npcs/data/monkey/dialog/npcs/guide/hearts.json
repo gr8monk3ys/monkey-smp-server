@@ -1,0 +1,54 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {
+    "text": "Guide",
+    "color": "gold"
+  },
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "You start with 10 hearts, and 20 is the most. A player kill moves one heart from the victim to the killer. Dying to anything else costs nothing."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "At 0 hearts you're out for 24 hours, then back with 3. A friend can bring you back sooner with a Revive Beacon."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Claim your base with a golden shovel: right-click two corners. Nobody can grief or loot a claim, but you can still be fought in one. Unclaimed land is fair game."
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 300,
+      "contents": "Your first 3 hours come with newbie protection from PvP."
+    }
+  ],
+  "columns": 2,
+  "actions": [
+    {
+      "label": "Discord and links",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:links"
+      }
+    },
+    {
+      "label": "Back",
+      "width": 150,
+      "action": {
+        "type": "minecraft:show_dialog",
+        "dialog": "monkey:npcs/guide"
+      }
+    }
+  ],
+  "exit_action": {
+    "label": {
+      "translate": "gui.done"
+    },
+    "width": 150
+  }
+}

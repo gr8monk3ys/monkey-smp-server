@@ -22,15 +22,14 @@ watch and read status: no staff commands that change anything.
 ## Set up a test server (about 15 minutes)
 
 1. From the [releases page](https://github.com/gr8monk3ys/monkey-smp-server/releases), download the release
-   you're testing: `MonkeySMP-Server-<version>.zip` for the server and, unless you play through the Modrinth
-   App, `MonkeySMP-Player-<version>.zip` (Windows, normal launcher) or `MonkeySMP-Client-<version>.mrpack`
-   (Modrinth App or Prism) for the game. Same version for both.
+   you're testing: `MonkeySMP-Server-<version>.zip`. The game needs nothing: a plain Java client, or Bedrock
+   on port 19132 (the test server runs Geyser too).
 2. Unzip the server into a **new, empty folder** (not over an old test server: a used world can hide a bug
    that only shows on a fresh one).
 3. Windows: double-click `Start Server.bat` (Mac: `Start Server.command`; Linux: `sh start.sh`). Type `YES` for
    the EULA, then your Minecraft username: you become the admin, with op. The first start downloads about
    500 MB; wait for "Done".
-4. Install the game side, start Minecraft with the Monkey SMP profile and join `localhost`.
+4. Start Minecraft as it comes (no mods) and join `localhost`.
 5. Someone else to test with (needed for claims and the Hunted omen): see "READ ME FIRST.txt", section 4, or
    have them on the same network join your computer's local address. Add them with `Add Player.bat`.
 
@@ -146,33 +145,6 @@ factions exist and an hour has passed. Read and watch only: real players' wars a
   the kit and puts them back at the entrance in survival.
 - [ ] `function monkey:events/season/lock` puts survival players in adventure with PvP off; `season/unlock`
   undoes it.
-
-## Measure the memory the pack needs (not done yet)
-
-`site/player-needs.json` says players need a PC with 16 GB of RAM, with `"ram_measured": false`: nobody has
-measured it. No automated check can, because the game needs a window, a graphics card and a signed-in account.
-This is the measurement, by hand, about an hour. Use a scratch instance and a scratch server only, never the
-live server and never your own play instance.
-
-1. Set up a test server as above, in a new empty folder.
-2. In Prism Launcher: Add Instance, Import, pick the release's `MonkeySMP-Client-<version>.mrpack`, and name the
-   instance "Monkey SMP memory test". Keep the pack's own settings (render distance 17, its resource packs).
-3. Close other games and heavy apps. Write down the PC: CPU, graphics card, total RAM, Windows version, and
-   Task Manager, Performance, Memory, "In use" with the game closed.
-4. Each try: in the instance's Settings, Java, set minimum and maximum memory to the same number. Start at
-   6 GB (what the player docs advise), then 5, 4 and 3 GB. If 6 GB fails, try 7 and 8 GB instead.
-5. A try passes when the game reaches the title screen, joins `localhost`, and plays for 10 minutes: walk
-   around spawn, open the inventory, then `/tp` 1,000 blocks away five times to load new land. It fails on a
-   crash, an `OutOfMemoryError` in the instance's `logs/latest.log`, or a freeze of more than 2 seconds.
-   For each try, write down: the memory setting, pass or fail, and the game's peak memory (Task Manager,
-   Details, add the "Peak working set" column, row `javaw.exe`).
-6. The smallest setting that passes is the answer. The PC the pack needs is the game's peak working set plus
-   "In use" from step 3, rounded up to a common size (8, 16 or 32 GB).
-7. Put it in `site/player-needs.json`: `ram_gb` the PC size, `ram_measured` true, and `ram_note` how it was
-   measured ("Measured <date> on <PC>: plays at <N> GB; game peak <P> GB; Windows and apps <U> GB"). Then run
-   `python tools/player_needs.py`: it names every text that must change to the new number. Change
-   `ram_measured is False` in `tests/test_player_needs.py` to `True`. If the smallest setting is not 6 GB, the
-   memory advice in `docs/PLAYERS.md` and the installer's memory steps need a look too.
 
 ## Reporting what you find
 

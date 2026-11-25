@@ -39,14 +39,21 @@ def test_config_json_must_be_an_object():
 
 def test_the_real_config_has_every_setting_and_nothing_else():
     assert site_links.config_problems(site_links.links()) == []
-    assert set(site_links.links()) == set(site_links.KEYS)
+    assert set(site_links.KEYS) <= set(site_links.links()) <= set(site_links.SETTINGS)
+
+
+def test_the_old_pack_and_installer_settings_may_be_left_out():
+    """The relaunch has no client pack or player installer: config.json may drop their two settings."""
+    given = {k: v for k, v in SETTINGS.items() if k not in ("MODPACK_URL", "INSTALLER_URL")}
+    assert site_links.config_problems(given) == []
+    assert site_links.config_problems(links(MODPACK_URL=3)) == ["config.json: MODPACK_URL should be a string"]
 
 
 def test_a_missing_misspelt_or_non_string_setting_is_reported():
     given = {k: v for k, v in links(MAP_URL=3, STORE_URLS="x").items() if k != "ADDRESS"}
     assert site_links.config_problems(given) == [
         "config.json: ADDRESS is missing",
-        f"config.json: STORE_URLS is not a setting the site has (the settings: {', '.join(site_links.KEYS)})",
+        f"config.json: STORE_URLS is not a setting the site has (the settings: {', '.join(site_links.SETTINGS)})",
         "config.json: MAP_URL should be a string",
     ]
 
@@ -160,26 +167,12 @@ def test_check_reports_a_stale_wrapped_stylesheet_and_writing_fixes_it(tmp_path)
     assert site_links.main(["--check"], repo=repo) == 1
 
 
-def test_the_served_pack_must_be_the_pinned_version(tmp_path):
+def test_the_served_pack_need_not_be_the_pinned_version(tmp_path):
+    """Nothing builds a client pack any more, so an old one left on the site is not held to the manifest."""
     repo = fake_site(tmp_path, manifest_version="1.3.0")
-    site_links.main([], repo=repo)
-    [error] = site_links.problems(repo)
-    assert "1.2.3 client pack, but the manifest is 1.3.0" in error
-    assert "site/public/pack/" in error and "site/config.json" in error
-
-
-def test_a_site_build_of_the_pinned_version_is_accepted(tmp_path):
-    repo = fake_site(tmp_path, pack_version="1.2.3-ships")
     site_links.main([], repo=repo)
     assert site_links.problems(repo) == []
 
-
-@pytest.mark.parametrize("pack_version", ["1.2.30", "1.2.3-", "1.2.3-Ships", "1.2.4-ships"])
-def test_only_a_labelled_build_of_the_pinned_version_passes(tmp_path, pack_version):
-    repo = fake_site(tmp_path, pack_version=pack_version)
-    site_links.main([], repo=repo)
-    [error] = site_links.problems(repo)
-    assert f"{pack_version} client pack, but the manifest is 1.2.3" in error
 
 def test_a_missing_pack_is_reported(tmp_path):
     repo = fake_site(tmp_path)

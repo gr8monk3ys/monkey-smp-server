@@ -35,9 +35,9 @@ Paste these as they are. Lists that have a field this kit doesn't cover get the 
 > - A pre-generated world on a dedicated CPU, up to 30 online.
 >
 > Access is a server pass: $5 a month or $8 for 2 months, the same for everyone. Supporter tiers are cosmetic
-> only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a PC
-> (Windows, macOS or Linux) with 16 GB of RAM; the modpack installs in one click from the website. If it won't
-> run in your first 48 hours, you get your money back.
+> only, and nothing sold gives an advantage or a place in line. Join from Minecraft Java Edition or Bedrock
+> (phone, tablet, console or PC), with nothing to install: Java `monkeysmp.lscaturchio.xyz`, Bedrock
+> `play.monkeysmp.lscaturchio.xyz` port 19132.
 >
 > Website: https://monkeysmp.lscaturchio.xyz · Discord: https://discord.gg/C25hy9Ca9W ·
 > Contact: lorenzosca7@protonmail.ch
@@ -116,8 +116,7 @@ one leaves its players on a dead address. Joins during a failover can't be count
 ### Counting joins per address
 
 Vanilla Minecraft doesn't log the address a player used, so the server runs a small server-side mod that
-does: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) (GPL-3.0). It's in the server pack, not
-the client pack. Every join adds a line like this to the log:
+does: [Hostname Catcher](https://modrinth.com/mod/hostname-catcher) (GPL-3.0). It runs on the server only. Every join adds a line like this to the log:
 
 ```text
 [20:15:02] [Server thread/INFO]: [STDOUT]: Player NAME connected via: yt.monkeysmp.lscaturchio.xyz
@@ -215,15 +214,14 @@ answer comments from the same account that day. Other subreddits only after read
 > - Up to 30 online, a pre-generated world, 20 TPS.
 >
 > **It's paid:** a server pass, $5 a month or $8 for 2 months, the same for everyone. Supporter tiers are
-> cosmetic only, and nothing sold gives an advantage or a place in line. You need Minecraft Java Edition on a
-> PC with 16 GB of RAM; the modpack installs in one click from the website. If it won't run in your first 48
-> hours, you get your money back.
+> cosmetic only, and nothing sold gives an advantage or a place in line. Join from Minecraft Java Edition or
+> Bedrock, with no mods to install.
 >
 > **Founding roster:** the first 30 to sign up in the Discord are in on launch night, in the order they
 > signed up. Signing up is free. Play launch weekend and you keep the Founder skin for good; it's never
 > sold. [needs the Founder skin]
 >
-> - Website and modpack: https://monkeysmp.lscaturchio.xyz
+> - Website: https://monkeysmp.lscaturchio.xyz
 > - Discord: https://discord.gg/C25hy9Ca9W
 > - Address, from launch: `monkeysmp.lscaturchio.xyz`
 > - Live map: https://map.monkeysmp.lscaturchio.xyz

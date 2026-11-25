@@ -410,7 +410,7 @@ values.
 The Overworld and the End generate as in vanilla 26.2 plus the mods' structures and biomes (Grand Capitals,
 Crazy Chambers, Streams Reflowing, Sulfur Caves Plus and others). The Nether is vanilla's terrain, 128 tall, with
 its structures reworked or added by Dungeons and Taverns and Moog's. The seed is pinned in the manifest, so every copy of the
-server gets the same terrain. Players never get it: it isn't in the client pack, the player zip, the site or the
+server gets the same terrain. Players never get it: it isn't on the site or in the
 rules (`tests/test_build.py` fails if it turns up there), Minecraft only sends them a hash of it, and only admins
 can run `/seed`. Keep it that way, because the seed shows where every ore and structure is: don't post it, and
 don't hand the server zip or a hosting bundle to players. A determined cheater can still work it out from the
@@ -765,7 +765,9 @@ counting: `mine` (blocks mined minus the same blocks placed), `stat` (a statisti
   Touch), so keep `mine` rewards small and look at anyone who finishes one in minutes.
 
 Then `python tools/datapacks.py` (it writes the challenges into the wardrobe pack), run the checks, and
-release. Players need a new client pack only when skins change.
+release. The skins' models are in the wardrobe resource pack (`tools/wardrobe.py`), which no longer reaches
+players since the client pack went: until the server sends it as a server resource pack, a skinned item shows
+the missing-model placeholder.
 
 **The launch weekend (Founder's Circlet).** `function monkey:rules/launch` opens it, and it closes by itself
 at the end of Sunday 8 November, Pacific (31 hours of game time, kept to the wall clock by
@@ -803,7 +805,8 @@ python tools/goal.py schedule                       # which goal runs in which w
 
 The Guide's "Talk to the Guide" step and its "Your first week" button come with its preset: after a release
 that changes them, place the Guide again (`function monkey:npcs/guide/here`, "Spawn NPCs" above). The
-Pathfinder blade needs the new client pack.
+Pathfinder blade's model is in the wardrobe resource pack, which players don't get at the moment (see the
+wardrobe above).
 
 **Editing the goal pool.** `POOL` in `tools/goal.py`, as the challenges' pool: an `id` (it names the goal's
 scores, so don't rename the one that is on), a `name` (at most 24 characters), a `target` for about 20 to 30
@@ -1302,10 +1305,9 @@ too, in the same words: downtime and new times, event news, season dates and eac
 goes live when its pull request merges and Vercel has built it, so during an outage say it in the Discord and in game
 first.
 
-What goes in: rule changes (and the rule's number), mods added or removed, anything the client pack
-needs, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),
+What goes in: rule changes (and the rule's number), plugins added or removed, new wardrobe skins, config that changes play (the border, Netherite age, disabled enchantments),
 and season dates. What stays out: server internals, fixes nobody could see, and anything that helps a
-cheater. Write it for players: what changed, from when, and what they have to do ("Update the modpack").
+cheater. Write it for players: what changed, from when, and anything they have to do.
 
 When a release has a player-facing change, add its entry to `site/src/content/changes.mdx` in the same pull request (an `<Entry>` on top; the
 file's first lines say how)

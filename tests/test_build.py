@@ -1,10 +1,7 @@
 import hashlib
-import io
-import json
 import zipfile
 
 import pytest
-from conftest import PLAYER_FILES, fake_player
 
 import build
 import checksums
@@ -18,15 +15,11 @@ def test_build_outputs(tmp_path, request, release):
     repo = request.getfixturevalue(release)
     manifest = repo.load_manifest()
     server = build.build_server(manifest["version"], repo, tmp_path)
-    client = build.build_client(manifest["version"], repo, tmp_path)
     names = zipfile.ZipFile(server).namelist()
     assert "MonkeySMP-Server/Start Server.bat" in names
     assert "MonkeySMP-Server/monkey/manifest.json" in names
     assert "MonkeySMP-Server/monkey/patches/silvers_effects-library/pack.mcmeta" in names
     assert not any(n.endswith((".jar", ".zip")) for n in names), "release must not bundle third-party files"
-    index = json.loads(zipfile.ZipFile(client).read("modrinth.index.json"))
-    assert index["versionId"] == manifest["version"]
-    assert index["dependencies"]["minecraft"] == manifest["minecraft"]
 
 
 def test_build_ships_every_patch_of_a_fabric_release(tmp_path, fabric_repo):
@@ -39,16 +32,12 @@ def test_build_ships_every_patch_of_a_fabric_release(tmp_path, fabric_repo):
 @pytest.mark.parametrize("release", RELEASES)
 def test_build_is_reproducible(tmp_path, request, release):
     repo = request.getfixturevalue(release)
-    fake_player(repo)
     version = repo.load_manifest()["version"]
     hashes = []
     for sub in ("a", "b"):
         (tmp_path / sub).mkdir()
-        mrpack = build.build_client(version, repo, tmp_path / sub)
-        for path in (build.build_server(version, repo, tmp_path / sub), mrpack,
-                     build.build_player(version, mrpack, repo, tmp_path / sub)):
-            hashes.append(hashlib.sha256(path.read_bytes()).hexdigest())
-    assert hashes[:3] == hashes[3:]
+        hashes.append(hashlib.sha256(build.build_server(version, repo, tmp_path / sub).read_bytes()).hexdigest())
+    assert hashes[0] == hashes[1]
 
 
 def test_build_rejects_a_tag_that_differs_from_the_manifest(tmp_path, monkeypatch, paper_repo):
@@ -58,76 +47,26 @@ def test_build_rejects_a_tag_that_differs_from_the_manifest(tmp_path, monkeypatc
     assert not (tmp_path / "dist").exists()
 
 
-# --- the player zip --------------------------------------------------------------------------------
-
-def test_build_player_zip(tmp_path, fabric_repo):
-    player = fake_player(fabric_repo)
-    mrpack = build.build_client("2.0.0", fabric_repo, tmp_path)
-    out = build.build_player("2.0.0", mrpack, fabric_repo, tmp_path)
-
-    assert out.name == "MonkeySMP-Player-2.0.0.zip"
-    z = zipfile.ZipFile(out)
-    top = "MonkeySMP-Player-2.0.0/"
-    added = ["MonkeySMP-Client-2.0.0.mrpack", "installer/fabric-profile.json"]
-    assert z.namelist() == sorted(top + name for name in [*player, *added])
-    assert z.read(top + "MonkeySMP-Client-2.0.0.mrpack") == mrpack.read_bytes()
-    assert z.read(top + "installer/fabric-profile.json") == fabric_repo.fabric_profile.read_bytes()
-    assert all(z.read(top + name) == data for name, data in player.items())
-    assert {i.date_time for i in z.infolist()} == {build.EPOCH}
-
-
-def test_build_main_writes_all_three_files(tmp_path, fabric_repo, capsys, monkeypatch):
+def test_build_main_writes_the_server_zip_and_its_checksum(tmp_path, fabric_repo, capsys, monkeypatch):
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    fake_player(fabric_repo)
-    build.main(fabric_repo, tmp_path / "dist")
-    assert sorted(p.name for p in (tmp_path / "dist").iterdir()) == [
-        "MonkeySMP-Client-2.0.0.mrpack", "MonkeySMP-Player-2.0.0.zip", "MonkeySMP-Server-2.0.0.zip",
-        "SHA256SUMS.txt"]
-    out = capsys.readouterr().out
-    assert all(name in out for name in ("MonkeySMP-Server-2.0.0.zip", "MonkeySMP-Client-2.0.0.mrpack",
-                                        "MonkeySMP-Player-2.0.0.zip", "SHA256SUMS.txt"))
-
-
-def test_build_main_lists_the_sha256_of_each_release_file(tmp_path, fabric_repo, monkeypatch):
-    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    fake_player(fabric_repo)
     dist = tmp_path / "dist"
     build.main(fabric_repo, dist)
+    assert sorted(p.name for p in dist.iterdir()) == ["MonkeySMP-Server-2.0.0.zip", "SHA256SUMS.txt"]
+    out = capsys.readouterr().out
+    assert all(name in out for name in ("MonkeySMP-Server-2.0.0.zip", "SHA256SUMS.txt"))
     assert checksums.problems(dist) == [], "what the release workflow checks before it publishes"
-    assert (dist / "SHA256SUMS.txt").read_bytes() == "".join(
-        f"{hashlib.sha256((dist / name).read_bytes()).hexdigest()}  {name}\n" for name in (
-            "MonkeySMP-Client-2.0.0.mrpack", "MonkeySMP-Player-2.0.0.zip", "MonkeySMP-Server-2.0.0.zip")).encode()
-    # A site build into the same folder lists its own three files, not the release's beside them.
-    build.main(fabric_repo, dist, ["--site-build", "ships"])
-    assert sorted(checksums.load(dist)) == [
-        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip"]
+    assert (dist / "SHA256SUMS.txt").read_bytes() == (
+        f"{hashlib.sha256((dist / 'MonkeySMP-Server-2.0.0.zip').read_bytes()).hexdigest()}  "
+        "MonkeySMP-Server-2.0.0.zip\n").encode()
 
 
-def test_build_site_build_names_every_file_and_the_pack_by_its_label(tmp_path, fabric_repo, monkeypatch):
+def test_build_has_no_site_build_any_more(tmp_path, fabric_repo, monkeypatch):
+    """--site-build rebuilt the client pack and player zip for the website; neither exists since the relaunch."""
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    fake_player(fabric_repo)
-    build.main(fabric_repo, tmp_path / "dist", ["--site-build", "ships"])
-    assert sorted(p.name for p in (tmp_path / "dist").iterdir()) == [
-        "MonkeySMP-Client-2.0.0-ships.mrpack", "MonkeySMP-Player-2.0.0-ships.zip", "MonkeySMP-Server-2.0.0-ships.zip",
-        "SHA256SUMS.txt"]
-    index = json.loads(zipfile.ZipFile(tmp_path / "dist" / "MonkeySMP-Client-2.0.0-ships.mrpack").read(
-        "modrinth.index.json"))
-    assert index["versionId"] == "2.0.0-ships"
-    player = zipfile.ZipFile(tmp_path / "dist" / "MonkeySMP-Player-2.0.0-ships.zip").namelist()
-    assert "MonkeySMP-Player-2.0.0-ships/MonkeySMP-Client-2.0.0-ships.mrpack" in player
-
-
-@pytest.mark.parametrize(("argv", "tag", "message"), [
-    (["--site-build", "Ships!"], "", "lower-case letters and digits"),
-    (["--site-build", "ships"], "v2.0.0", "not for a tagged release"),
-    (["--site-build", "ships", "--notes", "notes.md"], "", "never a release"),
-])
-def test_build_site_build_is_never_a_release(tmp_path, fabric_repo, monkeypatch, argv, tag, message):
-    monkeypatch.setenv("GITHUB_REF_NAME", tag)
-    fake_player(fabric_repo)
-    with pytest.raises(SystemExit, match=message):
-        build.main(fabric_repo, tmp_path / "dist", argv)
+    with pytest.raises(SystemExit):
+        build.main(fabric_repo, tmp_path / "dist", ["--site-build", "ships"])
     assert not (tmp_path / "dist").exists()
+
 
 CHANGELOG = ("# Changelog\n\n## [Unreleased]\n\n## [2.0.0] - 2026-10-01\n\nFabric.\n\n- New mods.\n\n"
              "## [1.1.0]\n\nOld.\n")
@@ -144,48 +83,21 @@ def test_changelog_section_is_one_versions_section():
 
 def test_build_main_writes_the_release_notes(tmp_path, fabric_repo, monkeypatch):
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    fake_player(fabric_repo)
     (fabric_repo.root / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
     build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
     notes = (tmp_path / "notes.md").read_text(encoding="utf-8")
     assert notes == "Fabric.\n\n- New mods.\n\n" + build.DOWNLOADS
     assert notes.splitlines()[4] == "### Downloads" and notes.endswith("`sha256sum <file>` on Linux.\n")
-    assert "- **SHA256SUMS.txt** - the SHA-256 of each file above." in notes
+    assert "- **SHA256SUMS.txt** - the SHA-256 of the zip above." in notes
+    assert ".mrpack" not in notes and "MonkeySMP-Player" not in notes, "players download nothing"
 
 
 def test_build_main_needs_a_changelog_section_for_the_notes(tmp_path, fabric_repo, monkeypatch):
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    fake_player(fabric_repo)
     (fabric_repo.root / "CHANGELOG.md").write_text("# Changelog\n\n## [1.1.0]\n\nOld.\n", encoding="utf-8")
     with pytest.raises(SystemExit, match=r"no '## \[2.0.0\]' section"):
         build.main(fabric_repo, tmp_path / "dist", ["--notes", str(tmp_path / "notes.md")])
     assert not (tmp_path / "dist").exists() and not (tmp_path / "notes.md").exists()
-
-
-def test_build_fails_clearly_without_player_folder(tmp_path, fabric_repo, monkeypatch):
-    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
-    assert not fabric_repo.player.exists()
-    with pytest.raises(SystemExit, match="player.* is missing"):
-        build.main(fabric_repo, tmp_path / "dist")
-    assert not (tmp_path / "dist").exists(), "nothing is built when the player zip can't be"
-    mrpack = build.build_client("2.0.0", fabric_repo, tmp_path)
-    with pytest.raises(SystemExit, match="player.* is missing"):
-        build.build_player("2.0.0", mrpack, fabric_repo, tmp_path)
-
-
-def test_build_player_needs_the_launcher_profile(tmp_path, fabric_repo):
-    fake_player(fabric_repo)
-    fabric_repo.fabric_profile.unlink()
-    mrpack = build.build_client("2.0.0", fabric_repo, tmp_path)
-    with pytest.raises(SystemExit, match="fabric-profile.json is missing"):
-        build.build_player("2.0.0", mrpack, fabric_repo, tmp_path)
-
-
-def test_build_player_refuses_files_it_would_overwrite(tmp_path, fabric_repo):
-    fake_player(fabric_repo, {**PLAYER_FILES, "installer/fabric-profile.json": "{}"})
-    mrpack = build.build_client("2.0.0", fabric_repo, tmp_path)
-    with pytest.raises(SystemExit, match="must not contain installer/fabric-profile.json"):
-        build.build_player("2.0.0", mrpack, fabric_repo, tmp_path)
 
 
 # --- Linux and macOS ---------------------------------------------------------------------------------
@@ -219,24 +131,14 @@ def test_build_leaves_out_what_a_local_install_or_docker_left_in_package(tmp_pat
 
 # --- the world seed --------------------------------------------------------------------------------
 
-def _members(z: zipfile.ZipFile):
-    """(name, bytes) of every file, including the files inside a zipped .mrpack."""
-    for name in z.namelist():
-        data = z.read(name)
-        if name.endswith(".mrpack"):
-            yield from ((f"{name}/{inner}", d) for inner, d in _members(zipfile.ZipFile(io.BytesIO(data))))
-        else:
-            yield name, data
-
-
-def test_nothing_players_get_contains_the_world_seed(tmp_path):
+def test_nothing_public_contains_the_world_seed():
     """The seed shows where every ore and structure is (seed-based x-ray), so only the server zip has it."""
     seed = REPO.load_manifest()["world"]["seed"].lstrip("-").encode()
-    mrpack = build.build_client("0.0.0", REPO, tmp_path)
-    player = build.build_player("0.0.0", mrpack, REPO, tmp_path)
-    for out in (mrpack, player):
-        assert not [name for name, data in _members(zipfile.ZipFile(out)) if seed in data], out.name
-    server = zipfile.ZipFile(build.build_server("0.0.0", REPO, tmp_path))
-    assert seed in server.read("MonkeySMP-Server/monkey/manifest.json")  # the check can see it where it is
     public = [*REPO.root.joinpath("site").rglob("*"), REPO.root / "docs" / "RULES.md"]
     assert not [p for p in public if p.is_file() and seed in p.read_bytes()]
+
+
+def test_the_server_zip_holds_the_world_seed(tmp_path):
+    seed = REPO.load_manifest()["world"]["seed"].lstrip("-").encode()
+    server = zipfile.ZipFile(build.build_server("0.0.0", REPO, tmp_path))
+    assert seed in server.read("MonkeySMP-Server/monkey/manifest.json")  # the check above can see it where it is

@@ -3,8 +3,6 @@ import json
 import struct
 from pathlib import Path
 
-import pytest
-
 import challenges as challenges_module
 import rcon
 import wardrobe
@@ -213,23 +211,6 @@ def test_challenge_and_launch_rewards_are_scores_and_skins_only():
         advancement = json.loads(data[path])
         assert set(advancement["rewards"]) == {"function"}, path
         assert "display" not in advancement, path   # no toast, no chat line, nothing in the advancements screen
-
-
-@pytest.mark.parametrize("eol", [b"\n", b"\r\n"])
-def test_enable_in_options_adds_the_pack_once_and_keeps_line_endings(tmp_path, eol):
-    options = tmp_path / "options.txt"
-    options.write_bytes(eol.join([b"fov:0.5", b'resourcePacks:["vanilla","file/x.zip"]', b"lang:en_us"]) + eol)
-    wardrobe.enable_in_options(options)
-    wardrobe.enable_in_options(options)
-    assert options.read_bytes() == eol.join(
-        [b"fov:0.5", b'resourcePacks:["vanilla","file/x.zip","file/Monkey SMP Wardrobe"]', b"lang:en_us"]) + eol
-
-
-def test_enable_in_options_without_a_resource_pack_line(tmp_path):
-    options = tmp_path / "options.txt"
-    options.write_text("fov:0.5\n", encoding="utf-8")
-    wardrobe.enable_in_options(options)
-    assert options.read_text(encoding="utf-8") == 'fov:0.5\nresourcePacks:["vanilla","file/Monkey SMP Wardrobe"]\n'
 
 
 def png_size(data: bytes) -> tuple[int, int]:

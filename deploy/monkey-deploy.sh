@@ -328,18 +328,6 @@ label=$ref
 [ "$TRACK" = tags ] || label="$TRACK@$(git -C "$REPO_DIR" rev-parse --short "$commit")"
 log "deploying $label ($commit); live: ${deployed:-nothing}"
 
-# Players need the new client pack when client/ changed (mods added, removed or updated). Every
-# release bumps "versionId" in the pack index, and that alone doesn't make an old pack unable to join.
-index_without_version() {
-    git -C "$REPO_DIR" show "$1:client/modrinth.index.json" 2>/dev/null | grep -v '^[[:space:]]*"versionId":'
-}
-pack_changed=''
-if [ -z "$deployed" ] ||
-    ! git -C "$REPO_DIR" diff --quiet "$deployed" "$commit" -- client/ ':(exclude)client/modrinth.index.json' 2>/dev/null ||
-    [ "$(index_without_version "$deployed")" != "$(index_without_version "$commit")" ]; then
-    pack_changed=1
-fi
-
 if running; then
     [ -n "$now" ] || warn_players "Server update to $label" 'Server update'
     log 'backing up the world'
@@ -366,7 +354,6 @@ if restart_and_wait; then
     fi
     log "live: $label"
     msg="Monkey SMP is back up on $label."
-    [ -z "$pack_changed" ] || msg="$msg The mod list changed: update your modpack before joining (see the site)."
     discord "$msg"
     # Root runs its own copies (deploy/install-root.sh), which only the owner updates: say when they are behind.
     # Only when the checkout is the live release: a pin leaves it on another one, so comparing would mislead.

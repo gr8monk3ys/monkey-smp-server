@@ -19,9 +19,9 @@ repo (tag vX.Y.Z) <-- git fetch every 5 min -- VPS: monkey-deploy.timer --> dock
 
 ## Why releases, not every push
 
-A deploy restarts the server, and when `client/` changed every player has to update their pack before they
-can join again. A release tag is the point where both exist: the release workflow publishes the matching
-`.mrpack`. So the VPS follows the newest `vX.Y.Z` tag. To make any merge to `main` go live instead, set
+A deploy restarts the server, so it should happen at a point someone chose and checked: a release tag. Players
+need nothing from a release (they join with a plain client, Java or Bedrock). So the VPS follows the newest
+`vX.Y.Z` tag. To make any merge to `main` go live instead, set
 `TRACK=main` in `/etc/monkey-deploy.env`. GitHub Actions doesn't start in this private repo right now
 (billing), and the VPS pulls rather than being pushed to, so nothing here depends on Actions or on an
 SSH key into the server.
@@ -1117,7 +1117,7 @@ searches Modrinth and answers "do players need it?", which only notes the answer
 | Back up now, list snapshots | admin | Asks the root helper (below). |
 | Restore a snapshot | owner | Types the snapshot's short ID. The live world is kept in `backups/before-restore-TIME`. |
 | Schedules | admin | A command, a restart (with warnings) or a backup, daily, weekly or every N minutes; whoever is online, only when nobody is, or only when someone is. A run whose condition doesn't hold is skipped and says so; so is one when the server won't say who is on. A restart only when empty checks again after its warnings, and is called off if someone joined (chat then says so). A stopped server counts as nobody online. |
-| Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players need that their pack lacks, and the mod changes waiting for a release of the players' pack. |
+| Mods list | moderator | Each jar's name, version and side, whether it is off, pinned or kept off, and whether players need it. The mods players would need (there is no players' pack since the relaunch). |
 | Upload a jar, install a modpack | owner | A jar or `.mrpack` from the owner's computer. |
 | Search Modrinth | admin | Fabric mods for the server's game version that run on a server. |
 | Mod manager | owner | Install from Modrinth, turn a jar off or on, remove it. Types the jar's file name (Modrinth: the mod's short name). |
@@ -1180,25 +1180,12 @@ The mod manager:
   (`/v2/version_file/HASH?algorithm=sha512`, then the project's `client_side`), a Modrinth install from the project
   it already has, a modpack from its own `env`. It is noted in `server/.monkey-mod-sides.json`. A failed lookup is
   "unknown" and never stops the install; the page then asks staff (yes, no, don't know). Staff's answer always
-  replaces the note; a lookup's "unknown" never replaces a known answer. `required` and not in the players' pack
-  shows a red notice: players must install it too, and until the owner adds it to the players' pack in a release
-  they may not be able to join. The mods list names every enabled mod players need that the players' pack lacks: the pack is
-  `client/modrinth.index.json` in the repo checkout, matched by Modrinth project or jar name. When the checkout has
-  no readable pack, the list is every mod marked as needed. The page never changes the players' pack.
-- **Players' pack: waiting for a release** (owner, 2026-11-08): the Mods tab lists the mod changes players need in
-  their pack too, worked out afresh from the mods folder each time:
-  - *add*: an enabled jar players need (`required`) that the owner put in, whose file the pack lacks. A new version
-    of a mod the pack has counts too: the pack must have the server's version.
-  - *remove*: a mod players need that is in the pack but no longer runs here: a jar the owner put in and then turned
-    off or removed, or a release mod kept off. A release mod that is only off or removed comes back at the next
-    start, so it isn't one.
-
-  After each mod change the page writes the list to `server/.monkey-pack-changes.json` (who, when, and for an add
-  the jar's sha512). A line goes by itself once the deployed release's pack matches the server, or when the owner
-  undoes the change. Nothing on the VPS writes to the repo or to Modrinth: on the owner's PC,
-  `python tools/pack_sync.py --ssh HOST` reads that file over the owner's SSH login and changes
-  `client/modrinth.index.json` and `package/monkey/manifest.json` (`--pr` opens a draft pull request). Players get
-  it once the owner merges that and tags a release (docs/MAINTAINING.md, "Releasing").
+  replaces the note; a lookup's "unknown" never replaces a known answer. `required` shows a red notice: players
+  would have to install it too, and since the relaunch there is no players' pack, so a mod like that keeps
+  vanilla and Bedrock players out. The mods list names every enabled mod marked as needed.
+- **Players' pack: waiting for a release**: gone with the relaunch. Players join with a plain client, so the repo
+  has no `client/` pack for the page to compare with and `tools/pack_sync.py` is gone. The page still has the
+  code, but with no pack in the checkout this list never shows.
 
 The data packs box (admin, Mods tab) has a troubleshooting mode for "which pack breaks it":
 

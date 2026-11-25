@@ -193,10 +193,9 @@ def test_a_damaged_file_stops_before_writing(tmp_path, capsys):
     assert (root / "server" / "world" / "datapacks" / OLD_PACK).is_dir()
 
 
-# The places that still have to know the old name: this tool, its tests, the player installer's move of the
-# old game folder, and the glossary's "Formerly" line. Everywhere else it stays gone (CLAUDE.md).
-KNOWS_THE_OLD_NAME = {"tools/migrate_names.py", "tests/test_migrate_names.py", "player/installer/PlayerInstall.psm1",
-                      "tests/Player.Tests.ps1", "GLOSSARY.md"}
+# The places that still have to know the old name: this tool, its tests, and the glossary's "Formerly" line.
+# Everywhere else it stays gone (CLAUDE.md).
+KNOWS_THE_OLD_NAME = {"tools/migrate_names.py", "tests/test_migrate_names.py", "GLOSSARY.md"}
 
 
 def test_the_old_name_is_gone_from_the_repo():

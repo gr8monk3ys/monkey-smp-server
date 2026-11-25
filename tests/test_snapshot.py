@@ -5,9 +5,6 @@ import json
 import pytest
 from conftest import (
     fabric_launcher,
-    fabric_profile,
-    github_client_file,
-    github_pin,
     make_zip,
     paper_build,
     paper_builds_url,
@@ -19,8 +16,7 @@ import entries
 import patches
 import snapshot
 import validate
-from repo import load_json, save_json
-from upstream import RecordedHttp, Upstream, fabric_profile_url
+from upstream import Upstream
 
 MC = "26.1.2"
 PACK = {"pack.mcmeta": b'{"pack": {"pack_format": 55}}', "data/x/tags/a.json": b'{"values": []}'}
@@ -272,184 +268,15 @@ def test_detect_server_refuses_unclear_folders(tmp_path, fabric, server):
         snapshot.detect_server(server.root)
 
 
-def client_instance(root, modrinth, mc, loader):
-    """A Prism instance with one mod and one shader on Modrinth, one private mod, configs and options."""
-    instance = root / "Factions Client" / "minecraft"
-    write(instance.parent / "mmc-pack.json", json.dumps(
-        {"components": [{"uid": "net.minecraft", "version": mc},
-                        {"uid": "net.fabricmc.fabric-loader", "version": loader}]}))
-    mod = write(instance / "mods" / "sodium.jar", b"sodium")
-    private = write(instance / "mods" / "private.jar", b"not on modrinth")
-    shader = write(instance / "shaderpacks" / "shader.zip", b"shader")
-    write(instance / "shaderpacks" / "shader.zip.txt", "profile=HIGH")
-    write(instance / "config" / "sodium.json", "{}")
-    write(instance / "config" / "sodium.json.bak", "{}")
-    write(instance / "options.txt", "fov:0.5")
-    modrinth.publish(mod, "sodium", "sodium-fabric.jar")
-    modrinth.publish(shader, "shader", "shader.zip")
-    modrinth.expect_lookup(mod, private, shader)
-    return instance
-
-
-@pytest.mark.parametrize("release", ["paper_repo", "fabric_repo"])
-def test_snapshot_client(tmp_path, fake_modrinth, request, release):
-    repo = request.getfixturevalue(release)
-    mc = repo.load_manifest()["minecraft"]  # the client pack follows the server manifest
-    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
-    profile = fabric_profile(mc, "0.99.0")
-    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), profile)
-
-    index = snapshot.snapshot_client(instance, repo=repo, upstream=Upstream(fake_modrinth.http))
-
-    assert [f["path"] for f in index["files"]] == ["mods/sodium.jar", "shaderpacks/shader.zip"]
-    # tools/client_env.py: a mod it doesn't list stays required; shaders are always optional
-    assert [f["env"]["client"] for f in index["files"]] == ["required", "optional"]
-    assert index["dependencies"] == {"minecraft": mc, "fabric-loader": "0.99.0"}
-    assert index["versionId"] == repo.load_manifest()["version"]
-    overrides = repo.client / "overrides"
-    assert sorted(p.relative_to(overrides).as_posix() for p in overrides.rglob("*") if p.is_file()) == [
-        "config/sodium.json", "options.txt", "shaderpacks/shader.zip.txt"]
-    assert load_json(repo.fabric_profile) == profile
-    assert validate.validate_client(repo.load_manifest(), repo) == []
-
-
-def test_snapshot_client_keeps_the_wardrobe_resource_pack(tmp_path, fake_modrinth, fabric_repo):
-    mc = fabric_repo.load_manifest()["minecraft"]
-    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
-    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
-    pack = fabric_repo.client / "overrides" / "resourcepacks" / "Monkey SMP Wardrobe" / "pack.mcmeta"
-    write(pack, "{}")
-    write(fabric_repo.client / "overrides" / "stale.txt", "from an old snapshot")
-
-    snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
-
-    overrides = fabric_repo.client / "overrides"
-    assert pack.read_text() == "{}"
-    assert not (overrides / "stale.txt").exists()
-    assert '"file/Monkey SMP Wardrobe"' in (overrides / "options.txt").read_text(encoding="utf-8")
-
-
-def test_snapshot_client_pins_the_recorded_launcher_profile(tmp_path, fake_modrinth, recorded, fabric_repo, capsys):
-    fabric_repo.fabric_profile.unlink()
-    instance = client_instance(tmp_path, fake_modrinth, "26.3", "0.19.5")
-    fake_modrinth.http.responses.update({k: v for k, v in recorded.responses.items() if "meta.fabricmc.net" in k})
-
-    snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
-
-    pinned = load_json(fabric_repo.fabric_profile)
-    assert pinned == recorded.get_json(fabric_profile_url("26.3", "0.19.5"))
-    assert pinned["id"] == "fabric-loader-0.19.5-26.3" and pinned["inheritsFrom"] == "26.3"
-    assert fabric_repo.fabric_profile.read_bytes().endswith(b"}\n"), "stored like every repo JSON file"
-    assert "client/fabric-profile.json: fabric-loader-0.19.5-26.3\n" in capsys.readouterr().out
-    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == []
-
-
-def test_snapshot_client_refuses_a_bad_profile_and_writes_nothing(tmp_path, fake_modrinth, fabric_repo):
-    instance = client_instance(tmp_path, fake_modrinth, "26.3", "0.19.6")
-    fake_modrinth.http.add("GET", fabric_profile_url("26.3", "0.19.6"), fabric_profile("26.3", "0.19.5"))
-    index_before = (fabric_repo.client / "modrinth.index.json").read_bytes()
-    profile_before = fabric_repo.fabric_profile.read_bytes()
-    with pytest.raises(SystemExit, match="id must be fabric-loader-0.19.6-26.3"):
-        snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
-    assert (fabric_repo.client / "modrinth.index.json").read_bytes() == index_before
-    assert fabric_repo.fabric_profile.read_bytes() == profile_before
-
-
-def test_snapshot_profile_repins_only_the_profile(fabric_repo, recorded):
-    fabric_repo.fabric_profile.unlink()
-    index_before = (fabric_repo.client / "modrinth.index.json").read_bytes()
-    snapshot.main(["profile"], repo=fabric_repo, upstream=Upstream(recorded))
-    assert load_json(fabric_repo.fabric_profile) == recorded.get_json(fabric_profile_url("26.3", "0.19.5"))
-    assert (fabric_repo.client / "modrinth.index.json").read_bytes() == index_before
-
-
-def test_snapshot_profile_keeps_the_file_when_only_the_generation_time_changed(fabric_repo, capsys):
-    served = fabric_profile("26.3", "0.19.5")
-    served.update(time="2027-01-01T00:00:00+0000", releaseTime="2027-01-01T00:00:00+0000")
-    http = RecordedHttp().add("GET", fabric_profile_url("26.3", "0.19.5"), served)
-    before = fabric_repo.fabric_profile.read_bytes()
-    snapshot.main(["profile"], repo=fabric_repo, upstream=Upstream(http))
-    assert fabric_repo.fabric_profile.read_bytes() == before
-    assert "(unchanged)" in capsys.readouterr().out
-    served["mainClass"] = "net.fabricmc.loader.impl.launch.knot.KnotClientNew"
-    snapshot.main(["profile"], repo=fabric_repo, upstream=Upstream(http))
-    assert load_json(fabric_repo.fabric_profile) == served
-
-
-@pytest.mark.parametrize("what", ["server", "client"])
-def test_snapshot_needs_a_path_for_server_and_client(what, capsys):
+def test_snapshot_needs_a_server_folder(capsys):
     with pytest.raises(SystemExit):
-        snapshot.main([what])
-    assert f"'{what}' needs a path" in capsys.readouterr().err
+        snapshot.main(["server"])
+    assert "path" in capsys.readouterr().err
 
 
-# --- GitHub pins (ADR-0009) ---------------------------------------------------------------------
-
-def test_snapshot_fabric_server_keeps_a_github_pin(fabric, fabric_repo):
-    """A jar that is not on Modrinth but is still exactly the manifest's GitHub pin keeps that pin."""
-    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
-    pin = github_pin(homemade)
-    old = fabric_repo.load_manifest()
-    old["mods"].append(pin)
-    fabric_repo.save_manifest(old)
-    fabric.expect_lookup(homemade)
-
-    m = fabric.snapshot(fabric_repo)
-
-    assert [e["slug"] for e in m["mods"]] == ["edited", "mod", "patina-and-chime", "same"]
-    assert m["mods"][2] == pin
-    assert validate.validate(m, fabric_repo) == []
-
-
-def test_snapshot_fabric_server_fails_on_a_jar_that_is_no_longer_its_github_pin(fabric, fabric_repo):
-    """A new build of the mod under the old name: the pin is moved by hand (pin_github.py), not guessed."""
-    homemade = write(fabric.root / "mods" / "homemade-1.0.jar", make_zip({"fabric.mod.json": b"{}"}))
-    old = fabric_repo.load_manifest()
-    old["mods"].append(github_pin(b"the release that was pinned"))
-    fabric_repo.save_manifest(old)
-    fabric.expect_lookup(homemade)
-    before = fabric_repo.manifest.read_bytes()
-    with pytest.raises(SystemExit, match="homemade-1.0.jar"):
-        fabric.snapshot(fabric_repo)
-    assert fabric_repo.manifest.read_bytes() == before
-
-
-def test_snapshot_client_keeps_the_servers_github_pin(tmp_path, fake_modrinth, fabric_repo):
-    """private.jar is not on Modrinth: it stays in the pack only as the server's GitHub pin, byte for byte."""
-    mc = fabric_repo.load_manifest()["minecraft"]
-    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
-    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
-    pin = github_pin(b"not on modrinth", file="private.jar")
-    m = fabric_repo.load_manifest()
-    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
-    fabric_repo.save_manifest(m)
-    index_path = fabric_repo.client / "modrinth.index.json"
-    old = load_json(index_path)
-    old["files"].append(github_client_file(pin, b"not on modrinth"))
-    save_json(index_path, old)
-
-    index = snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
-
-    assert [f["path"] for f in index["files"]] == ["mods/private.jar", "mods/sodium.jar", "shaderpacks/shader.zip"]
-    assert index["files"][0] == github_client_file(pin, b"not on modrinth")
-    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == []
-
-
-def test_snapshot_client_drops_a_jar_that_is_no_longer_the_github_pin(tmp_path, fake_modrinth, fabric_repo):
-    mc = fabric_repo.load_manifest()["minecraft"]
-    instance = client_instance(tmp_path, fake_modrinth, mc, "0.99.0")
-    fake_modrinth.http.add("GET", fabric_profile_url(mc, "0.99.0"), fabric_profile(mc, "0.99.0"))
-    pin = github_pin(b"the release that was pinned", file="private.jar")
-    m = fabric_repo.load_manifest()
-    m["mods"] = sorted(m["mods"] + [pin], key=lambda e: e["slug"])
-    fabric_repo.save_manifest(m)
-    index_path = fabric_repo.client / "modrinth.index.json"
-    old = load_json(index_path)
-    old["files"].append(github_client_file(pin, b"the release that was pinned"))
-    save_json(index_path, old)
-
-    index = snapshot.snapshot_client(instance, repo=fabric_repo, upstream=Upstream(fake_modrinth.http))
-
-    assert [f["path"] for f in index["files"]] == ["mods/sodium.jar", "shaderpacks/shader.zip"]
-    assert validate.validate_client(fabric_repo.load_manifest(), fabric_repo) == [
-        "client: mods/private.jar is missing (the server's GitHub pin patina-and-chime must be in the pack)"]
+@pytest.mark.parametrize("what", ["client", "profile"])
+def test_snapshot_no_longer_captures_a_client(what, capsys):
+    """The client pack and its launcher profile went with the relaunch: players join with a plain client."""
+    with pytest.raises(SystemExit):
+        snapshot.main([what, "somewhere"])
+    assert "invalid choice" in capsys.readouterr().err

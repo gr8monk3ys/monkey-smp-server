@@ -98,8 +98,7 @@ jobs:
         shell: powershell
         run: |
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
-          $files = 'package/monkey/monkey.ps1', 'package/monkey/Monkey.psm1', 'tests/smoke.ps1', 'tests/Monkey.Tests.ps1',
-                   'player/installer/install-client.ps1', 'player/installer/PlayerInstall.psm1', 'tests/Player.Tests.ps1'
+          $files = 'package/monkey/monkey.ps1', 'package/monkey/Monkey.psm1', 'tests/smoke.ps1', 'tests/Monkey.Tests.ps1'
           $issues = $files | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Settings ./PSScriptAnalyzerSettings.psd1 }
           $issues | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
           if ($issues) { exit 1 }
@@ -109,7 +108,7 @@ jobs:
         run: |
           Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
           Import-Module Pester -MinimumVersion 5.5
-          $r = Invoke-Pester -Path tests/Monkey.Tests.ps1, tests/Player.Tests.ps1 -Output Detailed -PassThru
+          $r = Invoke-Pester -Path tests/Monkey.Tests.ps1 -Output Detailed -PassThru
           if ($r.FailedCount) { exit 1 }
 
       - name: Download the release files built by the tools job

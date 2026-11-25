@@ -49,9 +49,7 @@ def sh_scripts(root: Path) -> list[Path]:
 
 
 def pester_files(root: Path) -> list[str]:
-    # Player.Tests.ps1 covers the Windows-only player installer; CI runs it on Windows only.
-    names = ["tests/Monkey.Tests.ps1", *(["tests/Player.Tests.ps1"] if WINDOWS else [])]
-    return [n for n in names if (root / n).is_file()]
+    return [n for n in ("tests/Monkey.Tests.ps1",) if (root / n).is_file()]
 
 
 def pester(root: Path) -> list[list[str]]:
@@ -94,7 +92,7 @@ CHECKS = (
     Check("pytest", "module:pytest", lambda root: [[sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]],
           "the unit tests"),
     Check("validate", "", lambda root: [[sys.executable, "-X", "utf8", "tools/validate.py"]],
-          "the manifest, package, client pack and site agree"),
+          "the manifest, package and site agree"),
     Check("datapacks", "", lambda root: [[sys.executable, "-X", "utf8", "tools/datapacks.py", "--check"]],
           "the committed generated packs match their tables"),
     Check("sh", "dash", lambda root: [["dash", "-n", str(p)] for p in sh_scripts(root)],
@@ -192,12 +190,11 @@ def summary(results: list[Result]) -> str:
 
 # CI's boot jobs cost far more than these checks (Windows minutes count double), so a run boots only what its
 # change can break. A path that starts with one of these needs every boot: the required ones (Windows, with
-# PSScriptAnalyzer and the player installer's tests, then the hosting bundle it makes) and the Linux ones. That is
+# PSScriptAnalyzer and the Pester tests, then the hosting bundle it makes) and the Linux ones. That is
 # all of package/ (data packs, mod patches and configs, the manifest, launchers, the Docker files), the build
 # (build.py and the repo.py it imports make the zip every boot unzips), and the boot tests themselves.
-WINDOWS_PATHS = ("package/", "player/", "tools/build.py", "tools/repo.py", "tests/smoke.ps1", "tests/hosting-smoke.sh",
-                 "tests/Monkey.Tests.ps1", "tests/Player.Tests.ps1", "PSScriptAnalyzerSettings.psd1",
-                 ".github/workflows/ci.yml")
+WINDOWS_PATHS = ("package/", "tools/build.py", "tools/repo.py", "tests/smoke.ps1", "tests/hosting-smoke.sh",
+                 "tests/Monkey.Tests.ps1", "PSScriptAnalyzerSettings.psd1", ".github/workflows/ci.yml")
 # ... and these need only the Linux boots.
 LINUX_PATHS = ("tests/docker-smoke.sh",)
 BOOT_LABEL = "boot"

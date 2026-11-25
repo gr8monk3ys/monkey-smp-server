@@ -28,7 +28,6 @@ rewrite: a jar keeps its name. Anything it can't read (a damaged file, an old an
 stops the run before anything is written. If writing stops partway (a disk error, a locked file), fix the cause
 and run it again: a second run picks up what is left, and on a migrated folder finds nothing to do.
 
-A player's game folder (%APPDATA%\\.the-realms) is moved by the player installer, not here.
 Stdlib only, and Python 3.10 or newer: it runs on the VPS (the 2.10.0 switch, docs/upgrades/HISTORY.md).
 """
 import argparse

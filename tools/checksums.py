@@ -9,11 +9,10 @@
 The list is one line per file, "<64 hex digits>  <name>", sorted by name, LF line ends: what `sha256sum` and
 `shasum -a 256` write, so `sha256sum -c SHA256SUMS.txt` checks a folder against it.
 
-tools/build.py writes dist/SHA256SUMS.txt beside the three release files and the release workflow attaches it to
-the GitHub release, after `--check dist` (so a release can't go out without the list, or with a stale one).
-Players download from the website, so site/public/pack/ has a list too, for the files there: tools/site_links.py
-writes it, validate.py fails when it is missing or stale, and the front page links to it. `--same` is how the
-release workflow says when the website's files are not the release's own bytes.
+tools/build.py writes dist/SHA256SUMS.txt beside the server zip and the release workflow attaches it to the GitHub
+release, after `--check dist` (so a release can't go out without the list, or with a stale one). A folder of
+downloads the website serves itself (site/public/pack/) has a list too: tools/site_links.py writes it, validate.py
+fails when it is missing or stale. `--same` compares two folders' lists.
 """
 import argparse
 import hashlib

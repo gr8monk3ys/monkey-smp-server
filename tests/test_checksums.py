@@ -111,7 +111,7 @@ def test_main_writes_checks_and_compares(tmp_path, capsys):
 def test_the_release_checks_the_list_before_it_publishes():
     """release.yml attaches everything in dist/, and only after `checksums.py --check dist` passed there."""
     publish = (REPO.root / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    publish = publish[publish.index("\n  publish:"):publish.index("\n  modrinth:")]
+    publish = publish[publish.index("\n  publish:"):]
     build, check, create = (publish.index(step) for step in (
         "python tools/build.py --notes notes.md", "python tools/checksums.py --check dist", "gh release create"))
     assert build < check < create

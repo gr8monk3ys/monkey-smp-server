@@ -3,13 +3,8 @@
 Kinds of artifact: "java" (a Temurin JRE build), "server" (the Paper jar or the Fabric server launcher),
 "plugin", "mod" and "datapack". Every entry has `file`, `url`, `size` and `hashes`; Modrinth entries
 (plugins, mods, datapacks) add `slug`, `project_id`, `version` and `version_id`; a mod or datapack
-may add a `patch` (owned by patches.py).
-
-A GitHub pin (ADR-0009) is a mod that is not on Modrinth, pinned to one asset of one release of a
-repository in GITHUB_PINS. It has `slug`, `github` ("owner/repo"), `tag` and `version` instead of the
-Modrinth ids, and its `url` must be exactly that release's download URL for `file` (github_url). It
-is pinned and moved by hand with pin_github.py (github builds the entry); is_github tells the update
-check, add.py and the snapshots to leave it alone.
+may add a `patch` (owned by patches.py). A GeyserMC pin (ADR-0010) is a plugin from GeyserMC's own
+download API instead of Modrinth (is_geysermc).
 
 Server types (manifest["server"]["type"]) and the groups they may use (GROUPS_BY_TYPE):
   - paper:  {"type", "build", file, url, size, hashes}; plugins + datapacks, `mods` must be empty.
@@ -36,8 +31,8 @@ In short: snapshots record what is on disk, updates take upstream's name except 
 sticky (STICKY_NAMES).
 
 Built from upstream responses with: from_disk (snapshot), updated (update check), added (add.py),
-github (pin_github.py), paper, fabric, java. Checked with: check (one entry), check_types (server type vs groups),
-check_java (the Java builds).
+geysermc (relaunch.py, the update check), paper, fabric, java. Checked with: check (one entry), check_types
+(server type vs groups), check_java (the Java builds).
 Hash choice: hash_of, matches.
 """
 import hashlib
@@ -63,9 +58,6 @@ ALLOWED_HOSTS = ("https://cdn.modrinth.com/", "https://fill-data.papermc.io/", "
 # `geysermc` (the project), `version` and `build` instead of Modrinth's ids, and only that build's own URL.
 GEYSERMC = "https://download.geysermc.org/v2/projects"
 GEYSERMC_PINS = ("floodgate",)
-# The repositories ("owner/repo") a mod may be pinned from as a GitHub release asset (ADR-0009): the owner's own
-# mods only. Adding one is a decision, not a routine edit.
-GITHUB_PINS = ("gr8monk3ys/patina-and-chime",)
 MODRINTH_KEYS = ("project_id", "version_id")
 # Modrinth channels a project may be pinned from (add.py, check_updates.py, relaunch.py). Every project takes only
 # "release", except these: GeyserMC publishes every Geyser and Floodgate build as "beta", including the ones it
@@ -141,29 +133,6 @@ def geysermc(project: str, build: dict, jar: bytes) -> dict:
             "hashes": {"sha256": d["sha256"]}}
 
 
-def is_github(entry: dict) -> bool:
-    """Whether a plugin/mod/datapack entry is a GitHub pin (ADR-0009) and so has no Modrinth ids."""
-    return "github" in entry
-
-
-def github_pin_of(client_file: dict, manifest: dict) -> dict | None:
-    """The server's GitHub pin that a file of the client index is, byte for byte: the same jar name in mods/, the
-    same one URL, size and sha512. None for anything else, so no other download from outside Modrinth passes."""
-    for e in group(manifest, "mod"):
-        if (is_github(e) and client_file["path"] == f"mods/{e.get('file')}"
-                and client_file["downloads"] == [e.get("url")] and client_file.get("fileSize") == e.get("size")
-                and isinstance(e.get("hashes"), dict) and e["hashes"].get("sha512")
-                and client_file["hashes"].get("sha512") == e["hashes"]["sha512"]):
-            return e
-    return None
-
-
-def github_url(repo: str, tag: str, file: str) -> str:
-    """GitHub's download URL for one asset of one release (a '+' in the name is %2B, as GitHub writes it)."""
-    quote = urllib.parse.quote
-    return f"https://github.com/{repo}/releases/download/{quote(tag, safe='')}/{quote(file, safe='')}"
-
-
 # --- building entries from upstream responses ---------------------------------------------------
 
 def from_disk(version: dict, sha1: str, slug: str, *, disk_name: str, patch: dict | None = None) -> dict:
@@ -180,8 +149,6 @@ def updated(kind: str, entry: dict, version: dict) -> dict:
     """
     if "patch" in entry:
         raise ValueError(f"{entry['slug']} is patched; re-snapshot it to update (ADR-0004)")
-    if is_github(entry):
-        raise ValueError(f"{entry['slug']} is pinned from GitHub; pin its new release by hand (ADR-0009)")
     f = pick_file(version, entry["file"])
     name = entry["file"] if kind in STICKY_NAMES else f["filename"]
     return _modrinth(version, f, slug=entry["slug"], project_id=entry["project_id"], file=name)
@@ -191,13 +158,6 @@ def added(kind: str, slug: str, version: dict) -> dict:
     """Entry for a plugin/mod/datapack being added to the manifest: upstream names the file."""
     f = pick_file(version, ".zip" if kind == "datapack" else ".jar")
     return _modrinth(version, f, slug=slug, project_id=version["project_id"], file=f["filename"])
-
-
-def github(slug: str, repo: str, tag: str, version: str, file: str, jar: bytes) -> dict:
-    """Entry for a mod pinned to one asset of a GitHub release (ADR-0009), from the bytes downloaded from it."""
-    return {"slug": slug, "github": repo, "tag": tag, "version": version, "file": file,
-            "url": github_url(repo, tag, file), "size": len(jar),
-            "hashes": {"sha512": hashlib.sha512(jar).hexdigest()}}
 
 
 def pick_file(version: dict, like: str) -> dict:
@@ -273,19 +233,15 @@ def check(kind: str, e: dict) -> list[str]:
     """Problems with one entry on its own (as error strings; empty means fine)."""
     errors = [f"{kind} {e.get('file', '?')}: missing '{key}'" for key in ("file", "url", "size", "hashes")
               if key not in e]
-    github = kind in GROUPS and is_github(e)
     geyser = kind in GROUPS and is_geysermc(e)
     if kind in GROUPS:
-        keys = (("slug", "github", "tag", "version") if github else ("slug", "geysermc", "version", "build") if geyser
-                else ("slug", "project_id", "version", "version_id"))
+        keys = ("slug", "geysermc", "version", "build") if geyser else ("slug", "project_id", "version", "version_id")
         errors += [f"{kind} {e.get('file', '?')}: missing '{key}'" for key in keys if key not in e]
     if kind == "server":
         errors += _check_server_keys(e)
     if errors:
         return errors
-    if github:
-        errors += _check_github(kind, e)
-    elif geyser:
+    if geyser:
         errors += _check_geysermc(kind, e)
     elif not e["url"].startswith(ALLOWED_HOSTS):
         errors.append(f"{kind} {e['file']}: url is not from an allowed host: {e['url']}")
@@ -301,24 +257,6 @@ def check(kind: str, e: dict) -> list[str]:
             errors.append(f"{kind} {e['file']}: {algo} is not {HEX[algo]} lowercase hex chars")
     except KeyError as err:
         errors.append(str(err.args[0]))
-    return errors
-
-
-def _check_github(kind: str, e: dict) -> list[str]:
-    """Problems with a GitHub pin: only a mod, only from GITHUB_PINS, and only that release's own URL."""
-    name = f"{kind} {e['file']}"
-    if kind != "mod":
-        return [f"{name}: only a mod can be pinned from a GitHub release (ADR-0009)"]
-    if e["github"] not in GITHUB_PINS:
-        return [f"{name}: {e['github']!r} is not a repository mods may be pinned from (ADR-0009)"]
-    errors = [f"{name}: a GitHub pin can't also have '{key}'" for key in MODRINTH_KEYS if key in e]
-    if not isinstance(e["tag"], str) or not e["tag"]:
-        return errors + [f"{name}: 'tag' must be the release's tag"]
-    url = github_url(e["github"], e["tag"], e["file"])
-    if e["url"] != url:
-        errors.append(f"{name}: url must be {url} (release {e['tag']} of {e['github']})")
-    if "sha512" not in e["hashes"]:
-        errors.append(f"{name}: a GitHub pin needs a sha512 (the players' pack is matched to it)")
     return errors
 
 

@@ -1,13 +1,11 @@
 """Check the manifest and package for mistakes that would break an install.
 
-  python tools/validate.py              offline checks (structure, entries, patches, defaults, client pack,
-                                        Fabric launcher profile, player installer files, the site's links and modpack,
+  python tools/validate.py              offline checks (structure, entries, patches, defaults, the site's links,
                                         the generated data packs)
   python tools/validate.py --online     also download every file (Java for every platform, the Paper jar
                                         or Fabric launcher, plugins, mods, datapacks, and the PowerShell
-                                        builds in pwsh.lock), verify its size and hash, apply each
-                                        mod/datapack patch to its download to prove it still fits, and
-                                        check Fabric meta still serves the pinned launcher profile
+                                        builds in pwsh.lock), verify its size and hash, and apply each
+                                        mod/datapack patch to its download to prove it still fits
 """
 import argparse
 import hashlib
@@ -15,17 +13,14 @@ import re
 import sys
 
 import build
-import client_env
 import datapacks
 import defaults
 import entries
-import launcher_profile
 import patches
-import player_needs
 import pwsh_lock
 import season_ics
 import site_links
-from repo import REPO, load_json
+from repo import REPO
 from upstream import LiveHttp, Upstream
 
 PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Schedule Backups.bat", "Add Player.bat",
@@ -37,9 +32,6 @@ PACKAGE_FILES = ("Start Server.bat", "Stop Server.bat", "Backup World.bat", "Sch
 DOCKER_FILES = ("docker/Dockerfile", "docker/compose.yaml", "docker/entrypoint.sh", "docker/.env.example")
 # Read by sh (or Docker) on Linux and macOS: a CR at the end of a line breaks them.
 UNIX_FILES = ("*.sh", "*.command", "pwsh.lock", "docker/*")
-# Checked only once player/ exists (the player zip can't be built without it).
-PLAYER_FILES = ("Install for Minecraft Launcher.bat", "READ ME.txt", "installer/install-client.ps1",
-                "installer/PlayerInstall.psm1")
 ASCII_NOTE = "must be plain ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI; see ADR-0003)"
 # Tab, LF, CR. Anything else below 32 in a READ ME, script or doc is a backslash path eaten by an escape
 # (\v in "config\voicechat").
@@ -89,83 +81,14 @@ def validate_package(repo=REPO) -> list[str]:
             errors.append(f"{script.relative_to(repo.package).as_posix()} must have LF line endings (it is run by sh)")
     if repo.pwsh_lock.is_file():
         errors += pwsh_lock.check(repo.pwsh_lock.read_text(encoding="ascii", errors="replace"))
-    if repo.player.is_dir():
-        errors += [f"player/{name} is missing" for name in PLAYER_FILES if not (repo.player / name).is_file()]
-        for script in sorted(repo.player.rglob("*.ps*1")) + sorted(repo.player.rglob("*.bat")):
-            if any(b > 127 for b in script.read_bytes()):
-                errors.append(f"{script.relative_to(repo.root).as_posix()} {ASCII_NOTE}")
     # The READ MEs, the scripts (they write HOSTING.txt and every message) and the docs.
-    texts = [path for folder in (repo.package, repo.player) if folder.is_dir()
-             for pattern in ("*.txt", "*.bat", "*.command", "**/*.sh", "**/*.ps*1")
-             for path in sorted(folder.glob(pattern))]
+    texts = [path for pattern in ("*.txt", "*.bat", "*.command", "**/*.sh", "**/*.ps*1")
+             for path in sorted(repo.package.glob(pattern))]
     texts += sorted(repo.root.glob("*.md")) + sorted((repo.root / "docs").rglob("*.md"))
     for text in texts:
         if any(b < 32 and b not in CONTROL_OK for b in text.read_bytes()):
             errors.append(f"{text.relative_to(repo.root).as_posix()} {CONTROL_NOTE}")
     return errors
-
-
-def validate_client(manifest: dict, repo=REPO) -> list[str]:
-    index = load_json(repo.client / "modrinth.index.json")
-    errors = []
-    if index["dependencies"].get("minecraft") != manifest["minecraft"]:
-        errors.append("client: minecraft version differs from the server manifest")
-    for f in index["files"]:
-        modrinth = f["downloads"] and all(u.startswith("https://cdn.modrinth.com/") for u in f["downloads"])
-        if not modrinth and not entries.github_pin_of(f, manifest):
-            errors.append(f"client {f['path']}: downloads must be Modrinth CDN URLs "
-                          "(or be exactly a GitHub pin of the server manifest, ADR-0009)")
-        if f["path"].startswith(("/", "..")) or ".." in f["path"].split("/"):
-            errors.append(f"client {f['path']}: unsafe path")
-    # Two versions of one mod: Fabric refuses to start (or picks one) when two jars have the same mod id.
-    by_project = {}
-    for f in index["files"]:
-        m = re.match(r"https://cdn\.modrinth\.com/data/([^/]+)/", f["downloads"][0]) if f["downloads"] else None
-        if m and f["path"].startswith("mods/"):
-            by_project.setdefault(m.group(1), []).append(f["path"])
-    errors += [f"client: {' and '.join(sorted(paths))} are the same Modrinth project (keep one version)"
-               for paths in by_project.values() if len(paths) > 1]
-    # A GitHub pin is a mod of ours that adds blocks or items: a player without it can't join.
-    paths = {f["path"] for f in index["files"]}
-    errors += [f"client: mods/{e['file']} is missing (the server's GitHub pin {e.get('slug')} must be in the pack)"
-               for e in entries.group(manifest, "mod") if entries.is_github(e) and f"mods/{e.get('file')}" not in paths]
-    errors += client_env.check(index)  # which files a player may untick (optional) and which they need
-    return errors + validate_profile(index, repo)
-
-
-def client_version_problems(manifest: dict, repo=REPO) -> list[str]:
-    """The client pack's own versionId is the release's: build.py stamps the built pack, but the source index is
-    what the Modrinth App shows when the pack is imported from the repo."""
-    version = load_json(repo.client / "modrinth.index.json").get("versionId")
-    if version != manifest["version"]:
-        return [f"client: modrinth.index.json's versionId is {version}, but the manifest is {manifest['version']}: "
-                "change both together (docs/MAINTAINING.md, Releasing, step 1)"]
-    return []
-
-
-def validate_profile(index: dict, repo=REPO) -> list[str]:
-    """client/fabric-profile.json must be the launcher profile for the client index's Minecraft + loader."""
-    mc, loader = index["dependencies"].get("minecraft"), index["dependencies"].get("fabric-loader")
-    if not loader:
-        return ["client: modrinth.index.json has no fabric-loader dependency"]
-    if not repo.fabric_profile.is_file():
-        return ["client/fabric-profile.json is missing (pin it with `python tools/snapshot.py profile`)"]
-    try:
-        profile = load_json(repo.fabric_profile)
-    except ValueError as err:
-        return [f"client/fabric-profile.json is not valid JSON: {err}"]
-    return launcher_profile.check(profile, mc, loader)
-
-
-def verify_profile_online(upstream: Upstream, repo=REPO) -> list[str]:
-    """Fabric meta must still serve the pinned profile (ignoring its generation time)."""
-    deps = load_json(repo.client / "modrinth.index.json")["dependencies"]
-    served = upstream.fabric_profile(deps["minecraft"], deps["fabric-loader"])
-    if not launcher_profile.same(load_json(repo.fabric_profile), served):
-        return ["client/fabric-profile.json differs from what Fabric meta serves now "
-                "(re-pin it with `python tools/snapshot.py profile`)"]
-    print(f"ok  profile  {served['id']}")
-    return []
 
 
 def verify_online(manifest: dict, upstream: Upstream, repo=REPO) -> list[str]:
@@ -201,17 +124,14 @@ def main(argv=None, repo=REPO, upstream=None) -> int:
     ap.add_argument("--online", action="store_true")
     a = ap.parse_args(argv)
     manifest = repo.load_manifest()
-    errors = (validate(manifest, repo) + validate_package(repo) + validate_client(manifest, repo)
-              + site_links.problems(repo))
+    errors = validate(manifest, repo) + validate_package(repo) + site_links.problems(repo)
     if repo.root == REPO.root:  # the generators are this checkout's; an older release's packs came from older ones
         errors += [f"{p} is out of date (run python tools/datapacks.py)" for p in datapacks.differences(repo)]
         errors += datapacks.problems(datapacks.all_files(repo))
         errors += season_ics.problems(repo)
-        errors += client_version_problems(manifest, repo) + player_needs.problems(repo)
     if a.online and not errors:
         upstream = upstream or Upstream(LiveHttp())
-        errors += (verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)
-                   + verify_profile_online(upstream, repo))
+        errors += verify_online(manifest, upstream, repo) + verify_pwsh_online(upstream, repo)
     for e in errors:
         print("ERROR", e)
     counts = ", ".join(f"{len(entries.group(manifest, kind))} {group}" for kind, group in entries.GROUPS.items())

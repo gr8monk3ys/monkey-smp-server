@@ -70,7 +70,7 @@ export const shots: { name: string; where: string; alt: string; caption: ReactNo
 export const cosmetics: { name: string; text: string }[] = [
   { name: "Supporter ranks", text: "Monthly: a chat colour, tag, title and particles, plus a role in the Discord." },
   { name: "Season pass", text: "A cosmetic track you unlock by playing the season, on top of the free track." },
-  { name: "One-offs", text: "Weapon and armour skins, kill effects, banners and emotes." },
+  { name: "One-offs", text: "Pets, particle trails, death effects and chat tags." },
 ];
 
 /** Questions (#faq). */

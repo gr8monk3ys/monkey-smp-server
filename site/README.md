@@ -48,7 +48,7 @@ does. CI runs it all with the other checks.
 | Search and link previews | Each page's title, description and canonical address through `pageMetadata` in `src/lib/seo.ts`, which also holds the structured data (the site, Season I's launch as an event, the guide's breadcrumbs); `src/app/sitemap.ts`, `robots.ts` and `manifest.ts` build `/sitemap.xml`, `/robots.txt` and `/manifest.webmanifest`. A new page gets its own `pageMetadata` and a line in `sitemap.ts` (guide pages come from `pages.ts`); `tools/site_links.py --built` fails the build check when a built page is missing from `sitemap.xml` |
 | The page for a missing address | `src/app/not-found.tsx` (built as `out/404.html`) |
 | Add to calendar (a link on `/guide/week`) | `public/monkey-smp-season-1.ics`, made by `python tools/season_ics.py` (not edited by hand); `CALENDAR_URL` points at it |
-| Images, fonts, video, the press kit, the modpack | `public/` (served as they are: `public/img/og.jpg` is `/img/og.jpg`) |
+| Images, fonts, video, the press kit | `public/` (served as they are: `public/img/og.jpg` is `/img/og.jpg`) |
 | Season Wrapped | `public/wrapped/season-<n>/`, made by `tools/wrapped.py` (docs/SEASONS.md, "Ending a season"): build it again rather than edit it. Its pages load `public/wrapped/site.css`, a copy of `src/app/style.css` that `python tools/site_links.py` refreshes (validate.py fails while it is stale) |
 
 ## config.json

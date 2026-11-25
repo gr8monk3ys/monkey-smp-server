@@ -18,8 +18,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@config": ["./config.json"],
-      "@live-packs": ["./live-packs.json"],
-      "@player-needs": ["./player-needs.json"]
+      "@live-packs": ["./live-packs.json"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts", "**/*.d.ts"],

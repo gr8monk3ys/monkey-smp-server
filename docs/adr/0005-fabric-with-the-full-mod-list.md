@@ -1,5 +1,5 @@
 ---
-status: accepted (supersedes ADR-0001)
+status: superseded by ADR-0010 (supersedes ADR-0001)
 ---
 # Fabric 26.3 with the full mod list, instead of Paper with Towns & Nations
 

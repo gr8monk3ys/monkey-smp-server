@@ -28,21 +28,5 @@ jobs:
       - name: Pin Paper and the plugin stack
         shell: bash
         run: python tools/relaunch.py --mc "${{ inputs.mc || '26.3' }}" --skip-missing --report pins.md
-      - name: Look up slugs and fallbacks
-        shell: bash
-        run: |
-          cd tools && python - <<'PY'
-          import json, urllib.parse
-          from upstream import LiveHttp, MODRINTH
-          http = LiveHttp()
-          for slug in ("ultracosmetics", "tebex", "lpc-chat", "tne", "essentialsx", "auctionhousepro"):
-              vs = http.get_json(f"{MODRINTH}/project/{slug}/version")[:6]
-              print("versions", slug, [(v["version_number"], v["version_type"], v["game_versions"][-3:],
-                                         v["loaders"], v["date_published"][:10]) for v in vs])
-          for q in ("coins engine", "auction house", "economy vault provider"):
-              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=6&index=downloads"
-                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"], ["versions:26.3"]])))
-              print(f"search {q!r} [26.3]", [(h["slug"], h["downloads"]) for h in hits["hits"]])
-          PY
       - name: Show the manifest
         run: cat package/monkey/manifest.json

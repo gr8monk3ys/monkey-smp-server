@@ -1,7 +1,9 @@
 import datetime as dt
+import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 from fake_world import FakeWorld, score_rows
@@ -216,19 +218,20 @@ def test_a_failed_map_write_sends_no_reload(tmp_path, monkeypatch):
     assert len(log) == 1 and log[0].startswith("map: could not write ") and log[0].endswith("; no reload")
 
 
-def test_a_map_config_that_cant_be_written_is_warned_about_and_never_reloads(tmp_path):
+def test_a_map_config_that_cant_be_written_is_warned_about_and_never_reloads(tmp_path, monkeypatch):
     world = make_world(tmp_path, scores=(LAUNCHED, ("op", "#ring", 5000)), spots=placed())
     conf = map_conf(world) / "world.conf"
-    conf.chmod(0o444)
-    try:
-        warned = []
-        assert outposts.map_changes(world, placed(), warned.append) == [] and "can't be written" in warned[0]
-        assert outposts.commands(world, NOON) == []
-        server, log = rcon.Recorder(), []
-        assert outposts.send(server, world, NOON, log.append) == 0 and server.sent == []
-        assert log == [f"map: {conf} can't be written: the map's outposts are out of date"]
-    finally:
-        conf.chmod(0o644)
+    # Deny write access through os.access itself: a read-only chmod doesn't stop root (cloud sessions run as root).
+    real_access = os.access
+    monkeypatch.setattr(outposts.os, "access",
+                        lambda path, mode, **kw: False if Path(path) == conf and mode & os.W_OK
+                        else real_access(path, mode, **kw))
+    warned = []
+    assert outposts.map_changes(world, placed(), warned.append) == [] and "can't be written" in warned[0]
+    assert outposts.commands(world, NOON) == []
+    server, log = rcon.Recorder(), []
+    assert outposts.send(server, world, NOON, log.append) == 0 and server.sent == []
+    assert log == [f"map: {conf} can't be written: the map's outposts are out of date"]
 
 
 def test_the_saved_world_is_read_once_a_run(tmp_path, monkeypatch):

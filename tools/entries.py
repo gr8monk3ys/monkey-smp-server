@@ -58,6 +58,11 @@ JAVA_BUILDS_SINCE = (2, 3, 0)
 HEX = {"sha1": 40, "sha256": 64, "sha512": 128}
 ALLOWED_HOSTS = ("https://cdn.modrinth.com/", "https://fill-data.papermc.io/", "https://meta.fabricmc.net/",
                  "https://github.com/adoptium/")
+# GeyserMC projects a plugin may be pinned from GeyserMC's own download API (ADR-0010): Floodgate publishes its
+# Paper build only there, and Bedrock players can't join with their own accounts without it. Its entry has
+# `geysermc` (the project), `version` and `build` instead of Modrinth's ids, and only that build's own URL.
+GEYSERMC = "https://download.geysermc.org/v2/projects"
+GEYSERMC_PINS = ("floodgate",)
 # The repositories ("owner/repo") a mod may be pinned from as a GitHub release asset (ADR-0009): the owner's own
 # mods only. Adding one is a decision, not a routine edit.
 GITHUB_PINS = ("gr8monk3ys/patina-and-chime",)
@@ -115,6 +120,25 @@ def artifacts(manifest: dict):
     for kind in GROUPS:
         for entry in group(manifest, kind):
             yield kind, entry
+
+
+def is_geysermc(entry: dict) -> bool:
+    """Whether a plugin entry is pinned from GeyserMC's download API (ADR-0010) and so has no Modrinth ids."""
+    return "geysermc" in entry
+
+
+def geysermc_url(project: str, version: str, build: int, platform: str = "spigot") -> str:
+    return f"{GEYSERMC}/{project}/versions/{version}/builds/{build}/downloads/{platform}"
+
+
+def geysermc(project: str, build: dict, jar: bytes) -> dict:
+    """Entry for a GeyserMC build (the download API's build JSON) from the bytes downloaded from it."""
+    d = build["downloads"]["spigot"]
+    if hashlib.sha256(jar).hexdigest() != d["sha256"]:
+        raise ValueError(f"{project} build {build['build']}: the download doesn't match GeyserMC's sha256")
+    return {"slug": project, "geysermc": project, "version": build["version"], "build": build["build"],
+            "file": d["name"], "url": geysermc_url(project, build["version"], build["build"]), "size": len(jar),
+            "hashes": {"sha256": d["sha256"]}}
 
 
 def is_github(entry: dict) -> bool:
@@ -250,8 +274,10 @@ def check(kind: str, e: dict) -> list[str]:
     errors = [f"{kind} {e.get('file', '?')}: missing '{key}'" for key in ("file", "url", "size", "hashes")
               if key not in e]
     github = kind in GROUPS and is_github(e)
+    geyser = kind in GROUPS and is_geysermc(e)
     if kind in GROUPS:
-        keys = ("slug", "github", "tag", "version") if github else ("slug", "project_id", "version", "version_id")
+        keys = (("slug", "github", "tag", "version") if github else ("slug", "geysermc", "version", "build") if geyser
+                else ("slug", "project_id", "version", "version_id"))
         errors += [f"{kind} {e.get('file', '?')}: missing '{key}'" for key in keys if key not in e]
     if kind == "server":
         errors += _check_server_keys(e)
@@ -259,6 +285,8 @@ def check(kind: str, e: dict) -> list[str]:
         return errors
     if github:
         errors += _check_github(kind, e)
+    elif geyser:
+        errors += _check_geysermc(kind, e)
     elif not e["url"].startswith(ALLOWED_HOSTS):
         errors.append(f"{kind} {e['file']}: url is not from an allowed host: {e['url']}")
     if re.search(r'[\\/:*?"<>|]', e["file"]):
@@ -291,6 +319,22 @@ def _check_github(kind: str, e: dict) -> list[str]:
         errors.append(f"{name}: url must be {url} (release {e['tag']} of {e['github']})")
     if "sha512" not in e["hashes"]:
         errors.append(f"{name}: a GitHub pin needs a sha512 (the players' pack is matched to it)")
+    return errors
+
+
+def _check_geysermc(kind: str, e: dict) -> list[str]:
+    """Problems with a GeyserMC pin: only a plugin, only from GEYSERMC_PINS, and only that build's own URL."""
+    name = f"{kind} {e['file']}"
+    if kind != "plugin":
+        return [f"{name}: only a plugin can be pinned from GeyserMC (ADR-0010)"]
+    if e["geysermc"] not in GEYSERMC_PINS:
+        return [f"{name}: {e['geysermc']!r} is not a GeyserMC project plugins may be pinned from (ADR-0010)"]
+    errors = [f"{name}: a GeyserMC pin can't also have '{key}'" for key in MODRINTH_KEYS if key in e]
+    if not isinstance(e["build"], int):
+        return errors + [f"{name}: 'build' must be GeyserMC's build number"]
+    url = geysermc_url(e["geysermc"], e["version"], e["build"])
+    if e["url"] != url:
+        errors.append(f"{name}: url must be {url}")
     return errors
 
 

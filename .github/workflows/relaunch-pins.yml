@@ -1,7 +1,7 @@
 name: Relaunch pins
 
 # Pins the relaunch's Paper build and plugins (tools/relaunch.py) on a runner with internet, because the pins need
-# Modrinth and PaperMC. It only reads: the report and the new manifest.json are printed to the log for a
+# Modrinth, PaperMC and GeyserMC. It only reads: the report and the new manifest.json are printed to the log for a
 # maintainer to check and commit. Delete this workflow once the relaunch branch is merged.
 on:
   push:
@@ -28,24 +28,21 @@ jobs:
       - name: Pin Paper and the plugin stack
         shell: bash
         run: python tools/relaunch.py --mc "${{ inputs.mc || '26.3' }}" --skip-missing --report pins.md
-      - name: Look up what couldn't be pinned
+      - name: Look up slugs and fallbacks
         shell: bash
         run: |
           cd tools && python - <<'PY'
           import json, urllib.parse
           from upstream import LiveHttp, MODRINTH
           http = LiveHttp()
-          for q in ("griefprevention", "claims", "land claim protection"):
-              hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=6&index=downloads"
-                                   "&facets=" + urllib.parse.quote(json.dumps([["project_type:plugin"], ["versions:26.3"]])))
-              print("search", q, [(h["slug"], h["downloads"]) for h in hits["hits"]])
-          for url in ("https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest",
-                      "https://hangar.papermc.io/api/v1/projects/HuskClaims/versions?limit=2",
-                      "https://hangar.papermc.io/api/v1/projects/EssentialsX/versions?limit=2"):
-              try:
-                  print(url, json.dumps(http.get_json(url))[:900])
-              except Exception as err:
-                  print(url, "failed:", err)
+          for q in ("lpc chat", "economyshopgui", "donut auction house", "theneweconomy", "coinsengine",
+                    "tebex", "ultracosmetics", "deluxetags", "essentialsx"):
+              for label, facets in (("26.3", [["project_type:plugin"], ["versions:26.3"]]),
+                                    ("any", [["project_type:plugin"]])):
+                  hits = http.get_json(f"{MODRINTH}/search?query={urllib.parse.quote(q)}&limit=4&index=relevance"
+                                       "&facets=" + urllib.parse.quote(json.dumps(facets)))
+                  print(f"search {q!r} [{label}]", [(h["slug"], h["downloads"], h.get("versions", [])[-2:])
+                                                    for h in hits["hits"]])
           PY
       - name: Show the manifest
         run: cat package/monkey/manifest.json

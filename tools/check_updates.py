@@ -60,6 +60,16 @@ def newer_release(versions: list[dict], entry: dict, channels=("release",)) -> d
     return max(newer, key=lambda v: v["date_published"]) if newer else None
 
 
+def geysermc_update(kind: str, e: dict, upstream: Upstream) -> Update | None:
+    """A newer build of a plugin pinned from GeyserMC's download API (ADR-0010)."""
+    build = upstream.geysermc_latest_build(e["geysermc"])
+    if build["build"] <= e["build"]:
+        return None
+    url = entries.geysermc_url(e["geysermc"], build["version"], build["build"])
+    return Update(kind, e["slug"], f"{e['version']} b{e['build']}", f"{build['version']} b{build['build']}",
+                  entries.geysermc(e["geysermc"], build, upstream.download(url)))
+
+
 def server_update(manifest: dict, upstream: Upstream) -> Update | None:
     mc, server = manifest["minecraft"], manifest["server"]
     if server["type"] == "paper":
@@ -151,6 +161,11 @@ def find_updates(manifest: dict, upstream: Upstream, lock_text: str | None = Non
         for e in entries.group(manifest, kind):
             if entries.is_github(e):
                 continue  # pinned by hand from a GitHub release (ADR-0009): Modrinth has nothing to compare it to
+            if entries.is_geysermc(e):
+                found = geysermc_update(kind, e, upstream)
+                if found:
+                    updates.append(found)
+                continue
             v = newer_release(upstream.modrinth_versions(e["project_id"], mc, LOADERS[kind]), e,
                               entries.channels(e["slug"]))
             if not v:

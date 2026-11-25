@@ -86,3 +86,40 @@ def test_check_updates_moves_geyser_along_its_beta_channel():
     assert check_updates.newer_release([old, new], entry) is None
     assert check_updates.newer_release([old, new], entry, entries.channels("geyser"))["id"] == new["id"]
     assert entries.channels("luckperms") == ("release",)
+
+
+def _geysermc_build(build_id: int, jar: bytes) -> dict:
+    return {"project_id": "floodgate", "version": "2.2.5", "build": build_id,
+            "downloads": {"spigot": {"name": "floodgate-spigot.jar", "sha256": hashlib.sha256(jar).hexdigest()}}}
+
+
+def test_floodgate_is_pinned_from_geysermc_and_checked():
+    http = RecordedHttp()
+    jar = b"floodgate 141"
+    http.add("GET", f"{entries.GEYSERMC}/floodgate/versions/latest/builds/latest", _geysermc_build(141, jar))
+    http.add("GET", entries.geysermc_url("floodgate", "2.2.5", 141), jar)
+    out, rows = relaunch.pin_geysermc({"plugins": []}, ["floodgate"], Upstream(http))
+    (e,) = out["plugins"]
+    assert (e["build"], e["size"], e["file"]) == (141, len(jar), "floodgate-spigot.jar")
+    assert entries.check("plugin", e) == []
+    assert rows == [{"slug": "floodgate", "version": "2.2.5 b141", "channel": "GeyserMC"}]
+    assert entries.check("mod", e)  # only a plugin may come from GeyserMC
+    assert entries.check("plugin", {**e, "url": e["url"].replace("spigot", "velocity")})
+    assert entries.check("plugin", {**e, "geysermc": "geyser", "slug": "geyser"})
+
+
+def test_geysermc_download_must_match_its_sha256():
+    with pytest.raises(ValueError, match="sha256"):
+        entries.geysermc("floodgate", _geysermc_build(141, b"real"), b"tampered")
+
+
+def test_check_updates_follows_floodgate_builds():
+    old = entries.geysermc("floodgate", _geysermc_build(141, b"a"), b"a")
+    http = RecordedHttp()
+    http.add("GET", f"{entries.GEYSERMC}/floodgate/versions/latest/builds/latest", _geysermc_build(142, b"b"))
+    http.add("GET", entries.geysermc_url("floodgate", "2.2.5", 142), b"b")
+    found = check_updates.geysermc_update("plugin", old, Upstream(http))
+    assert found.entry["build"] == 142
+    http2 = RecordedHttp()
+    http2.add("GET", f"{entries.GEYSERMC}/floodgate/versions/latest/builds/latest", _geysermc_build(141, b"a"))
+    assert check_updates.geysermc_update("plugin", old, Upstream(http2)) is None
